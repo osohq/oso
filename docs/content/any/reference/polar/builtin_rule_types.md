@@ -51,7 +51,8 @@ type has_relation(subject: Actor, relation: String, object: Resource);
 type allow(actor, action, resource);
 ```
 
-`allow` rules are the top-level entrypoint for policy evaluation. These rules are queried by calling `is_allowed()` and `authorize()` and `authorized_resources()`. This type of rule must have 3 arguments.
+<!-- TODO: update this link when enforcement guides are ported -->
+`allow` rules are the top-level entrypoint for policy evaluation. These rules are queried by the [resource-level enforcement API methods]({{< ref href="/guides/enforcement/resource" lang="python" >}}). This type of rule must have 3 arguments.
 
 ## `allow_field`
 
@@ -60,7 +61,7 @@ type allow_field(actor, action, resource, field);
 ```
 
 `allow_field` rules are similar to `allow` rules, but they include the field that is being accessed on the resource.
-These rules are queried by calling `authorize_field()` and `authorized_fields()`. This type of rule must have 4 arguments.
+These rules are queried by the [field-level enforcement API methods]({{< ref href="/guides/enforcement/field" lang="python">}}). This type of rule must have 4 arguments.
 
 ## `allow_request`
 
@@ -68,5 +69,5 @@ These rules are queried by calling `authorize_field()` and `authorized_fields()`
 type allow_request(actor, request);
 ```
 
-`allow_request` rules are similar to `allow` rules, but instead of authorizing an action and a resource, they authorize access to a request. These rules are queried by calling `authorize_request()`.
+`allow_request` rules are similar to `allow` rules, but instead of authorizing an action and a resource, they authorize access to a request. These rules are queried by the [request-level enforcement API methods]({{< ref href="/guides/enforcement/request" lang="python">}}).
 This type of rule must have 2 arguments.
