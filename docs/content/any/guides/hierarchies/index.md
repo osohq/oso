@@ -62,13 +62,13 @@ has_relation(parent_org: Organization, "parent", child_repo: Repository) if
     parent_org = child_repo.organization;    # use the `organization` relation we registered in Step 1
 {{< /code >}}
 
-{{% callout "Tip" green %}}
+{{% callout "Tip" "green" %}}
 Using registered `Relation`s to access related resources from your policy, rather than using an arbitrary application field or method, ensures that data filtering queries will work with your policy.
 {{% /callout %}}
 
 ## 3. Write rules using parent relations
 
-You now have all the plumbing you need in place to write rules that use `parent` relations.
+You now have all the plumbing in place to write rules that use `parent` relations.
 
 If you need to grant a role on a child resource based on a parent resource role, you can define a [shorthand rule](reference/polar/polar-syntax#shorthand-rules) in the child resource block. For example, in GitClub the `"owner"` role on `Organization` resources grants a user the `"admin"` role on every `Repository` within the organization:
 
