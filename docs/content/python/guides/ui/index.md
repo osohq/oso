@@ -18,9 +18,8 @@ the current user doesn't have access to that page. Or perhaps you'd like
 to display an "edit" button only if the user is actually allowed to edit
 the resource in question.
 
-These are examples of what we at Oso call "Authorization-Dependent UI
-Elements." In this guide we'll explain how you can use Oso to implement
-these kinds of features in your app.
+In this guide we'll explain how you can use Oso to implement these kinds of
+features in your app.
 
 {{% callout "Note" "blue" %}}
 We don't currently provide a version of Oso that runs in the
@@ -28,43 +27,32 @@ browser. This guide covers how to query for information in the backend
 that can be sent to your frontend service.
 {{% /callout %}}
 
-### Getting a user's allowed actions
+### Getting a user's authorized actions
 
-If you're familiar with Oso, you know that Oso policies contain `allow`
-rules that specify that an **actor** is allowed to take an **action** on
-a **resource.**
+When you're deciding what to display to a user in the frontend, it can be useful
+to know **all the actions** that the user is allowed to take on a
+resource, rather than checking if a single action is allowed.
+In this case, you can use the {{< apiDeepLink class="Oso"
+label="authorized_actions(actor, resource)" >}}authorized_actions{{<
+/apiDeepLink >}} method to get a list of a user's authorized actions and return
+them to your frontend.
 
-In many cases, like when you are authorizing a specific request in the
-backend, you'll just want to know if a specific
-`(actor, action, resource)` combination is allowed, e.g., is
-`alice@gmail.com` allowed to `"READ"` `Expense{id: 1}`? For these yes/no
-queries, we provide the `Oso.is_allowed()` method.
-
-But when you're deciding what to display to Alice in the frontend, you
-may want more information. It can be especially useful to know **all the
-actions** that Alice is allowed to take on the `Expense{id: 1}`
-resource, not just whether or not she can read it. In this case, you can
-use the `Oso.get_allowed_actions()` method to get a list of Alice's
-allowed actions and return them to your frontend.
-
-Let's look at an example. Imagine we have a GitHub-like app that gives
-users access to repositories. The page to view a specific repository
-looks like this:
+Let's look at an example. Imagine we have a GitHub-like app that gives users
+access to repositories. The page to view a specific repository looks like this:
 
 ![image](python/guides/ui/a.png)
 
-On this page there are several components that we may want to control
-based on the actions the current user is allowed to take. For example,
-we may want to hide the "Manage Access" or "Delete Repository" links
-depending on whether the user is allowed to take those actions.
+On this page, we may want to hide the "Issues" or "Settings" links
+depending on whether the user is allowed to view issues or adjust repository settings.
 
-In this situation, the `Oso.get_allowed_actions()` method can be very
-helpful. The method returns a list of actions that a user is allowed to
-take on a specific resource. In our example, we call
-`Oso.get_allowed_actions()` in the route handler for the "Show
+In this situation, you can use the {{< apiDeepLink class="Oso"
+label="authorized_actions()" >}}authorized_actions{{<
+/apiDeepLink >}} method. The method returns a list of actions that a user is authorized to
+take on a specific resource. In our example, we can call
+`authorized_actions()` in the route handler for the "Show
 repository" view to get the user's allowed actions for the current repo:
 
-```python
+{{< code file="app.py" hl_lines="9,10,11,17" >}}
 def repos_show(org_id, repo_id):
     # Get repo
     repo = Repository.query.get(repo_id)
@@ -73,7 +61,7 @@ def repos_show(org_id, repo_id):
     current_app.oso.authorize(repo, action="READ")
 
     # Get allowed actions on the repo
-    actions = current_app.base_oso.get_allowed_actions(
+    actions = current_app.base_oso.authorized_actions(
         get_current_user(), repo
     )
     # Send allowed actions to template (or frontend)
@@ -83,47 +71,47 @@ def repos_show(org_id, repo_id):
         org_id=org_id,
         actions=actions,
     )
-```
+{{< /code >}}
 
-In our demo app, when we call `Oso.get_allowed_actions()` with the user
+In our demo app, when we call `Oso.authorized_actions()` with the user
 `mike@monsters.com`, we get back:
 
 ```python
-actions = ['READ', 'LIST_ROLES', 'CREATE', 'DELETE', 'LIST_ISSUES']
+actions = ['read', 'list_roles', 'delete', 'list_issues']
 ```
 
 But when we call with a different user, `sully@monsters.com`, we get:
 
 ```python
-actions = ['READ', 'CREATE', 'LIST_ISSUES']
+actions = ['read', 'list_issues']
 ```
 
-The allowed actions for each user are determined by the **Oso policy.**
+The authorized actions for each user are determined by the **Oso policy.**
 In this case, our policy has the following rules:
 
-```python
-# Repository Permissions
-# ----------------------
+{{< code file="main.polar" >}}
+resource Repository {
+  permissions=["read", "list_roles", "delete", "list_issues"];
+  roles=["contributor", "maintainer", "admin"];
 
-# Repository members can read and list issues for the repo
-allow(user: User, action: String, repo: Repository) if
-    repo.is_member(user) and
-    action in ["READ", "LIST_ISSUES"];
+  # Repository contributors can read and list issues for the repo
+  "read" if "contributor";
+  "list_issues" if "contributor";
 
-# Repository admins can list roles and delete the repo
-allow(user: User, action: String, repo: Repository) if
-    repo.is_admin(user) and
-    action in ["LIST_ROLES", "DELETE"];
+  # Repository admins can list roles and delete the repo
+  "list_roles" if "admin";
+  "delete" if "admin";
 
-# Members of the parent organization can create new repos
-allow(user: User, "CREATE", repo: Repository) if
-    repo.organization.is_member(user);
-```
+  # Repository admins are contributors by default
+  "contributor" if "admin";
+}
+
+# ...
+{{< /code >}}
+
 
 The users Mike and Sully have the following attributes:
 
-- Mike and Sully are both members of the parent organization (Monsters
-  Inc.), so they can both create repositories in the organization
 - Mike is the admin of the "Paperwork" repository, so he can list
   roles and delete the repo, in addition to reading and listing issues
 - Sully is a member of the "Paperwork" repository, so he can only read
@@ -132,52 +120,16 @@ The users Mike and Sully have the following attributes:
 Based on these user attributes and our policy, we can see why Mike is
 allowed to take more actions on the repository than Sully.
 
-With this relatively straightforward policy, it's easy to trace where
-the users' allowed actions come from. But `Oso.get_allowed_actions()`
-can be especially powerful with more complicated policies. For example,
-if we used Oso's [roles](guides/rbac),
-we could have a policy that looks like this instead:
-
-```polar
-resource(_type: Organization, "org", actions, roles) if
-  actions = [] and
-  roles = {
-    member: {
-      permissions: ["repo:CREATE"],
-      implies: ["repo:reader"]
-    },
-  };
-
-resource(_type: Repository, "repo", actions, roles) if
-  actions = ["CREATE", "READ", "UPDATE", "DELETE", "LIST_ISSUES", "LIST_ROLES"] and
-  roles = {
-    reader: {
-      permissions: ["READ", "LIST_ISSUES"]
-    },
-    admin: {
-      permissions: ["LIST_ROLES", "DELETE"],
-      implies: ["reader"]
-    }
-  };
-```
-
-Now the users' allowed actions depend on their assigned roles for both
-the repository and the parent organization, as well as the hierarchy of
-the repository roles (for more information on implementing RBAC with
-Oso, [check out our guide](/guides/rbac)).
-
-Even with this more complicated policy, we'll still get the correct
-allowed actions for Mike and Sully.
 
 ### Using allowed actions in the frontend
 
-Since Mike has permission to "LIST_ROLES" and "DELETE" the repo, he
+Since Mike has permission to `"list_roles"` and `"delete"` the repo, he
 should be able to see the "Manage Access" and "Delete" buttons, but
 Sully should not. We can implement this with a simple check in our
 template:
 
 ```python
-{% if "LIST_ROLES" in actions %}
+{% if "list_roles" in actions %}
 <div>
   <a href={{ url_for('routes.repo_roles_index', org_id=org_id, repo_id=repo.id) }}>
     <h4 class="text-primary">
@@ -188,7 +140,7 @@ template:
   </a>
 </div>
 {% endif %}
-{% if "DELETE" in actions %}
+{% if "delete" in actions %}
 <br />
 <form action={{ url_for('routes.repos_show', org_id=org_id, repo_id=repo.id) }} method="POST">
   <button class="btn btn-primary" type="submit" name="delete_repo" value="">
