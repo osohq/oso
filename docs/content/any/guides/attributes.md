@@ -46,15 +46,16 @@ This rule will be evaluated alongside the `"read" if "contributor"` shorthand ru
 
 Oso also supports granting users roles based on user or resource attributes. Oso uses `has_role` rules to look up a user's roles in your application. By defining multiple `has_role` rules,  you can customize how users are granted various roles.
 
-For example, you could add a `has_role` rule to the policy above that grants the `"admin"` role to the repository creator.
+For example, you could add a `has_role` rule to the policy above that grants the `"admin"` role to the repository creator:
 
 {{< code file="main.polar" hl_lines="8" >}}
 # ...
+
 resource Repository {
   permissions = ["read", "push", "delete"];
   roles = ["contributor", "maintainer", "admin"];
 
   "read" if "contributor";
 }
-has_role(user: User, "read", repo: Repository) if user = repo.created_by;
+has_role(user: User, "admin", repo: Repository) if user = repo.created_by;
 {{< /code >}}
