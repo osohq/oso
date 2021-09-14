@@ -8,16 +8,6 @@ aliases:
 # draft: True
 ---
 
-{{% callout "Note: 0.20.0 Beta Feature" %}}
-  This is an API provided by the beta release of Oso 0.20.0, meaning that it is
-  not yet officially released. You may find other docs that conflict with the
-  guidance here, so proceed at your own risk! If you have any questions, don't
-  hesitate to [reach out to us on Slack](https://join-slack.osohq.com). We're
-  here to help.
-{{% /callout %}}
-
-<div class="pb-10"></div>
-
 # Use Oso Policies in an App
 
 To use an Oso policy in your app, you'll need to "enforce" it. A policy is

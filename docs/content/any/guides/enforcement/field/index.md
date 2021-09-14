@@ -33,24 +33,20 @@ this:
 ```polar
 allow_field(user, "read", profile: Profile, "email") if
     user = profile.user or
-    user.is_admin;
+    user.{{< exampleGet "isAdmin" >}};
 ```
 
 Notice that an `allow_field` rule is just like an `allow` rule, except that it
 takes an additional argument: the field name.
 
-## The `authorize_field` method
+## The `{{< exampleGet "authorizeField" >}}` method
 
 To enforce field-level authorization in your app, you use the {{% apiDeepLink
-class="Oso" %}}authorize_field{{% /apiDeepLink %}} method.
+class="Oso" %}}{{< exampleGet "authorizeField" >}}{{% /apiDeepLink %}} method.
 
-```python
-def get_last_check_in_location(profile, current_user):
-    oso.authorize_field(current_user, "read", profile, "email")
-    return profile.email
-```
+{{% exampleGet "getEmail" %}}
 
-Like `authorize`, `authorize_field` will raise an `AuthorizationError` when the
+Like `{{< exampleGet "authorize" >}}`, `{{< exampleGet "authorizeField" >}}` will raise an `AuthorizationError` when the
 user is not allowed to perform the given action. This is an error that you
 should handle globally in your app. You can read more details about this in the
 [Resource-level Enforcement Guide](resource.html#authorization-failure).
@@ -59,26 +55,16 @@ should handle globally in your app. You can read more details about this in the
 
 Sometimes it is helpful to get _all_ fields that a user can access, and for this
 there is a separate method called {{% apiDeepLink class="Oso"
-%}}authorized_fields{{%/apiDeepLink %}}:
+%}}{{< exampleGet "authorizedFields" >}}{{%/apiDeepLink %}}:
 
-```python
-# Serialize only the fields of profile that the current user is allowed to read
-def serialize_profile(profile, current_user):
-    fields = oso.authorized_fields(current_user, "read", profile)
-    return {field: profile[field] for field in fields}
-```
+{{% exampleGet "serializeProfile" %}}
 
-The `authorized_fields` method can be used to send only the fields that the user
+The `{{< exampleGet "authorizedFields" >}}` method can be used to send only the fields that the user
 is explicitly allowed to read, or can similarly be used to filter _incoming_
 parameters from a user for a call to, say, an `update` method. In that case, you
-might use an `"update"` action in the call to `authorized_fields`:
+might use an `"update"` action in the call to `{{< exampleGet "authorizedFields" >}}`:
 
-```python
-# Filter update_params by the fields on profile that the user can update
-def filter_update_params(profile, raw_update_params, current_user):
-    fields = oso.authorized_fields(current_user, "update", profile)
-    return {field: raw_update_params[field] for field in fields}
-```
+{{% exampleGet "filterUpdateParams" %}}
 
 ## Authorizing many fields
 
@@ -88,40 +74,33 @@ some fields viewable only by friends, and some fields viewable by admins only.
 
 You can do this with Polar's `in` operator:
 
-```python
+```polar
 # Allow friends access to friend-only fields
 allow_field(user: User, "read", profile: Profile, field) if
-    field in ["last_check_in_location", "favorite_animal"] and
+    field in {{< exampleGet "fieldsFriendsOnlyBefore" >}} and
     user in profile.friends;
 
 # Allow admins access to admin-only fields
 allow_field(user: User, "read", profile: Profile, field) if
-    field in ["email", "last_login"] and
-    user.is_admin;
+    field in {{< exampleGet "fieldsAdminOnlyBefore" >}} and
+    user.{{< exampleGet "isAdmin" >}};
 ```
 
 Or, if you have trouble listing all fields in your Polar policy files, and you'd
 prefer to list fields in your application code, you can also use a constant
 defined on the class, like this:
 
-```python
+```polar
 allow_field(user: User, "read", profile: Profile, field) if
-    field in Profile.FRIENDS_ONLY_FIELDS and
+    field in {{< exampleGet "fieldsFriendsOnlyAfter" >}} and
     user in profile.friends;
 
 allow_field(user: User, "read", profile: Profile, field) if
-    field in Profile.ADMIN_ONLY_FIELDS and
-    user.is_admin;
+    field in {{< exampleGet "fieldsAdminOnlyAfter" >}} and
+    user.{{< exampleGet "isAdmin" >}};
 ```
 
-Doing so would require you to add the `FRIENDS_ONLY_FIELDS` and
-`ADMIN_ONLY_FIELDS` constants to your `Profile` class:
-
-```python
-class Profile:
-    ADMIN_ONLY_FIELDS = ["email", "last_login"]
-    FRIENDS_ONLY_FIELDS = ["last_check_in_location", "favorite_animal"]
-```
+{{% exampleGet "fieldDefinitions" %}}
 
 That way, you can add new fields and authorize access to them without touching
 your Polar policy code.
