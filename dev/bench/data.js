@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1631644045260,
+  "lastUpdate": 1631646872723,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -97365,6 +97365,240 @@ window.BENCHMARK_DATA = {
             "name": "partial_rule_depth/100",
             "value": 100256390,
             "range": "± 5258589",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "12413582+leina05@users.noreply.github.com",
+            "name": "Leina McDermott",
+            "username": "leina05"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1bb2a70e040c3a5318e5b7f0defaeb7d46bd8a1d",
+          "message": "Reference docs for new configuration (#1166)\n\n* add resource blocks to polar syntax\r\n\r\n* rule types polar syntax\r\n\r\n* builtin rule types reference\r\n\r\n* add explanation of shorthand rule expansion\r\n\r\n* some highlighting\r\n\r\n* Update docs/content/any/reference/polar/builtin_rule_types.md\r\n\r\nCo-authored-by: Gabe Jackson <17556281+gj@users.noreply.github.com>\r\n\r\n* Update docs/content/any/reference/polar/builtin_rule_types.md\r\n\r\nCo-authored-by: Gabe Jackson <17556281+gj@users.noreply.github.com>\r\n\r\n* Update docs/content/any/reference/polar/builtin_rule_types.md\r\n\r\nCo-authored-by: Gabe Jackson <17556281+gj@users.noreply.github.com>\r\n\r\n* Update docs/content/any/reference/polar/polar-syntax.md\r\n\r\nCo-authored-by: Gabe Jackson <17556281+gj@users.noreply.github.com>\r\n\r\n* Update docs/content/any/reference/polar/polar-syntax.md\r\n\r\nCo-authored-by: Gabe Jackson <17556281+gj@users.noreply.github.com>\r\n\r\n* Update docs/content/any/reference/polar/polar-syntax.md\r\n\r\nCo-authored-by: Gabe Jackson <17556281+gj@users.noreply.github.com>\r\n\r\n* Update docs/content/any/reference/polar/polar-syntax.md\r\n\r\nCo-authored-by: Gabe Jackson <17556281+gj@users.noreply.github.com>\r\n\r\n* Update docs/content/any/reference/polar/builtin_rule_types.md\r\n\r\nCo-authored-by: Gabe Jackson <17556281+gj@users.noreply.github.com>\r\n\r\n* update links to enforcement\r\n\r\n* fix random description issue\r\n\r\n* Update docs/content/any/reference/polar/polar-syntax.md\r\n\r\nCo-authored-by: Gabe Jackson <17556281+gj@users.noreply.github.com>\r\n\r\n* Update docs/content/any/reference/polar/polar-syntax.md\r\n\r\nCo-authored-by: Gabe Jackson <17556281+gj@users.noreply.github.com>\r\n\r\n* Update docs/content/any/reference/polar/polar-syntax.md\r\n\r\nCo-authored-by: Gabe Jackson <17556281+gj@users.noreply.github.com>\r\n\r\n* Apply suggestions from code review\r\n\r\nCo-authored-by: Gabe Jackson <17556281+gj@users.noreply.github.com>\r\n\r\n* fix some links\r\n\r\n* address pr comments'\r\n\r\n* Update docs/content/any/reference/polar/polar-syntax.md\r\n\r\nCo-authored-by: Gabe Jackson <17556281+gj@users.noreply.github.com>\r\n\r\n* literalincludes for polar syntax\r\n\r\n* Update line ranges\r\n\r\n* delete old file\r\n\r\n* spelling\r\n\r\n* get rid of arity\r\n\r\nCo-authored-by: Gabe Jackson <17556281+gj@users.noreply.github.com>",
+          "timestamp": "2021-09-14T18:59:44Z",
+          "tree_id": "fa4cd67012502a1767d6f01400b119c12e3d10c4",
+          "url": "https://github.com/osohq/oso/commit/1bb2a70e040c3a5318e5b7f0defaeb7d46bd8a1d"
+        },
+        "date": 1631646868766,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 49703,
+            "range": "± 8375",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 2231649,
+            "range": "± 48709",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 10724253,
+            "range": "± 23053",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 21386417,
+            "range": "± 133646",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 916,
+            "range": "± 25",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2402,
+            "range": "± 769",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 55173,
+            "range": "± 1423",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 495663,
+            "range": "± 7982",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 19504,
+            "range": "± 819",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 19565,
+            "range": "± 817",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 19596,
+            "range": "± 825",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 19593,
+            "range": "± 784",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 17641,
+            "range": "± 750",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 5281,
+            "range": "± 614",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 6700,
+            "range": "± 1919",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 7871,
+            "range": "± 333",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 25375,
+            "range": "± 809",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 6255,
+            "range": "± 183",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 12955,
+            "range": "± 426",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 8103,
+            "range": "± 311",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "load_policy",
+            "value": 888086,
+            "range": "± 1052",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/1",
+            "value": 35979,
+            "range": "± 1726",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/5",
+            "value": 124665,
+            "range": "± 4012",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/10",
+            "value": 235462,
+            "range": "± 4969",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/20",
+            "value": 487406,
+            "range": "± 5685",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/40",
+            "value": 1055522,
+            "range": "± 8000",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/80",
+            "value": 2349214,
+            "range": "± 4596",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/100",
+            "value": 3082293,
+            "range": "± 47241",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/1",
+            "value": 111809,
+            "range": "± 4296",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/5",
+            "value": 346453,
+            "range": "± 6384",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/10",
+            "value": 727575,
+            "range": "± 11932",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/20",
+            "value": 1959499,
+            "range": "± 11910",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/40",
+            "value": 6708812,
+            "range": "± 76498",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/80",
+            "value": 38329910,
+            "range": "± 209709",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/100",
+            "value": 68741283,
+            "range": "± 496230",
             "unit": "ns/iter"
           }
         ]
