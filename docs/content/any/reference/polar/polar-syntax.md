@@ -96,7 +96,7 @@ Bear{first_name: "Yogi", last_name: "Bear"}
 ```
 
 Classes can be registered with the Oso library to integrate with Polar. See
-[Application Types](getting-started/policies#application-types) for more information.
+[Application Types](getting-started/policies#instances-and-fields) for more information.
 
 An instance literal can only be used with [the `new` operator](#new) or as a
 [pattern](#patterns).
@@ -373,7 +373,7 @@ so-and-so is true, then **cut** out all other alternatives.
 #### New
 
 The `new` operator is used to construct a new instance of an application class.
-(See [Application Types](getting-started/policies#application-types) for more about how to define and
+(See [Application Types](getting-started/policies#instances-and-fields) for more about how to define and
 register application classes.) The name of the class to instantiate comes next,
 followed by a set of initialization arguments that are passed to the class’s
 constructor:
@@ -523,7 +523,7 @@ has_first_name(user: User, name) if user.name = name;
 Now, the `first_name` rule can be used with instances of the `User` or `Person`
 type.
 
-For more on this feature, see [Application Types](getting-started/policies#application-types).
+For more on this feature, see [Application Types](getting-started/policies#instances-and-fields).
 
 #### Patterns
 
@@ -620,6 +620,7 @@ The above rule type specifies that any rule with the name `has_permission` must 
 Argument matching is determined in the same way that matching is determined for rule evaluation. See [Patterns and Matching](#patterns-and-matching).
 
 Rule types are optional. If a rule type exists with the same name as a rule, then the rule must match that type or else an error will be thrown when the policy is loaded.
+If multiple rule types are defined for the same rule name, then a rule need only match one type to be valid.
 
 You can find a reference for built-in rule types [here](reference/polar/builtin_rule_types).
 
@@ -639,7 +640,7 @@ actor User {}
 resource Repository {}
 ```
 
-In the above example, `User` and `Repository` must be registered application types.
+In the above example, `User` and `Repository` must be registered [application types](classes).
 
 Inside of a block, you can declare [permissions](#permission-declarations), [roles](#role-declarations), and [relations](#relation-declarations) and write [shorthand rules](#shorthand-rules).
 

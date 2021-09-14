@@ -27,7 +27,7 @@ More detailed examples of working with application objects can be found in our
 
 Rust structs and enums can be registered with Oso, which lets you pass them in
 and access their methods and fields in your policy (see [Application
-Types](getting-started/policies#application-types)).
+Types](getting-started/policies#instances-and-fields)).
 
 Rust structs can also be constructed from inside an Oso policy using [the `new`
 operator](polar-syntax#new) if a type constructor is provided at registration.
