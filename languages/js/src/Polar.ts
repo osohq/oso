@@ -163,12 +163,12 @@ export class Polar {
    * Load a Polar policy file.
    *
    * @deprecated `Oso.loadFile` has been deprecated in favor of `Oso.loadFiles`
-   * as of the 0.20.0 release. Please see changelog for migration instructions:
+   * as of the 0.20 release. Please see changelog for migration instructions:
    * https://docs.osohq.com/project/changelogs/2021-09-15.html
    */
   async loadFile(filename: string): Promise<void> {
     console.error(
-      '`Oso.loadFile` has been deprecated in favor of `Oso.loadFiles` as of the 0.20.0 release.\n\n' +
+      '`Oso.loadFile` has been deprecated in favor of `Oso.loadFiles` as of the 0.20 release.\n\n' +
         'Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html'
     );
     return this.loadFiles([filename]);

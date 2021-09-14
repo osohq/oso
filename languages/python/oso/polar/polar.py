@@ -118,7 +118,7 @@ class Polar:
         https://docs.osohq.com/project/changelogs/2021-09-15.html
         """
         print(
-            "`Oso.load_file` has been deprecated in favor of `Oso.load_files` as of the 0.20.0 release.\n\n"
+            "`Oso.load_file` has been deprecated in favor of `Oso.load_files` as of the 0.20 release.\n\n"
             + "Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html",
             file=sys.stderr,
         )
