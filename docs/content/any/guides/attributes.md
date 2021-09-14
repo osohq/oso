@@ -5,7 +5,7 @@ weight: 1
 
 # Build Attribute-Based Access Control (ABAC)
 
-While role-based access control emphasizes granting permissions based on roles, you may also wish to grant permissions or roles based on user or resource attributes. **With Oso, you can use attribute-based logic alongside roles.**
+While [role-based access control (RBAC)](guides/rbac) emphasizes granting permissions based on roles, you may also wish to grant permissions or roles based on attributes of actors or resources. **With Oso, you can use attribute-based logic alongside roles.**
 
 ## Grant permissions with attributes
 
