@@ -96,16 +96,16 @@ Bear{first_name: "Yogi", last_name: "Bear"}
 ```
 
 Classes can be registered with the Oso library to integrate with Polar. See
-[Application Types](guides/policies#application-types) for more information.
+[Application Types](guides/policies#instances-and-fields) for more information.
 
 An instance literal can only be used with [the `new` operator](#new) or as a
 [pattern](#patterns).
 
 ## Rules
 
-Every statement in a Polar file is part of a rule. Rules allow us to express
-conditional statements ("**if** this **then** that").
+Rules allow you to express conditional statements ("**if** this **then** that").
 
+<!-- TODO: this is not a great explanation as it uses the term "fact" which we don't explain. -->
 A rule in Polar takes the form `HEAD if BODY;` where `HEAD` must be a _fact_
 and `BODY` any number of _terms_. The meaning of a rule is that `HEAD` is true
 **if** each of the `BODY` terms is true. If there are be multiple rules with
@@ -373,7 +373,7 @@ so-and-so is true, then **cut** out all other alternatives.
 #### New
 
 The `new` operator is used to construct a new instance of an application class.
-(See [Application Types](guides/policies#application-types) for more about how to define and
+(See [Application Types](guides/policies#instances-and-fields) for more about how to define and
 register application classes.) The name of the class to instantiate comes next,
 followed by a set of initialization arguments that are passed to the class’s
 constructor:
@@ -523,7 +523,7 @@ has_first_name(user: User, name) if user.name = name;
 Now, the `first_name` rule can be used with instances of the `User` or `Person`
 type.
 
-For more on this feature, see [Application Types](guides/policies#application-types).
+For more on this feature, see [Application Types](guides/policies#instances-and-fields).
 
 #### Patterns
 
@@ -573,6 +573,25 @@ pattern matching. This operator can be used anywhere within a rule body to
 perform a match. The same operation is used by the engine to test whether a
 rule argument matches the specializer.
 
+#### Actor and Resource Specializers
+
+Oso provides built-in specializers that will match any
+application type that has been declared via an [actor or resource block](#actor-and-resource-blocks).
+
+The `Actor` specializer will match any application type that has been declared via an `actor` block,
+and `Resource` will match types declared via `resource` blocks.
+
+E.g., the following is a valid head for an `allow` rule:
+
+```polar
+allow(actor: Actor, action, resource: Resource) if ...
+```
+
+Because of this, attempts to register application types named `Actor` or
+`Resource` will result in an error.
+
+`Actor` and `Resource` specializers are used by Oso's built-in [rule types](#rule-types) to validate policies.
+
 ### Inline Queries (`?=`)
 
 Queries can also be added to Polar files and will run when the file is loaded.
@@ -586,3 +605,270 @@ To add an inline query to a Polar file, use the `?=` operator:
 ```
 
 An inline query is only valid at the beginning of a line.
+
+### Rule Types
+
+A rule type specifies the _shape_ of a rule — its number of arguments and, optionally, the type of each argument. If a rule type exists for `has_permission()`, then all `has_permission()` rules must conform to the rule type.
+Rule types have the same syntax as rule heads and are preceded by the keyword `type`:
+
+```polar
+type has_permission(actor: Actor, action: String, resource: Resource);
+```
+
+The above rule type specifies that any rule with the name `has_permission` must have three arguments where the first argument matches `Actor`, the second argument matches `String`, and the third argument matches `Resource`.
+
+Argument matching is determined in the same way that matching is determined for rule evaluation. See [Patterns and Matching](#patterns-and-matching).
+
+Rule types are optional. If a rule type exists with the same name as a rule, then the rule must match that type or else an error will be thrown when the policy is loaded.
+If multiple rule types are defined for the same rule name, then a rule need only match one type to be valid.
+
+You can find a reference for built-in rule types [here](reference/polar/builtin_rule_types).
+
+## Actor and Resource Blocks
+
+Actor and resource blocks provide a way to organize authorization logic by application type.
+These blocks are especially useful for expressing role-based access control logic.
+
+
+The simplest form of a block looks like this:
+
+```polar
+# Actor block
+actor User {}
+
+# Resource block
+resource Repository {}
+```
+
+In the above example, `User` and `Repository` must be registered [application types](classes).
+
+Inside of a block, you can declare [permissions](#permission-declarations), [roles](#role-declarations), and [relations](#relation-declarations) and write [shorthand rules](#shorthand-rules).
+
+A more complete block looks like this:
+
+{{< literalInclude dynPath="rolesPolicyPath"
+                   from="docs: blocks-start"
+                   to="docs: blocks-end" >}}
+
+<!--
+TODO: should we add the data-linking rules here too? I'm thinking in case
+someone just copies and pastes this whole thing
+-->
+
+Once you have declared a block, you can use the built-in [`Actor` and `Resource`
+specializers](#actor-and-resource-specializers) to match all types declared as actors or
+resources, respectively.
+
+### Permission Declarations
+
+You can specify the permissions that are available for an actor or resource type using the following syntax:
+
+
+{{< code codeLang="polar" hl_lines="2">}}
+resource Repository {
+  permissions = ["read", "push"];
+}
+{{< /code >}}
+
+Permissions are always strings. You must declare permissions in order to use them in [shorthand rules](#shorthand-rules).
+
+### Role Declarations
+
+You can specify the roles that are available for an actor or resource type using the following syntax:
+
+{{< code codeLang="polar" hl_lines="2">}}
+resource Repository {
+  roles = ["contributor", "maintainer", "admin"];
+}
+{{< /code >}}
+
+Roles are always strings. You must declare roles in order to use them in [shorthand rules](#shorthand-rules).
+
+In order to use roles, you must write at least one `has_role` rule that gets
+user-role assignments stored in your application. This rule takes the following
+form:
+
+```polar
+has_role(actor: Actor, name: String, resource: Resource) if ...
+```
+
+For example:
+
+```polar
+# User-role assignment hook - required when using roles
+has_role(user: User, name: String, repo: Repository) if
+  # Look up user-role assignments from application, e.g.
+  role in user.roles and
+  role.repo_id = repo.id;
+```
+
+The `name` argument corresponds to the role names in the declaration list. The
+`has_role` rule must handle every declared role name, otherwise you may encounter application errors or unexpected policy behavior.
+### Relation Declarations
+
+You can specify relations between actor/resource types using the following syntax:
+
+{{< code codeLang="polar" hl_lines="2">}}
+resource Repository {
+  relations = { parent: Organization };
+}
+{{< /code >}}
+
+Relations are `key: value` pairs where the key is the relation name and the value is the type of the related object.
+Related object types must also be declared in resource or actor blocks.
+
+In order to use relations, you must write a `has_relation` rule that gets relationship data from your application. This rule takes the following form:
+
+```polar
+has_relation(subject: Resource/Actor, name: String, object: Resource/Actor) if ...
+```
+
+The `object` argument is the resource or actor type on which the relation was declared.
+In the example above, the object type is `Repository` and the subject type is `Organization`.
+
+For example:
+
+```polar
+# Relation hook - required when using relations
+has_relation(parent_org: Organization, "parent", repo: Repository) if
+  # Look up parent-child relation from application, e.g.
+  parent_org = repo.organization;
+```
+
+`has_relation` rules must be defined for every declared relation.
+
+### Shorthand Rules
+
+Shorthand rules are concise rules that you can define inside actor and
+resource blocks using declared permissions, roles, and relations.
+
+For example,
+
+{{< literalInclude dynPath="rolesPolicyPath"
+                   from="docs: blocks-start"
+                   to="docs: blocks-end" >}}
+
+For shorthand rules to be evaluated by the Oso library, you must add the following rule to your policy:
+
+```polar
+allow(actor, action, resource) if has_permission(actor, action, resource);
+```
+
+This rule tells Oso to look for permissions that were granted through shorthand rules.
+
+#### Shorthand Rules Without Relations
+
+A shorthand rule has the basic form:
+
+```polar
+[result] if [condition];
+```
+
+Where `"result"` and `"condition"` can be [permissions](#permission-declarations) or [roles](#role-declarations) that were declared inside the same block.
+
+For example:
+
+```polar
+resource Repository {
+  permissions = ["read", "push"];
+  roles = ["contributor", "maintainer"];
+
+  "read" if "contributor";  # "contributor" role grants "read" permission
+  "push" if "maintainer";  # "maintainer" role grants "push" permission
+  "contributor" if "maintainer";  # "maintainer" role grants "contributor" role
+}
+```
+
+#### Shorthand Rules With Relations
+
+If you have [declared relations](#relation-declarations) inside a block, you can also write shorthand rules of this form:
+
+```polar
+[result] if [condition] on [relation];
+```
+
+where `result` and `condition` can be permissions or roles, and `relation` can be a relation.
+
+This form is used to grant results based on conditions on a related resource or
+actor. This form is commonly used with `"parent"` relations.
+
+For example,
+
+```polar
+resource Repository {
+  roles = ["contributor", "maintainer"];
+  relations = { parent: Organization };
+
+  "admin" if "owner" on "parent"  # "owner" role on parent Organization grants the "admin" role
+  "contributor" if "member" on "parent"  # "member" role on parent Organization grants "contributor" role
+}
+```
+
+### Shorthand Rule Expansion
+
+Shorthand rules are expanded to full Polar rules when they are loaded. The semantics of this expansion are as follows.
+
+#### Expansion without relation
+
+```polar
+$x if $y;
+=> rule1(actor: Actor, $x, resource: $Type) if rule2(actor, $y, resource);
+```
+
+where `rule1` and `rule2` are the expansions of `$x` and `$y` respectively.
+
+If `$x` is a [permission](#permission-declarations), then `rule1` will be
+`has_permission`. If `$x` is a [role](#role-declarations), then `rule1` will be
+`has_role`. The same semantics apply for `$y` and `$rule2`.
+
+The resource argument specializer `$Type` is determined by the enclosing [block definition](#actor-and-resource-blocks).
+E.g., if the rule is defined inside of `resource Repository {}`, then `$Type` will be `Repository`.
+
+For example,
+
+```polar
+# Shorthand rule
+resource Repository {
+  permissions = ["read"];
+  roles = ["contributor"];
+
+  "read" if "contributor";
+}
+
+# Expanded rule
+#                            "read"                        if                 "contributor"           ;
+#                              \/                                                  \/
+has_permission(actor: Actor, "read", resource: Repository) if has_role(actor, "contributor", resource);
+```
+
+
+#### Expansion with relation
+
+```polar
+$x if $y on $z;
+=> rule1(actor: Actor, $x, resource: $Type) if rule2(actor, $y, related) and has_relation(related, $z, resource);
+```
+
+where `rule1`, `rule2`, and `has_relation` are the expansions of `$x`, `$y`, and `$z` respectively.
+
+The expansion of `$x` to `rule1` and `$y` to `rule2` follow the same semantics as expansion without relation above.
+`$z` must always be a [declared relation](#relation-declarations) in the enclosing block.
+The `has_relation` rule is necessary in order to access the `related` object that `rule2` references.
+This expansion shows why it is necessary to define `has_relation` rules for every declared relation.
+
+
+For example:
+
+```polar
+resource Repository {
+  roles = ["admin"];
+  relations = {parent: Organization};
+
+  "admin" if "owner" on "parent";
+}
+
+# Expanded rule
+#                      "admin"                        if                 "owner"            on                        "parent"          ;
+#                        \/                                                \/        /------|-----------------\         \/
+has_role(actor: Actor, "admin", resource: Repository) if has_role(actor, "owner", related) and has_relation(related, "parent", resource);
+```

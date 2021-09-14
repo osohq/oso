@@ -233,7 +233,7 @@ organization. This is how you write that rule with Oso:
 
 {{< literalInclude
   dynPath="policy_path"
-  lines="21-25,36-43"
+  lines="22-26,37-45"
   hl_lines="4,8-9,12-13"
   ellipsis="  # ..."
 >}}
@@ -288,7 +288,7 @@ two resource types:
 
 {{< literalInclude
   dynPath="policy_path"
-  lines="21-25,36-38"
+  lines="22-26,37-39"
   hl_lines="4,8-9"
   ellipsis="  # ..."
 >}}
