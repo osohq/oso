@@ -7,7 +7,7 @@ JS_DIR := $(OSO_ROOT)/languages/js
 RUBY_DIR := $(OSO_ROOT)/languages/ruby
 
 # Needed for tests
-JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/oso/target/oso-0.20.0-beta.jar
+JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/oso/target/oso-0.20.1.jar
 
 export BUNDLE_GEMFILE := $(RUBY_DIR)/Gemfile
 
@@ -21,16 +21,13 @@ update-submodules:
 	git submodule update --checkout --init --recursive --remote
 	cd roles/sqlalchemy/basic && git checkout basic_roles_complete && git pull
 
-.PHONY: submodules update-submodules java-test java-test-abac java-test-context java-test-rbac
+.PHONY: submodules update-submodules java-test java-test-context java-test-rbac
 
 $(JAVA_PACKAGE_JAR_PATH):
 	$(MAKE) -C $(JAVA_DIR) package
 
 java-test-rbac: $(JAVA_PACKAGE_JAR_PATH)
 	cd rbac/java && javac -cp $(JAVA_PACKAGE_JAR_PATH):. TestApp.java && java -cp $(JAVA_PACKAGE_JAR_PATH):. TestApp
-
-java-test-abac: $(JAVA_PACKAGE_JAR_PATH)
-	cd abac/java && javac -cp $(JAVA_PACKAGE_JAR_PATH):. TestAbac.java && java -cp $(JAVA_PACKAGE_JAR_PATH):. TestAbac
 
 java-test-context: $(JAVA_PACKAGE_JAR_PATH)
 	# The way this test works for context is pretty sketchy.
@@ -40,11 +37,10 @@ java-test-context: $(JAVA_PACKAGE_JAR_PATH)
 	cd context/java && (ENV="production" java -cp $(JAVA_PACKAGE_JAR_PATH):. TestContext && exit 1 || exit 0)
 	@echo "Ignore that failure it actually worked!"
 
-java-test: java-test-abac java-test-context
+java-test: java-test-context
 
 python-test:
 	cd inheritance/python && pytest .
-	cd abac/python && pytest .
 	cd context/python && pytest .
 	cd user_types/python && pytest .
 	cd roles/sqlalchemy/basic && pip install -r requirements.txt && pytest .
@@ -52,14 +48,12 @@ python-test:
 	$(MAKE) -C data_access/sqlalchemy test
 
 ruby-test:
-	cd abac/ruby && bundle install --quiet && bundle exec rspec test_spec.rb
 	cd context/ruby && bundle install --quiet && bundle exec rspec test_spec.rb
 	cd inheritance/ruby && bundle install --quiet && bundle exec rspec test_spec.rb
 	cd user_types/ruby && bundle install --quiet && bundle exec rspec test_spec.rb
 
 nodejs-test:
 	$(MAKE) -C $(JS_DIR) build
-	cd abac/nodejs && yarn && yarn jest
 	cd context/nodejs && yarn && yarn jest
 	cd inheritance/nodejs && yarn && yarn jest
 	cd user_types/nodejs && yarn && yarn jest

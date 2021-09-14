@@ -136,12 +136,12 @@ module Oso
       # @return [self] for chaining.
       #
       # @deprecated {#load_file} has been deprecated in favor of {#load_files}
-      #   as of the 0.20.0 release. Please see changelog for migration
+      #   as of the 0.20 release. Please see changelog for migration
       #   instructions:
       #   https://docs.osohq.com/project/changelogs/2021-09-15.html
       def load_file(filename)
         warn <<~WARNING
-          `Oso#load_file` has been deprecated in favor of `Oso#load_files` as of the 0.20.0 release.
+          `Oso#load_file` has been deprecated in favor of `Oso#load_files` as of the 0.20 release.
 
           Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html
         WARNING
@@ -211,6 +211,10 @@ module Oso
       #
       # @param cls [Class] the class to register.
       # @param name [String] the name to register the class as. Defaults to the name of the class.
+      # @param fields [Hash] a map from field names on instances of +cls+ to types, or Relation objects.
+      # @param build_query [Proc] a method to produce a query for +cls+ objects, given a list of Filters.
+      # @param exec_query [Proc] a method to execute a query produced by +build_query+
+      # @param combine_query [Proc] a method to merge two queries produced by +build_query+
       # @raise [DuplicateClassAliasError] if attempting to register a class
       # under a previously-registered name.
       # @raise [FFI::Error] if the FFI call returns an error.

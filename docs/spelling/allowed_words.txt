@@ -25,6 +25,7 @@ Gradle
 GraphQL
 Graphene
 Halbert
+HTTP
 IAM
 IDEs
 JARs
@@ -54,6 +55,7 @@ RepoId
 RubyGems
 Rubying
 SLA
+SQL
 SQLAlchemy
 SQLAlchemy's
 SQLite
@@ -69,6 +71,7 @@ URIs
 VM
 VPN
 WASM
+Wayfair
 alice
 amongst
 anonymized
@@ -163,6 +166,7 @@ repo
 repositoryRoles
 roadmap
 roleName
+runnable
 runtime
 specializer
 specializers

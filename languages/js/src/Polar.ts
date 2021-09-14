@@ -163,12 +163,12 @@ export class Polar {
    * Load a Polar policy file.
    *
    * @deprecated `Oso.loadFile` has been deprecated in favor of `Oso.loadFiles`
-   * as of the 0.20.0 release. Please see changelog for migration instructions:
+   * as of the 0.20 release. Please see changelog for migration instructions:
    * https://docs.osohq.com/project/changelogs/2021-09-15.html
    */
   async loadFile(filename: string): Promise<void> {
     console.error(
-      '`Oso.loadFile` has been deprecated in favor of `Oso.loadFiles` as of the 0.20.0 release.\n\n' +
+      '`Oso.loadFile` has been deprecated in favor of `Oso.loadFiles` as of the 0.20 release.\n\n' +
         'Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html'
     );
     return this.loadFiles([filename]);
@@ -236,12 +236,6 @@ export class Polar {
     return this.query(new Predicate(name, args));
   }
 
-  setDataFilteringQueryDefaults({ buildQuery, execQuery, combineQuery }: any) {
-    if (buildQuery) this.#host.buildQuery = buildQuery;
-    if (execQuery) this.#host.execQuery = execQuery;
-    if (combineQuery) this.#host.combineQuery = combineQuery;
-  }
-
   /**
    * Query for a Polar rule, returning true if there are any results.
    */
@@ -261,7 +255,9 @@ export class Polar {
    * Accepted extra parameters are:
    * - name: Explicit name to use for the class in Polar.
    * - types: A map or object of string keys to type values, used for data filtering.
-   * - {build,combine,exec}Query: Query generating/executing callbacks for data filtering.
+   * - buildQuery: A function to produce a query for `cls` objects
+   * - execQuery: A function to execute a query produced by `buildQuery`
+   * - combineQuery: A function to merge two queries produced by `buildQuery`
    */
   registerClass<T>(cls: Class<T>, params?: any): void {
     const clsName = this.#host.cacheClass(cls, params);

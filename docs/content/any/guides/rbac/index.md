@@ -5,7 +5,8 @@ description: |
   Build role-based access control (RBAC) with Oso's built-in authorization
   modeling features.
 aliases:
-  - todo
+  - /guides/roles/index.html
+  - /guides/roles/sqlalchemy/index.html
 ---
 
 # Build Role-Based Access Control (RBAC)

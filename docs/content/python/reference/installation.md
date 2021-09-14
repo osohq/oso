@@ -37,11 +37,3 @@ $ pip install oso=={{< version >}}
 
 Oso also provides [libraries](frameworks) to integrate with popular Python
 frameworks and ORMS.
-
-{{% callout "Adding roles to your application?" "blue" %}}
-
-We just released the next version of the Oso Roles feature.
-
-[Check it out here!](/guides/roles/)
-
-{{% /callout %}}

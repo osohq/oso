@@ -111,9 +111,14 @@ class Polar:
         self._load_sources(sources)
 
     def load_file(self, filename: Union[Path, str]):
-        """Load Polar policy from a ".polar" file."""
+        """Load Polar policy from a ".polar" file.
+
+        `Oso.load_file` has been deprecated in favor of `Oso.load_files` as of
+        the 0.20 release. Please see changelog for migration instructions:
+        https://docs.osohq.com/project/changelogs/2021-09-15.html
+        """
         print(
-            "`Oso.load_file` has been deprecated in favor of `Oso.load_files` as of the 0.20.0 release.\n\n"
+            "`Oso.load_file` has been deprecated in favor of `Oso.load_files` as of the 0.20 release.\n\n"
             + "Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html",
             file=sys.stderr,
         )
@@ -235,7 +240,23 @@ class Polar:
         exec_query=None,
         combine_query=None
     ):
-        """Register `cls` as a class accessible by Polar."""
+        """
+        Register `cls` as a class accessible by Polar.
+
+        :param name:
+            Optionally specify the name for the class inside of Polar. Defaults
+            to `cls.__name__`
+        :param types:
+            Optional dict mapping field names to types or Relation objects for
+            data filtering.
+        :param build_query:
+            Optional function to generate a query for resources of type `cls`
+            from a list of Filters.
+        :param exec_query:
+            Optional function to execute a query produced by `build_query`.
+        :param combine_query:
+            Optional function to merge two queries produced by `build_query`.
+        """
         # TODO: let's add example usage here or at least a proper docstring for the arguments
         cls_name = self.host.cache_class(
             cls,
@@ -257,16 +278,6 @@ class Polar:
         :raises UnregisteredClassError: If the class is not registered.
         """
         return self.host.get_class(name)
-
-    def set_data_filtering_query_defaults(
-        self, build_query=None, exec_query=None, combine_query=None
-    ):
-        if build_query is not None:
-            self.host.build_query = build_query
-        if exec_query is not None:
-            self.host.exec_query = exec_query
-        if combine_query is not None:
-            self.host.combine_query = combine_query
 
 
 def polar_class(_cls=None, *, name=None):
