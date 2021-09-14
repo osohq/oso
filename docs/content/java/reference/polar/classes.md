@@ -20,7 +20,7 @@ More detailed examples of working with application classes can be found in our
 
 You may pass an instance of any Java class into Oso and access its methods and
 fields from your policy (see [Application
-Types](getting-started/policies#application-types)).
+Types](guides/policies#application-types)).
 
 Java instances can be constructed from within an Oso policy using the
 [`new`](polar-syntax#new) operator:

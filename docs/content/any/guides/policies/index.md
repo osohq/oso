@@ -4,6 +4,7 @@ weight: 3
 any: true
 aliases:
   - ../getting-started/policies/index.html
+  - ../getting-started/policies.html
   - ../learn/policies.html
 description: Learn about writing Oso policies - the source of truth for authorization logic.
 ---
@@ -60,8 +61,8 @@ as a simple declarative sentence of English (or other natural language),
 it should be straightforward to turn into a Polar rule.
 
 If you're unsure of what _kind_ of authorization policy to write,
-you may want to head over to the [Conceptual Guides](learn) or
-start with a familiar pattern such as [roles](/learn/roles).
+you may want to head over to the [Conceptual Guides](guides) or
+start with a familiar pattern such as [roles](/guides/rbac).
 This tutorial will not be concerned with a specific kind of policy,
 but rather with the language in which many different kinds of
 policies may be expressed.
@@ -144,7 +145,7 @@ let's take a moment to put them in context. Rules are loaded into
 a **knowledge base**, a kind of specialized in-memory database that
 supports **queries** by pattern matching and logical inference.
 
-![Oso Architecture](getting-started/policies/arch.svg)
+![Oso Architecture](guides/policies/arch.svg)
 
 To determine whether a given argument tuple is authorized,
 the Oso library issues a query to the knowledge base.

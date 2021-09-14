@@ -135,8 +135,7 @@ allowed to take more actions on the repository than Sully.
 With this relatively straightforward policy, it's easy to trace where
 the users' allowed actions come from. But `Oso.get_allowed_actions()`
 can be especially powerful with more complicated policies. For example,
-if we used Oso's [SQLAlchemy Roles library
-features](guides/roles/sqlalchemy),
+if we used Oso's [roles](guides/rbac),
 we could have a policy that looks like this instead:
 
 ```polar
@@ -165,8 +164,7 @@ resource(_type: Repository, "repo", actions, roles) if
 Now the users' allowed actions depend on their assigned roles for both
 the repository and the parent organization, as well as the hierarchy of
 the repository roles (for more information on implementing RBAC with
-Oso, [check out our
-guide](/learn/roles)).
+Oso, [check out our guide](/guides/rbac)).
 
 Even with this more complicated policy, we'll still get the correct
 allowed actions for Mike and Sully.

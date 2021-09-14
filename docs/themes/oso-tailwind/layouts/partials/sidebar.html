@@ -32,6 +32,11 @@
                 </div>
                 {{ $currentNode := . }}
                 <ul>
+                    <li class="pl-2 font-bold text-black"><a href="">
+                        <a class="flex items-center px-3" href="{{ $.Site.BaseURL }}index.html">
+                            Home
+                        </a>
+                    </li>
                     {{ template "tree-nav" dict "sect" (.GetPage "/introduction") "currentNode" $currentNode "level" 0}}
                     {{ range .Site.Home.Sections.ByWeight }}
                     {{ template "tree-nav" dict "sect" . "currentNode" $currentNode "level" 0 "alwaysShow" 0 }}

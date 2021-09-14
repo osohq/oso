@@ -51,7 +51,7 @@ We can now write a simple policy over these actor types:
                    to="simple-end" >}}
 
 This policy uses [specialized
-rules](getting-started/policies#registering-application-types) to control rules
+rules](guides/policies#registering-application-types) to control rules
 execution based on the actor type that is passed into the authorization
 request.
 

@@ -23,12 +23,12 @@ More detailed examples of working with application objects can be found in our
 ### Class Instances
 
 You can pass any Ruby instance into Oso and access its methods and fields from
-your policy (see [Application Types](getting-started/policies#application-types)).
+your policy (see [Application Types](guides/policies#application-types)).
 
 Ruby instances can be constructed from inside an Oso policy using the [`new`
 operator](polar-syntax#new) if the Ruby class has been **registered** using the
 `Oso#register_class` method. An example of this can be found
-[here](getting-started/policies#application-types).
+[here](guides/policies#application-types).
 
 ### Numbers and Booleans
 
