@@ -15,11 +15,13 @@ Common examples of resource hierarchies include:
 
 
 You can model resource hierarchies in Oso by defining *relations* between resources.
-You can write policies that use relations and query them to find out if a user has access to a single resource or to get a list of resources that a user has access to (using our data filtering feature).
+You can write policies that use relations and query them to find out if a user has access to a single resource or to get a list of resources that a user has access to (using the [data filtering](guides/data_filtering) feature).
 
-This guide uses an example resource hierarchy from our GitClub sample application.
+This guide uses an example resource hierarchy from our [GitClub][] sample application.
 In GitClub, `Organization` is the top-level resource, and `Repository` resources are nested within organizations.
 Users have roles at both the organization and repository level. A user's organization role grants them a default role on every repository within that organization.
+
+[GitClub]: https://github.com/osohq/gitclub
 
 ## 1. Register resource types and relations
 
