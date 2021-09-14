@@ -2,12 +2,21 @@
 {{- partial "sidebar.html" . -}}
 <div class="md:w-4/5 lg:w-3/5 lg:mx-0 mx-auto pt-12">
     <div class="w-full md:mt-6 lg:mt-0 lg:mx-10 text-black">
-        <h1 class="text-4xl font-bold pb-8 text-center">Batteries-Included Framework for Application Authorization</h1>
+        <h1 class="text-2xl font-bold pb-8 text-center">Batteries-Included Framework for Application Authorization</h1>
         <div class="prose max-w-none min-w-0 flex-auto px-4 sm:px-6 xl:px-8 pb-24 lg:pb-16">
             {{ .Content }}
         </div>
-        <div style="display: block; height: 500px;">
-            <p>Widget here</p>
+        <div style="display: block; height: 500px;" class="section pb-4">
+            <div id="oso-web-demo">
+            </div>
+        </div>
+        <div class="flex justify-center mt-4">
+            <a class="button btn btn-blue text-base mr-6" href={{ ref . "getting-started/quickstart" }}>
+                Try Oso
+            </a>
+            <a class="button btn btn-blue text-base" href={{ ref . "getting-started/application" }}>
+                Add to Your App
+            </a>
         </div>
     </div>
 </div>
