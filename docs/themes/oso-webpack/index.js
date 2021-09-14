@@ -1,5 +1,5 @@
-import {postIntegrationRequest, postFeedback} from './backend';
-import {get, set} from './localStorage';
+import { postIntegrationRequest, postFeedback } from './backend';
+import { get, set } from './localStorage';
 
 import('monaco-editor-core').then(monaco => {
   // Monokai colors
@@ -28,6 +28,10 @@ import('monaco-editor-core').then(monaco => {
 
   monaco.languages.setMonarchTokensProvider('polar', {
     keywords: [
+      'type',
+      // TODO: want to make these keywords, but then variables named 'resource' are highlighted
+      //'resource',
+      //'actor',
       'and',
       'cut',
       'debug',
@@ -342,37 +346,41 @@ function setRequestedIntegrations() {
 function setRequestedIntegration(integration) {
   const buttonId = `request-button-${integration}`;
   const el = document.getElementById(buttonId);
-  el.innerText = "Requested!"
+  el.innerText = 'Requested!';
   el.setAttribute('disabled', '');
 }
 
 window.onRequestIntegration = function(integration) {
-  postIntegrationRequest(integration)
-    .then(() => {
-      let requestedIntegrations = JSON.parse(get(REQUESTED_INTEGRATIONS_KEY));
-      if (requestedIntegrations) {
-        requestedIntegrations.push(integration);
-      } else {
-        requestedIntegrations = [integration];
-      }
-      set(REQUESTED_INTEGRATIONS_KEY, JSON.stringify(requestedIntegrations));
+  postIntegrationRequest(integration).then(() => {
+    let requestedIntegrations = JSON.parse(get(REQUESTED_INTEGRATIONS_KEY));
+    if (requestedIntegrations) {
+      requestedIntegrations.push(integration);
+    } else {
+      requestedIntegrations = [integration];
+    }
+    set(REQUESTED_INTEGRATIONS_KEY, JSON.stringify(requestedIntegrations));
 
-      setRequestedIntegration(integration);
-    });
-}
+    setRequestedIntegration(integration);
+  });
+};
 
 function makePromptsUnselectable() {
   const languages = ['bash', 'console'];
   languages.forEach(l => {
-    const els = document.querySelectorAll(`code.language-${l}[data-lang="${l}"]`);
+    const els = document.querySelectorAll(
+      `code.language-${l}[data-lang="${l}"]`
+    );
     els.forEach(el => {
-      const newHtml = el.innerHTML.replace(/^\$ /gm, '<span style="user-select:none">$ </span>');
+      const newHtml = el.innerHTML.replace(
+        /^\$ /gm,
+        '<span style="user-select:none">$ </span>'
+      );
       el.innerHTML = newHtml;
     });
-  })
-};
+  });
+}
 
-window.recordFeedback = (isUp) => {
+window.recordFeedback = isUp => {
   postFeedback(isUp).then(() => {
     const upEl = document.getElementById('feedback-up');
     const downEl = document.getElementById('feedback-down');
@@ -385,3 +393,67 @@ window.recordFeedback = (isUp) => {
     }
   });
 }
+
+// Support for code tab groups -- hacks ahead!
+window.addEventListener("load", () => {
+  const unique = (array) => [...new Set(array)];
+
+  const tabGroupDivs = Array.from(
+    document.querySelectorAll("div[data-tabgroup]")
+  );
+
+  let tabGroups = tabGroupDivs.map(
+    (div) => div.attributes["data-tabgroup"].value
+  );
+  tabGroups = unique(tabGroups);
+
+  for (const tabGroup of tabGroups) {
+    const codeBlocks = document.querySelectorAll(
+      `div.code[data-tabgroup='${tabGroup}'`
+    );
+    const first = codeBlocks[0];
+    // tabGroupContainer is the full containing div, and replaces the first code
+    // block in the tabGroup
+    const tabGroupContainer = document.createElement("div");
+    tabGroupContainer.className = "code";
+    first.parentNode.insertBefore(tabGroupContainer, first);
+    // tabContainer contains the clickable tabs
+    const tabContainer = document.createElement("div");
+    // codeContainer contains the, well, code
+    const codeContainer = document.createElement("div");
+    codeContainer.className = "tab-group-code";
+    tabGroupContainer.appendChild(tabContainer);
+    tabGroupContainer.appendChild(codeContainer);
+    tabContainer.className = "tab-group-tabs";
+
+    const pres = Array.from(codeBlocks).map((div) => div.querySelector("pre"));
+    const filenames = Array.from(codeBlocks).map((div) => {
+      const newDiv = document.createElement("div");
+      newDiv.replaceChildren(...div.querySelector(".filename").childNodes);
+      return newDiv;
+    });
+
+    codeBlocks.forEach((block) => block.remove());
+    tabContainer.replaceChildren(...filenames);
+
+    function unselectFilename(filename) {
+      filename.className = "tab-group-tab";
+    }
+
+    function selectFilename(filename) {
+      filename.className = "tab-group-tab selected";
+    }
+
+    function select(selectedIndex) {
+      filenames.forEach(unselectFilename);
+      selectFilename(filenames[selectedIndex]);
+      codeContainer.replaceChildren(pres[selectedIndex]);
+    }
+
+    filenames.forEach((filename, i) => {
+      filename.addEventListener("click", () => select(i));
+    });
+
+    select(0);
+  }
+});

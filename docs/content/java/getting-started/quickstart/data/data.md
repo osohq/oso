@@ -1,20 +1,22 @@
 ---
-githubApp: "[Java sample app](https://github.com/osohq/oso-java-quickstart)"
-githubURL: "https://github.com/osohq/oso-java-quickstart.git"
-installation: |
-    Go to the [Maven Repository](https://search.maven.org/artifact/com.osohq/oso)
-    to install Oso.
-    Either add Oso as a dependency to your build system, or download
-    the latest JAR file and add it to your Java project libraries.
-
-    Once you have Oso installed, run `Server.java`.
-amount: amount
-manager: manager
-submitted_by: submittedBy
-endswith: endsWith
-endswithURL: >
-   [the `String.endsWith` method](https://docs.oracle.com/javase/10/docs/api/java/lang/String.html#endsWith(java.lang.String))
-expensesPath1: examples/quickstart/polar/expenses-01-java.polar
-expensesPath2: examples/quickstart/polar/expenses-02-java.polar
-isAllowed: isAllowed
+githubUrl: "https://github.com/osohq/oso-java-quickstart"
+githubCloneUrl: "https://github.com/osohq/oso-java-quickstart.git"
+repoName: oso-java-quickstart
+mainPolarFile: "examples/quickstart/java/src/main/java/quickstart/main.polar"
+serverFile: "examples/quickstart/java/src/main/java/quickstart/Server.java"
+modelFile: "examples/quickstart/java/src/main/java/quickstart/Models.java"
+polarFileRelative: "main.polar"
+serverFileRelative: "Server.java"
+modelFileRelative: "Models.java"
+installDependencies: "mvn install # requires maven to be installed!"
+startServer: mvn clean package exec:java -Dexec.mainClass="quickstart.Server"
+osoAuthorize: oso.authorize()
+isPublic: isPublic
+hasRole: |-
+  has_role(actor: User, role_name: String, repository: Repository) if
+    role in actor.roles and
+    role_name = role.name and
+    repository = role.repository;
+endpoint: the `/repo/{name}` route
+port: 5000
 ---
