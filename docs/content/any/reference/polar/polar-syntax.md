@@ -581,7 +581,7 @@ application type that has been declared via an [actor or resource block](#actor-
 The `Actor` specializer will match any application type that has been declared via an `actor` block,
 and `Resource` will match types declared via `resource` blocks.
 
-E.g.,
+E.g., the following is a valid head for an `allow` rule:
 
 ```polar
 allow(actor: Actor, action, resource: Resource) if ...
