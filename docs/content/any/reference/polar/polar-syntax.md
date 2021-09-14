@@ -590,7 +590,7 @@ allow(actor: Actor, action, resource: Resource) if ...
 Because of this, attempts to register application types named `Actor` or
 `Resource` will result in an error.
 
-Actor and resource specializers are used by Oso's built-in [rule types](#rule-types) to validate policies.
+`Actor` and `Resource` specializers are used by Oso's built-in [rule types](#rule-types) to validate policies.
 
 ### Inline Queries (`?=`)
 
@@ -609,25 +609,23 @@ An inline query is only valid at the beginning of a line.
 ### Rule Types
 
 A rule type is simply the declaration of a rule that specifies the rule's name, arguments and argument types or values.
-Rule types have the same syntax as rule head, and are preceded by the keyword `type`.
-
-For example,
+Rule types have the same syntax as rule heads and are preceded by the keyword `type`:
 
 ```polar
 type has_permission(actor: Actor, action: String, resource: Resource);
 ```
 
-The above rule type specifies that any rule with the name `has_permission` must have three arguments, where the first argument matches `Actor`, the second argument matches `String`, and the third argument matches `Resource`.
+The above rule type specifies that any rule with the name `has_permission` must have three arguments where the first argument matches `Actor`, the second argument matches `String`, and the third argument matches `Resource`.
 
 Argument matching is determined in the same way that matching is determined for rule evaluation. See [Patterns and Matching](#patterns-and-matching).
 
-Rule types are optional. If a rule type exists with the same name as a rule, then the rule must match that type or else an error will be thrown at policy load-time.
+Rule types are optional. If a rule type exists with the same name as a rule, then the rule must match that type or else an error will be thrown when the policy is loaded.
 
 You can find a reference for built-in rule types [here](reference/polar/builtin_rule_types).
 
 ## Actor and Resource Blocks
 
-Actor and Resource Blocks provide a way to organize policies by actor and resource types.
+Actor and resource blocks provide a way to organize authorization logic by application type.
 These blocks are especially useful for expressing role-based access control logic.
 
 
@@ -650,13 +648,13 @@ A more complete block looks like this:
 {{< code codeLang="polar">}}
 resource Repository {
   ### Permission, role, and relation declarations ###
-  permissions = ["read", "push"];  # permissions that can be granted for the actor or resource
-  roles = ["contributor", "maintainer", "admin"];  # roles that can be assigned for the actor or resource
+  permissions = ["read", "push"];  # permissions that can be granted for the resource
+  roles = ["contributor", "maintainer", "admin"];  # roles that can be assigned for the resource
   relations = { parent: Organization };  # relations to other actors/resources
 
   ### Shorthand Rules ###
   "read" if "contributor"  # "contributor" role grants the "read" permission
-  "push" if "maintainer"  # "member" role grants the "read" permission
+  "push" if "maintainer"  # "maintainer" role grants the "push" permission
   "maintainer" if "admin"  # "admin" role grants the "maintainer" role
 }
 {{< /code >}}
@@ -665,9 +663,9 @@ TODO: should we add the data-linking rules here too? I'm thinking in case
 someone just copies and pastes this whole thing
 -->
 
-Once you have declared a block, you can use the built-in [Actor and Resource
-specializers](#actor-and-resource-specializers) to match all declared actor and
-resource types.
+Once you have declared a block, you can use the built-in [`Actor` and `Resource`
+specializers](#actor-and-resource-specializers) to match all types declared as actors or
+resources, respectively.
 
 ### Permission Declarations
 
@@ -679,7 +677,7 @@ resource Repository {
 }
 {{< /code >}}
 
-Permissions are always Strings. You must declare permissions in order to use them in [shorthand rules](#shorthand-rules).
+Permissions are always strings. You must declare permissions in order to use them in [shorthand rules](#shorthand-rules).
 
 ### Role Declarations
 
@@ -691,7 +689,7 @@ resource Repository {
 }
 {{< /code >}}
 
-Roles are always Strings. You must declare roles in order to use them in [shorthand rules](#shorthand-rules).
+Roles are always strings. You must declare roles in order to use them in [shorthand rules](#shorthand-rules).
 
 In order to use roles, you must write at least one `has_role` rule that gets
 user-role assignments stored in your application. This rule takes the following
@@ -701,7 +699,7 @@ form:
 has_role(actor: Actor, name: String, resource: Resource) if ...
 ```
 
-For example,
+For example:
 
 ```polar
 # User-role assignment hook - required when using roles
@@ -736,13 +734,13 @@ has_relation(subject: Resource/Actor, name: String, object: Resource/Actor) if .
 The `object` argument is the resource or actor type on which the relation was declared.
 In the example above, the object type is `Repository` and the subject type is `Organization`.
 
-For example,
+For example:
 
 ```polar
 # Relation hook - required when using relations
 has_relation(parent_org: Organization, "parent", repo: Repository) if
   # Look up parent-child relation from application, e.g.
-  parent_org = repo.org;
+  parent_org = repo.organization;
 ```
 
 `has_relation` rules must be defined for every declared relation.
@@ -789,7 +787,7 @@ A shorthand rule has the basic form:
 
 Where `"result"` and `"condition"` can be [permissions](#permission-declarations) or [roles](#role-declarations) that were declared inside the same block.
 
-For example,
+For example:
 
 ```polar
 resource Repository {
@@ -865,14 +863,14 @@ has_permission(actor: Actor, "read", resource: Repository) if has_role(actor, "c
 ```
 
 
-# Expansion with relation
+#### Expansion with relation
 
 ```polar
 $x if $y on $z;
 => rule1(actor: Actor, $x, resource: $Type) if rule2(actor, $y, related) and has_relation(related, $z, resource);
 ```
 
-where `rule1`, `rule2`, and `relation` are the expansions of `$x`, `$y`, and `$z` respectively.
+where `rule1`, `rule2`, and `has_relation` are the expansions of `$x`, `$y`, and `$z` respectively.
 
 The expansion of `$x` to `rule1` and `$y` to `rule2` follow the same semantics as expansion without relation above.
 `$z` must always be a [declared relation](#relation-declarations) in the enclosing block.
@@ -880,7 +878,7 @@ The `has_relation` rule is necessary in order to access the `related` object tha
 This expansion shows why it is necessary to define `has_relation` rules for every declared relation.
 
 
-For example,
+For example:
 
 ```polar
 resource Repository {
@@ -894,48 +892,3 @@ resource Repository {
 #                        \/                                                \/        /------|-----------------\         \/
 has_role(actor: Actor, "admin", resource: Repository) if has_role(actor, "owner", related) and has_relation(related, "parent", resource);
 ```
-
-
-
-
-
-<!-- There are three kinds of shorthand rules:
-OLD
----
-### Built-in `Actor` and `Resource` specializers
-
-Once you have declared a block, you can use the built-in `Actor` and `Resource` specializers
-to match all declared actor and resource types.
-
-E.g., `allow(actor: Actor, action, resource: Resource) if ...` will only match
-when called with instances of `MyActor` and `MyResource` in the above example.
-
-1. Grant a permission with a role.
-
-```polar
-[permission] if [role];
-```
-This rule says that an actor has `permission` on the resource if they have `role` for the same resource, e.g.
-```polar
-resource Repository {
-  permissions = ["read"];
-  roles = ["contributor"];
-
-  "read" if "contributor";
-}
-```
-
-2. Grant a role with another role.
-
-```polar
-[roleA] if [roleB];
-```
-This rule says that an actor has `roleA` on the resource if they have `roleB` for the same resource, e.g.
-
-```polar
-resource Repository {
-  roles = ["contributor", "maintainer"];
-
-  "contributor" if "maintainer";
-}
-``` -->
