@@ -3,6 +3,8 @@ title: Ruby Types in Polar
 weight: 2
 aliases:
   - /using/libraries/ruby/index.html
+description: |
+  Reference for using Ruby types in Polar.
 ---
 
 [rb-array]: https://ruby-doc.org/core/Array.html
@@ -23,12 +25,12 @@ More detailed examples of working with application objects can be found in our
 ### Class Instances
 
 You can pass any Ruby instance into Oso and access its methods and fields from
-your policy (see [Application Types](guides/policies#application-types)).
+your policy (see [Application Types](guides/policies#instances-and-fields)).
 
 Ruby instances can be constructed from inside an Oso policy using the [`new`
 operator](polar-syntax#new) if the Ruby class has been **registered** using the
 `Oso#register_class` method. An example of this can be found
-[here](guides/policies#application-types).
+[here](guides/policies#instances-and-fields).
 
 ### Numbers and Booleans
 
