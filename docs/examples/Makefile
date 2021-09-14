@@ -68,6 +68,7 @@ test-quickstarts: submodules
 	$(MAKE) -C quickstart test
 
 test:
+	$(MAKE) -C add-to-your-application test
 	$(MAKE) -C rbac test
 	$(MAKE) python-test
 	$(MAKE) ruby-test

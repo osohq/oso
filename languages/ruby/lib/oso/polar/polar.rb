@@ -136,12 +136,12 @@ module Oso
       # @return [self] for chaining.
       #
       # @deprecated {#load_file} has been deprecated in favor of {#load_files}
-      #   as of the 0.20.0 release. Please see changelog for migration
+      #   as of the 0.20 release. Please see changelog for migration
       #   instructions:
       #   https://docs.osohq.com/project/changelogs/2021-09-15.html
       def load_file(filename)
         warn <<~WARNING
-          `Oso#load_file` has been deprecated in favor of `Oso#load_files` as of the 0.20.0 release.
+          `Oso#load_file` has been deprecated in favor of `Oso#load_files` as of the 0.20 release.
 
           Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html
         WARNING

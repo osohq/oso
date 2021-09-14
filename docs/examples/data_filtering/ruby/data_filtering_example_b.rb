@@ -1,3 +1,4 @@
+# docs: begin-b1
 require 'active_record'
 require 'sqlite3'
 require 'oso'
@@ -30,29 +31,6 @@ class RepoRole < ActiveRecord::Base
   include QueryConfig
   belongs_to :user
   belongs_to :repository, foreign_key: :repo_id
-end
-
-def example
-  init_db
-  oso = init_oso
-
-  osohq = Organization.create id: 'osohq'
-  apple = Organization.create id: 'apple'
-
-  ios = Repository.create id: 'ios', organization: apple
-  oso_repo = Repository.create id: 'oso', organization: osohq
-  demo_repo = Repository.create id: 'demo', organization: osohq
-
-  leina = User.create id: 'leina'
-  steve = User.create id: 'steve'
-
-  OrgRole.create user: leina, organization: osohq, name: 'owner'
-
-  oso.load_files(['policy_b.polar'])
-
-  results = oso.authorized_resources(leina, 'read', Repository)
-  raise unless results == [oso_repo, demo_repo]
-  puts "ok"
 end
 
 def init_db
@@ -101,46 +79,9 @@ def init_db
     database: DB_FILE
   )
 end
+# docs: end-b1
 
-def init_oso
-  oso = Oso.new
-
-  oso.register_class(
-    Organization,
-    fields: { id: String }
-  )
-
-  oso.register_class(
-    Repository,
-    fields: {
-      id: String,
-      organization: Relation.new(
-        kind: 'one',
-        other_type: Organization,
-        my_field: 'org_id',
-        other_field: 'id'
-      )
-    }
-  )
-
-  oso.register_class(
-    User,
-    fields: { id: String, }
-  )
-
-  oso.register_class(
-    RepoRole,
-    fields: { name: String, }
-  )
-
-  oso.register_class(
-    OrgRole,
-    fields: { name: String, }
-  )
-
-  oso
-end
-
+# docs: begin-b2
 module QueryConfig
   def self.included(base)
     base.instance_eval do
@@ -188,4 +129,71 @@ module QueryConfig
   end
 end
 
+def init_oso
+  oso = Oso.new
+
+  oso.register_class(
+    Organization,
+    fields: { id: String }
+  )
+
+  oso.register_class(
+    Repository,
+    fields: {
+      id: String,
+      organization: Relation.new(
+        kind: 'one',
+        other_type: Organization,
+        my_field: 'org_id',
+        other_field: 'id'
+      )
+    }
+  )
+
+  oso.register_class(
+    User,
+    fields: { id: String, }
+  )
+
+  oso.register_class(
+    RepoRole,
+    fields: { name: String, }
+  )
+
+  oso.register_class(
+    OrgRole,
+    fields: { name: String, }
+  )
+
+  oso
+end
+
+# docs: end-b2
+
+# docs: begin-b3
+
+def example
+  init_db
+  oso = init_oso
+
+  osohq = Organization.create id: 'osohq'
+  apple = Organization.create id: 'apple'
+
+  ios = Repository.create id: 'ios', organization: apple
+  oso_repo = Repository.create id: 'oso', organization: osohq
+  demo_repo = Repository.create id: 'demo', organization: osohq
+
+  leina = User.create id: 'leina'
+  steve = User.create id: 'steve'
+
+  OrgRole.create user: leina, organization: osohq, name: 'owner'
+
+  oso.load_files(['policy_b.polar'])
+
+  results = oso.authorized_resources(leina, 'read', Repository)
+  raise unless results == [oso_repo, demo_repo]
+  puts "ok"
+end
+
 example
+# docs: end-b3

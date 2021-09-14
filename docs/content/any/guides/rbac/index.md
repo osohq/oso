@@ -44,10 +44,8 @@ resource Repository {}
 
 Our app also has a `User` type that will be our lone type of **actor**:
 
-<!-- TODO(gj): remove fallback when all example apps complete -->
 {{% literalInclude
   dynPath="policy_path"
-  fallback="register"
   from="docs: begin-actor"
   to="docs: end-actor"
 %}}
@@ -60,10 +58,8 @@ particular type.
 {{% callout "Note" "blue" %}}
   For every resource block, we also need to register the type with Oso:
 
-  <!-- TODO(gj): remove fallback when all example apps complete -->
   {{< literalInclude
     dynPath="app_path"
-    fallback="register"
     from="docs: begin-setup"
     to="docs: end-setup"
     hlFrom="docs: begin-register"
@@ -176,10 +172,8 @@ The main question Oso asks is: does `User("Ariana")` have the `"maintainer"` rol
 on `Repository("Acme App")`? For Oso to be able to ask this question, we need to
 implement a `has_role()` rule in the policy:
 
-<!-- TODO(gj): remove fallback when all example apps complete -->
 {{< literalInclude
   dynPath="policy_path"
-  fallback="register"
   from="docs: begin-has_role"
   to="docs: end-has_role"
 >}}
@@ -197,10 +191,8 @@ and `role.{{% exampleGet "role_name" %}} = name and role.{{% exampleGet
 
   <div class="pb-4"></div>
 
-  <!-- TODO(gj): remove fallback when all example apps complete -->
   {{< literalInclude
     dynPath="app_path"
-    fallback="register"
     from="docs: begin-types"
     to="docs: end-types"
   >}}
@@ -238,10 +230,8 @@ repositories. For example, a user is granted the `"maintainer"` role on a
 repository if they're assigned the `"owner"` role on the repository's parent
 organization. This is how you write that rule with Oso:
 
-<!-- TODO(gj): remove fallback when all example apps complete -->
 {{< literalInclude
   dynPath="policy_path"
-  fallback="register"
   lines="21-25,36-43"
   hl_lines="4,8-9,12-13"
   ellipsis="  # ..."
@@ -250,10 +240,8 @@ organization. This is how you write that rule with Oso:
 First, we declare that every `Repository` has a `"parent"` relation that
 references an `Organization`:
 
-<!-- TODO(gj): remove fallback when all example apps complete -->
 {{< literalInclude
   dynPath="policy_path"
-  fallback="register"
   from="docs: begin-relations"
   to="docs: end-relations"
 >}}
@@ -264,10 +252,8 @@ is the relation's type.
 Next, we write a `has_relation()` rule that tells Oso how to check if an
 organization has the `"parent"` relation with a repository:
 
-<!-- TODO(gj): remove fallback when all example apps complete -->
 {{< literalInclude
   dynPath="policy_path"
-  fallback="register"
   from="docs: begin-has_relation"
   to="docs: end-has_relation"
 >}}
@@ -299,10 +285,8 @@ Finally, we add a shorthand rule that involves the `"maintainer"` repository
 role, the `"owner"` organization role, and the `"parent"` relation between the
 two resource types:
 
-<!-- TODO(gj): remove fallback when all example apps complete -->
 {{< literalInclude
   dynPath="policy_path"
-  fallback="register"
   lines="21-25,36-38"
   hl_lines="4,8-9"
   ellipsis="  # ..."
@@ -313,10 +297,8 @@ two resource types:
 At this point, the policy is almost fully functional. All that's left is adding
 an `allow()` rule:
 
-<!-- TODO(gj): remove fallback when all example apps complete -->
 {{< literalInclude
   dynPath="policy_path"
-  fallback="register"
   from="docs: begin-allow"
   to="docs: end-allow"
 >}}
@@ -336,8 +318,7 @@ enforcement methods like {{% apiDeepLink class="Oso" %}}{{% exampleGet "authoriz
 
 Our complete policy looks like this:
 
-<!-- TODO(gj): remove fallback when all example apps complete -->
-{{< literalInclude dynPath="policy_path" fallback="register" >}}
+{{< literalInclude dynPath="policy_path" >}}
 
 If you'd like to play around with a more fully-featured version of this policy
 and application, check out the GitClub repository on [GitHub][GitClub].

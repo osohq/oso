@@ -1,3 +1,4 @@
+# docs: begin-a1
 require 'active_record'
 require 'sqlite3'
 require 'oso'
@@ -17,27 +18,6 @@ class RepoRole < ActiveRecord::Base
   include QueryConfig
   belongs_to :user
   belongs_to :repository, foreign_key: :repo_id
-end
-
-def example
-  init_db
-  oso = init_oso
-
-  ios = Repository.create id: 'ios'
-  oso_repo = Repository.create id: 'oso'
-  demo_repo = Repository.create id: 'demo'
-
-  leina = User.create id: 'leina'
-  steve = User.create id: 'steve'
-
-  RepoRole.create user: leina, repository: oso_repo, name: 'contributor'
-  RepoRole.create user: leina, repository: demo_repo, name: 'maintainer'
-
-  oso.load_files(['policy_a.polar'])
-
-  results = oso.authorized_resources(leina, 'read', Repository)
-  raise "#{results}" unless results == [demo_repo, oso_repo]
-  puts "ok"
 end
 
 def init_db
@@ -70,28 +50,9 @@ def init_db
     database: DB_FILE
   )
 end
+# docs: end-a1
 
-def init_oso
-  oso = Oso.new
-
-  oso.register_class(
-    Repository,
-    fields: { id: String, }
-  )
-
-  oso.register_class(
-    User,
-    fields: { id: String, }
-  )
-
-  oso.register_class(
-    RepoRole,
-    fields: { name: String, }
-  )
-
-  oso
-end
-
+# docs: begin-a2
 module QueryConfig
   def self.included(base)
     base.instance_eval do
@@ -139,4 +100,51 @@ module QueryConfig
   end
 end
 
+def init_oso
+  oso = Oso.new
+
+  oso.register_class(
+    Repository,
+    fields: { id: String, }
+  )
+
+  oso.register_class(
+    User,
+    fields: { id: String, }
+  )
+
+  oso.register_class(
+    RepoRole,
+    fields: { name: String, }
+  )
+
+  oso
+end
+
+# docs: end-a2
+
+# docs: begin-a3
+def example
+  init_db
+  oso = init_oso
+
+  ios = Repository.create id: 'ios'
+  oso_repo = Repository.create id: 'oso'
+  demo_repo = Repository.create id: 'demo'
+
+  leina = User.create id: 'leina'
+  steve = User.create id: 'steve'
+
+  RepoRole.create user: leina, repository: oso_repo, name: 'contributor'
+  RepoRole.create user: leina, repository: demo_repo, name: 'maintainer'
+
+  oso.load_files(['policy_a.polar'])
+
+  results = oso.authorized_resources(leina, 'read', Repository)
+  raise "#{results}" unless results == [demo_repo, oso_repo]
+  puts "ok"
+end
+
 example
+
+# docs: end-a3
