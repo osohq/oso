@@ -10,7 +10,7 @@ weight: 3
 # Write Polar Rules
 
 Polar is Oso's declarative policy language. We used Polar in [Model your
-authorization policy](model) to authorize access to resources, and we
+authorization logic](model) to authorize access to resources, and we
 already wrote a few rules:
 
 - an `allow` rule: The top level rule that `authorize` calls to perform
