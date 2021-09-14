@@ -8,7 +8,7 @@ description: |
 
 # Built-in Rule Types
 
-Oso recognizes certain Polar rules as building blocks for implementing authorization best practices. Some of these rules are expanded from [shorthand rules](reference/polar/polar-syntax#shorthand-rules) in [resource blocks](reference/polar/polar-syntax#actor-and-resource-blocks), and others must be implemented in order to act as policy entrypoints for Oso's enforcement APIs.
+Oso recognizes certain Polar rules as building blocks for implementing authorization best practices. Some of these rules are expanded from [shorthand rules](reference/polar/polar-syntax#shorthand-rules) in [resource blocks](reference/polar/polar-syntax#actor-and-resource-blocks), and others must be implemented in order to act as policy entry points for Oso's enforcement APIs.
 
 To ensure consistent and correct usage of these building block rules, Oso ships with built-in [rule types](reference/polar/polar-syntax#rule-types) for each one.
 
