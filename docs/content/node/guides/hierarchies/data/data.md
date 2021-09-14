@@ -1,3 +1,3 @@
 ---
-registerClassExample: examples/hierarchies/node/app.ts
+registerClassExample: examples/hierarchies/node/app.js
 ---
