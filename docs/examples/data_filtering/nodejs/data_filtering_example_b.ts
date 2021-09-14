@@ -1,3 +1,4 @@
+// docs: begin-b1
 import { Relation, Oso, ForbiddenError, NotFoundError } from "oso";
 import { createConnection, In, Not, Entity, PrimaryGeneratedColumn, Column, PrimaryColumn, JoinColumn, ManyToOne } from "typeorm";
 import { readFileSync } from "fs";
@@ -11,7 +12,7 @@ class Repository {
   org_id: string;
 }
 
-@Entity() 
+@Entity()
 class User {
   @PrimaryColumn()
   id: string;
@@ -47,6 +48,9 @@ class OrgRole {
   org_id: string;
 }
 
+// docs: end-b1
+
+// docs: begin-b2
 const constrain = (query, filter) => {
   if (filter.field === undefined) {
     filter.field = "id";
@@ -56,9 +60,9 @@ const constrain = (query, filter) => {
       filter.value = filter.value.id;
   }
   switch (filter.kind) {
-    case "Eq":  query[filter.field] = filter.value; break;
+    case "Eq": query[filter.field] = filter.value; break;
     case "Neq": query[filter.field] = Not(filter.value); break;
-    case "In":  query[filter.field] = In(filter.value); break;
+    case "In": query[filter.field] = In(filter.value); break;
     default:
       throw new Error(`Unknown filter kind: ${filter.kind}`);
   }
@@ -109,7 +113,7 @@ createConnection({
     types: {
       id: String,
       repo_roles: new Relation("many", "RepoRole", "id", "user_id"),
-      org_roles:  new Relation("many", "OrgRole",  "id", "user_id")
+      org_roles: new Relation("many", "OrgRole", "id", "user_id")
     }
   });
 
@@ -130,12 +134,14 @@ createConnection({
       organization: new Relation("one", "Organization", "org_id", "id")
     }
   });
+  // docs: end-b2
 
+  // docs: begin-b3
   oso.loadFiles(["policy_b.polar"]);
-  const orgs  = connection.getRepository(Organization),
-        users = connection.getRepository(User),
-        repos = connection.getRepository(Repository),
-        roles = connection.getRepository(OrgRole);
+  const orgs = connection.getRepository(Organization),
+    users = connection.getRepository(User),
+    repos = connection.getRepository(Repository),
+    roles = connection.getRepository(OrgRole);
 
   await orgs.save({ id: 'osohq' });
   await orgs.save({ id: 'apple' });
@@ -152,5 +158,6 @@ createConnection({
     users.findOne({ id: 'leina' }).then(leina =>
       oso.authorizedResources(leina, 'read', Repository).then(result =>
         assert.deepEqual(result.sort(compare),
-                         repos.sort(compare)))));
+          repos.sort(compare)))));
 });
+// docs: end-b3

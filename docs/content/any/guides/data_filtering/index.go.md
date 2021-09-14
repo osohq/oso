@@ -4,6 +4,8 @@ weight: 1
 showContentForAnyLanguage: true
 ---
 
+# Filter Data: Coming Soon
+
 Data filtering is coming soon for {{< lang >}}!
 
 If you want to get data filtering in your app now or just want to

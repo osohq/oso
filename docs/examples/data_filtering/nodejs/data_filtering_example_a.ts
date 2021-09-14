@@ -1,3 +1,4 @@
+// docs: begin-a1
 import { Relation, Oso, ForbiddenError, NotFoundError } from "oso";
 import { createConnection, In, Not, Entity, PrimaryGeneratedColumn, Column, PrimaryColumn, JoinColumn, ManyToOne } from "typeorm";
 import { readFileSync } from "fs";
@@ -9,7 +10,7 @@ class Repository {
   id: string;
 }
 
-@Entity() 
+@Entity()
 class User {
   @PrimaryColumn()
   id: string;
@@ -27,6 +28,9 @@ class RepoRole {
   user_id: string;
 }
 
+// docs: end-a1
+
+// docs: begin-a2
 const constrain = (query, filter) => {
   if (filter.field === undefined) {
     filter.field = "id";
@@ -36,9 +40,9 @@ const constrain = (query, filter) => {
       filter.value = filter.value.id;
   }
   switch (filter.kind) {
-    case "Eq":  query[filter.field] = filter.value; break;
+    case "Eq": query[filter.field] = filter.value; break;
     case "Neq": query[filter.field] = Not(filter.value); break;
-    case "In":  query[filter.field] = In(filter.value); break;
+    case "In": query[filter.field] = In(filter.value); break;
     default:
       throw new Error(`Unknown filter kind: ${filter.kind}`);
   }
@@ -90,10 +94,13 @@ createConnection({
     }
   });
 
+  // docs: end-a2
+
+  // docs: begin-a3
   oso.loadFiles(["policy_a.polar"]);
   const users = connection.getRepository(User),
-        repos = connection.getRepository(Repository),
-        roles = connection.getRepository(RepoRole);
+    repos = connection.getRepository(Repository),
+    roles = connection.getRepository(RepoRole);
 
   await repos.save({ id: 'ios' });
   await repos.save({ id: 'oso' });
@@ -101,7 +108,7 @@ createConnection({
   await users.save({ id: 'leina' });
   await users.save({ id: 'steve' });
   await roles.save({ user_id: 'leina', repo_id: 'oso', name: 'contributor' }),
-  await roles.save({ user_id: 'leina', repo_id: 'demo', name: 'maintainer' });
+    await roles.save({ user_id: 'leina', repo_id: 'demo', name: 'maintainer' });
 
   const compare = (a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 
@@ -109,5 +116,6 @@ createConnection({
     users.findOne({ id: 'leina' }).then(leina =>
       oso.authorizedResources(leina, 'read', Repository).then(result =>
         assert.deepEqual(result.sort(compare),
-                         repos.sort(compare)))));
+          repos.sort(compare)))));
 });
+// docs: end-a3
