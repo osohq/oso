@@ -52,13 +52,6 @@ class OrgRole {
 
 // docs: begin-b2
 const constrain = (query, filter) => {
-  if (filter.field === undefined) {
-    filter.field = "id";
-    if (filter.kind == "In")
-      filter.value = filter.value.map(v => v.id);
-    else
-      filter.value = filter.value.id;
-  }
   switch (filter.kind) {
     case "Eq": query[filter.field] = filter.value; break;
     case "Neq": query[filter.field] = Not(filter.value); break;
