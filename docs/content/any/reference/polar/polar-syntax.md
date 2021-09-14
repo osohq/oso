@@ -720,7 +720,7 @@ You can specify relations between actor/resource types using the following synta
 
 {{< code codeLang="polar" hl_lines="2">}}
 resource Repository {
-  relations = {parent: Organization};
+  relations = { parent: Organization };
 }
 {{< /code >}}
 
