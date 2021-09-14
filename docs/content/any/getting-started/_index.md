@@ -39,6 +39,6 @@ enforcing authorization, setting up role-based authorization, writing
 rules, and filtering data by authorization.
 
 For more on the design principles behind Oso and why it makes
-authorization easy for development teams see the **TODO** What is Oso
+authorization easy for development teams, see the **TODO** What is Oso
 section or **TODO** read stories from teams using Oso — like Wayfair and
 Intercom.
