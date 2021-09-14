@@ -28,7 +28,7 @@ team.
 
 {{% /1on1 %}}
 
-## Installing Oso
+## Install Oso
 
 The Oso library evaluates authorization policies.
 
@@ -40,7 +40,7 @@ and can be installed using {{% exampleGet "installer" %}}:
 For more detailed installation instructions, see
 [installation](/reference/installation).
 
-## Write a policy
+## Create a Policy
 
 Policies are files that are packaged with the rest of your application
 code. Oso loads and evaluates policy files when your
@@ -203,7 +203,7 @@ has_role(actor: User, role_name: String, repository: Repository) if
 allow(actor, action, resource) if
     has_permission(actor, action, resource);
 ```
-    
+
 ### What's next
 
 Now that we've setup our policy, let's see how we can enforce it!

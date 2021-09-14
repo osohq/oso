@@ -1,5 +1,5 @@
 ---
-title: Write Oso Policies (30 min)
+title: Write Custom Policies
 weight: 3
 any: true
 aliases:
@@ -9,96 +9,38 @@ aliases:
 description: Learn about writing Oso policies - the source of truth for authorization logic.
 ---
 
-# Write Oso Policies
+# Write Custom Policies
 
-This tutorial will teach you how to write policies for the
-Oso authorization system. You will learn what policies are,
-how they're queried, and the basic structure and operations
-of the rules that comprise them. You will also learn how to
-write rules that refer to application classes, instances,
-and fields.
+In Oso, policies are where authorization logic is stored. Policy files are
+separate from your application code, and are written in a declarative language
+called Polar (file extension `.polar`).
 
-# What is a policy in Oso?
+Oso provides policy building blocks for common authorization models like [role-based
+access control](/guides/rbac), [attribute-based access control](/guides/attributes), and
+[resource hierarchies](/guides/hierarchies).
 
-An **authorization policy** is a set of logical **rules** for
-who is allowed to access what resources in an application.
-Some examples of rules expressed in English are:
+This guide covers how to extend those building blocks by writing custom
+policies in Oso's policy language, Polar.
+You will learn the basic structure and operations of Polar rules, and how to
+write rules that refer to application classes, instances, and fields.
 
-* The user named "Banned B. User" may not access any resources.
-* No user may access any resource before 06:00 in their local timezone.
-* A user may access any resource that they created.
+## What is a policy?
 
-In any particular application, such rules may be represented
-and enforced in many different ways; e.g., as `if` statements
-in code, with database access control, filesystem permissions, etc.
+In Oso, policies are where authorization logic is stored. Policy files are
+separate from your application code, and are written in a declarative language
+called Polar (file extension `.polar`).
 
-Oso is a library designed to express and enforce
-authorization policies. Policies are kept separate from both
-application code and the underlying database/filesystem/etc.
-But because Oso is a library that runs in your application
-process, it has direct access to application objects and types,
-which lets you express application-specific policies in a very
-natural way.
-
-Authorization policies in Oso are expressed in a declarative,
-logic-based programming language called Polar. You've probably
-already seen some Polar policies in the [Quickstart](quickstart)
-and [Add to an App]({{< ref path="/getting-started/application" >}})
-guides, and the [Polar Syntax guide](polar-syntax) has a detailed
-description of the language syntax and features.
-
-The purpose of _this_ guide is to serve as a tutorial introduction
-to the Polar language. When you've finished it, you should be able
-to read and write simple Polar rules over your own application objects
-and types.
-
-If you have some prior exposure to logic programming, the Polar
-language will feel very familiar. If not, don't panic! Polar is
-designed to be simple, often allowing more concise
-expression of authorization rules than equivalent code in an
-imperative language. If you can express an authorization rule
-as a simple declarative sentence of English (or other natural language),
-it should be straightforward to turn into a Polar rule.
-
-If you're unsure of what _kind_ of authorization policy to write,
-you may want to head over to the [Conceptual Guides](guides) or
-start with a familiar pattern such as [roles](/guides/rbac).
-This tutorial will not be concerned with a specific kind of policy,
-but rather with the language in which many different kinds of
-policies may be expressed.
-
-## Application Setup
-
-To use Oso for authorization, your application must first:
-
-1. Load the Oso library: `from oso import Oso`
-2. Create an {{% apiDeepLink class="Oso" /%}} instance: `oso = Oso()`
-3. Load a policy: `oso.load_file(policy)`.
-
-Then, at authorization time, you can call:
-
-```python
-oso.is_allowed(actor, action, resource)
-```
-
-This returns a boolean indicating whether the given `actor`
-is authorized to perform `action` on `resource` according to
-the current policy.
-
-The arguments to `oso.is_allowed` may be arbitrary Python
-objects. We'll often use strings for examples, but in your
-application they could be ORM model objects, URIs, numbers, etc.
+<!-- TODO: update enforcmeent link once docs are ported -->
+Your application can query a policy using the [Enforcement APIs]({{< ref href="/guides/enforcement" lang="python" >}}) to get authorization decisions.
+The most basic component of a policy is a **rule**, which describes a logical condition that must be true in order for a query to succeed.
 
 ## Rules
 
-The way you control whether `oso.is_allowed` returns `True`
-or `False` is to define and load Polar rules that **match**
-only the desired set of `actor`, `action`, and `resource`
-arguments. This matching may involve logical connectives,
-type checks, equality checks, variable bindings, field lookups,
-method calls, arithmetic, comparisons, etc. See the
-[Polar Syntax guide](polar-syntax) for a complete list
-of available operators.
+The way you control whether an authorization query succeeds is to define and
+load rules that **match** certain queries. This matching may involve
+logical connectives, type checks, equality checks, variable bindings, field
+lookups, method calls, arithmetic, comparisons, etc. See the [Polar Syntax
+guide](polar-syntax) for a complete list of available operators.
 
 Let's start with the basic syntax. A **rule definition** in Polar
 has a **name**, a **parameter list**, and an optional **body**.
@@ -108,11 +50,10 @@ Here's a very simple rule definition:
 allow("Zora", "read", "document-1");
 ```
 
-The name of this rule is `allow`. It has three string-valued
-parameters: `"Zora"`, `"read"`, and `"document-1"`, which must
-match the supplied arguments exactly. The terminating semicolon
-comes right after the parameter list, so it has no body; we say
-that this rule is **unconditional**.
+- The name of this rule is `allow`.
+- It has three string-valued parameters: `"Zora"`, `"read"`, and
+`"document-1"`, which must match the query arguments exactly.
+- The rule has no body (the terminating semicolon comes right after the parameter list), so it is **unconditional**.
 
 Here's a **conditional** rule definition:
 
@@ -120,13 +61,14 @@ Here's a **conditional** rule definition:
 allow("Zora", "read", "document-1") if 1 = 0;
 ```
 
-Like the previous rule, this one tries to match the query arguments
-exactly. But this rule also has a body, introduced by the keyword
-`if` after the parameter list. The body has one condition, which
-must also be true in order for this rule to match a query. (_We_
-can see that that the condition `1 = 0` is always false, but Polar
+This rule has a body, introduced by the keyword `if` after the parameter list.
+The body has one condition. In addition to the query arguments matching the rule
+parameters, this condition must be true in order for the rule to match a
+query. (_We_ can see that that the condition `1 = 0` is always false, but Oso
 does not know that; it must perform the comparison each time.)
-We could add more conditions with the logical connective `and`:
+
+We could add more
+conditions with the logical connective `and`:
 
 ```polar
 allow("Zora", "read", "document-1") if
@@ -138,14 +80,12 @@ The logical operators `or` (binary) and `not` (unary) can also
 be used in a rule body, as well as a variety of mathematical,
 matching, and lookup operators.
 
-## The Big Picture
+## Query Evaluation
 
 Before diving any deeper into the details of rules and matching,
 let's take a moment to put them in context. Rules are loaded into
 a **knowledge base**, a kind of specialized in-memory database that
 supports **queries** by pattern matching and logical inference.
-
-![Oso Architecture](guides/policies/arch.svg)
 
 To determine whether a given argument tuple is authorized,
 the Oso library issues a query to the knowledge base.
@@ -172,7 +112,7 @@ suppose users named Abagail, Carol, and Johann are allowed to
 read some document. We'll represent users, actions, and documents
 as strings for now, but we'll see richer representations in just
 a moment. We could express this policy with the following three
-Polar rule definitions:
+rule definitions:
 
 ```polar
 allow("Abagail", "read", "document-1");
@@ -181,14 +121,14 @@ allow("Johann", "read", "document-1");
 ```
 
 After we load this file into the knowledge base, we can make
-authorization decisions from our Python application by
+authorization decisions from our application by
 calling:
 
 ```python
-oso.is_allowed("Johann", "read", "document-1")
+oso.authorize("Johann", "read", "document-1")
 ```
 
-The Oso library issues a Polar query to the knowledge base:
+The Oso library issues a query to the knowledge base:
 
 ```polar
 allow("Johann", "read", "document-1")
@@ -202,24 +142,21 @@ The second rule also fails to match, because `"Carol" != "Johann"`.
 The third rule, however, successfully matches each of the arguments
 with the corresponding parameter: `"Johann" = "Johann"`, `"read" = "read"`,
 and `"document-1" = "document-1"`. So the query succeeds,
-and `oso.is_allowed` returns `True`.
+and {{< apiDeepLink class="Oso" label="authorize(actor, action, resource)"
+  >}}authorize{{< /apiDeepLink >}} succeeds.
 
 ## Variables
 
-In the example above, `allow` rules were used to explicitly
-enumerate sets of permissions using exact matching (value equality).
-That style of rule is sometimes useful, but such policies can become
-unmanageably large. The Polar knowledge base does index rules,
-so policies containing tens or hundreds of thousands of rules like
-that can still be used efficiently should your application and
-policy require it, but it's not really recommended.
+The `allow` rules in the example above enumerate sets of permissions using exact
+matching (value equality). That style of rule is sometimes useful, but policies
+that enumerate every permission can become unmanageably large.
 
-What we usually want instead is to write rules that match more
-than one argument by exploiting regularities or abstractions in
-our application objects and policy. For instance, each of the three
-rules above has the same second and third parameters, so we can
-collapse all three rules into one if we _conditionally_ match the
-first argument.
+
+Instead, you usually want to write rules that match more than one argument. This
+can be done by exploiting regularities or abstractions in your application
+objects and policy. For instance, each of the three rules above has the same
+second and third parameters, so we can collapse all three rules into one if we
+_conditionally_ match the first argument.
 
 We can do that by using a **variable** parameter named `actor`
 (instead of a literal string), and checking whether its value
@@ -244,15 +181,16 @@ against a rule like the one above. Suppose the query is:
 allow("Zora", "read", "document-1")
 ```
 
-Polar first matches the names (`allow`), then tries to match
-each of the arguments `("Zora", "read", "document-1")` with
+1. First, Oso matches the query name to the rule name (`allow`)
+2. Then, Oso tries to match each of the arguments `("Zora", "read", "document-1")` with
 the parameters `(actor, "read", "document-1")`. These all succeed,
-but in two different ways: the string `"Zora"` matches the variable
-`actor` by **binding** the variable to the string, while the latter
-two arguments match the corresponding parameters by value (string)
-equality.
+but in two different ways.
+    1. The string `"Zora"` matches the variable `actor` by **binding** the variable
+to the string.
+    2. `"read"` and `"document-1"` match the corresponding parameters by value
+    (string) equality.
 
-This operation of either binding an unbound variable _or_
+The operation of either binding an unbound variable _or_
 comparing two values (of bound variables) is called
 [**unification**](https://en.wikipedia.org/wiki/Unification_(computer_science)).
 It happens implicitly when Polar matches query arguments
@@ -289,11 +227,11 @@ allow("Johann", "read", "document-1")
 
 ## Instances and Fields
 
-We still have an explicit enumeration of permissions in the rule
-above. That's fine for users represented by strings and such, but
-most applications use more structured representations for their
-actors, actions, and resources.
+So far, we've only shown rules that use string-valued actor, action, and resource parameters.
+Since most applications use more structured representations for their
+actors, actions, and resources, Oso supports using application instances and fields in policies.
 
+<!-- TODO: port -->
 Suppose then that our actors are represented by instances of a
 Python `User` class, with, say, a user ID and administrator
 flag:
@@ -324,7 +262,7 @@ The two policy rules we'll implement are:
 Our application will be making calls like this:
 
 ```python
-oso.is_allowed(User(id=0, admin=True), "read", Document(id=1, owner=0))
+oso.authorize(User(id=0, admin=True), "read", Document(id=1, owner=0))
 ```
 
 The Oso library will generate a Polar query like this:
@@ -358,10 +296,10 @@ lookups would yield values that satisfy the conditions. If the call
 were, however, something like:
 
 ```python
-oso.is_allowed(User(id=1, admin=False), "read", Document(id=1, owner=0))
+oso.authorize(User(id=1, admin=False), "read", Document(id=1, owner=0))
 ```
 
-This call would return `False`, since neither rule would match
+This call would return raise a `ForbiddenError`, since neither rule would match
 the supplied instances. The first rule would fail because the
 `admin` flag isn't true, and the second because the user's ID
 `1` isn't equal to the document's owner ID `0`.
@@ -488,6 +426,7 @@ registers a few **built-in** classes, such as:
 
 These classes correspond to ones in the application language,
 e.g., in Python, `String` is actually the built-in `str` class.
+For more information on how application types are converted to Polar, see [the reference guide](reference/polar/classes).
 
 ## Method Calls
 
@@ -512,37 +451,41 @@ against invalid calls with the `String` specializer.
 
 So far all of our examples have involved only `allow` rules
 with three parameters. That's a natural place to start with Oso,
-because the `is_allowed` function generates queries of the form
+because the `authorize` function generates queries of the form
 `allow(actor, action, resource)`. But you can write rules for
 whatever you like, and use them from within your `allow` rules.
-For instance a rule that handles roles might look like this:
+For instance, to use the [built-in roles features](guides/rbac), you need to
+define a rule that handles roles might look like this:
 
 <!-- TODO: We should update these rules to reflect our current role policy semantics. -->
 ```polar
 allow(user, action, resource) if
-    resource_role_applies_to(resource, role_resource) and
-    user_in_role(user, role, role_resource) and
-    role_allow(role, action, resource);
+    has_permission(actor, action, resource);
 ```
 
-All three parameters are variables, so they are [bound](#bindings)
-to any three arguments. Then queries for each condition in the body
-must also succeed, so the rules `resource_role_applies_to`,
-`user_in_role`, and `role_allow` must also be defined and match
-the supplied arguments.
+All three parameters are variables, so they are [bound](#bindings) to any three
+arguments. Then queries for the condition in the body must also succeed, so the
+rule `has_permission`, must also be defined and match the supplied arguments (in
+this case, `has_permission` rules are generated by [shorthand
+rules](reference/polar/polar-syntax#shorthand-rules)).
 
 Rules may also be recursive, i.e., may refer to themselves.
 But be sure to define a base case, or queries may loop until
 they time out.
 
 Finally, you can query arbitrary rules directly (i.e., without
-going through `oso.is_allowed`) by using the `oso.query_rule`
+going through `oso.authorize`) by using the `oso.query_rule`
 method. This gives you direct access to the knowledge base,
 and lets you receive result bindings and continue searching
-for results past the first one (`oso.is_allowed` stops after
+for results past the first one (`oso.authorize` stops after
 the first result, since any one valid authorization is as good
-as several). It lets you use Oso as a general purpose rule
-engine — what other kinds of rules does your application need?
+as several).
+
+<!-- TODO: update link once enforcement guides are ported -->
+{{% callout "Warning" "orange" %}}
+  Authorization features like data filtering and resource blocks aren't
+  guaranteed to work with `query_rule()`. We recommend using the [Enforcement APIs]({{< ref href="/guides/enforcement" lang="python" >}}) for all authorization queries.
+{{% /callout %}}
 
 ## Summary
 

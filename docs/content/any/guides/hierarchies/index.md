@@ -1,10 +1,10 @@
 ---
-title: "Implement Resource Hierarchies"
+title: "Build Resource Hierarchies"
 weight: 3
 showContentForAnyLanguage: true
 ---
 
-# Implement Resource Hierarchies
+# Build Resource Hierarchies
 
 A **resource hierarchy** refers to a model with nested resources, where a user's permissions and roles on a resource depend on the resource's parent.
 
