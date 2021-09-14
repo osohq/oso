@@ -26,7 +26,7 @@ application.
     application. For example, you may deny access by banned users or
     allow any user to access a public resource.
 {{% ifLang "python" %}}
-- **Framework Libraries**: Oso has pre-built integrations for web
+- **Framework Libraries**: Oso has integrations for web
 application libraries, including Django, SQLAlchemy, and Flask.
 {{% /ifLang %}}
 
