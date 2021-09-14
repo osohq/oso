@@ -61,8 +61,8 @@ as a simple declarative sentence of English (or other natural language),
 it should be straightforward to turn into a Polar rule.
 
 If you're unsure of what _kind_ of authorization policy to write,
-you may want to head over to the [Conceptual Guides](learn) or
-start with a familiar pattern such as [roles](/learn/roles).
+you may want to head over to the [Conceptual Guides](guides) or
+start with a familiar pattern such as [roles](/guides/rbac).
 This tutorial will not be concerned with a specific kind of policy,
 but rather with the language in which many different kinds of
 policies may be expressed.
