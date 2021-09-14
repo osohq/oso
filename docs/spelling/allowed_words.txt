@@ -24,8 +24,8 @@ Github's
 Gradle
 GraphQL
 Graphene
-Halbert
 HTTP
+Halbert
 IAM
 IDEs
 JARs

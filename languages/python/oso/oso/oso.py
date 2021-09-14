@@ -1,6 +1,6 @@
 """Core oso functionality"""
 
-__version__ = "0.20.0-beta"
+__version__ = "0.20.1"
 
 import os
 from typing import List, Any, Set
