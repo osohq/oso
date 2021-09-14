@@ -1,6 +1,6 @@
 ---
 authorizedResources: authorizedResources
-authorizedQuery: authorizedWuery
+authorizedQuery: authorizedQuery
 buildQuery: buildQuery
 execQuery: execQuery
 combineQuery: combineQuery
