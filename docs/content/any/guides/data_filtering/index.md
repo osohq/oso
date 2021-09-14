@@ -152,7 +152,8 @@ know what fields to match up with building a query for the other type.
 
 ## Example
 
-This time our data will be a little more complicated.
+This time our data will be a little more complicated in order to model a more
+sophisticated policy.
 
 {{< literalInclude
       dynPath="exampleBPath"
