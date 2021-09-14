@@ -173,14 +173,14 @@ module Oso
       fields
     end
 
-    # Returns a query for resources of type +cls+ that +actor+  is allowed
-    # to perform +action+ on.
+    # Create a query for resources of type +cls+ that +actor+ is
+    # allowed to perform +action+ on.
     #
     # @param actor The actor whose permissions to check.
     # @param action The action being taken on the resource.
     # @param resource_cls The resource being accessed.
     #
-    # @returns A query for resources accessible to the actor.
+    # @return A query for resources accessible to the actor.
     def authorized_query(actor, action, resource_cls) # rubocop:disable Metrics/MethodLength
       resource = Polar::Variable.new 'resource'
 
@@ -204,14 +204,14 @@ module Oso
         .build_query
     end
 
-    # Returns the resources of type +resource_cls+ that +actor+  is allowed
-    # to perform +action+ on.
+    # Determine the resources of type +resource_cls+ that +actor+
+    # is allowed to perform +action+ on.
     #
     # @param actor The actor whose permissions to check.
     # @param action The action being taken on the resource.
     # @param resource_cls The resource being accessed.
     #
-    # @returns A list of resources accessible to the actor.
+    # @return A list of resources accessible to the actor.
     def authorized_resources(actor, action, resource_cls)
       q = authorized_query actor, action, resource_cls
       return [] if q.nil?

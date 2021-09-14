@@ -11,7 +11,8 @@ Classes
 .. autoclass:: oso.Oso
    :members: __init__, is_allowed, get_allowed_actions, load_str, load_file,
       register_class, query_rule, query, clear_rules, authorize,
-      authorize_request, authorize_field, authorized_actions, authorized_fields
+      authorize_request, authorize_field, authorized_actions, authorized_fields,
+      authorized_resources, authorized_query
 
 .. autoclass:: oso.Variable
 

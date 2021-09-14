@@ -235,13 +235,13 @@ export class Oso<
   }
 
   /**
-   * Returns a query for all the resources of the supplied type that the actor is
-   * allowed to perform some action on.
+   * Create a query for all the resources of type `resourceCls` that `actor` is
+   * allowed to perform `action` on.
    *
    * @param actor Subject.
    * @param action Verb.
    * @param resourceCls Object type.
-   * @returns A query object that selects authorized resources of type resourceCls
+   * @returns A query that selects authorized resources of type `resourceCls`
    */
   async authorizedQuery(
     actor: any,
@@ -292,7 +292,8 @@ export class Oso<
   }
 
   /**
-   * Returns all the resources of some type the actor is allowed to perform some action on.
+   * Determine the resources of type `resourceCls` that `actor`
+   * is allowed to perform `action` on.
    *
    * @param actor Subject.
    * @param action Verb.
@@ -303,7 +304,7 @@ export class Oso<
     actr: any,
     actn: any,
     resourceCls: any
-  ): Promise<any> {
+  ): Promise<any[]> {
     const query = await this.authorizedQuery(actr, actn, resourceCls);
     return !query
       ? []

@@ -229,14 +229,13 @@ class Oso(Polar):
         return fields
 
     def authorized_query(self, actor, action, resource_cls):
-        """
-        Returns a query for the resources the actor is allowed to perform action on.
-        The query is built by using the build_query and combine_query methods registered for the type.
+        """Create a query for resources of type ``resource_cls``
+        that ``actor`` is allowed to perform ``action`` on. The
+        query is built by using the ``build_query`` and ``combine_query``
+        functions registered for the ``resource_cls``.
 
         :param actor: The actor for whom to collect allowed resources.
-
         :param action: The action that user wants to perform.
-
         :param resource_cls: The type of the resources.
 
         :return: A query to fetch the resources,
@@ -269,14 +268,12 @@ class Oso(Polar):
 
         return filter_data(self, plan)
 
-    def authorized_resources(self, actor, action, resource_cls):
-        """
-        Returns the resources the actor is allowed to perform action on.
+    def authorized_resources(self, actor, action, resource_cls) -> List[Any]:
+        """Determine the resources of type ``resource_cls`` that ``actor``
+        is allowed to perform ``action`` on.
 
         :param actor: The actor for whom to collect allowed resources.
-
         :param action: The action that user wants to perform.
-
         :param resource_cls: The type of the resources.
 
         :return: The requested resources.
