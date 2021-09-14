@@ -35,8 +35,6 @@ To use this API, you must pass some additional information to
 `register_class` so that Oso knows how to retrieve your
 application's objects.
 
-TODO make sure this matches data filtering guides
-
 ## Implementing data filtering query functions
 
 To use data filtering, you tell Oso how to make queries to your data
@@ -106,7 +104,5 @@ a more detailed how to of using data filtering and implementing query
 <!-- todo remove lang -->
 builder functions, see: [How to: Filter data]({{< ref href="/guides/data_access" lang="python" >}}).
 
-TODO update title as needed here
-
-This is the end of __Add to your app__! For more detail on using
+This is the end of __Add to Your App__! For more detail on using
 Oso, see the [How to guides](/guides).
