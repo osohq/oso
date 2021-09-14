@@ -749,7 +749,7 @@ has_relation(parent_org: Organization, "parent", repo: Repository) if
 
 ### Shorthand Rules
 
-Shorthand rules are shortened rules that you can define inside actor and
+Shorthand rules are concise rules that you can define inside actor and
 resource blocks using declared permissions, roles, and relations.
 
 For example,
