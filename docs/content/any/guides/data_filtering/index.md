@@ -6,38 +6,29 @@ showContentForAnyLanguage: true
 # Filter Data
 
 When you call `authorize(actor, action, resource)` , Oso evaluates the allow
-rule(s) you have defined in your policy to determine if that `actor` is allowed to do that `action` on that `resource`.
-
-If you have a policy like this,
-
-```polar
-allow(actor, "get", doc: Document) if doc.owner = actor;
-```
-
-Oso checks that the passed in `doc`'s `owner` field is equal to the passed
-in `actor`. For example if the actor was `"steve"` and the document was 
-`{owner: "steve", content: "hello world"}` then `"steve"` would be allowed
-to `"get"` that document.
-
-Data filtering means asking a slightly different question. Instead of “Can
-this actor do this action on this specific resource?”, we want to ask “What
-are all the resources that this actor can do this action on?”.
+rule(s) you have defined in your policy to determine if `actor` is allowed
+to perform `action` on `resource`.  For example, if `jane` wants to `"edit"`
+a `document`, Oso may check that `jane = document.owner`.  But what if you
+need the set of all documents that Jane is allowed to edit?  For example, you
+may want to render them as a list in your application.
 
 One way to answer this question is to take every document in the system and
 call `is_allowed` on it. This isn’t efficient and many times is just
 impossible. There could be thousands of documents in a database but only three
 that have the owner `"steve"`. Instead of fetching every document and passing
 it into Oso, it's better to ask the database for only the documents that
-have the owner `"steve"`. This process of filtering the data in your data
-store, based on the logic in your policy is what we call “Data Filtering”.
+have the owner `"steve"`. Using Oso to filter the data in your data
+store based on the logic in your policy is what we call “Data Filtering”.
 
-{{% ifLang "python" %}}
+{{< ifLang "python" >}}
 {{% callout "ORM Integrations" "blue" %}}
-If you are using one of our ORM adapter libraries like `sqlalchemy-oso` or
-`django-oso` data filtering is already built in and you won't have to worry
-about integrating it yourself. See docs for the ORM library instead.
+If you are using one of our ORM adapter libraries like
+[`sqlalchemy-oso`]({{< ref path="reference/frameworks/data_filtering/sqlalchemy" lang="python" >}})
+or [`django-oso`]({{< ref path="reference/frameworks/data_filtering/django" lang="python" >}}) then
+data filtering is already built in and you won't have to worry about integrating
+it yourself. See docs for the ORM library instead.
 {{% /callout %}}
-{{% /ifLang %}}
+{{< /ifLang >}}
 
 You can use data filtering to enforce authorization on queries made to your data
 store. Oso will take the logic in the policy and turn it into a query for the
@@ -61,7 +52,8 @@ You must define how to build queries and a few other details when you register c
 
 ### Query Functions
 
-There are three Query functions that must be implemented. These define what a query is for your application, how the logic in the policy maps to them, how to execute them and how to combine two queries.
+There are three Query functions that must be implemented. These define what a query is for your application,
+how the logic in the policy maps to them, how to execute them and how to combine two queries.
 
 #### Build a Query
 
@@ -81,6 +73,10 @@ Value will be a list.
 - `Contains` means that the field must contain the value. This only applies
 if the field is a list.
 
+The condition described by a `Filter` applies to the data stored in the attribute
+`field` of a resource.  The `field` of a `Filter` may be `{{< exampleGet "none" >}}`,
+in which case the condition applies to the resource directly.
+
 #### Execute a Query
 
 `{{% exampleGet "execQuery" %}}` takes a query and returns a list of the results.
@@ -99,13 +95,16 @@ specific ones when you register a class.
 
 ### Types
 
-The other thing you have to define to use data filtering are types for
-registered classes. These let Oso know what the type of the fields are. Oso
-needs this information to handle specializers and other things in the policy
-when we don't have a concrete resource. The types are a 
+The other thing you have to provide to use data filtering is type information
+for registered classes. This lets Oso know what the types of an object's fields
+are. Oso needs this information to handle specializers and other things in the
+policy when we don't have a concrete resource. The types are a 
 {{% exampleGet "map" %}} from field name to type.
 
 ## Example
+
+In this example we'll model access to code repositories in a simple Git hosting application.
+
 {{< literalInclude
       dynPath="exampleAPath"
       from="docs: begin-a1"
@@ -134,7 +133,7 @@ Then we can load a policy and query it.
 
 ## Relations
 
-Often times you need data that is not contained on the object to make
+Often you need data that is not contained on the object to make
 authorization decisions. This comes up when the role required to
 do something is implied by a role on it's parent object. For instance,
 you want to check the organization for a repository but that data isn't
@@ -152,10 +151,13 @@ another. They specify what the related type is and how it's related.
 - `my_field` Is the field on this object that matches `other_field`.
 - `other_field` Is the field on the other object that matches `this_field`.
 
-The my_field / other_field relationship is similar to a foreign key. It lets Oso
+The `my_field` / `other_field` relationship is similar to a foreign key. It lets Oso
 know what fields to match up with building a query for the other type.
 
 ## Example
+
+This time our data will be a little more complicated in order to model a more
+sophisticated policy.
 
 {{< literalInclude
       dynPath="exampleBPath"
@@ -211,4 +213,6 @@ Some Polar expressions are not supported. `not`, `cut` and `forall` are not
 allowed in policies that want to use data filtering. Numeric comparisons with
 the `<` `>` `<=` and `>=` are not currently supported either.
 
-Relations only support matching on a single field.
+Relations only support matching on a single field. For example, relating a
+`Student` to their classmates with matching `school_id` and `homeroom_id`
+fields isn't currently possible.
