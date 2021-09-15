@@ -454,7 +454,6 @@ whatever you like and use them from within your `allow` rules.
 For instance, to use the [resource block feature](guides/rbac) for implementing
 RBAC, you need to define an `allow` rule that calls a `has_permission` rule:
 
-<!-- TODO: We should update these rules to reflect our current role policy semantics. -->
 ```polar
 allow(user, action, resource) if
     has_permission(actor, action, resource);
