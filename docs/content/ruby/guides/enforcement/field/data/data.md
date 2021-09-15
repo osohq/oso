@@ -1,5 +1,5 @@
 ---
-isAdmin: is_admin
+isAdmin: admin?
 authorize: authorize
 authorizeField: authorize_field
 authorizedFields: authorized_fields

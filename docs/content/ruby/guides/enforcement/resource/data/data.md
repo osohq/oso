@@ -1,6 +1,6 @@
 ---
 authorize: authorize
-isAdmin: is_admin
+isAdmin: admin?
 forbiddenError: ForbiddenError
 notFoundError: NotFoundError
 authorizeLink: |-
