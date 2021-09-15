@@ -11,6 +11,10 @@ notFoundErrorLink: |-
   <a href="/node/reference/api/classes/errors.notfounderror.html">`NotFoundError`</a>
 authorizationErrorLink: |-
   <a href="/node/reference/api/classes/errors.authorizationerror.html">an `AuthorizationError`</a>
+exampleCall: |-
+    ```javascript
+    oso.authorize(user, "approve", expense)
+    ```
 getExpense: |-
     ```javascript
     async function getExpense(user, expenseId) {

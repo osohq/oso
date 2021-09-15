@@ -35,9 +35,7 @@ Failure](#authorization-failure).
 <!-- You'll see this method in a lot of our guides and examples, because it's the
 simplest way to use Oso in your app. -->
 
-```python
-oso.authorize(user, "approve", expense)
-```
+{{% exampleGet "exampleCall" %}}
 
 The `{{< exampleGet "authorize" >}}` method checks all of the `allow` rules in your policy, and
 ensures that there is an `allow` rule for that applies to the given user,

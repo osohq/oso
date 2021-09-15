@@ -11,6 +11,10 @@ notFoundErrorLink: |-
   `Oso::NotFoundError`
 authorizationErrorLink: |-
   an `Oso::AuthorizationError`
+exampleCall: |-
+    ```ruby
+    oso.authorize(user, "approve", expense)
+    ```
 getExpense: |-
     ```ruby
     def get_expense(user, expense_id)

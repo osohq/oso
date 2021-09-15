@@ -12,6 +12,10 @@ notFoundErrorLink: |-
   <a href="/python/reference/api/index.html#oso.exceptions.NotFoundError">`NotFoundError`</a>
 authorizationErrorLink: |-
   <a href="/python/reference/api/index.html#oso.exceptions.AuthorizationError">an `AuthorizationError`</a>
+exampleCall: |-
+    ```python
+    oso.authorize(user, "approve", expense)
+    ```
 getExpense: |-
     ```python
     def get_expense(user, expense_id):

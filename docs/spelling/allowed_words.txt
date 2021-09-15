@@ -5,6 +5,7 @@ Abagail
 ActiveRecord
 AdminOnlyFields
 Appleby
+AuthorizationError
 Bhavik's
 Bjerk
 Bundler
@@ -17,6 +18,7 @@ EMR
 EOF
 EndsWith
 FFI
+ForbiddenError
 FriendsOnlyFields
 GC
 GDB
@@ -42,6 +44,7 @@ MinGW
 NFA
 NaN
 NestJS
+NotFoundError
 OAuth
 ORM
 ORMs
@@ -78,9 +81,11 @@ Wayfair
 alice
 amongst
 anonymized
+api
 args
 arities
 arity
+authorizationerror
 authorizeField
 authorizeRequest
 authorizedActions
@@ -119,6 +124,7 @@ enumerables
 enums
 favoriteAnimal
 filesystem
+forbiddenerror
 frontend
 glibc
 gmail
@@ -127,6 +133,7 @@ hardcoding
 hoc
 hotfixes
 href
+html
 http
 ing
 instantiation
@@ -159,6 +166,7 @@ namespaces
 natively
 nbsp
 nodejs
+notfounderror
 npm
 organizationRoles
 oso

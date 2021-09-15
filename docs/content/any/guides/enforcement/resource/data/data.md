@@ -12,6 +12,10 @@ notFoundErrorLink: |-
   [`NotFoundError`](https://docs.osohq.com/python/reference/api/index.html#oso.exceptions.NotFoundError)
 authorizationErrorLink: |-
   an [`AuthorizationError`](https://docs.osohq.com/python/reference/api/index.html#oso.exceptions.AuthorizationError)
+exampleCall: |-
+    ```python
+    oso.authorize(user, "approve", expense)
+    ```
 getExpense: |-
     ```python
     def get_expense(user, expense_id):
