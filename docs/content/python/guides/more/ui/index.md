@@ -5,6 +5,7 @@ description: |
   Control what you expose in the UI with Oso policies.
 aliases:
   - /getting-started/ui/index.html
+  - /guides/ui.html
 ---
 
 # Authorize in the UI
@@ -40,7 +41,7 @@ them to your frontend.
 Let's look at an example. Imagine we have a GitHub-like app that gives users
 access to repositories. The page to view a specific repository looks like this:
 
-![image](python/guides/ui/a.png)
+![image](img/ui-a.png)
 
 On this page, we may want to hide the "Issues" or "Settings" links
 depending on whether the user is allowed to view issues or adjust repository settings.
@@ -152,7 +153,7 @@ template:
 
 Now when Sully logs in, the buttons are hidden:
 
-![image](python/guides/ui/b.png)
+![image](img/ui-b.png)
 
 Our example uses Flask templates for the UI, but the allowed actions
 could be sent to the frontend to make UI decisions in React, Vue or any

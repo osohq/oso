@@ -1,5 +1,5 @@
 ---
-title: Quickstart (5 min)
+title: Quickstart
 description: |
   Ready to get started? See Oso in action, and walk through a quick
   change to an Oso policy in a simple web server.

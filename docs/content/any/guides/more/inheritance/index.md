@@ -8,11 +8,10 @@ weight: 10
 description: |
   Oso policies make it possible to share rules across related resource types, and override them as needed.
 aliases:
-  - ../../../guides/more/inheritance.html
   - ../../../using/examples/inheritance.html
 ---
 
-# Resources with Inheritance
+# Share Rules Across Resources
 
 Some applications have many resources that should have similar authorization
 rules applied to them. This is a common scenario in workflow driven

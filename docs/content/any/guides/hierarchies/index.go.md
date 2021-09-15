@@ -1,6 +1,6 @@
 ---
-title: "Implement Resource Hierarchies"
-weight: 1
+title: "Build Authorization for Resource Hierarchies"
+weight: 4
 showContentForAnyLanguage: true
 ---
 

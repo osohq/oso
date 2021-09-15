@@ -1,5 +1,6 @@
 ---
 title: Internals
+weight: 7
 aliases:
     - ../more/internals.html
 ---
