@@ -21,7 +21,7 @@ getExpense: |-
     func GetExpense(user User, expenseId int) {
         expense := db.Fetch(
             "SELECT * FROM expenses WHERE id %", expenseId)
-        oso.Authorize(user, "read", "expense")
+        oso.Authorize(user, "read", expense)
 
         // ... process request
     }
