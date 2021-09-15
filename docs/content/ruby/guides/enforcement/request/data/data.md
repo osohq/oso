@@ -19,7 +19,7 @@ simplePolicy: |-
         user.verified_email;
     ```
 exampleCallWithAccessToken: |-
-    ```python
+    ```ruby
     oso.authorize_request(current_access_token, request)
     ```
 ---
