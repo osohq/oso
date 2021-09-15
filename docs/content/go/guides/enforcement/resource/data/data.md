@@ -11,7 +11,7 @@ forbiddenErrorLink: |-
 notFoundErrorLink: |-
   [`NotFoundError`](https://pkg.go.dev/github.com/osohq/go-oso/errors#NotFoundError)
 authorizationErrorLink: |-
-  an [`AuthorizationError`](https://pkg.go.dev/github.com/osohq/go-oso/errors)
+  an authorization error
 exampleCall: |-
     ```go
     err := oso.Authorize(user, "approve", expense)
