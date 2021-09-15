@@ -30,15 +30,10 @@ application.
 application libraries, including Django, SQLAlchemy, and Flask.
 {{% /ifLang %}}
 
-To quickly have a runnable example of using Oso, check out our
-[Quickstart](quickstart) where you can see a sample app with Oso.
+To quickly have a runnable example using Oso, check out our
+[Quickstart](quickstart) which includes a sample app with Oso.
 
 To use Oso for authorization in an existing application, check out our
 [Add Oso to Your App guide](application), where you'll be introduced to
-enforcing authorization, setting up role-based authorization, writing
+enforcing authorization, setting up role-based access control, writing
 rules, and filtering collections by authorization.
-
-For more on the design principles behind Oso and why it makes
-authorization easy for development teams, see the **TODO** What is Oso
-section or **TODO** read stories from teams using Oso — like Wayfair and
-Intercom.

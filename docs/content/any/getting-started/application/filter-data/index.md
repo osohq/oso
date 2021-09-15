@@ -101,7 +101,7 @@ pagination, or ordering to it.
 
 In this brief example we covered what the *data filtering API* does. For
 a more detailed how to of using data filtering and implementing query
-builder functions, see: [How to: Filter data]({{< ref href="/guides/filtering" >}}).
+builder functions, see the [Data Filtering](guides/data_filtering) guide.
 
 This is the end of __Add to your app__! For more detail on using
-Oso, see the [How to guides](/guides).
+Oso, see the [guides](/guides) section.
