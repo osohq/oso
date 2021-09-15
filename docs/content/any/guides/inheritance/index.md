@@ -12,7 +12,7 @@ aliases:
   - ../../../using/examples/inheritance.html
 ---
 
-# Resources with Inheritance
+# Share Rules Across Resources
 
 Some applications have many resources that should have similar authorization
 rules applied to them. This is a common scenario in workflow driven
