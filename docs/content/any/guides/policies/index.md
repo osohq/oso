@@ -454,8 +454,8 @@ with three parameters. That's a natural place to start with Oso,
 because the `authorize` function generates queries of the form
 `allow(actor, action, resource)`. But you can write rules for
 whatever you like and use them from within your `allow` rules.
-For instance, to use the [built-in roles features](guides/rbac), you need to
-define a rule that handles roles might look like this:
+For instance, to use the [resource block feature](guides/rbac) for implementing
+RBAC, you need to define an `allow` rule that calls a `has_permission` rule:
 
 <!-- TODO: We should update these rules to reflect our current role policy semantics. -->
 ```polar
