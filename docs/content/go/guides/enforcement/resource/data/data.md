@@ -7,11 +7,11 @@ notFoundError: NotFoundError
 authorizeLink: |-
   [`Oso.authorize`](https://pkg.go.dev/github.com/osohq/go-oso#Oso.Authorize)
 forbiddenErrorLink: |-
-  [`ForbiddenError`](https://pkg.go.dev/github.com/osohq/go-oso)
+  [`ForbiddenError`](https://pkg.go.dev/github.com/osohq/go-oso/errors#ForbiddenError)
 notFoundErrorLink: |-
-  [`NotFoundError`](https://pkg.go.dev/github.com/osohq/go-oso)
+  [`NotFoundError`](https://pkg.go.dev/github.com/osohq/go-oso/errors#NotFoundError)
 authorizationErrorLink: |-
-  an [`AuthorizationError`](https://pkg.go.dev/github.com/osohq/go-oso)
+  an [`AuthorizationError`](https://pkg.go.dev/github.com/osohq/go-oso/errors)
 exampleCall: |-
     ```go
     oso.Authorize(user, "approve", expense)
