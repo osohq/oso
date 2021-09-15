@@ -19,6 +19,7 @@ EOF
 EndsWith
 FFI
 ForbiddenError
+ForbiddenException
 FriendsOnlyFields
 GC
 GDB
@@ -40,11 +41,13 @@ Jullmann
 LDAP
 LLDB
 Lodash's
+MVC
 MinGW
 NFA
 NaN
 NestJS
 NotFoundError
+NotFoundException
 OAuth
 ORM
 ORMs
