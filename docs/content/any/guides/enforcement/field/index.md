@@ -5,7 +5,6 @@ any: true
 description: >
   Learn about enforcing field-level authorization, controlling who can access
   which fields of your resources.
-# draft: True
 ---
 
 # Field-level Enforcement

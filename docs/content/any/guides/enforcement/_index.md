@@ -4,8 +4,6 @@ weight: 4
 any: true
 aliases:
   - ../../../learn/enforce.html
-# showContentForAnyLanguage: true
-# draft: True
 ---
 
 # Enforcing an Oso Policy

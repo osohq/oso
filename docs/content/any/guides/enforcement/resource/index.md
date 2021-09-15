@@ -5,8 +5,6 @@ any: true
 description: >
   Learn about enforcing request-level authorization, controlling who can perform
   which actions on which resources.
-
-# draft: true
 ---
 
 # Resource-level Enforcement
