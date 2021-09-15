@@ -1,5 +1,5 @@
 ---
-title: Enforcing an Oso Policy (Oso 0.20.0 Beta)
+title: Enforcing an Oso Policy
 weight: 4
 any: true
 aliases:
