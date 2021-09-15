@@ -46,8 +46,8 @@ To enforce authorization, we query for the `allow` rule with a specific `actor`,
 ## `authorize`
 
 The `authorize` method queries the `allow` rule. If the query doesn't have any
-results (no rules succeed), it throws an `AuthorizationError`. You should
-handle this exception and [return an error response to the
+results (no rules succeed), it throws an authorization error. You should handle
+this exception and [return an error response to the
 user](guides/enforcement/resource#authorization-failure).
 
 The `authorize` method should be called any time you want to check if a user can
