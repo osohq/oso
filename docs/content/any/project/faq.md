@@ -1,5 +1,6 @@
 ---
 title: FAQ
+weight: 8
 aliases: 
     - ../more/faq.html
 ---

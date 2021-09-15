@@ -1,5 +1,6 @@
 ---
 title: Get Help
+weight: 1
 ---
 
 # Get Help

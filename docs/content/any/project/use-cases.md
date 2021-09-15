@@ -2,6 +2,7 @@
 title: Use Cases
 # Took this page down due to the Use Cases page on .com
 href: https://www.osohq.com/use-cases
+weight: 6
 _build:
   render: never
 aliases:
