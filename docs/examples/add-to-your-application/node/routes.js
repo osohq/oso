@@ -15,7 +15,9 @@ app.get('/repo/:name', async (req, res) => {
   const repo = Repository.getByName(req.params.name);
 
   try {
+    // docs: begin-authorize
     await res.locals.oso.authorize(User.getCurrentUser(), 'read', repo);
+    // docs: end-authorize
     return res.end(`<h1>A Repo</h1><p>Welcome to repo ${repo.name}</p>`);
   } catch (e) {
     console.log(e);

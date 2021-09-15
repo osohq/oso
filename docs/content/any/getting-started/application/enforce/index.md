@@ -46,9 +46,9 @@ To enforce authorization, we query for the `allow` rule with a specific `actor`,
 ## `authorize`
 
 The `authorize` method queries the `allow` rule. If the query doesn't have any
-results (no rules succeed), it throws an `AuthorizationError`. You should handle
-<!-- TODO remove lang -->
-this exception and [return an error response to the user]({{< ref href="/guides/enforcement/resource#authorization-failure" lang="python">}}).
+results (no rules succeed), it throws an authorization error. You should handle
+this exception and [return an error response to the
+user](guides/enforcement/resource#authorization-failure).
 
 The `authorize` method should be called any time you want to check if a user can
 perform an action—-like "read" or "delete"-—on a resource.
@@ -59,14 +59,16 @@ repository.
 {{< literalInclude
     dynPath="routePath"
     fallback="todo"
+    hlFrom="docs: begin-authorize"
+    hlTo="docs: end-authorize"
     from="docs: begin-show-route"
     to="docs: end-show-route"
     >}}
 
 The user and repository parameters are {{% lang %}} objects. Oso knows about
-fields & methods on {{% lang %}} objects, and their types, so you can access this data
-directly from your policy. You used the roles property of the user object
-in the [`has_role` implementation]({{< ref "model#giving-your-users-roles" >}}).
+fields & methods on {{% lang %}} objects, and their types, so you can access
+this data directly from your policy. You used the roles property of the user
+object in the [`has_role` implementation](model#give-your-users-roles).
 
 ## What's next
 
@@ -74,9 +76,9 @@ Add more `authorize` calls throughout your application, wherever you
 read or write data on behalf of a user.
 
 We only covered one type of enforcement in this guide: resource-level
-enforcement. Oso can also enforce access to fields on an object,
-requests, or queries from an external data source. See [How to: Enforce
-authorization]({{< ref href="/guides/enforcement" lang="python" >}}) for more.
+enforcement. Oso can also enforce access to fields on an object, requests, or
+queries from an external data source. See [How to: Enforce
+authorization](guides/enforcement) for more.
 
 This is all you need have Oso setup in your application and authorizing requests. Next, you may want to:
 

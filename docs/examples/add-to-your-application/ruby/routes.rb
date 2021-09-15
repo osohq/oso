@@ -15,9 +15,9 @@ get '/repo/:name' do
   repo = Repository.get_by_name(params['name'])
 
   begin
-    OSO.authorize(User.get_current_user,
-                  "read",
-                  repo)
+    # docs: begin-authorize
+    OSO.authorize(User.get_current_user, 'read', repo)
+    # docs: end-authorize
     "<h1>A Repo</h1><p>Welcome to repo #{repo.name}</p>"
   rescue Oso::NotFoundError
     status 404
