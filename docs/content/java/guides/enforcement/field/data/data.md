@@ -25,7 +25,7 @@ serializeProfile: |-
 filterUpdateParams: |-
   ```java
   // Filter rawUpdateParams by the fields on profile that the user can update
-  async function filterUpdateParams(profile, rawUpdateParams, currentUser) {
+  public Map<String, Object> filterUpdateParams(Profile profile, Map<String, Object> rawUpdateParams, User currentUser) {
       Set<String> fields = new HashSet(oso.authorizedFields(currentUser, "update", profile));
       Map<String, Object> result = new HashMap();
       for (String field : fields) {
@@ -39,10 +39,6 @@ fieldsFriendsOnlyAfter: FRIENDS_ONLY_FIELDS
 fieldsAdminOnlyBefore: '["email", "lastLogin"]'
 fieldsAdminOnlyAfter: ADMIN_ONLY_FIELDS
 fieldDefinitions: |-
-  Doing so would require you to add the `FRIENDS_ONLY_FIELDS` and
-  `ADMIN_ONLY_FIELDS` constants to your `Profile` class:
-
-  ```java
   Doing so would require you to define the `FRIENDS_ONLY_FIELDS` and
   `ADMIN_ONLY_FIELDS` constants, and register them with Oso:
 
@@ -54,6 +50,5 @@ fieldDefinitions: |-
 
   oso.RegisterConstant(Profile.ADMIN_ONLY_FIELDS, "ADMIN_ONLY_FIELDS")
   oso.RegisterConstant(Profile.FRIENDS_ONLY_FIELDS, "FRIENDS_ONLY_FIELDS")
-  ```
   ```
 ---
