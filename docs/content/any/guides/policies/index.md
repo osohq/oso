@@ -9,19 +9,18 @@ aliases:
 description: Learn about writing Oso policies - the source of truth for authorization logic.
 ---
 
-# Write Custom Policies
-
+# Write Rules
 
 Oso provides policy building blocks for common authorization models like [role-based
 access control](/guides/rbac), [attribute-based access control](/guides/attributes), and
 [resource hierarchies](/guides/hierarchies).
 
-This guide covers how to extend those building blocks by writing custom
-policies in Oso's policy language, Polar.
-You will learn the basic structure and operations of Polar rules and how to
-write rules that refer to application classes, instances, and fields.
+This guide covers how to extend those building blocks by writing rules in Oso's
+policy language, Polar.  You will learn the basic structure and operations of
+Polar rules, and how to write rules that refer to application classes,
+instances, and fields.
 
-## What is a policy?
+## What is a Policy?
 
 In Oso, policies are where authorization logic is stored. Policy files are
 separate from your application code and are written in a declarative language
@@ -31,7 +30,7 @@ called Polar (file extension `.polar`).
 Your application can query a policy using the [Enforcement APIs]({{< ref href="/guides/enforcement" lang="python" >}}) to get authorization decisions.
 The most basic component of a policy is a **rule**, which describes who is allowed to access what resources in an application.
 
-## Rules
+## What is a Rule?
 
 The way you control whether an authorization query succeeds is to define and
 load rules that **match** certain queries. This matching may involve
