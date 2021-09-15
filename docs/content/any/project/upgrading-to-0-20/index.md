@@ -2,6 +2,8 @@
 title: Upgrading to 0.20
 weight: -1
 any: false
+description: |
+  Migration guide for upgrading from Oso 0.15 to the new 0.20 release.
 ---
 
 # Upgrading to 0.20
