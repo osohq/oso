@@ -16,7 +16,7 @@ exampleCall: |-
     oso.authorize(user, "approve", expense)
     ```
 approveExpense: |-
-    ```ruby
+    ```ruby {hl_lines=[4]}
     def approve_expense(user, expense_id)
       expense = db.fetch(
         "SELECT * FROM expenses WHERE id = ?", expense_id)

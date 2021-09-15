@@ -4,14 +4,14 @@ authorize: authorize
 authorizeField: authorize_field
 authorizedFields: authorized_fields
 getEmail: |-
-  ```ruby
+  ```ruby {hl_lines=[2]}
   def get_email(profile, current_user)
     oso.authorize_field(current_user, "read", profile, "email")
     profile.email
   end
   ```
 serializeProfile: |-
-  ```ruby
+  ```ruby {hl_lines=[3]}
   # Serialize only the fields of profile that the current user is allowed to read
   def serialize_profile(profile, current_user)
     fields = oso.authorized_fields(current_user, "read", profile)
@@ -19,7 +19,7 @@ serializeProfile: |-
   end
   ```
 filterUpdateParams: |-
-  ```ruby
+  ```ruby {hl_lines=[3]}
   # Filter raw_update_params by the fields on profile that the user can update
   def filter_update_params(profile, raw_update_params, current_user)
     fields = oso.authorized_fields(current_user, "update", profile)
