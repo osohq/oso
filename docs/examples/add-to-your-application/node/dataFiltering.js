@@ -27,7 +27,7 @@ async function initDb() {
 }
 
 // docs: begin-data-filtering
-// This is an example implementation for the Seqeulize ORM, but you can
+// This is an example implementation for the Sequelize ORM, but you can
 // use any ORM with this API.
 async function initOso() {
   await initDb();

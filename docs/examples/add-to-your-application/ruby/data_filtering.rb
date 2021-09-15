@@ -23,6 +23,8 @@ module DF
   OSO = Oso.new
 
   # docs: begin-data-filtering
+  # This is an example implementation for the Sequel ORM, but you can
+  # use any ORM with this API.
   def self.get_repositories(filters)
     query = Repository
     filters.each do |filter|
