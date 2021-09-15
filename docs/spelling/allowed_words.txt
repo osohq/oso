@@ -11,6 +11,7 @@ Bjerk
 Bundler
 CLI
 CTO
+Changelogs
 Cloudflare
 DFA
 Dexec
