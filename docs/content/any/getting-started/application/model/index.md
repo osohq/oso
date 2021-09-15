@@ -1,5 +1,5 @@
 ---
-title: Model your authorization logic
+title: Model Your Authorization Logic
 description: |
     Authorization in Oso starts with the policy. Authorization policies
     define the resources that you want to control access to, and rules that
@@ -10,7 +10,7 @@ description: |
 weight: 1
 ---
 
-# Model your authorization logic
+# Model Your Authorization Logic
 
 Authorization in Oso starts with the policy. To model authorization with
 Oso, you write a policy in Polar - Oso's declarative policy language.
@@ -21,7 +21,7 @@ In this guide, we'll cover how to express your authorization logic using
 Oso. We'll use GitClub (our example application) as an example, but you
 can follow along with your application.
 
-## Installing Oso
+## Install Oso
 
 The Oso library evaluates authorization policies.
 
@@ -33,7 +33,7 @@ and can be installed using {{% exampleGet "installer" %}}:
 For more detailed installation instructions, see
 [installation](/reference/installation).
 
-## Write a policy
+## Create a Policy
 
 Policies are files that are packaged with the rest of your application
 code. Oso loads and evaluates policy files when your
@@ -42,7 +42,7 @@ called `main.polar` and use it in your app:
 
 {{< literalInclude dynPath="pathOso" fallback="todo" >}}
 
-## Define your resources, permissions and roles
+## Define Resources, Permissions, and Roles
 
 Authorization controls access to *resources* in your application. In
 this guide, we're going to show how to implement the most common
@@ -106,7 +106,7 @@ The last rules we added are between two roles: A user has the
 `"maintainer"` role and all permissions associated with it if they have the
 `"admin"` role, and the same for `"contributor"` and `"maintainer"`.
 
-### Giving your users roles
+### Give Your Users Roles
 
 Now that we've written the core of our policy, we must associate users with roles
 in our application. Oso doesn't manage authorization data. The data
@@ -148,7 +148,7 @@ likely use your existing User model to maintain this information.
     from="docs: start"
     to="docs: end" >}}
 
-### Allowing access
+### Allow Access
 
 Oso policies have a special rule: the `allow` rule. The `allow` rule is
 the entrypoint to the policy, and is used by the Oso library to check if an
@@ -171,7 +171,7 @@ allow(actor, action, resource) if
 	has_permission(actor, action, resource);
 ```
 
-### The complete policy
+### The Complete Policy
 
 ```polar
 actor User {}
@@ -196,8 +196,8 @@ has_role(actor: User, role_name: String, repository: Repository) if
 allow(actor, action, resource) if
     has_permission(actor, action, resource);
 ```
-    
-### What's next
+
+### What's Next
 
 {{% 1on1 %}}
 
