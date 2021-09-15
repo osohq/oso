@@ -8,7 +8,7 @@ aliases:
 # draft: True
 ---
 
-# Use Oso Policies in an App
+# Enforcing an Oso Policy
 
 To use an Oso policy in your app, you'll need to "enforce" it. A policy is
 useless without an app that consults the policy on user actions. For most apps,
