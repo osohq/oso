@@ -67,6 +67,13 @@
     {{ if eq $level 0 }}font-bold py-2{{else}}font-normal{{end}}
     {{ if $isCurrent}}active text-primary{{else}} text-black{{ end }}
 ">
+    {{ if isset .Params "href" }}
+    <li data-nav-id="{{.Params.href}}" title="{{.Title}}" class="font-normal text-black pl-2">
+        <a class="font-bold flex items-center px-3 transition-colors duration-200 mb-2" href="{{ .Params.href }}">
+            {{or .Params.menuTitle .LinkTitle .Title}}
+        </a>
+    </li>
+    {{ else }}
     <a class="flex items-center px-3 hover:text-gray-900 transition-colors duration-200 mb-2" href="{{.RelPermalink}}">
         {{or .Params.menuTitle .LinkTitle .Title}}
     </a>
@@ -87,6 +94,7 @@
         {{ template "tree-nav" $templateParams }}
         {{ end }}
     </ul>
+    {{ end }}
     {{end}}
     {{ end }}
 </li>
