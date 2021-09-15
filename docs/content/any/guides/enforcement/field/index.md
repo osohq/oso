@@ -35,7 +35,8 @@ class="Oso" %}}{{< exampleGet "authorizeField" >}}{{% /apiDeepLink %}} method.
 
 {{% exampleGet "getEmail" %}}
 
-Like `{{< exampleGet "authorize" >}}`, `{{< exampleGet "authorizeField" >}}` will raise an `AuthorizationError` when the
+Like `{{< exampleGet "authorize" >}}`, `{{< exampleGet "authorizeField" >}}`
+will raise an an authorization error when the
 user is not allowed to perform the given action. This is an error that you
 should handle globally in your app. You can read more details about this in the
 [Resource-level Enforcement Guide](resource.html#authorization-failure).
