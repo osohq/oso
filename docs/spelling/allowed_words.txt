@@ -3,6 +3,7 @@ APIs
 AWS
 Abagail
 ActiveRecord
+AdminOnlyFields
 Appleby
 Bhavik's
 Bjerk
@@ -16,6 +17,7 @@ EMR
 EOF
 EndsWith
 FFI
+FriendsOnlyFields
 GC
 GDB
 GSuite
@@ -51,6 +53,7 @@ RBAC
 REPL
 RESTful
 ReBAC
+RegisterConstant
 RepoId
 RubyGems
 Rubying
@@ -78,6 +81,10 @@ anonymized
 args
 arities
 arity
+authorizeField
+authorizeRequest
+authorizedActions
+authorizedFields
 autoboxed
 backend
 bodiless
@@ -110,6 +117,7 @@ entrypoint
 enum
 enumerables
 enums
+favoriteAnimal
 filesystem
 frontend
 glibc
@@ -127,6 +135,8 @@ io
 iterable
 iterables
 js
+lastCheckInLocation
+lastLogin
 latencies
 lifecycle
 localhost
