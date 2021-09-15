@@ -16,8 +16,8 @@ public class Oso extends Polar {
   }
 
   /**
-   * Override the "read" action, which is used to differentiate between a NotFoundError and a
-   * ForbiddenError on authorization failures.
+   * Override the "read" action, which is used to differentiate between a `NotFoundException` and a
+   * `ForbiddenException` on authorization failures.
    */
   public void setReadAction(Object readAction) {
     this.readAction = readAction;
@@ -86,13 +86,13 @@ public class Oso extends Polar {
    * `None`. If the action is not permitted by the policy, this method will raise an error.
    *
    * <p>The error raised by this method depends on whether the actor can perform the `"read"` action
-   * on the resource. If they cannot read the resource, then a `NotFound` error is raised.
-   * Otherwise, a `ForbiddenError` is raised.
+   * on the resource. If they cannot read the resource, then a `NotFoundException` is raised.
+   * Otherwise, a `ForbiddenException` is raised.
    *
    * @param actor The actor performing the request.
    * @param action The action the actor is attempting to perform.
    * @param resource The resource being accessed.
-   * @param checkRead If set to `false`, a `ForbiddenError` is always thrown on authorization
+   * @param checkRead If set to `false`, a `ForbiddenException` is always thrown on authorization
    *     failures, regardless of whether the actor can read the resource. Default is `true`.
    * @throws Exceptions.OsoException
    */
@@ -124,7 +124,7 @@ public class Oso extends Polar {
    * <p>Checks the `allow_request` rule of a policy.
    *
    * <p>If the request is permitted with an `allow_request` rule in the policy, then this method
-   * returns nothing. Otherwise, this method raises a `ForbiddenError`.
+   * returns nothing. Otherwise, this method raises a `ForbiddenException`.
    *
    * @param actor The actor performing the request.
    * @param request An object representing the request that was sent by the actor.
@@ -142,7 +142,7 @@ public class Oso extends Polar {
    *
    * <p>If the action is permitted by an `allow_field` rule in the policy, then this method returns
    * nothing. If the action is not permitted by the policy, this method will raise a
-   * `ForbiddenError`.
+   * `ForbiddenException`.
    *
    * @param actor The actor performing the request.
    * @param action The action the actor is attempting to perform on the field.

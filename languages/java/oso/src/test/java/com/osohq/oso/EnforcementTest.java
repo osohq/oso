@@ -66,15 +66,15 @@ public class EnforcementTest {
     oso.authorize(guest, "read", widget0);
     oso.authorize(admin, "update", widget1);
 
-    // Throws a forbidden error when user can read resource
+    // Throws a forbidden exception when user can read resource
     assertThrows(
         Exceptions.ForbiddenException.class, () -> oso.authorize(guest, "update", widget0));
 
-    // Throws a not found error when user cannot read resource
+    // Throws a not found exception when user cannot read resource
     assertThrows(Exceptions.NotFoundException.class, () -> oso.authorize(guest, "read", widget1));
     assertThrows(Exceptions.NotFoundException.class, () -> oso.authorize(guest, "update", widget1));
 
-    // With checkRead = false, returns a forbidden error
+    // With checkRead = false, returns a forbidden exception
     assertThrows(
         Exceptions.ForbiddenException.class, () -> oso.authorize(guest, "read", widget1, false));
     assertThrows(
@@ -218,8 +218,8 @@ public class EnforcementTest {
     oso.setReadAction("fetch");
     oso.loadStr("allow(\"graham\", \"fetch\", \"bar\");");
     assertThrows(Exceptions.NotFoundException.class, () -> oso.authorize("sam", "frob", "bar"));
-    // A user who can "fetch" should get a ForbiddenError instead of a
-    // NotFoundError
+    // A user who can "fetch" should get a ForbiddenException instead of a
+    // NotFoundException
     assertThrows(Exceptions.ForbiddenException.class, () -> oso.authorize("graham", "frob", "bar"));
   }
 }
