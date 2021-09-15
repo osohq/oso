@@ -15,7 +15,9 @@ func InitApp() *fiber.App {
 		c.Set(fiber.HeaderContentType, fiber.MIMETextHTML)
 		repoName := c.Params("repoName")
 		repository := GetRepositoryByName(repoName)
+		// docs: begin-authorize
 		err := oso.Authorize(GetCurrentUser(), "read", repository)
+		// docs: end-authorize
 		if err == nil {
 			return c.Status(200).SendString(fmt.Sprintf("<h1>A Repo</h1><p>Welcome to repo %s</p>", repository.Name))
 		} else {

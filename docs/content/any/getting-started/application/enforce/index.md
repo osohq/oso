@@ -59,6 +59,8 @@ repository.
 {{< literalInclude
     dynPath="routePath"
     fallback="todo"
+    hlFrom="docs: begin-authorize"
+    hlTo="docs: end-authorize"
     from="docs: begin-show-route"
     to="docs: end-show-route"
     >}}
