@@ -5,6 +5,7 @@ description: |
   Control what you expose in the UI with Oso policies.
 aliases:
   - /getting-started/ui/index.html
+  - /guides/ui.html
 ---
 
 # Authorize in the UI

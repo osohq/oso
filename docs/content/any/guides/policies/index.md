@@ -12,7 +12,7 @@ description: Learn about writing Oso policies - the source of truth for authoriz
 # Write Rules
 
 Oso provides policy building blocks for common authorization models like [role-based
-access control](/guides/rbac), [attribute-based access control](/guides/attributes), and
+access control](/guides/rbac), [attribute-based access control](/guides/more/attributes), and
 [resource hierarchies](/guides/hierarchies).
 
 This guide covers how to extend those building blocks by writing rules in Oso's
