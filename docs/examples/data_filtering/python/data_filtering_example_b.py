@@ -14,6 +14,7 @@ class Organization(Base):
     id = Column(String(), primary_key=True)
 
 
+# Repositories belong to Organizations
 class Repository(Base):
     __tablename__ = "repos"
 
@@ -52,6 +53,7 @@ session = Session()
 
 Base.metadata.create_all(engine)
 
+# Here's some more test data
 osohq = Organization(id="osohq")
 apple = Organization(id="apple")
 
@@ -80,6 +82,7 @@ session.commit()
 # docs: end-b1
 
 # docs: begin-b2
+# The query functions are the same.
 def build_query_cls(cls):
     def build_query(filters):
         query = session.query(cls)
@@ -108,6 +111,8 @@ from polar import Relation
 
 oso = Oso()
 
+# All the combine/exec query functions are the same, so we
+# can set defaults.
 oso.set_data_filtering_query_defaults(
     exec_query=exec_query, combine_query=combine_query
 )
@@ -124,6 +129,9 @@ oso.register_class(
     Repository,
     types={
         "id": str,
+        # Here we use a Relation to represent the logical connection between an Organization and a Repository.
+        # Note that this only goes in one direction: to access repositories from an organization, we'd have to
+        # add a "many" relation on the Organization class.
         "organization": Relation(
             kind="one", other_type="Organization", my_field="org_id", other_field="id"
         ),

@@ -1,4 +1,5 @@
 # docs: begin-a1
+# We're using sqlalchemy here, but you can use data filtering with any ORM
 from sqlalchemy import create_engine
 from sqlalchemy.types import String, Boolean, Integer
 from sqlalchemy.schema import Column, ForeignKey
@@ -36,6 +37,7 @@ session = Session()
 
 Base.metadata.create_all(engine)
 
+# Here's some data to work with ...
 ios = Repository(id="ios")
 oso_repo = Repository(id="oso")
 demo_repo = Repository(id="demo")
@@ -61,6 +63,7 @@ session.commit()
 # docs: end-a1
 
 # docs: begin-a2
+# build_query takes a list of filters and returns a query
 def build_query(filters):
     query = session.query(Repository)
     for filter in filters:
@@ -73,10 +76,12 @@ def build_query(filters):
     return query
 
 
+# exec_query takes a query and returns a list of resources
 def exec_query(query):
     return query.all()
 
 
+# combine_query takes two queries and returns a new query
 def combine_query(q1, q2):
     return q1.union(q2)
 
@@ -103,6 +108,7 @@ with open("../policy_a.polar") as f:
 
 # docs: begin-a3
 oso.load_str(policy_a)
+# Verify that the policy works as expected
 leina_repos = list(oso.authorized_resources(leina, "read", Repository))
 assert leina_repos == [demo_repo, oso_repo]
 # docs: end-a3
