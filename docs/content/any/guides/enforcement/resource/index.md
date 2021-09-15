@@ -37,8 +37,8 @@ simplest way to use Oso in your app. -->
 
 {{% exampleGet "exampleCall" %}}
 
-The `{{< exampleGet "authorize" >}}` method checks all of the `allow` rules in your policy, and
-ensures that there is an `allow` rule for that applies to the given user,
+The `{{< exampleGet "authorize" >}}` method checks all of the `allow` rules in your policy and
+ensures that there is an `allow` rule that applies to the given user,
 action, and resource, like this:
 
 ```polar
