@@ -22,7 +22,7 @@ approveExpense: |-
             "SELECT * FROM expenses WHERE id = %", expenseId);
         await oso.authorize(user, "approve", expense);
 
-        # ... process request
+        // ... process request
     }
     ```
 globalErrorHandler: |-
