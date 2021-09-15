@@ -21,13 +21,6 @@ In this guide, we'll cover how to express your authorization logic using
 Oso. We'll use GitClub (our example application) as an example, but you
 can follow along with your application.
 
-{{% 1on1 %}}
-
-For help deciding what type of authorization model to use, chat with our
-team.
-
-{{% /1on1 %}}
-
 ## Installing Oso
 
 The Oso library evaluates authorization policies.
@@ -53,9 +46,9 @@ called `main.polar` and use it in your app:
 
 Authorization controls access to *resources* in your application. In
 this guide, we're going to show how to implement the most common
-authorization model, role-based access control, with Oso. See [How to:
-modeling](/guides) **TODO** to see how to implement other authorization
-models in Oso.
+authorization model, role-based access control, with Oso. See the
+[guides](/guides) section for how to implement other authorization models with
+Oso.
 
 To start with, you need to define resource blocks in your policy. Let's
 say we have an application like GitHub that includes a `Repository`
@@ -205,5 +198,12 @@ allow(actor, action, resource) if
 ```
     
 ### What's next
+
+{{% 1on1 %}}
+
+For help deciding what type of authorization model to use, chat with our
+team.
+
+{{% /1on1 %}}
 
 Now that we've setup our policy, let's see how we can enforce it!
