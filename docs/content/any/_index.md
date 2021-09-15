@@ -21,4 +21,4 @@ in the sample app on the right.
 
 <div id="oso-web-demo"></div>
 
-<script src="https://oso-web-demo.s3.us-west-2.amazonaws.com/bundle-3103463431644cfb9e23/bundle.js"></script>
+<script src="https://oso-web-demo.s3.us-west-2.amazonaws.com/main-f564bc9494e824b5c195.js"></script>
