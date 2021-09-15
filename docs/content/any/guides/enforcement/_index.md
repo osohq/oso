@@ -1,12 +1,12 @@
 ---
-title: Enforcing an Oso Policy
+title: Enforce an Oso Policy
 weight: 4
 any: true
 aliases:
   - ../../../learn/enforce.html
 ---
 
-# Enforcing an Oso Policy
+# Enforce an Oso Policy
 
 To use an Oso policy in your app, you'll need to "enforce" it. A policy is
 useless without an app that consults the policy on user actions. For most apps,
