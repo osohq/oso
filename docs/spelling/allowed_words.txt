@@ -3,7 +3,9 @@ APIs
 AWS
 Abagail
 ActiveRecord
+AdminOnlyFields
 Appleby
+AuthorizationError
 Bhavik's
 Bjerk
 Bundler
@@ -16,6 +18,9 @@ EMR
 EOF
 EndsWith
 FFI
+ForbiddenError
+ForbiddenException
+FriendsOnlyFields
 GC
 GDB
 GSuite
@@ -37,10 +42,13 @@ LDAP
 LLDB
 LoadString
 Lodash's
+MVC
 MinGW
 NFA
 NaN
 NestJS
+NotFoundError
+NotFoundException
 OAuth
 ORM
 ORMs
@@ -52,6 +60,7 @@ RBAC
 REPL
 RESTful
 ReBAC
+RegisterConstant
 RepoId
 RubyGems
 Rubying
@@ -76,9 +85,15 @@ Wayfair
 alice
 amongst
 anonymized
+api
 args
 arities
 arity
+authorizationerror
+authorizeField
+authorizeRequest
+authorizedActions
+authorizedFields
 autoboxed
 backend
 bodiless
@@ -111,7 +126,9 @@ entrypoint
 enum
 enumerables
 enums
+favoriteAnimal
 filesystem
+forbiddenerror
 frontend
 glibc
 gmail
@@ -120,6 +137,7 @@ hardcoding
 hoc
 hotfixes
 href
+html
 http
 ing
 instantiation
@@ -129,6 +147,8 @@ isAllowed
 iterable
 iterables
 js
+lastCheckInLocation
+lastLogin
 latencies
 lifecycle
 loadFile
@@ -153,6 +173,7 @@ namespaces
 natively
 nbsp
 nodejs
+notfounderror
 npm
 organizationRoles
 oso
