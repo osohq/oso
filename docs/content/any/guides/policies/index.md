@@ -29,7 +29,7 @@ called Polar (file extension `.polar`).
 
 <!-- TODO: update enforcmeent link once docs are ported -->
 Your application can query a policy using the [Enforcement APIs]({{< ref href="/guides/enforcement" lang="python" >}}) to get authorization decisions.
-The most basic component of a policy is a **rule**, which describes a logical condition that must be true in order for a query to succeed.
+The most basic component of a policy is a **rule**, which describes who is allowed to access what resources in an application.
 
 ## Rules
 
