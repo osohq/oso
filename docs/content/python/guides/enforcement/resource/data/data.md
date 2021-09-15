@@ -5,13 +5,13 @@ forbiddenError: ForbiddenError
 notFoundError: NotFoundError
 # TODO: change these to relative links
 authorizeLink: |-
-  [`Oso.authorize`](https://docs.osohq.com/python/reference/api/index.html#oso.Oso.authorize)
+  <a href="/python/reference/api/index.html#oso.Oso.authorize">`Oso.authorize`</a>
 forbiddenErrorLink: |-
-  [`ForbiddenError`](https://docs.osohq.com/python/reference/api/index.html#oso.exceptions.ForbiddenError)
+  <a href="/python/reference/api/index.html#oso.exceptions.ForbiddenError">`ForbiddenError`</a>
 notFoundErrorLink: |-
-  [`NotFoundError`](https://docs.osohq.com/python/reference/api/index.html#oso.exceptions.NotFoundError)
+  <a href="/python/reference/api/index.html#oso.exceptions.NotFoundError">`NotFoundError`</a>
 authorizationErrorLink: |-
-  an [`AuthorizationError`](https://docs.osohq.com/python/reference/api/index.html#oso.exceptions.AuthorizationError)
+  <a href="/python/reference/api/index.html#oso.exceptions.AuthorizationError">an `AuthorizationError`</a>
 getExpense: |-
     ```python
     def get_expense(user, expense_id):
