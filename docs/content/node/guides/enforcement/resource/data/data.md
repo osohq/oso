@@ -15,12 +15,12 @@ exampleCall: |-
     ```javascript
     oso.authorize(user, "approve", expense)
     ```
-getExpense: |-
+approveExpense: |-
     ```javascript
-    async function getExpense(user, expenseId) {
+    async function approveExpense(user, expenseId) {
         const expense = await db.fetch(
             "SELECT * FROM expenses WHERE id = %", expenseId);
-        await oso.authorize(user, "read", expense);
+        await oso.authorize(user, "approve", expense);
 
         # ... process request
     }

@@ -15,12 +15,12 @@ exampleCall: |-
     ```ruby
     oso.authorize(user, "approve", expense)
     ```
-getExpense: |-
+approveExpense: |-
     ```ruby
-    def get_expense(user, expense_id)
+    def approve_expense(user, expense_id)
       expense = db.fetch(
         "SELECT * FROM expenses WHERE id = ?", expense_id)
-      oso.authorize(user, "read", expense)
+      oso.authorize(user, "approve", expense)
 
       # ... process request
     end

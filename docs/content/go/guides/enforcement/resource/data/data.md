@@ -16,12 +16,12 @@ exampleCall: |-
     ```go
     err := oso.Authorize(user, "approve", expense)
     ```
-getExpense: |-
+approveExpense: |-
     ```go
-    func GetExpense(user User, expenseId int) {
+    func ApproveExpense(user User, expenseId int) {
         expense := db.Fetch(
             "SELECT * FROM expenses WHERE id %", expenseId)
-        if err := oso.Authorize(user, "read", expense); err != nil {
+        if err := oso.Authorize(user, "approve", expense); err != nil {
             // handle error
         }
 

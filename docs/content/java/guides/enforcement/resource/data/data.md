@@ -16,11 +16,11 @@ exampleCall: |-
     ```java
     oso.authorize(user, "approve", expense);
     ```
-getExpense: |-
+approveExpense: |-
     ```java
-    public void getExpense(User user, int expenseId) throws AuthorizationException {
+    public void approveExpense(User user, int expenseId) throws AuthorizationException {
         Expense expense = Expense.byId(expenseId);
-        oso.authorize(user, "read", expense);
+        oso.authorize(user, "approve", expense);
 
         // ... process request
     ```

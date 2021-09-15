@@ -48,7 +48,7 @@ allow(user: User, "approve", _expense: Expense) if
 
 Let's see an example of `{{< exampleGet "authorize" >}}` from within an endpoint:
 
-{{% exampleGet "getExpense" %}}
+{{% exampleGet "approveExpense" %}}
 
 As you can see from this example, it's common to have to fetch _some_ data
 before performing authorization. To perform resource-level authorization, you
