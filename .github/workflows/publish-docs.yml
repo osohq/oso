@@ -2,6 +2,8 @@ name: Publish Docs
 on:
   workflow_dispatch:
     inputs:
+      url:
+        description: "docs s3 path (docs.oso.dev or docs-preview.oso.dev)"
       oso_version:
         description: "oso release to build docs for"
         default: "0.20.1" # oso_version
@@ -93,14 +95,16 @@ jobs:
         uses: peaceiris/actions-hugo@v2
         with:
           hugo-version: '0.79.1'
-      - name: Build Hugo docs (docs.oso.dev)
+      - name: Build Hugo docs (docs-preview.oso.dev)
+        if: github.event.inputs.url == 'docs-preview.oso.dev'
         run: |
-          make ci-prod-docs
+          make ci-preview-docs
         working-directory: docs
-      - name: download s3-deploy package
+      - name: Build Hugo docs (docs.oso.dev)
+        if: github.event.inputs.url == 'docs.oso.dev'
         run: |
           wget https://github.com/bep/s3deploy/releases/download/v2.4.0/s3deploy_2.4.0_Linux-64bit.deb
           sudo dpkg -i s3deploy_2.4.0_Linux-64bit.deb
       - name: deploy
-        run: s3deploy -bucket docs.oso.dev -distribution-id E1MY35FKBOYAV1 -path v/main -source public -region us-east-1
+        run: s3deploy -bucket ${{ github.event.inputs.url }} -distribution-id E1MY35FKBOYAV1 -path v/main -source public -region us-east-1
         working-directory: docs
