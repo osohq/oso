@@ -1,0 +1,11 @@
+#!/bin/bash
+set -eou pipefail
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+pushd $SCRIPT_DIR
+
+for lang in content/*; do
+    pushd $lang
+    mv $*
+    popd
+done
