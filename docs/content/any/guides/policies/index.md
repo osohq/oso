@@ -21,13 +21,13 @@ access control](/guides/rbac), [attribute-based access control](/guides/attribut
 
 This guide covers how to extend those building blocks by writing custom
 policies in Oso's policy language, Polar.
-You will learn the basic structure and operations of Polar rules, and how to
+You will learn the basic structure and operations of Polar rules and how to
 write rules that refer to application classes, instances, and fields.
 
 ## What is a policy?
 
 In Oso, policies are where authorization logic is stored. Policy files are
-separate from your application code, and are written in a declarative language
+separate from your application code and are written in a declarative language
 called Polar (file extension `.polar`).
 
 <!-- TODO: update enforcmeent link once docs are ported -->
@@ -453,7 +453,7 @@ So far all of our examples have involved only `allow` rules
 with three parameters. That's a natural place to start with Oso,
 because the `authorize` function generates queries of the form
 `allow(actor, action, resource)`. But you can write rules for
-whatever you like, and use them from within your `allow` rules.
+whatever you like and use them from within your `allow` rules.
 For instance, to use the [built-in roles features](guides/rbac), you need to
 define a rule that handles roles might look like this:
 
