@@ -103,6 +103,9 @@ jobs:
       - name: Build Hugo docs (docs.oso.dev)
         if: github.event.inputs.url == 'docs.oso.dev'
         run: |
+          make ci-prod-docs
+      - name: Install s3deploy
+        run: |
           wget https://github.com/bep/s3deploy/releases/download/v2.4.0/s3deploy_2.4.0_Linux-64bit.deb
           sudo dpkg -i s3deploy_2.4.0_Linux-64bit.deb
       - name: deploy
