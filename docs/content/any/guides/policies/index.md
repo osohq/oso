@@ -1,5 +1,5 @@
 ---
-title: Write Custom Policies
+title: Write Rules
 weight: 3
 any: true
 aliases:
