@@ -35,6 +35,7 @@ JWZ
 Jullmann
 LDAP
 LLDB
+LoadString
 Lodash's
 MinGW
 NFA
@@ -124,11 +125,14 @@ ing
 instantiation
 integrations
 io
+isAllowed
 iterable
 iterables
 js
 latencies
 lifecycle
+loadFile
+loadStr
 localhost
 lookups
 macOS
@@ -191,4 +195,5 @@ unmanageably
 unsafety
 unspecialized
 untaken
+vec
 webpack
