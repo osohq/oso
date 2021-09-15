@@ -21,10 +21,6 @@
           {{ else }}
             {{ partial "toc.html" . }}
           {{ end }}
-          {{ if (eq .Params.below_picker "old-sqlalchemy") }}
-            <p class="prose max-w-none">If you are looking for the the currently released version of
-                the sqlalchemy-oso library, you can find it <a href="{{ ref . "/reference/frameworks/sqlalchemy" }}">here</a>.</p>
-          {{ end }}
           <!--/ Post Content-->
           <hr class="max-w-4xl mx-auto text-center border-gray-100 my-12" />
           <div class="prose max-w-none min-w-0 flex-auto pb-24 lg:pb-16">
@@ -33,7 +29,7 @@
         </div>
       </div>
     </main>
-{{ else }}
+  {{ else }}
     <div class="w-3/5 text-black leading-normal pt-6 mx-auto static">
       <article class="prose max-w-none min-w-0 flex-auto px-4 sm:px-6 xl:mr-64 xl:px-8 pt-10 pb-24 lg:pb-16">
         {{ if .Params.showContentForAnyLanguage }}
