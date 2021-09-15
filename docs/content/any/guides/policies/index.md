@@ -170,7 +170,7 @@ allow(actor, "read", "document-1") if
 ```
 
 We would read this in English as: "allow an actor to read document-1
-if the actor is Abagail, or it is Carol, or is Johann".
+if the actor is Abagail, or it is Carol, or it is Johann".
 
 ### Bindings
 
