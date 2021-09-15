@@ -1,6 +1,6 @@
 ---
 title: Enforce an Oso Policy
-weight: 4
+weight: 3
 any: true
 aliases:
   - ../../../learn/enforce.html

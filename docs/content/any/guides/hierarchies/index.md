@@ -1,6 +1,6 @@
 ---
 title: "Build Authorization for Resource Hierarchies"
-weight: 3
+weight: 4
 showContentForAnyLanguage: true
 ---
 
