@@ -93,12 +93,6 @@ button > * {
       @apply rounded-t-none mt-0
     }
 }
-:target::before {
-  content: "";
-  display: block;
-  height: 120px; /* fixed header height*/
-  margin: -120px 0 0; /* negative fixed header height */
-}
 
 /* Making the sidebar sticky. See: https://github.com/tailwindlabs/discuss/issues/193 */
 @supports (position: sticky) {

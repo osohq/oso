@@ -11,10 +11,12 @@ authorization over collections too - e.g., "Show me only the records
 that Juno can see."
 - **Test**: Inspect your authorization logic now that
 it's in a single place and write unit tests over it.
-
-
-#### Try it out
+### Oso in Action
 
 Oso lets you write policies to control who can do what in your app.
 Select different policies below to see how they change the permissions
 in the sample app on the right.
+
+<div id="oso-web-demo"></div>
+
+<script src="https://oso-web-demo.s3.us-west-2.amazonaws.com/bundle-3103463431644cfb9e23/bundle.js"></script>
