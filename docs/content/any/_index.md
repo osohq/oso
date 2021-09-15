@@ -9,8 +9,10 @@ need with Oso's declarative policy language, Polar.
 - **Filter**: Go beyond yes/no authorization questions. Implement
 authorization over collections too - e.g., "Show me only the records
 that Juno can see."
-- **Test**: Inspect your authorization logic now that
-it's in a single place and write unit tests over it.
+- **Test**: Write unit tests over your authorization logic now that you
+have a single interface for it. Use the debugger or tracing to track
+down unexpected behavior.
+
 ### Oso in Action
 
 Oso lets you write policies to control who can do what in your app.
