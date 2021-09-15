@@ -16,8 +16,8 @@ public class Oso extends Polar {
   }
 
   /**
-   * Override the "read" action, which is used to differentiate between a
-   * `NotFoundException` and a `ForbiddenException` on authorization failures.
+   * Override the "read" action, which is used to differentiate between a `NotFoundException` and a
+   * `ForbiddenException` on authorization failures.
    */
   public void setReadAction(Object readAction) {
     this.readAction = readAction;
