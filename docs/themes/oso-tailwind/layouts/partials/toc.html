@@ -1,7 +1,16 @@
 <div class="grid grid-cols-2 md:grid-cols-3 gap-2 justify-center py-4 leading-normal">
   {{ $pages := .Pages }}
+  {{ $filteredPages := slice }}
   {{ if .Params.reverse }}{{ $pages = $pages.Reverse }}{{ end }}
-  {{ $pages = first 6 $pages }}
+
+  {{/* filter out pages w/ `_build: render: never` in the frontmatter */}}
+  {{ range $index, $page := $pages }}
+    {{ if not (eq $page.Params._build.render "never") }}
+      {{ $filteredPages = $filteredPages | append $page }}
+    {{ end }}
+  {{ end }}
+
+  {{ $pages = first 6 $filteredPages }}
   {{ range $pages }}
   {{ $page := . }}
   <a href="{{ $page.RelPermalink }}"
