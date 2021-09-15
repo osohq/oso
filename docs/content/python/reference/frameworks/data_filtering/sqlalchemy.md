@@ -1,11 +1,7 @@
 ---
-date: '2021-01-07T02:46:33.217Z'
-docname: getting-started/list-filtering/sqlalchemy
+docname: data-filtering/sqlalchemy
 images: {}
-path: /getting-started-list-filtering-sqlalchemy
 title: Filter collections with SQLAlchemy
-aliases:
-    - /getting-started/list-filtering/sqlalchemy.html
 description: Learn to use Oso's SQLAlchemy integration to filter collections of data.
 ---
 
