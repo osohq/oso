@@ -5,6 +5,7 @@ theme = ["oso-tailwind", "oso-webpack"]
 uglyurls = true
 
 defaultContentLanguage = "python"
+defaultContentLanguageInSubdir: true
 
 # used for Twitter card etc
 [params]
