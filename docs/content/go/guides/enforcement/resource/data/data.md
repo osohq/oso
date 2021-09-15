@@ -14,14 +14,16 @@ authorizationErrorLink: |-
   an [`AuthorizationError`](https://pkg.go.dev/github.com/osohq/go-oso/errors)
 exampleCall: |-
     ```go
-    oso.Authorize(user, "approve", expense)
+    err := oso.Authorize(user, "approve", expense)
     ```
 getExpense: |-
     ```go
     func GetExpense(user User, expenseId int) {
         expense := db.Fetch(
             "SELECT * FROM expenses WHERE id %", expenseId)
-        oso.Authorize(user, "read", expense)
+        if err := oso.Authorize(user, "read", expense); err != nil {
+            // handle error
+        }
 
         // ... process request
     }
