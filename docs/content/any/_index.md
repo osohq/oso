@@ -1,8 +1,5 @@
 ---
 ---
-
-### What is Oso?
-
 Oso is a batteries-included framework for building authorization in your application.
 With Oso, you can:
 
@@ -15,9 +12,8 @@ that Juno can see."
 - **Test**: Inspect your authorization logic now that
 it's in a single place and write unit tests over it.
 
-Oso supports Python, Javascript, Go, Ruby, Rust, and Java.
 
-### Try it out
+#### Try it out
 
 Oso lets you write policies to control who can do what in your app.
 Select different policies below to see how they change the permissions
