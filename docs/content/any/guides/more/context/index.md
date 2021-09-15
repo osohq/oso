@@ -8,7 +8,6 @@ weight: 5
 description: |
   Pass context beyond the actor, action, and resource into Oso policies.
 aliases:
-  - ../../../guides/more/context.html
   - ../../../using/examples/context.html
 ---
 
