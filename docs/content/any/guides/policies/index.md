@@ -16,8 +16,8 @@ access control](/guides/rbac), [attribute-based access control](/guides/attribut
 [resource hierarchies](/guides/hierarchies).
 
 This guide covers how to extend those building blocks by writing rules in Oso's
-policy language, Polar.  You will learn the basic structure and operations of
-Polar rules, and how to write rules that refer to application classes,
+policy language, Polar. You will learn the basic structure and operations of
+Polar rules and how to write rules that refer to application classes,
 instances, and fields.
 
 ## What is a Policy?

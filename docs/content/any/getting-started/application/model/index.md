@@ -42,7 +42,7 @@ called `main.polar` and use it in your app:
 
 {{< literalInclude dynPath="pathOso" fallback="todo" >}}
 
-## Define Resources, Permissions and Roles
+## Define Resources, Permissions, and Roles
 
 Authorization controls access to *resources* in your application. In
 this guide, we're going to show how to implement the most common
