@@ -26,9 +26,10 @@ In Oso, policies are where authorization logic is stored. Policy files are
 separate from your application code and are written in a declarative language
 called Polar (file extension `.polar`).
 
-<!-- TODO: update enforcmeent link once docs are ported -->
-Your application can query a policy using the [Enforcement APIs]({{< ref href="/guides/enforcement" lang="python" >}}) to get authorization decisions.
-The most basic component of a policy is a **rule**, which describes who is allowed to access what resources in an application.
+Your application can query a policy using the [Enforcement
+APIs](guides/enforcement) to get authorization decisions. The most basic
+component of a policy is a **rule**, which describes who is allowed to access
+what resources in an application.
 
 ## What is a Rule?
 
@@ -476,10 +477,10 @@ for results past the first one (`oso.authorize` stops after
 the first result, since any one valid authorization is as good
 as several).
 
-<!-- TODO: update link once enforcement guides are ported -->
 {{% callout "Warning" "orange" %}}
   Authorization features like data filtering and resource blocks aren't
-  guaranteed to work with `query_rule()`. We recommend using the [Enforcement APIs]({{< ref href="/guides/enforcement" lang="python" >}}) for all authorization queries.
+  guaranteed to work with `query_rule()`. We recommend using the [Enforcement
+  APIs](guides/enforcement) for all authorization queries.
 {{% /callout %}}
 
 ## Summary
