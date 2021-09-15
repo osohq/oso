@@ -108,3 +108,11 @@ jobs:
       - name: deploy
         run: s3deploy -bucket ${{ github.event.inputs.url }} -distribution-id E1MY35FKBOYAV1 -path v/main -source public -region us-east-1
         working-directory: docs
+
+      ### Push to S3 + invalidate cache
+      - name: cloudfront invalidate docs preview
+        run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"
+        if: github.event.inputs.url == 'docs-preview.oso.dev'
+      - name: cloudfront invalidate docs
+        run: aws cloudfront create-invalidation --distribution-id E1MY35FKBOYAV1 --paths "/*"
+        if: github.event.inputs.url == 'docs.oso.dev'
