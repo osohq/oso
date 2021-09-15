@@ -23,6 +23,7 @@ approveExpense: |-
         oso.authorize(user, "approve", expense);
 
         // ... process request
+    }
     ```
 globalErrorHandler: |-
     As an example, here's what a global exception handler looks like in a Spring MVC app:

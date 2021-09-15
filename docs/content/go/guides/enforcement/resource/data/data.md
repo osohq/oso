@@ -5,7 +5,7 @@ forbiddenError: ForbiddenError
 notFoundError: NotFoundError
 # TODO: change these to relative links
 authorizeLink: |-
-  [`Oso.authorize`](https://pkg.go.dev/github.com/osohq/go-oso#Oso.Authorize)
+  [`Oso.Authorize`](https://pkg.go.dev/github.com/osohq/go-oso#Oso.Authorize)
 forbiddenErrorLink: |-
   [`ForbiddenError`](https://pkg.go.dev/github.com/osohq/go-oso/errors#ForbiddenError)
 notFoundErrorLink: |-
