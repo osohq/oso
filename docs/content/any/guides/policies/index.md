@@ -11,9 +11,6 @@ description: Learn about writing Oso policies - the source of truth for authoriz
 
 # Write Custom Policies
 
-In Oso, policies are where authorization logic is stored. Policy files are
-separate from your application code, and are written in a declarative language
-called Polar (file extension `.polar`).
 
 Oso provides policy building blocks for common authorization models like [role-based
 access control](/guides/rbac), [attribute-based access control](/guides/attributes), and
