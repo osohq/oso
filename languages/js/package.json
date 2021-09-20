@@ -40,10 +40,7 @@
   "devDependencies": {
     "@types/jest": "^26.0.9",
     "@types/node": "^15.14.7",
-    "@typescript-eslint/eslint-plugin": "^4.31.2",
-    "@typescript-eslint/parser": "^4.31.2",
     "chokidar-cli": "^2.1.0",
-    "eslint": "^7.32.0",
     "gts": "^3.1.0",
     "jest": "^27.0.4",
     "live-server": "^1.2.1",
