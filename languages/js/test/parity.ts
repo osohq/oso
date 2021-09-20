@@ -53,8 +53,7 @@ oso.registerClass(E);
     const expectedName = 'ParseError::UnrecognizedEOF';
     const expectedMessage =
       'hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 19';
-    const { name, message } = e as Error;
-    if (name === expectedName && message === expectedMessage)
+    if (e.name === expectedName && e.message === expectedMessage)
       exceptionThrown = true;
   } finally {
     if (!exceptionThrown) throw new Error();

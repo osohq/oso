@@ -18,7 +18,5 @@ module.exports = {
   readme: '../../README.md',
   gaID: 'UA-139858805-1',
   hideGenerator: true,
-  validation: {
-    invalidLink: true,
-  },
+  listInvalidSymbolLinks: true,
 };
