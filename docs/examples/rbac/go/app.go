@@ -46,9 +46,7 @@ o.RegisterClass(reflect.TypeOf(Repository{}), nil)
 o.RegisterClass(reflect.TypeOf(User{}), NewUser)
 // docs: end-register
 
-if err := o.LoadFiles([]string{"main.polar"}); err != nil {
-	panic(err)
-}
+o.LoadFiles([]string{"main.polar"})
 // docs: end-setup
 
 return o
