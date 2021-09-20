@@ -388,16 +388,12 @@ impl Simplifier {
                             simplify_debug!("*** 2");
                             MaybeDrop::Bind(r.clone(), left.clone())
                         }
-                        // Replace variable with value if the value is ground
-                        // or a dot output (x.foo) and variable is mentioned elsewhere
-                        // in the expression.
+                        // Replace unbound variable with ground value.
                         (Value::Variable(var), val) if val.is_ground() && !self.is_bound(var) => {
                             simplify_debug!("*** 3");
                             MaybeDrop::Check(var.clone(), right.clone())
                         }
-                        // Replace variable with value if the value is ground
-                        // or a dot output (x.foo) and variable is mentioned elsewhere
-                        // in the expression.
+                        // Replace unbound variable with ground value.
                         (val, Value::Variable(var)) if val.is_ground() && !self.is_bound(var) => {
                             simplify_debug!("*** 4");
                             MaybeDrop::Check(var.clone(), left.clone())
