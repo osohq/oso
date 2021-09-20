@@ -1,3 +1,5 @@
+unexport BUNDLE_GEMFILE
+
 .PHONY: test install
 
 test: install
