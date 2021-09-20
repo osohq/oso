@@ -1,3 +1,5 @@
+unexport BUNDLE_GEMFILE
+
 test: test-python test-policy-extensions test-ruby test-node
 
 test-policy-extensions:
@@ -14,5 +16,5 @@ test-node:
 test-ruby:
 	# TODO disabled because these won't pass CI for some reason
 	# https://github.com/osohq/oso/pull/1157/checks?check_run_id=3592723372
-	cd ruby; pwd; bundle install --gemfile=./Gemfile
-	cd ruby; BUNDLE_GEMFILE=./Gemfile bundle exec ruby test.rb
+	cd ruby; bundle install
+	cd ruby; bundle exec ruby test.rb
