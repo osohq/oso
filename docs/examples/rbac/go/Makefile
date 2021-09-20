@@ -1,5 +1,5 @@
 .PHONY: test
 
 test:
-	make -C ../../../../languages/go
+	make -C ../../../../languages/go copy_lib
 	go test
