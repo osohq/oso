@@ -132,7 +132,7 @@ export class Host {
   /**
    * Return user types that are registered with Host.
    */
-  *distinctUserTypes(): IterableIterator<UserType> {
+  private *distinctUserTypes(): IterableIterator<UserType> {
     for (const [name, typ] of this.types.entries())
       if (typeof name === 'string') yield typ;
   }
