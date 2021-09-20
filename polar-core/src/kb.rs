@@ -323,7 +323,7 @@ impl KnowledgeBase {
             (Value::List(rule_type_list), Value::List(rule_list)) => {
                 if has_rest_var(rule_type_list) {
                     return Err(error::RuntimeError::TypeError {
-                        msg: format!("Rule types cannot contain *rest variables.",),
+                        msg: "Rule types cannot contain *rest variables.".to_string(),
                         stack_trace: None,
                     }
                     .into());
