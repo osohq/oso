@@ -401,7 +401,7 @@ export class Host {
           },
         };
       case v instanceof Pattern:
-        let dict = this.toPolar(v.fields).value as PolarDictPattern;
+        const dict = this.toPolar(v.fields).value as PolarDictPattern;
         if (v.tag === undefined) {
           return { value: { Pattern: dict } };
         } else {
@@ -505,7 +505,7 @@ export class Host {
         const fields = await this.toJs({ value: t.Pattern });
         return new Pattern({ fields });
       } else {
-        let {
+        const {
           tag,
           fields: { fields },
         } = t.Pattern.Instance;

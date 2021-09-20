@@ -50,14 +50,14 @@ export class Polar {
         typeof a === 'object' &&
         a.__proto__ === b.__proto__
       ) {
-        let check = new Map();
+        const check = new Map();
 
-        for (let x in a) {
+        for (const x in a) {
           if (!defaultEqual(a[x], b[x])) return false;
           check.set(x, true);
         }
 
-        for (let x in b) if (!check.get(x)) return false;
+        for (const x in b) if (!check.get(x)) return false;
 
         return true;
       }
@@ -111,7 +111,7 @@ export class Polar {
    */
   private processMessages() {
     while (true) {
-      let msg = this.#ffiPolar.nextMessage();
+      const msg = this.#ffiPolar.nextMessage();
       if (msg === undefined) break;
       processMessage(msg);
     }

@@ -328,7 +328,7 @@ describe('conversions between JS + Polar values', () => {
 
   test('unifies equivalent JS and Polar types', async () => {
     const p = new Polar();
-    var result = await query(p, 'new Integer(1) = 1');
+    let result = await query(p, 'new Integer(1) = 1');
     expect(result).toStrictEqual([map()]);
     result = await query(p, 'new String("foo") = "foo"');
     expect(result).toStrictEqual([map()]);

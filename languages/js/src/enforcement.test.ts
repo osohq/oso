@@ -204,7 +204,7 @@ describe(Oso, () => {
         notFoundError: TestNotFound,
         forbiddenError: TestForbidden,
       });
-      oso.loadStr(`allow("graham", "read", "bar");`);
+      oso.loadStr('allow("graham", "read", "bar");');
 
       await expect(oso.authorize('graham', 'frob', 'foo')).rejects.toThrow(
         TestNotFound
@@ -218,7 +218,7 @@ describe(Oso, () => {
       const oso = new Oso({
         readAction: 'fetch',
       });
-      await oso.loadStr(`allow("graham", "fetch", "bar");`);
+      await oso.loadStr('allow("graham", "fetch", "bar");');
       await expect(oso.authorize('sam', 'frob', 'bar')).rejects.toThrow(
         NotFoundError
       );

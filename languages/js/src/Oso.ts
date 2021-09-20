@@ -257,9 +257,9 @@ export class Oso<
         new Pattern({ tag: clsName, fields: {} }),
       ]),
     ]);
-    let bindings = new Map();
+    const bindings = new Map();
     bindings.set('resource', constraint);
-    let results = this.queryRuleWithBindings(
+    const results = this.queryRuleWithBindings(
       'allow',
       bindings,
       actor,
@@ -272,7 +272,7 @@ export class Oso<
       queryResults.push(result);
     }
 
-    let jsonResults = queryResults.map(result => ({
+    const jsonResults = queryResults.map(result => ({
       // `Map<string, any> -> {[key: string]: PolarTerm}` b/c Maps aren't
       // trivially `JSON.stringify()`-able.
       bindings: [...result.entries()].reduce((obj: obj, [k, v]) => {
@@ -280,9 +280,9 @@ export class Oso<
         return obj;
       }, {}),
     }));
-    let resultsStr = JSON.stringify(jsonResults);
-    let typesStr = serializeTypes(host.types);
-    let plan = this.getFfi().buildFilterPlan(
+    const resultsStr = JSON.stringify(jsonResults);
+    const typesStr = serializeTypes(host.types);
+    const plan = this.getFfi().buildFilterPlan(
       typesStr,
       resultsStr,
       'resource',

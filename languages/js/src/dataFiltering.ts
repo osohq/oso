@@ -54,12 +54,12 @@ export class Filter {
 }
 
 export function serializeTypes(userTypes: Map<any, UserType>): string {
-  let polarTypes: any = {};
-  for (let [tag, userType] of userTypes.entries())
+  const polarTypes: any = {};
+  for (const [tag, userType] of userTypes.entries())
     if (typeof tag === 'string') {
-      let fields = userType.fields;
-      let fieldTypes: any = {};
-      for (let [k, v] of fields.entries()) {
+      const fields = userType.fields;
+      const fieldTypes: any = {};
+      for (const [k, v] of fields.entries()) {
         if (v instanceof Relation) {
           fieldTypes[k] = {
             Relation: {
@@ -83,17 +83,17 @@ export function serializeTypes(userTypes: Map<any, UserType>): string {
 }
 
 async function parseFilter(host: Host, constraint: any): Promise<Filter> {
-  let kind = constraint['kind'];
-  let field = constraint['field'];
+  const kind = constraint['kind'];
+  const field = constraint['field'];
   let value = constraint['value'];
 
-  let valueKind = Object.keys(value)[0];
+  const valueKind = Object.keys(value)[0];
   value = value[valueKind];
   if (valueKind == 'Term') {
     value = await host.toJs(value);
   } else if (valueKind == 'Ref') {
-    let childField = value['field'];
-    let resultId = value['result_id'];
+    const childField = value['field'];
+    const resultId = value['result_id'];
     value = new Ref(childField, resultId);
   } else if (valueKind == 'Field') {
     value = new Field(value);
@@ -103,7 +103,7 @@ async function parseFilter(host: Host, constraint: any): Promise<Filter> {
 }
 
 function groundFilter(results: any, con: Filter) {
-  let ref = con.value;
+  const ref = con.value;
   if (!(ref instanceof Ref)) return;
   con.value = results.get(ref.resultId);
   if (ref.field) con.value = con.value.map((v: any) => v[ref.field]);
@@ -112,23 +112,23 @@ function groundFilter(results: any, con: Filter) {
 // @TODO: type for filter plan
 
 export async function filterData(host: Host, plan: any): Promise<any> {
-  let queries: any = [];
+  const queries: any = [];
   let combine: any;
-  for (let rs of plan.result_sets) {
-    let setResults = new Map();
-    for (let i of rs.resolve_order) {
-      let req = rs.requests.get(i);
-      let constraints = req.constraints;
+  for (const rs of plan.result_sets) {
+    const setResults = new Map();
+    for (const i of rs.resolve_order) {
+      const req = rs.requests.get(i);
+      const constraints = req.constraints;
 
-      for (let i in constraints) {
-        let con = await parseFilter(host, constraints[i]);
+      for (const i in constraints) {
+        const con = await parseFilter(host, constraints[i]);
         // Substitute in results from previous requests.
         groundFilter(setResults, con);
         constraints[i] = con;
       }
 
-      let typ = host.types.get(req.class_tag)!;
-      let query = await Promise.resolve(typ.buildQuery!(constraints));
+      const typ = host.types.get(req.class_tag)!;
+      const query = await Promise.resolve(typ.buildQuery!(constraints));
       if (i != rs.result_id) {
         setResults.set(i, await Promise.resolve(typ.execQuery!(query)));
       } else {

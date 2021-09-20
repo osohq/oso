@@ -137,7 +137,7 @@ const gensym = (tag?: any) => `_${tag}_${i++}`;
 async function fixtures() {
   const connection = await createConnection({
     type: 'sqlite',
-    database: `:memory:`,
+    database: ':memory:',
     entities: [Foo, Bar, Num, Org, Repo, User, OrgRole, RepoRole, Issue],
     synchronize: true,
     logging: false,
@@ -188,9 +188,9 @@ async function fixtures() {
   const anotherFoo = await mkFoo('another', 'hello', true);
   const thirdFoo = await mkFoo('next', 'goodbye', true);
 
-  for (let i of [0, 1, 2]) await mkNum(i, 'one');
-  for (let i of [0, 1]) await mkNum(i, 'another');
-  for (let i of [0]) await mkNum(i, 'next');
+  for (const i of [0, 1, 2]) await mkNum(i, 'one');
+  for (const i of [0, 1]) await mkNum(i, 'another');
+  for (const i of [0]) await mkNum(i, 'next');
 
   const oso = new Oso();
 
@@ -401,7 +401,7 @@ async function fixtures() {
     resource: any,
     expected: any[]
   ) => {
-    for (let x of expected)
+    for (const x of expected)
       expect(await oso.isAllowed(actor, action, x)).toBe(true);
     const actual = await oso.authorizedResources(actor, action, resource);
 
