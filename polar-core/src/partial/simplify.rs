@@ -493,15 +493,9 @@ impl Simplifier {
 
                 // Drop the rest.
                 let mut i = 0;
-                o.args.retain(|it| {
+                o.args.retain(|_| {
                     i += 1;
-                    let k = keep[i - 1] || references[i - 1];
-                    if !k {
-                        if_debug! {
-                            eprintln!("drop {}", it.to_polar())
-                        }
-                    }
-                    k
+                    keep[i - 1] || references[i - 1]
                 });
 
                 // Simplify the survivors.
