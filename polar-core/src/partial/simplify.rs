@@ -430,11 +430,6 @@ impl Simplifier {
                         assert_eq!(o.args.len(), 2);
                         let left = &o.args[0];
                         let right = &o.args[1];
-                        if left == right {
-                            if_debug! {
-                                eprintln!("self-unify: {}", left.to_polar())
-                            }
-                        }
                         left != right
                     }
                     _ => true,
