@@ -125,7 +125,7 @@ export async function filterData(host: Host, plan: any): Promise<any> {
         constraints[i] = con;
       }
 
-      const typ = host.types.get(req.class_tag)!;
+      const typ = host.getType(req.class_tag)!;
       const query = await Promise.resolve(typ.buildQuery!(constraints));
       if (i != rs.result_id) {
         setResults.set(i, await Promise.resolve(typ.execQuery!(query)));

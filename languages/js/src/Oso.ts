@@ -250,7 +250,7 @@ export class Oso<
   ): Promise<any> {
     const resource = new Variable('resource');
     const host = this.getHost();
-    const clsName = host.types.get(resourceCls)!.name;
+    const clsName = host.getType(resourceCls)!.name;
     const constraint = new Expression('And', [
       new Expression('Isa', [
         resource,
@@ -306,9 +306,7 @@ export class Oso<
     resourceCls: any
   ): Promise<any[]> {
     const query = await this.authorizedQuery(actr, actn, resourceCls);
-    return !query
-      ? []
-      : this.getHost().types.get(resourceCls)!.execQuery!(query);
+    return !query ? [] : this.getHost().getType(resourceCls)!.execQuery!(query);
   }
 
   /**
