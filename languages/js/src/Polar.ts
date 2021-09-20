@@ -6,20 +6,14 @@ import {
   PolarError,
   PolarFileExtensionError,
   PolarFileNotFoundError,
-  DuplicateClassAliasError,
 } from './errors';
 import { Query } from './Query';
-import { Host, UserType } from './Host';
+import { Host } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
-import { Class, obj, Options, QueryResult } from './types';
+import { Class, Options, QueryResult } from './types';
 import { printError, PROMPT, readFile, repr } from './helpers';
-
-import { Variable } from './Variable';
-import { Expression } from './Expression';
-import { Pattern } from './Pattern';
-import { serializeTypes, filterData } from './dataFiltering';
 
 class Source {
   readonly src: string;
