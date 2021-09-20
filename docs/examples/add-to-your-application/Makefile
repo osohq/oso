@@ -14,5 +14,5 @@ test-node:
 test-ruby:
 	# TODO disabled because these won't pass CI for some reason
 	# https://github.com/osohq/oso/pull/1157/checks?check_run_id=3592723372
-	cd ruby; pwd; bundle install
+	cd ruby; pwd; cat Gemfile; cat Gemfile.lock; bundle install --gemfile=./Gemfile
 	cd ruby; bundle exec ruby test.rb
