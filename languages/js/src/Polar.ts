@@ -144,7 +144,8 @@ export class Polar {
           const contents = await readFile(filename);
           return new Source(contents, filename);
         } catch (e) {
-          if (e.code === 'ENOENT') throw new PolarFileNotFoundError(filename);
+          if ((e as NodeJS.ErrnoException).code === 'ENOENT')
+            throw new PolarFileNotFoundError(filename);
           throw e;
         }
       })
@@ -282,7 +283,7 @@ export class Polar {
     try {
       if (files?.length) await this.loadFiles(files);
     } catch (e) {
-      printError(e);
+      printError(e as Error);
     }
 
     // @ts-ignore
@@ -342,7 +343,7 @@ export class Polar {
         }
       }
     } catch (e) {
-      printError(e);
+      printError(e as Error);
     }
   }
 }
