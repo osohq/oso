@@ -1,3 +1,5 @@
+# By unexporting BUNDLE_GEMFILE here, we prevent bundler from using the
+# Gemfile defined in `docs/examples/Makefile`.
 unexport BUNDLE_GEMFILE
 
 test: test-python test-policy-extensions test-ruby test-node
