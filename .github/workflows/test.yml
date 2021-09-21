@@ -347,7 +347,8 @@ jobs:
       - name: Install Ruby + gems
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.0
+          ruby-version: 2.4
+          bundler-cache: true
       - name: Use Node.js 12.20.0
         uses: actions/setup-node@v1
         with:
