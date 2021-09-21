@@ -365,31 +365,31 @@ describe('conversions between JS + Polar values', () => {
   });
 });
 
-describe('#loadFile', () => {
+describe('#loadFiles', () => {
   test('loads a Polar file', async () => {
     const p = new Polar();
-    await p.loadFile(await tempFileFx());
+    await p.loadFiles([await tempFileFx()]);
     expect(await qvar(p, 'f(x)', 'x')).toStrictEqual([1, 2, 3]);
   });
 
   test('passes the filename across the FFI boundary', async () => {
     const p = new Polar();
     const file = await tempFile(';', 'invalid.polar');
-    await expect(p.loadFile(file)).rejects.toThrow(
+    await expect(p.loadFiles([file])).rejects.toThrow(
       `did not expect to find the token ';' at line 1, column 1 in file ${file}`
     );
   });
 
   test('throws if given a non-Polar file', async () => {
     const p = new Polar();
-    await expect(p.loadFile('other.ext')).rejects.toThrow(
+    await expect(p.loadFiles(['other.ext'])).rejects.toThrow(
       PolarFileExtensionError
     );
   });
 
   test('throws if given a non-existent file', async () => {
     const p = new Polar();
-    await expect(p.loadFile('other.polar')).rejects.toThrow(
+    await expect(p.loadFiles(['other.polar'])).rejects.toThrow(
       PolarFileNotFoundError
     );
   });
@@ -592,7 +592,7 @@ describe('#registerConstant', () => {
     describe('that return undefined', () => {
       test('without things blowing up', async () => {
         const p = new Polar();
-        p.registerConstant({}, 'u');
+        p.registerConstant({ x: undefined, y: undefined }, 'u');
         expect(await query(p, 'u.x = u.y')).toStrictEqual([map()]);
         await expect(query(p, 'u.x.y')).rejects.toThrow();
       });
@@ -991,4 +991,23 @@ describe('Oso Roles', () => {
     const policy5 = policy4 + 'type f(x: Foo, x.baz);';
     await expect(p.loadStr(policy5)).rejects.toThrow('Invalid rule type');
   });
+});
+
+test('can specialize on a dict with undefineds', async () => {
+  const p = new Polar();
+  await p.loadStr('f(_: {x: 1});');
+
+  const noAttr = {};
+  const hasAttr = { x: 1 };
+
+  const result1 = await query(p, pred('f', hasAttr));
+  expect(result1).toStrictEqual([map()]);
+
+  const result2 = await query(p, pred('f', noAttr));
+  expect(result2).toStrictEqual([]);
+
+  Object.setPrototypeOf(noAttr, hasAttr);
+
+  const result3 = await query(p, pred('f', noAttr));
+  expect(result3).toStrictEqual([map()]);
 });
