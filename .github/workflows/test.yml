@@ -369,3 +369,52 @@ jobs:
         run: gem install yard
       - name: Doc test
         run: make -C docs test
+
+  test_quickstarts:
+    name: Test Quickstarts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Initialize submodules
+        run: make -C docs/examples update-submodules
+      - name: Check that submodules are all up-to-date
+        run: |
+          git submodule foreach git remote update
+          git submodule foreach '[ -z $(git --no-pager diff origin/main main) ]'
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-debug-${{ hashFiles('**/Cargo.lock') }}
+      - name: Use Python 3.6
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.6
+      - name: Use Ruby 2.4.0
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          ruby-version: "2.4.0"
+          working-directory: "docs/examples/quickstart/ruby"
+      - name: Use Node.js 12.20.0
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12.20.0"
+      - name: Use Java 10
+        uses: actions/setup-java@v1
+        with:
+          java-version: 10
+      - name: Use stable Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Use Go 1.13
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.13"
+      - name: Run quickstart tests
+        run: make -C docs test-quickstarts
