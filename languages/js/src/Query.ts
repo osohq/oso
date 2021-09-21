@@ -145,8 +145,8 @@ export class Query {
           rel.otherField,
           receiver[rel.myField]
         );
-        let query = await Promise.resolve(typ.buildQuery!([constraint]));
-        let results = await Promise.resolve(typ.execQuery!(query));
+        const query = await Promise.resolve(typ.buildQuery!([constraint]));
+        const results = await Promise.resolve(typ.execQuery!(query));
         if (rel.kind == 'one') {
           if (results.length != 1)
             throw new Error('Wrong number of parents: ' + results.length);
