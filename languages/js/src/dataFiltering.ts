@@ -79,8 +79,7 @@ export function serializeTypes(userTypes: Map<any, UserType>): string {
       }
       polarTypes[tag] = fieldTypes;
     }
-  const out = JSON.stringify(polarTypes);
-  return out;
+  return JSON.stringify(polarTypes);
 }
 
 async function parseFilter(host: Host, constraint: any): Promise<Filter> {
@@ -100,8 +99,7 @@ async function parseFilter(host: Host, constraint: any): Promise<Filter> {
     value = new Field(value);
   }
 
-  const f = new Filter(kind, field, value);
-  return f;
+  return new Filter(kind, field, value);
 }
 
 function groundFilter(results: any, con: Filter) {
