@@ -69,19 +69,19 @@ export class InvalidAttributeError extends PolarError {
 }
 
 export class InvalidCallError extends PolarError {
-  constructor(instance: any, field: string) {
+  constructor(instance: unknown, field: string) {
     super(`${repr(instance)}.${field} is not a function`);
   }
 }
 
 export class InvalidIteratorError extends PolarError {
-  constructor(term: any) {
+  constructor(term: unknown) {
     super(`${term} is not iterable`);
   }
 }
 
 export class InvalidConstructorError extends PolarError {
-  constructor(ctor: any) {
+  constructor(ctor: unknown) {
     super(`${repr(ctor)} is not a constructor`);
   }
 }

@@ -4,7 +4,7 @@ import type { Polar } from '../src/Polar';
 import { Predicate } from '../src/Predicate';
 import type { obj } from '../src/types';
 
-type Result = Map<string, any>;
+type Result = Map<string, unknown>;
 
 export async function query<T extends Polar>(
   x: T,
@@ -20,7 +20,7 @@ export async function query<T extends Polar>(
 export async function queryRule<T extends Polar>(
   x: T,
   name: string,
-  ...args: any[]
+  ...args: unknown[]
 ): Promise<Result[]> {
   const results = [];
   for await (const result of x.queryRule(name, ...args)) {
@@ -34,7 +34,7 @@ export async function qvar<T extends Polar>(
   q: string | Predicate,
   prop: string,
   one?: boolean
-): Promise<any> {
+): Promise<unknown> {
   const results = await query(x, q);
   return one ? results[0]?.get(prop) : results.map(r => r.get(prop));
 }
@@ -43,7 +43,7 @@ export function pred(name: string, ...args: unknown[]): Predicate {
   return new Predicate(name, args);
 }
 
-export function map(obj?: obj): Map<string, any> {
+export function map(obj?: obj): Map<string, unknown> {
   return new Map(Object.entries(obj || {}));
 }
 

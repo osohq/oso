@@ -282,7 +282,7 @@ export interface PolarTerm {
  *
  * @internal
  */
-function isPolarValue(v: any): v is PolarValue {
+function isPolarValue(v: unknown): v is PolarValue {
   if (typeof v !== 'object' || v === null) return false;
   return (
     isPolarStr(v) ||
@@ -304,8 +304,8 @@ function isPolarValue(v: any): v is PolarValue {
  *
  * @internal
  */
-export function isPolarTerm(v: any): v is PolarTerm {
-  return isPolarValue(v?.value);
+export function isPolarTerm(v: unknown): v is PolarTerm {
+  return isPolarValue(Object(v).value);
 }
 
 /**
@@ -313,7 +313,7 @@ export function isPolarTerm(v: any): v is PolarTerm {
  *
  * @internal
  */
-export type Class<T extends {} = {}> = new (...args: any[]) => T;
+export type Class<T extends {} = {}> = new (...args: unknown[]) => T;
 
 /**
  * The `Result` [[`QueryEvent`]] represents a single result from a query
@@ -532,7 +532,7 @@ export interface QueryEvent {
  * `false`, the query yielded at least one result and therefore succeeded.
  */
 export type QueryResult = AsyncGenerator<
-  Map<string, any>,
+  Map<string, unknown>,
   void,
   undefined | void
 >;
@@ -542,7 +542,7 @@ export type QueryResult = AsyncGenerator<
  *
  * @hidden
  */
-export type obj = { [key: string]: any };
+export type obj = { [key: string]: unknown };
 
 /**
  * A function that compares two values and returns `true` if they are equal and
@@ -552,15 +552,15 @@ export type obj = { [key: string]: any };
  * [[`Oso.constructor`]] in order to override the default equality function,
  * which uses `==` (loose equality).
  */
-export type EqualityFn = (x: any, y: any) => boolean;
+export type EqualityFn = (x: unknown, y: unknown) => boolean;
 
-export type CustomError = new (...args: any[]) => Error;
+export type CustomError = new (...args: unknown[]) => Error;
 
 /**
  * Functions of one or two arguments.
  */
-export type UnaryFn = (x: any) => any;
-export type BinaryFn = (x: any, y: any) => any;
+export type UnaryFn = (x: unknown) => unknown;
+export type BinaryFn = (x: unknown, y: unknown) => unknown;
 
 /**
  * Optional configuration for the [[`Oso.constructor`]].
@@ -591,8 +591,8 @@ export interface Options {
  *
  * @internal
  */
-export function isIterableIterator(x: any): boolean {
-  return typeof x?.next === 'function' && Symbol.iterator in Object(x);
+export function isIterableIterator(x: unknown): boolean {
+  return typeof Object(x).next === 'function' && Symbol.iterator in Object(x);
 }
 
 /**
@@ -600,7 +600,7 @@ export function isIterableIterator(x: any): boolean {
  *
  * @internal
  */
-export function isAsyncIterator(x: any): boolean {
+export function isAsyncIterator(x: unknown): boolean {
   return Symbol.asyncIterator in Object(x);
 }
 
@@ -617,5 +617,5 @@ export function isAsyncIterator(x: any): boolean {
  * @internal
  */
 export class Dict extends Object {
-  [index: string]: any;
+  [index: string]: unknown;
 }

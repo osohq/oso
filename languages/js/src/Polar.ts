@@ -200,7 +200,7 @@ export class Polar {
   /**
    * Query for a Polar predicate or string.
    */
-  query(q: Predicate | string, bindings?: Map<string, any>): QueryResult {
+  query(q: Predicate | string, bindings?: Map<string, unknown>): QueryResult {
     const host = Host.clone(this.#host);
     let ffiQuery;
     if (typeof q === 'string') {
@@ -218,7 +218,7 @@ export class Polar {
    */
   queryRuleWithBindings(
     name: string,
-    bindings: Map<string, any>,
+    bindings: Map<string, unknown>,
     ...args: unknown[]
   ): QueryResult {
     return this.query(new Predicate(name, args), bindings);

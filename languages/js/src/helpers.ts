@@ -5,10 +5,11 @@ const _readFile = require('fs')?.readFile;
 import { InvalidQueryEventError, KwargsError, PolarError } from './errors';
 import {
   isPolarComparisonOperator,
+  isPolarPredicate,
   isPolarTerm,
   QueryEventKind,
 } from './types';
-import type { obj, QueryEvent } from './types';
+import type { obj, PolarTerm, QueryEvent } from './types';
 
 /**
  * Assemble the prototypal inheritance chain of a class.
@@ -37,7 +38,7 @@ export function ancestors(cls: Function): Function[] {
  *
  * @internal
  */
-export function repr(x: any): string {
+export function repr(x: unknown): string {
   return inspect(x);
 }
 
@@ -88,16 +89,11 @@ export function parseQueryEvent(event: string | obj): QueryEvent {
  *
  * @internal
  */
-function parseResult({ bindings }: obj): QueryEvent {
-  if (
-    typeof bindings !== 'object' ||
-    Object.values(bindings).some(v => !isPolarTerm(v))
-  )
-    throw new Error();
-  return {
-    kind: QueryEventKind.Result,
-    data: { bindings },
-  };
+function parseResult(event: unknown): QueryEvent {
+  if (!isObj(event)) throw new Error();
+  const { bindings } = event;
+  if (!isMapOfPolarTerms(bindings)) throw new Error();
+  return { kind: QueryEventKind.Result, data: { bindings } };
 }
 
 /**
@@ -106,19 +102,20 @@ function parseResult({ bindings }: obj): QueryEvent {
  *
  * @internal
  */
-function parseMakeExternal(d: obj): QueryEvent {
-  const instanceId = d.instance_id;
-  const ctor = d['constructor']?.value?.Call;
-  const tag = ctor?.name;
-  const fields = ctor?.args;
-  if (ctor?.kwargs) throw new KwargsError();
-  if (
-    !Number.isSafeInteger(instanceId) ||
-    typeof tag !== 'string' ||
-    !Array.isArray(fields) ||
-    fields.some((v: unknown) => !isPolarTerm(v))
-  )
-    throw new Error();
+function parseMakeExternal(event: unknown): QueryEvent {
+  if (!isObj(event)) throw new Error();
+  const { instance_id: instanceId } = event;
+  if (!isSafeInteger(instanceId)) throw new Error();
+  const ctor = event['constructor'];
+  if (!isPolarTerm(ctor)) throw new Error();
+  if (!isPolarPredicate(ctor.value)) throw new Error();
+  // TODO(gj): can we remove this kwargs check?
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  if (ctor.value.Call.kwargs) throw new KwargsError();
+  const { name: tag, args: fields } = ctor.value.Call;
+  if (typeof tag !== 'string') throw new Error();
+  if (!isArrayOfPolarTerms(fields)) throw new Error();
   return {
     kind: QueryEventKind.MakeExternal,
     data: { fields, instanceId, tag },
@@ -131,15 +128,12 @@ function parseMakeExternal(d: obj): QueryEvent {
  *
  * @internal
  */
-function parseNextExternal(d: obj): QueryEvent {
-  const callId = d.call_id;
-  const iterable = d.iterable;
-  if (!Number.isSafeInteger(callId) || !isPolarTerm(iterable))
-    throw new Error();
-  return {
-    kind: QueryEventKind.NextExternal,
-    data: { callId, iterable },
-  };
+function parseNextExternal(event: unknown): QueryEvent {
+  if (!isObj(event)) throw new Error();
+  const { call_id: callId, iterable } = event;
+  if (!isSafeInteger(callId)) throw new Error();
+  if (!isPolarTerm(iterable)) throw new Error();
+  return { kind: QueryEventKind.NextExternal, data: { callId, iterable } };
 }
 
 /**
@@ -148,22 +142,14 @@ function parseNextExternal(d: obj): QueryEvent {
  *
  * @internal
  */
-function parseExternalCall({
-  args,
-  kwargs,
-  attribute,
-  call_id: callId,
-  instance,
-}: obj): QueryEvent {
+function parseExternalCall(event: unknown): QueryEvent {
+  if (!isObj(event)) throw new Error();
+  const { args, kwargs, attribute, call_id: callId, instance } = event;
+  if (!isArrayOfPolarTerms(args)) throw new Error();
   if (kwargs) throw new KwargsError();
-  if (
-    !Number.isSafeInteger(callId) ||
-    !isPolarTerm(instance) ||
-    typeof attribute !== 'string' ||
-    (args !== undefined &&
-      (!Array.isArray(args) || args.some((a: unknown) => !isPolarTerm(a))))
-  )
-    throw new Error();
+  if (typeof attribute !== 'string') throw new Error();
+  if (!isSafeInteger(callId)) throw new Error();
+  if (!isPolarTerm(instance)) throw new Error();
   return {
     kind: QueryEventKind.ExternalCall,
     data: { args, attribute, callId, instance },
@@ -176,19 +162,18 @@ function parseExternalCall({
  *
  * @internal
  */
-function parseExternalIsSubspecializer({
-  call_id: callId,
-  instance_id: instanceId,
-  left_class_tag: leftTag,
-  right_class_tag: rightTag,
-}: obj): QueryEvent {
-  if (
-    !Number.isSafeInteger(instanceId) ||
-    !Number.isSafeInteger(callId) ||
-    typeof leftTag !== 'string' ||
-    typeof rightTag !== 'string'
-  )
-    throw new Error();
+function parseExternalIsSubspecializer(event: unknown): QueryEvent {
+  if (!isObj(event)) throw new Error();
+  const {
+    call_id: callId,
+    instance_id: instanceId,
+    left_class_tag: leftTag,
+    right_class_tag: rightTag,
+  } = event;
+  if (!isSafeInteger(callId)) throw new Error();
+  if (!isSafeInteger(instanceId)) throw new Error();
+  if (typeof leftTag !== 'string') throw new Error();
+  if (typeof rightTag !== 'string') throw new Error();
   return {
     kind: QueryEventKind.ExternalIsSubspecializer,
     data: { callId, instanceId, leftTag, rightTag },
@@ -201,17 +186,16 @@ function parseExternalIsSubspecializer({
  *
  * @internal
  */
-function parseExternalIsSubclass({
-  call_id: callId,
-  left_class_tag: leftTag,
-  right_class_tag: rightTag,
-}: obj): QueryEvent {
-  if (
-    !Number.isSafeInteger(callId) ||
-    typeof leftTag !== 'string' ||
-    typeof rightTag !== 'string'
-  )
-    throw new Error();
+function parseExternalIsSubclass(event: unknown): QueryEvent {
+  if (!isObj(event)) throw new Error();
+  const {
+    call_id: callId,
+    left_class_tag: leftTag,
+    right_class_tag: rightTag,
+  } = event;
+  if (!isSafeInteger(callId)) throw new Error();
+  if (typeof leftTag !== 'string') throw new Error();
+  if (typeof rightTag !== 'string') throw new Error();
   return {
     kind: QueryEventKind.ExternalIsSubclass,
     data: { callId, leftTag, rightTag },
@@ -224,21 +208,13 @@ function parseExternalIsSubclass({
  *
  * @internal
  */
-function parseExternalIsa({
-  call_id: callId,
-  instance,
-  class_tag: tag,
-}: obj): QueryEvent {
-  if (
-    !Number.isSafeInteger(callId) ||
-    !isPolarTerm(instance) ||
-    typeof tag !== 'string'
-  )
-    throw new Error();
-  return {
-    kind: QueryEventKind.ExternalIsa,
-    data: { callId, instance, tag },
-  };
+function parseExternalIsa(event: unknown): QueryEvent {
+  if (!isObj(event)) throw new Error();
+  const { call_id: callId, instance, class_tag: tag } = event;
+  if (!isSafeInteger(callId)) throw new Error();
+  if (!isPolarTerm(instance)) throw new Error();
+  if (typeof tag !== 'string') throw new Error();
+  return { kind: QueryEventKind.ExternalIsa, data: { callId, instance, tag } };
 }
 
 /**
@@ -247,18 +223,18 @@ function parseExternalIsa({
  *
  * @internal
  */
-function parseExternalIsaWithPath({
-  call_id: callId,
-  base_tag: baseTag,
-  path,
-  class_tag: classTag,
-}: obj): QueryEvent {
-  if (
-    !Number.isSafeInteger(callId) ||
-    typeof classTag !== 'string' ||
-    typeof baseTag !== 'string'
-  )
-    throw new Error();
+function parseExternalIsaWithPath(event: unknown): QueryEvent {
+  if (!isObj(event)) throw new Error();
+  const {
+    call_id: callId,
+    base_tag: baseTag,
+    path,
+    class_tag: classTag,
+  } = event;
+  if (!isSafeInteger(callId)) throw new Error();
+  if (typeof baseTag !== 'string') throw new Error();
+  if (typeof classTag !== 'string') throw new Error();
+  if (!isArrayOfStrings(path)) throw new Error();
   return {
     kind: QueryEventKind.ExternalIsaWithPath,
     data: { callId, baseTag, path, classTag },
@@ -271,29 +247,19 @@ function parseExternalIsaWithPath({
  *
  * @internal
  */
-function parseExternalOp({ call_id: callId, args, operator }: obj): QueryEvent {
-  if (
-    !Number.isSafeInteger(callId) ||
-    (args !== undefined &&
-      (!Array.isArray(args) ||
-        args.length !== 2 ||
-        args.some((a: unknown) => !isPolarTerm(a))))
-  )
-    throw new Error();
+function parseExternalOp(event: unknown): QueryEvent {
+  if (!isObj(event)) throw new Error();
+  const { call_id: callId, args, operator } = event;
+  if (!isSafeInteger(callId)) throw new Error();
+  if (!isArrayOfPolarTerms(args) || args.length !== 2) throw new Error();
+  if (typeof operator !== 'string') throw new Error();
   if (!isPolarComparisonOperator(operator))
     throw new PolarError(
       `Unsupported external operation '${repr(args[0])} ${operator} ${repr(
         args[1]
       )}'`
     );
-  return {
-    kind: QueryEventKind.ExternalOp,
-    data: {
-      args,
-      callId,
-      operator,
-    },
-  };
+  return { kind: QueryEventKind.ExternalOp, data: { args, callId, operator } };
 }
 
 /**
@@ -302,12 +268,11 @@ function parseExternalOp({ call_id: callId, args, operator }: obj): QueryEvent {
  *
  * @internal
  */
-function parseDebug({ message }: obj): QueryEvent {
+function parseDebug(event: unknown): QueryEvent {
+  if (!isObj(event)) throw new Error();
+  const { message } = event;
   if (typeof message !== 'string') throw new Error();
-  return {
-    kind: QueryEventKind.Debug,
-    data: { message },
-  };
+  return { kind: QueryEventKind.Debug, data: { message } };
 }
 
 /**
@@ -361,10 +326,61 @@ export function printError(e: Error) {
  */
 export function isConstructor(f: unknown): boolean {
   try {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     Reflect.construct(String, [], f);
     return true;
   } catch (e) {
     return false;
   }
+}
+
+/**
+ * Type guard to test if a value is a [[`obj`]].
+ *
+ * @internal
+ */
+function isObj(x: unknown): x is obj {
+  return typeof x === 'object' && x !== null;
+}
+
+/**
+ * Type guard to test if a value is an ES6 Map with string keys and PolarTerm
+ * values.
+ *
+ * @internal
+ */
+function isMapOfPolarTerms(x: unknown): x is Map<string, PolarTerm> {
+  if (!(x instanceof Map)) return false;
+  for (const [key, value] of x.entries()) {
+    if (typeof key !== 'string' || !isPolarTerm(value)) return false;
+  }
+  return true;
+}
+
+/**
+ * Type guard to test if a value is an Array of PolarTerms.
+ *
+ * @internal
+ */
+function isArrayOfPolarTerms(x: unknown): x is Array<PolarTerm> {
+  return !Array.isArray(x) || x.some((v: unknown) => !isPolarTerm(v));
+}
+
+/**
+ * Type guard to test if a value is an array of strings.
+ *
+ * @internal
+ */
+function isArrayOfStrings(x: unknown): x is Array<string> {
+  return !Array.isArray(x) || x.some((v: unknown) => typeof v !== 'string');
+}
+
+/**
+ * Type guard to test if a value is a safe integer.
+ *
+ * @internal
+ */
+function isSafeInteger(x: unknown): x is number {
+  return Number.isSafeInteger(x);
 }

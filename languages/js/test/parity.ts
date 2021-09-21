@@ -186,11 +186,11 @@ oso.registerClass(E);
     'bar',
     new Variable('z')
   );
-  if (((await result.next()).value as Map<string, any>).get('z') !== 1)
+  if (((await result.next()).value as Map<string, unknown>).get('z') !== 1)
     throw new Error();
-  if (((await result.next()).value as Map<string, any>).get('z') !== 2)
+  if (((await result.next()).value as Map<string, unknown>).get('z') !== 2)
     throw new Error();
-  if (((await result.next()).value as Map<string, any>).get('z') !== 3)
+  if (((await result.next()).value as Map<string, unknown>).get('z') !== 3)
     throw new Error();
 
   console.log('tests pass');
