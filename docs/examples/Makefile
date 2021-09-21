@@ -61,8 +61,11 @@ nodejs-test:
 	cd inheritance/nodejs && yarn && yarn jest
 	cd user_types/nodejs && yarn && yarn jest
 
-test-quickstarts: submodules
-	$(MAKE) -C quickstart test
+test-quickstarts-release: submodules
+	cd quickstart && ruby test_quickstarts.rb
+
+test-quickstarts-local: submodules
+	cd quickstart && ruby test_quickstarts.rb
 
 test:
 	$(MAKE) -C add-to-your-application test
