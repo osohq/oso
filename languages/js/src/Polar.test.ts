@@ -997,7 +997,7 @@ test('can specialize on a dict with undefineds', async () => {
   const p = new Polar();
   await p.loadStr('f(_: {x: 1});');
 
-  const noAttr = { };
+  const noAttr = {};
   const hasAttr = { x: 1 };
 
   const result1 = await query(p, pred('f', hasAttr));
