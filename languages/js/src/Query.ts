@@ -184,7 +184,11 @@ export class Query {
         }
       }
     } catch (e) {
-      if (e instanceof TypeError || e instanceof InvalidCallError) {
+      if (
+        e instanceof TypeError ||
+        e instanceof InvalidCallError ||
+        e instanceof InvalidAttributeError
+      ) {
         this.applicationError(e.message);
       } else {
         throw e;
