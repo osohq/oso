@@ -44,66 +44,91 @@ class Num {
 }
 
 @Entity()
-export class Issue {
+export class Org {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
   @Column()
-  title: string;
+  name!: string;
   @Column()
-  repo_id: number;
-}
-
-@Entity()
-export class User {
-  @PrimaryGeneratedColumn()
-  id: number;
+  base_repo_role!: string;
   @Column()
-  email: string;
-}
-
-@Entity()
-export class RepoRole {
-  @PrimaryGeneratedColumn()
-  id: number;
-  @Column()
-  name: string;
-  @Column()
-  repo_id: number;
-  @Column()
-  user_id: number;
+  billing_address!: string;
+  @OneToMany(() => Repo, repo => repo.org)
+  repositories!: Repo[];
+  @OneToMany(() => OrgRole, org_role => org_role.org)
+  roles!: OrgRole[];
 }
 
 @Entity()
 export class Repo {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
   @Column()
-  name: string;
+  name!: string;
   @Column()
-  org_id: number;
-}
-@Entity()
-export class OrgRole {
-  @PrimaryGeneratedColumn()
-  id: number;
-  @Column()
-  name: string;
-  @Column()
-  org_id: number;
-  @Column()
-  user_id: number;
+  org_id!: number;
+  @ManyToOne(() => Org, org => org.repositories)
+  org!: Org;
+  @OneToMany(() => Issue, issue => issue.repo)
+  issues!: Issue[];
+  @OneToMany(() => RepoRole, repo_role => repo_role.repo)
+  roles!: RepoRole[];
 }
 
 @Entity()
-export class Org {
+export class Issue {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
   @Column()
-  name: string;
+  title!: string;
   @Column()
-  base_repo_role: string;
+  repo_id!: number;
+  @ManyToOne(() => Repo, repo => repo.issues)
+  repo!: Repo;
+}
+
+@Entity()
+export class User {
+  @PrimaryGeneratedColumn()
+  id!: number;
   @Column()
-  billing_address: string;
+  email!: string;
+  @OneToMany(() => RepoRole, repo_role => repo_role.user)
+  repo_roles!: RepoRole[];
+  @OneToMany(() => OrgRole, org_role => org_role.user)
+  org_roles!: OrgRole[];
+}
+
+@Entity()
+export class RepoRole {
+  @PrimaryGeneratedColumn()
+  id!: number;
+  @Column()
+  name!: string;
+  @Column()
+  repo_id!: number;
+  @Column()
+  user_id!: number;
+  @ManyToOne(() => User, user => user.repo_roles, { eager: true })
+  user!: User;
+  @ManyToOne(() => Repo, repo => repo.roles, { eager: true })
+  repo!: Repo;
+}
+
+@Entity()
+export class OrgRole {
+  @PrimaryGeneratedColumn()
+  id!: number;
+  @Column()
+  name!: string;
+  @Column()
+  org_id!: number;
+  @Column()
+  user_id!: number;
+  @ManyToOne(() => Org, org => org.roles, { eager: true })
+  org!: Org;
+  @ManyToOne(() => User, user => user.org_roles, { eager: true })
+  user!: User;
 }
 
 let i = 0;

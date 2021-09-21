@@ -154,8 +154,7 @@ export class Query {
         } else {
           value = results;
         }
-      }
-      if (value === undefined) {
+      } else {
         value = receiver[attr];
         if (args !== undefined) {
           if (typeof value === 'function') {

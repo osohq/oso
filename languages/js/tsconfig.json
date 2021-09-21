@@ -11,8 +11,7 @@
     "outDir": "dist",
     "rootDir": ".",
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "strictPropertyInitialization": false
+    "emitDecoratorMetadata": true
   },
   "include": [
     "src/**/*",
