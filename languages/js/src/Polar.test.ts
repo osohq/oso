@@ -995,7 +995,6 @@ describe('Oso Roles', () => {
 
 test('can specialize on a dict with undefineds', async () => {
   const p = new Polar();
-  p.registerClass(User);
   await p.loadStr('f(_: {x: 1});');
 
   const noAttr = { };
