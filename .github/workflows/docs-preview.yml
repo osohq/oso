@@ -43,7 +43,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v1
         with:
-          node-version: '12.x'
+          node-version: '12.20.0'
 
       ### Build Rust WASM target
       - name: Add WebAssembly target
