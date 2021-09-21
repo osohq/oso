@@ -318,13 +318,10 @@ impl Simplifier {
     }
 
     pub fn bind(&mut self, var: Symbol, value: Term) {
-        let new_value = self.deref(&value);
-        if self.is_bound(&var) {
-            // We do not allow rebindings.
-            return;
+        // We do not allow rebindings.
+        if !self.is_bound(&var) {
+            self.bindings.insert(var, self.deref(&value));
         }
-
-        self.bindings.insert(var, new_value);
     }
 
     pub fn deref(&self, term: &Term) -> Term {
@@ -343,17 +340,6 @@ impl Simplifier {
     fn is_output(&self, t: &Term) -> bool {
         match t.value() {
             Value::Variable(v) | Value::RestVariable(v) => self.output_vars.contains(v),
-            _ => false,
-        }
-    }
-
-    /// output_var.?
-    fn is_dot_output(&self, t: &Term) -> bool {
-        match t.value() {
-            Value::Expression(e) => {
-                e.operator == Operator::Dot
-                    && (self.is_dot_output(&e.args[0]) || self.is_output(&e.args[0]))
-            }
             _ => false,
         }
     }
@@ -402,25 +388,13 @@ impl Simplifier {
                             simplify_debug!("*** 2");
                             MaybeDrop::Bind(r.clone(), left.clone())
                         }
-                        // Replace variable with value if the value is ground
-                        // or a dot output (x.foo) and variable is mentioned elsewhere
-                        // in the expression.
-                        (Value::Variable(var), val)
-                            if (val.is_ground() || self.is_dot_output(right))
-                                && !self.is_bound(var)
-                                && !right.contains_variable(var) =>
-                        {
+                        // Replace unbound variable with ground value.
+                        (Value::Variable(var), val) if val.is_ground() && !self.is_bound(var) => {
                             simplify_debug!("*** 3");
                             MaybeDrop::Check(var.clone(), right.clone())
                         }
-                        // Replace variable with value if the value is ground
-                        // or a dot output (x.foo) and variable is mentioned elsewhere
-                        // in the expression.
-                        (val, Value::Variable(var))
-                            if (val.is_ground() || self.is_dot_output(left))
-                                && !self.is_bound(var)
-                                && !left.contains_variable(var) =>
-                        {
+                        // Replace unbound variable with ground value.
+                        (val, Value::Variable(var)) if val.is_ground() && !self.is_bound(var) => {
                             simplify_debug!("*** 4");
                             MaybeDrop::Check(var.clone(), left.clone())
                         }
@@ -492,12 +466,12 @@ impl Simplifier {
                             self.bind(var, value);
                         }
                         MaybeDrop::Check(var, value) => {
-                            simplify_debug!("check {:?}, {:?}", var, value.to_polar());
+                            simplify_debug!("check {:?}, {:?}", var.to_polar(), value.to_polar());
                             for (j, arg) in o.args.iter().enumerate() {
                                 if j != i && arg.contains_variable(&var) {
                                     simplify_debug!(
                                         "check bind {:?}, {:?} ref: {}",
-                                        var,
+                                        var.to_polar(),
                                         value.to_polar(),
                                         j
                                     );
@@ -602,16 +576,13 @@ impl Simplifier {
         F: Fn(&mut Self, &mut Operation, &TermSimplifier) + 'static + Clone,
     {
         if self.seen.contains(term) {
-            //            println!("seen {}", term.to_polar());
             return;
         }
         let orig = term.clone();
         self.seen.insert(term.clone());
 
-        //        println!("simplify_term pre {}", term.to_polar());
         let de = self.deref(term);
         *term = de;
-        //        println!("simplify_term ref {}", term.to_polar());
 
         match term.mut_value() {
             Value::Dictionary(dict) => {
