@@ -120,7 +120,7 @@ jobs:
       - name: Use Node.js 12.20.0
         uses: actions/setup-node@v1
         with:
-          node-version: 12.20.0
+          node-version: "12.20.0"
       - name: Set up .npmrc
         working-directory: "oso-js-node-${{ github.event.inputs.version }}"
         run: echo '//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}' > .npmrc
