@@ -51,10 +51,7 @@ export class Query {
     this.#calls = new Map();
     this.#host = host;
 
-    if (bindings)
-      for (const [k, v] of bindings) {
-        this.bind(k, v);
-      }
+    if (bindings) for (const [k, v] of bindings) this.bind(k, v);
 
     this.results = this.start();
   }
