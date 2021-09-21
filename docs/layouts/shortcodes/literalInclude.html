@@ -296,9 +296,9 @@
 {{ end }}
 
 <div class="code" id="{{ $file | urlize}}" data-hl_lines="{{ $hl_lines }}" {{ if $tabGroup }}data-tabgroup="{{ $tabGroup }}"{{ end }}>
-  <div class="filename rounded-t-md bg-gray-200 text-gray-700 text-sm py-2">
+  <div class="filename rounded-t-md bg-gray-200 text-gray-700 text-sm py-2 flex">
     {{- with $syntax -}}
-      <span class="px-2{{ if eq . "go" }} block w-10{{end}}">
+      <span class="px-2{{ if eq . "go" }} flex w-10{{end}}">
         {{- partialCached "fontawesome.html" . . -}}
       </span>
     {{- end -}}

@@ -57,7 +57,7 @@ class User
 end
 
 user = User.new("alice@example.com")
-raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
+oso.authorize(user, "foo", "bar")
 ```
 
 {{% callout "Warning" "orange" %}}
@@ -83,7 +83,7 @@ class User
 end
 
 user = User.new(["HR", "payroll"])
-raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
+oso.authorize(user, "foo", "bar")
 ```
 
 {{% callout "Warning" "orange" %}}
@@ -111,7 +111,7 @@ class User
 end
 
 user = User.new(["HR", "payroll"])
-raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
+oso.authorize(user, "foo", "bar")
 ```
 
 Ruby methods like [`Array#at`][rb-array-at] may be used for random access to
@@ -139,7 +139,7 @@ class User
 end
 
 user = User.new({"project1" => "admin"})
-raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
+oso.authorize(user, "foo", "bar")
 ```
 
 Likewise, dictionaries constructed in Polar may be passed into Ruby methods.
@@ -160,7 +160,7 @@ class User
   end
 end
 
-raise "should be allowed" unless oso.allowed?(User.new, "foo", "bar")
+oso.authorize(User.new, "foo", "bar")
 ```
 
 ### `nil`
@@ -180,7 +180,7 @@ class User
   end
 end
 
-raise "should be allowed" unless oso.allowed?(User.new, "foo", "bar")
+oso.authorize(User.new, "foo", "bar")
 ```
 
 ### Ruby → Polar Types Summary
