@@ -106,12 +106,7 @@ function groundFilter(results: any, con: Filter) {
   let ref = con.value;
   if (!(ref instanceof Ref)) return;
   con.value = results.get(ref.resultId);
-  if (ref.field != null) con.value = con.value.map((v: any) => v[ref.field]);
-}
-
-function groundFilters(results: any, constraints: any): any {
-  for (let c of constraints) groundFilter(results, c);
-  return constraints;
+  if (ref.field) con.value = con.value.map((v: any) => v[ref.field]);
 }
 
 // @TODO: type for filter plan
@@ -121,7 +116,6 @@ export async function filterData(host: Host, plan: any): Promise<any> {
   let combine: any;
   for (let rs of plan.result_sets) {
     let setResults = new Map();
-
     for (let i of rs.resolve_order) {
       let req = rs.requests.get(i);
       let constraints = req.constraints;
