@@ -997,8 +997,18 @@ test('can specialize on a dict with undefineds', async () => {
   const p = new Polar();
   p.registerClass(User);
   await p.loadStr('f(_: {x: 1});');
-  const result1 = await query(p, pred('f', { x: 1 }));
+
+  const noAttr = { };
+  const hasAttr = { x: 1 };
+
+  const result1 = await query(p, pred('f', hasAttr));
   expect(result1).toStrictEqual([map()]);
-  const result2 = await query(p, pred('f', {}));
+
+  const result2 = await query(p, pred('f', noAttr));
   expect(result2).toStrictEqual([]);
+
+  Object.setPrototypeOf(noAttr, hasAttr);
+
+  const result1 = await query(p, pred('f', noAttr));
+  expect(result1).toStrictEqual([map()]);
 });
