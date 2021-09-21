@@ -5,6 +5,7 @@ const createInterface = require('readline')?.createInterface;
 import { parseQueryEvent } from './helpers';
 import {
   DuplicateInstanceRegistrationError,
+  InvalidAttributeError,
   InvalidCallError,
   InvalidIteratorError,
 } from './errors';
@@ -163,7 +164,7 @@ export class Query {
           }
         }
       }
-      if (value == undefined) {
+      if (value === undefined) {
         value = receiver[attr];
         if (args !== undefined) {
           if (typeof value === 'function') {
@@ -174,10 +175,20 @@ export class Query {
             // Error on attempt to call non-function.
             throw new InvalidCallError(receiver, attr);
           }
+        } else {
+          // If value isn't a property anywhere in receiver's prototype chain,
+          // throw an error.
+          if (value === undefined && !(attr in receiver)) {
+            throw new InvalidAttributeError(receiver, attr);
+          }
         }
       }
     } catch (e) {
-      if (e instanceof TypeError || e instanceof InvalidCallError) {
+      if (
+        e instanceof TypeError ||
+        e instanceof InvalidCallError ||
+        e instanceof InvalidAttributeError
+      ) {
         this.applicationError(e.message);
       } else {
         throw e;
