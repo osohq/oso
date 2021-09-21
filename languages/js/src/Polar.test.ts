@@ -365,31 +365,31 @@ describe('conversions between JS + Polar values', () => {
   });
 });
 
-describe('#loadFile', () => {
+describe('#loadFiles', () => {
   test('loads a Polar file', async () => {
     const p = new Polar();
-    await p.loadFile(await tempFileFx());
+    await p.loadFiles([await tempFileFx()]);
     expect(await qvar(p, 'f(x)', 'x')).toStrictEqual([1, 2, 3]);
   });
 
   test('passes the filename across the FFI boundary', async () => {
     const p = new Polar();
     const file = await tempFile(';', 'invalid.polar');
-    await expect(p.loadFile(file)).rejects.toThrow(
+    await expect(p.loadFiles([file])).rejects.toThrow(
       `did not expect to find the token ';' at line 1, column 1 in file ${file}`
     );
   });
 
   test('throws if given a non-Polar file', async () => {
     const p = new Polar();
-    await expect(p.loadFile('other.ext')).rejects.toThrow(
+    await expect(p.loadFiles(['other.ext'])).rejects.toThrow(
       PolarFileExtensionError
     );
   });
 
   test('throws if given a non-existent file', async () => {
     const p = new Polar();
-    await expect(p.loadFile('other.polar')).rejects.toThrow(
+    await expect(p.loadFiles(['other.polar'])).rejects.toThrow(
       PolarFileNotFoundError
     );
   });
@@ -592,7 +592,7 @@ describe('#registerConstant', () => {
     describe('that return undefined', () => {
       test('without things blowing up', async () => {
         const p = new Polar();
-        p.registerConstant({}, 'u');
+        p.registerConstant({ x: undefined, y: undefined }, 'u');
         expect(await query(p, 'u.x = u.y')).toStrictEqual([map()]);
         await expect(query(p, 'u.x.y')).rejects.toThrow();
       });
@@ -947,10 +947,10 @@ describe('Oso Roles', () => {
   });
 
   test('rule types correctly check subclasses', async () => {
-    class Foo {}
-    class Bar extends Foo {}
-    class Baz extends Bar {}
-    class Bad {}
+    class Foo { }
+    class Bar extends Foo { }
+    class Baz extends Bar { }
+    class Bad { }
 
     // NOTE: keep this order of registering classes--confirms that MROs are added at the correct time
     const p = new Polar();
