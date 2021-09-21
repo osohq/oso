@@ -2,7 +2,7 @@
 title: Installation
 weight: 1
 description: Installation instructions for Oso's Node.js library.
-aliases: 
+aliases:
   - ./lib.html
 ---
 
@@ -29,7 +29,7 @@ $ yarn add oso@{{< version >}}
 
 ## Requirements
 
-* Node.js version 10 or greater
+* Node.js version 12.20.0 or greater
 * Supported platforms:
   * Linux
   * macOS
