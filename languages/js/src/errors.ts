@@ -68,7 +68,6 @@ export class InvalidAttributeError extends PolarError {
   }
 }
 
-
 export class InvalidCallError extends PolarError {
   constructor(instance: any, field: string) {
     super(`${repr(instance)}.${field} is not a function`);

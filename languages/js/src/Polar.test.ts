@@ -833,7 +833,6 @@ describe('iterators', () => {
       await qvar(p, 'x = new BarIterator([1, 2, 3]).sum()', 'x', true)
     ).toBe(6);
   });
-
 });
 
 test('handles expressions', async () => {
@@ -948,10 +947,10 @@ describe('Oso Roles', () => {
   });
 
   test('rule types correctly check subclasses', async () => {
-    class Foo { }
-    class Bar extends Foo { }
-    class Baz extends Bar { }
-    class Bad { }
+    class Foo {}
+    class Bar extends Foo {}
+    class Baz extends Bar {}
+    class Bad {}
 
     // NOTE: keep this order of registering classes--confirms that MROs are added at the correct time
     const p = new Polar();

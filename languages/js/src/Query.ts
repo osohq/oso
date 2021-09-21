@@ -179,7 +179,7 @@ export class Query {
           // If value isn't a property anywhere in receiver's prototype chain,
           // throw an error.
           if (value === undefined && !(attr in receiver)) {
-            throw new InvalidAttributeError(receiver, attr)
+            throw new InvalidAttributeError(receiver, attr);
           }
         }
       }
