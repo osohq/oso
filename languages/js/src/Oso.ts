@@ -9,6 +9,7 @@ import type {
   Class,
   UnaryFn,
   BinaryFn,
+  PolarTerm,
 } from './types';
 import {
   NotFoundError,
@@ -146,8 +147,9 @@ export class Oso<
           return new Set(['*']);
         }
       }
-      // TODO(gj): do we need to handle case where `action === undefined`?
-      actions.add(action);
+      // TODO(gj): do we need to handle the case where `action` is something
+      // other than a `Variable` or an `Action`? E.g., if it's an `Expression`?
+      actions.add(action as Action);
     }
     return actions;
   }
@@ -245,7 +247,9 @@ export class Oso<
           return new Set(['*']);
         }
       }
-      fields.add(field);
+      // TODO(gj): do we need to handle the case where `field` is something
+      // other than a `Variable` or a `Field`? E.g., if it's an `Expression`?
+      fields.add(field as Field);
     }
     return fields;
   }
@@ -292,9 +296,9 @@ export class Oso<
     }
 
     const jsonResults = queryResults.map(result => ({
-      // `Map<string, any> -> {[key: string]: PolarTerm}` b/c Maps aren't
+      // `Map<string, unknown> -> {[key: string]: PolarTerm}` b/c Maps aren't
       // trivially `JSON.stringify()`-able.
-      bindings: [...result.entries()].reduce((obj: obj, [k, v]) => {
+      bindings: [...result.entries()].reduce((obj: obj<PolarTerm>, [k, v]) => {
         obj[k] = host.toPolar(v);
         return obj;
       }, {}),
