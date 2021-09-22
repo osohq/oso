@@ -80,16 +80,10 @@ class Ref {
 type FilterKind = 'Eq' | 'Neq' | 'In' | 'Contains';
 
 /** Represents a condition that must hold on a resource. */
-export class Filter {
+export interface Filter {
   kind: FilterKind;
   value: unknown; // Ref | Field | Term
   field?: string;
-
-  constructor(kind: FilterKind, value: unknown, field?: string) {
-    this.kind = kind;
-    this.value = value;
-    this.field = field;
-  }
 }
 
 export type SerializedFields = {
@@ -99,7 +93,7 @@ export type SerializedFields = {
 async function parseFilter(host: Host, filter: Filter): Promise<Filter> {
   const { kind, field } = filter;
   if (!['Eq', 'Neq', 'In', 'Contains'].includes(kind)) throw new Error();
-  if (typeof field !== 'string') throw new Error();
+  if (field !== undefined && typeof field !== 'string') throw new Error();
 
   let { value } = filter;
   if (!isObj(value)) throw new Error();
@@ -118,7 +112,7 @@ async function parseFilter(host: Host, filter: Filter): Promise<Filter> {
     throw new Error();
   }
 
-  return new Filter(kind as FilterKind, value, field);
+  return { kind, value, field };
 }
 
 function groundFilter(results: Map<number, unknown[]>, filter: Filter): Filter {
@@ -128,7 +122,7 @@ function groundFilter(results: Map<number, unknown[]>, filter: Filter): Filter {
   let value = results.get(ref.resultId);
   value = ref.field ? value?.map(v => (v as any)[ref.field!]) : value; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-  return new Filter(filter.kind, value, filter.field);
+  return { ...filter, value };
 }
 
 export async function filterData(

@@ -13,7 +13,7 @@ import {
   Repository,
   SelectQueryBuilder,
 } from 'typeorm';
-import { Class } from './types';
+import { Class, obj } from './types';
 
 @Entity()
 class Bar {
@@ -198,17 +198,18 @@ async function fixtures() {
 
   const oso = new Oso();
 
-  function fromRepo<T>(repo: Repository<T>, name: string) {
+  const fromRepo = <T>(repo: Repository<T>, name: string) => {
     const constrain = (
       query: SelectQueryBuilder<T>,
       { field, kind, value }: Filter
     ) => {
       const sym = gensym(field);
-      const param = {};
+      const param: obj = {};
 
       if (field === undefined) {
         field = 'id';
-        value = kind === 'In' ? value.map(x => x.id) : value.id;
+        value =
+          kind === 'In' ? (value as any[]).map(x => x.id) : (value as any).id; // eslint-disable-line @typescript-eslint/no-explicit-any
       }
 
       let rhs: string;
@@ -242,7 +243,7 @@ async function fixtures() {
 
     return (constraints: Filter[]) =>
       constraints.reduce(constrain, repo.createQueryBuilder(name));
-  }
+  };
 
   type Resource =
     | User
@@ -272,7 +273,7 @@ async function fixtures() {
 
   oso.registerClass(User, {
     buildQuery: fromRepo(users, 'user'),
-    types: {
+    fields: {
       id: Number,
       email: String,
       repo_roles: new Relation('many', 'RepoRole', 'id', 'user_id'),
@@ -282,7 +283,7 @@ async function fixtures() {
 
   oso.registerClass(Repo, {
     buildQuery: fromRepo(repos, 'repo'),
-    types: {
+    fields: {
       id: Number,
       name: String,
       org_id: Number,
@@ -294,7 +295,7 @@ async function fixtures() {
 
   oso.registerClass(Org, {
     buildQuery: fromRepo(orgs, 'org'),
-    types: {
+    fields: {
       id: Number,
       name: String,
       billing_address: String,
@@ -306,7 +307,7 @@ async function fixtures() {
 
   oso.registerClass(Issue, {
     buildQuery: fromRepo(issues, 'issue'),
-    types: {
+    fields: {
       id: Number,
       title: String,
       repo_id: Number,
@@ -316,7 +317,7 @@ async function fixtures() {
 
   oso.registerClass(RepoRole, {
     buildQuery: fromRepo(repoRoles, 'repo_role'),
-    types: {
+    fields: {
       id: Number,
       role: String,
       repo_id: Number,
@@ -328,7 +329,7 @@ async function fixtures() {
 
   oso.registerClass(OrgRole, {
     buildQuery: fromRepo(orgRoles, 'org_role'),
-    types: {
+    fields: {
       id: Number,
       role: String,
       org_id: Number,
@@ -340,7 +341,7 @@ async function fixtures() {
 
   oso.registerClass(Bar, {
     buildQuery: fromRepo(bars, 'bar'),
-    types: {
+    fields: {
       id: String,
       isCool: Boolean,
       isStillCool: Boolean,
@@ -350,7 +351,7 @@ async function fixtures() {
 
   oso.registerClass(Foo, {
     buildQuery: fromRepo(foos, 'foo'),
-    types: {
+    fields: {
       id: String,
       barId: String,
       isFooey: Boolean,
@@ -361,7 +362,7 @@ async function fixtures() {
 
   oso.registerClass(Num, {
     buildQuery: fromRepo(nums, 'num'),
-    types: {
+    fields: {
       number: Number,
       fooId: String,
       foo: new Relation('one', 'Foo', 'fooId', 'id'),

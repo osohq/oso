@@ -32,7 +32,7 @@ import {
   isIterableIterator,
   QueryEventKind,
 } from './types';
-import { Filter, Relation } from './dataFiltering';
+import { Relation } from './dataFiltering';
 
 function getLogLevelsFromEnv() {
   if (typeof process?.env === 'undefined') return [undefined, undefined];
@@ -149,7 +149,11 @@ export class Query {
         const typ = userTypes.get(rel.otherType)!;
         // Use the fetcher for the other type to traverse
         // the relationship.
-        const filter = new Filter('Eq', receiver[rel.myField], rel.otherField);
+        const filter = {
+          kind: 'Eq',
+          value: receiver[rel.myField],
+          field: rel.otherField,
+        };
         const query = await typ.buildQuery([filter]);
         const results = await typ.execQuery(query);
         if (rel.kind === 'one') {
