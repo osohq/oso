@@ -10,7 +10,6 @@ import {
   tempFile,
   tempFileFx,
   tempFileGx,
-  truncate,
 } from '../test/helpers';
 import {
   A,
