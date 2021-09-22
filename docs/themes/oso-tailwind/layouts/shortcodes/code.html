@@ -13,8 +13,13 @@
 {{ with .Get "codeLang" }}{{ $codeLang = . }}{{ end }}
 <div class="code" id="{{ $file | urlize}}" data-hl_lines="{{ $hl_lines }}">
 {{- with $file -}}
-<div class="filename rounded-md bg-gray-200 text-gray-700 text-sm py-2">
-{{- with $codeLang -}}<span class="px-2">{{- partialCached "fontawesome.html" $codeLang $codeLang -}}</span>{{- end -}}{{- . -}}
+<div class="filename rounded-t-md bg-gray-200 text-gray-700 text-sm py-2 flex">
+  {{- with $codeLang -}}
+    <span class="px-2{{ if eq . "go" }} flex w-10{{end}}">
+      {{- partialCached "fontawesome.html" . . -}}
+    </span>
+  {{- end -}}
+  {{- . -}}
 </div>
 {{- end -}}
 {{ with $codeLang }}
