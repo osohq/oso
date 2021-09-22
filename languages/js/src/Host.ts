@@ -6,7 +6,7 @@ import {
   UnregisteredClassError,
   UnregisteredInstanceError,
 } from './errors';
-import { ancestors, isConstructor, promisify1, repr } from './helpers';
+import { ancestors, isConstructor, isObj, promisify1, repr } from './helpers';
 import type { Polar as FfiPolar } from './polar_wasm_api';
 import { Expression } from './Expression';
 import { Pattern } from './Pattern';
@@ -315,7 +315,7 @@ export class Host implements DataFilteringQueryParams {
   ): Promise<boolean> {
     let instance = this.getInstance(id);
     instance = instance instanceof Promise ? await instance : instance;
-    if (!isConstructor(instance)) return false;
+    if (!isObj(instance)) return false;
     const mro = ancestors(instance.constructor);
     const leftIndex = mro.indexOf(this.getClass(left));
     const rightIndex = mro.indexOf(this.getClass(right));
