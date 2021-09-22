@@ -26,7 +26,7 @@
     "npm": ">=6.4.1"
   },
   "scripts": {
-    "lint": "gts lint",
+    "lint": "gts lint -- . --max-warnings 0",
     "clean": "gts clean",
     "fix": "gts fix",
     "fmt": "prettier --write 'src/**/*.[jt]s' 'test/**/*.[jt]s'",
