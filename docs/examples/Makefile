@@ -62,7 +62,7 @@ nodejs-test:
 	cd user_types/nodejs && yarn && yarn jest
 
 test-quickstarts-release: submodules
-	cd quickstart && ruby test_quickstarts.rb
+	$(MAKE) -C quickstart test-release
 
 test-quickstarts-local: submodules
 	cd quickstart && ruby test_quickstarts.rb
