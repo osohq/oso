@@ -329,8 +329,6 @@ export class Oso<
     const userType = this.getHost().getType(resourceCls);
     if (userType === undefined)
       throw new UnregisteredClassError(resourceCls.name);
-    if (userType.execQuery === undefined)
-      throw new DataFilteringConfigurationError('execQuery');
     return userType.execQuery(query) as T[];
   }
 
