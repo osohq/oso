@@ -15,7 +15,6 @@ import {
   ForbiddenError,
   OsoError,
   UnregisteredClassError,
-  DataFilteringConfigurationError,
 } from './errors';
 import { filterData } from './dataFiltering';
 import type { FfiFilterPlan } from './dataFiltering';
