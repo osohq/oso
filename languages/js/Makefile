@@ -14,8 +14,13 @@ test: install wasm
 parity: install wasm
 	yarn ts-node test/parity.ts
 
-# Check formatting and types.
+# Check formatting and types and run ESLint.
 lint: fmtcheck typecheck
+	yarn lint
+
+# Tell ESLint to auto-fix some issues.
+lint-fix: install
+	yarn fix
 
 # Run the formatter, updating offending files.
 fmt: install
