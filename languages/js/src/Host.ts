@@ -357,10 +357,26 @@ export class Host {
     for (const field of path) {
       const userType = this.types.get(tag);
       if (userType === undefined) return false;
-      const fieldType = userType.fields.get(field);
+
+      let fieldType = userType.fields.get(field);
       if (fieldType === undefined) return false;
-      // TODO(gj): what happens if newBase is a Relation?
-      const newBase = this.types.get(fieldType as any);
+
+      if (fieldType instanceof Relation) {
+        switch (fieldType.kind) {
+          case 'one': {
+            const otherCls = this.getType(fieldType.otherType)?.cls;
+            if (otherCls === undefined)
+              throw new UnregisteredClassError(fieldType.otherType);
+            fieldType = otherCls;
+            break;
+          }
+          case 'many':
+            fieldType = Array;
+            break;
+        }
+      }
+
+      const newBase = this.getType(fieldType);
       if (newBase === undefined) return false;
       tag = newBase.name;
     }

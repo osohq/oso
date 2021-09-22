@@ -26,15 +26,17 @@ interface SerializedRelation {
   };
 }
 
+type RelationKind = 'one' | 'many';
+
 /** Represents relationships between two resources, eg. one-one or one-many. */
 export class Relation {
-  kind: string;
+  kind: RelationKind;
   otherType: string;
   myField: string;
   otherField: string;
 
   constructor(
-    kind: string,
+    kind: RelationKind,
     otherType: string,
     myField: string,
     otherField: string
