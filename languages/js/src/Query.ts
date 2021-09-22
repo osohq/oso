@@ -5,6 +5,7 @@ const createInterface = require('readline')?.createInterface;
 import { parseQueryEvent } from './helpers';
 import {
   DuplicateInstanceRegistrationError,
+  InvalidAttributeError,
   InvalidCallError,
   InvalidIteratorError,
 } from './errors';
@@ -50,9 +51,7 @@ export class Query {
     this.#calls = new Map();
     this.#host = host;
 
-    for (const k in bindings) {
-      this.bind(k, bindings.get(k));
-    }
+    if (bindings) for (const [k, v] of bindings) this.bind(k, v);
 
     this.results = this.start();
   }
@@ -136,34 +135,26 @@ export class Query {
       const userTypes = this.#host.types;
 
       // Check if it's a relationship
-      if (receiver != undefined) {
-        const userType = userTypes.get(receiver.constructor);
-        const clsName = userType?.name;
-        const typedef = userType?.fields;
-        const fieldType = typedef?.get(attr);
-        if (fieldType != null) {
-          if (fieldType instanceof Relation) {
-            const typ = userTypes.get(fieldType.otherType)!;
-            // Use the fetcher for the other type to traverse
-            // the relationship.
-            const constraint = new Filter(
-              'Eq',
-              fieldType.otherField,
-              receiver[fieldType.myField]
-            );
-            let query = await Promise.resolve(typ.buildQuery!([constraint]));
-            let results = await Promise.resolve(typ.execQuery!(query));
-            if (fieldType.kind == 'one') {
-              if (results.length != 1)
-                throw new Error('Wrong number of parents: ' + results.length);
-              value = results[0];
-            } else {
-              value = results;
-            }
-          }
+      const rel = userTypes.get(receiver?.constructor)?.fields?.get(attr);
+      if (rel instanceof Relation) {
+        const typ = userTypes.get(rel.otherType)!;
+        // Use the fetcher for the other type to traverse
+        // the relationship.
+        const constraint = new Filter(
+          'Eq',
+          rel.otherField,
+          receiver[rel.myField]
+        );
+        let query = await Promise.resolve(typ.buildQuery!([constraint]));
+        let results = await Promise.resolve(typ.execQuery!(query));
+        if (rel.kind == 'one') {
+          if (results.length != 1)
+            throw new Error('Wrong number of parents: ' + results.length);
+          value = results[0];
+        } else {
+          value = results;
         }
-      }
-      if (value == undefined) {
+      } else {
         value = receiver[attr];
         if (args !== undefined) {
           if (typeof value === 'function') {
@@ -174,10 +165,20 @@ export class Query {
             // Error on attempt to call non-function.
             throw new InvalidCallError(receiver, attr);
           }
+        } else {
+          // If value isn't a property anywhere in receiver's prototype chain,
+          // throw an error.
+          if (value === undefined && !(attr in receiver)) {
+            throw new InvalidAttributeError(receiver, attr);
+          }
         }
       }
     } catch (e) {
-      if (e instanceof TypeError || e instanceof InvalidCallError) {
+      if (
+        e instanceof TypeError ||
+        e instanceof InvalidCallError ||
+        e instanceof InvalidAttributeError
+      ) {
         this.applicationError(e.message);
       } else {
         throw e;

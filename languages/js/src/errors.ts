@@ -62,6 +62,12 @@ export class InlineQueryFailedError extends PolarError {
   }
 }
 
+export class InvalidAttributeError extends PolarError {
+  constructor(instance: any, field: string) {
+    super(`${field} not found on ${repr(instance)}.`);
+  }
+}
+
 export class InvalidCallError extends PolarError {
   constructor(instance: any, field: string) {
     super(`${repr(instance)}.${field} is not a function`);
