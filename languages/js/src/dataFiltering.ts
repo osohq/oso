@@ -2,19 +2,19 @@ import { Host } from './Host';
 import { BinaryFn, isPolarTerm } from './types';
 import { isObj } from './helpers';
 
-interface FfiRequest {
+interface Request {
   class_tag: string;
-  constraints: FfiFilter[];
+  constraints: Filter[];
 }
 
-interface FfiResultSet {
+interface ResultSet {
   result_id: number;
   resolve_order: number[];
-  requests: Map<number, FfiRequest>;
+  requests: Map<number, Request>;
 }
 
-export interface FfiFilterPlan {
-  result_sets: FfiResultSet[];
+export interface FilterPlan {
+  result_sets: ResultSet[];
 }
 
 interface SerializedRelation {
@@ -77,19 +77,15 @@ class Ref {
   }
 }
 
-interface FfiFilter {
-  kind: string;
-  value: unknown; // Ref | Field | Term
-  field?: string;
-}
+type FilterKind = 'Eq' | 'Neq' | 'In' | 'Contains';
 
 /** Represents a condition that must hold on a resource. */
 export class Filter {
-  kind: string;
+  kind: FilterKind;
   value: unknown; // Ref | Field | Term
   field?: string;
 
-  constructor(kind: string, value: unknown, field?: string) {
+  constructor(kind: FilterKind, value: unknown, field?: string) {
     this.kind = kind;
     this.value = value;
     this.field = field;
@@ -100,9 +96,9 @@ export type SerializedFields = {
   [field: string]: SerializedRelation | { Base: { class_tag: string } };
 };
 
-async function parseFilter(host: Host, filter: FfiFilter): Promise<Filter> {
+async function parseFilter(host: Host, filter: Filter): Promise<Filter> {
   const { kind, field } = filter;
-  if (typeof kind !== 'string') throw new Error();
+  if (!['Eq', 'Neq', 'In', 'Contains'].includes(kind)) throw new Error();
   if (typeof field !== 'string') throw new Error();
 
   let { value } = filter;
@@ -122,7 +118,7 @@ async function parseFilter(host: Host, filter: FfiFilter): Promise<Filter> {
     throw new Error();
   }
 
-  return new Filter(kind, value, field);
+  return new Filter(kind as FilterKind, value, field);
 }
 
 function groundFilter(results: Map<number, unknown[]>, filter: Filter): Filter {
@@ -137,7 +133,7 @@ function groundFilter(results: Map<number, unknown[]>, filter: Filter): Filter {
 
 export async function filterData(
   host: Host,
-  plan: FfiFilterPlan
+  plan: FilterPlan
 ): Promise<unknown> {
   const queries = [];
   let combine: BinaryFn | undefined;

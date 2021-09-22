@@ -18,7 +18,7 @@ import {
   UnregisteredClassError,
 } from './errors';
 import { filterData } from './dataFiltering';
-import type { FfiFilterPlan } from './dataFiltering';
+import type { FilterPlan } from './dataFiltering';
 
 /** The Oso authorization API. */
 // TODO(gj): maybe pass DF options to constructor & try to parametrize a
@@ -310,7 +310,7 @@ export class Oso<
       'resource',
       clsName
     );
-    return filterData(host, plan as FfiFilterPlan);
+    return filterData(host, plan as FilterPlan);
   }
 
   /**
