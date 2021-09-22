@@ -245,7 +245,7 @@ export class Query {
           case QueryEventKind.Result: {
             const { bindings } = event.data as Result;
             const transformed: Map<string, unknown> = new Map();
-            for (const [k, v] of bindings.entries()) {
+            for (const [k, v] of bindings) {
               transformed.set(k, await this.#host.toJs(v));
             }
             yield transformed;

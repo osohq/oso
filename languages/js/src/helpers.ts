@@ -352,7 +352,7 @@ export function isObj(x: unknown): x is obj {
  */
 function isMapOfPolarTerms(x: unknown): x is Map<string, PolarTerm> {
   if (!(x instanceof Map)) return false;
-  for (const [key, value] of x.entries()) {
+  for (const [key, value] of x) {
     if (typeof key !== 'string' || !isPolarTerm(value)) return false;
   }
   return true;
