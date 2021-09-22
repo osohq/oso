@@ -1,4 +1,4 @@
-require 'test/unit'
+require 'test-unit'
 require 'rack/test'
 
 require_relative './oso'

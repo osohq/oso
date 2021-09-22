@@ -423,6 +423,19 @@ mod test {
     }
 
     #[test]
+    fn test_partial_isa_unify() -> TestResult {
+        let p = Polar::new();
+        p.load_str("foo(u: User, x: Post) if x.user = u;")?;
+        let mut q = p.new_query_from_term(term!(call!("foo", [sym!("user"), sym!("post")])), false);
+        assert_partial_expressions!(
+            next_binding(&mut q)?,
+            "user" => "_this matches User{} and post matches Post{} and _this = post.user",
+            "post" => "user matches User{} and _this matches Post{} and user = _this.user"
+        );
+        Ok(())
+    }
+
+    #[test]
     fn test_partial_isa() -> TestResult {
         let p = Polar::new();
         p.load_str(
@@ -588,8 +601,8 @@ mod test {
 
         let mut q = p.new_query_from_term(term!(call!("h", [sym!("x"), sym!("y")])), false);
         assert_partial_expressions!(next_binding(&mut q)?,
-            "x" => "y.x matches X{}",
-            "y" => "_this.x matches X{}"
+            "x" => "_this matches X{} and y.x = _this",
+            "y" => "x matches X{} and _this.x = x"
         );
         assert_query_done!(q);
 
@@ -663,23 +676,25 @@ mod test {
         assert_partial_binding!(
             next,
             "x",
-            term!(op!(Isa, var!("y"), term!(pattern!(instance!("Y"))))),
             term!(op!(
-                Isa,
+                Unify,
                 term!(op!(Dot, var!("y"), str!("x"))),
-                term!(pattern!(instance!("X")))
-            ))
+                var!("_this")
+            )),
+            term!(op!(Isa, var!("y"), term!(pattern!(instance!("Y"))))),
+            term!(op!(Isa, var!("_this"), term!(pattern!(instance!("X")))))
         );
 
         assert_partial_binding!(
             next,
             "y",
-            term!(op!(Isa, var!("_this"), term!(pattern!(instance!("Y"))))),
             term!(op!(
-                Isa,
+                Unify,
                 term!(op!(Dot, var!("_this"), str!("x"))),
-                term!(pattern!(instance!("X")))
-            ))
+                var!("x")
+            )),
+            term!(op!(Isa, var!("_this"), term!(pattern!(instance!("Y"))))),
+            term!(op!(Isa, var!("x"), term!(pattern!(instance!("X")))))
         );
 
         assert_query_done!(q);
