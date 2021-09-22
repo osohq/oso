@@ -315,19 +315,19 @@ export class Host {
    *
    * @internal
    */
-  async isaWithPath(
-    baseTag: string,
-    path: string[],
-    classTag: string
-  ): Promise<boolean> {
-    return (
-      classTag ==
-      path.reduce((k: string | undefined, field: string) => {
-        let l = this.types.get(k);
-        if (l) l = this.types.get(l.fields.get(field));
-        return l ? l.name : l;
-      }, baseTag)
-    );
+  isaWithPath(baseTag: string, path: string[], classTag: string): boolean {
+    let tag = baseTag;
+    for (const field of path) {
+      const userType = this.types.get(tag);
+      if (userType === undefined) return false;
+      const fieldType = userType.fields.get(field);
+      if (fieldType === undefined) return false;
+      // TODO(gj): what happens if newBase is a Relation?
+      const newBase = this.types.get(fieldType as any);
+      if (newBase === undefined) return false;
+      tag = newBase.name;
+    }
+    return classTag === tag;
   }
 
   /**
