@@ -65,7 +65,7 @@ test-quickstarts-release: submodules
 	$(MAKE) -C quickstart test-release
 
 test-quickstarts-local: submodules
-	cd quickstart && ruby test_quickstarts.rb
+	$(MAKE) -C quickstart test-local
 
 test:
 	$(MAKE) -C add-to-your-application test

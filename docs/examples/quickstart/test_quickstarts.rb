@@ -9,12 +9,15 @@ require 'bundler'
 CURL_ERROR = "curl: (7) Failed to connect to localhost port 5000: Connection refused\n"
 CURL_EMPTY = "curl: (52) Empty reply from server\n"
 
+
 quickstarts = [
-  { lang: 'go', setup: 'go build', server: './oso-go-quickstart' },
-  { lang: 'java', setup: 'make install', server: 'make run' },
-  { lang: 'nodejs', setup: 'npm i', server: 'npm run dev' },
-  { lang: 'python', setup: 'pip install --upgrade -r requirements.txt', server: 'FLASK_APP=app.server python -m flask run' },
-  { lang: 'ruby', setup: 'bundle', server: 'bundle exec ruby server.rb' },
+  { lang: 'go', local_setup: "go mod edit -replace github.com/osohq/go-oso@v0.20.1=../../../../languages/go && go build", release_setup: 'go build', server: './oso-go-quickstart' },
+  # TODO: add local_setup that tests against local Oso install for java
+  { lang: 'java', local_setup: "make install", release_setup: 'make install', server: 'make run' },
+  # TODO: add local_setup that tests against local Oso install for nodejs
+  { lang: 'nodejs', local_setup: "npm i", release_setup: 'npm i', server: 'npm run dev' },
+  { lang: 'python', local_setup: "pip install -e ../../../../languages/python/oso && pip install --upgrade -r requirements.txt", release_setup: 'pip install --upgrade -r requirements.txt', server: 'FLASK_APP=app.server python -m flask run' },
+  { lang: 'ruby', local_setup: "BUNDLE_GEMFILE=../Gemfile-local bundle", release_setup: 'bundle', server: 'bundle exec ruby server.rb' },
   # { lang: 'rust', setup: 'cargo build', server: 'cargo run' }
 ]
 
@@ -53,7 +56,11 @@ quickstarts.each do |qs|
     Dir.chdir(qs_dir) do
       prefix = "#{Time.now.to_i} [#{lang}]"
       puts "#{prefix} Installing dependencies..."
-      setup_output = `#{qs[:setup]} 2>&1`
+      if ARGV.include? "local"
+        setup_output = `#{qs[:local_setup]} 2>&1`
+      else
+        setup_output = `#{qs[:release_setup]} 2>&1`
+      end
       raise "Setup step failed for #{lang.upcase}:\n#{setup_output}" unless $CHILD_STATUS.exitstatus.zero?
 
       Timeout.timeout 15 do
