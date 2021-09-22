@@ -559,7 +559,7 @@ export type obj<T = unknown> = { [key: string]: T };
  */
 export type EqualityFn = (x: unknown, y: unknown) => boolean;
 
-export type CustomError = new (...args: unknown[]) => Error;
+export type CustomError = new (...args: any[]) => Error; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 /**
  * Functions of one or two arguments.
