@@ -132,7 +132,7 @@ export class OrgRole {
 }
 
 let i = 0;
-const gensym = (tag?: any) => `_${tag}_${i++}`;
+const gensym = (tag?: string) => `_${tag || 'anon'}_${i++}`;
 
 async function fixtures() {
   const connection = await createConnection({

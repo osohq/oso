@@ -127,7 +127,7 @@ export async function filterData(host: Host, plan: any): Promise<any> {
 
       const typ = host.getType(req.class_tag)!;
       const query = await Promise.resolve(typ.buildQuery!(constraints));
-      if (i != rs.result_id) {
+      if (i !== rs.result_id) {
         setResults.set(i, await Promise.resolve(typ.execQuery!(query)));
       } else {
         queries.push(query);
@@ -136,7 +136,7 @@ export async function filterData(host: Host, plan: any): Promise<any> {
     }
   }
 
-  if (queries.length == 0) return null;
+  if (queries.length === 0) return null;
   // @TODO remove duplicates
   return queries.reduce(combine);
 }

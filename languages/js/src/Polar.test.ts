@@ -174,7 +174,9 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
     const animal = 'new Animal({})';
 
     test('can unify instances with a custom equality function', async () => {
-      const p = new Polar({ equalityFn: (x, y) => x.family === y.family });
+      const p = new Polar({
+        equalityFn: (x: any, y: any) => x.family === y.family, // eslint-disable-line @typescript-eslint/no-explicit-any
+      });
       p.registerClass(Animal);
       await p.loadStr(`
           yup() if new Animal({family: "steve"}) = new Animal({family: "steve"});
@@ -307,6 +309,7 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
   test('errors when passed a non-constructable type', () => {
     expect(() => {
       const p = new Polar();
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       p.registerClass(Math);
     }).toThrow(InvalidConstructorError);
@@ -793,7 +796,7 @@ describe('±∞ and NaN', () => {
 test('ExternalOp events test for equality succeeds', async () => {
   // js objects are never equal so we override
   // weirdness in js definition of equality
-  const p = new Polar({ equalityFn: (_x, _y) => true });
+  const p = new Polar({ equalityFn: () => true });
   p.registerClass(X);
   expect(await query(p, 'new X() == new X()')).toStrictEqual([map()]);
   expect(await query(p, 'new X() != new X()')).toStrictEqual([]);
