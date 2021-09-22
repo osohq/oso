@@ -26,7 +26,12 @@ import type {
   Result,
 } from './types';
 import { processMessage } from './messages';
-import { isAsyncIterator, isIterableIterator, QueryEventKind } from './types';
+import {
+  isAsyncIterable,
+  isIterable,
+  isIterableIterator,
+  QueryEventKind,
+} from './types';
 import { Filter, Relation } from './dataFiltering';
 
 function getLogLevelsFromEnv() {
@@ -45,7 +50,7 @@ export class Query {
   #host: Host;
   results: QueryResult;
 
-  constructor(ffiQuery: FfiQuery, host: Host, bindings?: Map<string, any>) {
+  constructor(ffiQuery: FfiQuery, host: Host, bindings?: Map<string, unknown>) {
     ffiQuery.setLoggingOptions(...getLogLevelsFromEnv());
     this.#ffiQuery = ffiQuery;
     this.#calls = new Map();
@@ -61,7 +66,7 @@ export class Query {
    *
    * @internal
    */
-  private bind(name: string, value: any) {
+  private bind(name: string, value: unknown) {
     this.#ffiQuery.bind(name, JSON.stringify(this.#host.toPolar(value)));
   }
 
@@ -71,7 +76,7 @@ export class Query {
    * @internal
    */
   private processMessages() {
-    while (true) {
+    for (;;) {
       const msg = this.#ffiQuery.nextMessage();
       if (msg === undefined) break;
       processMessage(msg);
@@ -147,8 +152,8 @@ export class Query {
         );
         const query = await Promise.resolve(typ.buildQuery!([constraint]));
         const results = await Promise.resolve(typ.execQuery!(query));
-        if (rel.kind == 'one') {
-          if (results.length != 1)
+        if (rel.kind === 'one') {
+          if (results.length !== 1)
             throw new Error('Wrong number of parents: ' + results.length);
           value = results[0];
         } else {
@@ -199,12 +204,12 @@ export class Query {
         if (isIterableIterator(value)) {
           // If the call result is an iterable iterator, yield from it.
           yield* value;
-        } else if (isAsyncIterator(value)) {
+        } else if (isAsyncIterable(value)) {
           // Same for async iterators.
           for await (const result of value) {
             yield result;
           }
-        } else if (Symbol.iterator in Object(value)) {
+        } else if (isIterable(value)) {
           for (const result of value) {
             yield result;
           }
@@ -305,7 +310,7 @@ export class Query {
             break;
           }
           case QueryEventKind.Debug:
-            if (createInterface == null) {
+            if (createInterface === null) {
               console.warn('debug events not supported in browser oso');
               break;
             }

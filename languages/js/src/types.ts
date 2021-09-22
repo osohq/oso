@@ -1,3 +1,5 @@
+import { isObj } from './helpers';
+
 /**
  * Polar string type.
  *
@@ -282,8 +284,9 @@ export interface PolarTerm {
  *
  * @internal
  */
-function isPolarValue(v: unknown): v is PolarValue {
-  if (typeof v !== 'object' || v === null) return false;
+function isPolarValue(x: unknown): x is PolarValue {
+  if (!isObj(x)) return false;
+  const v = x as unknown as PolarValue;
   return (
     isPolarStr(v) ||
     isPolarNum(v) ||
@@ -305,7 +308,8 @@ function isPolarValue(v: unknown): v is PolarValue {
  * @internal
  */
 export function isPolarTerm(v: unknown): v is PolarTerm {
-  return isPolarValue(Object(v).value);
+  if (!isObj(v)) return false;
+  return isPolarValue(v.value);
 }
 
 /**
@@ -591,17 +595,32 @@ export interface Options {
  *
  * @internal
  */
-export function isIterableIterator(x: unknown): boolean {
-  return typeof Object(x).next === 'function' && Symbol.iterator in Object(x);
+export function isIterableIterator(x: unknown): x is IterableIterator<unknown> {
+  return typeof Object(x).next === 'function' && isIterable(x);
 }
 
 /**
- * Type guard to test if a value is an `AsyncIterator`.
+ * Type guard to test if a value is an `Iterable`.
  *
  * @internal
  */
-export function isAsyncIterator(x: unknown): boolean {
-  return Symbol.asyncIterator in Object(x);
+export function isIterable(x: unknown): x is Iterable<unknown> {
+  return (
+    Symbol.iterator in Object(x) &&
+    typeof Object(x)[Symbol.iterator] === 'function'
+  );
+}
+
+/**
+ * Type guard to test if a value is an `AsyncIterable`.
+ *
+ * @internal
+ */
+export function isAsyncIterable(x: unknown): x is AsyncIterable<unknown> {
+  return (
+    Symbol.asyncIterator in Object(x) &&
+    typeof Object(x)[Symbol.asyncIterator] === 'function'
+  );
 }
 
 /**

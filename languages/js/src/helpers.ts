@@ -9,7 +9,7 @@ import {
   isPolarTerm,
   QueryEventKind,
 } from './types';
-import type { obj, PolarTerm, QueryEvent } from './types';
+import type { Class, obj, PolarTerm, QueryEvent } from './types';
 
 /**
  * Assemble the prototypal inheritance chain of a class.
@@ -324,7 +324,7 @@ export function printError(e: Error) {
  *
  * @internal
  */
-export function isConstructor(f: unknown): boolean {
+export function isConstructor(f: unknown): f is Class {
   try {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
@@ -340,7 +340,7 @@ export function isConstructor(f: unknown): boolean {
  *
  * @internal
  */
-function isObj(x: unknown): x is obj {
+export function isObj(x: unknown): x is obj {
   return typeof x === 'object' && x !== null;
 }
 

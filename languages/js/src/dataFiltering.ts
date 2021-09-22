@@ -42,9 +42,9 @@ class Ref {
 export class Filter {
   kind: string;
   field: string;
-  value: any;
+  value: unknown;
 
-  constructor(kind: string, field: string, value: any) {
+  constructor(kind: string, field: string, value: unknown) {
     this.kind = kind;
     this.field = field;
     this.value = value;

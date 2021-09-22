@@ -12,8 +12,8 @@ import { Host } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
-import { Class, Options, QueryResult } from './types';
-import { printError, PROMPT, readFile, repr } from './helpers';
+import type { Class, Options, QueryResult } from './types';
+import { isObj, printError, PROMPT, readFile, repr } from './helpers';
 
 class Source {
   readonly src: string;
@@ -42,26 +42,24 @@ export class Polar {
   #host: Host;
 
   constructor(opts: Options = {}) {
-    function defaultEqual(a: any, b: any) {
+    function defaultEqual(a: unknown, b: unknown) {
       if (
-        a &&
-        b && // good grief!!
-        typeof a === typeof b &&
-        typeof a === 'object' &&
-        a.__proto__ === b.__proto__
+        isObj(a) &&
+        isObj(b) &&
+        Object.getPrototypeOf(a) === Object.getPrototypeOf(b)
       ) {
-        const check = new Map();
+        const check = new Set();
 
         for (const x in a) {
           if (!defaultEqual(a[x], b[x])) return false;
-          check.set(x, true);
+          check.add(x);
         }
 
-        for (const x in b) if (!check.get(x)) return false;
+        for (const x in b) if (!check.has(x)) return false;
 
         return true;
       }
-      return a == b;
+      return a == b; // eslint-disable-line eqeqeq
     }
 
     this.#ffiPolar = new FfiPolar();
@@ -110,7 +108,7 @@ export class Polar {
    * @internal
    */
   private processMessages() {
-    while (true) {
+    for (;;) {
       const msg = this.#ffiPolar.nextMessage();
       if (msg === undefined) break;
       processMessage(msg);
@@ -185,7 +183,7 @@ export class Polar {
   }
 
   private async checkInlineQueries(): Promise<void> {
-    while (true) {
+    for (;;) {
       const query = this.#ffiPolar.nextInlineQuery();
       this.processMessages();
       if (query === undefined) break;
@@ -262,7 +260,7 @@ export class Polar {
   /**
    * Register a JavaScript value for use in Polar policies.
    */
-  registerConstant(value: any, name: string): void {
+  registerConstant(value: unknown, name: string): void {
     const term = this.#host.toPolar(value);
     this.#ffiPolar.registerConstant(name, JSON.stringify(term));
   }
@@ -277,23 +275,27 @@ export class Polar {
 
   /** Start a REPL session. */
   async repl(files?: string[]): Promise<void> {
-    if (createInterface == null) {
+    if (createInterface === null)
       throw new PolarError('REPL is not supported in the browser');
-    }
     try {
       if (files?.length) await this.loadFiles(files);
     } catch (e) {
       printError(e as Error);
     }
 
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     const repl = global.repl?.repl;
 
     if (repl) {
       repl.setPrompt(PROMPT);
       const evalQuery = this.evalReplInput.bind(this);
-      repl.eval = async (cmd: string, _ctx: any, _file: string, cb: Function) =>
-        cb(null, await evalQuery(cmd));
+      repl.eval = async (
+        cmd: string,
+        _ctx: unknown,
+        _file: string,
+        cb: Function
+      ) => cb(null, await evalQuery(cmd));
       const listeners: Function[] = repl.listeners('exit');
       repl.removeAllListeners('exit');
       repl.prependOnceListener('exit', () => {
