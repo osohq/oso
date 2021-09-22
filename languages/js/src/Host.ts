@@ -1,4 +1,5 @@
 import {
+  DataFilteringConfigurationError,
   DuplicateClassAliasError,
   InvalidConstructorError,
   PolarError,
@@ -35,15 +36,16 @@ import {
   isPolarVariable,
 } from './types';
 import { Relation } from './dataFiltering';
+import type { SerializedFields } from './dataFiltering';
 
 export class UserType {
   name: string;
   cls: Class;
   id: number;
   fields: Map<string, Class | Relation>;
-  buildQuery?: UnaryFn;
-  execQuery?: UnaryFn;
-  combineQuery?: BinaryFn;
+  buildQuery: UnaryFn;
+  execQuery: UnaryFn;
+  combineQuery: BinaryFn;
 
   constructor({
     name,
@@ -57,9 +59,24 @@ export class UserType {
     this.name = name;
     this.cls = cls;
     this.fields = fields;
-    this.buildQuery = buildQuery;
-    this.execQuery = execQuery;
-    this.combineQuery = combineQuery;
+    // NOTE(gj): these Promise.resolve() calls are for Promisifying synchronous
+    // return values from {build,exec,combine}Query. Since a user's
+    // implementation *might* return a Promise, we want to `await` invocations.
+    this.buildQuery = buildQuery
+      ? (...args) => Promise.resolve(buildQuery(...args))
+      : () => {
+          throw new DataFilteringConfigurationError('buildQuery');
+        };
+    this.execQuery = execQuery
+      ? (...args) => Promise.resolve(execQuery(...args))
+      : () => {
+          throw new DataFilteringConfigurationError('execQuery');
+        };
+    this.combineQuery = combineQuery
+      ? (...args) => Promise.resolve(combineQuery(...args))
+      : () => {
+          throw new DataFilteringConfigurationError('combineQuery');
+        };
     this.id = id;
   }
 }
@@ -122,17 +139,10 @@ export class Host {
   /**
    * Get user type for `cls`.
    *
-   * @param cls Class.
+   * @param cls Class or class name.
    */
-  getType(cls: Class): UserType | undefined {
-    const typ = this.types.get(cls);
-    if (typ === undefined) return undefined;
-
-    if (typ.id === undefined) {
-      throw new Error('invariant: class must be in names and ids.');
-    }
-
-    return typ;
+  getType(cls: Class | string): UserType | undefined {
+    return this.types.get(cls);
   }
 
   /**
@@ -141,6 +151,28 @@ export class Host {
   private *distinctUserTypes(): IterableIterator<UserType> {
     for (const [name, typ] of this.types.entries())
       if (typeof name === 'string') yield typ;
+  }
+
+  serializeTypes(): string {
+    const polarTypes: { [tag: string]: SerializedFields } = {};
+    for (const [tag, userType] of this.types) {
+      if (typeof tag === 'string') {
+        const fields = userType.fields;
+        const fieldTypes: SerializedFields = {};
+        for (const [k, v] of fields) {
+          if (v instanceof Relation) {
+            fieldTypes[k] = v.serialize();
+          } else {
+            const class_tag = this.getType(v)?.name;
+            if (class_tag === undefined)
+              throw new UnregisteredClassError(v.name);
+            fieldTypes[k] = { Base: { class_tag } };
+          }
+        }
+        polarTypes[tag] = fieldTypes;
+      }
+    }
+    return JSON.stringify(polarTypes);
   }
 
   /**
@@ -153,7 +185,9 @@ export class Host {
    */
   cacheClass<T>(cls: Class<T>, params?: ClassParams): string {
     params = params ? params : {};
-    const { name, types, buildQuery, execQuery, combineQuery, id } = params;
+    // TODO(gw) maybe we only want to support plain objects?
+    let fields = params.fields || {};
+    const { name, buildQuery, execQuery, combineQuery } = params;
     if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
     const clsName: string = name ? name : cls.name;
     const existing = this.types.get(clsName);
@@ -165,8 +199,6 @@ export class Host {
       });
     }
 
-    // TODO(gw) maybe we only want to support plain objects?
-    let fields = types || {};
     if (!(fields instanceof Map)) fields = new Map(Object.entries(fields));
 
     const userType = new UserType({
@@ -176,7 +208,7 @@ export class Host {
       buildQuery: buildQuery || this.buildQuery,
       execQuery: execQuery || this.execQuery,
       combineQuery: combineQuery || this.combineQuery,
-      id: id || this.cacheInstance(cls, undefined),
+      id: this.cacheInstance(cls),
     });
     this.types.set(cls, userType);
     this.types.set(clsName, userType);

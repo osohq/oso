@@ -136,22 +136,26 @@ export class Query {
   ): Promise<void> {
     let value;
     try {
-      const receiver = await this.#host.toJs(instance);
+      const receiver = (await this.#host.toJs(instance)) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
       const userTypes = this.#host.types;
 
       // Check if it's a relationship
       const rel = userTypes.get(receiver?.constructor)?.fields?.get(attr);
       if (rel instanceof Relation) {
+        // TODO(gj|gw): we should add validation for UserType relations once we
+        // have a nice hook where we know every class has been registered
+        // (e.g., once we enforce that all registerCalls() have to happen
+        // before loadFiles()).
         const typ = userTypes.get(rel.otherType)!;
         // Use the fetcher for the other type to traverse
         // the relationship.
         const constraint = new Filter(
           'Eq',
-          rel.otherField,
-          receiver[rel.myField]
+          receiver[rel.myField],
+          rel.otherField
         );
-        const query = await Promise.resolve(typ.buildQuery!([constraint]));
-        const results = await Promise.resolve(typ.execQuery!(query));
+        const query = await typ.buildQuery([constraint]);
+        const results = await typ.execQuery(query);
         if (rel.kind === 'one') {
           if (results.length !== 1)
             throw new Error('Wrong number of parents: ' + results.length);

@@ -121,3 +121,11 @@ export class UnregisteredInstanceError extends PolarError {
     super(`Unregistered instance: ${id}.`);
   }
 }
+
+export class DataFilteringConfigurationError extends PolarError {
+  constructor(fn: 'buildQuery' | 'execQuery' | 'combineQuery') {
+    super(
+      `Missing '${fn}' implementation. Did you forget to call \`Oso.setDataFilteringQueryDefaults()\`?`
+    );
+  }
+}

@@ -10,10 +10,19 @@ import type {
   UnaryFn,
   BinaryFn,
 } from './types';
-import { NotFoundError, ForbiddenError, OsoError } from './errors';
-import { serializeTypes, filterData } from './dataFiltering';
+import {
+  NotFoundError,
+  ForbiddenError,
+  OsoError,
+  UnregisteredClassError,
+  DataFilteringConfigurationError,
+} from './errors';
+import { filterData } from './dataFiltering';
+import type { FfiFilterPlan } from './dataFiltering';
 
 /** The Oso authorization API. */
+// TODO(gj): maybe pass DF options to constructor & try to parametrize a
+// `Query` type w/ the return type of the provided buildQuery fn.
 export class Oso<
   Actor = unknown,
   Action = unknown,
@@ -255,17 +264,13 @@ export class Oso<
     actor: Actor,
     action: Action,
     resourceCls: Class
-    // TODO(gj): can we do a better return type here?
   ): Promise<unknown> {
     const resource = new Variable('resource');
     const host = this.getHost();
-    // TODO(gj): is it cool if `clsName` is undefined? That would create an
-    // `Isa` with an empty dict pattern, which feels pretty weird.
-    //
-    // Update: given code further down in this function, seems like it's
-    // definitely not cool. Seems like we need to handle the case where someone
-    // calls `authorizedQuery` w/ an unregistered class.
     const clsName = host.getType(resourceCls)?.name;
+    if (clsName === undefined)
+      throw new UnregisteredClassError(resourceCls.name);
+
     const constraint = new Expression('And', [
       new Expression('Isa', [
         resource,
@@ -296,14 +301,13 @@ export class Oso<
       }, {}),
     }));
     const resultsStr = JSON.stringify(jsonResults);
-    const typesStr = serializeTypes(host.types);
     const plan = this.getFfi().buildFilterPlan(
-      typesStr,
+      host.serializeTypes(),
       resultsStr,
       'resource',
       clsName
     );
-    return filterData(host, plan);
+    return filterData(host, plan as FfiFilterPlan);
   }
 
   /**
@@ -322,8 +326,12 @@ export class Oso<
   ): Promise<T[]> {
     const query = await this.authorizedQuery(actor, action, resourceCls);
     if (!query) return [];
-    // TODO(gj): deal with all these non-null assertions
-    return this.getHost().getType(resourceCls)!.execQuery!(query) as T[];
+    const userType = this.getHost().getType(resourceCls);
+    if (userType === undefined)
+      throw new UnregisteredClassError(resourceCls.name);
+    if (userType.execQuery === undefined)
+      throw new DataFilteringConfigurationError('execQuery');
+    return userType.execQuery(query) as T[];
   }
 
   /**

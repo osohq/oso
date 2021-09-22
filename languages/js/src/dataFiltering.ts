@@ -1,8 +1,23 @@
-import { Host, UserTypesMap } from './Host';
-import { isPolarTerm, obj } from './types';
+import { Host } from './Host';
+import { BinaryFn, isPolarTerm } from './types';
 import { isObj } from './helpers';
 
-export interface SerializedRelation {
+interface FfiRequest {
+  class_tag: string;
+  constraints: FfiFilter[];
+}
+
+interface FfiResultSet {
+  result_id: number;
+  resolve_order: number[];
+  requests: Map<number, FfiRequest>;
+}
+
+export interface FfiFilterPlan {
+  result_sets: FfiResultSet[];
+}
+
+interface SerializedRelation {
   Relation: {
     kind: string;
     other_class_tag: string;
@@ -51,54 +66,39 @@ export class Field {
 }
 
 class Ref {
-  field: string;
-  resultId: string;
+  resultId: number;
+  field?: string;
 
-  constructor(field: string, resultId: string) {
-    this.field = field;
+  constructor(resultId: number, field?: string) {
     this.resultId = resultId;
+    this.field = field;
   }
+}
+
+interface FfiFilter {
+  kind: string;
+  value: unknown; // Ref | Field | Term
+  field?: string;
 }
 
 /** Represents a condition that must hold on a resource. */
 export class Filter {
   kind: string;
-  field: string;
-  value: Ref | Field | unknown;
+  value: unknown; // Ref | Field | Term
+  field?: string;
 
-  constructor(kind: string, field: string, value: unknown) {
+  constructor(kind: string, value: unknown, field?: string) {
     this.kind = kind;
-    this.field = field;
     this.value = value;
+    this.field = field;
   }
 }
 
-type SerializedFields = {
+export type SerializedFields = {
   [field: string]: SerializedRelation | { Base: { class_tag: string } };
 };
 
-export function serializeTypes(userTypes: UserTypesMap): string {
-  const polarTypes: { [tag: string]: SerializedFields } = {};
-  for (const [tag, userType] of userTypes.entries())
-    if (typeof tag === 'string') {
-      const fields = userType.fields;
-      const fieldTypes: SerializedFields = {};
-      for (const [k, v] of fields.entries()) {
-        if (v instanceof Relation) {
-          fieldTypes[k] = v.serialize();
-        } else {
-          const class_tag = userTypes.get(v)?.name;
-          // TODO(gj): what's the failure mode if `userType` is undefined?
-          if (class_tag === undefined) throw new Error();
-          fieldTypes[k] = { Base: { class_tag } };
-        }
-      }
-      polarTypes[tag] = fieldTypes;
-    }
-  return JSON.stringify(polarTypes);
-}
-
-async function parseFilter(host: Host, filter: obj): Promise<Filter> {
+async function parseFilter(host: Host, filter: FfiFilter): Promise<Filter> {
   const { kind, field } = filter;
   if (typeof kind !== 'string') throw new Error();
   if (typeof field !== 'string') throw new Error();
@@ -110,59 +110,72 @@ async function parseFilter(host: Host, filter: obj): Promise<Filter> {
     value = await host.toJs(value['Term']);
   } else if (value['Ref'] !== undefined) {
     const { field: childField, result_id: resultId } = value;
-    if (typeof childField !== 'string') throw new Error();
-    if (typeof resultId !== 'string') throw new Error();
-    value = new Ref(childField, resultId);
+    if (childField !== undefined && typeof childField !== 'string')
+      throw new Error();
+    if (!Number.isInteger(resultId)) throw new Error();
+    value = new Ref(resultId as number, childField);
   } else if (typeof value['Field'] === 'string') {
     value = new Field(value['Field']);
   } else {
     throw new Error();
   }
 
-  return new Filter(kind, field, value);
+  return new Filter(kind, value, field);
 }
 
-function groundFilter(results: any, filter: Filter) {
+function groundFilter(results: Map<number, unknown[]>, filter: Filter): Filter {
   const ref = filter.value;
-  if (!(ref instanceof Ref)) return;
-  filter.value = results.get(ref.resultId);
-  // TODO(gj): can `ref.field` ever be anything but a string? If it can't, is
-  // this condition just checking that it's non-empty?
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  if (ref.field) filter.value = filter.value.map((v: obj) => v[ref.field]);
+  if (!(ref instanceof Ref)) return filter;
+
+  let value = results.get(ref.resultId);
+  value = ref.field ? value?.map(v => (v as any)[ref.field!]) : value; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+  return new Filter(filter.kind, value, filter.field);
 }
 
-// @TODO: type for filter plan
-
-export async function filterData(host: Host, plan: any): Promise<any> {
-  const queries: any = [];
-  let combine: any;
+export async function filterData(
+  host: Host,
+  plan: FfiFilterPlan
+): Promise<unknown> {
+  const queries = [];
+  let combine: BinaryFn | undefined;
   for (const rs of plan.result_sets) {
-    const setResults = new Map();
+    const setResults: Map<number, unknown[]> = new Map();
     for (const i of rs.resolve_order) {
-      const req = rs.requests.get(i);
-      const constraints = req.constraints;
+      const req = rs.requests.get(i)!;
+      const filters = await Promise.all(
+        req.constraints.map(async constraint => {
+          const con = await parseFilter(host, constraint);
+          // Substitute in results from previous requests.
+          return groundFilter(setResults, con);
+        })
+      );
 
-      for (const i in constraints) {
-        const con = await parseFilter(host, constraints[i]);
-        // Substitute in results from previous requests.
-        groundFilter(setResults, con);
-        constraints[i] = con;
-      }
-
+      // NOTE(gj|gw): The class_tag on the request comes from serializeTypes(),
+      // a function we use to pass type information to the core in order to
+      // generate the filter plan. The type information is derived from
+      // Host.userTypes, so anything you get back as a class_tag will exist as
+      // a key in the Host.userTypes Map.
       const typ = host.getType(req.class_tag)!;
-      const query = await Promise.resolve(typ.buildQuery!(constraints));
+
+      const query = await typ.buildQuery(filters);
       if (i !== rs.result_id) {
-        setResults.set(i, await Promise.resolve(typ.execQuery!(query)));
+        setResults.set(i, await typ.execQuery(query));
       } else {
         queries.push(query);
-        combine = typ.combineQuery!;
+        combine = typ.combineQuery;
       }
     }
   }
 
   if (queries.length === 0) return null;
+
+  // NOTE(gw|gj): combine will only be undefined in two cases: (1) if
+  // result_set.result_id is not a member of result_set.resolve_order; (2)
+  // there are no result_sets. Either one of these would be a bug in the data
+  // filtering logic in the core.
+  if (combine === undefined) throw new Error();
+
   // @TODO remove duplicates
   return queries.reduce(combine);
 }

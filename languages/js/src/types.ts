@@ -547,7 +547,7 @@ export type QueryResult = AsyncGenerator<
  *
  * @hidden
  */
-export type obj = { [key: string]: unknown };
+export type obj<T = unknown> = { [key: string]: T };
 
 /**
  * A function that compares two values and returns `true` if they are equal and
@@ -641,6 +641,7 @@ export class Dict extends Object {
   [index: string]: unknown;
 }
 
+// NOTE(gj): these are *required* if the user wants to use Data Filtering.
 interface DataFilteringQueryParams {
   /**
    * A function to produce a query for instances of the class.
@@ -669,14 +670,7 @@ export interface ClassParams extends DataFilteringQueryParams {
    * A Map or object with string keys containing types for fields. Used for
    * data filtering.
    */
-  types?: obj | Map<string, unknown>;
-  /**
-   * Polar instance ID for the registered class. This should never be
-   * provided by users... I think?
-   *
-   * @internal
-   */
-  id?: number;
+  fields?: obj<Class | Relation> | Map<string, Class | Relation>;
 }
 
 /**
@@ -697,8 +691,6 @@ export interface UserTypeParams extends DataFilteringQueryParams {
    */
   fields: Map<string, Class | Relation>;
   /**
-   * TODO(gj): what do we use this for?
-   *
    * Polar instance ID for the registered class.
    *
    * @internal
