@@ -317,7 +317,7 @@ export function isPolarTerm(v: unknown): v is PolarTerm {
  *
  * @internal
  */
-export type Class<T extends {} = {}> = new (...args: unknown[]) => T;
+export type Class<T extends {} = {}> = new (...args: any[]) => T; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 /**
  * The `Result` [[`QueryEvent`]] represents a single result from a query
