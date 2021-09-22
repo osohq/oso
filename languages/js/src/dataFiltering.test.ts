@@ -1,5 +1,6 @@
 import { Oso } from './Oso';
-import { Relation, Field } from './dataFiltering';
+import { Field, Relation } from './dataFiltering';
+import type { Filter } from './dataFiltering';
 import 'reflect-metadata';
 import {
   OneToMany,
@@ -9,7 +10,10 @@ import {
   PrimaryColumn,
   Column,
   createConnection,
+  Repository,
+  SelectQueryBuilder,
 } from 'typeorm';
+import { Class } from './types';
 
 @Entity()
 class Bar {
@@ -194,39 +198,65 @@ async function fixtures() {
 
   const oso = new Oso();
 
-  const fromRepo = (repo: any, name: string) => {
-    const constrain = (query: any, c: any) => {
-      let clause,
-        rhs,
-        sym = gensym(c.field),
-        param: any = {};
+  function fromRepo<T>(repo: Repository<T>, name: string) {
+    const constrain = (
+      query: SelectQueryBuilder<T>,
+      { field, kind, value }: Filter
+    ) => {
+      const sym = gensym(field);
+      const param = {};
 
-      if (c.field === undefined) {
-        c.field = 'id';
-        c.value = c.kind == 'In' ? c.value.map((x: any) => x.id) : c.value.id;
+      if (field === undefined) {
+        field = 'id';
+        value = kind === 'In' ? value.map(x => x.id) : value.id;
       }
 
-      if (c.value instanceof Field) {
-        rhs = `${name}.${c.value.field}`;
+      let rhs: string;
+      if (value instanceof Field) {
+        rhs = `${name}.${value.field}`;
       } else {
-        rhs = c.kind == 'In' ? `(:...${sym})` : `:${sym}`;
-        param[sym] = c.value;
+        rhs = kind === 'In' ? `(:...${sym})` : `:${sym}`;
+        param[sym] = value;
       }
 
-      if (c.kind === 'Eq') clause = `${name}.${c.field} = ${rhs}`;
-      else if (c.kind === 'Neq') clause = `${name}.${c.field} <> ${rhs}`;
-      else if (c.kind === 'In') clause = `${name}.${c.field} IN ${rhs}`;
-      else throw new Error(`Unknown constraint kind: ${c.kind}`);
+      let clause: string;
+      switch (kind) {
+        case 'Eq': {
+          clause = `${name}.${field} = ${rhs}`;
+          break;
+        }
+        case 'Neq': {
+          clause = `${name}.${field} <> ${rhs}`;
+          break;
+        }
+        case 'In': {
+          clause = `${name}.${field} IN ${rhs}`;
+          break;
+        }
+        default:
+          throw new Error(`Unknown constraint kind: ${kind}`);
+      }
 
       return query.andWhere(clause, param);
     };
 
-    return (constraints: any) =>
+    return (constraints: Filter[]) =>
       constraints.reduce(constrain, repo.createQueryBuilder(name));
-  };
+  }
 
-  const execQuery = (q: any) => q.getMany();
-  const combineQuery = (a: any, b: any) => {
+  type Resource =
+    | User
+    | Repo
+    | Org
+    | Issue
+    | RepoRole
+    | OrgRole
+    | Bar
+    | Foo
+    | Num;
+
+  const execQuery = (q: SelectQueryBuilder<Resource>) => q.getMany();
+  const combineQuery = <T extends SelectQueryBuilder<Resource>>(a: T, b: T) => {
     // this is kind of bad but typeorm doesn't give you a lot of tools
     // for working with queries :(
     const whereClause = (sql: string) => /WHERE (.*)$/.exec(sql)![1];
@@ -396,10 +426,10 @@ async function fixtures() {
   await repoRoles.save({ name: 'reader', repo_id: app.id, user_id: gwen.id });
 
   const checkAuthz = async (
-    actor: any,
+    actor: unknown,
     action: string,
-    resource: any,
-    expected: any[]
+    resource: Class,
+    expected: unknown[]
   ) => {
     for (const x of expected)
       expect(await oso.isAllowed(actor, action, x)).toBe(true);
@@ -478,6 +508,8 @@ describe('Data filtering using typeorm/sqlite', () => {
 
     const query = await oso.authorizedQuery('gwen', 'put', Foo);
 
+    if (!(query instanceof SelectQueryBuilder)) throw new Error();
+
     let result = await query.getMany();
     expect(result).toHaveLength(2);
     expect(result).toEqual(expect.arrayContaining([aFoo, anotherFoo]));
@@ -488,22 +520,8 @@ describe('Data filtering using typeorm/sqlite', () => {
   });
 
   test('a gitclub-like policy', async () => {
-    const {
-      oso,
-      osohq,
-      apple,
-      tiktok,
-      checkAuthz,
-      gwen,
-      lag,
-      bug,
-      steve,
-      gabe,
-      leina,
-      pol,
-      app,
-      ios,
-    } = await fixtures();
+    const { oso, checkAuthz, gwen, lag, steve, gabe, leina, pol, app, ios } =
+      await fixtures();
     await oso.loadStr(`
 allow(actor, action, resource) if
   has_permission(actor, action, resource);

@@ -1,3 +1,4 @@
+import { Relation } from './dataFiltering';
 import { isObj } from './helpers';
 
 /**
@@ -563,8 +564,9 @@ export type CustomError = new (...args: unknown[]) => Error;
 /**
  * Functions of one or two arguments.
  */
-export type UnaryFn = (x: unknown) => unknown;
-export type BinaryFn = (x: unknown, y: unknown) => unknown;
+// TODO(gj): are there any better types we can use here?
+export type UnaryFn = (x: any) => any; // eslint-disable-line @typescript-eslint/no-explicit-any
+export type BinaryFn = (x: any, y: any) => any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 /**
  * Optional configuration for the [[`Oso.constructor`]].
@@ -637,4 +639,69 @@ export function isAsyncIterable(x: unknown): x is AsyncIterable<unknown> {
  */
 export class Dict extends Object {
   [index: string]: unknown;
+}
+
+interface DataFilteringQueryParams {
+  /**
+   * A function to produce a query for instances of the class.
+   */
+  buildQuery?: UnaryFn;
+  /**
+   * A function to execute a query produced by [[`ClassParams.buildQuery`]].
+   */
+  execQuery?: UnaryFn;
+  /**
+   * A function to merge two queries produced by [[`ClassParams.buildQuery`]].
+   */
+  combineQuery?: BinaryFn;
+}
+
+/**
+ * Optional parameters for [[`Polar.registerClass`]] and [[`Host.cacheClass`]].
+ */
+export interface ClassParams extends DataFilteringQueryParams {
+  /**
+   * Explicit name to use for the class in Polar. Defaults to the class's
+   * `name` property.
+   */
+  name?: string;
+  /**
+   * A Map or object with string keys containing types for fields. Used for
+   * data filtering.
+   */
+  types?: obj | Map<string, unknown>;
+  /**
+   * Polar instance ID for the registered class. This should never be
+   * provided by users... I think?
+   *
+   * @internal
+   */
+  id?: number;
+}
+
+/**
+ * Parameters for [[`UserType`]].
+ */
+export interface UserTypeParams extends DataFilteringQueryParams {
+  /**
+   * Class registered as a user type.
+   */
+  cls: Class;
+  /**
+   * Explicit name to use for the class in Polar.
+   */
+  name: string;
+  /**
+   * A Map with string keys containing types for fields. Used for data
+   * filtering.
+   */
+  fields: Map<string, Class | Relation>;
+  /**
+   * TODO(gj): what do we use this for?
+   *
+   * Polar instance ID for the registered class.
+   *
+   * @internal
+   */
+  id: number;
 }

@@ -13,12 +13,13 @@ import { Predicate } from './Predicate';
 import { Variable } from './Variable';
 import type {
   Class,
+  ClassParams,
   EqualityFn,
   UnaryFn,
   BinaryFn,
   PolarComparisonOperator,
   PolarTerm,
-  PolarDictPattern,
+  UserTypeParams,
 } from './types';
 import {
   Dict,
@@ -33,12 +34,13 @@ import {
   isPolarStr,
   isPolarVariable,
 } from './types';
+import { Relation } from './dataFiltering';
 
 export class UserType {
   name: string;
   cls: Class;
   id: number;
-  fields: Map<string, unknown>;
+  fields: Map<string, Class | Relation>;
   buildQuery?: UnaryFn;
   execQuery?: UnaryFn;
   combineQuery?: BinaryFn;
@@ -51,7 +53,7 @@ export class UserType {
     buildQuery,
     execQuery,
     combineQuery,
-  }: any) {
+  }: UserTypeParams) {
     this.name = name;
     this.cls = cls;
     this.fields = fields;
@@ -62,6 +64,8 @@ export class UserType {
   }
 }
 
+export type UserTypesMap = Map<string | Class, UserType>;
+
 /**
  * Translator between Polar and JavaScript.
  *
@@ -70,7 +74,7 @@ export class UserType {
 export class Host {
   #ffiPolar: FfiPolar;
   #instances: Map<number, unknown>;
-  types: Map<unknown, UserType>;
+  types: UserTypesMap;
   #equalityFn: EqualityFn;
 
   // global data filtering config
@@ -117,6 +121,8 @@ export class Host {
 
   /**
    * Get user type for `cls`.
+   *
+   * @param cls Class.
    */
   getType(cls: Class): UserType | undefined {
     const typ = this.types.get(cls);
@@ -141,12 +147,11 @@ export class Host {
    * Store a JavaScript class in the class cache.
    *
    * @param cls Class to cache.
-   * @param name Optional alias under which to cache the class. Defaults to the
-   * class's `name` property.
+   * @param params Optional parameters.
    *
    * @internal
    */
-  cacheClass<T>(cls: Class<T>, params?: any): string {
+  cacheClass<T>(cls: Class<T>, params?: ClassParams): string {
     params = params ? params : {};
     const { name, types, buildQuery, execQuery, combineQuery, id } = params;
     if (!isConstructor(cls)) throw new InvalidConstructorError(cls);

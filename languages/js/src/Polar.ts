@@ -12,7 +12,7 @@ import { Host } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
-import type { Class, Options, QueryResult } from './types';
+import type { Class, ClassParams, Options, QueryResult } from './types';
 import { isObj, printError, PROMPT, readFile, repr } from './helpers';
 
 class Source {
@@ -244,15 +244,8 @@ export class Polar {
    *
    * @param cls The class to register.
    * @param params An optional object with extra parameters.
-   *
-   * Accepted extra parameters are:
-   * - name: Explicit name to use for the class in Polar.
-   * - types: A map or object of string keys to type values, used for data filtering.
-   * - buildQuery: A function to produce a query for `cls` objects
-   * - execQuery: A function to execute a query produced by `buildQuery`
-   * - combineQuery: A function to merge two queries produced by `buildQuery`
    */
-  registerClass<T>(cls: Class<T>, params?: any): void {
+  registerClass<T>(cls: Class<T>, params?: ClassParams): void {
     const clsName = this.#host.cacheClass(cls, params);
     this.registerConstant(cls, clsName);
   }

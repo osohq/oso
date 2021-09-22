@@ -2,7 +2,14 @@ import { Polar } from './Polar';
 import { Variable } from './Variable';
 import { Expression } from './Expression';
 import { Pattern } from './Pattern';
-import type { Options, CustomError, obj } from './types';
+import type {
+  Options,
+  CustomError,
+  obj,
+  Class,
+  UnaryFn,
+  BinaryFn,
+} from './types';
 import { NotFoundError, ForbiddenError, OsoError } from './errors';
 import { serializeTypes, filterData } from './dataFiltering';
 
@@ -131,6 +138,7 @@ export class Oso<
           return new Set(['*']);
         }
       }
+      // TODO(gj): do we need to handle case where `action === undefined`?
       actions.add(action);
     }
     return actions;
@@ -244,13 +252,20 @@ export class Oso<
    * @returns A query that selects authorized resources of type `resourceCls`
    */
   async authorizedQuery(
-    actor: any,
-    action: any,
-    resourceCls: any
-  ): Promise<any> {
+    actor: Actor,
+    action: Action,
+    resourceCls: Class
+    // TODO(gj): can we do a better return type here?
+  ): Promise<unknown> {
     const resource = new Variable('resource');
     const host = this.getHost();
-    const clsName = host.getType(resourceCls)!.name;
+    // TODO(gj): is it cool if `clsName` is undefined? That would create an
+    // `Isa` with an empty dict pattern, which feels pretty weird.
+    //
+    // Update: given code further down in this function, seems like it's
+    // definitely not cool. Seems like we need to handle the case where someone
+    // calls `authorizedQuery` w/ an unregistered class.
+    const clsName = host.getType(resourceCls)?.name;
     const constraint = new Expression('And', [
       new Expression('Isa', [
         resource,
@@ -300,13 +315,15 @@ export class Oso<
    * @param resourceCls Object type.
    * @returns An array of authorized resources.
    */
-  async authorizedResources(
-    actr: any,
-    actn: any,
-    resourceCls: any
-  ): Promise<any[]> {
-    const query = await this.authorizedQuery(actr, actn, resourceCls);
-    return !query ? [] : this.getHost().getType(resourceCls)!.execQuery!(query);
+  async authorizedResources<T>(
+    actor: Actor,
+    action: Action,
+    resourceCls: Class<T>
+  ): Promise<T[]> {
+    const query = await this.authorizedQuery(actor, action, resourceCls);
+    if (!query) return [];
+    // TODO(gj): deal with all these non-null assertions
+    return this.getHost().getType(resourceCls)!.execQuery!(query) as T[];
   }
 
   /**
@@ -315,9 +332,9 @@ export class Oso<
    * `registerClass`.
    */
   setDataFilteringQueryDefaults(options: {
-    buildQuery?: any;
-    execQuery?: any;
-    combineQuery?: any;
+    buildQuery?: UnaryFn;
+    execQuery?: UnaryFn;
+    combineQuery?: BinaryFn;
   }) {
     if (options.buildQuery) this.getHost().buildQuery = options.buildQuery;
     if (options.execQuery) this.getHost().execQuery = options.execQuery;

@@ -1,4 +1,15 @@
-import { Host, UserType } from './Host';
+import { Host, UserTypesMap } from './Host';
+import { isPolarTerm, obj } from './types';
+import { isObj } from './helpers';
+
+export interface SerializedRelation {
+  Relation: {
+    kind: string;
+    other_class_tag: string;
+    my_field: string;
+    other_field: string;
+  };
+}
 
 /** Represents relationships between two resources, eg. one-one or one-many. */
 export class Relation {
@@ -17,6 +28,17 @@ export class Relation {
     this.otherType = otherType;
     this.myField = myField;
     this.otherField = otherField;
+  }
+
+  serialize(): SerializedRelation {
+    return {
+      Relation: {
+        kind: this.kind,
+        other_class_tag: this.otherType,
+        my_field: this.myField,
+        other_field: this.otherField,
+      },
+    };
   }
 }
 
@@ -42,7 +64,7 @@ class Ref {
 export class Filter {
   kind: string;
   field: string;
-  value: unknown;
+  value: Ref | Field | unknown;
 
   constructor(kind: string, field: string, value: unknown) {
     this.kind = kind;
@@ -51,28 +73,24 @@ export class Filter {
   }
 }
 
-export function serializeTypes(userTypes: Map<any, UserType>): string {
-  const polarTypes: any = {};
+type SerializedFields = {
+  [field: string]: SerializedRelation | { Base: { class_tag: string } };
+};
+
+export function serializeTypes(userTypes: UserTypesMap): string {
+  const polarTypes: { [tag: string]: SerializedFields } = {};
   for (const [tag, userType] of userTypes.entries())
     if (typeof tag === 'string') {
       const fields = userType.fields;
-      const fieldTypes: any = {};
+      const fieldTypes: SerializedFields = {};
       for (const [k, v] of fields.entries()) {
         if (v instanceof Relation) {
-          fieldTypes[k] = {
-            Relation: {
-              kind: v.kind,
-              other_class_tag: v.otherType,
-              my_field: v.myField,
-              other_field: v.otherField,
-            },
-          };
+          fieldTypes[k] = v.serialize();
         } else {
-          fieldTypes[k] = {
-            Base: {
-              class_tag: userTypes.get(v)?.name,
-            },
-          };
+          const class_tag = userTypes.get(v)?.name;
+          // TODO(gj): what's the failure mode if `userType` is undefined?
+          if (class_tag === undefined) throw new Error();
+          fieldTypes[k] = { Base: { class_tag } };
         }
       }
       polarTypes[tag] = fieldTypes;
@@ -80,31 +98,39 @@ export function serializeTypes(userTypes: Map<any, UserType>): string {
   return JSON.stringify(polarTypes);
 }
 
-async function parseFilter(host: Host, constraint: any): Promise<Filter> {
-  const kind = constraint['kind'];
-  const field = constraint['field'];
-  let value = constraint['value'];
+async function parseFilter(host: Host, filter: obj): Promise<Filter> {
+  const { kind, field } = filter;
+  if (typeof kind !== 'string') throw new Error();
+  if (typeof field !== 'string') throw new Error();
 
-  const valueKind = Object.keys(value)[0];
-  value = value[valueKind];
-  if (valueKind == 'Term') {
-    value = await host.toJs(value);
-  } else if (valueKind == 'Ref') {
-    const childField = value['field'];
-    const resultId = value['result_id'];
+  let { value } = filter;
+  if (!isObj(value)) throw new Error();
+
+  if (isPolarTerm(value['Term'])) {
+    value = await host.toJs(value['Term']);
+  } else if (value['Ref'] !== undefined) {
+    const { field: childField, result_id: resultId } = value;
+    if (typeof childField !== 'string') throw new Error();
+    if (typeof resultId !== 'string') throw new Error();
     value = new Ref(childField, resultId);
-  } else if (valueKind == 'Field') {
-    value = new Field(value);
+  } else if (typeof value['Field'] === 'string') {
+    value = new Field(value['Field']);
+  } else {
+    throw new Error();
   }
 
   return new Filter(kind, field, value);
 }
 
-function groundFilter(results: any, con: Filter) {
-  const ref = con.value;
+function groundFilter(results: any, filter: Filter) {
+  const ref = filter.value;
   if (!(ref instanceof Ref)) return;
-  con.value = results.get(ref.resultId);
-  if (ref.field) con.value = con.value.map((v: any) => v[ref.field]);
+  filter.value = results.get(ref.resultId);
+  // TODO(gj): can `ref.field` ever be anything but a string? If it can't, is
+  // this condition just checking that it's non-empty?
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  if (ref.field) filter.value = filter.value.map((v: obj) => v[ref.field]);
 }
 
 // @TODO: type for filter plan

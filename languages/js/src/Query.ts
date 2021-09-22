@@ -238,14 +238,15 @@ export class Query {
         switch (event.kind) {
           case QueryEventKind.Done:
             return;
-          case QueryEventKind.Result:
+          case QueryEventKind.Result: {
             const { bindings } = event.data as Result;
-            const transformed: Map<string, any> = new Map();
+            const transformed: Map<string, unknown> = new Map();
             for (const [k, v] of bindings.entries()) {
               transformed.set(k, await this.#host.toJs(v));
             }
             yield transformed;
             break;
+          }
           case QueryEventKind.MakeExternal: {
             const { instanceId, tag, fields } = event.data as MakeExternal;
             if (this.#host.hasInstance(instanceId))
@@ -305,7 +306,7 @@ export class Query {
             await this.handleNextExternal(callId, iterable);
             break;
           }
-          case QueryEventKind.Debug:
+          case QueryEventKind.Debug: {
             if (createInterface === null) {
               console.warn('debug events not supported in browser oso');
               break;
@@ -324,6 +325,11 @@ export class Query {
               this.processMessages();
             });
             break;
+          }
+          default: {
+            const _: never = event.kind;
+            return _;
+          }
         }
       }
     } finally {
