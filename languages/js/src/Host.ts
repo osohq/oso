@@ -6,7 +6,7 @@ import {
   UnregisteredClassError,
   UnregisteredInstanceError,
 } from './errors';
-import { ancestors, repr, isConstructor } from './helpers';
+import { ancestors, isConstructor, promisify1, repr } from './helpers';
 import type { Polar as FfiPolar } from './polar_wasm_api';
 import { Expression } from './Expression';
 import { Pattern } from './Pattern';
@@ -16,11 +16,13 @@ import type {
   Class,
   ClassParams,
   EqualityFn,
-  UnaryFn,
-  BinaryFn,
   PolarComparisonOperator,
   PolarTerm,
   UserTypeParams,
+  BuildQueryFn,
+  ExecQueryFn,
+  CombineQueryFn,
+  DataFilteringQueryParams,
 } from './types';
 import {
   Dict,
@@ -38,14 +40,15 @@ import {
 import { Relation } from './dataFiltering';
 import type { SerializedFields } from './dataFiltering';
 
-export class UserType {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export class UserType<Type, Query = any> {
   name: string;
-  cls: Class;
+  cls: Class<Type>;
   id: number;
   fields: Map<string, Class | Relation>;
-  buildQuery: UnaryFn;
-  execQuery: UnaryFn;
-  combineQuery: BinaryFn;
+  buildQuery: BuildQueryFn<Promise<Query>>;
+  execQuery: ExecQueryFn<Query, Promise<Type[]>>;
+  combineQuery: CombineQueryFn<Query>;
 
   constructor({
     name,
@@ -55,7 +58,7 @@ export class UserType {
     buildQuery,
     execQuery,
     combineQuery,
-  }: UserTypeParams) {
+  }: UserTypeParams<Type>) {
     this.name = name;
     this.cls = cls;
     this.fields = fields;
@@ -63,17 +66,17 @@ export class UserType {
     // return values from {build,exec,combine}Query. Since a user's
     // implementation *might* return a Promise, we want to `await` invocations.
     this.buildQuery = buildQuery
-      ? (...args) => Promise.resolve(buildQuery(...args))
+      ? promisify1(buildQuery)
       : () => {
           throw new DataFilteringConfigurationError('buildQuery');
         };
     this.execQuery = execQuery
-      ? (...args) => Promise.resolve(execQuery(...args))
+      ? promisify1(execQuery)
       : () => {
           throw new DataFilteringConfigurationError('execQuery');
         };
     this.combineQuery = combineQuery
-      ? (...args) => Promise.resolve(combineQuery(...args))
+      ? combineQuery
       : () => {
           throw new DataFilteringConfigurationError('combineQuery');
         };
@@ -81,23 +84,23 @@ export class UserType {
   }
 }
 
-export type UserTypesMap = Map<string | Class, UserType>;
+export type UserTypesMap = Map<string | Class, UserType<any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 /**
  * Translator between Polar and JavaScript.
  *
  * @internal
  */
-export class Host {
+export class Host implements DataFilteringQueryParams {
   #ffiPolar: FfiPolar;
   #instances: Map<number, unknown>;
   types: UserTypesMap;
   #equalityFn: EqualityFn;
 
   // global data filtering config
-  buildQuery?: UnaryFn;
-  execQuery?: UnaryFn;
-  combineQuery?: BinaryFn;
+  buildQuery?: BuildQueryFn;
+  execQuery?: ExecQueryFn;
+  combineQuery?: CombineQueryFn;
 
   /**
    * Shallow clone a host to extend its state for the duration of a particular
@@ -141,14 +144,16 @@ export class Host {
    *
    * @param cls Class or class name.
    */
-  getType(cls: Class | string): UserType | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getType<T = any>(cls: Class<T> | string): UserType<T> | undefined {
     return this.types.get(cls);
   }
 
   /**
    * Return user types that are registered with Host.
    */
-  private *distinctUserTypes(): IterableIterator<UserType> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private *distinctUserTypes(): IterableIterator<UserType<any>> {
     for (const [name, typ] of this.types)
       if (typeof name === 'string') yield typ;
   }

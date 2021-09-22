@@ -145,7 +145,7 @@ function parseNextExternal(event: unknown): QueryEvent {
 function parseExternalCall(event: unknown): QueryEvent {
   if (!isObj(event)) throw new Error();
   const { args, kwargs, attribute, call_id: callId, instance } = event;
-  if (!isArrayOfPolarTerms(args)) throw new Error();
+  if (args !== undefined && !isArrayOfPolarTerms(args)) throw new Error();
   if (kwargs) throw new KwargsError();
   if (typeof attribute !== 'string') throw new Error();
   if (!isSafeInteger(callId)) throw new Error();
@@ -364,7 +364,7 @@ function isMapOfPolarTerms(x: unknown): x is Map<string, PolarTerm> {
  * @internal
  */
 function isArrayOfPolarTerms(x: unknown): x is Array<PolarTerm> {
-  return !Array.isArray(x) || x.some((v: unknown) => !isPolarTerm(v));
+  return Array.isArray(x) && x.every(isPolarTerm);
 }
 
 /**
@@ -373,7 +373,7 @@ function isArrayOfPolarTerms(x: unknown): x is Array<PolarTerm> {
  * @internal
  */
 function isArrayOfStrings(x: unknown): x is Array<string> {
-  return !Array.isArray(x) || x.some((v: unknown) => typeof v !== 'string');
+  return Array.isArray(x) && x.every((v: unknown) => typeof v === 'string');
 }
 
 /**
@@ -384,3 +384,11 @@ function isArrayOfStrings(x: unknown): x is Array<string> {
 function isSafeInteger(x: unknown): x is number {
   return Number.isSafeInteger(x);
 }
+
+/**
+ * Promisify a 1-arity function.
+ */
+export const promisify1 =
+  <A, B>(f: (a: A) => B) =>
+  (a: A) =>
+    Promise.resolve(f(a));

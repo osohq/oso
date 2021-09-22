@@ -7,9 +7,8 @@ import type {
   CustomError,
   obj,
   Class,
-  UnaryFn,
-  BinaryFn,
   PolarTerm,
+  DataFilteringQueryParams,
 } from './types';
 import {
   NotFoundError,
@@ -332,7 +331,7 @@ export class Oso<
     const userType = this.getHost().getType(resourceCls);
     if (userType === undefined)
       throw new UnregisteredClassError(resourceCls.name);
-    return userType.execQuery(query) as T[];
+    return userType.execQuery(query);
   }
 
   /**
@@ -340,11 +339,7 @@ export class Oso<
    * These can be overridden by passing specific implementations to
    * `registerClass`.
    */
-  setDataFilteringQueryDefaults(options: {
-    buildQuery?: UnaryFn;
-    execQuery?: UnaryFn;
-    combineQuery?: BinaryFn;
-  }) {
+  setDataFilteringQueryDefaults(options: DataFilteringQueryParams) {
     if (options.buildQuery) this.getHost().buildQuery = options.buildQuery;
     if (options.execQuery) this.getHost().execQuery = options.execQuery;
     if (options.combineQuery)

@@ -1,5 +1,6 @@
 import { Host } from './Host';
-import { BinaryFn, isPolarTerm } from './types';
+import { isPolarTerm } from './types';
+import type { CombineQueryFn } from './types';
 import { isObj } from './helpers';
 
 interface Request {
@@ -77,7 +78,7 @@ class Ref {
   }
 }
 
-type FilterKind = 'Eq' | 'Neq' | 'In' | 'Contains';
+export type FilterKind = 'Eq' | 'Neq' | 'In' | 'Contains';
 
 /** Represents a condition that must hold on a resource. */
 export interface Filter {
@@ -100,8 +101,8 @@ async function parseFilter(host: Host, filter: Filter): Promise<Filter> {
 
   if (isPolarTerm(value['Term'])) {
     value = await host.toJs(value['Term']);
-  } else if (value['Ref'] !== undefined) {
-    const { field: childField, result_id: resultId } = value;
+  } else if (isObj(value['Ref'])) {
+    const { field: childField, result_id: resultId } = value['Ref'];
     if (childField !== undefined && typeof childField !== 'string')
       throw new Error();
     if (!Number.isInteger(resultId)) throw new Error();
@@ -130,7 +131,7 @@ export async function filterData(
   plan: FilterPlan
 ): Promise<unknown> {
   const queries = [];
-  let combine: BinaryFn | undefined;
+  let combine: CombineQueryFn | undefined;
   for (const rs of plan.result_sets) {
     const setResults: Map<number, unknown[]> = new Map();
     for (const i of rs.resolve_order) {

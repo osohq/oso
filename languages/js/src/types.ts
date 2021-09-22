@@ -1,4 +1,4 @@
-import { Relation } from './dataFiltering';
+import type { Filter, Relation } from './dataFiltering';
 import { isObj } from './helpers';
 
 /**
@@ -562,13 +562,6 @@ export type EqualityFn = (x: unknown, y: unknown) => boolean;
 export type CustomError = new (...args: any[]) => Error; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 /**
- * Functions of one or two arguments.
- */
-// TODO(gj): are there any better types we can use here?
-export type UnaryFn = (x: any) => any; // eslint-disable-line @typescript-eslint/no-explicit-any
-export type BinaryFn = (x: any, y: any) => any; // eslint-disable-line @typescript-eslint/no-explicit-any
-
-/**
  * Optional configuration for the [[`Oso.constructor`]].
  */
 export interface Options {
@@ -641,20 +634,25 @@ export class Dict extends Object {
   [index: string]: unknown;
 }
 
+export type BuildQueryFn<Q = any> = (filters: Filter[]) => Q; // eslint-disable-line @typescript-eslint/no-explicit-any
+export type ExecQueryFn<Q = any, ReturnType = any> = (query: Q) => ReturnType; // eslint-disable-line @typescript-eslint/no-explicit-any
+export type CombineQueryFn<Q = any> = (a: Q, b: Q) => Q; // eslint-disable-line @typescript-eslint/no-explicit-any
+
 // NOTE(gj): these are *required* if the user wants to use Data Filtering.
-interface DataFilteringQueryParams {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface DataFilteringQueryParams<Query = any, ReturnType = any> {
   /**
-   * A function to produce a query for instances of the class.
+   * A function to produce a query.
    */
-  buildQuery?: UnaryFn;
+  buildQuery?: BuildQueryFn<Query>;
   /**
    * A function to execute a query produced by [[`ClassParams.buildQuery`]].
    */
-  execQuery?: UnaryFn;
+  execQuery?: ExecQueryFn<Query, ReturnType>;
   /**
    * A function to merge two queries produced by [[`ClassParams.buildQuery`]].
    */
-  combineQuery?: BinaryFn;
+  combineQuery?: CombineQueryFn<Query>;
 }
 
 /**
@@ -676,11 +674,11 @@ export interface ClassParams extends DataFilteringQueryParams {
 /**
  * Parameters for [[`UserType`]].
  */
-export interface UserTypeParams extends DataFilteringQueryParams {
+export interface UserTypeParams<Cls> extends DataFilteringQueryParams {
   /**
    * Class registered as a user type.
    */
-  cls: Class;
+  cls: Class<Cls>;
   /**
    * Explicit name to use for the class in Polar.
    */

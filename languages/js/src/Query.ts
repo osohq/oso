@@ -33,6 +33,7 @@ import {
   QueryEventKind,
 } from './types';
 import { Relation } from './dataFiltering';
+import type { FilterKind } from './dataFiltering';
 
 function getLogLevelsFromEnv() {
   if (typeof process?.env === 'undefined') return [undefined, undefined];
@@ -124,6 +125,36 @@ export class Query {
   }
 
   /**
+   * Handle an external call on a relation.
+   *
+   * @internal
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async handleRelation(receiver: any, rel: Relation): Promise<unknown> {
+    // TODO(gj|gw): we should add validation for UserType relations once we
+    // have a nice hook where we know every class has been registered
+    // (e.g., once we enforce that all registerCalls() have to happen
+    // before loadFiles()).
+    const typ = this.#host.getType(rel.otherType)!;
+    // Use the fetcher for the other type to traverse
+    // the relationship.
+    const filter = {
+      kind: 'Eq' as FilterKind,
+      value: receiver[rel.myField],
+      field: rel.otherField,
+    };
+    const query = await typ.buildQuery([filter]);
+    const results = await typ.execQuery(query);
+    if (rel.kind === 'one') {
+      if (results.length !== 1)
+        throw new Error('Wrong number of parents: ' + results.length);
+      return results[0];
+    } else {
+      return results;
+    }
+  }
+
+  /**
    * Handle an application call.
    *
    * @internal
@@ -142,27 +173,7 @@ export class Query {
       // Check if it's a relationship
       const rel = userTypes.get(receiver?.constructor)?.fields?.get(attr);
       if (rel instanceof Relation) {
-        // TODO(gj|gw): we should add validation for UserType relations once we
-        // have a nice hook where we know every class has been registered
-        // (e.g., once we enforce that all registerCalls() have to happen
-        // before loadFiles()).
-        const typ = userTypes.get(rel.otherType)!;
-        // Use the fetcher for the other type to traverse
-        // the relationship.
-        const filter = {
-          kind: 'Eq',
-          value: receiver[rel.myField],
-          field: rel.otherField,
-        };
-        const query = await typ.buildQuery([filter]);
-        const results = await typ.execQuery(query);
-        if (rel.kind === 'one') {
-          if (results.length !== 1)
-            throw new Error('Wrong number of parents: ' + results.length);
-          value = results[0];
-        } else {
-          value = results;
-        }
+        value = await this.handleRelation(receiver, rel);
       } else {
         value = receiver[attr];
         if (args !== undefined) {
