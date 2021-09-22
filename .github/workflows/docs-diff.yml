@@ -99,16 +99,18 @@ jobs:
     needs: check-label
     if: ${{ needs.check-label.outputs.hadLabel == 'false' }}
     steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.base_ref }}
+      - name: Get sha of base_ref
+        id: sha
+        run: 'echo "::set-output name=gitsha::$(git rev-parse HEAD)"'
       - uses: actions/cache@v2
         id: cache
         with:
           path: |
             docs/public
-          key: docs-${{ github.base_ref }}
-      - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.base_ref }}
-        if: steps.cache.outputs.cache-hit != 'true'
+          key: docs-${{ steps.sha.outputs.gitsha }}
       - uses: actions/cache@v2
         with:
           path: |
