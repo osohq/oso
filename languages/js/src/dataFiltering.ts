@@ -121,7 +121,7 @@ function groundFilter(results: Map<number, unknown[]>, filter: Filter): Filter {
   if (!(ref instanceof Ref)) return filter;
 
   let value = results.get(ref.resultId);
-  value = ref.field ? value?.map(v => (v as any)[ref.field!]) : value; // eslint-disable-line @typescript-eslint/no-explicit-any
+  value = !ref.field ? value : value?.map(v => (v as any)[ref.field!]); // eslint-disable-line @typescript-eslint/no-explicit-any
 
   return { ...filter, value };
 }
