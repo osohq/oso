@@ -259,8 +259,9 @@ export class Polar {
 
   /** Start a REPL session. */
   async repl(files?: string[]): Promise<void> {
-    if (createInterface === null)
+    if (typeof createInterface !== 'function')
       throw new PolarError('REPL is not supported in the browser');
+
     try {
       if (files?.length) await this.loadFiles(files);
     } catch (e) {

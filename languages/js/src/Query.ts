@@ -322,7 +322,7 @@ export class Query {
             break;
           }
           case QueryEventKind.Debug: {
-            if (createInterface === null) {
+            if (typeof createInterface !== 'function') {
               console.warn('debug events not supported in browser oso');
               break;
             }
