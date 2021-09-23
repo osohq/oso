@@ -226,11 +226,7 @@ function parseExternalIsa(event: unknown): QueryEvent {
  */
 function parseExternalIsaWithPath(event: unknown): QueryEvent {
   if (!isObj(event)) throw new Error();
-  const {
-    call_id: callId,
-    base_tag: baseTag,
-    class_tag: classTag,
-  } = event;
+  const { call_id: callId, base_tag: baseTag, class_tag: classTag } = event;
   const path: string[] = (event.path as PolarTerm[]).map(x => {
     const val = x.value;
     if (!isPolarStr(val)) throw new Error();

@@ -1677,7 +1677,7 @@ fn test_circular_data() -> TestResult {
 
 fn commute_ops(u: &Value, v: &Value) -> bool {
     fn a2p(a: &[Term]) -> (&Value, &Value) {
-        (&a[0].value(), &a[1].value())
+        (a[0].value(), a[1].value())
     }
     match (u.as_expression(), v.as_expression()) {
         (
@@ -1705,7 +1705,7 @@ fn commute_ops(u: &Value, v: &Value) -> bool {
                 arg_a
                     .iter()
                     .enumerate()
-                    .all(|(i, x)| commute_ops(&arg_b[i].value(), x.value()))
+                    .all(|(i, x)| commute_ops(arg_b[i].value(), x.value()))
             }
         }
         _ => u == v,

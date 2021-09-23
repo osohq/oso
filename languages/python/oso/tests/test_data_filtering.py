@@ -426,13 +426,13 @@ def test_specializers(oso, t):
         allow(foo: Foo{logs: logs}, "PtnPtn",   log: Log{foo: foo}) if log in logs;
     """
     oso.load_str(policy)
-    Log = t['Log']
-    parts = ['None', 'Cls', 'Dict', 'Ptn']
+    Log = t["Log"]
+    parts = ["None", "Cls", "Dict", "Ptn"]
     for a in parts:
         for b in parts:
-            for log in t['logs']:
-                for foo in filter(lambda f: f.id == log.foo_id, t['foos']):
-                    check_authz(oso, foo, a+b, Log, [log])
+            for log in t["logs"]:
+                for foo in filter(lambda f: f.id == log.foo_id, t["foos"]):
+                    check_authz(oso, foo, a + b, Log, [log])
 
 
 def test_val_in_var(oso, t):

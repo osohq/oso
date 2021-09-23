@@ -426,14 +426,11 @@ async function fixtures() {
   async function make<T>(r: Repository<T>, x: any): Promise<T> {
     return await r.findOneOrFail(await r.save(x));
   }
-  const
-    pol = await make(repos, { name: 'pol', org: osohq }),
+  const pol = await make(repos, { name: 'pol', org: osohq }),
     ios = await make(repos, { name: 'ios', org: apple }),
     app = await make(repos, { name: 'app', org: tiktok }),
-
     bug = await make(issues, { title: 'bug', repo: pol }),
     lag = await make(issues, { title: 'lag', repo: ios }),
-
     steve = await make(users, { email: 'steve@osohq.com' }),
     leina = await make(users, { email: 'leina@osohq.com' }),
     gabe = await make(users, { email: 'gabe@osohq.com' }),
@@ -508,8 +505,8 @@ describe('Data filtering using typeorm/sqlite', () => {
     `);
 
     const parts = ['None', 'Cls', 'Dict', 'Ptn'];
-    for (const p1 of parts) for (const p2 of parts)
-      await checkAuthz(aFoo, p1+p2, Log, [aLog]);
+    for (const p1 of parts)
+      for (const p2 of parts) await checkAuthz(aFoo, p1 + p2, Log, [aLog]);
   });
   test('relations and operators', async () => {
     const { oso, checkAuthz, aFoo, anotherFoo, thirdFoo } = await fixtures();
