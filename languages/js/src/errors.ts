@@ -63,25 +63,25 @@ export class InlineQueryFailedError extends PolarError {
 }
 
 export class InvalidAttributeError extends PolarError {
-  constructor(instance: any, field: string) {
+  constructor(instance: unknown, field: string) {
     super(`${field} not found on ${repr(instance)}.`);
   }
 }
 
 export class InvalidCallError extends PolarError {
-  constructor(instance: any, field: string) {
+  constructor(instance: unknown, field: string) {
     super(`${repr(instance)}.${field} is not a function`);
   }
 }
 
 export class InvalidIteratorError extends PolarError {
-  constructor(term: any) {
+  constructor(term: unknown) {
     super(`${term} is not iterable`);
   }
 }
 
 export class InvalidConstructorError extends PolarError {
-  constructor(ctor: any) {
+  constructor(ctor: unknown) {
     super(`${repr(ctor)} is not a constructor`);
   }
 }
@@ -119,5 +119,13 @@ export class UnregisteredClassError extends PolarError {
 export class UnregisteredInstanceError extends PolarError {
   constructor(id: number) {
     super(`Unregistered instance: ${id}.`);
+  }
+}
+
+export class DataFilteringConfigurationError extends PolarError {
+  constructor(fn: 'buildQuery' | 'execQuery' | 'combineQuery') {
+    super(
+      `Missing '${fn}' implementation. Did you forget to call \`Oso.setDataFilteringQueryDefaults()\`?`
+    );
   }
 }
