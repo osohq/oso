@@ -7,7 +7,6 @@ import {
   isPolarComparisonOperator,
   isPolarPredicate,
   isPolarTerm,
-  isPolarStr,
   QueryEventKind,
 } from './types';
 import type { Class, obj, PolarTerm, QueryEvent } from './types';
@@ -226,15 +225,16 @@ function parseExternalIsa(event: unknown): QueryEvent {
  */
 function parseExternalIsaWithPath(event: unknown): QueryEvent {
   if (!isObj(event)) throw new Error();
-  const { call_id: callId, base_tag: baseTag, class_tag: classTag } = event;
-  const path: string[] = (event.path as PolarTerm[]).map(x => {
-    const val = x.value;
-    if (!isPolarStr(val)) throw new Error();
-    return val.String;
-  });
+  const {
+    path,
+    call_id: callId,
+    base_tag: baseTag,
+    class_tag: classTag,
+  } = event;
   if (!isSafeInteger(callId)) throw new Error();
   if (!isString(baseTag)) throw new Error();
   if (!isString(classTag)) throw new Error();
+  if (!isArrayOf(path, isPolarTerm)) throw new Error();
   return {
     kind: QueryEventKind.ExternalIsaWithPath,
     data: { callId, baseTag, path, classTag },

@@ -359,9 +359,11 @@ export class Host implements Required<DataFilteringQueryParams> {
    *
    * @internal
    */
-  isaWithPath(baseTag: string, path: string[], classTag: string): boolean {
+  isaWithPath(baseTag: string, path: PolarTerm[], classTag: string): boolean {
     let tag = baseTag;
-    for (const field of path) {
+    for (const fld of path) {
+      const field = this.toJs(fld);
+      if (!isString(field)) throw new Error();
       const userType = this.types.get(tag);
       if (userType === undefined) return false;
 
