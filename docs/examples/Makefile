@@ -74,3 +74,4 @@ test:
 	$(MAKE) ruby-test
 	$(MAKE) java-test
 	$(MAKE) nodejs-test
+	$(MAKE) test-quickstarts-local
