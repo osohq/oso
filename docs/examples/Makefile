@@ -24,7 +24,7 @@ update-submodules:
 	git submodule update --checkout --init --recursive --remote
 	cd roles/sqlalchemy/basic && git checkout basic_roles_complete && git pull
 
-.PHONY: submodules update-submodules java-test java-test-context java-test-rbac
+.PHONY: submodules update-submodules java-test java-test-context java-test-rbac  python-test ruby-test nodejs-test test-quickstarts-release test-quickstarts-local test
 
 $(JAVA_PACKAGE_JAR_PATH):
 	$(MAKE) -C $(JAVA_DIR) package

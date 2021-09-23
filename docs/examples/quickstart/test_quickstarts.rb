@@ -22,7 +22,7 @@ quickstarts = {
 }
 
 if ARGV.include? "local"
-  quickstarts[:go][:setup] = "go mod edit -replace github.com/osohq/go-oso@v0.20.1=../../../../languages/go && go build"
+  quickstarts[:go][:setup] = "make -C ../../../../languages/go copy_lib && go mod edit -replace github.com/osohq/go-oso=../../../../languages/go && go build"
   quickstarts[:python][:setup] = "pip install -e ../../../../languages/python/oso && pip install --upgrade -r requirements.txt"
   quickstarts[:ruby][:setup] = "BUNDLE_GEMFILE=../Gemfile-local bundle"
   quickstarts[:ruby][:server] = "BUNDLE_GEMFILE=../Gemfile-local bundle exec ruby server.rb"
