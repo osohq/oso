@@ -15,24 +15,38 @@ import {
 class Bar {
   @PrimaryColumn()
   id!: string;
-
   @Column()
   isCool!: boolean;
-
   @Column()
   isStillCool!: boolean;
+  @OneToMany(() => Foo, foo => foo.bar)
+  foos!: Foo[];
 }
 
 @Entity()
 class Foo {
   @PrimaryColumn()
   id!: string;
-
   @Column()
   barId!: string;
-
   @Column()
   isFooey!: boolean;
+  @ManyToOne(() => Bar, bar => bar.foos)
+  bar!: Bar;
+  @OneToMany(() => Log, log => log.foo)
+  logs!: Log[];
+}
+
+@Entity()
+class Log {
+  @PrimaryColumn()
+  id!: string;
+  @Column()
+  fooId!: string;
+  @Column()
+  data!: string;
+  @ManyToOne(() => Foo, foo => foo.logs)
+  foo!: Foo;
 }
 
 @Entity()
@@ -138,7 +152,7 @@ async function fixtures() {
   const connection = await createConnection({
     type: 'sqlite',
     database: `:memory:`,
-    entities: [Foo, Bar, Num, Org, Repo, User, OrgRole, RepoRole, Issue],
+    entities: [Foo, Bar, Log, Num, Org, Repo, User, OrgRole, RepoRole, Issue],
     synchronize: true,
     logging: false,
     name: gensym(),
@@ -146,6 +160,7 @@ async function fixtures() {
 
   const bars = connection.getRepository(Bar);
   const foos = connection.getRepository(Foo);
+  const logs = connection.getRepository(Log);
   const nums = connection.getRepository(Num);
 
   const users = connection.getRepository(User);
@@ -187,6 +202,16 @@ async function fixtures() {
   const aFoo = await mkFoo('one', 'hello', false);
   const anotherFoo = await mkFoo('another', 'hello', true);
   const thirdFoo = await mkFoo('next', 'goodbye', true);
+
+  const aLog = await logs.findOneOrFail(
+    await logs.save({ id: 'a', fooId: 'one', data: 'hello' })
+  );
+  const anotherLog = await logs.findOneOrFail(
+    await logs.save({ id: 'b', fooId: 'another', data: 'world' })
+  );
+  const thirdLog = await logs.findOneOrFail(
+    await logs.save({ id: 'c', fooId: 'next', data: 'steve' })
+  );
 
   for (let i of [0, 1, 2]) await mkNum(i, 'one');
   for (let i of [0, 1]) await mkNum(i, 'another');
@@ -325,7 +350,18 @@ async function fixtures() {
       barId: String,
       isFooey: Boolean,
       bar: new Relation('one', 'Bar', 'barId', 'id'),
+      logs: new Relation('many', 'Log', 'id', 'fooId'),
       numbers: new Relation('many', 'Num', 'id', 'fooId'),
+    },
+  });
+
+  oso.registerClass(Log, {
+    buildQuery: fromRepo(logs, 'log'),
+    types: {
+      id: String,
+      fooId: String,
+      data: String,
+      foo: new Relation('one', 'Foo', 'fooId', 'id'),
     },
   });
 
@@ -414,6 +450,9 @@ async function fixtures() {
     aFoo,
     anotherFoo,
     thirdFoo,
+    aLog,
+    anotherLog,
+    thirdLog,
     helloBar,
     byeBar,
     checkAuthz,
@@ -433,6 +472,22 @@ async function fixtures() {
 }
 
 describe('Data filtering using typeorm/sqlite', () => {
+  test('dictionary specializers', async () => {
+    const { oso, checkAuthz, aFoo, aLog } = await fixtures();
+    oso.loadStr(`
+      allow(foo: Foo, "glub", _: {foo: foo});
+      allow(foo: Foo, "bluh", log) if foo = log.foo;`);
+    await checkAuthz(aFoo, 'glub', Log, [aLog]);
+    await checkAuthz(aFoo, 'bluh', Log, [aLog]);
+  });
+  test('pattern specializers', async () => {
+    const { oso, checkAuthz, aFoo, aLog } = await fixtures();
+    oso.loadStr(`
+      allow(foo: Foo, "glub", _: Log{foo: foo});
+      allow(foo: Foo, "bluh", log: Log) if foo = log.foo;`);
+    await checkAuthz(aFoo, 'glub', Log, [aLog]);
+    await checkAuthz(aFoo, 'bluh', Log, [aLog]);
+  });
   test('relations and operators', async () => {
     const { oso, checkAuthz, aFoo, anotherFoo, thirdFoo } = await fixtures();
 
@@ -590,7 +645,7 @@ resource Issue {
   "read" if "reader" on "parent";
 }
 
-has_relation(repo: Repo, "parent", issue: Issue) if repo = issue.repo;
+has_relation(repo: Repo, "parent", issue: Issue) if issue.repo = repo;
     `);
 
     await checkAuthz(steve, 'create_issues', Repo, [ios]);
