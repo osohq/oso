@@ -140,7 +140,6 @@ export class Host implements Required<DataFilteringQueryParams> {
    *
    * @param cls Class or class name.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getType<Type extends Class>(cls: Type | string): UserType<Type> | undefined {
     return this.types.get(cls);
   }
