@@ -6,20 +6,14 @@ import {
   PolarError,
   PolarFileExtensionError,
   PolarFileNotFoundError,
-  DuplicateClassAliasError,
 } from './errors';
 import { Query } from './Query';
-import { Host, UserType } from './Host';
+import { Host } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
-import { Class, obj, Options, QueryResult } from './types';
-import { printError, PROMPT, readFile, repr } from './helpers';
-
-import { Variable } from './Variable';
-import { Expression } from './Expression';
-import { Pattern } from './Pattern';
-import { serializeTypes, filterData } from './dataFiltering';
+import type { Class, ClassParams, Options, QueryResult } from './types';
+import { isObj, isString, printError, PROMPT, readFile, repr } from './helpers';
 
 class Source {
   readonly src: string;
@@ -48,26 +42,24 @@ export class Polar {
   #host: Host;
 
   constructor(opts: Options = {}) {
-    function defaultEqual(a: any, b: any) {
+    function defaultEqual(a: unknown, b: unknown) {
       if (
-        a &&
-        b && // good grief!!
-        typeof a === typeof b &&
-        typeof a === 'object' &&
-        a.__proto__ === b.__proto__
+        isObj(a) &&
+        isObj(b) &&
+        Object.getPrototypeOf(a) === Object.getPrototypeOf(b)
       ) {
-        let check = new Map();
+        const check = new Set();
 
-        for (let x in a) {
+        for (const x in a) {
           if (!defaultEqual(a[x], b[x])) return false;
-          check.set(x, true);
+          check.add(x);
         }
 
-        for (let x in b) if (!check.get(x)) return false;
+        for (const x in b) if (!check.has(x)) return false;
 
         return true;
       }
-      return a == b;
+      return a == b; // eslint-disable-line eqeqeq
     }
 
     this.#ffiPolar = new FfiPolar();
@@ -102,22 +94,13 @@ export class Polar {
   }
 
   /**
-   * For tests only.
-   *
-   * @hidden
-   */
-  __host() {
-    return this.#host;
-  }
-
-  /**
    * Process messages received from the Polar VM.
    *
    * @internal
    */
   private processMessages() {
-    while (true) {
-      let msg = this.#ffiPolar.nextMessage();
+    for (;;) {
+      const msg = this.#ffiPolar.nextMessage();
       if (msg === undefined) break;
       processMessage(msg);
     }
@@ -150,7 +133,8 @@ export class Polar {
           const contents = await readFile(filename);
           return new Source(contents, filename);
         } catch (e) {
-          if (e.code === 'ENOENT') throw new PolarFileNotFoundError(filename);
+          if ((e as NodeJS.ErrnoException).code === 'ENOENT')
+            throw new PolarFileNotFoundError(filename);
           throw e;
         }
       })
@@ -183,19 +167,19 @@ export class Polar {
 
   // Register MROs, load Polar code, and check inline queries.
   private async loadSources(sources: Source[]): Promise<void> {
-    this.#host.registerMros();
+    this.getHost().registerMros();
     this.#ffiPolar.load(sources);
     this.processMessages();
     return this.checkInlineQueries();
   }
 
   private async checkInlineQueries(): Promise<void> {
-    while (true) {
+    for (;;) {
       const query = this.#ffiPolar.nextInlineQuery();
       this.processMessages();
       if (query === undefined) break;
       const source = query.source();
-      const { results } = new Query(query, this.#host);
+      const { results } = new Query(query, this.getHost());
       const { done } = await results.next();
       await results.return();
       if (done) throw new InlineQueryFailedError(source);
@@ -205,10 +189,10 @@ export class Polar {
   /**
    * Query for a Polar predicate or string.
    */
-  query(q: Predicate | string, bindings?: Map<string, any>): QueryResult {
-    const host = Host.clone(this.#host);
+  query(q: Predicate | string, bindings?: Map<string, unknown>): QueryResult {
+    const host = Host.clone(this.getHost());
     let ffiQuery;
-    if (typeof q === 'string') {
+    if (isString(q)) {
       ffiQuery = this.#ffiPolar.newQueryFromStr(q);
     } else {
       const term = JSON.stringify(host.toPolar(q));
@@ -223,7 +207,7 @@ export class Polar {
    */
   queryRuleWithBindings(
     name: string,
-    bindings: Map<string, any>,
+    bindings: Map<string, unknown>,
     ...args: unknown[]
   ): QueryResult {
     return this.query(new Predicate(name, args), bindings);
@@ -251,24 +235,17 @@ export class Polar {
    *
    * @param cls The class to register.
    * @param params An optional object with extra parameters.
-   *
-   * Accepted extra parameters are:
-   * - name: Explicit name to use for the class in Polar.
-   * - types: A map or object of string keys to type values, used for data filtering.
-   * - buildQuery: A function to produce a query for `cls` objects
-   * - execQuery: A function to execute a query produced by `buildQuery`
-   * - combineQuery: A function to merge two queries produced by `buildQuery`
    */
-  registerClass<T>(cls: Class<T>, params?: any): void {
-    const clsName = this.#host.cacheClass(cls, params);
+  registerClass(cls: Class, params?: ClassParams): void {
+    const clsName = this.getHost().cacheClass(cls, params);
     this.registerConstant(cls, clsName);
   }
 
   /**
    * Register a JavaScript value for use in Polar policies.
    */
-  registerConstant(value: any, name: string): void {
-    const term = this.#host.toPolar(value);
+  registerConstant(value: unknown, name: string): void {
+    const term = this.getHost().toPolar(value);
     this.#ffiPolar.registerConstant(name, JSON.stringify(term));
   }
 
@@ -282,23 +259,28 @@ export class Polar {
 
   /** Start a REPL session. */
   async repl(files?: string[]): Promise<void> {
-    if (createInterface == null) {
+    if (typeof createInterface !== 'function')
       throw new PolarError('REPL is not supported in the browser');
-    }
+
     try {
       if (files?.length) await this.loadFiles(files);
     } catch (e) {
-      printError(e);
+      printError(e as Error);
     }
 
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     const repl = global.repl?.repl;
 
     if (repl) {
       repl.setPrompt(PROMPT);
       const evalQuery = this.evalReplInput.bind(this);
-      repl.eval = async (cmd: string, _ctx: any, _file: string, cb: Function) =>
-        cb(null, await evalQuery(cmd));
+      repl.eval = async (
+        cmd: string,
+        _ctx: unknown,
+        _file: string,
+        cb: Function
+      ) => cb(null, await evalQuery(cmd));
       const listeners: Function[] = repl.listeners('exit');
       repl.removeAllListeners('exit');
       repl.prependOnceListener('exit', () => {
@@ -331,7 +313,7 @@ export class Polar {
     try {
       if (input !== '') {
         const ffiQuery = this.#ffiPolar.newQueryFromStr(input);
-        const query = new Query(ffiQuery, this.#host);
+        const query = new Query(ffiQuery, this.getHost());
         const results = [];
         for await (const result of query.results) {
           results.push(result);
@@ -348,7 +330,7 @@ export class Polar {
         }
       }
     } catch (e) {
-      printError(e);
+      printError(e as Error);
     }
   }
 }
