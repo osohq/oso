@@ -41,13 +41,13 @@ import { Relation } from './dataFiltering';
 import type { SerializedFields } from './dataFiltering';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export class UserType<Type, Query = any> {
+export class UserType<Type extends Class<T>, T = any, Query = any> {
   name: string;
-  cls: Class<Type>;
+  cls: Type;
   id: number;
   fields: Map<string, Class | Relation>;
   buildQuery: BuildQueryFn<Promise<Query>>;
-  execQuery: ExecQueryFn<Query, Promise<Type[]>>;
+  execQuery: ExecQueryFn<Query, Promise<T[]>>;
   combineQuery: CombineQueryFn<Query>;
 
   constructor({
@@ -145,7 +145,7 @@ export class Host implements DataFilteringQueryParams {
    * @param cls Class or class name.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getType<T = any>(cls: Class<T> | string): UserType<T> | undefined {
+  getType<Type extends Class>(cls: Type | string): UserType<Type> | undefined {
     return this.types.get(cls);
   }
 

@@ -674,11 +674,12 @@ export interface ClassParams extends DataFilteringQueryParams {
 /**
  * Parameters for [[`UserType`]].
  */
-export interface UserTypeParams<Cls> extends DataFilteringQueryParams {
+export interface UserTypeParams<Type extends Class>
+  extends DataFilteringQueryParams {
   /**
    * Class registered as a user type.
    */
-  cls: Class<Cls>;
+  cls: Type;
   /**
    * Explicit name to use for the class in Polar.
    */
