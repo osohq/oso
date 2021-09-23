@@ -24,7 +24,7 @@ interface Message {
  *
  * @internal
  */
-export function processMessage(message: Message) {
+export function processMessage(message: Message): void {
   switch (message.kind) {
     case MessageKind.Print:
       console.log(message.msg);
