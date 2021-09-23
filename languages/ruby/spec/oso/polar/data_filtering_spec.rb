@@ -125,8 +125,8 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         )
       end
 
-      context 'with specializers in the rule head' do
-        it 'works' do
+      context 'with specializers in the rule head' do # rubocop:disable Metrics/BlockLength
+        it 'works' do # rubocop:disable Metrics/BlockLength
           subject.load_str <<~POL
             allow(foo: Foo,             "NoneNone", log) if foo = log.foo;
             allow(foo,                  "NoneCls",  log: Log) if foo = log.foo;
@@ -149,7 +149,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           parts.each do |a|
             parts.each do |b|
               Log.all.each do |log|
-                results = subject.authorized_resources log.foo, a+b, Log
+                results = subject.authorized_resources log.foo, a + b, Log
                 expect(results).to contain_exactly(log)
               end
             end
