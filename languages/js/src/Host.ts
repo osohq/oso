@@ -62,24 +62,13 @@ export class UserType<Type extends Class<T>, T = any, Query = any> {
     this.name = name;
     this.cls = cls;
     this.fields = fields;
-    // NOTE(gj): these Promise.resolve() calls are for Promisifying synchronous
+    // NOTE(gj): these `promisify1()` calls are for Promisifying synchronous
     // return values from {build,exec,combine}Query. Since a user's
-    // implementation *might* return a Promise, we want to `await` invocations.
-    this.buildQuery = buildQuery
-      ? promisify1(buildQuery)
-      : () => {
-          throw new DataFilteringConfigurationError('buildQuery');
-        };
-    this.execQuery = execQuery
-      ? promisify1(execQuery)
-      : () => {
-          throw new DataFilteringConfigurationError('execQuery');
-        };
-    this.combineQuery = combineQuery
-      ? combineQuery
-      : () => {
-          throw new DataFilteringConfigurationError('combineQuery');
-        };
+    // implementation *might* return a Promise, we want to `await` _all_
+    // invocations.
+    this.buildQuery = promisify1(buildQuery);
+    this.execQuery = promisify1(execQuery);
+    this.combineQuery = combineQuery;
     this.id = id;
   }
 }
@@ -91,16 +80,16 @@ export type UserTypesMap = Map<string | Class, UserType<any>>; // eslint-disable
  *
  * @internal
  */
-export class Host implements DataFilteringQueryParams {
+export class Host implements Required<DataFilteringQueryParams> {
   #ffiPolar: FfiPolar;
   #instances: Map<number, unknown>;
   types: UserTypesMap;
   #equalityFn: EqualityFn;
 
   // global data filtering config
-  buildQuery?: BuildQueryFn;
-  execQuery?: ExecQueryFn;
-  combineQuery?: CombineQueryFn;
+  buildQuery: BuildQueryFn;
+  execQuery: ExecQueryFn;
+  combineQuery: CombineQueryFn;
 
   /**
    * Shallow clone a host to extend its state for the duration of a particular
@@ -124,6 +113,15 @@ export class Host implements DataFilteringQueryParams {
     this.#instances = new Map();
     this.#equalityFn = equalityFn;
     this.types = new Map();
+    this.buildQuery = () => {
+      throw new DataFilteringConfigurationError('buildQuery');
+    };
+    this.execQuery = () => {
+      throw new DataFilteringConfigurationError('execQuery');
+    };
+    this.combineQuery = () => {
+      throw new DataFilteringConfigurationError('combineQuery');
+    };
   }
 
   /**

@@ -675,7 +675,7 @@ export interface ClassParams extends DataFilteringQueryParams {
  * Parameters for [[`UserType`]].
  */
 export interface UserTypeParams<Type extends Class>
-  extends DataFilteringQueryParams {
+  extends Required<DataFilteringQueryParams> {
   /**
    * Class registered as a user type.
    */
