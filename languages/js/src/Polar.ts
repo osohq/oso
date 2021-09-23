@@ -236,7 +236,7 @@ export class Polar {
    * @param cls The class to register.
    * @param params An optional object with extra parameters.
    */
-  registerClass<T>(cls: Class<T>, params?: ClassParams): void {
+  registerClass(cls: Class, params?: ClassParams): void {
     const clsName = this.getHost().cacheClass(cls, params);
     this.registerConstant(cls, clsName);
   }

@@ -266,10 +266,7 @@ async function fixtures() {
   };
 
   // set global exec/combine query functions
-  oso.setDataFilteringQueryDefaults({
-    execQuery: execQuery,
-    combineQuery: combineQuery,
-  });
+  oso.setDataFilteringQueryDefaults({ execQuery, combineQuery });
 
   oso.registerClass(User, {
     buildQuery: fromRepo(users, 'user'),

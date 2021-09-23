@@ -265,7 +265,7 @@ export class Oso<
   async authorizedQuery(
     actor: Actor,
     action: Action,
-    resourceCls: Class
+    resourceCls: Class<Resource>
   ): Promise<unknown> {
     const resource = new Variable('resource');
     const host = this.getHost();
@@ -321,7 +321,7 @@ export class Oso<
    * @param resourceCls Object type.
    * @returns An array of authorized resources.
    */
-  async authorizedResources<T>(
+  async authorizedResources<T extends Resource>(
     actor: Actor,
     action: Action,
     resourceCls: Class<T>
