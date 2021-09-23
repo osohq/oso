@@ -367,7 +367,7 @@ export class Host implements Required<DataFilteringQueryParams> {
     let tag = baseTag;
     for (const fld of path) {
       const field = await this.toJs(fld);
-      if (!isString(field)) throw new Error();
+      if (!isString(field)) throw new Error(`Not a field name: ${field}`);
       const userType = this.types.get(tag);
       if (userType === undefined) return false;
 
