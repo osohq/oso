@@ -406,6 +406,31 @@ def test_parent_child_cases(oso, t):
     check_authz(oso, log, "bluh", t["Foo"], [foo])
 
 
+def test_head_pattern_specializer(oso, t):
+    policy = """
+    allow(foo: Foo, "glub", _: FooLogRecord{foo: foo});
+    allow(foo: Foo, "bluh", log: FooLogRecord) if foo = log.foo;
+    """
+    oso.load_str(policy)
+    Log = t['FooLogRecord']
+    for log in t['logs']:
+        foo = next(filter(lambda f: f.id == log.foo_id, t['foos']))
+        check_authz(oso, foo, 'glub', Log, [log])
+        check_authz(oso, foo, 'bluh', Log, [log])
+
+
+def test_head_dict_specializer(oso, t):
+    policy = """
+    allow(foo: Foo, "glub", _: {foo: foo});
+    allow(foo: Foo, "bluh", log) if foo = log.foo;
+    """
+    oso.load_str(policy)
+    Log = t['FooLogRecord']
+    for log in t['logs']:
+        foo = next(filter(lambda f: f.id == log.foo_id, t['foos']))
+        check_authz(oso, foo, 'glub', Log, [log])
+        check_authz(oso, foo, 'bluh', Log, [log])
+
 def test_val_in_var(oso, t):
     # value in var
     oso.clear_rules()

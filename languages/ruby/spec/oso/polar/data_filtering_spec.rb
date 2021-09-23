@@ -125,6 +125,32 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         )
       end
 
+      context 'with specializers in the rule head' do
+        it 'handles dictionary specializers' do
+          subject.load_str <<~POL
+            allow(foo: Foo, "glub", _: {foo: foo});
+            allow(foo: Foo, "bluh", log) if foo = log.foo;
+          POL
+          FooLog.all.each do |log|
+            foo = log.foo
+            results = subject.authorized_resources foo, 'glub', FooLog
+            expect(results).to contain_exactly(log)
+          end
+        end
+
+        it 'handles pattern specializers' do
+          subject.load_str <<~POL
+            allow(foo: Foo, "glub", _: FooLog{foo: foo});
+            allow(foo: Foo, "bluh", log: FooLog) if foo = log.foo;
+          POL
+          FooLog.all.each do |log|
+            foo = log.foo
+            results = subject.authorized_resources foo, 'glub', FooLog
+            expect(results).to contain_exactly(log)
+          end
+        end
+      end
+
       context 'for collection membership' do # rubocop:disable Metrics/BlockLength
         it 'can check if a value is in a field' do
           policy = 'allow("gwen", "get", foo: Foo) if 1 in foo.numbers and 2 in foo.numbers;'
