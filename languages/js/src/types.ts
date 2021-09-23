@@ -318,7 +318,7 @@ export function isPolarTerm(v: unknown): v is PolarTerm {
  *
  * @internal
  */
-export type Class<T extends {} = {}> = new (...args: any[]) => T; // eslint-disable-line @typescript-eslint/no-explicit-any
+export type Class<T = unknown> = new (...args: any[]) => T; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 /**
  * The `Result` [[`QueryEvent`]] represents a single result from a query
@@ -591,7 +591,7 @@ export interface Options {
  * @internal
  */
 export function isIterableIterator(x: unknown): x is IterableIterator<unknown> {
-  return typeof Object(x).next === 'function' && isIterable(x);
+  return isObj(x) && typeof x.next === 'function' && isIterable(x);
 }
 
 /**
@@ -600,10 +600,7 @@ export function isIterableIterator(x: unknown): x is IterableIterator<unknown> {
  * @internal
  */
 export function isIterable(x: unknown): x is Iterable<unknown> {
-  return (
-    Symbol.iterator in Object(x) &&
-    typeof Object(x)[Symbol.iterator] === 'function'
-  );
+  return isObj(x) && Symbol.iterator in x;
 }
 
 /**
@@ -612,10 +609,7 @@ export function isIterable(x: unknown): x is Iterable<unknown> {
  * @internal
  */
 export function isAsyncIterable(x: unknown): x is AsyncIterable<unknown> {
-  return (
-    Symbol.asyncIterator in Object(x) &&
-    typeof Object(x)[Symbol.asyncIterator] === 'function'
-  );
+  return isObj(x) && Symbol.asyncIterator in x;
 }
 
 /**
