@@ -64,11 +64,7 @@ quickstarts.each do |lang, qs|
     Dir.chdir(qs_dir) do
       prefix = "#{Time.now.to_i} [#{lang}]"
       puts "#{prefix} Installing dependencies..."
-      if ARGV.include? "local"
-        setup_output = `#{qs[:local_setup]} 2>&1`
-      else
-        setup_output = `#{qs[:release_setup]} 2>&1`
-      end
+      setup_output = `#{qs[:setup]} 2>&1`
       raise "Setup step failed for #{lang.upcase}:\n#{setup_output}" unless $CHILD_STATUS.exitstatus.zero?
 
       Timeout.timeout 15 do
