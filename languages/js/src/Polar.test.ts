@@ -349,9 +349,9 @@ describe('conversions between JS + Polar values', () => {
       const p = new Polar();
       p.registerClass(Counter);
 
-      const preLoadInstanceCount = p.__host().instances().length;
+      const preLoadInstanceCount = p.getHost().instances().length;
       await p.loadStr('f(_: Counter) if Counter.count() > 0;');
-      const preQueryInstanceCount = p.__host().instances().length;
+      const preQueryInstanceCount = p.getHost().instances().length;
       expect(preLoadInstanceCount).toStrictEqual(preQueryInstanceCount);
 
       expect(Counter.count()).toBe(0);
@@ -359,7 +359,7 @@ describe('conversions between JS + Polar values', () => {
       expect(Counter.count()).toBe(1);
 
       expect(await queryRule(p, 'f', c)).toStrictEqual([map()]);
-      const postQueryInstanceCount = p.__host().instances().length;
+      const postQueryInstanceCount = p.getHost().instances().length;
       expect(preQueryInstanceCount).toStrictEqual(postQueryInstanceCount);
 
       expect(Counter.count()).toBe(1);
@@ -497,18 +497,18 @@ describe('#makeInstance', () => {
   test('handles no args', async () => {
     const p = new Polar();
     p.registerClass(ConstructorNoArgs);
-    await p.__host().makeInstance(ConstructorNoArgs.name, [], 1);
-    const instance = p.__host().getInstance(1);
+    await p.getHost().makeInstance(ConstructorNoArgs.name, [], 1);
+    const instance = p.getHost().getInstance(1);
     expect(instance).toStrictEqual(new ConstructorNoArgs());
   });
 
   test('handles positional args', async () => {
     const p = new Polar();
     p.registerClass(ConstructorArgs);
-    const one = p.__host().toPolar(1);
-    const two = p.__host().toPolar(2);
-    await p.__host().makeInstance(ConstructorArgs.name, [one, two], 1);
-    const instance = p.__host().getInstance(1);
+    const one = p.getHost().toPolar(1);
+    const two = p.getHost().toPolar(2);
+    await p.getHost().makeInstance(ConstructorArgs.name, [one, two], 1);
+    const instance = p.getHost().getInstance(1);
     expect(instance).toStrictEqual(new ConstructorArgs(1, 2));
   });
 

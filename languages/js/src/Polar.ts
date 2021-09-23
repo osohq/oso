@@ -94,15 +94,6 @@ export class Polar {
   }
 
   /**
-   * For tests only.
-   *
-   * @hidden
-   */
-  __host() {
-    return this.#host;
-  }
-
-  /**
    * Process messages received from the Polar VM.
    *
    * @internal
@@ -176,7 +167,7 @@ export class Polar {
 
   // Register MROs, load Polar code, and check inline queries.
   private async loadSources(sources: Source[]): Promise<void> {
-    this.#host.registerMros();
+    this.getHost().registerMros();
     this.#ffiPolar.load(sources);
     this.processMessages();
     return this.checkInlineQueries();
@@ -188,7 +179,7 @@ export class Polar {
       this.processMessages();
       if (query === undefined) break;
       const source = query.source();
-      const { results } = new Query(query, this.#host);
+      const { results } = new Query(query, this.getHost());
       const { done } = await results.next();
       await results.return();
       if (done) throw new InlineQueryFailedError(source);
@@ -199,7 +190,7 @@ export class Polar {
    * Query for a Polar predicate or string.
    */
   query(q: Predicate | string, bindings?: Map<string, unknown>): QueryResult {
-    const host = Host.clone(this.#host);
+    const host = Host.clone(this.getHost());
     let ffiQuery;
     if (typeof q === 'string') {
       ffiQuery = this.#ffiPolar.newQueryFromStr(q);
@@ -246,7 +237,7 @@ export class Polar {
    * @param params An optional object with extra parameters.
    */
   registerClass<T>(cls: Class<T>, params?: ClassParams): void {
-    const clsName = this.#host.cacheClass(cls, params);
+    const clsName = this.getHost().cacheClass(cls, params);
     this.registerConstant(cls, clsName);
   }
 
@@ -254,7 +245,7 @@ export class Polar {
    * Register a JavaScript value for use in Polar policies.
    */
   registerConstant(value: unknown, name: string): void {
-    const term = this.#host.toPolar(value);
+    const term = this.getHost().toPolar(value);
     this.#ffiPolar.registerConstant(name, JSON.stringify(term));
   }
 
@@ -321,7 +312,7 @@ export class Polar {
     try {
       if (input !== '') {
         const ffiQuery = this.#ffiPolar.newQueryFromStr(input);
-        const query = new Query(ffiQuery, this.#host);
+        const query = new Query(ffiQuery, this.getHost());
         const results = [];
         for await (const result of query.results) {
           results.push(result);
