@@ -1,7 +1,7 @@
 import { Oso } from './Oso';
-import { Relation, Field } from './dataFiltering';
+import { Field, Relation } from './dataFiltering';
+import type { Filter } from './dataFiltering';
 import 'reflect-metadata';
-import { obj } from './types';
 import {
   OneToMany,
   ManyToOne,
@@ -10,8 +10,10 @@ import {
   PrimaryColumn,
   Column,
   createConnection,
-  Repository
+  Repository,
+  SelectQueryBuilder,
 } from 'typeorm';
+import { Class, obj } from './types';
 
 @Entity()
 class Bar {
@@ -148,12 +150,12 @@ export class OrgRole {
 }
 
 let i = 0;
-const gensym = (tag?: any) => `_${tag}_${i++}`;
+const gensym = (tag?: string) => `_${tag || 'anon'}_${i++}`;
 
 async function fixtures() {
   const connection = await createConnection({
     type: 'sqlite',
-    database: `:memory:`,
+    database: ':memory:',
     entities: [Foo, Bar, Log, Num, Org, Repo, User, OrgRole, RepoRole, Issue],
     synchronize: true,
     logging: false,
@@ -215,50 +217,72 @@ async function fixtures() {
     await logs.save({ id: 'c', fooId: 'next', data: 'steve' })
   );
 
-  for (let i of [0, 1, 2]) await mkNum(i, 'one');
-  for (let i of [0, 1]) await mkNum(i, 'another');
-  for (let i of [0]) await mkNum(i, 'next');
+  for (const i of [0, 1, 2]) await mkNum(i, 'one');
+  for (const i of [0, 1]) await mkNum(i, 'another');
+  for (const i of [0]) await mkNum(i, 'next');
 
   const oso = new Oso();
 
-  const fromRepo = (repo: any, name: string) => {
-    const constrain = (query: any, c: any) => {
-      let clause,
-        rhs,
-        sym = gensym(c.field),
-        param: any = {};
+  const fromRepo = <T>(repo: Repository<T>, name: string) => {
+    const constrain = (
+      query: SelectQueryBuilder<T>,
+      { field, kind, value }: Filter
+    ) => {
+      const sym = gensym(field);
+      const param: obj = {};
 
-      if (c.field === undefined) {
-        c.field = 'id';
-        c.value = c.kind == 'In' ? c.value.map((x: any) => x.id) : c.value.id;
+      if (field === undefined) {
+        field = 'id';
+        value =
+          kind === 'In' ? (value as any[]).map(x => x.id) : (value as any).id; // eslint-disable-line @typescript-eslint/no-explicit-any
       }
 
-      if (c.value instanceof Field) {
-        rhs = `${name}.${c.value.field}`;
+      let rhs: string;
+      if (value instanceof Field) {
+        rhs = `${name}.${value.field}`;
       } else {
-        rhs = c.kind == 'In' ? `(:...${sym})` : `:${sym}`;
-        param[sym] = c.value;
+        rhs = kind === 'In' ? `(:...${sym})` : `:${sym}`;
+        param[sym] = value;
       }
 
-      if (c.kind === 'Eq') clause = `${name}.${c.field} = ${rhs}`;
-      else if (c.kind === 'Neq') clause = `${name}.${c.field} <> ${rhs}`;
-      else if (c.kind === 'In') clause = `${name}.${c.field} IN ${rhs}`;
-      else throw new Error(`Unknown constraint kind: ${c.kind}`);
+      let clause: string;
+      switch (kind) {
+        case 'Eq': {
+          clause = `${name}.${field} = ${rhs}`;
+          break;
+        }
+        case 'Neq': {
+          clause = `${name}.${field} <> ${rhs}`;
+          break;
+        }
+        case 'In': {
+          clause = `${name}.${field} IN ${rhs}`;
+          break;
+        }
+        default:
+          throw new Error(`Unknown constraint kind: ${kind}`);
+      }
 
       return query.andWhere(clause, param);
     };
 
-    return (constraints: any) => {
-      console.log('constraints on', name, constraints);
-      return constraints.reduce(constrain, repo.createQueryBuilder(name));
-    }
+    return (constraints: Filter[]) =>
+      constraints.reduce(constrain, repo.createQueryBuilder(name));
   };
 
-  const execQuery = (q: any) => {
-    console.log(q.getSql());
-    return q.getMany();
-  }
-  const combineQuery = (a: any, b: any) => {
+  type Resource =
+    | User
+    | Repo
+    | Org
+    | Issue
+    | RepoRole
+    | OrgRole
+    | Bar
+    | Foo
+    | Num;
+
+  const execQuery = (q: SelectQueryBuilder<Resource>) => q.getMany();
+  const combineQuery = <T extends SelectQueryBuilder<Resource>>(a: T, b: T) => {
     // this is kind of bad but typeorm doesn't give you a lot of tools
     // for working with queries :(
     const whereClause = (sql: string) => /WHERE (.*)$/.exec(sql)![1];
@@ -267,14 +291,11 @@ async function fixtures() {
   };
 
   // set global exec/combine query functions
-  oso.setDataFilteringQueryDefaults({
-    execQuery: execQuery,
-    combineQuery: combineQuery,
-  });
+  oso.setDataFilteringQueryDefaults({ execQuery, combineQuery });
 
   oso.registerClass(User, {
     buildQuery: fromRepo(users, 'user'),
-    types: {
+    fields: {
       id: Number,
       email: String,
       repoRoles: new Relation('many', 'RepoRole', 'id', 'userId'),
@@ -284,7 +305,7 @@ async function fixtures() {
 
   oso.registerClass(Repo, {
     buildQuery: fromRepo(repos, 'repo'),
-    types: {
+    fields: {
       id: Number,
       name: String,
       orgId: Number,
@@ -296,7 +317,7 @@ async function fixtures() {
 
   oso.registerClass(Org, {
     buildQuery: fromRepo(orgs, 'org'),
-    types: {
+    fields: {
       id: Number,
       name: String,
       billing_address: String,
@@ -308,7 +329,7 @@ async function fixtures() {
 
   oso.registerClass(Issue, {
     buildQuery: fromRepo(issues, 'issue'),
-    types: {
+    fields: {
       id: Number,
       title: String,
       repoId: Number,
@@ -318,7 +339,7 @@ async function fixtures() {
 
   oso.registerClass(RepoRole, {
     buildQuery: fromRepo(repoRoles, 'repo_role'),
-    types: {
+    fields: {
       id: Number,
       role: String,
       repoId: Number,
@@ -330,7 +351,7 @@ async function fixtures() {
 
   oso.registerClass(OrgRole, {
     buildQuery: fromRepo(orgRoles, 'org_role'),
-    types: {
+    fields: {
       id: Number,
       role: String,
       orgId: Number,
@@ -342,7 +363,7 @@ async function fixtures() {
 
   oso.registerClass(Bar, {
     buildQuery: fromRepo(bars, 'bar'),
-    types: {
+    fields: {
       id: String,
       isCool: Boolean,
       isStillCool: Boolean,
@@ -352,7 +373,7 @@ async function fixtures() {
 
   oso.registerClass(Foo, {
     buildQuery: fromRepo(foos, 'foo'),
-    types: {
+    fields: {
       id: String,
       barId: String,
       isFooey: Boolean,
@@ -364,7 +385,7 @@ async function fixtures() {
 
   oso.registerClass(Log, {
     buildQuery: fromRepo(logs, 'log'),
-    types: {
+    fields: {
       id: String,
       fooId: String,
       data: String,
@@ -374,7 +395,7 @@ async function fixtures() {
 
   oso.registerClass(Num, {
     buildQuery: fromRepo(nums, 'num'),
-    types: {
+    fields: {
       number: Number,
       fooId: String,
       foo: new Relation('one', 'Foo', 'fooId', 'id'),
@@ -402,9 +423,10 @@ async function fixtures() {
       })
     );
 
-  const make = async <T extends obj>(r: Repository<T>, x: any): Promise<T> =>
-    await r.findOneOrFail(await r.save(x)),
-
+  async function make<T>(r: Repository<T>, x: any): Promise<T> {
+    return await r.findOneOrFail(await r.save(x));
+  }
+  const
     pol = await make(repos, { name: 'pol', org: osohq }),
     ios = await make(repos, { name: 'ios', org: apple }),
     app = await make(repos, { name: 'app', org: tiktok }),
@@ -424,12 +446,12 @@ async function fixtures() {
   await repoRoles.save({ name: 'reader', repo: app, user: gwen });
 
   const checkAuthz = async (
-    actor: any,
+    actor: unknown,
     action: string,
-    resource: any,
-    expected: any[]
+    resource: Class,
+    expected: unknown[]
   ) => {
-    for (let x of expected)
+    for (const x of expected)
       expect(await oso.isAllowed(actor, action, x)).toBe(true);
     const actual = await oso.authorizedResources(actor, action, resource);
 
@@ -464,7 +486,6 @@ async function fixtures() {
 }
 
 describe('Data filtering using typeorm/sqlite', () => {
-  /*
   test('specializers', async () => {
     const { oso, checkAuthz, aFoo, aLog } = await fixtures();
     oso.loadStr(`
@@ -535,6 +556,8 @@ describe('Data filtering using typeorm/sqlite', () => {
 
     const query = await oso.authorizedQuery('gwen', 'put', Foo);
 
+    if (!(query instanceof SelectQueryBuilder)) throw new Error();
+
     let result = await query.getMany();
     expect(result).toHaveLength(2);
     expect(result).toEqual(expect.arrayContaining([aFoo, anotherFoo]));
@@ -578,25 +601,10 @@ describe('Data filtering using typeorm/sqlite', () => {
     await checkAuthz('steve', 'get', Bar, [helloBar]);
     await checkAuthz('steve', 'read', Foo, [aFoo, anotherFoo]);
   });
-  */
 
   test('a gitclub-like policy', async () => {
-    const {
-      oso,
-      osohq,
-      apple,
-      tiktok,
-      checkAuthz,
-      gwen,
-      lag,
-      bug,
-      steve,
-      gabe,
-      leina,
-      pol,
-      app,
-      ios,
-    } = await fixtures();
+    const { oso, checkAuthz, gwen, lag, steve, gabe, leina, pol, app, ios } =
+      await fixtures();
     await oso.loadStr(`
 allow(actor, action, resource) if
   has_permission(actor, action, resource);
@@ -683,16 +691,16 @@ resource Issue {
   "read" if "reader" on "parent";
 }
 
-#has_relation(repo: Repo, "parent", issue: Issue) if issue.repo = repo;
-has_relation(repo: Repo, "parent", _issue: Issue{repo:repo});
+has_relation(repo: Repo, "parent", issue: Issue) if issue.repo = repo;
+#has_relation(repo: Repo, "parent", _issue: Issue{repo:repo});
     `);
 
-//    await checkAuthz(steve, 'create_issues', Repo, [ios]);
+    await checkAuthz(steve, 'create_issues', Repo, [ios]);
     await checkAuthz(steve, 'read', Issue, [lag]);
- //   await checkAuthz(gwen, 'read', Repo, [app]);
-//    await checkAuthz(gwen, 'read', Issue, []);
-//    await checkAuthz(gwen, 'create_issues', Repo, []);
-//    await checkAuthz(leina, 'create_issues', Repo, [pol]);
- //   await checkAuthz(gabe, 'create_issues', Repo, []);
+    await checkAuthz(gwen, 'read', Repo, [app]);
+    await checkAuthz(gwen, 'read', Issue, []);
+    await checkAuthz(gwen, 'create_issues', Repo, []);
+    await checkAuthz(leina, 'create_issues', Repo, [pol]);
+    await checkAuthz(gabe, 'create_issues', Repo, []);
   });
 });

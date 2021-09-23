@@ -18,6 +18,7 @@ oso.registerClass(A);
 
 class D extends A {}
 
+// eslint-disable-next-line @typescript-eslint/no-namespace
 namespace B {
   export class C {
     readonly y: string;
@@ -53,10 +54,11 @@ oso.registerClass(E);
     const expectedName = 'ParseError::UnrecognizedEOF';
     const expectedMessage =
       'hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 19';
-    if (e.name === expectedName && e.message === expectedMessage)
+    const { name, message } = e as Error;
+    if (name === expectedName && message === expectedMessage)
       exceptionThrown = true;
   } finally {
-    if (!exceptionThrown) throw new Error();
+    if (!exceptionThrown) throw new Error(); // eslint-disable-line no-unsafe-finally
   }
 
   // Test that a built in string method can be called.
@@ -184,11 +186,11 @@ oso.registerClass(E);
     'bar',
     new Variable('z')
   );
-  if (((await result.next()).value as Map<string, any>).get('z') !== 1)
+  if (((await result.next()).value as Map<string, unknown>).get('z') !== 1)
     throw new Error();
-  if (((await result.next()).value as Map<string, any>).get('z') !== 2)
+  if (((await result.next()).value as Map<string, unknown>).get('z') !== 2)
     throw new Error();
-  if (((await result.next()).value as Map<string, any>).get('z') !== 3)
+  if (((await result.next()).value as Map<string, unknown>).get('z') !== 3)
     throw new Error();
 
   console.log('tests pass');
