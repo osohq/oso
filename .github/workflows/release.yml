@@ -664,7 +664,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        node-version: ['12.20.0', '14.0.0', '16.0.0']
+        node-version: ["12.20.0", "14.0.0", "16.0.0"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -729,7 +729,7 @@ jobs:
         with:
           go-version: "1.13"
       - name: Run quickstart tests
-        run: make -C docs test-quickstarts
+        run: make -C docs test-quickstarts-release
 
   release:
     name: Create release

@@ -9,14 +9,25 @@ require 'bundler'
 CURL_ERROR = "curl: (7) Failed to connect to localhost port 5000: Connection refused\n"
 CURL_EMPTY = "curl: (52) Empty reply from server\n"
 
-quickstarts = [
-  { lang: 'go', setup: 'go build', server: './oso-go-quickstart' },
-  { lang: 'java', setup: 'make install', server: 'make run' },
-  { lang: 'nodejs', setup: 'npm i', server: 'npm run dev' },
-  { lang: 'python', setup: 'pip install --upgrade -r requirements.txt', server: 'FLASK_APP=app.server python -m flask run' },
-  { lang: 'ruby', setup: 'bundle', server: 'bundle exec ruby server.rb' },
-  # { lang: 'rust', setup: 'cargo build', server: 'cargo run' }
-]
+
+quickstarts = {
+  go: { setup: 'go build', server: './oso-go-quickstart' },
+  # TODO: add local_setup that tests against local Oso install for java
+  java: { setup: 'make install', server: 'make run' },
+  # TODO: add local_setup that tests against local Oso install for nodejs
+  nodejs: { setup: 'npm i', server: 'npm run dev' },
+  python: { setup: 'pip install --upgrade -r requirements.txt', server: 'FLASK_APP=app.server python -m flask run' },
+  ruby: { setup: 'bundle', server: 'bundle exec ruby server.rb' },
+  # rust: { setup: 'cargo build', server: 'cargo run' }
+}
+
+if ARGV.include? "local"
+  quickstarts[:go][:setup] = "make -C ../../../../languages/go copy_lib && go mod edit -replace github.com/osohq/go-oso=../../../../languages/go && go build"
+  quickstarts[:python][:setup] = "pip install -e ../../../../languages/python/oso && pip install --upgrade -r requirements.txt"
+  quickstarts[:ruby][:setup] = "BUNDLE_GEMFILE=../Gemfile-local bundle"
+  quickstarts[:ruby][:server] = "BUNDLE_GEMFILE=../Gemfile-local bundle exec ruby server.rb"
+end
+
 
 def start_server(server, repo)
   server = spawn server
@@ -46,8 +57,8 @@ end
 
 # rubocop:disable Metrics/BlockLength
 
-quickstarts.each do |qs|
-  lang = qs[:lang]
+quickstarts.each do |lang, qs|
+  lang = lang.to_s
   qs_dir = File.join(File.expand_path(__dir__), lang)
   Bundler.with_unbundled_env do
     Dir.chdir(qs_dir) do
