@@ -188,7 +188,7 @@ export class Host implements DataFilteringQueryParams {
    *
    * @internal
    */
-  cacheClass<T>(cls: Class<T>, params?: ClassParams): string {
+  cacheClass(cls: Class, params?: ClassParams): string {
     params = params ? params : {};
     // TODO(gw) maybe we only want to support plain objects?
     let fields = params.fields || {};
