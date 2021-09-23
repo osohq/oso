@@ -115,7 +115,7 @@ function parseMakeExternal(event: unknown): QueryEvent {
   if (ctor.value.Call.kwargs) throw new KwargsError();
   const { name: tag, args: fields } = ctor.value.Call;
   if (typeof tag !== 'string') throw new Error();
-  if (!isArrayOfPolarTerms(fields)) throw new Error();
+  if (!isArrayOf(fields, isPolarTerm)) throw new Error();
   return {
     kind: QueryEventKind.MakeExternal,
     data: { fields, instanceId, tag },
@@ -145,7 +145,7 @@ function parseNextExternal(event: unknown): QueryEvent {
 function parseExternalCall(event: unknown): QueryEvent {
   if (!isObj(event)) throw new Error();
   const { args, kwargs, attribute, call_id: callId, instance } = event;
-  if (args !== undefined && !isArrayOfPolarTerms(args)) throw new Error();
+  if (args !== undefined && !isArrayOf(args, isPolarTerm)) throw new Error();
   if (kwargs) throw new KwargsError();
   if (typeof attribute !== 'string') throw new Error();
   if (!isSafeInteger(callId)) throw new Error();
@@ -234,7 +234,7 @@ function parseExternalIsaWithPath(event: unknown): QueryEvent {
   if (!isSafeInteger(callId)) throw new Error();
   if (typeof baseTag !== 'string') throw new Error();
   if (typeof classTag !== 'string') throw new Error();
-  if (!isArrayOfStrings(path)) throw new Error();
+  if (!isArrayOf(path, isString)) throw new Error();
   return {
     kind: QueryEventKind.ExternalIsaWithPath,
     data: { callId, baseTag, path, classTag },
@@ -251,7 +251,7 @@ function parseExternalOp(event: unknown): QueryEvent {
   if (!isObj(event)) throw new Error();
   const { call_id: callId, args, operator } = event;
   if (!isSafeInteger(callId)) throw new Error();
-  if (!isArrayOfPolarTerms(args) || args.length !== 2) throw new Error();
+  if (!isArrayOf(args, isPolarTerm) || args.length !== 2) throw new Error();
   if (typeof operator !== 'string') throw new Error();
   if (!isPolarComparisonOperator(operator))
     throw new PolarError(
@@ -345,36 +345,32 @@ export function isObj(x: unknown): x is obj {
 }
 
 /**
+ * Type guard to test if `x` is a `string`.
+ *
+ * @internal
+ */
+const isString = (x: unknown): x is string => typeof x === 'string';
+
+/**
  * Type guard to test if a value is an ES6 Map with string keys and PolarTerm
  * values.
  *
  * @internal
  */
-function isMapOfPolarTerms(x: unknown): x is Map<string, PolarTerm> {
-  if (!(x instanceof Map)) return false;
-  for (const [key, value] of x) {
-    if (typeof key !== 'string' || !isPolarTerm(value)) return false;
-  }
-  return true;
-}
+const isMapOfPolarTerms = (x: unknown): x is Map<string, PolarTerm> =>
+  x instanceof Map &&
+  [...x.keys()].every(isString) &&
+  [...x.values()].every(isPolarTerm);
 
 /**
- * Type guard to test if a value is an Array of PolarTerms.
+ * Type guard to test if `x` is an `Array` where every member matches a
+ * type-narrowing predicate `p`.
  *
  * @internal
  */
-function isArrayOfPolarTerms(x: unknown): x is Array<PolarTerm> {
-  return Array.isArray(x) && x.every(isPolarTerm);
-}
-
-/**
- * Type guard to test if a value is an array of strings.
- *
- * @internal
- */
-function isArrayOfStrings(x: unknown): x is Array<string> {
-  return Array.isArray(x) && x.every((v: unknown) => typeof v === 'string');
-}
+type Pred<T> = (x: unknown) => x is T;
+const isArrayOf = <T>(x: unknown, p: Pred<T>): x is Array<T> =>
+  Array.isArray(x) && x.every(p);
 
 /**
  * Type guard to test if a value is a safe integer.
