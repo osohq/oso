@@ -73,8 +73,6 @@ export class UserType<Type extends Class<T>, T = any, Query = any> {
   }
 }
 
-export type UserTypesMap = Map<string | Class, UserType<any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
-
 /**
  * Translator between Polar and JavaScript.
  *
@@ -83,7 +81,7 @@ export type UserTypesMap = Map<string | Class, UserType<any>>; // eslint-disable
 export class Host implements Required<DataFilteringQueryParams> {
   #ffiPolar: FfiPolar;
   #instances: Map<number, unknown>;
-  types: UserTypesMap;
+  types: Map<string | Class, UserType<any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
   #equalityFn: EqualityFn;
 
   // global data filtering config
