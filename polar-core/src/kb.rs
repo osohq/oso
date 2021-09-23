@@ -319,7 +319,15 @@ impl KnowledgeBase {
         rule_type_value: &Value,
     ) -> PolarResult<RuleParamMatch> {
         Ok(match (rule_type_value, rule_value) {
+            // List in rule head must be equal to or more specific than the list in the rule type head in order to match
             (Value::List(rule_type_list), Value::List(rule_list)) => {
+                if has_rest_var(rule_type_list) {
+                    return Err(error::RuntimeError::TypeError {
+                        msg: "Rule types cannot contain *rest variables.".to_string(),
+                        stack_trace: None,
+                    }
+                    .into());
+                }
                 if rule_type_list.iter().all(|t| rule_list.contains(t)) {
                     RuleParamMatch::True
                 } else {
@@ -911,6 +919,14 @@ mod tests {
             )
             .unwrap()
             .is_true());
+        // rule: f(x: "string"), rule_type: f(x: Integer) => FAIL
+        assert!(!kb
+            .rule_params_match(
+                &rule!("f", ["x"; value!("string")]),
+                &rule!("f", ["x"; instance!(sym!("Integer"))])
+            )
+            .unwrap()
+            .is_true());
         // rule: f(x: 6.0), rule_type: f(x: Float) => PASS
         assert!(kb
             .rule_params_match(
@@ -924,6 +940,14 @@ mod tests {
             .rule_params_match(
                 &rule!("f", ["x"; value!(6.0)]),
                 &rule!("f", ["x"; instance!(sym!("Foo"))])
+            )
+            .unwrap()
+            .is_true());
+        // rule: f(x: 6), rule_type: f(x: Float) => FAIL
+        assert!(!kb
+            .rule_params_match(
+                &rule!("f", ["x"; value!(6)]),
+                &rule!("f", ["x"; instance!(sym!("Float"))])
             )
             .unwrap()
             .is_true());
@@ -943,6 +967,26 @@ mod tests {
             )
             .unwrap()
             .is_true());
+        // rule: f(x: 6), rule_type: f(x: String) => FAIL
+        assert!(!kb
+            .rule_params_match(
+                &rule!("f", ["x"; value!(6)]),
+                &rule!("f", ["x"; instance!(sym!("String"))])
+            )
+            .unwrap()
+            .is_true());
+        // Ensure primitive types cannot have fields
+        // rule: f(x: "hello"), rule_type: f(x: String{id: 1}) => FAIL
+        assert!(!kb
+            .rule_params_match(
+                &rule!("f", ["x"; value!("hello")]),
+                &rule!(
+                    "f",
+                    ["x"; instance!(sym!("String"), btreemap! {sym!("id") => term!(1)})]
+                )
+            )
+            .unwrap()
+            .is_true());
         // rule: f(x: true), rule_type: f(x: Boolean) => PASS
         assert!(kb
             .rule_params_match(
@@ -959,6 +1003,14 @@ mod tests {
             )
             .unwrap()
             .is_true());
+        // rule: f(x: 6), rule_type: f(x: Boolean) => FAIL
+        assert!(!kb
+            .rule_params_match(
+                &rule!("f", ["x"; value!(6)]),
+                &rule!("f", ["x"; instance!(sym!("Boolean"))])
+            )
+            .unwrap()
+            .is_true());
         // rule: f(x: [1, 2]), rule_type: f(x: List) => PASS
         assert!(kb
             .rule_params_match(
@@ -972,6 +1024,14 @@ mod tests {
             .rule_params_match(
                 &rule!("f", ["x"; value!([1, 2])]),
                 &rule!("f", ["x"; instance!(sym!("Foo"))])
+            )
+            .unwrap()
+            .is_true());
+        // rule: f(x: 6), rule_type: f(x: List) => FAIL
+        assert!(!kb
+            .rule_params_match(
+                &rule!("f", ["x"; value!(6)]),
+                &rule!("f", ["x"; instance!(sym!("List"))])
             )
             .unwrap()
             .is_true());
@@ -996,6 +1056,14 @@ mod tests {
             .rule_params_match(
                 &rule!("f", [btreemap! {sym!("id") => term!(1)}]),
                 &rule!("f", ["x"; instance!(sym!("Foo"))])
+            )
+            .unwrap()
+            .is_true());
+        // rule: f(x: 6), rule_type: f(x: Dictionary) => FAIL
+        assert!(!kb
+            .rule_params_match(
+                &rule!("f", ["x"; value!(6)]),
+                &rule!("f", ["x"; instance!(sym!("Dictionary"))])
             )
             .unwrap()
             .is_true());
@@ -1100,6 +1168,17 @@ mod tests {
             )
             .unwrap()
             .is_true());
+        // test with *rest vars
+        // rule: f(x: [1, 2, 3]), rule_type: f(x: [1, 2, *rest]) => PASS
+        assert!(kb
+            .rule_params_match(
+                &rule!("f", ["x"; value!([1, 2])]),
+                &rule!(
+                    "f",
+                    ["x"; value!([1, 2, Value::RestVariable(sym!("*_rest"))])]
+                )
+            )
+            .is_err());
         // Dict: rule must be more specific than (superset of) rule_type
         // rule: f(x: {"id": 1, "name": "Dave"}), rule_type: f(x: {"id": 1}) => PASS
         assert!(kb
