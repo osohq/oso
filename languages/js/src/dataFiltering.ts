@@ -1,7 +1,7 @@
 import { Host } from './Host';
 import { isPolarTerm } from './types';
 import type { CombineQueryFn } from './types';
-import { isObj } from './helpers';
+import { isObj, isString } from './helpers';
 
 interface Request {
   class_tag: string;
@@ -94,7 +94,7 @@ export type SerializedFields = {
 async function parseFilter(host: Host, filter: Filter): Promise<Filter> {
   const { kind, field } = filter;
   if (!['Eq', 'Neq', 'In', 'Contains'].includes(kind)) throw new Error();
-  if (field !== undefined && typeof field !== 'string') throw new Error();
+  if (field !== undefined && !isString(field)) throw new Error();
 
   let { value } = filter;
   if (!isObj(value)) throw new Error();
@@ -103,11 +103,10 @@ async function parseFilter(host: Host, filter: Filter): Promise<Filter> {
     value = await host.toJs(value['Term']);
   } else if (isObj(value['Ref'])) {
     const { field: childField, result_id: resultId } = value['Ref'];
-    if (childField !== undefined && typeof childField !== 'string')
-      throw new Error();
+    if (childField !== undefined && !isString(childField)) throw new Error();
     if (!Number.isInteger(resultId)) throw new Error();
     value = new Ref(resultId as number, childField);
-  } else if (typeof value['Field'] === 'string') {
+  } else if (isString(value['Field'])) {
     value = new Field(value['Field']);
   } else {
     throw new Error();

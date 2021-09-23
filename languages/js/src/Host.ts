@@ -6,7 +6,14 @@ import {
   UnregisteredClassError,
   UnregisteredInstanceError,
 } from './errors';
-import { ancestors, isConstructor, isObj, promisify1, repr } from './helpers';
+import {
+  ancestors,
+  isConstructor,
+  isObj,
+  isString,
+  promisify1,
+  repr,
+} from './helpers';
 import type { Polar as FfiPolar } from './polar_wasm_api';
 import { Expression } from './Expression';
 import { Pattern } from './Pattern';
@@ -149,14 +156,13 @@ export class Host implements Required<DataFilteringQueryParams> {
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private *distinctUserTypes(): IterableIterator<UserType<any>> {
-    for (const [name, typ] of this.types)
-      if (typeof name === 'string') yield typ;
+    for (const [name, typ] of this.types) if (isString(name)) yield typ;
   }
 
   serializeTypes(): string {
     const polarTypes: { [tag: string]: SerializedFields } = {};
     for (const [tag, userType] of this.types) {
-      if (typeof tag === 'string') {
+      if (isString(tag)) {
         const fields = userType.fields;
         const fieldTypes: SerializedFields = {};
         for (const [k, v] of fields) {
@@ -439,7 +445,7 @@ export class Host implements Required<DataFilteringQueryParams> {
           v = 'NaN';
         }
         return { value: { Number: { Float: v as number } } };
-      case typeof v === 'string':
+      case isString(v):
         return { value: { String: v as string } };
       case Array.isArray(v): {
         const polarTermList = (v as Array<unknown>).map(a => this.toPolar(a));

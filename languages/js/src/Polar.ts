@@ -13,7 +13,7 @@ import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import { processMessage } from './messages';
 import type { Class, ClassParams, Options, QueryResult } from './types';
-import { isObj, printError, PROMPT, readFile, repr } from './helpers';
+import { isObj, isString, printError, PROMPT, readFile, repr } from './helpers';
 
 class Source {
   readonly src: string;
@@ -192,7 +192,7 @@ export class Polar {
   query(q: Predicate | string, bindings?: Map<string, unknown>): QueryResult {
     const host = Host.clone(this.getHost());
     let ffiQuery;
-    if (typeof q === 'string') {
+    if (isString(q)) {
       ffiQuery = this.#ffiPolar.newQueryFromStr(q);
     } else {
       const term = JSON.stringify(host.toPolar(q));

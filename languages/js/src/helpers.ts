@@ -50,7 +50,7 @@ export function repr(x: unknown): string {
  */
 export function parseQueryEvent(event: string | obj): QueryEvent {
   try {
-    if (typeof event === 'string') throw new Error();
+    if (isString(event)) throw new Error();
     switch (true) {
       case event['Done'] !== undefined:
         return { kind: QueryEventKind.Done };
@@ -114,7 +114,7 @@ function parseMakeExternal(event: unknown): QueryEvent {
   // @ts-ignore
   if (ctor.value.Call.kwargs) throw new KwargsError();
   const { name: tag, args: fields } = ctor.value.Call;
-  if (typeof tag !== 'string') throw new Error();
+  if (!isString(tag)) throw new Error();
   if (!isArrayOf(fields, isPolarTerm)) throw new Error();
   return {
     kind: QueryEventKind.MakeExternal,
@@ -147,7 +147,7 @@ function parseExternalCall(event: unknown): QueryEvent {
   const { args, kwargs, attribute, call_id: callId, instance } = event;
   if (args !== undefined && !isArrayOf(args, isPolarTerm)) throw new Error();
   if (kwargs) throw new KwargsError();
-  if (typeof attribute !== 'string') throw new Error();
+  if (!isString(attribute)) throw new Error();
   if (!isSafeInteger(callId)) throw new Error();
   if (!isPolarTerm(instance)) throw new Error();
   return {
@@ -172,8 +172,8 @@ function parseExternalIsSubspecializer(event: unknown): QueryEvent {
   } = event;
   if (!isSafeInteger(callId)) throw new Error();
   if (!isSafeInteger(instanceId)) throw new Error();
-  if (typeof leftTag !== 'string') throw new Error();
-  if (typeof rightTag !== 'string') throw new Error();
+  if (!isString(leftTag)) throw new Error();
+  if (!isString(rightTag)) throw new Error();
   return {
     kind: QueryEventKind.ExternalIsSubspecializer,
     data: { callId, instanceId, leftTag, rightTag },
@@ -194,8 +194,8 @@ function parseExternalIsSubclass(event: unknown): QueryEvent {
     right_class_tag: rightTag,
   } = event;
   if (!isSafeInteger(callId)) throw new Error();
-  if (typeof leftTag !== 'string') throw new Error();
-  if (typeof rightTag !== 'string') throw new Error();
+  if (!isString(leftTag)) throw new Error();
+  if (!isString(rightTag)) throw new Error();
   return {
     kind: QueryEventKind.ExternalIsSubclass,
     data: { callId, leftTag, rightTag },
@@ -213,7 +213,7 @@ function parseExternalIsa(event: unknown): QueryEvent {
   const { call_id: callId, instance, class_tag: tag } = event;
   if (!isSafeInteger(callId)) throw new Error();
   if (!isPolarTerm(instance)) throw new Error();
-  if (typeof tag !== 'string') throw new Error();
+  if (!isString(tag)) throw new Error();
   return { kind: QueryEventKind.ExternalIsa, data: { callId, instance, tag } };
 }
 
@@ -232,8 +232,8 @@ function parseExternalIsaWithPath(event: unknown): QueryEvent {
     class_tag: classTag,
   } = event;
   if (!isSafeInteger(callId)) throw new Error();
-  if (typeof baseTag !== 'string') throw new Error();
-  if (typeof classTag !== 'string') throw new Error();
+  if (!isString(baseTag)) throw new Error();
+  if (!isString(classTag)) throw new Error();
   if (!isArrayOf(path, isString)) throw new Error();
   return {
     kind: QueryEventKind.ExternalIsaWithPath,
@@ -252,7 +252,7 @@ function parseExternalOp(event: unknown): QueryEvent {
   const { call_id: callId, args, operator } = event;
   if (!isSafeInteger(callId)) throw new Error();
   if (!isArrayOf(args, isPolarTerm) || args.length !== 2) throw new Error();
-  if (typeof operator !== 'string') throw new Error();
+  if (!isString(operator)) throw new Error();
   if (!isPolarComparisonOperator(operator))
     throw new PolarError(
       `Unsupported external operation '${repr(args[0])} ${operator} ${repr(
@@ -271,7 +271,7 @@ function parseExternalOp(event: unknown): QueryEvent {
 function parseDebug(event: unknown): QueryEvent {
   if (!isObj(event)) throw new Error();
   const { message } = event;
-  if (typeof message !== 'string') throw new Error();
+  if (!isString(message)) throw new Error();
   return { kind: QueryEventKind.Debug, data: { message } };
 }
 
@@ -349,7 +349,7 @@ export function isObj(x: unknown): x is obj {
  *
  * @internal
  */
-const isString = (x: unknown): x is string => typeof x === 'string';
+export const isString = (x: unknown): x is string => typeof x === 'string';
 
 /**
  * Type guard to test if a value is an ES6 Map with string keys and PolarTerm
