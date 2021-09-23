@@ -185,8 +185,11 @@ export class Host implements Required<DataFilteringQueryParams> {
    */
   cacheClass(cls: Class, params?: ClassParams): string {
     params = params ? params : {};
+
     // TODO(gw) maybe we only want to support plain objects?
     let fields = params.fields || {};
+    if (!(fields instanceof Map)) fields = new Map(Object.entries(fields));
+
     const { name, buildQuery, execQuery, combineQuery } = params;
     if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
     const clsName: string = name ? name : cls.name;
@@ -198,8 +201,6 @@ export class Host implements Required<DataFilteringQueryParams> {
         existing,
       });
     }
-
-    if (!(fields instanceof Map)) fields = new Map(Object.entries(fields));
 
     const userType = new UserType({
       name: clsName,
