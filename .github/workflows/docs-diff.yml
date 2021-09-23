@@ -200,6 +200,14 @@ jobs:
         id: diff
         run: set -o pipefail && diff -q --recursive base head | tee diff.txt
         continue-on-error: true
+      - name: Full diff
+        run: diff --recursive base head > diff-full.txt
+        if: ${{ steps.diff.outcome == 'failure' }}
+      - name: Upload diff artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: full-diff
+          path: diff-full.txt
       - name: Print docs changes
         run: |
           cat <<EOF
