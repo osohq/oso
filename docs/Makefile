@@ -133,4 +133,4 @@ test-quickstarts-release:
 test-quickstarts-local:
 	$(MAKE) -C examples test-quickstarts-local
 
-.PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean spelling build-search search require-algolia-vars check-links check-links-deps lint test-quickstarts
+.PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean spelling build-search search require-algolia-vars check-links check-links-deps lint test-quickstarts-release test-quickstarts-local
