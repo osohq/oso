@@ -688,8 +688,8 @@ resource Issue {
   "read" if "reader" on "parent";
 }
 
-has_relation(repo: Repo, "parent", issue: Issue) if issue.repo = repo;
-#has_relation(repo: Repo, "parent", _issue: Issue{repo:repo});
+#has_relation(repo: Repo, "parent", issue: Issue) if issue.repo = repo;
+has_relation(repo: Repo, "parent", _issue: Issue{repo:repo});
     `);
 
     await checkAuthz(steve, 'create_issues', Repo, [ios]);

@@ -359,10 +359,14 @@ export class Host implements Required<DataFilteringQueryParams> {
    *
    * @internal
    */
-  isaWithPath(baseTag: string, path: PolarTerm[], classTag: string): boolean {
+  async isaWithPath(
+    baseTag: string,
+    path: PolarTerm[],
+    classTag: string
+  ): Promise<boolean> {
     let tag = baseTag;
     for (const fld of path) {
-      const field = this.toJs(fld);
+      const field = await this.toJs(fld);
       if (!isString(field)) throw new Error();
       const userType = this.types.get(tag);
       if (userType === undefined) return false;
