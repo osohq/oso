@@ -235,7 +235,7 @@ class Polar:
         cls,
         *,
         name=None,
-        types=None,
+        fields=None,
         build_query=None,
         exec_query=None,
         combine_query=None
@@ -246,7 +246,7 @@ class Polar:
         :param name:
             Optionally specify the name for the class inside of Polar. Defaults
             to `cls.__name__`
-        :param types:
+        :param fields:
             Optional dict mapping field names to types or Relation objects for
             data filtering.
         :param build_query:
@@ -261,7 +261,7 @@ class Polar:
         cls_name = self.host.cache_class(
             cls,
             name=name,
-            fields=types,
+            fields=fields,
             build_query=build_query,
             exec_query=exec_query,
             combine_query=combine_query,

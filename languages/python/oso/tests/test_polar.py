@@ -998,9 +998,9 @@ def test_isa_with_path(polar, query):
     class Baz:
         bar: Bar
 
-    polar.register_class(Foo, types={'num': int})
-    polar.register_class(Bar, types={'foo': Foo})
-    polar.register_class(Baz, types={'bar': Bar})
+    polar.register_class(Foo, fields={'num': int})
+    polar.register_class(Bar, fields={'foo': Foo})
+    polar.register_class(Baz, fields={'bar': Bar})
 
     polar.load_str('f(x: Integer) if x = 0; g(x: Baz) if f(x.bar.foo.num); h(x: Bar) if f(x.num);')
     results = query('g(x)', accept_expression=True)

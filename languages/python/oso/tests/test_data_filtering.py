@@ -95,7 +95,7 @@ def t(oso):
 
     oso.register_class(
         Bar,
-        types={
+        fields={
             "id": str,
             "is_cool": bool,
             "is_still_cool": bool,
@@ -107,7 +107,7 @@ def t(oso):
     )
     oso.register_class(
         Foo,
-        types={
+        fields={
             "id": str,
             "bar_id": str,
             "is_fooey": bool,
@@ -126,7 +126,7 @@ def t(oso):
     )
     oso.register_class(
         FooLogRecord,
-        types={
+        fields={
             "id": str,
             "foo_id": str,
             "data": str,
@@ -201,7 +201,7 @@ def sqlalchemy_t(oso):
 
     oso.register_class(
         Bar,
-        types={"id": str, "is_cool": bool, "is_still_cool": bool},
+        fields={"id": str, "is_cool": bool, "is_still_cool": bool},
         build_query=get_bars,
     )
 
@@ -220,7 +220,7 @@ def sqlalchemy_t(oso):
 
     oso.register_class(
         Foo,
-        types={
+        fields={
             "id": str,
             "bar_id": str,
             "is_fooey": bool,
@@ -592,14 +592,14 @@ def roles(oso):
 
     oso.register_class(
         Org,
-        types={"name": str},
+        fields={"name": str},
         build_query=get_orgs,
         exec_query=exec_query,
         combine_query=combine_query,
     )
     oso.register_class(
         Repo,
-        types={
+        fields={
             "name": str,
             "org_name": str,
             "org": Relation(
@@ -612,7 +612,7 @@ def roles(oso):
     )
     oso.register_class(
         Issue,
-        types={
+        fields={
             "name": str,
             "repo_name": str,
             "repo": Relation(
@@ -628,7 +628,7 @@ def roles(oso):
     )
     oso.register_class(
         Role,
-        types={
+        fields={
             "user_name": str,
             "resource_name": str,
             "role": str,
@@ -639,7 +639,7 @@ def roles(oso):
     )
     oso.register_class(
         User,
-        types={
+        fields={
             "name": str,
             "roles": Relation(
                 kind="many",
