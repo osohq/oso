@@ -125,11 +125,12 @@ function groundFilter(results: Map<number, unknown[]>, filter: Filter): Filter {
 
   if (field !== undefined) {
     value = value?.map(v => {
-      // TODO(gj): what should we do here if `v` isn't indexable? Without
-      // handling the case where `v` can't be indexed by `field`, it'll blow up
-      // at runtime.
-      if (!isObj(v)) return;
-      return v[field];
+      // NOTE(gj): if `v` can't be indexed by `field`, it'll blow up at
+      // runtime. This indicates something is wrong either with the data
+      // filtering configuration, the user's ORM, etc.
+      //
+      // ref: https://github.com/osohq/oso/pull/1227#discussion_r715813796
+      return (v as any)[field]; // eslint-disable-line
     });
   }
 
