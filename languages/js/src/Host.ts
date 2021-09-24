@@ -69,9 +69,8 @@ export class UserType<Type extends Class<T>, T = any, Query = any> {
     this.cls = cls;
     this.fields = fields;
     // NOTE(gj): these `promisify1()` calls are for Promisifying synchronous
-    // return values from {build,exec}Query. Since a user's
-    // implementation *might* return a Promise, we want to `await` _all_
-    // invocations.
+    // return values from {build,exec}Query. Since a user's implementation
+    // *might* return a Promise, we want to `await` _all_ invocations.
     this.buildQuery = promisify1(buildQuery);
     this.execQuery = promisify1(execQuery);
     this.combineQuery = combineQuery;

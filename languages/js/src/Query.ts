@@ -21,7 +21,6 @@ import type {
   ExternalOp,
   MakeExternal,
   NextExternal,
-  obj,
   PolarTerm,
   QueryResult,
   Result,
@@ -182,8 +181,8 @@ export class Query {
         value = await this.handleRelation(receiver, rel);
       } else {
         // NOTE(gj): disabling ESLint for following line b/c we're fine if
-        // `receiver[attr]` blows up -- we catch the error and relay it to
-        // the core below.
+        // `receiver[attr]` blows up -- we catch the error and relay it to the
+        // core below.
         value = (receiver as any)[attr]; // eslint-disable-line
         if (args !== undefined) {
           if (typeof value === 'function') {
@@ -191,7 +190,16 @@ export class Query {
             const jsArgs = await Promise.all(
               args.map(async a => await this.#host.toJs(a))
             );
-            value = ((receiver as obj)[attr] as CallableFunction)(...jsArgs); // eslint-disable-line @typescript-eslint/no-unsafe-assignment
+            // NOTE(gj): disabling ESLint for following line b/c we know
+            // `receiver[attr]` (A) won't blow up (because if it was going to
+            // it already would've happened above) and (B) is a function
+            // (thanks to the `typeof value === 'function'` check above).
+            //
+            // The function invocation could still blow up with a `TypeError`
+            // if `receiver[attr]` is a class constructor (e.g., if instance
+            // were something like `{x: class{}}`), but that'll be caught &
+            // relayed to the core down below.
+            value = ((receiver as any)[attr] as CallableFunction)(...jsArgs); // eslint-disable-line
           } else {
             // Error on attempt to call non-function.
             throw new InvalidCallError(receiver, attr);
