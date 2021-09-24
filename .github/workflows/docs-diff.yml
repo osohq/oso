@@ -202,9 +202,9 @@ jobs:
           name: new-docs.tar.gz
       - run: mkdir -p head && tar --extract --verbose --gzip --file new-docs.tar.gz --directory head
       - name: Remove ignored files (generated api docs)
-        run: rm -rf base/docs/public/java/reference/api base/docs/public/python/reference/api base/docs/public/ruby/reference/api base/docs/public/node/reference/api
+        run: rm -rf base/docs/public/java/reference/api base/docs/public/ruby/reference/api base/docs/public/node/reference/api
       - name: Remove ignored files (generated api docs)
-        run: rm -rf head/docs/public/java/reference/api head/docs/public/python/reference/api head/docs/public/ruby/reference/api head/docs/public/node/reference/api
+        run: rm -rf head/docs/public/java/reference/api head/docs/public/ruby/reference/api head/docs/public/node/reference/api
       - name: Diff
         id: diff
         run: set -o pipefail && diff -q --recursive base head | tee diff.txt
