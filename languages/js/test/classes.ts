@@ -141,7 +141,7 @@ export class Foo {
     return 'c';
   }
 
-  d(x: any) {
+  d(x: unknown) {
     return x;
   }
 

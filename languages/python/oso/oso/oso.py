@@ -300,7 +300,7 @@ class Oso(Polar):
             self.host.combine_query = combine_query
 
     def _print_polar_log_message(self):
-        if os.environ.get("POLAR_LOG", None):
+        if os.environ.get("POLAR_LOG", "0") not in ("off", "0"):
             print(
                 "Polar tracing enabled. Get help with "
                 + "traces from our engineering team: https://help.osohq.com/trace"

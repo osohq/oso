@@ -26,7 +26,7 @@
     "npm": ">=6.4.1"
   },
   "scripts": {
-    "lint": "gts lint",
+    "lint": "gts lint -- . --max-warnings 0",
     "clean": "gts clean",
     "fix": "gts fix",
     "fmt": "prettier --write 'src/**/*.[jt]s' 'test/**/*.[jt]s'",
@@ -52,5 +52,8 @@
     "typedoc": "^0.21.0",
     "typeorm": "^0.2.37",
     "typescript": "^4.3.4"
+  },
+  "resolutions": {
+    "live-server/object-assign": "^4.1.0"
   }
 }
