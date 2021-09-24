@@ -182,7 +182,7 @@ export class Polar {
       const query = this.#ffiPolar.nextInlineQuery();
       this.processMessages();
       if (query === undefined) break;
-      const source = query.source() as string;
+      const source = query.source();
       const { results } = new Query(query, this.getHost());
       const { done } = await results.next();
       await results.return();
