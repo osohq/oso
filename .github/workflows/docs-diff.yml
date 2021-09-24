@@ -110,8 +110,8 @@ jobs:
   build-base:
     name: Build docs on base.
     runs-on: ubuntu-latest
-    needs: check-label
-    if: ${{ needs.check-label.outputs.hadLabel == 'false' }}
+    # needs: check-label
+    # if: ${{ needs.check-label.outputs.hadLabel == 'false' }}
     steps:
       - uses: actions/checkout@v2
         with:
