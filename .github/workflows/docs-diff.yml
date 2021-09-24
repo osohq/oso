@@ -3,6 +3,7 @@ name: Docs Diff
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
+
 jobs:
   check-label:
     name: Check for "Docs" label
@@ -15,6 +16,7 @@ jobs:
         run: exit 1 # Fail the job!
         if: "!contains(github.event.pull_request.labels.*.name, 'Docs')"
         continue-on-error: true
+
   build-head:
     name: Build docs on HEAD.
     runs-on: ubuntu-latest
@@ -88,11 +90,14 @@ jobs:
         run: make build
         if: steps.cache.outputs.cache-hit != 'true'
         working-directory: docs
+      - run: tar --create --verbose --gzip --file new-docs.tar.gz docs/public
       - name: Upload new build of docs.
         uses: actions/upload-artifact@v2
         with:
-          name: new-docs
-          path: docs/public
+          name: new-docs.tar.gz
+          path: new-docs.tar.gz
+          if-no-files-found: error
+
   build-base:
     name: Build docs on base.
     runs-on: ubuntu-latest
@@ -170,11 +175,14 @@ jobs:
         run: make build
         working-directory: docs
         if: steps.cache.outputs.cache-hit != 'true'
+      - run: tar --create --verbose --gzip --file old-docs.tar.gz docs/public
       - name: Upload old build of docs.
         uses: actions/upload-artifact@v2
         with:
-          name: old-docs
-          path: docs/public
+          name: old-docs.tar.gz
+          path: old-docs.tar.gz
+          if-no-files-found: error
+
   diff:
     name: Diff
     needs: [check-label, build-base, build-head]
@@ -186,18 +194,17 @@ jobs:
       - name: Pull old build of docs.
         uses: actions/download-artifact@v2
         with:
-          name: old-docs
-          path: base
+          name: old-docs.tar.gz
+      - run: mkdir -p base && tar --extract --verbose --gzip --file old-docs.tar.gz --directory base
       - name: Pull new build of docs.
         uses: actions/download-artifact@v2
         with:
-          name: new-docs
-          path: head
+          name: new-docs.tar.gz
+      - run: mkdir -p head && tar --extract --verbose --gzip --file new-docs.tar.gz --directory head
       - name: Remove ignored files (generated api docs)
-        run: rm -rf base/java/reference/api base/python/reference/api base/ruby/reference/api base/node/reference/api
+        run: rm -rf base/docs/public/java/reference/api base/docs/public/ruby/reference/api base/docs/public/node/reference/api
       - name: Remove ignored files (generated api docs)
-        run: rm -rf head/java/reference/api head/python/reference/api head/ruby/reference/api head/node/reference/api
-
+        run: rm -rf head/docs/public/java/reference/api head/docs/public/ruby/reference/api head/docs/public/node/reference/api
       - name: Diff
         id: diff
         run: set -o pipefail && diff -q --recursive base head | tee diff.txt
@@ -210,6 +217,8 @@ jobs:
         with:
           name: full-diff
           path: diff-full.txt
+          if-no-files-found: error
+        if: ${{ steps.diff.outcome == 'failure' }}
       - name: Print docs changes
         run: |
           cat <<EOF
@@ -222,6 +231,7 @@ jobs:
 
           EOF
         if: ${{ steps.diff.outcome == 'failure' }}
+
   # Job that succeeds or fails depending upon the entire workflow.
   # Used as a required check.
   decide_if_pr_okay:
