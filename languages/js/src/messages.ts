@@ -14,7 +14,7 @@ enum MessageKind {
  *
  * @internal
  */
-interface Message {
+export interface Message {
   kind: MessageKind;
   msg: string;
 }

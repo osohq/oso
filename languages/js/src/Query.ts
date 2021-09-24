@@ -1,13 +1,15 @@
+// TODO(gj): Make sure this is cool w/ Oso in the browser.
+import { createInterface } from 'readline';
+
 import type { Query as FfiQuery } from './polar_wasm_api';
 
-const createInterface = require('readline')?.createInterface;
-
-import { parseQueryEvent } from './helpers';
+import { isConstructor, isObj, parseQueryEvent, repr } from './helpers';
 import {
   DuplicateInstanceRegistrationError,
   InvalidAttributeError,
   InvalidCallError,
   InvalidIteratorError,
+  UnregisteredClassError,
 } from './errors';
 import { Host } from './Host';
 import type {
@@ -20,11 +22,12 @@ import type {
   ExternalOp,
   MakeExternal,
   NextExternal,
+  obj,
   PolarTerm,
-  QueryEvent,
   QueryResult,
   Result,
 } from './types';
+import type { Message } from './messages';
 import { processMessage } from './messages';
 import {
   isAsyncIterable,
@@ -78,7 +81,7 @@ export class Query {
    */
   private processMessages() {
     for (;;) {
-      const msg = this.#ffiQuery.nextMessage();
+      const msg = this.#ffiQuery.nextMessage() as Message | undefined;
       if (msg === undefined) break;
       processMessage(msg);
     }
@@ -110,7 +113,9 @@ export class Query {
    * @internal
    */
   private async nextCallResult(callId: number): Promise<string | undefined> {
-    const { done, value } = await this.#calls.get(callId)!.next();
+    const call = this.#calls.get(callId);
+    if (call === undefined) throw new Error('invalid call');
+    const { done, value } = await call.next(); // eslint-disable-line @typescript-eslint/no-unsafe-assignment
     if (done) return undefined;
     return JSON.stringify(this.#host.toPolar(value));
   }
@@ -135,7 +140,12 @@ export class Query {
     // have a nice hook where we know every class has been registered
     // (e.g., once we enforce that all registerCalls() have to happen
     // before loadFiles()).
-    const typ = this.#host.getType(rel.otherType)!;
+    const typ = this.#host.getType(rel.otherType);
+    if (typ === undefined) throw new UnregisteredClassError(rel.otherType);
+
+    if (!isObj(receiver))
+      throw new Error(`Can't index into type ${repr(receiver)}`);
+
     // Use the fetcher for the other type to traverse
     // the relationship.
     const filter = {
@@ -143,14 +153,14 @@ export class Query {
       value: receiver[rel.myField],
       field: rel.otherField,
     };
-    const query = await typ.buildQuery([filter]);
+    const query = await typ.buildQuery([filter]); // eslint-disable-line @typescript-eslint/no-unsafe-assignment
     const results = await typ.execQuery(query);
     if (rel.kind === 'one') {
       if (results.length !== 1)
-        throw new Error('Wrong number of parents: ' + results.length);
-      return results[0];
+        throw new Error(`Wrong number of parents: ${results.length}`);
+      return results[0]; // eslint-disable-line @typescript-eslint/no-unsafe-return
     } else {
-      return results;
+      return results; // eslint-disable-line @typescript-eslint/no-unsafe-return
     }
   }
 
@@ -167,20 +177,26 @@ export class Query {
   ): Promise<void> {
     let value;
     try {
-      const receiver = (await this.#host.toJs(instance)) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
-      const userTypes = this.#host.types;
-
+      const receiver = await this.#host.toJs(instance);
       // Check if it's a relationship
-      const rel = userTypes.get(receiver?.constructor)?.fields?.get(attr);
+      const rel =
+        isObj(receiver) &&
+        isConstructor(receiver.constructor) &&
+        this.#host.getType(receiver.constructor)?.fields?.get(attr);
       if (rel instanceof Relation) {
         value = await this.handleRelation(receiver, rel);
       } else {
-        value = receiver[attr];
+        // NOTE(gj): disabling ESLint for following line b/c we're fine if
+        // `receiver[attr]` blows up -- we catch the error and relay it to
+        // the core below.
+        value = (receiver as any)[attr]; // eslint-disable-line
         if (args !== undefined) {
           if (typeof value === 'function') {
             // If value is a function, call it with the provided args.
-            const jsArgs = args!.map(async a => await this.#host.toJs(a));
-            value = receiver[attr](...(await Promise.all(jsArgs)));
+            const jsArgs = await Promise.all(
+              args.map(async a => await this.#host.toJs(a))
+            );
+            value = ((receiver as obj)[attr] as CallableFunction)(...jsArgs); // eslint-disable-line @typescript-eslint/no-unsafe-assignment
           } else {
             // Error on attempt to call non-function.
             throw new InvalidCallError(receiver, attr);
@@ -188,7 +204,7 @@ export class Query {
         } else {
           // If value isn't a property anywhere in receiver's prototype chain,
           // throw an error.
-          if (value === undefined && !(attr in receiver)) {
+          if (value === undefined && isObj(receiver) && !(attr in receiver)) {
             throw new InvalidAttributeError(receiver, attr);
           }
         }
@@ -206,7 +222,7 @@ export class Query {
     } finally {
       // resolve promise if necessary
       // convert result to JSON and return
-      value = await Promise.resolve(value);
+      value = await Promise.resolve(value); // eslint-disable-line @typescript-eslint/no-unsafe-assignment
       value = JSON.stringify(this.#host.toPolar(value));
       this.callResult(callId, value);
     }
@@ -247,9 +263,9 @@ export class Query {
   private async *start(): QueryResult {
     try {
       while (true) {
-        const nextEvent = this.#ffiQuery.nextEvent();
+        const nextEvent = this.#ffiQuery.nextEvent(); // eslint-disable-line @typescript-eslint/no-unsafe-assignment
         this.processMessages();
-        const event: QueryEvent = parseQueryEvent(nextEvent);
+        const event = parseQueryEvent(nextEvent);
         switch (event.kind) {
           case QueryEventKind.Done:
             return;
@@ -323,7 +339,7 @@ export class Query {
           }
           case QueryEventKind.Debug: {
             if (typeof createInterface !== 'function') {
-              console.warn('debug events not supported in browser oso');
+              console.warn('debug events not supported in browser Oso');
               break;
             }
             const { message } = event.data as Debug;
