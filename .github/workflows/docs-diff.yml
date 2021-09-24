@@ -193,12 +193,13 @@ jobs:
           name: old-docs.tar.gz
           path: old-docs.tar.gz
           if-no-files-found: error
+      - run: mv old-docs.tar.gz new-docs.tar.gz
       - name: TEMPPPPPPPPPPPPP
         uses: actions/upload-artifact@v2
         with:
           # name: docs-${{ steps.sha.outputs.gitsha }}.tar.gz
           name: new-docs.tar.gz
-          path: old-docs.tar.gz
+          path: new-docs.tar.gz
           if-no-files-found: error
       # - name: Upload old build of docs.
       #   uses: actions/upload-artifact@v2
