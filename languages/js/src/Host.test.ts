@@ -24,7 +24,7 @@ describe('conversions between JS + Polar values', () => {
     const dictPattern = new Pattern({ fields: dict });
     const promises = {
       resolved: Promise.resolve(int),
-      pending: Promise.reject(str).catch(() => {}),
+      pending: Promise.reject(str).catch(() => {}), // eslint-disable-line @typescript-eslint/no-empty-function
       constructor: Promise.prototype,
     };
     const functions = {
