@@ -204,7 +204,7 @@ export class Host implements Required<DataFilteringQueryParams> {
       throw new DuplicateClassAliasError({
         name: clsName,
         cls,
-        existing,
+        existing: existing.cls,
       });
     }
 

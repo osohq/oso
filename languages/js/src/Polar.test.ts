@@ -93,7 +93,7 @@ describe('#registerClass', () => {
 Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
     );
     await expect(qvar(p, 'x in new Foo("A").b', 'x', true)).rejects.toThrow(
-      'function is not iterable'
+      "'function' is not iterable"
     );
     expect(await qvar(p, 'x in new Foo("A").b()', 'x', true)).toStrictEqual(
       'b'
