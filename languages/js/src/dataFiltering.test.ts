@@ -603,18 +603,6 @@ describe('Data filtering using typeorm/sqlite', () => {
     const { oso, checkAuthz, gwen, lag, steve, gabe, leina, pol, app, ios } =
       await fixtures();
     await oso.loadStr(`
-allow(actor, action, resource) if
-  has_permission(actor, action, resource);
-
-# Users can see each other.
-has_permission(_: User, "read", _: User);
-
-# A User can read their own profile.
-has_permission(_: User{id: id}, "read_profile", _:User{id: id});
-
-# Any logged-in user can create a new org.
-has_permission(_: User, "create", _: Org);
-
 actor User {}
 
 resource Org {
@@ -640,10 +628,6 @@ resource Org {
 
   "member" if "owner";
 }
-
-has_role(user: User, name: String, org: Org) if
-    role in user.orgRoles and
-    role matches { name: name, org: org };
 
 resource Repo {
   roles = ["admin", "writer", "reader"];
@@ -675,12 +659,6 @@ resource Repo {
   "reader" if "writer";
 }
 
-has_role(user: User, name: String, repo: Repo) if
-    role in user.repoRoles and
-    role matches { name: name, repo: repo };
-
-has_relation(org: Org, "parent", repo: Repo) if org = repo.org;
-
 resource Issue {
   permissions = ["read"];
   relations = { parent: Repo };
@@ -688,8 +666,29 @@ resource Issue {
   "read" if "reader" on "parent";
 }
 
-#has_relation(repo: Repo, "parent", issue: Issue) if issue.repo = repo;
-has_relation(repo: Repo, "parent", _issue: Issue{repo:repo});
+allow(actor, action, resource) if
+  has_permission(actor, action, resource);
+
+# Users can see each other.
+has_permission(_: User, "read", _: User);
+
+# A User can read their own profile.
+has_permission(user: User, "read_profile", user: User);
+
+# Any logged-in user can create a new org.
+has_permission(_: User, "create", _: Org);
+
+has_role(user: User, name: String, org: Org) if
+    role in user.orgRoles and
+    role matches { name: name, org: org };
+
+has_role(user: User, name: String, repo: Repo) if
+    role in user.repoRoles and
+    role matches { name: name, repo: repo };
+
+has_relation(org: Org, "parent", _: Repo{org: org});
+has_relation(repo: Repo, "parent", _: Issue{repo: repo});
+
     `);
 
     await checkAuthz(steve, 'create_issues', Repo, [ios]);

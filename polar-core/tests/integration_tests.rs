@@ -230,6 +230,45 @@ fn query_results_with_externals(query: Query) -> (QueryResults, MockExternal) {
     )
 }
 
+/// equality test for polar expressions that takes symmetric operators
+/// into account, eg. a = b == b = a
+fn commute_ops(u: &Value, v: &Value) -> bool {
+    fn a2p(a: &[Term]) -> (&Value, &Value) {
+        (a[0].value(), a[1].value())
+    }
+    match (u.as_expression(), v.as_expression()) {
+        (
+            Ok(Operation {
+                operator: op_a,
+                args: arg_a,
+            }),
+            Ok(Operation {
+                operator: op_b,
+                args: arg_b,
+            }),
+        ) if op_a == op_b && arg_a.len() == arg_b.len() => {
+            let op = *op_a;
+            if arg_a.len() == 2
+                && (op == Operator::Unify
+                    || op == Operator::Eq
+                    || op == Operator::Neq
+                    || op == Operator::And
+                    || op == Operator::Or)
+            {
+                let (a, b) = (a2p(arg_a), a2p(arg_b));
+                commute_ops(a.0, b.0) && commute_ops(a.1, b.1)
+                    || commute_ops(a.0, b.1) && commute_ops(a.1, b.0)
+            } else {
+                arg_a
+                    .iter()
+                    .enumerate()
+                    .all(|(i, x)| commute_ops(arg_b[i].value(), x.value()))
+            }
+        }
+        _ => u == v,
+    }
+}
+
 #[track_caller]
 #[must_use = "test results need to be asserted"]
 fn eval(p: &mut Polar, query_str: &str) -> bool {
@@ -1673,43 +1712,6 @@ fn test_circular_data() -> TestResult {
         RuntimeError::StackOverflow { .. }
     );
     Ok(())
-}
-
-fn commute_ops(u: &Value, v: &Value) -> bool {
-    fn a2p(a: &[Term]) -> (&Value, &Value) {
-        (a[0].value(), a[1].value())
-    }
-    match (u.as_expression(), v.as_expression()) {
-        (
-            Ok(Operation {
-                operator: op_a,
-                args: arg_a,
-            }),
-            Ok(Operation {
-                operator: op_b,
-                args: arg_b,
-            }),
-        ) if op_a == op_b && arg_a.len() == arg_b.len() => {
-            let op = *op_a;
-            if arg_a.len() == 2
-                && (op == Operator::Unify
-                    || op == Operator::Eq
-                    || op == Operator::Neq
-                    || op == Operator::And
-                    || op == Operator::Or)
-            {
-                let (a, b) = (a2p(arg_a), a2p(arg_b));
-                commute_ops(a.0, b.0) && commute_ops(a.1, b.1)
-                    || commute_ops(a.0, b.1) && commute_ops(a.1, b.0)
-            } else {
-                arg_a
-                    .iter()
-                    .enumerate()
-                    .all(|(i, x)| commute_ops(arg_b[i].value(), x.value()))
-            }
-        }
-        _ => u == v,
-    }
 }
 
 #[test]
