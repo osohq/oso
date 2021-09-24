@@ -591,7 +591,9 @@ export interface Options {
  * @internal
  */
 export function isIterableIterator(x: unknown): x is IterableIterator<unknown> {
-  return isObj(x) && typeof x.next === 'function' && isIterable(x);
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  return typeof x?.next === 'function' && isIterable(x);
 }
 
 /**
@@ -600,7 +602,14 @@ export function isIterableIterator(x: unknown): x is IterableIterator<unknown> {
  * @internal
  */
 export function isIterable(x: unknown): x is Iterable<unknown> {
-  return isObj(x) && Symbol.iterator in x;
+  try {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    return Symbol.iterator in x;
+  } catch (e) {
+    if (e instanceof TypeError) return false;
+    throw e;
+  }
 }
 
 /**
@@ -609,7 +618,14 @@ export function isIterable(x: unknown): x is Iterable<unknown> {
  * @internal
  */
 export function isAsyncIterable(x: unknown): x is AsyncIterable<unknown> {
-  return isObj(x) && Symbol.asyncIterator in x;
+  try {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    return Symbol.asyncIterator in x;
+  } catch (e) {
+    if (e instanceof TypeError) return false;
+    throw e;
+  }
 }
 
 /**
