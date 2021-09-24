@@ -149,7 +149,6 @@ func (q Query) handleMakeExternal(event types.QueryEventMakeExternal) error {
 
 func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 	instance, err := q.host.ToGo(event.Instance)
-	fmt.Println(instance)
 	if err != nil {
 		return err
 	}
@@ -158,41 +157,13 @@ func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 
 	// if we provided Args, it should be callable
 	if event.Args != nil {
+		// Check for the method on a pointer to the value, not the value itself.
 		typ := reflect.TypeOf(instance)
 		iv := reflect.New(typ)
-		piv := reflect.New(reflect.PtrTo(typ))
-		//fmt.Println(reflect.TypeOf(instance))
-		//iv := reflect.ValueOf(instance)
-		//fmt.Println(iv.Type())
-		//piv := reflect.PtrTo(reflect.TypeOf(instance))
-		//fmt.Println(piv)
-
-		/* fmt.Println("methods on struct")
-		for i := 0; i < iv.NumMethod(); i++ {
-			m := iv.Method(i)
-			fmt.Println(m.Interface().(reflect.Method).Name)
-		}
-
-		fmt.Println("methods on pointer")
-		for i := 0; i < piv.NumMethod(); i++ {
-			m := piv.Method(i)
-			fmt.Println(m.Type())
-		} */
-		fmt.Println("checking struct")
+		iv.Elem().Set(reflect.ValueOf(instance))
 		method := iv.MethodByName(string(event.Attribute))
-		fmt.Println(method)
+
 		if !method.IsValid() {
-			fmt.Println("checking pointer")
-			method = piv.MethodByName(string(event.Attribute))
-			if method.IsValid() {
-				fmt.Println("found on pointer")
-			}
-			fmt.Println(method)
-		} else {
-			fmt.Println("found on struct")
-		}
-		if !method.IsValid() {
-			fmt.Println("not found")
 			q.ffiQuery.ApplicationError((errors.NewMissingAttributeError(instance, string(event.Attribute))).Error())
 			q.ffiQuery.CallResult(event.CallId, nil)
 			return nil
