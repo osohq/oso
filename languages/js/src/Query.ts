@@ -2,7 +2,7 @@ import { createInterface } from 'readline';
 
 import type { Query as FfiQuery } from './polar_wasm_api';
 
-import { isConstructor, isObj, parseQueryEvent, repr } from './helpers';
+import { parseQueryEvent } from './helpers';
 import {
   DuplicateInstanceRegistrationError,
   InvalidAttributeError,
@@ -142,16 +142,14 @@ export class Query {
     const typ = this.#host.getType(rel.otherType);
     if (typ === undefined) throw new UnregisteredClassError(rel.otherType);
 
-    if (!isObj(receiver))
-      throw new Error(`Can't index into type ${repr(receiver)}`);
+    // NOTE(gj): disabling ESLint for following line b/c we're fine if
+    // `receiver[rel.myField]` blows up -- we catch the error and relay it to
+    // the core in `handleCall`.
+    const value = receiver[rel.myField] as unknown; // eslint-disable-line
 
     // Use the fetcher for the other type to traverse
     // the relationship.
-    const filter = {
-      kind: 'Eq' as FilterKind,
-      value: receiver[rel.myField],
-      field: rel.otherField,
-    };
+    const filter = { kind: 'Eq' as FilterKind, value, field: rel.otherField };
     const query = await typ.buildQuery([filter]); // eslint-disable-line @typescript-eslint/no-unsafe-assignment
     const results = await typ.execQuery(query);
     if (rel.kind === 'one') {
@@ -177,11 +175,9 @@ export class Query {
     let value;
     try {
       const receiver = await this.#host.toJs(instance);
-      // Check if it's a relationship
-      const rel =
-        isObj(receiver) &&
-        isConstructor(receiver.constructor) &&
-        this.#host.getType(receiver.constructor)?.fields?.get(attr);
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const rel = this.#host.getType(receiver?.constructor)?.fields?.get(attr);
       if (rel instanceof Relation) {
         value = await this.handleRelation(receiver, rel);
       } else {
@@ -203,7 +199,14 @@ export class Query {
         } else {
           // If value isn't a property anywhere in receiver's prototype chain,
           // throw an error.
-          if (value === undefined && isObj(receiver) && !(attr in receiver)) {
+          //
+          // NOTE(gj): disabling TS for following line b/c we're fine if `attr
+          // in receiver` blows up -- we catch the error and relay it to the
+          // core below.
+          //
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          if (value === undefined && !(attr in receiver)) {
             throw new InvalidAttributeError(receiver, attr);
           }
         }

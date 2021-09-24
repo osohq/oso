@@ -40,7 +40,6 @@ import {
   InvalidIteratorError,
 } from './errors';
 import * as rolesHelpers from '../test/rolesHelpers';
-import { isObj } from './helpers';
 
 test('it works', async () => {
   const p = new Polar();
@@ -177,9 +176,8 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
 
     test('can unify instances with a custom equality function', async () => {
       const p = new Polar({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        equalityFn: (x: any, y: any) =>
-          isObj(x) && isObj(y) && x.family === y.family,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+        equalityFn: (x: any, y: any) => x.family === y.family,
       });
       p.registerClass(Animal);
       await p.loadStr(`

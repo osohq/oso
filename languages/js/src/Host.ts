@@ -9,7 +9,6 @@ import {
 import {
   ancestors,
   isConstructor,
-  isObj,
   isString,
   promisify1,
   repr,
@@ -317,16 +316,27 @@ export class Host implements Required<DataFilteringQueryParams> {
   ): Promise<boolean> {
     let instance = this.getInstance(id);
     instance = instance instanceof Promise ? await instance : instance;
-    if (!isObj(instance)) return false;
-    const mro = ancestors(instance.constructor);
-    const leftIndex = mro.indexOf(this.getClass(left));
-    const rightIndex = mro.indexOf(this.getClass(right));
-    if (leftIndex === -1) {
-      return false;
-    } else if (rightIndex === -1) {
-      return true;
-    } else {
-      return leftIndex < rightIndex;
+    try {
+      // NOTE(gj): TS is worried about looking up the `.constructor` property
+      // on an `unknown` type. `instance.constructor` will throw a `TypeError`
+      // if `instance` is `null` or `undefined`, but we catch that error down
+      // below and return `false`.
+      //
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const mro = ancestors(instance.constructor);
+      const leftIndex = mro.indexOf(this.getClass(left));
+      const rightIndex = mro.indexOf(this.getClass(right));
+      if (leftIndex === -1) {
+        return false;
+      } else if (rightIndex === -1) {
+        return true;
+      } else {
+        return leftIndex < rightIndex;
+      }
+    } catch (e) {
+      if (e instanceof TypeError) return false;
+      throw e;
     }
   }
 
@@ -350,11 +360,19 @@ export class Host implements Required<DataFilteringQueryParams> {
   async isa(polarInstance: PolarTerm, name: string): Promise<boolean> {
     const instance = await this.toJs(polarInstance);
     const cls = this.getClass(name);
-    // `null` and `undefined` can never be an instance of a class.
-    if (instance === null || instance === undefined) return false;
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    return instance instanceof cls || instance.constructor === cls;
+    try {
+      // NOTE(gj): TS is worried about looking up the `.constructor` property
+      // on an `unknown` type. `instance.constructor` will throw a `TypeError`
+      // if `instance` is `null` or `undefined`, but we catch that error down
+      // below and return `false`.
+      //
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      return instance instanceof cls || instance.constructor === cls;
+    } catch (e) {
+      if (e instanceof TypeError) return false;
+      throw e;
+    }
   }
 
   /**
