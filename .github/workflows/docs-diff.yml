@@ -239,9 +239,9 @@ jobs:
 
       - run: ls -lah
       - run: ls -lah
-        working-directory: head/docs
+        working-directory: head/docs/public
       - run: ls -lah
-        working-directory: base/docs
+        working-directory: base/docs/public
 
       - name: Diff
         id: diff
