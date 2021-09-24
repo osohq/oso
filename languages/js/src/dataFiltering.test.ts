@@ -485,7 +485,7 @@ async function fixtures() {
 describe('Data filtering using typeorm/sqlite', () => {
   test('specializers', async () => {
     const { oso, checkAuthz, aFoo, aLog } = await fixtures();
-    oso.loadStr(`
+    await oso.loadStr(`
       allow(foo: Foo,             "NoneNone", log) if foo = log.foo;
       allow(foo,                  "NoneCls",  log: Log) if foo = log.foo;
       allow(foo,                  "NoneDict", _: {foo:foo});
@@ -566,7 +566,7 @@ describe('Data filtering using typeorm/sqlite', () => {
 
   test('a roles policy', async () => {
     const { oso, checkAuthz, aFoo, anotherFoo, helloBar } = await fixtures();
-    oso.loadStr(`
+    await oso.loadStr(`
       allow(actor, action, resource) if
         has_permission(actor, action, resource);
 
