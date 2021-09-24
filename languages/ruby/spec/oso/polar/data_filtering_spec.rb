@@ -11,7 +11,7 @@ end
 
 RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
   DFH = DataFilteringHelpers
-  Relation = ::Oso::Polar::DataFiltering::Relation
+  Relation = ::Oso::Relation
   Bar = DFH.record(:id, :is_cool, :is_still_cool) do
     def foos
       Foo.all.select { |foo| id == foo.bar_id }
