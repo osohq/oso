@@ -1,4 +1,3 @@
-// TODO(gj): Make sure this is cool w/ Oso in the browser.
 import { createInterface } from 'readline';
 
 import type { Query as FfiQuery } from './polar_wasm_api';
