@@ -12,6 +12,7 @@ import {
   createConnection,
   Repository,
   SelectQueryBuilder,
+  DeepPartial,
 } from 'typeorm';
 import { Class, obj } from './types';
 
@@ -426,7 +427,7 @@ async function fixtures() {
       })
     );
 
-  async function make<T>(r: Repository<T>, x: any): Promise<T> {
+  async function make<T>(r: Repository<T>, x: DeepPartial<T>): Promise<T> {
     return await r.findOneOrFail(await r.save(x));
   }
   const pol = await make(repos, { name: 'pol', org: osohq }),
