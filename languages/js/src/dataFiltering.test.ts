@@ -209,7 +209,7 @@ async function fixtures() {
       if (field === undefined) {
         field = 'id';
         value =
-          kind === 'In' ? (value as any[]).map(x => x.id) : (value as any).id; // eslint-disable-line @typescript-eslint/no-explicit-any
+          kind === 'In' ? (value as obj[]).map(x => x.id) : (value as obj).id; // eslint-disable-line @typescript-eslint/no-explicit-any
       }
 
       let rhs: string;
@@ -260,9 +260,12 @@ async function fixtures() {
   const combineQuery = <T extends SelectQueryBuilder<Resource>>(a: T, b: T) => {
     // this is kind of bad but typeorm doesn't give you a lot of tools
     // for working with queries :(
-    const whereClause = (sql: string) => /WHERE (.*)$/.exec(sql)![1];
-    a = a.orWhere(whereClause(b.getQuery()), b.getParameters());
-    return a.where(`(${whereClause(a.getQuery())})`, a.getParameters());
+    const whereClause = (sql: string) => /WHERE (.*)$/.exec(sql)?.[1];
+    const bClause = whereClause(b.getQuery());
+    if (bClause) a = a.orWhere(bClause, b.getParameters());
+    const aClause = whereClause(a.getQuery());
+    if (aClause) a = a.where(`(${aClause})`, a.getParameters());
+    return a;
   };
 
   // set global exec/combine query functions
@@ -464,7 +467,7 @@ describe('Data filtering using typeorm/sqlite', () => {
   test('relations and operators', async () => {
     const { oso, checkAuthz, aFoo, anotherFoo, thirdFoo } = await fixtures();
 
-    oso.loadStr(`
+    await oso.loadStr(`
       allow("steve", "get", resource: Foo) if
           resource.bar = bar and
           bar.isCool = true and
@@ -485,13 +488,13 @@ describe('Data filtering using typeorm/sqlite', () => {
 
   test('an empty result', async () => {
     const { oso } = await fixtures();
-    oso.loadStr('allow("gwen", "put", _: Foo);');
+    await oso.loadStr('allow("gwen", "put", _: Foo);');
     expect(await oso.authorizedResources('gwen', 'delete', Foo)).toEqual([]);
   });
 
   test('not equals', async () => {
     const { oso, checkAuthz, byeBar } = await fixtures();
-    oso.loadStr(`
+    await oso.loadStr(`
       allow("gwen", "get", bar: Bar) if
         bar.isCool != bar.isStillCool;`);
     await checkAuthz('gwen', 'get', Bar, [byeBar]);
@@ -499,7 +502,7 @@ describe('Data filtering using typeorm/sqlite', () => {
 
   test('returning, modifying and executing a query', async () => {
     const { oso, aFoo, anotherFoo } = await fixtures();
-    oso.loadStr(`
+    await oso.loadStr(`
       allow("gwen", "put", foo: Foo) if
         rec in foo.numbers and
         rec.number in [1, 2];`);
@@ -620,7 +623,7 @@ has_relation(repo: Repo, "parent", issue: Issue) if repo = issue.repo;
 
   test('a roles policy', async () => {
     const { oso, checkAuthz, aFoo, anotherFoo, helloBar } = await fixtures();
-    oso.loadStr(`
+    await oso.loadStr(`
       allow(actor, action, resource) if
         has_permission(actor, action, resource);
 
