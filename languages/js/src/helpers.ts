@@ -1,5 +1,4 @@
 import { inspect } from 'util';
-// TODO(gj): verify this doesn't break things when using Oso in the browser.
 import { readFile as _readFile } from 'fs';
 
 import { InvalidQueryEventError, KwargsError, PolarError } from './errors';
