@@ -289,7 +289,7 @@ export class Query {
           case QueryEventKind.ExternalIsSubclass: {
             const { leftTag, rightTag, callId } =
               event.data as ExternalIsSubclass;
-            const answer = await this.#host.isSubclass(leftTag, rightTag);
+            const answer = this.#host.isSubclass(leftTag, rightTag);
             this.questionResult(answer, callId);
             break;
           }
