@@ -7,8 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 from dataclasses import dataclass
-from oso import Oso
-from polar import Relation
+from oso import Oso, Relation
 from functools import reduce
 
 
