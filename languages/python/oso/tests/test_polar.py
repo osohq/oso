@@ -14,6 +14,7 @@ from polar import (
 )
 from polar.partial import TypeConstraint
 from polar.errors import ValidationError
+from dataclasses import dataclass
 
 import pytest
 
@@ -982,6 +983,31 @@ def test_lookup_in_head(polar, is_allowed):
 
     assert not is_allowed("leina", "write", r)
     assert is_allowed("leina", "read", r)
+
+
+def test_isa_with_path(polar, query):
+    @dataclass
+    class Foo:
+        num: int
+
+    @dataclass
+    class Bar:
+        foo: Foo
+
+    @dataclass
+    class Baz:
+        bar: Bar
+
+    polar.register_class(Foo, types={'num': int})
+    polar.register_class(Bar, types={'foo': Foo})
+    polar.register_class(Baz, types={'bar': Bar})
+
+    polar.load_str('f(x: Integer) if x = 0; g(x: Baz) if f(x.bar.foo.num); h(x: Bar) if f(x.num);')
+    results = query('g(x)', accept_expression=True)
+    assert len(results) == 1
+
+    with pytest.raises(exceptions.PolarRuntimeError):
+        query('h(x)')
 
 
 def test_rule_types_with_subclass_check(polar):
