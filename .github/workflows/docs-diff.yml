@@ -221,14 +221,15 @@ jobs:
         with:
           name: docs-${{ steps.sha.outputs.gitsha }}.tar.gz
           # path: base
+      - run: ls -lah
       - run: mkdir -p base && tar --extract --verbose --gzip --file docs-${{ steps.sha.outputs.gitsha }}.tar.gz --directory base
-      - name: Pull new build of docs.
-        uses: actions/download-artifact@v2
-        with:
-          name: docs-1fc2fa1a6c15189de9d0e3291c8c883718be38e5.tar.gz
-          # name: docs-${{ github.sha }}.tar.gz
-          # path: head
-      # - run: mkdir -p head && tar --extract --verbose --gzip --file docs-${{ github.sha }}.tar.gz --directory head
+      # - name: Pull new build of docs.
+      #   uses: actions/download-artifact@v2
+      #   with:
+      #     name: docs-1fc2fa1a6c15189de9d0e3291c8c883718be38e5.tar.gz
+      #     # name: docs-${{ github.sha }}.tar.gz
+      #     # path: head
+      # # - run: mkdir -p head && tar --extract --verbose --gzip --file docs-${{ github.sha }}.tar.gz --directory head
       - run: mkdir -p head && tar --extract --verbose --gzip --file docs-1fc2fa1a6c15189de9d0e3291c8c883718be38e5.tar.gz --directory head
       - name: Remove ignored files (generated api docs)
         run: rm -rf base/java/reference/api base/python/reference/api base/ruby/reference/api base/node/reference/api
