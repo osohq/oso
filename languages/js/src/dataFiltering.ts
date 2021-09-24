@@ -2,6 +2,7 @@ import { Host } from './Host';
 import { isPolarTerm } from './types';
 import type { CombineQueryFn } from './types';
 import { isObj, isString } from './helpers';
+import { UnregisteredClassError } from './errors';
 
 interface Request {
   class_tag: string;
@@ -119,22 +120,34 @@ function groundFilter(results: Map<number, unknown[]>, filter: Filter): Filter {
   const ref = filter.value;
   if (!(ref instanceof Ref)) return filter;
 
-  let value = results.get(ref.resultId);
-  value = !ref.field ? value : value?.map(v => (v as any)[ref.field!]); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const { field, resultId } = ref;
+  let value = results.get(resultId);
+
+  if (field !== undefined) {
+    value = value?.map(v => {
+      // TODO(gj): what should we do here if `v` isn't indexable? Without
+      // handling the case where `v` can't be indexed by `field`, it'll blow up
+      // at runtime.
+      if (!isObj(v)) return;
+      return v[field];
+    });
+  }
 
   return { ...filter, value };
 }
 
-export async function filterData(
+export async function filterData<T>(
   host: Host,
   plan: FilterPlan
-): Promise<unknown> {
+): Promise<T | null> {
   const queries = [];
-  let combine: CombineQueryFn | undefined;
+  let combine: CombineQueryFn<T> | undefined;
   for (const rs of plan.result_sets) {
     const setResults: Map<number, unknown[]> = new Map();
     for (const i of rs.resolve_order) {
-      const req = rs.requests.get(i)!;
+      const req = rs.requests.get(i);
+      if (req === undefined) throw new Error();
+
       const filters = await Promise.all(
         req.constraints.map(async constraint => {
           const con = await parseFilter(host, constraint);
@@ -148,9 +161,10 @@ export async function filterData(
       // generate the filter plan. The type information is derived from
       // Host.userTypes, so anything you get back as a class_tag will exist as
       // a key in the Host.userTypes Map.
-      const typ = host.getType(req.class_tag)!;
+      const typ = host.getType(req.class_tag);
+      if (typ === undefined) throw new UnregisteredClassError(req.class_tag);
 
-      const query = await typ.buildQuery(filters);
+      const query = await typ.buildQuery(filters); // eslint-disable-line @typescript-eslint/no-unsafe-assignment
       if (i !== rs.result_id) {
         setResults.set(i, await typ.execQuery(query));
       } else {
@@ -169,5 +183,5 @@ export async function filterData(
   if (combine === undefined) throw new Error();
 
   // @TODO remove duplicates
-  return queries.reduce(combine);
+  return queries.reduce(combine); // eslint-disable-line @typescript-eslint/no-unsafe-return
 }
