@@ -3,6 +3,10 @@ name: Docs Diff
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
+  push:
+    branches:
+      - gj/zippier-docs-diff
+
 jobs:
   check-label:
     name: Check for "Docs" label
@@ -15,6 +19,7 @@ jobs:
         run: exit 1 # Fail the job!
         if: "!contains(github.event.pull_request.labels.*.name, 'Docs')"
         continue-on-error: true
+
   build-head:
     name: Build docs on HEAD.
     runs-on: ubuntu-latest
@@ -88,11 +93,20 @@ jobs:
         run: make build
         if: steps.cache.outputs.cache-hit != 'true'
         working-directory: docs
+      - run: tar --create --verbose --gzip --file new-docs.tar.gz docs/public
       - name: Upload new build of docs.
         uses: actions/upload-artifact@v2
         with:
-          name: new-docs
-          path: docs/public
+          name: new-docs.tar.gz
+          path: new-docs.tar.gz
+          if-no-files-found: error
+      # - name: Upload new build of docs.
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: new-docs
+      #     path: docs/public
+      #     if-no-files-found: error
+
   build-base:
     name: Build docs on base.
     runs-on: ubuntu-latest
@@ -170,11 +184,20 @@ jobs:
         run: make build
         working-directory: docs
         if: steps.cache.outputs.cache-hit != 'true'
+      - run: tar --create --verbose --gzip --file old-docs.tar.gz docs/public
       - name: Upload old build of docs.
         uses: actions/upload-artifact@v2
         with:
-          name: old-docs
-          path: docs/public
+          name: old-docs.tar.gz
+          path: old-docs.tar.gz
+          if-no-files-found: error
+      # - name: Upload old build of docs.
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: old-docs
+      #     path: docs/public
+      #     if-no-files-found: error
+
   diff:
     name: Diff
     needs: [check-label, build-base, build-head]
@@ -186,13 +209,15 @@ jobs:
       - name: Pull old build of docs.
         uses: actions/download-artifact@v2
         with:
-          name: old-docs
-          path: base
+          name: old-docs.tar.gz
+          # path: base
+      - run: mkdir -p base && tar --extract --verbose --gzip --file old-docs.tar.gz base
       - name: Pull new build of docs.
         uses: actions/download-artifact@v2
         with:
-          name: new-docs
-          path: head
+          name: new-docs.tar.gz
+          # path: head
+      - run: mkdir -p head && tar --extract --verbose --gzip --file new-docs.tar.gz head
       - name: Remove ignored files (generated api docs)
         run: rm -rf base/java/reference/api base/python/reference/api base/ruby/reference/api base/node/reference/api
       - name: Remove ignored files (generated api docs)
@@ -210,6 +235,7 @@ jobs:
         with:
           name: full-diff
           path: diff-full.txt
+          if-no-files-found: error
       - name: Print docs changes
         run: |
           cat <<EOF
@@ -222,6 +248,7 @@ jobs:
 
           EOF
         if: ${{ steps.diff.outcome == 'failure' }}
+
   # Job that succeeds or fails depending upon the entire workflow.
   # Used as a required check.
   decide_if_pr_okay:
