@@ -237,6 +237,12 @@ jobs:
       - name: Remove ignored files (generated api docs)
         run: rm -rf head/java/reference/api head/python/reference/api head/ruby/reference/api head/node/reference/api
 
+      - run: ls -lah
+      - run: ls -lah
+        working-directory: head
+      - run: ls -lah
+        working-directory: base
+
       - name: Diff
         id: diff
         run: set -o pipefail && diff -q --recursive base head | tee diff.txt
@@ -250,6 +256,7 @@ jobs:
           name: full-diff
           path: diff-full.txt
           if-no-files-found: error
+        if: ${{ steps.diff.outcome == 'failure' }}
       - name: Print docs changes
         run: |
           cat <<EOF
