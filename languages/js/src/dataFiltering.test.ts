@@ -19,24 +19,38 @@ import { Class, obj } from './types';
 class Bar {
   @PrimaryColumn()
   id!: string;
-
   @Column()
   isCool!: boolean;
-
   @Column()
   isStillCool!: boolean;
+  @OneToMany(() => Foo, foo => foo.bar)
+  foos!: Foo[];
 }
 
 @Entity()
 class Foo {
   @PrimaryColumn()
   id!: string;
-
   @Column()
   barId!: string;
-
   @Column()
   isFooey!: boolean;
+  @ManyToOne(() => Bar, bar => bar.foos)
+  bar!: Bar;
+  @OneToMany(() => Log, log => log.foo)
+  logs!: Log[];
+}
+
+@Entity()
+class Log {
+  @PrimaryColumn()
+  id!: string;
+  @Column()
+  fooId!: string;
+  @Column()
+  data!: string;
+  @ManyToOne(() => Foo, foo => foo.logs)
+  foo!: Foo;
 }
 
 @Entity()
@@ -70,7 +84,7 @@ export class Repo {
   @Column()
   name!: string;
   @Column()
-  org_id!: number;
+  orgId!: number;
   @ManyToOne(() => Org, org => org.repositories)
   org!: Org;
   @OneToMany(() => Issue, issue => issue.repo)
@@ -86,7 +100,7 @@ export class Issue {
   @Column()
   title!: string;
   @Column()
-  repo_id!: number;
+  repoId!: number;
   @ManyToOne(() => Repo, repo => repo.issues)
   repo!: Repo;
 }
@@ -98,9 +112,9 @@ export class User {
   @Column()
   email!: string;
   @OneToMany(() => RepoRole, repo_role => repo_role.user)
-  repo_roles!: RepoRole[];
+  repoRoles!: RepoRole[];
   @OneToMany(() => OrgRole, org_role => org_role.user)
-  org_roles!: OrgRole[];
+  orgRoles!: OrgRole[];
 }
 
 @Entity()
@@ -110,10 +124,10 @@ export class RepoRole {
   @Column()
   name!: string;
   @Column()
-  repo_id!: number;
+  repoId!: number;
   @Column()
-  user_id!: number;
-  @ManyToOne(() => User, user => user.repo_roles, { eager: true })
+  userId!: number;
+  @ManyToOne(() => User, user => user.repoRoles, { eager: true })
   user!: User;
   @ManyToOne(() => Repo, repo => repo.roles, { eager: true })
   repo!: Repo;
@@ -126,12 +140,12 @@ export class OrgRole {
   @Column()
   name!: string;
   @Column()
-  org_id!: number;
+  orgId!: number;
   @Column()
-  user_id!: number;
+  userId!: number;
   @ManyToOne(() => Org, org => org.roles, { eager: true })
   org!: Org;
-  @ManyToOne(() => User, user => user.org_roles, { eager: true })
+  @ManyToOne(() => User, user => user.orgRoles, { eager: true })
   user!: User;
 }
 
@@ -142,7 +156,7 @@ async function fixtures() {
   const connection = await createConnection({
     type: 'sqlite',
     database: ':memory:',
-    entities: [Foo, Bar, Num, Org, Repo, User, OrgRole, RepoRole, Issue],
+    entities: [Foo, Bar, Log, Num, Org, Repo, User, OrgRole, RepoRole, Issue],
     synchronize: true,
     logging: false,
     name: gensym(),
@@ -150,6 +164,7 @@ async function fixtures() {
 
   const bars = connection.getRepository(Bar);
   const foos = connection.getRepository(Foo);
+  const logs = connection.getRepository(Log);
   const nums = connection.getRepository(Num);
 
   const users = connection.getRepository(User);
@@ -191,6 +206,16 @@ async function fixtures() {
   const aFoo = await mkFoo('one', 'hello', false);
   const anotherFoo = await mkFoo('another', 'hello', true);
   const thirdFoo = await mkFoo('next', 'goodbye', true);
+
+  const aLog = await logs.findOneOrFail(
+    await logs.save({ id: 'a', fooId: 'one', data: 'hello' })
+  );
+  const anotherLog = await logs.findOneOrFail(
+    await logs.save({ id: 'b', fooId: 'another', data: 'world' })
+  );
+  const thirdLog = await logs.findOneOrFail(
+    await logs.save({ id: 'c', fooId: 'next', data: 'steve' })
+  );
 
   for (const i of [0, 1, 2]) await mkNum(i, 'one');
   for (const i of [0, 1]) await mkNum(i, 'another');
@@ -276,8 +301,8 @@ async function fixtures() {
     fields: {
       id: Number,
       email: String,
-      repo_roles: new Relation('many', 'RepoRole', 'id', 'user_id'),
-      org_roles: new Relation('many', 'OrgRole', 'id', 'user_id'),
+      repoRoles: new Relation('many', 'RepoRole', 'id', 'userId'),
+      orgRoles: new Relation('many', 'OrgRole', 'id', 'userId'),
     },
   });
 
@@ -286,10 +311,10 @@ async function fixtures() {
     fields: {
       id: Number,
       name: String,
-      org_id: Number,
-      org: new Relation('one', 'Org', 'org_id', 'id'),
-      roles: new Relation('many', 'RepoRole', 'id', 'repo_id'),
-      issues: new Relation('many', 'Issue', 'id', 'repo_id'),
+      orgId: Number,
+      org: new Relation('one', 'Org', 'orgId', 'id'),
+      roles: new Relation('many', 'RepoRole', 'id', 'repoId'),
+      issues: new Relation('many', 'Issue', 'id', 'repoId'),
     },
   });
 
@@ -300,8 +325,8 @@ async function fixtures() {
       name: String,
       billing_address: String,
       base_repo_role: String,
-      repos: new Relation('many', 'Repo', 'id', 'org_id'),
-      roles: new Relation('many', 'OrgRole', 'id', 'org_id'),
+      repos: new Relation('many', 'Repo', 'id', 'orgId'),
+      roles: new Relation('many', 'OrgRole', 'id', 'orgId'),
     },
   });
 
@@ -310,8 +335,8 @@ async function fixtures() {
     fields: {
       id: Number,
       title: String,
-      repo_id: Number,
-      repo: new Relation('one', 'Repo', 'repo_id', 'id'),
+      repoId: Number,
+      repo: new Relation('one', 'Repo', 'repoId', 'id'),
     },
   });
 
@@ -320,10 +345,10 @@ async function fixtures() {
     fields: {
       id: Number,
       role: String,
-      repo_id: Number,
-      user_id: Number,
-      user: new Relation('one', 'User', 'user_id', 'id'),
-      repo: new Relation('one', 'Repo', 'repo_id', 'id'),
+      repoId: Number,
+      userId: Number,
+      user: new Relation('one', 'User', 'userId', 'id'),
+      repo: new Relation('one', 'Repo', 'repoId', 'id'),
     },
   });
 
@@ -332,10 +357,10 @@ async function fixtures() {
     fields: {
       id: Number,
       role: String,
-      org_id: Number,
-      user_id: Number,
-      user: new Relation('one', 'User', 'user_id', 'id'),
-      org: new Relation('one', 'Org', 'org_id', 'id'),
+      orgId: Number,
+      userId: Number,
+      user: new Relation('one', 'User', 'userId', 'id'),
+      org: new Relation('one', 'Org', 'orgId', 'id'),
     },
   });
 
@@ -356,7 +381,18 @@ async function fixtures() {
       barId: String,
       isFooey: Boolean,
       bar: new Relation('one', 'Bar', 'barId', 'id'),
+      logs: new Relation('many', 'Log', 'id', 'fooId'),
       numbers: new Relation('many', 'Num', 'id', 'fooId'),
+    },
+  });
+
+  oso.registerClass(Log, {
+    buildQuery: fromRepo(logs, 'log'),
+    fields: {
+      id: String,
+      fooId: String,
+      data: String,
+      foo: new Relation('one', 'Foo', 'fooId', 'id'),
     },
   });
 
@@ -390,41 +426,24 @@ async function fixtures() {
       })
     );
 
-  const pol = await repos.findOneOrFail(
-      await repos.save({ name: 'pol', org_id: osohq.id })
-    ),
-    ios = await repos.findOneOrFail(
-      await repos.save({ name: 'ios', org_id: apple.id })
-    ),
-    app = await repos.findOneOrFail(
-      await repos.save({ name: 'app', org_id: tiktok.id })
-    );
+  async function make<T>(r: Repository<T>, x: any): Promise<T> {
+    return await r.findOneOrFail(await r.save(x));
+  }
+  const pol = await make(repos, { name: 'pol', org: osohq }),
+    ios = await make(repos, { name: 'ios', org: apple }),
+    app = await make(repos, { name: 'app', org: tiktok }),
+    bug = await make(issues, { title: 'bug', repo: pol }),
+    lag = await make(issues, { title: 'lag', repo: ios }),
+    steve = await make(users, { email: 'steve@osohq.com' }),
+    leina = await make(users, { email: 'leina@osohq.com' }),
+    gabe = await make(users, { email: 'gabe@osohq.com' }),
+    gwen = await make(users, { email: 'gwen@osohq.com' });
 
-  const bug = await issues.findOneOrFail(
-      await issues.save({ title: 'bug', repo_id: pol.id })
-    ),
-    lag = await issues.findOneOrFail(
-      await issues.save({ title: 'lag', repo_id: ios.id })
-    );
+  await orgRoles.save({ name: 'owner', org: osohq, user: leina });
+  await orgRoles.save({ name: 'member', org: tiktok, user: gabe });
 
-  const steve = await users.findOneOrFail(
-      await users.save({ email: 'steve@osohq.com' })
-    ),
-    leina = await users.findOneOrFail(
-      await users.save({ email: 'leina@osohq.com' })
-    ),
-    gabe = await users.findOneOrFail(
-      await users.save({ email: 'gabe@osohq.com' })
-    ),
-    gwen = await users.findOneOrFail(
-      await users.save({ email: 'gwen@osohq.com' })
-    );
-
-  await orgRoles.save({ name: 'owner', org_id: osohq.id, user_id: leina.id });
-  await orgRoles.save({ name: 'member', org_id: tiktok.id, user_id: gabe.id });
-
-  await repoRoles.save({ name: 'writer', repo_id: ios.id, user_id: steve.id });
-  await repoRoles.save({ name: 'reader', repo_id: app.id, user_id: gwen.id });
+  await repoRoles.save({ name: 'writer', repo: ios, user: steve });
+  await repoRoles.save({ name: 'reader', repo: app, user: gwen });
 
   const checkAuthz = async (
     actor: unknown,
@@ -445,6 +464,9 @@ async function fixtures() {
     aFoo,
     anotherFoo,
     thirdFoo,
+    aLog,
+    anotherLog,
+    thirdLog,
     helloBar,
     byeBar,
     checkAuthz,
@@ -464,6 +486,31 @@ async function fixtures() {
 }
 
 describe('Data filtering using typeorm/sqlite', () => {
+  test('specializers', async () => {
+    const { oso, checkAuthz, aFoo, aLog } = await fixtures();
+    await oso.loadStr(`
+      allow(foo: Foo,             "NoneNone", log) if foo = log.foo;
+      allow(foo,                  "NoneCls",  log: Log) if foo = log.foo;
+      allow(foo,                  "NoneDict", _: {foo:foo});
+      allow(foo,                  "NonePtn",  _: Log{foo: foo});
+      allow(foo: Foo,             "ClsNone",  log) if log in foo.logs;
+      allow(foo: Foo,             "ClsCls",   log: Log) if foo = log.foo;
+      allow(foo: Foo,             "ClsDict",  _: {foo: foo});
+      allow(foo: Foo,             "ClsPtn",   _: Log{foo: foo});
+      allow(_: {logs: logs},      "DictNone", log) if log in logs;
+      allow(_: {logs: logs},      "DictCls",  log: Log) if log in logs;
+      allow(foo: {logs: logs},    "DictDict", log: {foo: foo}) if log in logs;
+      allow(foo: {logs: logs},    "DictPtn",  log: Log{foo: foo}) if log in logs;
+      allow(_: Foo{logs: logs},   "PtnNone",  log) if log in logs;
+      allow(_: Foo{logs: logs},   "PtnCls",   log: Log) if log in logs;
+      allow(foo: Foo{logs: logs}, "PtnDict",  log: {foo: foo}) if log in logs;
+      allow(foo: Foo{logs: logs}, "PtnPtn",   log: Log{foo: foo}) if log in logs;
+    `);
+
+    const parts = ['None', 'Cls', 'Dict', 'Ptn'];
+    for (const p1 of parts)
+      for (const p2 of parts) await checkAuthz(aFoo, p1 + p2, Log, [aLog]);
+  });
   test('relations and operators', async () => {
     const { oso, checkAuthz, aFoo, anotherFoo, thirdFoo } = await fixtures();
 
@@ -520,107 +567,6 @@ describe('Data filtering using typeorm/sqlite', () => {
     expect(result).toEqual(expect.arrayContaining([aFoo]));
   });
 
-  test('a gitclub-like policy', async () => {
-    const { oso, checkAuthz, gwen, lag, steve, gabe, leina, pol, app, ios } =
-      await fixtures();
-    await oso.loadStr(`
-allow(actor, action, resource) if
-  has_permission(actor, action, resource);
-
-# Users can see each other.
-has_permission(_: User, "read", _: User);
-
-# A User can read their own profile.
-has_permission(_: User{id: id}, "read_profile", _:User{id: id});
-
-# Any logged-in user can create a new org.
-has_permission(_: User, "create", _: Org);
-
-actor User {}
-
-resource Org {
-  roles = ["owner", "member"];
-  permissions = [
-    "read",
-    "create_repos",
-    "list_repos",
-    "create_role_assignments",
-    "list_role_assignments",
-    "update_role_assignments",
-    "delete_role_assignments",
-  ];
-
-  "read" if "member";
-  "list_repos" if "member";
-  "list_role_assignments" if "member";
-
-  "create_repos" if "owner";
-  "create_role_assignments" if "owner";
-  "update_role_assignments" if "owner";
-  "delete_role_assignments" if "owner";
-
-  "member" if "owner";
-}
-
-has_role(user: User, name: String, org: Org) if
-    role in user.org_roles and
-    role matches { name: name, org: org };
-
-resource Repo {
-  roles = ["admin", "writer", "reader"];
-  permissions = [
-    "read",
-    "create_issues",
-    "list_issues",
-    "create_role_assignments",
-    "list_role_assignments",
-    "update_role_assignments",
-    "delete_role_assignments",
-  ];
-  relations = { parent: Org };
-
-  "create_role_assignments" if "admin";
-  "list_role_assignments" if "admin";
-  "update_role_assignments" if "admin";
-  "delete_role_assignments" if "admin";
-
-  "create_issues" if "writer";
-
-  "read" if "reader";
-  "list_issues" if "reader";
-
-  "admin" if "owner" on "parent";
-  "reader" if "member" on "parent";
-
-  "writer" if "admin";
-  "reader" if "writer";
-}
-
-has_role(user: User, name: String, repo: Repo) if
-    role in user.repo_roles and
-    role matches { name: name, repo: repo };
-
-has_relation(org: Org, "parent", repo: Repo) if org = repo.org;
-
-resource Issue {
-  permissions = ["read"];
-  relations = { parent: Repo };
-
-  "read" if "reader" on "parent";
-}
-
-has_relation(repo: Repo, "parent", issue: Issue) if repo = issue.repo;
-    `);
-
-    await checkAuthz(steve, 'create_issues', Repo, [ios]);
-    await checkAuthz(steve, 'read', Issue, [lag]);
-    await checkAuthz(gwen, 'read', Repo, [app]);
-    await checkAuthz(gwen, 'read', Issue, []);
-    await checkAuthz(gwen, 'create_issues', Repo, []);
-    await checkAuthz(leina, 'create_issues', Repo, [pol]);
-    await checkAuthz(gabe, 'create_issues', Repo, []);
-  });
-
   test('a roles policy', async () => {
     const { oso, checkAuthz, aFoo, anotherFoo, helloBar } = await fixtures();
     await oso.loadStr(`
@@ -654,5 +600,106 @@ has_relation(repo: Repo, "parent", issue: Issue) if repo = issue.repo;
       `);
     await checkAuthz('steve', 'get', Bar, [helloBar]);
     await checkAuthz('steve', 'read', Foo, [aFoo, anotherFoo]);
+  });
+
+  test('a gitclub-like policy', async () => {
+    const { oso, checkAuthz, gwen, lag, steve, gabe, leina, pol, app, ios } =
+      await fixtures();
+    await oso.loadStr(`
+actor User {}
+
+resource Org {
+  roles = ["owner", "member"];
+  permissions = [
+    "read",
+    "create_repos",
+    "list_repos",
+    "create_role_assignments",
+    "list_role_assignments",
+    "update_role_assignments",
+    "delete_role_assignments",
+  ];
+
+  "read" if "member";
+  "list_repos" if "member";
+  "list_role_assignments" if "member";
+
+  "create_repos" if "owner";
+  "create_role_assignments" if "owner";
+  "update_role_assignments" if "owner";
+  "delete_role_assignments" if "owner";
+
+  "member" if "owner";
+}
+
+resource Repo {
+  roles = ["admin", "writer", "reader"];
+  permissions = [
+    "read",
+    "create_issues",
+    "list_issues",
+    "create_role_assignments",
+    "list_role_assignments",
+    "update_role_assignments",
+    "delete_role_assignments",
+  ];
+  relations = { parent: Org };
+
+  "create_role_assignments" if "admin";
+  "list_role_assignments" if "admin";
+  "update_role_assignments" if "admin";
+  "delete_role_assignments" if "admin";
+
+  "create_issues" if "writer";
+
+  "read" if "reader";
+  "list_issues" if "reader";
+
+  "admin" if "owner" on "parent";
+  "reader" if "member" on "parent";
+
+  "writer" if "admin";
+  "reader" if "writer";
+}
+
+resource Issue {
+  permissions = ["read"];
+  relations = { parent: Repo };
+
+  "read" if "reader" on "parent";
+}
+
+allow(actor, action, resource) if
+  has_permission(actor, action, resource);
+
+# Users can see each other.
+has_permission(_: User, "read", _: User);
+
+# A User can read their own profile.
+has_permission(user: User, "read_profile", user: User);
+
+# Any logged-in user can create a new org.
+has_permission(_: User, "create", _: Org);
+
+has_role(user: User, name: String, org: Org) if
+    role in user.orgRoles and
+    role matches { name: name, org: org };
+
+has_role(user: User, name: String, repo: Repo) if
+    role in user.repoRoles and
+    role matches { name: name, repo: repo };
+
+has_relation(org: Org, "parent", _: Repo{org: org});
+has_relation(repo: Repo, "parent", _: Issue{repo: repo});
+
+    `);
+
+    await checkAuthz(steve, 'create_issues', Repo, [ios]);
+    await checkAuthz(steve, 'read', Issue, [lag]);
+    await checkAuthz(gwen, 'read', Repo, [app]);
+    await checkAuthz(gwen, 'read', Issue, []);
+    await checkAuthz(gwen, 'create_issues', Repo, []);
+    await checkAuthz(leina, 'create_issues', Repo, [pol]);
+    await checkAuthz(gabe, 'create_issues', Repo, []);
   });
 });

@@ -363,9 +363,15 @@ export class Host implements Required<DataFilteringQueryParams> {
    *
    * @internal
    */
-  isaWithPath(baseTag: string, path: string[], classTag: string): boolean {
+  async isaWithPath(
+    baseTag: string,
+    path: PolarTerm[],
+    classTag: string
+  ): Promise<boolean> {
     let tag = baseTag;
-    for (const field of path) {
+    for (const fld of path) {
+      const field = await this.toJs(fld);
+      if (!isString(field)) throw new Error(`Not a field name: ${field}`);
       const userType = this.types.get(tag);
       if (userType === undefined) return false;
 

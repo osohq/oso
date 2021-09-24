@@ -227,15 +227,15 @@ function parseExternalIsa(event: unknown): QueryEvent {
 function parseExternalIsaWithPath(event: unknown): QueryEvent {
   if (!isObj(event)) throw new Error();
   const {
+    path,
     call_id: callId,
     base_tag: baseTag,
-    path,
     class_tag: classTag,
   } = event;
   if (!isSafeInteger(callId)) throw new Error();
   if (!isString(baseTag)) throw new Error();
   if (!isString(classTag)) throw new Error();
-  if (!isArrayOf(path, isString)) throw new Error();
+  if (!isArrayOf(path, isPolarTerm)) throw new Error();
   return {
     kind: QueryEventKind.ExternalIsaWithPath,
     data: { callId, baseTag, path, classTag },

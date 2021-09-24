@@ -327,7 +327,11 @@ export class Query {
           case QueryEventKind.ExternalIsaWithPath: {
             const { baseTag, path, classTag, callId } =
               event.data as ExternalIsaWithPath;
-            const answer = this.#host.isaWithPath(baseTag, path, classTag);
+            const answer = await this.#host.isaWithPath(
+              baseTag,
+              path,
+              classTag
+            );
             this.questionResult(answer, callId);
             break;
           }

@@ -400,7 +400,7 @@ export interface ExternalIsa {
  */
 export interface ExternalIsaWithPath {
   baseTag: string;
-  path: string[];
+  path: PolarTerm[];
   classTag: string;
   callId: number;
 }
