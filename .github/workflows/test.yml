@@ -304,10 +304,10 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt, clippy
-      - name: Use Go 1.13
+      - name: Use Go 1.12
         uses: actions/setup-go@v2
         with:
-          go-version: "1.13"
+          go-version: "1.12"
       - name: Test go
         run: make go-test
 

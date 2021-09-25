@@ -25,7 +25,7 @@ import "github.com/osohq/go-oso"
 
 ## Requirements
 
-- Go version 1.13 or higher
+- Go version 1.12 or higher
 - Supported platforms (x64 only):
   - Linux
   - macOS
