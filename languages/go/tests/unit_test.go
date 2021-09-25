@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	oso "github.com/osohq/go-oso"
+	"github.com/osohq/go-oso/internal/ffi"
+	"github.com/osohq/go-oso/internal/host"
 	. "github.com/osohq/go-oso/types"
 )
 
@@ -297,5 +299,37 @@ func TestRuleTypes(t *testing.T) {
 		t.Fatalf("Failed to raise validation error.")
 	} else if msg = err.Error(); !strings.Contains(msg, "Invalid rule") {
 		t.Fatalf("Incorrect error message: %v", msg)
+	}
+}
+
+func TestZeroValueRepr(t *testing.T) {
+	ffiPolar := ffi.NewPolarFfi()
+	host := host.NewHost(ffiPolar)
+	polarValue, err := host.ToPolar(Foo{})
+	if err != nil {
+		t.Fatalf("host.ToPolar failed: %v", err)
+	}
+	switch variant := polarValue.ValueVariant.(type) {
+	case ValueExternalInstance:
+		expected := "oso_test.Foo{Name: Num:0}"
+		if *variant.Repr != expected {
+			t.Errorf("Zero-value Foo{} repr didn't match.\n\tExpected: %v\n\tReceived: %#v", expected, *variant.Repr)
+		}
+	default:
+		t.Fatalf("Expected ValueExternalInstance; received: %v", variant)
+	}
+
+	polarValue, err = host.ToPolar(Foo{Name: "Zooey", Num: 42})
+	if err != nil {
+		t.Fatalf("host.ToPolar failed: %v", err)
+	}
+	switch variant := polarValue.ValueVariant.(type) {
+	case ValueExternalInstance:
+		expected := "oso_test.Foo{Name:Zooey Num:42}"
+		if *variant.Repr != expected {
+			t.Errorf("Zero-value Foo{} repr didn't match.\n\tExpected: %v\n\tReceived: %#v", expected, *variant.Repr)
+		}
+	default:
+		t.Fatalf("Expected ValueExternalInstance; received: %v", variant)
 	}
 }
