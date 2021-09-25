@@ -8,8 +8,7 @@ test-policy-extensions:
 	pytest test_policy_extensions.py
 
 test-python:
-	pip install flask sqlalchemy
-	pytest python/app/test.py
+	$(MAKE) -C python test
 
 test-node:
 	cd node; npm install
