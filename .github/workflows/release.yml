@@ -462,12 +462,13 @@ jobs:
           path: languages/js/*
 
   validate_go:
-    name: Test go on ${{ matrix.os }}
+    name: Test go ${{ matrix.go-version }} on ${{ matrix.os }}
     needs: [build_go]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        go-version: ["1.12", "1.13", "1.14", "1.15", "1.16", "1.17"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -476,7 +477,7 @@ jobs:
       - name: Set up go
         uses: actions/setup-go@v2
         with:
-          go-version: "1.15"
+          go-version: ${{ matrix.go-version }}
       - name: Download go package from package run
         uses: actions/download-artifact@v1
         with:
