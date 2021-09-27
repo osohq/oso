@@ -22,9 +22,8 @@ submodules: .make.submodules.installed
 
 update-submodules:
 	git submodule update --checkout --init --recursive --remote
-	cd roles/sqlalchemy/basic && git checkout basic_roles_complete && git pull
 
-.PHONY: submodules update-submodules java-test java-test-context java-test-rbac
+.PHONY: submodules update-submodules java-test java-test-context java-test-rbac  python-test ruby-test nodejs-test test-quickstarts-release test-quickstarts-local test
 
 $(JAVA_PACKAGE_JAR_PATH):
 	$(MAKE) -C $(JAVA_DIR) package
@@ -46,7 +45,6 @@ python-test:
 	cd inheritance/python && pytest .
 	cd context/python && pytest .
 	cd user_types/python && pytest .
-	cd roles/sqlalchemy/basic && pip install -r requirements.txt && pytest .
 	$(MAKE) -C data_access/django test
 	$(MAKE) -C data_access/sqlalchemy test
 
@@ -61,8 +59,11 @@ nodejs-test:
 	cd inheritance/nodejs && yarn && yarn jest
 	cd user_types/nodejs && yarn && yarn jest
 
-test-quickstarts: submodules
-	$(MAKE) -C quickstart test
+test-quickstarts-release: submodules
+	$(MAKE) -C quickstart test-release
+
+test-quickstarts-local: submodules
+	$(MAKE) -C quickstart test-local
 
 test:
 	$(MAKE) -C add-to-your-application test
@@ -71,3 +72,4 @@ test:
 	$(MAKE) ruby-test
 	$(MAKE) java-test
 	$(MAKE) nodejs-test
+	$(MAKE) test-quickstarts-local

@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	oso "github.com/osohq/go-oso"
+	"github.com/osohq/go-oso/internal/ffi"
+	"github.com/osohq/go-oso/internal/host"
 	. "github.com/osohq/go-oso/types"
 )
 
@@ -298,4 +300,92 @@ func TestRuleTypes(t *testing.T) {
 	} else if msg = err.Error(); !strings.Contains(msg, "Invalid rule") {
 		t.Fatalf("Incorrect error message: %v", msg)
 	}
+}
+
+func TestZeroValueRepr(t *testing.T) {
+	ffiPolar := ffi.NewPolarFfi()
+	host := host.NewHost(ffiPolar)
+	polarValue, err := host.ToPolar(Foo{})
+	if err != nil {
+		t.Fatalf("host.ToPolar failed: %v", err)
+	}
+	switch variant := polarValue.ValueVariant.(type) {
+	case ValueExternalInstance:
+		expected := "oso_test.Foo{Name: Num:0}"
+		if *variant.Repr != expected {
+			t.Errorf("repr didn't match!\n\tExpected: %v\n\tReceived: %#v", expected, *variant.Repr)
+		}
+	default:
+		t.Fatalf("Expected ValueExternalInstance; received: %v", variant)
+	}
+
+	polarValue, err = host.ToPolar(Foo{Name: "Zooey", Num: 42})
+	if err != nil {
+		t.Fatalf("host.ToPolar failed: %v", err)
+	}
+	switch variant := polarValue.ValueVariant.(type) {
+	case ValueExternalInstance:
+		expected := "oso_test.Foo{Name:Zooey Num:42}"
+		if *variant.Repr != expected {
+			t.Errorf("repr didn't match!\n\tExpected: %v\n\tReceived: %#v", expected, *variant.Repr)
+		}
+	default:
+		t.Fatalf("Expected ValueExternalInstance; received: %v", variant)
+	}
+}
+
+type Typ struct {
+	x int
+}
+
+func (t Typ) Method() int {
+	return t.x + 1
+}
+
+func (t *Typ) PtrMethod() bool {
+	return t.x == 1
+}
+
+func TestPointerMethods(t *testing.T) {
+	var o oso.Oso
+	var err error
+
+	if o, err = oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
+
+	if err = o.RegisterClass(reflect.TypeOf(Typ{}), nil); err != nil {
+		t.Fatalf("Register class failed: %v", err)
+	}
+
+	typ := Typ{x: 1}
+	if typ.Method() != 2 {
+		t.Errorf("Bad Method")
+	}
+	if !typ.PtrMethod() {
+		t.Errorf("Bad Method")
+	}
+
+	o.LoadString("rule1(x: Typ, y) if y = x.Method(); rule2(x: Typ, y) if y = x.PtrMethod();")
+
+	test := func(rule string, typ interface{}, y_val interface{}) {
+		results, errors := o.QueryRule(rule, typ, ValueVariable("y"))
+		if err = <-errors; err != nil {
+			t.Error(err.Error())
+		} else {
+			var got []map[string]interface{}
+			expected := map[string]interface{}{"y": y_val}
+			for elem := range results {
+				got = append(got, elem)
+			}
+			if len(got) > 1 {
+				t.Errorf("Received too many results: %v", got)
+			} else if !reflect.DeepEqual(got[0], expected) {
+				t.Errorf("Expected: %v, got: %v", expected, got[0])
+			}
+		}
+	}
+
+	test("rule1", typ, int64(2))
+	test("rule2", typ, true)
 }

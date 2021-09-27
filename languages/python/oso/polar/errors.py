@@ -39,7 +39,7 @@ def get_python_error(err_str, enrich_message=None):
         subkind = None
         details = None
 
-    if details:
+    if details and enrich_message:
         if details.get("stack_trace"):
             details["stack_trace"] = enrich_message(details["stack_trace"])
         if "msg" in details:

@@ -1,7 +1,3 @@
-[submodule "docs/examples/roles/sqlalchemy/basic"]
-	path = docs/examples/roles/sqlalchemy/basic
-	url = https://github.com/osohq/oso-sqlalchemy-roles-guide.git
-	branch = basic_roles_complete
 [submodule "docs/examples/quickstart/go"]
 	path = docs/examples/quickstart/go
 	url = https://github.com/osohq/oso-go-quickstart.git
@@ -30,11 +26,3 @@
 	path = docs/examples/gitclub
 	url = https://github.com/osohq/gitclub.git
 	branch = main
-[submodule "docs/examples/python/getting-started/application"]
-	path = docs/examples/python/getting-started/application
-	url = https://github.com/osohq/oso-flask-tutorial.git
-	branch = authorized
-[submodule "docs/examples/node/getting-started/application"]
-	path = docs/examples/node/getting-started/application
-	url = https://github.com/osohq/oso-express-tutorial.git
-	branch = oso-auth

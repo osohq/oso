@@ -1,5 +1,4 @@
-from oso import Oso
-from polar import Relation
+from oso import Oso, Relation
 
 oso = Oso()
 

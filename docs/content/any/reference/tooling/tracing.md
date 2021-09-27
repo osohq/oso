@@ -69,3 +69,5 @@ query> f(12);
 [debug]           HALT
 False
 ```
+
+Debug mode can be disabled by setting `POLAR_LOG=0` or `POLAR_LOG=off`.
