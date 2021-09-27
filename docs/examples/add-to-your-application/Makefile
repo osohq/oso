@@ -14,8 +14,7 @@ test-node:
 	$(MAKE) -C node test
 
 test-ruby:
-	cd ruby; bundle install
-	cd ruby; bundle exec ruby test.rb
+	$(MAKE) -C ruby test
 
 venv: venv/touchfile
 
