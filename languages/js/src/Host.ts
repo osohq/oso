@@ -29,6 +29,7 @@ import type {
   ExecQueryFn,
   CombineQueryFn,
   DataFilteringQueryParams,
+  NullishOrHasConstructor,
 } from './types';
 import {
   Dict,
@@ -145,7 +146,8 @@ export class Host implements Required<DataFilteringQueryParams> {
    *
    * @param cls Class or class name.
    */
-  getType<Type extends Class>(cls: Type | string): UserType<Type> | undefined {
+  getType<Type extends Class>(cls?: Type | string): UserType<Type> | undefined {
+    if (cls === undefined) return undefined;
     return this.types.get(cls);
   }
 
@@ -313,29 +315,17 @@ export class Host implements Required<DataFilteringQueryParams> {
     left: string,
     right: string
   ): Promise<boolean> {
-    let instance = this.getInstance(id);
-    instance = instance instanceof Promise ? await instance : instance;
-    try {
-      // NOTE(gj): TS is worried about looking up the `.constructor` property
-      // on an `unknown` type. `instance.constructor` will throw a `TypeError`
-      // if `instance` is `null` or `undefined`, but we catch that error down
-      // below and return `false`.
-      //
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      const mro = ancestors(instance.constructor);
-      const leftIndex = mro.indexOf(this.getClass(left));
-      const rightIndex = mro.indexOf(this.getClass(right));
-      if (leftIndex === -1) {
-        return false;
-      } else if (rightIndex === -1) {
-        return true;
-      } else {
-        return leftIndex < rightIndex;
-      }
-    } catch (e) {
-      if (e instanceof TypeError) return false;
-      throw e;
+    let instance = this.getInstance(id) as NullishOrHasConstructor;
+    instance = instance instanceof Promise ? await instance : instance; // eslint-disable-line @typescript-eslint/no-unsafe-assignment
+    const mro = ancestors(instance?.constructor);
+    const leftIndex = mro.indexOf(this.getClass(left));
+    const rightIndex = mro.indexOf(this.getClass(right));
+    if (leftIndex === -1) {
+      return false;
+    } else if (rightIndex === -1) {
+      return true;
+    } else {
+      return leftIndex < rightIndex;
     }
   }
 
@@ -357,21 +347,11 @@ export class Host implements Required<DataFilteringQueryParams> {
    * @internal
    */
   async isa(polarInstance: PolarTerm, name: string): Promise<boolean> {
-    const instance = await this.toJs(polarInstance);
+    const instance = (await this.toJs(
+      polarInstance
+    )) as NullishOrHasConstructor;
     const cls = this.getClass(name);
-    try {
-      // NOTE(gj): TS is worried about looking up the `.constructor` property
-      // on an `unknown` type. `instance.constructor` will throw a `TypeError`
-      // if `instance` is `null` or `undefined`, but we catch that error down
-      // below and return `false`.
-      //
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      return instance instanceof cls || instance.constructor === cls;
-    } catch (e) {
-      if (e instanceof TypeError) return false;
-      throw e;
-    }
+    return instance instanceof cls || instance?.constructor === cls;
   }
 
   /**

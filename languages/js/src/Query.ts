@@ -21,6 +21,7 @@ import type {
   ExternalOp,
   MakeExternal,
   NextExternal,
+  NullishOrHasConstructor,
   PolarTerm,
   QueryResult,
   Result,
@@ -173,9 +174,9 @@ export class Query {
   ): Promise<void> {
     let value;
     try {
-      const receiver = await this.#host.toJs(instance);
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
+      const receiver = (await this.#host.toJs(
+        instance
+      )) as NullishOrHasConstructor;
       const rel = this.#host.getType(receiver?.constructor)?.fields?.get(attr);
       if (rel instanceof Relation) {
         value = await this.handleRelation(receiver, rel);

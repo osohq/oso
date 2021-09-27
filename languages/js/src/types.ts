@@ -706,3 +706,13 @@ export interface UserTypeParams<Type extends Class>
    */
   id: number;
 }
+
+/**
+ * Utility type to represent a JS value that either does or does not have a
+ * constructor property.
+ *
+ * NOTE(gj): I *think* `null` & `undefined` are the only JS values w/o a
+ * `constructor` property (e.g., `(1).constructor` returns `[Function:
+ * Number]`), but I'm not 100% sure of that.
+ */
+export type NullishOrHasConstructor = { constructor: Class } | null | undefined;
