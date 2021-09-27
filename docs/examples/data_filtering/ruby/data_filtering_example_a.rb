@@ -5,7 +5,7 @@ require 'sqlite3'
 require 'oso'
 
 DB_FILE = '/tmp/test.db'
-Relation = Oso::Polar::DataFiltering::Relation
+Relation = Oso::Relation
 
 class Repository < ActiveRecord::Base
   include QueryConfig # This module adds build/exec/combine query functions for the class

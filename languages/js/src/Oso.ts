@@ -2,11 +2,26 @@ import { Polar } from './Polar';
 import { Variable } from './Variable';
 import { Expression } from './Expression';
 import { Pattern } from './Pattern';
-import type { Options, CustomError, obj } from './types';
-import { NotFoundError, ForbiddenError, OsoError } from './errors';
-import { serializeTypes, filterData } from './dataFiltering';
+import type {
+  Options,
+  CustomError,
+  obj,
+  Class,
+  PolarTerm,
+  DataFilteringQueryParams,
+} from './types';
+import {
+  NotFoundError,
+  ForbiddenError,
+  OsoError,
+  UnregisteredClassError,
+} from './errors';
+import { filterData } from './dataFiltering';
+import type { FilterPlan } from './dataFiltering';
 
 /** The Oso authorization API. */
+// TODO(gj): maybe pass DF options to constructor & try to parametrize a
+// `Query` type w/ the return type of the provided buildQuery fn.
 export class Oso<
   Actor = unknown,
   Action = unknown,
@@ -131,7 +146,9 @@ export class Oso<
           return new Set(['*']);
         }
       }
-      actions.add(action);
+      // TODO(gj): do we need to handle the case where `action` is something
+      // other than a `Variable` or an `Action`? E.g., if it's an `Expression`?
+      actions.add(action as Action);
     }
     return actions;
   }
@@ -229,7 +246,9 @@ export class Oso<
           return new Set(['*']);
         }
       }
-      fields.add(field);
+      // TODO(gj): do we need to handle the case where `field` is something
+      // other than a `Variable` or a `Field`? E.g., if it's an `Expression`?
+      fields.add(field as Field);
     }
     return fields;
   }
@@ -244,22 +263,25 @@ export class Oso<
    * @returns A query that selects authorized resources of type `resourceCls`
    */
   async authorizedQuery(
-    actor: any,
-    action: any,
-    resourceCls: any
-  ): Promise<any> {
+    actor: Actor,
+    action: Action,
+    resourceCls: Class<Resource>
+  ): Promise<unknown> {
     const resource = new Variable('resource');
     const host = this.getHost();
-    const clsName = host.types.get(resourceCls)!.name;
+    const clsName = host.getType(resourceCls)?.name;
+    if (clsName === undefined)
+      throw new UnregisteredClassError(resourceCls.name);
+
     const constraint = new Expression('And', [
       new Expression('Isa', [
         resource,
         new Pattern({ tag: clsName, fields: {} }),
       ]),
     ]);
-    let bindings = new Map();
+    const bindings = new Map();
     bindings.set('resource', constraint);
-    let results = this.queryRuleWithBindings(
+    const results = this.queryRuleWithBindings(
       'allow',
       bindings,
       actor,
@@ -272,23 +294,22 @@ export class Oso<
       queryResults.push(result);
     }
 
-    let jsonResults = queryResults.map(result => ({
-      // `Map<string, any> -> {[key: string]: PolarTerm}` b/c Maps aren't
+    const jsonResults = queryResults.map(result => ({
+      // `Map<string, unknown> -> {[key: string]: PolarTerm}` b/c Maps aren't
       // trivially `JSON.stringify()`-able.
-      bindings: [...result.entries()].reduce((obj: obj, [k, v]) => {
+      bindings: [...result.entries()].reduce((obj: obj<PolarTerm>, [k, v]) => {
         obj[k] = host.toPolar(v);
         return obj;
       }, {}),
     }));
-    let resultsStr = JSON.stringify(jsonResults);
-    let typesStr = serializeTypes(host.types);
-    let plan = this.getFfi().buildFilterPlan(
-      typesStr,
+    const resultsStr = JSON.stringify(jsonResults);
+    const plan = this.getFfi().buildFilterPlan(
+      host.serializeTypes(),
       resultsStr,
       'resource',
       clsName
     );
-    return filterData(host, plan);
+    return filterData(host, plan as FilterPlan);
   }
 
   /**
@@ -300,15 +321,17 @@ export class Oso<
    * @param resourceCls Object type.
    * @returns An array of authorized resources.
    */
-  async authorizedResources(
-    actr: any,
-    actn: any,
-    resourceCls: any
-  ): Promise<any[]> {
-    const query = await this.authorizedQuery(actr, actn, resourceCls);
-    return !query
-      ? []
-      : this.getHost().types.get(resourceCls)!.execQuery!(query);
+  async authorizedResources<T extends Resource>(
+    actor: Actor,
+    action: Action,
+    resourceCls: Class<T>
+  ): Promise<T[]> {
+    const query = await this.authorizedQuery(actor, action, resourceCls);
+    if (!query) return [];
+    const userType = this.getHost().getType(resourceCls);
+    if (userType === undefined)
+      throw new UnregisteredClassError(resourceCls.name);
+    return userType.execQuery(query);
   }
 
   /**
@@ -316,11 +339,7 @@ export class Oso<
    * These can be overridden by passing specific implementations to
    * `registerClass`.
    */
-  setDataFilteringQueryDefaults(options: {
-    buildQuery?: any;
-    execQuery?: any;
-    combineQuery?: any;
-  }) {
+  setDataFilteringQueryDefaults(options: DataFilteringQueryParams) {
     if (options.buildQuery) this.getHost().buildQuery = options.buildQuery;
     if (options.execQuery) this.getHost().execQuery = options.execQuery;
     if (options.combineQuery)

@@ -230,6 +230,45 @@ fn query_results_with_externals(query: Query) -> (QueryResults, MockExternal) {
     )
 }
 
+/// equality test for polar expressions that takes symmetric operators
+/// into account, eg. a = b == b = a
+fn commute_ops(u: &Value, v: &Value) -> bool {
+    fn a2p(a: &[Term]) -> (&Value, &Value) {
+        (a[0].value(), a[1].value())
+    }
+    match (u.as_expression(), v.as_expression()) {
+        (
+            Ok(Operation {
+                operator: op_a,
+                args: arg_a,
+            }),
+            Ok(Operation {
+                operator: op_b,
+                args: arg_b,
+            }),
+        ) if op_a == op_b && arg_a.len() == arg_b.len() => {
+            let op = *op_a;
+            if arg_a.len() == 2
+                && (op == Operator::Unify
+                    || op == Operator::Eq
+                    || op == Operator::Neq
+                    || op == Operator::And
+                    || op == Operator::Or)
+            {
+                let (a, b) = (a2p(arg_a), a2p(arg_b));
+                commute_ops(a.0, b.0) && commute_ops(a.1, b.1)
+                    || commute_ops(a.0, b.1) && commute_ops(a.1, b.0)
+            } else {
+                arg_a
+                    .iter()
+                    .enumerate()
+                    .all(|(i, x)| commute_ops(arg_b[i].value(), x.value()))
+            }
+        }
+        _ => u == v,
+    }
+}
+
 #[track_caller]
 #[must_use = "test results need to be asserted"]
 fn eval(p: &mut Polar, query_str: &str) -> bool {
@@ -1672,6 +1711,46 @@ fn test_circular_data() -> TestResult {
         "x = [x, y] and y = [y, x] and x = y",
         RuntimeError::StackOverflow { .. }
     );
+    Ok(())
+}
+
+#[test]
+fn test_data_filtering_dict_specializers() -> TestResult {
+    let pol_a = "allow(x, \"read\", _y: { x: x });";
+    let pol_b = "allow(x, \"read\", _y) if x = _y.x;";
+    let query = "allow(\"gwen\", \"read\", x)";
+    let p = Polar::new();
+    p.load_str(pol_a)?;
+    let mut res_a = query_results!(p.new_query(query, false)?);
+    p.clear_rules();
+    p.load_str(pol_b)?;
+    let mut res_b = query_results!(p.new_query(query, false)?);
+    assert_eq!(res_a.len(), 1);
+    assert_eq!(res_b.len(), 1);
+    let key = sym!("x");
+    let res_a = res_a[0].0.remove(&key).unwrap();
+    let res_b = res_b[0].0.remove(&key).unwrap();
+    assert!(commute_ops(&res_a, &res_b));
+    Ok(())
+}
+
+#[test]
+fn test_data_filtering_pattern_specializers() -> TestResult {
+    let pol_a = "allow(x, \"read\", _y: Dictionary{ x: x });";
+    let pol_b = "allow(x, \"read\", _y: Dictionary) if x = _y.x;";
+    let query = "allow(\"gwen\", \"read\", x)";
+    let p = Polar::new();
+    p.load_str(pol_a)?;
+    let mut res_a = query_results!(p.new_query(query, false)?);
+    p.clear_rules();
+    p.load_str(pol_b)?;
+    let mut res_b = query_results!(p.new_query(query, false)?);
+    assert_eq!(res_a.len(), 1);
+    assert_eq!(res_b.len(), 1);
+    let key = sym!("x");
+    let res_a = res_a[0].0.remove(&key).unwrap();
+    let res_b = res_b[0].0.remove(&key).unwrap();
+    assert!(commute_ops(&res_a, &res_b));
     Ok(())
 }
 

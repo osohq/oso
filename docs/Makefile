@@ -103,11 +103,11 @@ build-search:
 require-algolia-vars: require-ALGOLIA_APPLICATION_ID require-ALGOLIA_ADMIN_API_KEY require-ALGOLIA_INDEX
 
 ## This is the entry for all doc stuff for preview
-ci-preview-docs: require-ALGOLIA_ADMIN_API_KEY build build-search 
+ci-preview-docs: require-ALGOLIA_ADMIN_API_KEY build build-search
 	./searcher -index='preview_OSODOCS' -app_id='KROZ8F05YT'
 
 ## This is the entry for all doc stuff for production
-ci-prod-docs: require-ALGOLIA_ADMIN_API_KEY build-prod build-search 
+ci-prod-docs: require-ALGOLIA_ADMIN_API_KEY build-prod build-search
 	./searcher -index='prod_OSODOCS' -app_id='KROZ8F05YT'
 
 search: require-algolia-vars build-prod build-search
@@ -127,7 +127,10 @@ check-links-deps: .make.check-links-deps.installed
 
 lint: build spelling check-links
 
-test-quickstarts:
-	$(MAKE) -C examples test-quickstarts
+test-quickstarts-release:
+	$(MAKE) -C examples test-quickstarts-release
 
-.PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean spelling build-search search require-algolia-vars check-links check-links-deps lint test-quickstarts
+test-quickstarts-local:
+	$(MAKE) -C examples test-quickstarts-local
+
+.PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean spelling build-search search require-algolia-vars check-links check-links-deps lint test-quickstarts-release test-quickstarts-local

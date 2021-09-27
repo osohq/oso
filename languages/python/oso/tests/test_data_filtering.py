@@ -7,8 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 from dataclasses import dataclass
-from oso import Oso
-from polar import Relation
+from oso import Oso, Relation
 from functools import reduce
 
 
@@ -54,7 +53,7 @@ def t(oso):
         numbers: list
 
     @dataclass
-    class FooLogRecord:
+    class Log:
         id: str
         foo_id: str
         data: str
@@ -67,9 +66,9 @@ def t(oso):
     third_foo = Foo(id="third", bar_id="hello", is_fooey=True, numbers=[2])
     fourth_foo = Foo(id="fourth", bar_id="goodbye", is_fooey=True, numbers=[2, 1])
 
-    fourth_log_a = FooLogRecord(id="a", foo_id="fourth", data="hello")
-    third_log_b = FooLogRecord(id="b", foo_id="third", data="world")
-    another_log_c = FooLogRecord(id="c", foo_id="another", data="steve")
+    fourth_log_a = Log(id="a", foo_id="fourth", data="hello")
+    third_log_b = Log(id="b", foo_id="third", data="world")
+    another_log_c = Log(id="c", foo_id="another", data="steve")
 
     bars = [hello_bar, goodbye_bar, hershey_bar]
     foos = [something_foo, another_foo, third_foo, fourth_foo]
@@ -117,7 +116,7 @@ def t(oso):
             ),
             "logs": Relation(
                 kind="many",
-                other_type="FooLogRecord",
+                other_type="Log",
                 my_field="id",
                 other_field="foo_id",
             ),
@@ -125,7 +124,7 @@ def t(oso):
         build_query=get_foos,
     )
     oso.register_class(
-        FooLogRecord,
+        Log,
         types={
             "id": str,
             "foo_id": str,
@@ -140,7 +139,7 @@ def t(oso):
     return {
         "Foo": Foo,
         "Bar": Bar,
-        "FooLogRecord": FooLogRecord,
+        "Log": Log,
         "another_foo": another_foo,
         "third_foo": third_foo,
         "something_foo": something_foo,
@@ -388,13 +387,13 @@ def test_var_in_var(oso, t):
 
 def test_parent_child_cases(oso, t):
     policy = """
-    allow(log: FooLogRecord, "thence", foo: Foo) if
+    allow(log: Log, "thence", foo: Foo) if
       log.foo = foo;
-    allow(log: FooLogRecord, "thither", foo: Foo) if
+    allow(log: Log, "thither", foo: Foo) if
       log in foo.logs;
-    allow(log: FooLogRecord, "glub", foo: Foo) if
+    allow(log: Log, "glub", foo: Foo) if
       log.foo = foo and log in foo.logs;
-    allow(log: FooLogRecord, "bluh", foo: Foo) if
+    allow(log: Log, "bluh", foo: Foo) if
       log in foo.logs and log.foo = foo;
     """
     oso.load_str(policy)
@@ -404,6 +403,35 @@ def test_parent_child_cases(oso, t):
     check_authz(oso, log, "thither", t["Foo"], [foo])
     check_authz(oso, log, "glub", t["Foo"], [foo])
     check_authz(oso, log, "bluh", t["Foo"], [foo])
+
+
+def test_specializers(oso, t):
+    policy = """
+        allow(foo: Foo,             "NoneNone", log) if foo = log.foo;
+        allow(foo,                  "NoneCls",  log: Log) if foo = log.foo;
+        allow(foo,                  "NoneDict", _: {foo:foo});
+        allow(foo,                  "NonePtn",  _: Log{foo: foo});
+        allow(foo: Foo,             "ClsNone",  log) if log in foo.logs;
+        allow(foo: Foo,             "ClsCls",   log: Log) if foo = log.foo;
+        allow(foo: Foo,             "ClsDict",  _: {foo: foo});
+        allow(foo: Foo,             "ClsPtn",   _: Log{foo: foo});
+        allow(_: {logs: logs},      "DictNone", log) if log in logs;
+        allow(_: {logs: logs},      "DictCls",  log: Log) if log in logs;
+        allow(foo: {logs: logs},    "DictDict", log: {foo: foo}) if log in logs;
+        allow(foo: {logs: logs},    "DictPtn",  log: Log{foo: foo}) if log in logs;
+        allow(_: Foo{logs: logs},   "PtnNone",  log) if log in logs;
+        allow(_: Foo{logs: logs},   "PtnCls",   log: Log) if log in logs;
+        allow(foo: Foo{logs: logs}, "PtnDict",  log: {foo: foo}) if log in logs;
+        allow(foo: Foo{logs: logs}, "PtnPtn",   log: Log{foo: foo}) if log in logs;
+    """
+    oso.load_str(policy)
+    Log = t["Log"]
+    parts = ["None", "Cls", "Dict", "Ptn"]
+    for a in parts:
+        for b in parts:
+            for log in t["logs"]:
+                for foo in filter(lambda f: f.id == log.foo_id, t["foos"]):
+                    check_authz(oso, foo, a + b, Log, [log])
 
 
 def test_val_in_var(oso, t):
@@ -428,13 +456,13 @@ def test_var_in_value(oso, t):
     # This is I think the thing that MikeD wants though, for this to come through
     # as an in so the SQL can do an IN.
     policy = """
-    allow("steve", "get", resource: FooLogRecord) if
+    allow("steve", "get", resource: Log) if
         resource.data in ["hello", "world"];
     """
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", t["fourth_log_a"])
 
-    results = list(oso.authorized_resources("steve", "get", t["FooLogRecord"]))
+    results = list(oso.authorized_resources("steve", "get", t["Log"]))
     assert unord_eq(results, [t["fourth_log_a"], t["third_log_b"]])
 
 
@@ -508,12 +536,12 @@ def test_const_not_in_coll(oso, t):
 
 def test_param_field(oso, t):
     policy = """
-    allow(actor, action, resource: FooLogRecord) if
+    allow(actor, action, resource: Log) if
         actor = resource.data and
         action = resource.id;
     """
     oso.load_str(policy)
-    check_authz(oso, "steve", "c", t["FooLogRecord"], [t["another_log_c"]])
+    check_authz(oso, "steve", "c", t["Log"], [t["another_log_c"]])
 
 
 @pytest.fixture

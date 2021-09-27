@@ -1,3 +1,6 @@
+import type { Filter, Relation } from './dataFiltering';
+import { isObj } from './helpers';
+
 /**
  * Polar string type.
  *
@@ -282,8 +285,9 @@ export interface PolarTerm {
  *
  * @internal
  */
-function isPolarValue(v: any): v is PolarValue {
-  if (typeof v !== 'object' || v === null) return false;
+function isPolarValue(x: unknown): x is PolarValue {
+  if (!isObj(x)) return false;
+  const v = x as unknown as PolarValue;
   return (
     isPolarStr(v) ||
     isPolarNum(v) ||
@@ -304,8 +308,9 @@ function isPolarValue(v: any): v is PolarValue {
  *
  * @internal
  */
-export function isPolarTerm(v: any): v is PolarTerm {
-  return isPolarValue(v?.value);
+export function isPolarTerm(v: unknown): v is PolarTerm {
+  if (!isObj(v)) return false;
+  return isPolarValue(v.value);
 }
 
 /**
@@ -313,7 +318,7 @@ export function isPolarTerm(v: any): v is PolarTerm {
  *
  * @internal
  */
-export type Class<T extends {} = {}> = new (...args: any[]) => T;
+export type Class<T extends {} = {}> = new (...args: any[]) => T; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 /**
  * The `Result` [[`QueryEvent`]] represents a single result from a query
@@ -395,7 +400,7 @@ export interface ExternalIsa {
  */
 export interface ExternalIsaWithPath {
   baseTag: string;
-  path: string[];
+  path: PolarTerm[];
   classTag: string;
   callId: number;
 }
@@ -532,7 +537,7 @@ export interface QueryEvent {
  * `false`, the query yielded at least one result and therefore succeeded.
  */
 export type QueryResult = AsyncGenerator<
-  Map<string, any>,
+  Map<string, unknown>,
   void,
   undefined | void
 >;
@@ -542,7 +547,7 @@ export type QueryResult = AsyncGenerator<
  *
  * @hidden
  */
-export type obj = { [key: string]: any };
+export type obj<T = unknown> = { [key: string]: T };
 
 /**
  * A function that compares two values and returns `true` if they are equal and
@@ -552,15 +557,9 @@ export type obj = { [key: string]: any };
  * [[`Oso.constructor`]] in order to override the default equality function,
  * which uses `==` (loose equality).
  */
-export type EqualityFn = (x: any, y: any) => boolean;
+export type EqualityFn = (x: unknown, y: unknown) => boolean;
 
-export type CustomError = new (...args: any[]) => Error;
-
-/**
- * Functions of one or two arguments.
- */
-export type UnaryFn = (x: any) => any;
-export type BinaryFn = (x: any, y: any) => any;
+export type CustomError = new (...args: any[]) => Error; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 /**
  * Optional configuration for the [[`Oso.constructor`]].
@@ -591,17 +590,32 @@ export interface Options {
  *
  * @internal
  */
-export function isIterableIterator(x: any): boolean {
-  return typeof x?.next === 'function' && Symbol.iterator in Object(x);
+export function isIterableIterator(x: unknown): x is IterableIterator<unknown> {
+  return typeof Object(x).next === 'function' && isIterable(x);
 }
 
 /**
- * Type guard to test if a value is an `AsyncIterator`.
+ * Type guard to test if a value is an `Iterable`.
  *
  * @internal
  */
-export function isAsyncIterator(x: any): boolean {
-  return Symbol.asyncIterator in Object(x);
+export function isIterable(x: unknown): x is Iterable<unknown> {
+  return (
+    Symbol.iterator in Object(x) &&
+    typeof Object(x)[Symbol.iterator] === 'function'
+  );
+}
+
+/**
+ * Type guard to test if a value is an `AsyncIterable`.
+ *
+ * @internal
+ */
+export function isAsyncIterable(x: unknown): x is AsyncIterable<unknown> {
+  return (
+    Symbol.asyncIterator in Object(x) &&
+    typeof Object(x)[Symbol.asyncIterator] === 'function'
+  );
 }
 
 /**
@@ -617,5 +631,68 @@ export function isAsyncIterator(x: any): boolean {
  * @internal
  */
 export class Dict extends Object {
-  [index: string]: any;
+  [index: string]: unknown;
+}
+
+export type BuildQueryFn<Q = any> = (filters: Filter[]) => Q; // eslint-disable-line @typescript-eslint/no-explicit-any
+export type ExecQueryFn<Q = any, ReturnType = any> = (query: Q) => ReturnType; // eslint-disable-line @typescript-eslint/no-explicit-any
+export type CombineQueryFn<Q = any> = (a: Q, b: Q) => Q; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+// NOTE(gj): these are *required* if the user wants to use Data Filtering.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface DataFilteringQueryParams<Query = any, ReturnType = any> {
+  /**
+   * A function to produce a query.
+   */
+  buildQuery?: BuildQueryFn<Query>;
+  /**
+   * A function to execute a query produced by [[`ClassParams.buildQuery`]].
+   */
+  execQuery?: ExecQueryFn<Query, ReturnType>;
+  /**
+   * A function to merge two queries produced by [[`ClassParams.buildQuery`]].
+   */
+  combineQuery?: CombineQueryFn<Query>;
+}
+
+/**
+ * Optional parameters for [[`Polar.registerClass`]] and [[`Host.cacheClass`]].
+ */
+export interface ClassParams extends DataFilteringQueryParams {
+  /**
+   * Explicit name to use for the class in Polar. Defaults to the class's
+   * `name` property.
+   */
+  name?: string;
+  /**
+   * A Map or object with string keys containing types for fields. Used for
+   * data filtering.
+   */
+  fields?: obj<Class | Relation> | Map<string, Class | Relation>;
+}
+
+/**
+ * Parameters for [[`UserType`]].
+ */
+export interface UserTypeParams<Type extends Class>
+  extends Required<DataFilteringQueryParams> {
+  /**
+   * Class registered as a user type.
+   */
+  cls: Type;
+  /**
+   * Explicit name to use for the class in Polar.
+   */
+  name: string;
+  /**
+   * A Map with string keys containing types for fields. Used for data
+   * filtering.
+   */
+  fields: Map<string, Class | Relation>;
+  /**
+   * Polar instance ID for the registered class.
+   *
+   * @internal
+   */
+  id: number;
 }
