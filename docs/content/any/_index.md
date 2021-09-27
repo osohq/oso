@@ -1,5 +1,7 @@
 ---
 ---
+# Batteries-Included Framework for Application Authorization
+
 Oso is a batteries-included framework for building authorization in your application.
 With Oso, you can:
 
