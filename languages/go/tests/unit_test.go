@@ -315,7 +315,6 @@ func (t *Typ) PtrMethod() bool {
 func TestPointerMethods(t *testing.T) {
 	var o oso.Oso
 	var err error
-	//var msg string
 
 	if o, err = oso.NewOso(); err != nil {
 		t.Fatalf("Failed to set up Oso: %v", err)
