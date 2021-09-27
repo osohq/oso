@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1632775044607,
+  "lastUpdate": 1632778666972,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -108831,6 +108831,240 @@ window.BENCHMARK_DATA = {
             "name": "partial_rule_depth/100",
             "value": 67718689,
             "range": "± 459258",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "17556281+gj@users.noreply.github.com",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ab774b0e1533396f1409e8722807e789cb9b3fed",
+          "message": "ESLint Part 2: Now With More Linting (#1227)\n\n* That was non-obvious\r\n\r\nfrom https://eslint.org/docs/user-guide/configuring/configuration-files#how-do-overrides-work:\r\n\r\n> Nested overrides setting will be applied only if the glob patterns of\r\n> both of the parent config and the child config matched. This is the\r\n> same when the extended configs have an overrides setting.\r\n\r\n* Lint test/parity.ts\r\n\r\n* Lint test/helpers.ts\r\n\r\n* Lint test/classes.ts\r\n\r\n* Lint src/types.ts\r\n\r\n* Lint src/messages.ts\r\n\r\n* Lint src/helpers.ts & add tests for ancestors()\r\n\r\n* Lint src/errors.ts\r\n\r\n* Lint src/enforcement.test.ts\r\n\r\n* Lint src/dataFiltering.ts\r\n\r\n* Lint src/Host.ts\r\n\r\n* Lint src/dataFiltering.test.ts\r\n\r\n* Lint src/Query.ts\r\n\r\n* Lint src/Query.test.ts\r\n\r\n* Lint src/Polar.ts\r\n\r\n* Return String instead of using serde_wasm_bindgen\r\n\r\n* Lint src/Polar.test.ts\r\n\r\n* Lint src/Oso.test.ts\r\n\r\n* Lint src/Host.test.ts\r\n\r\n* Lint src/Oso.ts\r\n\r\n* Update languages/js/src/Query.ts\r\n\r\n* Update languages/js/src/helpers.ts\r\n\r\n* Address https://github.com/osohq/oso/pull/1227#discussion_r715813796\r\n\r\n* Fix new issues from recent PRs\r\n\r\n* Happier with these type guards for [Async]Iterable[Iterator]\r\n\r\n* Don't overuse isObj()\r\n\r\n* Comments\r\n\r\n* Appease the Queen of Types\r\n\r\nCo-authored-by: gw <gwen@osohq.com>",
+          "timestamp": "2021-09-27T17:24:21-04:00",
+          "tree_id": "9f00d708cfd1322c6eea9575c6b1ca75c6cc9a06",
+          "url": "https://github.com/osohq/oso/commit/ab774b0e1533396f1409e8722807e789cb9b3fed"
+        },
+        "date": 1632778662859,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 64244,
+            "range": "± 13764",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 2822882,
+            "range": "± 120043",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 13560248,
+            "range": "± 477427",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 26925424,
+            "range": "± 1471725",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 1155,
+            "range": "± 297",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 3030,
+            "range": "± 194",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 70728,
+            "range": "± 4472",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 621012,
+            "range": "± 19016",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 24560,
+            "range": "± 3904",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 25267,
+            "range": "± 2269",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 24485,
+            "range": "± 2521",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 24845,
+            "range": "± 1917",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 21673,
+            "range": "± 1392",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6935,
+            "range": "± 1186",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 8691,
+            "range": "± 2503",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 10934,
+            "range": "± 1360",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 18750,
+            "range": "± 9466",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 8222,
+            "range": "± 861",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 17643,
+            "range": "± 1683",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 10743,
+            "range": "± 1178",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "load_policy",
+            "value": 1155371,
+            "range": "± 53653",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/1",
+            "value": 45634,
+            "range": "± 5372",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/5",
+            "value": 157828,
+            "range": "± 11253",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/10",
+            "value": 294922,
+            "range": "± 13120",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/20",
+            "value": 607699,
+            "range": "± 18417",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/40",
+            "value": 1353606,
+            "range": "± 57587",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/80",
+            "value": 3060385,
+            "range": "± 119246",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/100",
+            "value": 4072272,
+            "range": "± 141786",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/1",
+            "value": 140207,
+            "range": "± 12396",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/5",
+            "value": 436177,
+            "range": "± 40189",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/10",
+            "value": 962062,
+            "range": "± 54011",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/20",
+            "value": 2592124,
+            "range": "± 70730",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/40",
+            "value": 9672203,
+            "range": "± 409818",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/80",
+            "value": 59895971,
+            "range": "± 3891423",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/100",
+            "value": 111354057,
+            "range": "± 2485974",
             "unit": "ns/iter"
           }
         ]
