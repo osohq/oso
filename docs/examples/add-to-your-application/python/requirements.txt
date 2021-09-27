@@ -1,0 +1,5 @@
+-e ../../../../languages/python/oso
+pytest
+black
+sqlalchemy
+flask

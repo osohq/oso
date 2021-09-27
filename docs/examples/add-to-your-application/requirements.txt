@@ -1,0 +1,2 @@
+-e ../../../languages/python/oso
+pytest
