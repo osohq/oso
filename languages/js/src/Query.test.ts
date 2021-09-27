@@ -130,9 +130,9 @@ describe('#registerCall', () => {
       },
       arrow: () => Promise.resolve([1, 2, 3]),
       generator: async function* () {
-        yield 1;
-        yield 2;
-        yield 3;
+        yield await Promise.resolve(1);
+        yield await Promise.resolve(2);
+        yield await Promise.resolve(3);
       },
       iterator: {
         [Symbol.asyncIterator]() {

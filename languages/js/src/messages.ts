@@ -14,7 +14,7 @@ enum MessageKind {
  *
  * @internal
  */
-interface Message {
+export interface Message {
   kind: MessageKind;
   msg: string;
 }
@@ -24,7 +24,7 @@ interface Message {
  *
  * @internal
  */
-export function processMessage(message: Message) {
+export function processMessage(message: Message): void {
   switch (message.kind) {
     case MessageKind.Print:
       console.log(message.msg);

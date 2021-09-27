@@ -308,8 +308,8 @@ export class Oso<
       resultsStr,
       'resource',
       clsName
-    );
-    return filterData(host, plan as FilterPlan);
+    ) as FilterPlan;
+    return filterData(host, plan);
   }
 
   /**
@@ -331,7 +331,7 @@ export class Oso<
     const userType = this.getHost().getType(resourceCls);
     if (userType === undefined)
       throw new UnregisteredClassError(resourceCls.name);
-    return userType.execQuery(query);
+    return (await userType.execQuery(query)) as T[];
   }
 
   /**
@@ -339,7 +339,7 @@ export class Oso<
    * These can be overridden by passing specific implementations to
    * `registerClass`.
    */
-  setDataFilteringQueryDefaults(options: DataFilteringQueryParams) {
+  setDataFilteringQueryDefaults(options: DataFilteringQueryParams): void {
     if (options.buildQuery) this.getHost().buildQuery = options.buildQuery;
     if (options.execQuery) this.getHost().execQuery = options.execQuery;
     if (options.combineQuery)
