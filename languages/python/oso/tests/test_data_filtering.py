@@ -293,6 +293,206 @@ def test_sqlalchemy_neq(oso, sqlalchemy_t):
     )
 
 
+# cf. test_flask_model
+def test_model(oso, t):
+    policy = 'allow("gwen", "get", foo: Foo) if foo.id = "something";'
+    oso.load_str(policy)
+    check_authz(oso, 'gwen', 'get', t['Foo'], [t['something_foo']])
+
+    policy = """
+    allow("gwen", "get", foo: Foo) if foo.id = "something";
+    allow("gwen", "get", foo: Foo) if foo.id = "another";
+    """
+
+    oso.clear_rules()
+    oso.load_str(policy)
+    check_authz(oso, 'gwen', 'get', t['Foo'], [t['another_foo'], t['something_foo']])
+
+
+def test_authorize_scalar_attribute_eq(oso, t):
+    oso.load_str("""
+        allow(_: Bar, "read", foo: Foo) if
+            foo.is_fooey;
+        allow(bar: Bar, "read", foo: Foo) if
+            foo.bar = bar;
+    """)
+    bar = t['bars'][0]
+    results = list(oso.authorized_resources(bar, 'read', t['Foo']))
+    assert len(results) == 4
+    bar = t['bars'][1]
+    results = list(oso.authorized_resources(bar, 'read', t['Foo']))
+    assert len(results) == 3
+
+def test_authorize_scalar_attribute_condition(oso, t):
+    oso.load_str("""
+        allow(bar: Bar, "read", foo: Foo) if
+            foo.bar.is_cool = true and
+            foo.bar.id = bar.id;
+        allow(_: Bar, "read", foo: Foo) if
+            foo.bar.is_cool = true and
+            foo.is_fooey = true;
+        allow(bar: Bar, "read", foo: Foo) if
+            foo.bar.is_cool = false and
+            bar.is_still_cool = true;
+    """)
+    bar = t['bars'][0]
+    results = list(oso.authorized_resources(bar, 'read', t['Foo']))
+    assert len(results) == 4
+    bar = t['bars'][1]
+    results = list(oso.authorized_resources(bar, 'read', t['Foo']))
+    assert len(results) == 3
+    bar = t['bars'][2]
+    results = list(oso.authorized_resources(bar, 'read', t['Foo']))
+    assert len(results) == 2
+
+def test_in_multiple_attribute_relationship(oso, t):
+    oso.load_str("""
+        allow(_, "read", _: Foo{is_fooey: false});
+        allow(bar, "read", _: Foo{bar: bar});
+        allow(_, "read", foo: Foo) if
+            num in foo.numbers and
+            foo.bar.is_cool and
+            num = 1;
+        allow(_, "read", foo: Foo) if
+            num in foo.numbers and
+            foo.bar.is_cool and
+            num = 2;
+    """)
+
+    bars = t['bars']
+    foo = t['Foo']
+    results = list(oso.authorized_resources(bars[0], 'read', foo))
+    assert len(results) == 3
+    results = list(oso.authorized_resources(bars[1], 'read', foo))
+    assert len(results) == 4
+    results = list(oso.authorized_resources(bars[2], 'read', foo))
+    assert len(results) == 3
+
+def test_nested_relationship_many_single(oso, t):
+    oso.load_str("""
+        allow(log: FooLogRecord, "read", bar: Bar) if
+            foo in bar.foos and
+            log.foo_id = foo.id;
+    """)
+    bar = t['Bar']
+    for log in t['logs']:
+        results = list(oso.authorized_resources(log, 'read', bar))
+        assert len(results) == 1
+
+
+def test_nested_relationship_many_many(oso, t):
+    oso.load_str("""
+        allow(log: FooLogRecord, "read", bar: Bar) if
+            foo in bar.foos and
+            log in foo.logs;
+    """)
+    bar = t['Bar']
+    for log in t['logs']:
+        results = list(oso.authorized_resources(log, 'read', bar))
+        assert len(results) == 1
+
+
+def test_nested_relationship_many_many_constrained(oso, t):
+    oso.load_str("""
+        allow(_, "read", bar: Bar) if
+            foo in bar.foos and
+            log in foo.logs and
+            log.data = "steve";
+    """)
+    Bar = t['Bar']
+    hello_bar = t['bars'][0]
+    check_authz(oso, 'gwen', 'read', Bar, [hello_bar])
+
+# TODO
+# def test_nested_relationship_many_many_many_constrained(oso, t):
+
+def test_partial_in_collection(oso, t):
+    oso.load_str("""
+        allow(bar, "read", foo: Foo) if foo in bar.foos;
+    """)
+    bars = t['bars']
+    Foo = t['Foo']
+    result = list(oso.authorized_resources(bars[1], 'read', Foo))
+    assert result == [t['fourth_foo']]
+
+def test_empty_constraints_in(oso, t):
+    # FIXME 2nd clause shouldn't be needed
+    oso.load_str("""
+        allow(_, "read", foo: Foo) if _n in foo.numbers;
+    """)
+
+    result = list(oso.authorized_resources('gwen', 'read', t['Foo']))
+    assert len(result) == 3
+
+
+def test_in_with_constraints_but_no_matching_object(oso, t):
+    oso.load_str("""
+        allow(_, "read", foo: Foo) if n in foo.numbers and n = 99;
+    """)
+
+    result = list(oso.authorized_resources('gwen', 'read', t['Foo']))
+    assert len(result) == 0
+
+
+def test_redundant_in_on_same_field(oso, t):
+    oso.load_str("""
+        allow(_, "read", foo: Foo) if
+            m in foo.numbers and
+            n in foo.numbers and
+            m = 1 and n = 2;
+    """)
+
+    result = list(oso.authorized_resources('gwen', 'read', t['Foo']))
+    assert len(result) == 1
+
+@pytest.mark.xfail(reason="???")
+def test_unify_ins(oso, t):
+    oso.load_str("""
+        allow(_, "read", bar: Bar) if
+            foo1 in bar.foos and
+            foo2 in bar.foos and
+            foo1.id = foo2.id;
+    """)
+
+    result = list(oso.authorized_resources('gwen', 'read', t['Bar']))
+    assert len(result) == 3
+
+@pytest.mark.xfail(reason="???")
+def test_deeply_nested_in(oso, t):
+    oso.load_str("""
+        allow(_, _, f0: Foo) if
+            f1 in f0.bar.foos and f1 != f0 and
+            f2 in f1.bar.foos and f2 != f1 and
+            f3 in f2.bar.foos and f3 != f2 and
+            f4 in f3.bar.foos and f4 != f3;
+    """)
+
+    result = list(oso.authorized_resources('gwen', 'read', t['Foo']))
+    assert len(result) == 3
+
+
+@pytest.mark.xfail(reason="???")
+def test_in_intersection(oso, t):
+    oso.load_str("""
+        allow(_, _, foo: Foo) if
+            n in foo.numbers and
+            f in foo.bar.foos and
+            n in f.numbers;
+    """)
+    result = list(oso.authorized_resources('gwen', 'read', t['Foo']))
+    assert len(result) == 3
+
+
+def test_partial_isa_with_path(oso, t):
+    oso.load_str("""
+        allow(_, _, foo: Foo) if check(foo.bar);
+        check(foo: Foo) if foo.bar.id = "hello";
+        check(bar: Bar) if bar.id = "goodbye";
+    """)
+
+    result = list(oso.authorized_resources('gwen', 'read', t['Foo']))
+    assert len(result) == 1
+
 def test_no_relationships(oso, t):
     # Write a policy
     policy = """
@@ -360,7 +560,7 @@ def test_known_results(oso):
     assert results == []
 
 
-def test_var_in_values(oso, t):
+def test_scalar_in_list(oso, t):
     policy = """
     allow("steve", "get", resource: Foo) if
         resource.bar = bar and
@@ -406,7 +606,7 @@ def test_parent_child_cases(oso, t):
     check_authz(oso, log, "bluh", t["Foo"], [foo])
 
 
-def test_val_in_var(oso, t):
+def test_ground_object_in_collection(oso, t):
     # value in var
     oso.clear_rules()
     policy = """
@@ -418,6 +618,19 @@ def test_val_in_var(oso, t):
 
     results = list(oso.authorized_resources("steve", "get", t["Foo"]))
     assert results == [t["fourth_foo"]]
+
+
+@pytest.mark.xfail(reason="not yet supported")
+def test_forall_in_collection(oso, t):
+    oso.load_str('allow(_, _, bar: Bar) if forall(foo in bar.foos, foo.is_fooey = true);')
+    results = list(oso.authorized_resources('gwen', 'get', t['Bar']))
+    assert len(results) == 3
+
+@pytest.mark.xfail(reason="not yet supported")
+def test_no_objects_collection_condition(oso, t):
+    oso.load_str('allow(_, _, bar: Bar) if not (foo in bar.foos and foo.is_fooey);')
+    results = list(oso.authorized_resources('gwen', 'get', t['Bar']))
+    assert len(results) == 0
 
 
 def test_var_in_value(oso, t):
@@ -455,7 +668,7 @@ def test_or(oso, t):
     assert len(results) == 2
 
 
-def test_field_cmp_field(oso, t):
+def test_field_comparison(oso, t):
     policy = """
     allow("gwen", "eat", bar: Bar) if
         bar.is_cool = bar.is_still_cool;
