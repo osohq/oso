@@ -111,7 +111,7 @@ jobs:
 
       ### Push to S3 + invalidate cache
       - name: deploy
-        run: s3deploy -bucket ${{ github.event.inputs.url }} -distribution-id E1MY35FKBOYAV1 -path v/main -source public -region us-east-1
+        run: s3deploy -bucket ${{ github.event.inputs.url }}  -path v/main -source public -region us-east-1
         working-directory: docs
       - name: cloudfront invalidate docs preview
         run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"
