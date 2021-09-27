@@ -1,6 +1,6 @@
 module github.com/osohq/go-oso
 
-go 1.13
+go 1.12
 
 require (
 	github.com/goccy/go-yaml v1.8.5
