@@ -1,6 +1,6 @@
 require 'oso'
 
-Relation = Oso::Polar::DataFiltering::Relation
+Relation = Oso::Relation
 
 oso = Oso.new
 
