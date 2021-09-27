@@ -313,7 +313,7 @@ func TestZeroValueRepr(t *testing.T) {
 	case ValueExternalInstance:
 		expected := "oso_test.Foo{Name: Num:0}"
 		if *variant.Repr != expected {
-			t.Errorf("Zero-value Foo{} repr didn't match.\n\tExpected: %v\n\tReceived: %#v", expected, *variant.Repr)
+			t.Errorf("repr didn't match!\n\tExpected: %v\n\tReceived: %#v", expected, *variant.Repr)
 		}
 	default:
 		t.Fatalf("Expected ValueExternalInstance; received: %v", variant)
@@ -327,7 +327,7 @@ func TestZeroValueRepr(t *testing.T) {
 	case ValueExternalInstance:
 		expected := "oso_test.Foo{Name:Zooey Num:42}"
 		if *variant.Repr != expected {
-			t.Errorf("Zero-value Foo{} repr didn't match.\n\tExpected: %v\n\tReceived: %#v", expected, *variant.Repr)
+			t.Errorf("repr didn't match!\n\tExpected: %v\n\tReceived: %#v", expected, *variant.Repr)
 		}
 	default:
 		t.Fatalf("Expected ValueExternalInstance; received: %v", variant)
