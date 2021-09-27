@@ -106,8 +106,7 @@ def combine_query(q1, q2):
     return q1.union(q2)
 
 
-from oso import Oso
-from polar import Relation
+from oso import Oso, Relation
 
 oso = Oso()
 
