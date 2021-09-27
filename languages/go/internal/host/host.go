@@ -329,13 +329,7 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		var repr string
-		value := reflect.ValueOf(v)
-		if value.IsZero() {
-			repr = fmt.Sprintf("%v{}", value.Type())
-		} else {
-			repr = fmt.Sprintf("%v{%v}", value.Type(), v)
-		}
+		repr := fmt.Sprintf("%T%+v", v, v)
 		inner := ValueExternalInstance{
 			InstanceId:  *instanceID,
 			Constructor: nil,

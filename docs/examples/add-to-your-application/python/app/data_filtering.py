@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from .routes import serialize, app
 from . import models
 
@@ -68,7 +70,7 @@ oso.register_class(
     combine_query=lambda q1, q2: q1.union(q2),
 )
 
-oso.load_files(["main.polar"])
+oso.load_files([Path(__file__).parent / "main.polar"])
 # docs: end-data-filtering
 
 class User:

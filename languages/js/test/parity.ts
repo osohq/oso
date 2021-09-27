@@ -1,5 +1,6 @@
 import { Oso } from '../src/Oso';
 import { Variable } from '../src/Variable';
+import { join } from 'path';
 
 const oso = new Oso();
 
@@ -27,7 +28,7 @@ namespace B {
       this.y = y;
     }
 
-    foo() {
+    foo(): number {
       return -1;
     }
   }
@@ -45,7 +46,7 @@ class E {
 
 oso.registerClass(E);
 
-(async function () {
+void (async function () {
   // Test that a custom error type is thrown.
   let exceptionThrown = false;
   try {
@@ -83,7 +84,6 @@ oso.registerClass(E);
   // In tests it's `languages/js/test/parity.ts`
   // In parity tests it's `js_package/dist/test/parity.js`
   // In both these cases the relative path to the test.polar file is the same.
-  const { join } = require('path');
   await oso.loadFiles([join(__dirname, '../../../test/test.polar')]);
 
   if (!(await oso.isAllowed('a', 'b', 'c'))) throw new Error();

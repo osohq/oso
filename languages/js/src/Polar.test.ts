@@ -39,6 +39,7 @@ import {
   PolarFileExtensionError,
   InvalidIteratorError,
 } from './errors';
+import * as rolesHelpers from '../test/rolesHelpers';
 
 test('it works', async () => {
   const p = new Polar();
@@ -93,7 +94,7 @@ describe('#registerClass', () => {
 Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
     );
     await expect(qvar(p, 'x in new Foo("A").b', 'x', true)).rejects.toThrow(
-      'function is not iterable'
+      "'function' is not iterable"
     );
     expect(await qvar(p, 'x in new Foo("A").b()', 'x', true)).toStrictEqual(
       'b'
@@ -175,7 +176,8 @@ Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
 
     test('can unify instances with a custom equality function', async () => {
       const p = new Polar({
-        equalityFn: (x: any, y: any) => x.family === y.family, // eslint-disable-line @typescript-eslint/no-explicit-any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+        equalityFn: (x: any, y: any) => x.family === y.family,
       });
       p.registerClass(Animal);
       await p.loadStr(`
@@ -847,8 +849,6 @@ test('handles expressions', async () => {
   const expected = new Expression('And', [gt]);
   expect(x).toStrictEqual(expected);
 });
-
-import * as rolesHelpers from '../test/rolesHelpers';
 
 // test_roles_integration
 describe('Oso Roles', () => {

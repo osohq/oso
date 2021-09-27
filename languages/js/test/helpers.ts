@@ -1,3 +1,5 @@
+import write from 'temp-write';
+
 import type { Polar } from '../src/Polar';
 import { Predicate } from '../src/Predicate';
 import type { obj } from '../src/types';
@@ -46,7 +48,7 @@ export function map(obj?: obj): Map<string, unknown> {
 }
 
 export function tempFile(contents: string, name?: string): Promise<string> {
-  return require('temp-write')(contents, name);
+  return write(contents, name);
 }
 
 export function tempFileFx(): Promise<string> {

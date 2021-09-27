@@ -318,7 +318,7 @@ export function isPolarTerm(v: unknown): v is PolarTerm {
  *
  * @internal
  */
-export type Class<T extends {} = {}> = new (...args: any[]) => T; // eslint-disable-line @typescript-eslint/no-explicit-any
+export type Class<T = unknown> = new (...args: any[]) => T; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 /**
  * The `Result` [[`QueryEvent`]] represents a single result from a query
@@ -591,7 +591,9 @@ export interface Options {
  * @internal
  */
 export function isIterableIterator(x: unknown): x is IterableIterator<unknown> {
-  return typeof Object(x).next === 'function' && isIterable(x);
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  return typeof x?.next === 'function' && isIterable(x);
 }
 
 /**
@@ -600,10 +602,14 @@ export function isIterableIterator(x: unknown): x is IterableIterator<unknown> {
  * @internal
  */
 export function isIterable(x: unknown): x is Iterable<unknown> {
-  return (
-    Symbol.iterator in Object(x) &&
-    typeof Object(x)[Symbol.iterator] === 'function'
-  );
+  try {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    return Symbol.iterator in x;
+  } catch (e) {
+    if (e instanceof TypeError) return false;
+    throw e;
+  }
 }
 
 /**
@@ -612,10 +618,14 @@ export function isIterable(x: unknown): x is Iterable<unknown> {
  * @internal
  */
 export function isAsyncIterable(x: unknown): x is AsyncIterable<unknown> {
-  return (
-    Symbol.asyncIterator in Object(x) &&
-    typeof Object(x)[Symbol.asyncIterator] === 'function'
-  );
+  try {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    return Symbol.asyncIterator in x;
+  } catch (e) {
+    if (e instanceof TypeError) return false;
+    throw e;
+  }
 }
 
 /**
@@ -696,3 +706,13 @@ export interface UserTypeParams<Type extends Class>
    */
   id: number;
 }
+
+/**
+ * Utility type to represent a JS value that either does or does not have a
+ * constructor property.
+ *
+ * NOTE(gj): I *think* `null` & `undefined` are the only JS values w/o a
+ * `constructor` property (e.g., `(1).constructor` returns `[Function:
+ * Number]`), but I'm not 100% sure of that.
+ */
+export type NullishOrHasConstructor = { constructor: Class } | null | undefined;
