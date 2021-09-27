@@ -104,11 +104,15 @@ jobs:
         if: github.event.inputs.url == 'docs.oso.dev'
         run: |
           make ci-prod-docs
-        working-directory: docs
+      - name: Install s3deploy
+        run: |
+          wget https://github.com/bep/s3deploy/releases/download/v2.4.0/s3deploy_2.4.0_Linux-64bit.deb
+          sudo dpkg -i s3deploy_2.4.0_Linux-64bit.deb
 
       ### Push to S3 + invalidate cache
-      - name: s3 publish
-        run: aws s3 sync --delete docs/public/ s3://${{ github.event.inputs.url }}
+      - name: deploy
+        run: s3deploy -bucket ${{ github.event.inputs.url }}  -path v/main -source public -region us-east-1
+        working-directory: docs
       - name: cloudfront invalidate docs preview
         run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"
         if: github.event.inputs.url == 'docs-preview.oso.dev'
