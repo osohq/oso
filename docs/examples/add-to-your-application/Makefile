@@ -11,8 +11,7 @@ test-python:
 	$(MAKE) -C python test
 
 test-node:
-	cd node; npm install
-	cd node; node test.js
+	$(MAKE) -C node test
 
 test-ruby:
 	cd ruby; bundle install
