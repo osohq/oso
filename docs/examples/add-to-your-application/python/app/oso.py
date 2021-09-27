@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from oso import Oso
 
 from .models import User, Repository
@@ -12,4 +14,4 @@ oso.register_class(User)
 oso.register_class(Repository)
 
 # Load your policy file.
-oso.load_files(["main.polar"])
+oso.load_files([Path(__file__).parent / "main.polar"])

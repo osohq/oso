@@ -309,7 +309,10 @@ impl PolarVirtualMachine {
             kb,
             call_id_symbols: HashMap::new(),
             log: std::env::var("RUST_LOG").is_ok(),
-            polar_log: std::env::var("POLAR_LOG").is_ok(),
+            polar_log: match std::env::var("POLAR_LOG") {
+                Ok(s) => s != "0" && s != "off",
+                Err(_) => false,
+            },
             polar_log_stderr: std::env::var("POLAR_LOG")
                 .map(|pl| pl == "now")
                 .unwrap_or(false),
@@ -330,7 +333,10 @@ impl PolarVirtualMachine {
             if &pl == "now" {
                 self.polar_log_stderr = true;
             }
-            self.polar_log = true;
+            self.polar_log = match Some(pl).as_deref() {
+                None | Some("0") | Some("off") => false,
+                _ => true,
+            }
         }
     }
 

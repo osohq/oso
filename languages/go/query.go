@@ -157,7 +157,12 @@ func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 
 	// if we provided Args, it should be callable
 	if event.Args != nil {
-		method := reflect.ValueOf(instance).MethodByName(string(event.Attribute))
+		// Check for the method on a pointer to the value, not the value itself.
+		typ := reflect.TypeOf(instance)
+		iv := reflect.New(typ)
+		iv.Elem().Set(reflect.ValueOf(instance))
+		method := iv.MethodByName(string(event.Attribute))
+
 		if !method.IsValid() {
 			q.ffiQuery.ApplicationError((errors.NewMissingAttributeError(instance, string(event.Attribute))).Error())
 			q.ffiQuery.CallResult(event.CallId, nil)
