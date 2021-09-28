@@ -78,9 +78,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
 
       bars.each do |bar|
         expected = foos.select do |foo|
-          !foo.is_fooey ||
-            bar == foo.bar ||
-            (foo.bar.is_cool && [1, 2].any? { |n| foo.numbers.include? n })
+          !foo.is_fooey || bar == foo.bar || (foo.bar.is_cool && (foo.numbers.include?(1) || foo.numbers.include?(2)))
         end
         check_authz bar, 'read', Foo, expected
       end
@@ -307,7 +305,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
 
     it 'test_const_in_coll' do
       magic = 1
-      subject.register_constant magic, name: 'magic'
+      subject.register_constant(magic, 'magic')
       subject.load_str 'allow(_, _, foo: Foo) if magic in foo.numbers;'
       expected = foos.select { |foo| foo.numbers.include? magic }
       check_authz 'gwen', 'get', Foo, expected
@@ -337,7 +335,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     # not supported
     xit 'test_const_not_in_coll' do
       magic = 1
-      subject.register_constant magic, name: 'magic'
+      subject.register_cosntant magic, 'magic'
       subject.load_str 'allow(_, _, foo: Foo) if not (magic in foo.numbers);'
       expected = foos.reject { |foo| foo.numbers.include? magic }
       check_authz 'gwen', 'get', Foo, expected
@@ -386,18 +384,6 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       POL
       expected = bars.select { |bar| bar.foos.length >= 2 }
       check_authz 'gwen', 'get', Foo, expected
-    end
-
-    xit 'test_in_intersection' do
-      subject.load_str <<~POL
-        allow(_, _, foo: Foo) if
-          num in foo.numbers and
-          goo in foo.bar.foos and
-          goo != foo and
-          num in goo.numbers;
-      POL
-
-      expect(subject.authorized_resources('gwen', 'get', Foo)).to be_empty
     end
   end
 

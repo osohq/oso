@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
-require 'tempfile'
-require_relative './data_filtering_helpers'
-require_relative './basic_classes'
+require_relative './helpers'
+require_relative './parity'
 
 RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
   context '#authorized_resources' do # rubocop:disable Metrics/BlockLength

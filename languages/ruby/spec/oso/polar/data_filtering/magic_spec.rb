@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
-require_relative './data_filtering_helpers'
+require_relative './helpers'
+
 Wizard = DFH.record(:name, :books, :spell_levels) do
   def spells
     Spell.all.select do |spell|
@@ -24,7 +25,7 @@ Spell.new('know alignment',    'divination',  6)
 
 RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
   let(:level) { ->(n) { 1.upto(n).to_a } }
-  let(:policy_file) { File.join(__dir__, 'magic_policy.polar') }
+  let(:policy_file) { File.join(__dir__, 'magic.polar') }
   let(:gandalf) { Wizard.new('gandalf', %w[divination destruction], level[4]) }
   let(:galadriel) { Wizard.new('galadriel', %w[thaumaturgy divination inscription], level[7]) }
   let(:baba_yaga) { Wizard.new('baba yaga', %w[necromancy summoning destruction], level[8]) }

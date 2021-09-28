@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative './data_filtering_helpers'
+require_relative './helpers'
 require 'sqlite3'
 require 'active_record'
 DB_FILE = 'astro_test.db'
