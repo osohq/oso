@@ -758,7 +758,7 @@ jobs:
         validate_java,
         validate_js,
         validate_go,
-        test_quickstarts,
+        # test_quickstarts,
       ]
     steps:
       - name: Set version env
@@ -899,7 +899,7 @@ jobs:
         validate_java,
         validate_js,
         validate_go,
-        test_quickstarts,
+        # test_quickstarts,
       ]
     steps:
       - uses: rtCamp/action-slack-notify@master
