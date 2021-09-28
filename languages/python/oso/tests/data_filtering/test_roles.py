@@ -1,6 +1,6 @@
 import pytest
-from oso import Oso, Relation
-from helpers import check_authz, filter_array
+from oso import Relation
+from helpers import filter_array, DfTestOso
 from dataclasses import dataclass
 
 
@@ -61,7 +61,7 @@ roles = [
 
 @pytest.fixture
 def oso():
-    oso = Oso()
+    oso = DfTestOso()
 
     def combine_query(q1, q2):
         results = q1 + q2
@@ -74,8 +74,8 @@ def oso():
 
     oso.register_class(
         Org,
-        fields={"name": str},
         build_query=filter_array(orgs),
+        fields={"name": str},
     )
     oso.register_class(
         Repo,
@@ -180,21 +180,21 @@ def oso():
 
 
 def test_roles_data_filtering_owner(oso):
-    check_authz(oso, leina, "invite", Org, [osohq])
-    check_authz(oso, leina, "pull", Repo, [oso_repo, demo_repo])
-    check_authz(oso, leina, "push", Repo, [oso_repo, demo_repo])
-    check_authz(oso, leina, "edit", Issue, [oso_bug])
+    oso.check_authz(leina, "invite", Org, [osohq])
+    oso.check_authz(leina, "pull", Repo, [oso_repo, demo_repo])
+    oso.check_authz(leina, "push", Repo, [oso_repo, demo_repo])
+    oso.check_authz(leina, "edit", Issue, [oso_bug])
 
 
 def test_roles_data_filtering_member(oso):
-    check_authz(oso, steve, "pull", Repo, [oso_repo, demo_repo])
-    check_authz(oso, steve, "push", Repo, [])
-    check_authz(oso, steve, "invite", Org, [])
-    check_authz(oso, steve, "edit", Issue, [])
+    oso.check_authz(steve, "pull", Repo, [oso_repo, demo_repo])
+    oso.check_authz(steve, "push", Repo, [])
+    oso.check_authz(steve, "invite", Org, [])
+    oso.check_authz(steve, "edit", Issue, [])
 
 
 def test_roles_data_filtering_writer(oso):
-    check_authz(oso, gabe, "invite", Org, [])
-    check_authz(oso, gabe, "pull", Repo, [oso_repo])
-    check_authz(oso, gabe, "push", Repo, [oso_repo])
-    check_authz(oso, gabe, "edit", Issue, [oso_bug])
+    oso.check_authz(gabe, "invite", Org, [])
+    oso.check_authz(gabe, "pull", Repo, [oso_repo])
+    oso.check_authz(gabe, "push", Repo, [oso_repo])
+    oso.check_authz(gabe, "edit", Issue, [oso_bug])

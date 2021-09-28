@@ -1,4 +1,12 @@
+from oso import Oso
 from functools import reduce
+
+
+class DfTestOso(Oso):
+    def check_authz(self, actor, action, resource, expected):
+        assert unord_eq(self.authorized_resources(actor, action, resource), expected)
+        for re in expected:
+            assert self.is_allowed(actor, action, re)
 
 
 def unord_eq(a, b):
@@ -9,12 +17,6 @@ def unord_eq(a, b):
         except ValueError:
             return False
     return not b
-
-
-def check_authz(oso, actor, action, resource, expected):
-    assert unord_eq(oso.authorized_resources(actor, action, resource), expected)
-    for re in expected:
-        assert oso.is_allowed(actor, action, re)
 
 
 def filter_array(array):
