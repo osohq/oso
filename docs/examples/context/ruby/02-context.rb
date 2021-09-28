@@ -1,7 +1,4 @@
-require "bundler"
-Bundler.setup
-
-require 'oso-oso'
+require 'oso'
 
 OSO ||= Oso.new
 

@@ -4,7 +4,7 @@ require 'English'
 require 'fileutils'
 require 'timeout'
 
-require "bundler"
+require 'bundler'
 
 CURL_ERROR = "curl: (7) Failed to connect to localhost port 5000: Connection refused\n"
 CURL_EMPTY = "curl: (52) Empty reply from server\n"

@@ -1,7 +1,4 @@
-require "bundler"
-Bundler.setup
-
-require "oso-oso"
+require "oso"
 
 require_relative "inheritance_external.rb"
 
