@@ -406,7 +406,7 @@ def test_var_in_value(oso):
     # var in value, This currently doesn't come through as an `in`
     # This is I think the thing that MikeD wants though, for this to come through
     # as an in so the SQL can do an IN.
-    oso.load_str(' allow(_, _, log: Log) if log.data in ["hello", "world"];')
+    oso.load_str('allow(_, _, log: Log) if log.data in ["hello", "world"];')
     oso.check_authz("steve", "get", Log, [third_log_b, fourth_log_a])
 
 
