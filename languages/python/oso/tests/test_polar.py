@@ -998,16 +998,18 @@ def test_isa_with_path(polar, query):
     class Baz:
         bar: Bar
 
-    polar.register_class(Foo, fields={'num': int})
-    polar.register_class(Bar, fields={'foo': Foo})
-    polar.register_class(Baz, fields={'bar': Bar})
+    polar.register_class(Foo, fields={"num": int})
+    polar.register_class(Bar, fields={"foo": Foo})
+    polar.register_class(Baz, fields={"bar": Bar})
 
-    polar.load_str('f(x: Integer) if x = 0; g(x: Baz) if f(x.bar.foo.num); h(x: Bar) if f(x.num);')
-    results = query('g(x)', accept_expression=True)
+    polar.load_str(
+        "f(x: Integer) if x = 0; g(x: Baz) if f(x.bar.foo.num); h(x: Bar) if f(x.num);"
+    )
+    results = query("g(x)", accept_expression=True)
     assert len(results) == 1
 
     with pytest.raises(exceptions.PolarRuntimeError):
-        query('h(x)')
+        query("h(x)")
 
 
 def test_rule_types_with_subclass_check(polar):

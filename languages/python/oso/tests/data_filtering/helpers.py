@@ -1,13 +1,8 @@
-import pytest
-from oso import Oso
 from functools import reduce
 
-@pytest.fixture
-def oso():
-    oso = Oso()
-    return oso
 
 def unord_eq(a, b):
+    b = list(b)
     for x in a:
         try:
             b.remove(x)
@@ -15,10 +10,12 @@ def unord_eq(a, b):
             return False
     return not b
 
+
 def check_authz(oso, actor, action, resource, expected):
     assert unord_eq(oso.authorized_resources(actor, action, resource), expected)
     for re in expected:
         assert oso.is_allowed(actor, action, re)
+
 
 def filter_array(array, constraints):
     check = reduce(
@@ -27,5 +24,3 @@ def filter_array(array, constraints):
         lambda _: True,
     )
     return [x for x in array if check(x)]
-
-
