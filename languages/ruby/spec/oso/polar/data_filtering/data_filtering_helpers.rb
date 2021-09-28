@@ -81,3 +81,10 @@ module DataFilteringHelpers
     end
   end
 end
+
+RSpec.configure do |c|
+  c.include DataFilteringHelpers
+end
+
+Relation = ::Oso::Relation
+DFH = DataFilteringHelpers
