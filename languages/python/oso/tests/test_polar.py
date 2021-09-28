@@ -27,13 +27,13 @@ def test_anything_works(polar, query):
     assert results[0]["y"] == 1
 
 
-def test_helpers(polar, load_file, query, qeval, qvar):
-    load_file(Path(__file__).parent / "test_file.polar")  # f(1);
+def test_helpers(polar, query, qvar):
+    polar.load_file(Path(__file__).parent / "test_file.polar")  # f(1);
     assert query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
     assert qvar("f(x)", "x") == [1, 2, 3]
 
 
-def test_data_conversions(polar, qvar, query):
+def test_data_conversions(polar, qvar):
     polar.load_str('a(1);b("two");c(true);d([1,"two",true]);')
     assert qvar("a(x)", "x", one=True) == 1
     assert qvar("b(x)", "x", one=True) == "two"
@@ -46,27 +46,30 @@ def test_data_conversions(polar, qvar, query):
 
 def test_load_function(polar, query, qvar):
     """Make sure the load function works."""
-    # Loading the same file twice doesn't mess stuff up.
     filename = Path(__file__).parent / "test_file.polar"
-    polar.load_file(filename)
     with pytest.raises(exceptions.PolarRuntimeError) as e:
-        polar.load_file(filename)
+        polar.load_files([filename, filename])
     assert str(e.value).startswith(
         f"Problem loading file: File {filename} has already been loaded."
     )
 
     renamed = Path(__file__).parent / "test_file_renamed.polar"
     with pytest.raises(exceptions.PolarRuntimeError) as e:
-        polar.load_file(renamed)
-
+        polar.load_files([filename, renamed])
     expected = f"Problem loading file: A file with the same contents as {renamed} named {filename} has already been loaded."
     assert str(e.value).startswith(expected)
+
+    polar.load_file(filename)
     assert query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
     assert qvar("f(x)", "x") == [1, 2, 3]
 
     polar.clear_rules()
-    polar.load_file(Path(__file__).parent / "test_file.polar")
-    polar.load_file(Path(__file__).parent / "test_file_gx.polar")
+    polar.load_files(
+        [
+            Path(__file__).parent / "test_file.polar",
+            Path(__file__).parent / "test_file_gx.polar",
+        ]
+    )
     assert query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
     assert query("g(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
 
@@ -140,7 +143,7 @@ def test_external(polar, qvar, qeval):
     assert qvar("new Foo().h() = x", "x", one=True) is True
 
 
-def test_class_specializers(polar, qvar, qeval, query):
+def test_class_specializers(polar, qvar, query):
     class A:
         def a(self):
             return "A"
@@ -201,11 +204,12 @@ def test_class_specializers(polar, qvar, qeval, query):
     assert qvar("try(new X(), x)", "x") == []
 
 
-def test_dict_specializers(polar, qvar, qeval, query):
+def test_dict_specializers(polar, qvar, query):
     class Animal:
         def __init__(self, species=None, genus=None, family=None):
             self.genus = genus
             self.species = species
+            self.family = family
 
     polar.register_class(Animal)
 
@@ -229,7 +233,7 @@ def test_dict_specializers(polar, qvar, qeval, query):
     assert qvar(f"what_is({canine}, res)", "res") == ["canine"]
 
 
-def test_class_field_specializers(polar, qvar, qeval, query):
+def test_class_field_specializers(polar, qvar, query):
     class Animal:
         def __init__(self, species=None, genus=None, family=None):
             self.genus = genus
@@ -279,7 +283,7 @@ def test_class_field_specializers(polar, qvar, qeval, query):
     assert qvar(f"what_is({animal}, res)", "res") == ["animal"]
 
 
-def test_specializers_mixed(polar, qvar, qeval, query):
+def test_specializers_mixed(polar, qvar, query):
     class Animal:
         def __init__(self, species=None, genus=None, family=None):
             self.genus = genus
@@ -377,14 +381,14 @@ def test_parser_errors(polar):
         "'\\n' is not a valid character. Found in this is not at line 2, column 29"
     )
 
+    # TODO(gj): figure out what changed.
     rules = """
-    f(a) if a = "this is not allowed\0
-    """
+    f(a) if a = "this is not allowed\0"""
 
     with pytest.raises(exceptions.InvalidTokenCharacter) as e:
         polar.load_str(rules)
     assert str(e.value).startswith(
-        "'\\u{0}' is not a valid character. Found in this is not allowed at line 2, column 17"
+        "'\\u{0}' is not a valid character. Found in this is not allowed\\u{0} at line 2, column 17"
     )
 
     # InvalidToken -- not sure what causes this
@@ -457,17 +461,17 @@ def test_return_list(polar, query):
     assert query(Predicate(name="allow", args=[User(), "join", "party"]))
 
 
-def test_host_native_unify(polar, query):
+def test_host_native_unify(query):
     """Test that unification works across host and native data"""
     assert query("new Integer(1) = 1")
     assert query('new String("foo") = "foo"')
     assert query("new List([1,2,3]) = [1,2,3]")
 
 
-def test_query(load_file, polar, query):
+def test_query(polar, query):
     """Test that queries work with variable arguments"""
 
-    load_file(Path(__file__).parent / "test_file.polar")
+    polar.load_file(Path(__file__).parent / "test_file.polar")
     # plaintext polar query: query("f(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
 
     assert query(Predicate(name="f", args=[Variable("a")])) == [
@@ -535,7 +539,7 @@ def test_constructor_error(polar, query):
         query("x = new Foo()")
 
 
-def test_instance_cache(polar, qeval, query):
+def test_instance_cache(polar, query):
     class Counter:
         count = 0
 
@@ -554,8 +558,10 @@ def test_instance_cache(polar, qeval, query):
 
 
 def test_in(polar, qeval):
-    polar.load_str("g(x, y) if not x in y;")
-    polar.load_str("f(x) if not (x=1 or x=2);")
+    polar.load_str(
+        """g(x, y) if not x in y;
+           f(x) if not (x=1 or x=2);"""
+    )
     assert not qeval("f(1)")
     assert qeval("g(4, [1,2,3])")
     assert not qeval("g(1, [1,1,1])")
@@ -596,8 +602,10 @@ def test_external_op(polar, query):
     a1 = A(1)
     a2 = A(2)
 
-    polar.load_str("lt(a, b) if a < b;")
-    polar.load_str("gt(a, b) if a > b;")
+    polar.load_str(
+        """lt(a, b) if a < b;
+           gt(a, b) if a > b;"""
+    )
     assert query(Predicate("lt", [a1, a2]))
     assert not query(Predicate("lt", [a2, a1]))
     assert query(Predicate("gt", [a2, a1]))
@@ -614,12 +622,19 @@ def test_datetime(polar, query):
     assert query(Predicate("lt", [t1, t2]))
     assert not query(Predicate("lt", [t2, t1]))
 
+    polar.clear_rules()
+
     # test creating datetime from polar
     polar.load_str("dt(x) if x = new Datetime(year: 2020, month: 5, day: 25);")
     assert query(Predicate("dt", [Variable("x")])) == [{"x": datetime(2020, 5, 25)}]
+
+    polar.clear_rules()
+
     polar.load_str("ltnow(x) if x < Datetime.now();")
     assert query(Predicate("ltnow", [t1]))
     assert not query(Predicate("ltnow", [t3]))
+
+    polar.clear_rules()
 
     polar.load_str(
         "timedelta(a: Datetime, b: Datetime) if a.__sub__(b) == new Timedelta(days: 1);"
@@ -675,8 +690,10 @@ def test_register_constants_with_decorator():
         x = 1
 
     p = Polar()
-    p.load_str("foo_rule(_: RegisterDecoratorTest, y) if y = 1;")
-    p.load_str("foo_class_attr(y) if y = RegisterDecoratorTest.x;")
+    p.load_str(
+        """foo_rule(_: RegisterDecoratorTest, y) if y = 1;
+           foo_class_attr(y) if y = RegisterDecoratorTest.x;"""
+    )
     assert (
         next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))[
             "bindings"
@@ -685,9 +702,13 @@ def test_register_constants_with_decorator():
     )
     assert next(p.query_rule("foo_class_attr", Variable("y")))["bindings"]["y"] == 1
 
+    p.clear_rules()
+
     p = Polar()
-    p.load_str("foo_rule(_: RegisterDecoratorTest, y) if y = 1;")
-    p.load_str("foo_class_attr(y) if y = RegisterDecoratorTest.x;")
+    p.load_str(
+        """foo_rule(_: RegisterDecoratorTest, y) if y = 1;
+           foo_class_attr(y) if y = RegisterDecoratorTest.x;"""
+    )
     assert (
         next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))[
             "bindings"
@@ -719,6 +740,8 @@ def test_return_none(polar):
     polar.load_str("f(x) if x.this_is_none() = nil;")
     assert len(list(polar.query_rule("f", Foo()))) == 1
 
+    polar.clear_rules()
+
     polar.load_str("g(x) if x.this_is_none().bad_call() = 1;")
     with pytest.raises(exceptions.PolarRuntimeError) as e:
         list(polar.query_rule("g", Foo()))
@@ -727,7 +750,7 @@ def test_return_none(polar):
     )
 
 
-def test_static_method(polar, qeval):
+def test_static_method(polar):
     class Foo(list):
         @staticmethod
         def plus_one(x):
@@ -799,8 +822,10 @@ def test_partial_unification(polar):
 
 
 def test_partial(polar):
-    polar.load_str("f(1);")
-    polar.load_str("f(x) if x = 1 and x = 2;")
+    polar.load_str(
+        """f(1);
+           f(x) if x = 1 and x = 2;"""
+    )
 
     results = polar.query_rule("f", Variable("x"), accept_expression=True)
     first = next(results)
@@ -810,6 +835,8 @@ def test_partial(polar):
 
     with pytest.raises(StopIteration):
         next(results)
+
+    polar.clear_rules()
 
     polar.load_str("g(x) if x.bar = 1 and x.baz = 2;")
 
@@ -837,8 +864,10 @@ def test_partial_constraint(polar):
     polar.register_class(User)
     polar.register_class(Post)
 
-    polar.load_str("f(x: User) if x.user = 1;")
-    polar.load_str("f(x: Post) if x.post = 1;")
+    polar.load_str(
+        """f(x: User) if x.user = 1;
+           f(x: Post) if x.post = 1;"""
+    )
 
     x = Variable("x")
     results = polar.query_rule(
@@ -890,7 +919,7 @@ def test_partial_rule_filtering(polar):
     x = Variable("x")
     with pytest.raises(exceptions.PolarRuntimeError) as e:
         next(polar.query_rule("f", x, bindings={x: TypeConstraint(x, "A")}))
-    assert str(e.value).startswith("No type information for Python class A")
+    assert str(e.value).startswith("No field c on A")
 
 
 def test_iterators(polar, qeval, qvar):
@@ -924,7 +953,7 @@ def test_lookup_in_head(polar, is_allowed):
         READ = 1
         WRITE = 2
 
-    polar.register_constant(Actions, "Actions")
+    polar.register_class(Actions, name="Actions")
     polar.load_str('allow("leina", Actions.READ, "doc");')
 
     assert not is_allowed("leina", Actions.WRITE, "doc")
@@ -933,17 +962,21 @@ def test_lookup_in_head(polar, is_allowed):
     assert not is_allowed("leina", Actions, "doc")
     assert is_allowed("leina", Actions.READ, "doc")
 
+    polar.clear_rules()
+
     # Test lookup in specializer raises error
     with pytest.raises(exceptions.UnrecognizedToken):
         polar.load_str('allow("leina", action: Actions.READ, "doc");')
+
+    polar.clear_rules()
 
     # Test with normal class
     class Resource:
         def __init__(self, action):
             self.action = action
 
-    polar.register_class(Resource, name="Resource")
-    polar.load_str('allow("leina", resource.action, resource: Resource);')
+    polar.register_class(Resource, name="MyResource")
+    polar.load_str('allow("leina", resource.action, resource: MyResource);')
 
     r = Resource("read")
 
@@ -951,7 +984,7 @@ def test_lookup_in_head(polar, is_allowed):
     assert is_allowed("leina", "read", r)
 
 
-def test_rule_prototypes_with_subclass_check(polar):
+def test_rule_types_with_subclass_check(polar):
     class Foo:
         pass
 
@@ -975,19 +1008,20 @@ def test_rule_prototypes_with_subclass_check(polar):
     f(1);
     """
     polar.load_str(p)
+    polar.clear_rules()
 
-    p = """
+    p += """
     type f(_x: Foo);
     type f(_x: Foo, _y: Bar);
     f(_x: Bar);
     f(_x: Baz);
     """
     polar.load_str(p)
+    polar.clear_rules()
 
     with pytest.raises(ValidationError):
-        polar.load_str("f(_x: Bad);")
-
-    polar.clear_rules()
+        p += "f(_x: Bad);"
+        polar.load_str(p)
 
     # Test with fields
     p = """
@@ -996,10 +1030,13 @@ def test_rule_prototypes_with_subclass_check(polar):
     f(_x: Baz{id: 1});
     """
     polar.load_str(p)
-    with pytest.raises(ValidationError):
-        polar.load_str("f(_x: Baz);")
+    polar.clear_rules()
 
-    # Test invalid rule prototype
+    with pytest.raises(ValidationError):
+        p += "f(_x: Baz);"
+        polar.load_str(p)
+
+    # Test invalid rule type
     p = """
     type f(x: Foo, x.baz);
     """

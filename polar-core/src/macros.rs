@@ -48,12 +48,6 @@ macro_rules! pattern {
         $crate::macros::TestHelper::<Pattern>::from($arg).0
     };
 }
-#[macro_export]
-macro_rules! ptn {
-    ($arg:expr) => {
-        $crate::macros::TestHelper::<Term>::from(pattern!($arg)).0
-    };
-}
 
 #[macro_export]
 macro_rules! param {
@@ -156,16 +150,6 @@ macro_rules! op {
 }
 
 #[macro_export]
-macro_rules! opn {
-    ($op_type:ident, $($args:expr),+) => {
-        op!($op_type, $($args),+).into_term()
-    };
-    ($op_type:ident) => {
-        op!($op_type).into_term()
-    };
-}
-
-#[macro_export]
 macro_rules! dict {
     ($arg:expr) => {
         $crate::macros::TestHelper::<Dictionary>::from($arg).0
@@ -231,7 +215,17 @@ impl<T> From<T> for TestHelper<T> {
 
 impl From<Value> for TestHelper<Term> {
     fn from(other: Value) -> Self {
-        Self(Term::new_temporary(other))
+        Self(Term::from(other))
+    }
+}
+
+impl From<u64> for ExternalInstance {
+    fn from(instance_id: u64) -> Self {
+        ExternalInstance {
+            instance_id,
+            constructor: None,
+            repr: None,
+        }
     }
 }
 
@@ -256,7 +250,7 @@ impl From<Value> for TestHelper<Parameter> {
     /// a specializer.
     fn from(name: Value) -> Self {
         Self(Parameter {
-            parameter: Term::new_temporary(name),
+            parameter: Term::from(name),
             specializer: None,
         })
     }
@@ -351,6 +345,6 @@ impl From<InstanceLiteral> for TestHelper<Pattern> {
 }
 impl From<Pattern> for TestHelper<Term> {
     fn from(other: Pattern) -> Self {
-        Self(Term::new_temporary(value!(other)))
+        Self(Term::from(value!(other)))
     }
 }

@@ -15,6 +15,7 @@ import org.json.JSONObject;
 public class Host implements Cloneable {
   private Ffi.Polar ffiPolar;
   private Map<String, Class<?>> classes;
+  private Map<Class<?>, Long> classIds;
   private Map<Long, Object> instances;
 
   // Set to true to accept an expression from the core in toJava.
@@ -24,6 +25,7 @@ public class Host implements Cloneable {
     acceptExpression = false;
     ffiPolar = polarPtr;
     classes = new HashMap<String, Class<?>>();
+    classIds = new HashMap<Class<?>, Long>();
     instances = new HashMap<Long, Object>();
   }
 
@@ -31,6 +33,7 @@ public class Host implements Cloneable {
   public Host clone() {
     Host host = new Host(ffiPolar);
     host.classes.putAll(classes);
+    host.classIds.putAll(classIds);
     host.instances.putAll(instances);
     host.acceptExpression = acceptExpression;
     return host;
@@ -61,7 +64,26 @@ public class Host implements Cloneable {
           name, classes.get(name).getName(), cls.getName());
     }
     classes.put(name, cls);
+    classIds.put(cls, cacheInstance(cls, null));
     return name;
+  }
+
+  /**
+   * Register a list of base classes (MRO list) for all registered classes. The list is in method
+   * resolution order (MRO), meaning the superclasses are ordered from most to least specific.
+   */
+  public void registerMros() {
+
+    for (Map.Entry<String, Class<?>> cls : classes.entrySet()) {
+      Class<?> scls = cls.getValue().getSuperclass();
+      List<Long> mro = new ArrayList<Long>();
+      while (scls != null) {
+        Long id = classIds.get(scls);
+        if (id != null) mro.add(id);
+        scls = scls.getSuperclass();
+      }
+      ffiPolar.registerMro(cls.getKey(), mro.toString());
+    }
   }
 
   /** Get a cached Java instance. */
@@ -250,7 +272,14 @@ public class Host implements Cloneable {
       }
     } else {
       JSONObject attrs = new JSONObject();
-      attrs.put("instance_id", cacheInstance(value, null));
+      Long instanceId = null;
+
+      // if the object is a Class, then it will already have an instance ID
+      if (value instanceof Class) {
+        instanceId = classIds.get(value);
+      }
+
+      attrs.put("instance_id", cacheInstance(value, instanceId));
       attrs.put("repr", value == null ? "null" : value.toString());
       jVal.put("ExternalInstance", attrs);
     }

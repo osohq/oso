@@ -1,65 +1,22 @@
 ---
-githubApp: "[Python sample app](https://github.com/osohq/oso-python-quickstart)"
-githubURL: "https://github.com/osohq/oso-python-quickstart.git"
-installation: |
-    Install the project dependencies with pip, then run the server:
-    ```bash
-    $ pip install -r requirements.txt
-    installing requirements
-    
-    $ python server.py
-    server running on port 5050
-    ```
-amount: amount
-manager: manager
-submitted_by: submitted_by
-endswith: endswith
-endswithURL: >
-   [the `str.endswith` method](https://docs.python.org/3/library/stdtypes.html#str.endswith)
-expensesPath1: examples/quickstart/polar/expenses-01-python.polar
-expensesPath2: examples/quickstart/polar/expenses-02-python.polar
-isAllowed: is_allowed
-installation_new: |
-    ```bash
-    pip install --upgrade oso
-    ```
-    Or find the Oso package at [http://pypi.python.org/pypi/oso/](http://pypi.python.org/pypi/oso/).
-import: import
-import_code: |
-    ```python
-    from oso import Oso
-    oso = Oso()
-    oso.enable_roles()
-    ```
-example_app: a Flask
-load_policy: |
-    ```python
-    oso.load_file("authorization.polar")
-    ```
-getroles: get_roles
-classes: Python classes
-objects: Python objects
-methods: Python methods
-register_classes: |
-    ```python
-    oso.register_class(Page)
-    oso.register_class(User)
-    ```
-app_code: |
-    ```python
-    from flask import Flask
-
-    app = Flask(__name__)
-    @app.route("/page/<pagenum>")
-    def page_show(pagenum):
-        page = Page.get_page(pagenum)
-        if oso.is_allowed(
-            User.get_current_user(),  # the user doing the request
-            "read",  # the action we want to do
-            page,  # the resource we want to do it to
-        ):
-            return f"<h1>A Page</h1><p>this is page {pagenum}</p>", 200
-        else:
-            return f"<h1>Sorry</h1><p>You are not allowed to see this page</p>", 403
-    ```
+githubUrl: "https://github.com/osohq/oso-python-quickstart"
+githubCloneUrl: "https://github.com/osohq/oso-python-quickstart.git"
+repoName: oso-python-quickstart
+mainPolarFile: "examples/quickstart/python/app/main.polar"
+serverFile: "examples/quickstart/python/app/server.py"
+modelFile: "examples/quickstart/python/app/models.py"
+polarFileRelative: "app/main.polar"
+serverFileRelative: "app/server.py"
+modelFileRelative: "app/models.py"
+installDependencies: pip install -r requirements.txt
+startServer: FLASK_APP=app.server python -m flask run
+osoAuthorize: oso.authorize()
+isPublic: is_public
+hasRole: |-
+  has_role(actor: User, role_name: String, repository: Repository) if
+    role in actor.roles and
+    role_name = role.name and
+    repository = role.repository;
+endpoint: the `repo_show` route
+port: 5000
 ---

@@ -65,8 +65,9 @@ def load_policy_files():
             for file in filenames:
                 file_path = os.path.join(path, file)
                 if os.path.splitext(file)[1] == ".polar":
-                    Oso.load_file(file_path)
                     loaded_files.append(file_path)
+
+    Oso.load_files(loaded_files)
 
     _logger.debug(f"Loaded policies: {loaded_files}")
 

@@ -20,16 +20,8 @@ The Oso Flask integration is available on [PyPI](https://pypi.org/project/flask-
 `pip`:
 
 ```console
-$ pip install flask-oso
+$ pip install flask-oso=={{< version >}}
 ```
-
-{{% callout "Adding roles to your application with Flask?" "blue" %}}
-
-We just released the next version of our roles feature.
-
-[Check it out here!](/guides/roles)
-
-{{% /callout %}}
 
 ## Usage
 

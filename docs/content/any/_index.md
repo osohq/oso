@@ -1,12 +1,26 @@
 ---
 ---
+# Batteries-Included Framework for Application Authorization
 
-## What is Oso?
+Oso is a batteries-included framework for building authorization in your application.
+With Oso, you can:
 
-Oso is a batteries-included library for building authorization in your application. 
+- **Model**: Set up common permissions patterns like RBAC and
+relationships using Oso's built-in primitives. Extend them however you
+need with Oso's declarative policy language, Polar.
+- **Filter**: Go beyond yes/no authorization questions. Implement
+authorization over collections too - e.g., "Show me only the records
+that Juno can see."
+- **Test**: Write unit tests over your authorization logic now that you
+have a single interface for it. Use the debugger or tracing to track
+down unexpected behavior.
 
-Oso gives you a mental model and an authorization system – a set of APIs built on top of a declarative policy language called Polar, plus a debugger and REPL – to define who can do what in your application. You can express common concepts from “users can see their own data” and role-based access control, to others like multi-tenancy, organizations and teams, hierarchies and relationships.
+### Oso in Action
 
-Oso lets you offload the thinking of how to design authorization and build features fast, while keeping the flexibility to extend and customize as you see fit.
+Oso lets you write policies to control who can do what in your app.
+Select different policies below to see how they change the permissions
+in the sample app on the right.
 
-Developers can typically write a working Oso policy in <5 minutes, add Oso to an app in <30 minutes, and use Oso to solve real authorization problems within a few hours. To get started, you add the library to your application, create a new Oso instance and load an Oso policy. You can mix and match any of Oso's authorization APIs to implement features like roles with custom policies that you write to suit your application.
+<div id="oso-web-demo"></div>
+
+<script src="https://oso-demo-widget.s3.us-west-2.amazonaws.com/main.js"></script>

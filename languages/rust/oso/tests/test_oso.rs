@@ -10,12 +10,12 @@ fn test_file_path() -> PathBuf {
 }
 
 #[derive(PolarClass, Debug, Clone, PartialEq)]
-struct Actor {
+struct User {
     #[polar(attribute)]
     name: String,
 }
 
-impl Actor {
+impl User {
     pub fn new(name: String) -> Self {
         Self { name }
     }
@@ -48,7 +48,7 @@ impl Company {
         Self { id }
     }
 
-    pub fn role(&self, actor: Actor) -> String {
+    pub fn role(&self, actor: User) -> String {
         if actor.name == "president" {
             "admin".to_string()
         } else {
@@ -60,9 +60,9 @@ impl Company {
 fn test_oso() -> Oso {
     let mut oso = Oso::new();
     oso.register_class(
-        Actor::get_polar_class_builder()
-            .set_constructor(Actor::new)
-            .add_method("companies", Actor::companies)
+        User::get_polar_class_builder()
+            .set_constructor(User::new)
+            .add_method("companies", User::companies)
             .build(),
     )
     .unwrap();
@@ -77,7 +77,7 @@ fn test_oso() -> Oso {
     .unwrap();
 
     let path = test_file_path();
-    oso.load_file(path).unwrap();
+    oso.load_files(vec![path]).unwrap();
 
     oso
 }
@@ -87,13 +87,13 @@ fn test_is_allowed() -> oso::Result<()> {
     common::setup();
     let oso = test_oso();
 
-    let actor = Actor::new(String::from("guest"));
+    let actor = User::new(String::from("guest"));
     let resource = Widget::new(1);
     let action = "get";
 
     assert!(oso.is_allowed(actor, action, resource)?);
 
-    let actor = Actor::new(String::from("president"));
+    let actor = User::new(String::from("president"));
     let resource = Company::new(1);
     let action = "create";
 
@@ -107,7 +107,7 @@ fn test_query_rule() -> oso::Result<()> {
     common::setup();
     let oso = test_oso();
 
-    let actor = Actor::new(String::from("guest"));
+    let actor = User::new(String::from("guest"));
     let resource = Widget::new(1);
     let action = "get";
     let mut query = oso.query_rule("allow", (actor, action, resource))?;
@@ -122,7 +122,7 @@ fn test_fail() -> oso::Result<()> {
     common::setup();
     let oso = test_oso();
 
-    let actor = Actor::new(String::from("guest"));
+    let actor = User::new(String::from("guest"));
     let resource = Widget::new(1);
     let action = "not_allowed";
 
@@ -136,7 +136,7 @@ fn test_instance_from_external_call() -> oso::Result<()> {
     common::setup();
     let oso = test_oso();
 
-    let guest = Actor::new("guest".to_string());
+    let guest = User::new("guest".to_string());
     let resource = Company::new(1);
     assert!(oso.is_allowed(guest, "frob", resource.clone())?);
 
@@ -155,10 +155,10 @@ fn test_allow_model() -> oso::Result<()> {
     common::setup();
     let oso = test_oso();
 
-    let actor = Actor::new(String::from("auditor"));
+    let actor = User::new(String::from("auditor"));
     assert!(oso.is_allowed(actor, "list", Company::get_polar_class())?);
 
-    let actor = Actor::new(String::from("auditor"));
+    let actor = User::new(String::from("auditor"));
     assert!(!oso.is_allowed(actor, "list", Widget::get_polar_class())?);
 
     Ok(())
@@ -169,15 +169,15 @@ fn test_get_allowed_actions() -> oso::Result<()> {
     common::setup();
     let mut oso = Oso::new();
 
-    oso.register_class(Actor::get_polar_class()).unwrap();
+    oso.register_class(User::get_polar_class()).unwrap();
     oso.register_class(Widget::get_polar_class()).unwrap();
 
     oso.load_str(
-        r#"allow(_actor: Actor{name: "sally"}, action, _resource: Widget{id: 1}) if
+        r#"allow(_actor: User{name: "sally"}, action, _resource: Widget{id: 1}) if
            action in ["CREATE", "READ"];"#,
     )?;
 
-    let actor = Actor::new(String::from("sally"));
+    let actor = User::new(String::from("sally"));
     let resource = Widget::new(1);
     let actions: HashSet<Action> = oso.get_allowed_actions(actor, resource)?;
 
@@ -185,7 +185,7 @@ fn test_get_allowed_actions() -> oso::Result<()> {
     assert!(actions.contains(&Action::Typed("CREATE".to_string())));
     assert!(actions.contains(&Action::Typed("READ".to_string())));
 
-    let actor = Actor::new(String::from("sally"));
+    let actor = User::new(String::from("sally"));
     let resource = Widget::new(1);
     let actions: HashSet<String> = oso.get_allowed_actions(actor, resource)?;
 
@@ -193,12 +193,14 @@ fn test_get_allowed_actions() -> oso::Result<()> {
     assert!(actions.contains("CREATE"));
     assert!(actions.contains("READ"));
 
+    oso.clear_rules().unwrap();
+
     oso.load_str(
-        r#"allow(_actor: Actor{name: "fred"}, action, _resource: Widget{id: 2}) if
+        r#"allow(_actor: User{name: "fred"}, action, _resource: Widget{id: 2}) if
            action in [1, 2, 3, 4];"#,
     )?;
 
-    let actor = Actor::new(String::from("fred"));
+    let actor = User::new(String::from("fred"));
     let resource = Widget::new(2);
     let actions: HashSet<i32> = oso.get_allowed_actions(actor, resource)?;
 
@@ -208,7 +210,7 @@ fn test_get_allowed_actions() -> oso::Result<()> {
     assert!(actions.contains(&3));
     assert!(actions.contains(&4));
 
-    let actor = Actor::new(String::from("fred"));
+    let actor = User::new(String::from("fred"));
     let resource = Widget::new(2);
     let actions: HashSet<Action<i32>> = oso.get_allowed_actions(actor, resource)?;
 

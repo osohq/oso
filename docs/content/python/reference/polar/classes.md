@@ -3,6 +3,8 @@ title: Python Types in Polar
 weight: 2
 aliases:
   - /using/libraries/python/index.html
+description: |
+   Reference for working with Python types in Polar.
 ---
 
 # Working with Python Types
@@ -20,14 +22,14 @@ More detailed examples of working with application classes can be found in our
 
 You can pass an instance of any Python class into Oso and access its methods
 and fields from your policy (see [Application
-Types](getting-started/policies#application-types)).
+Types](guides/policies#instances-and-fields)).
 
 <!-- TODO(gj): link to API docs. -->
 
 Python instances can be constructed from inside an Oso policy using the
 [`new`](polar-syntax#new) operator if the Python class has been **registered**
 using either the `register_class()` method or the `polar_class()` decorator. An
-example of this can be found [here](getting-started/policies#application-types).
+example of this can be found [here](guides/policies#instances-and-fields).
 
 ## Numbers and Booleans
 

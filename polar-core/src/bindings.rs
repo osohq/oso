@@ -160,13 +160,13 @@ impl BindingManager {
     fn partial_bind(&mut self, partial: Operation, var: &Symbol, val: Term) -> PolarResult<Goal> {
         match partial.ground(var, val.clone()) {
             None => Err(RuntimeError::IncompatibleBindings {
-                msg: "Grounding failed".into(),
+                msg: "Grounding failed A".into(),
             }
             .into()),
             Some(grounded) => {
                 self.add_binding(var, val);
                 Ok(Goal::Query {
-                    term: grounded.into_term(),
+                    term: grounded.into(),
                 })
             }
         }
@@ -284,7 +284,7 @@ impl BindingManager {
                     Some(o) => op = o,
                     None => {
                         return Err(RuntimeError::IncompatibleBindings {
-                            msg: "Grounding failed".into(),
+                            msg: "Grounding failed B".into(),
                         }
                         .into())
                     }
@@ -294,7 +294,7 @@ impl BindingManager {
 
         // apply the new constraint to every remaining variable.
         for var in varset {
-            self.add_binding(var, op.clone().into_term())
+            self.add_binding(var, op.clone().into())
         }
         Ok(())
     }
@@ -512,7 +512,6 @@ impl BindingManager {
                 BindingManagerVariableState::Bound(left_value),
                 BindingManagerVariableState::Partial(p),
             ) => {
-                // Left is bound, right has constraints.
                 let p = p.clone();
                 goal = Some(self.partial_bind(p, right, left_value)?);
             }
@@ -525,9 +524,7 @@ impl BindingManager {
             }
             (BindingManagerVariableState::Partial(_), _)
             | (_, BindingManagerVariableState::Partial(_)) => {
-                self.add_constraint(
-                    &op!(Unify, term!(left.clone()), term!(right.clone())).into_term(),
-                )?;
+                self.add_constraint(&op!(Unify, term!(left.clone()), term!(right.clone())).into())?;
             }
         }
 

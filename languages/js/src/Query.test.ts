@@ -41,6 +41,9 @@ describe('#registerCall', () => {
     p.registerConstant(sync, 'sync');
 
     expect(await qvar(p, 'sync.undefined = x', 'x', true)).toBeUndefined();
+    await expect(query(p, 'sync.attribute_undefined = x')).rejects.toThrow(
+      'attribute_undefined not found on'
+    );
     await expect(query(p, 'sync.undefined()')).rejects.toThrow(
       '.undefined is not a function at line 1, column 1'
     );
@@ -127,9 +130,9 @@ describe('#registerCall', () => {
       },
       arrow: () => Promise.resolve([1, 2, 3]),
       generator: async function* () {
-        yield 1;
-        yield 2;
-        yield 3;
+        yield await Promise.resolve(1);
+        yield await Promise.resolve(2);
+        yield await Promise.resolve(3);
       },
       iterator: {
         [Symbol.asyncIterator]() {

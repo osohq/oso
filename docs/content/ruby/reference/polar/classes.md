@@ -3,6 +3,8 @@ title: Ruby Types in Polar
 weight: 2
 aliases:
   - /using/libraries/ruby/index.html
+description: |
+  Reference for using Ruby types in Polar.
 ---
 
 [rb-array]: https://ruby-doc.org/core/Array.html
@@ -23,12 +25,12 @@ More detailed examples of working with application objects can be found in our
 ### Class Instances
 
 You can pass any Ruby instance into Oso and access its methods and fields from
-your policy (see [Application Types](getting-started/policies#application-types)).
+your policy (see [Application Types](guides/policies#instances-and-fields)).
 
 Ruby instances can be constructed from inside an Oso policy using the [`new`
 operator](polar-syntax#new) if the Ruby class has been **registered** using the
 `Oso#register_class` method. An example of this can be found
-[here](getting-started/policies#application-types).
+[here](guides/policies#instances-and-fields).
 
 ### Numbers and Booleans
 
@@ -55,7 +57,7 @@ class User
 end
 
 user = User.new("alice@example.com")
-raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
+oso.authorize(user, "foo", "bar")
 ```
 
 {{% callout "Warning" "orange" %}}
@@ -81,7 +83,7 @@ class User
 end
 
 user = User.new(["HR", "payroll"])
-raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
+oso.authorize(user, "foo", "bar")
 ```
 
 {{% callout "Warning" "orange" %}}
@@ -109,7 +111,7 @@ class User
 end
 
 user = User.new(["HR", "payroll"])
-raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
+oso.authorize(user, "foo", "bar")
 ```
 
 Ruby methods like [`Array#at`][rb-array-at] may be used for random access to
@@ -137,7 +139,7 @@ class User
 end
 
 user = User.new({"project1" => "admin"})
-raise "should be allowed" unless oso.allowed?(user, "foo", "bar")
+oso.authorize(user, "foo", "bar")
 ```
 
 Likewise, dictionaries constructed in Polar may be passed into Ruby methods.
@@ -158,7 +160,7 @@ class User
   end
 end
 
-raise "should be allowed" unless oso.allowed?(User.new, "foo", "bar")
+oso.authorize(User.new, "foo", "bar")
 ```
 
 ### `nil`
@@ -178,7 +180,7 @@ class User
   end
 end
 
-raise "should be allowed" unless oso.allowed?(User.new, "foo", "bar")
+oso.authorize(User.new, "foo", "bar")
 ```
 
 ### Ruby → Polar Types Summary

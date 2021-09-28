@@ -7,7 +7,7 @@ from .exceptions import (
     InvalidConstructorError,
     PolarRuntimeError,
 )
-from .data_filtering import Relationship, Constraint
+from .data_filtering import Relation, Filter
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 
@@ -98,29 +98,31 @@ class Query:
             # Check if it's a relationship
             attr = None
             cls = instance.__class__
-            if cls in self.host.cls_names:
-                cls_name = self.host.cls_names[cls]
-                if cls_name in self.host.types:
-                    typ = self.host.types[cls_name]
-                    if attribute in typ:
-                        attr_typ = typ[attribute]
-                        if isinstance(attr_typ, Relationship):
-                            rel = attr_typ
-                            # Use the fetcher for the other type to traverse the relationship
-                            assert rel.other_type in self.host.fetchers
-                            fetcher = self.host.fetchers[rel.other_type]
-                            constraint = Constraint(
-                                kind="Eq",
-                                field=rel.other_field,
-                                value=getattr(instance, rel.my_field),
-                            )
-                            constraints = [constraint]
-                            results = fetcher(constraints)
-                            if rel.kind == "parent":
-                                assert len(results) == 1
-                                attr = results[0]
-                            elif rel.kind == "children":
-                                attr = results
+            if cls in self.host.types:
+                cls_rec = self.host.types[cls]
+                typ = cls_rec.fields
+                if attribute in typ:
+                    attr_typ = typ[attribute]
+                    if isinstance(attr_typ, Relation):
+                        rel = attr_typ
+                        # Use the fetcher for the other type to traverse the relationship
+                        build_query = self.host.types[rel.other_type].build_query
+                        exec_query = self.host.types[rel.other_type].exec_query
+                        assert build_query is not None
+                        assert exec_query is not None
+                        constraint = Filter(
+                            kind="Eq",
+                            field=rel.other_field,
+                            value=getattr(instance, rel.my_field),
+                        )
+                        constraints = [constraint]
+                        query = build_query(constraints)
+                        results = exec_query(query)
+                        if rel.kind == "one":
+                            assert len(results) == 1
+                            attr = results[0]
+                        elif rel.kind == "many":
+                            attr = results
             if attr is None:
                 attr = getattr(instance, attribute)
         except AttributeError as e:

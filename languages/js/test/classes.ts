@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
+
 export class A {
   a() {
     return 'A';
@@ -8,11 +10,11 @@ export class A {
   }
 }
 
-export class Actor {
-  #name: string;
+export class BaseActor {
+  name: string;
 
   constructor(name: string) {
-    this.#name = name;
+    this.name = name;
   }
 
   widget(): Widget {
@@ -141,7 +143,7 @@ export class Foo {
     return 'c';
   }
 
-  d(x: any) {
+  d(x: unknown) {
     return x;
   }
 
@@ -193,7 +195,7 @@ export class X {
 }
 
 export class NonIterable {
-  constructor() {}
+  constructor() {} // eslint-disable-line @typescript-eslint/no-empty-function
 }
 
 export class BarIterator {

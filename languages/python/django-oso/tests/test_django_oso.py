@@ -9,7 +9,6 @@ from django_oso.oso import Oso, reset_oso
 from django_oso.auth import authorize, authorize_model
 from polar import Variable, Expression
 
-from polar.exceptions import UnsupportedError
 from oso import OsoError
 from .conftest import negated_condition
 
@@ -20,30 +19,19 @@ def reset():
 
 
 @pytest.fixture
-def simple_policy():
+def simple_policy(load_additional_str):
     """Load simple authorization policy."""
-    Oso.load_file(Path(__file__).parent / "simple.polar")
+    with open(Path(__file__).parent / "simple.polar", "rb") as f:
+        contents = f.read().decode("utf-8")
+        load_additional_str(contents)
 
 
 @pytest.fixture
-def partial_policy():
+def partial_policy(load_additional_str):
     """Load partial authorization policy."""
-    Oso.load_file(Path(__file__).parent / "partial.polar")
-
-
-@pytest.fixture
-def oso_with_polar_roles_enabled():
-    Oso.load_str(
-        'resource(_: String, "string", ["get"], _roles); actor_has_role_for_resource(_,_,_);'
-    )
-    Oso.enable_roles()
-    yield Oso
-    Oso.clear_rules()
-
-
-def test_cannot_use_data_filtering_if_polar_roles_enabled(oso_with_polar_roles_enabled):
-    with pytest.raises(UnsupportedError, match="Polar roles"):
-        authorize_model(None, None)
+    with open(Path(__file__).parent / "partial.polar", "rb") as f:
+        contents = f.read().decode("utf-8")
+        load_additional_str(contents)
 
 
 def test_policy_autoload():
@@ -116,7 +104,7 @@ def test_require_authorization(client, settings, simple_policy):
     assert response.status_code == 500
 
 
-def test_route_authorization(client, settings, simple_policy):
+def test_route_authorization(client, settings, simple_policy, load_additional_str):
     """Test route authorization middleware"""
     settings.MIDDLEWARE.append("django.contrib.sessions.middleware.SessionMiddleware")
     settings.MIDDLEWARE.append(
@@ -130,7 +118,7 @@ def test_route_authorization(client, settings, simple_policy):
     response = client.get("/b/")
     assert response.status_code == 403
 
-    Oso.load_str('allow(_, "GET", _: HttpRequest{path: "/a/"});')
+    load_additional_str('allow(_, "GET", _: HttpRequest{path: "/a/"});')
     response = client.get("/a/")
     assert response.status_code == 200
 
@@ -199,7 +187,7 @@ def test_partial(rf, partial_policy):
 
 
 @pytest.mark.django_db
-def test_partial_isa_with_path():
+def test_partial_isa_with_path(load_additional_str):
     from test_app.models import Post, User
 
     alice = User(name="alice")
@@ -211,7 +199,7 @@ def test_partial_isa_with_path():
     Post(created_by=not_alice).save(),
     Post(created_by=alice).save(),
 
-    Oso.load_str(
+    load_additional_str(
         """
             allow(_, _, post: test_app::Post) if check(post.created_by);
             check(user: test_app::User) if user.name = "alice";
@@ -252,11 +240,11 @@ def test_partial_errors(rf):
 
 
 @pytest.mark.django_db
-def test_null_with_partial(rf):
+def test_null_with_partial(rf, load_additional_str):
     from test_app.models import Post
 
     Post(name="test", is_private=False, timestamp=1).save()
-    Oso.load_str("allow(_, _, post: test_app::Post) if post.option = nil;")
+    load_additional_str("allow(_, _, post: test_app::Post) if post.option = nil;")
     request = rf.get("/")
     request.user = "test_user"
 
@@ -274,11 +262,11 @@ def test_null_with_partial(rf):
 
 
 @pytest.mark.django_db
-def test_negated_matches_with_partial(rf):
+def test_negated_matches_with_partial(rf, load_additional_str):
     from test_app.models import Post
 
     Post(name="test", is_private=False, timestamp=1).save()
-    Oso.load_str(
+    load_additional_str(
         """
         allow(1, _, post) if not post matches test_app::Post;
         allow(2, _, post) if not post matches test_app::User;
@@ -331,8 +319,8 @@ def test_negated_matches_with_partial(rf):
     assert authorized_posts.count() == 1
 
 
-def test_partial_unification():
-    Oso.load_str("f(x, y) if x = y and x = 1;")
+def test_partial_unification(load_additional_str):
+    load_additional_str("f(x, y) if x = y and x = 1;")
     results = Oso.query_rule("f", Variable("x"), Variable("y"), accept_expression=True)
     first = next(results)["bindings"]
     assert first["x"] == 1
@@ -341,7 +329,7 @@ def test_partial_unification():
     with pytest.raises(StopIteration):
         next(results)
 
-    Oso.load_str("g(x, y) if x = y and y > 1;")
+    load_additional_str("g(x, y) if x = y and y > 1;")
     results = Oso.query_rule("g", Variable("x"), Variable("y"), accept_expression=True)
     first = next(results)["bindings"]
 
@@ -363,10 +351,10 @@ def test_partial_unification():
     )
 
 
-def test_rewrite_parameters():
+def test_rewrite_parameters(load_additional_str):
     from test_app.models import Post
 
-    Oso.load_str(
+    load_additional_str(
         """allow(_, _, resource) if g(resource.created_by);
            g(resource) if resource matches test_app::User;
         """
@@ -376,11 +364,11 @@ def test_rewrite_parameters():
 
 
 @pytest.mark.django_db
-def test_partial_with_allow_all(rf):
+def test_partial_with_allow_all(rf, load_additional_str):
     from test_app.models import Post
 
     Post(name="test", is_private=False, timestamp=1).save()
-    Oso.load_str("allow(_, _, _);")
+    load_additional_str("allow(_, _, _);")
     request = rf.get("/")
     request.user = "test_user"
 
@@ -396,10 +384,10 @@ def test_partial_with_allow_all(rf):
     assert authorized_posts.count() == 1
 
 
-def test_unconditional_policy_has_no_filter():
+def test_unconditional_policy_has_no_filter(load_additional_str):
     from test_app.models import Post
 
-    Oso.load_str(
+    load_additional_str(
         'allow("user", "read", post: test_app::Post) if post.id = 1; allow(_, _, _);'
     )
     authorize_filter = authorize_model(None, Post, actor="user", action="read")

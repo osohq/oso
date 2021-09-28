@@ -43,6 +43,10 @@
       segments will be separated by an ellipsis to indicate elided code.
   - gitHub: specify GitHub link to generate a link to example. E.g
     ``https://github.com/osohq/gitclub/``
+  - ellipsis: override the default marker for elided code ("...").
+  - hl_lines: specify lines of Polar code that you want to highlight. *This is
+    only for Polar code -- for all other code use the hlOpts property that
+    leverages Hugo's highlighting instead.*
 */}}
 
 {{ $dynPath := $.Params.dynPath }}
@@ -63,6 +67,9 @@
 {{ $firstLine := 0 }}
 {{ $lastLine := 0 }}
 {{ $linenos := $.Params.linenos | default false }}
+{{ $tabGroup := $.Params.tabGroup }}
+{{ $ellipsis := $.Params.ellipsis | default "..." }}
+{{ $hl_lines := $.Params.hl_lines | default "" }}
 
 {{/* Turn "1,3-5,11-17" into a slice of maps consisting of a single key-value
      pair where the key is the starting line and the value is the length of the
@@ -205,7 +212,7 @@
               {{ with first $count (after (sub (int $start) 1) $bounded) }}
                 {{ $temp = $temp | append . }}
                 {{ if ne $index $last }}
-                  {{ $temp = $temp | append "" "..." "" }}
+                  {{ $temp = $temp | append "" $ellipsis "" }}
                 {{ end }}
               {{ end }}
             {{ end }}
@@ -240,6 +247,15 @@
           {{ $hlOpts = "" }}
         {{ end }}
       {{ end }}
+
+      {{/* Strip any remaining lines containing the 'docs:' magic string. */}}
+      {{ $withoutDocsTags := slice }}
+      {{ range $index, $line := $contentLines }}
+        {{ if not (in $line "docs:") }}
+          {{ $withoutDocsTags = $withoutDocsTags | append $line }}
+        {{ end }}
+      {{ end }}
+      {{ $contentLines = $withoutDocsTags }}
 
       {{ $content = delimit $contentLines "\n" }}
     {{ end }}
@@ -279,10 +295,10 @@
     {{ $gitHubRef = (printf "%s/blob/main/%s#L%d-L%d" $gitHub $pathTrim $gFirstLine $gLastLine) }}
 {{ end }}
 
-<div class="code" id="{{ $id | urlize }}">
-  <div class="filename rounded-t-md bg-gray-200 text-gray-700 text-sm py-2">
+<div class="code" id="{{ $file | urlize}}" data-hl_lines="{{ $hl_lines }}" {{ if $tabGroup }}data-tabgroup="{{ $tabGroup }}"{{ end }}>
+  <div class="filename rounded-t-md bg-gray-200 text-gray-700 text-sm py-2 flex">
     {{- with $syntax -}}
-      <span class="px-2{{ if eq . "go" }} block w-10{{end}}">
+      <span class="px-2{{ if eq . "go" }} flex w-10{{end}}">
         {{- partialCached "fontawesome.html" . . -}}
       </span>
     {{- end -}}

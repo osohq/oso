@@ -3,7 +3,7 @@
 module Oso
   module Polar
     # Base error type for Oso::Polar.
-    class Error < ::RuntimeError
+    class Error < ::Oso::Error
       attr_reader :stack_trace
 
       # @param message [String]
@@ -68,7 +68,7 @@ module Oso
       end
     end
     class DuplicateClassAliasError < PolarRuntimeError # rubocop:disable Style/Documentation
-      # @param as [String]
+      # @param name [String]
       # @param old [Class]
       # @param new [Class]
       def initialize(name:, old:, new:)
@@ -101,7 +101,6 @@ module Oso
     class ParameterError < ApiError; end
 
     class ValidationError < Error; end
-    class RolesValidationError < Error; end
 
     UNEXPECTED_EXPRESSION_MESSAGE = <<~MSG
       Received Expression from Polar VM. The Expression type is not yet supported in this language.

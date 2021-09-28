@@ -7,8 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 from dataclasses import dataclass
-from oso import Oso
-from polar import Relationship
+from oso import Oso, Relation
 from functools import reduce
 
 
@@ -18,16 +17,12 @@ def oso():
     return oso
 
 
-def fold_constraints(constraints):
-    return reduce(
+def filter_array(array, constraints):
+    check = reduce(
         lambda f, g: lambda x: f(x) and g(x),
-        [c.to_predicate() for c in constraints],
+        [c.check for c in constraints],
         lambda _: True,
     )
-
-
-def filter_array(array, constraints):
-    check = fold_constraints(constraints)
     return [x for x in array if check(x)]
 
 
@@ -58,7 +53,7 @@ def t(oso):
         numbers: list
 
     @dataclass
-    class FooLogRecord:
+    class Log:
         id: str
         foo_id: str
         data: str
@@ -71,9 +66,9 @@ def t(oso):
     third_foo = Foo(id="third", bar_id="hello", is_fooey=True, numbers=[2])
     fourth_foo = Foo(id="fourth", bar_id="goodbye", is_fooey=True, numbers=[2, 1])
 
-    fourth_log_a = FooLogRecord(id="a", foo_id="fourth", data="hello")
-    third_log_b = FooLogRecord(id="b", foo_id="third", data="world")
-    another_log_c = FooLogRecord(id="c", foo_id="another", data="steve")
+    fourth_log_a = Log(id="a", foo_id="fourth", data="hello")
+    third_log_b = Log(id="b", foo_id="third", data="world")
+    another_log_c = Log(id="c", foo_id="another", data="steve")
 
     bars = [hello_bar, goodbye_bar, hershey_bar]
     foos = [something_foo, another_foo, third_foo, fourth_foo]
@@ -88,8 +83,26 @@ def t(oso):
     def get_foo_logs(constraints):
         return filter_array(foo_logs, constraints)
 
+    # Combining is combining but filtering out duplicates.
+    def combine_query(q1, q2):
+        results = q1 + q2
+        return [i for n, i in enumerate(results) if i not in results[:n]]
+
+    oso.set_data_filtering_query_defaults(
+        exec_query=lambda results: results, combine_query=combine_query
+    )
+
     oso.register_class(
-        Bar, types={"id": str, "is_cool": bool, "is_still_cool": bool}, fetcher=get_bars
+        Bar,
+        types={
+            "id": str,
+            "is_cool": bool,
+            "is_still_cool": bool,
+            "foos": Relation(
+                kind="many", other_type="Foo", my_field="id", other_field="bar_id"
+            ),
+        },
+        build_query=get_bars,
     )
     oso.register_class(
         Foo,
@@ -98,43 +111,45 @@ def t(oso):
             "bar_id": str,
             "is_fooey": bool,
             "numbers": list,
-            "bar": Relationship(
-                kind="parent", other_type="Bar", my_field="bar_id", other_field="id"
+            "bar": Relation(
+                kind="one", other_type="Bar", my_field="bar_id", other_field="id"
             ),
-            "logs": Relationship(
-                kind="children",
-                other_type="FooLogRecord",
+            "logs": Relation(
+                kind="many",
+                other_type="Log",
                 my_field="id",
                 other_field="foo_id",
             ),
         },
-        fetcher=get_foos,
+        build_query=get_foos,
     )
     oso.register_class(
-        FooLogRecord,
+        Log,
         types={
             "id": str,
             "foo_id": str,
             "data": str,
-            # "bar": Relationship(
-            #     kind="parent", other_type="Bar", my_field="bar_id", other_field="id"
-            # ),
+            "foo": Relation(
+                kind="one", other_type="Foo", my_field="foo_id", other_field="id"
+            ),
         },
-        fetcher=get_foo_logs,
+        build_query=get_foo_logs,
     )
     # Sorta hacky, just return anything you want to use in a test.
     return {
         "Foo": Foo,
         "Bar": Bar,
-        "FooLogRecord": FooLogRecord,
+        "Log": Log,
         "another_foo": another_foo,
         "third_foo": third_foo,
+        "something_foo": something_foo,
         "fourth_foo": fourth_foo,
         "fourth_log_a": fourth_log_a,
         "third_log_b": third_log_b,
         "another_log_c": another_log_c,
         "bars": bars,
         "foos": foos,
+        "logs": foo_logs,
     }
 
 
@@ -164,6 +179,10 @@ def sqlalchemy_t(oso):
 
     Base.metadata.create_all(engine)
 
+    oso.set_data_filtering_query_defaults(
+        exec_query=lambda query: query.all(), combine_query=lambda q1, q2: q1.union(q2)
+    )
+
     # @TODO: Somehow the session needs to get in here, didn't think about that yet... Just hack for now and use a global
     # one.
     def get_bars(constraints):
@@ -172,13 +191,17 @@ def sqlalchemy_t(oso):
             field = getattr(Bar, constraint.field)
             if constraint.kind == "Eq":
                 query = query.filter(field == constraint.value)
+            elif constraint.kind == "Neq":
+                query = query.filter(field != constraint.value)
             elif constraint.kind == "In":
                 query = query.filter(field.in_(constraint.value))
             # ...
-        return query.all()
+        return query
 
     oso.register_class(
-        Bar, types={"id": str, "is_cool": bool, "is_still_cool": bool}, fetcher=get_bars
+        Bar,
+        types={"id": str, "is_cool": bool, "is_still_cool": bool},
+        build_query=get_bars,
     )
 
     def get_foos(constraints):
@@ -187,10 +210,12 @@ def sqlalchemy_t(oso):
             field = getattr(Foo, constraint.field)
             if constraint.kind == "Eq":
                 query = query.filter(field == constraint.value)
+            elif constraint.kind == "Neq":
+                query = query.filter(field != constraint.value)
             elif constraint.kind == "In":
                 query = query.filter(field.in_(constraint.value))
             # ...
-        return query.all()
+        return query
 
     oso.register_class(
         Foo,
@@ -198,11 +223,11 @@ def sqlalchemy_t(oso):
             "id": str,
             "bar_id": str,
             "is_fooey": bool,
-            "bar": Relationship(
-                kind="parent", other_type="Bar", my_field="bar_id", other_field="id"
+            "bar": Relation(
+                kind="one", other_type="Bar", my_field="bar_id", other_field="id"
             ),
         },
-        fetcher=get_foos,
+        build_query=get_foos,
     )
 
     hello_bar = Bar(id="hello", is_cool=True, is_still_cool=True)
@@ -225,7 +250,15 @@ def sqlalchemy_t(oso):
         session.add(obj)
         session.commit()
 
-    return {"session": Session, "Bar": Bar, "Foo": Foo, "another_foo": another_foo}
+    return {
+        "session": Session,
+        "Bar": Bar,
+        "Foo": Foo,
+        "another_foo": another_foo,
+        "fourth_foo": fourth_foo,
+        "something_foo": something_foo,
+        "third_foo": third_foo,
+    }
 
 
 def test_sqlalchemy_relationship(oso, sqlalchemy_t):
@@ -238,8 +271,25 @@ def test_sqlalchemy_relationship(oso, sqlalchemy_t):
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", sqlalchemy_t["another_foo"])
 
-    results = list(oso.get_allowed_resources("steve", "get", sqlalchemy_t["Foo"]))
+    results = list(oso.authorized_resources("steve", "get", sqlalchemy_t["Foo"]))
     assert len(results) == 2
+
+
+def test_sqlalchemy_neq(oso, sqlalchemy_t):
+    policy = """
+    allow("steve", "get", foo: Foo) if foo.bar.id != "hello";
+    allow("steve", "put", foo: Foo) if foo.bar.id != "goodbye";
+    """
+    oso.load_str(policy)
+    t = sqlalchemy_t
+    check_authz(oso, "steve", "get", t["Foo"], [t["fourth_foo"]])
+    check_authz(
+        oso,
+        "steve",
+        "put",
+        t["Foo"],
+        [t["another_foo"], t["third_foo"], t["something_foo"]],
+    )
 
 
 def test_no_relationships(oso, t):
@@ -251,8 +301,24 @@ def test_no_relationships(oso, t):
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", t["another_foo"])
 
-    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
+    results = list(oso.authorized_resources("steve", "get", t["Foo"]))
     assert len(results) == 3
+
+
+def test_neq(oso, t):
+    policy = """
+    allow("steve", "get", foo: Foo) if foo.bar.id != "hello";
+    allow("steve", "put", foo: Foo) if foo.bar.id != "goodbye";
+    """
+    oso.load_str(policy)
+    check_authz(oso, "steve", "get", t["Foo"], [t["fourth_foo"]])
+    check_authz(
+        oso,
+        "steve",
+        "put",
+        t["Foo"],
+        [t["another_foo"], t["third_foo"], t["something_foo"]],
+    )
 
 
 def test_relationship(oso, t):
@@ -265,8 +331,32 @@ def test_relationship(oso, t):
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", t["another_foo"])
 
-    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
+    results = list(oso.authorized_resources("steve", "get", t["Foo"]))
     assert len(results) == 2
+
+
+def test_duplex_relationship(oso, t):
+    policy = "allow(_, _, foo: Foo) if foo in foo.bar.foos;"
+    oso.load_str(policy)
+    check_authz(oso, "gwen", "gwen", t["Foo"], t["foos"])
+
+
+@pytest.mark.skip(""" Cant filter non registered classes anymore.""")
+def test_known_results(oso):
+    policy = """
+      allow(_, _, i: Integer) if i in [1, 2];
+      allow(_, _, d: Dictionary) if d = {};
+    """
+    oso.load_str(policy)
+
+    results = oso.authorized_resources("gwen", "get", int)
+    assert unord_eq(results, [1, 2])
+
+    results = oso.authorized_resources("gwen", "get", dict)
+    assert results == [{}]
+
+    results = oso.authorized_resources("gwen", "get", str)
+    assert results == []
 
 
 def test_var_in_values(oso, t):
@@ -278,7 +368,7 @@ def test_var_in_values(oso, t):
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", t["another_foo"])
 
-    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
+    results = list(oso.authorized_resources("steve", "get", t["Foo"]))
     assert len(results) == 4
 
 
@@ -291,8 +381,57 @@ def test_var_in_var(oso, t):
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", t["fourth_foo"])
 
-    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
+    results = list(oso.authorized_resources("steve", "get", t["Foo"]))
     assert len(results) == 1
+
+
+def test_parent_child_cases(oso, t):
+    policy = """
+    allow(log: Log, "thence", foo: Foo) if
+      log.foo = foo;
+    allow(log: Log, "thither", foo: Foo) if
+      log in foo.logs;
+    allow(log: Log, "glub", foo: Foo) if
+      log.foo = foo and log in foo.logs;
+    allow(log: Log, "bluh", foo: Foo) if
+      log in foo.logs and log.foo = foo;
+    """
+    oso.load_str(policy)
+    foo = t["fourth_foo"]
+    log = t["logs"][0]
+    check_authz(oso, log, "thence", t["Foo"], [foo])
+    check_authz(oso, log, "thither", t["Foo"], [foo])
+    check_authz(oso, log, "glub", t["Foo"], [foo])
+    check_authz(oso, log, "bluh", t["Foo"], [foo])
+
+
+def test_specializers(oso, t):
+    policy = """
+        allow(foo: Foo,             "NoneNone", log) if foo = log.foo;
+        allow(foo,                  "NoneCls",  log: Log) if foo = log.foo;
+        allow(foo,                  "NoneDict", _: {foo:foo});
+        allow(foo,                  "NonePtn",  _: Log{foo: foo});
+        allow(foo: Foo,             "ClsNone",  log) if log in foo.logs;
+        allow(foo: Foo,             "ClsCls",   log: Log) if foo = log.foo;
+        allow(foo: Foo,             "ClsDict",  _: {foo: foo});
+        allow(foo: Foo,             "ClsPtn",   _: Log{foo: foo});
+        allow(_: {logs: logs},      "DictNone", log) if log in logs;
+        allow(_: {logs: logs},      "DictCls",  log: Log) if log in logs;
+        allow(foo: {logs: logs},    "DictDict", log: {foo: foo}) if log in logs;
+        allow(foo: {logs: logs},    "DictPtn",  log: Log{foo: foo}) if log in logs;
+        allow(_: Foo{logs: logs},   "PtnNone",  log) if log in logs;
+        allow(_: Foo{logs: logs},   "PtnCls",   log: Log) if log in logs;
+        allow(foo: Foo{logs: logs}, "PtnDict",  log: {foo: foo}) if log in logs;
+        allow(foo: Foo{logs: logs}, "PtnPtn",   log: Log{foo: foo}) if log in logs;
+    """
+    oso.load_str(policy)
+    Log = t["Log"]
+    parts = ["None", "Cls", "Dict", "Ptn"]
+    for a in parts:
+        for b in parts:
+            for log in t["logs"]:
+                for foo in filter(lambda f: f.id == log.foo_id, t["foos"]):
+                    check_authz(oso, foo, a + b, Log, [log])
 
 
 def test_val_in_var(oso, t):
@@ -305,7 +444,7 @@ def test_val_in_var(oso, t):
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", t["fourth_foo"])
 
-    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
+    results = list(oso.authorized_resources("steve", "get", t["Foo"]))
     assert results == [t["fourth_foo"]]
 
 
@@ -317,13 +456,13 @@ def test_var_in_value(oso, t):
     # This is I think the thing that MikeD wants though, for this to come through
     # as an in so the SQL can do an IN.
     policy = """
-    allow("steve", "get", resource: FooLogRecord) if
+    allow("steve", "get", resource: Log) if
         resource.data in ["hello", "world"];
     """
     oso.load_str(policy)
     assert oso.is_allowed("steve", "get", t["fourth_log_a"])
 
-    results = list(oso.get_allowed_resources("steve", "get", t["FooLogRecord"]))
+    results = list(oso.authorized_resources("steve", "get", t["Log"]))
     assert unord_eq(results, [t["fourth_log_a"], t["third_log_b"]])
 
 
@@ -340,18 +479,23 @@ def test_or(oso, t):
     oso.load_str(policy)
     # assert oso.is_allowed("steve", "get", t['fourth_log_a'])
 
-    results = list(oso.get_allowed_resources("steve", "get", t["Foo"]))
+    results = list(oso.authorized_resources("steve", "get", t["Foo"]))
     assert len(results) == 2
 
 
 def test_field_cmp_field(oso, t):
     policy = """
-    allow(_, _, bar: Bar) if
+    allow("gwen", "eat", bar: Bar) if
         bar.is_cool = bar.is_still_cool;
+    allow("gwen", "nom", bar: Bar) if
+        bar.is_cool != bar.is_still_cool;
     """
     oso.load_str(policy)
     expected = [b for b in t["bars"] if b.is_cool == b.is_still_cool]
     check_authz(oso, "gwen", "eat", t["Bar"], expected)
+
+    expected = [b for b in t["bars"] if b.is_cool != b.is_still_cool]
+    check_authz(oso, "gwen", "nom", t["Bar"], expected)
 
 
 @pytest.mark.xfail(reason="doesn't work yet!")
@@ -392,12 +536,12 @@ def test_const_not_in_coll(oso, t):
 
 def test_param_field(oso, t):
     policy = """
-    allow(actor, action, resource: FooLogRecord) if
+    allow(actor, action, resource: Log) if
         actor = resource.data and
         action = resource.id;
     """
     oso.load_str(policy)
-    check_authz(oso, "steve", "c", t["FooLogRecord"], [t["another_log_c"]])
+    check_authz(oso, "steve", "c", t["Log"], [t["another_log_c"]])
 
 
 @pytest.fixture
@@ -467,31 +611,48 @@ def roles(oso):
     def get_users(constraints):
         return filter_array(users, constraints)
 
-    oso.register_class(Org, types={"name": str}, fetcher=get_orgs)
+    def exec_query(results):
+        return results
+
+    def combine_query(q1, q2):
+        results = q1 + q2
+        return [i for n, i in enumerate(results) if i not in results[:n]]
+
+    oso.register_class(
+        Org,
+        types={"name": str},
+        build_query=get_orgs,
+        exec_query=exec_query,
+        combine_query=combine_query,
+    )
     oso.register_class(
         Repo,
         types={
             "name": str,
             "org_name": str,
-            "org": Relationship(
-                kind="parent", other_type="Org", my_field="org_name", other_field="name"
+            "org": Relation(
+                kind="one", other_type="Org", my_field="org_name", other_field="name"
             ),
         },
-        fetcher=get_repos,
+        build_query=get_repos,
+        exec_query=exec_query,
+        combine_query=combine_query,
     )
     oso.register_class(
         Issue,
         types={
             "name": str,
             "repo_name": str,
-            "repo": Relationship(
-                kind="parent",
+            "repo": Relation(
+                kind="one",
                 other_type="Repo",
                 my_field="repo_name",
                 other_field="name",
             ),
         },
-        fetcher=get_issues,
+        build_query=get_issues,
+        exec_query=exec_query,
+        combine_query=combine_query,
     )
     oso.register_class(
         Role,
@@ -500,76 +661,76 @@ def roles(oso):
             "resource_name": str,
             "role": str,
         },
-        fetcher=get_roles,
+        build_query=get_roles,
+        exec_query=exec_query,
+        combine_query=combine_query,
     )
     oso.register_class(
         User,
         types={
             "name": str,
-            "roles": Relationship(
-                kind="children",
+            "roles": Relation(
+                kind="many",
                 other_type="Role",
                 my_field="name",
                 other_field="user_name",
             ),
         },
-        fetcher=get_users,
+        build_query=get_users,
+        exec_query=exec_query,
+        combine_query=combine_query,
     )
 
     policy = """
-    resource(_type: Org, "org", actions, roles) if
-        actions = [
-            "invite",
-            "create_repo"
-        ] and
-        roles = {
-            member: {
-                permissions: ["create_repo"],
-                implies: ["repo:reader"]
-            },
-            owner: {
-                permissions: ["invite"],
-                implies: ["repo:writer", "member"]
-            }
-        };
+      allow(actor, action, resource) if
+        has_permission(actor, action, resource);
 
-    resource(_type: Repo, "repo", actions, roles) if
-        actions = [
-            "push",
-            "pull"
-        ] and
-        roles = {
-            writer: {
-                permissions: ["push", "issue:edit"],
-                implies: ["reader"]
-            },
-            reader: {
-                permissions: ["pull"]
-            }
-        };
+      has_role(user: User, name: String, resource: Resource) if
+        role in user.roles and
+        role.role = name and
+        role.resource_name = resource.name;
 
-    resource(_type: Issue, "issue", actions, {}) if
-        actions = [
-            "edit"
-        ];
+      actor User {}
 
-    parent_child(parent_org: Org, repo: Repo) if
-        repo.org = parent_org;
+      resource Org {
+        roles = [ "owner", "member" ];
+        permissions = [ "invite", "create_repo" ];
 
-    parent_child(parent_repo: Repo, issue: Issue) if
-        issue.repo = parent_repo;
+        "create_repo" if "member";
+        "invite" if "owner";
 
-    actor_has_role_for_resource(actor, role_name: String, resource) if
-        role in actor.roles and
-        role.resource_name = resource.name and
-        role.role = role_name;
+        "member" if "owner";
+      }
 
-    allow(actor, action, resource) if
-        role_allows(actor, action, resource);
+      resource Repo {
+        roles = [ "writer", "reader" ];
+        permissions = [ "push", "pull" ];
+        relations = { parent: Org };
+
+        "pull" if "reader";
+        "push" if "writer";
+
+        "reader" if "writer";
+
+        "reader" if "member" on "parent";
+        "writer" if "owner" on "parent";
+      }
+
+      has_relation(org: Org, "parent", repo: Repo) if
+        org = repo.org;
+
+      resource Issue {
+        permissions = [ "edit" ];
+        relations = { parent: Repo };
+
+        "edit" if "writer" on "parent";
+      }
+
+      has_relation(repo: Repo, "parent", issue: Issue) if
+        repo = issue.repo;
     """
 
     oso.load_str(policy)
-    oso.enable_roles()
     return {
         "apple": apple,
         "osohq": osohq,
@@ -590,7 +751,7 @@ def roles(oso):
 
 
 def check_authz(oso, actor, action, resource, expected):
-    assert unord_eq(oso.get_allowed_resources(actor, action, resource), expected)
+    assert unord_eq(oso.authorized_resources(actor, action, resource), expected)
     for re in expected:
         assert oso.is_allowed(actor, action, re)
 

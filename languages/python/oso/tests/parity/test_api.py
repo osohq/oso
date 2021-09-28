@@ -17,7 +17,7 @@ from .test_api_externals import (
     Http,
     Widget,
     DooDad,
-    Actor,
+    User,
     Company,
     get_frobbed,
     set_frobbed,
@@ -32,6 +32,7 @@ EXPECT_XFAIL_PASS = not bool(os.getenv("EXPECT_XFAIL_PASS", False))
 
 @pytest.fixture
 def load_policy(polar):
+    polar.register_class(User)
     polar.load_file(Path(__file__).parent / "policies" / "test_api.polar")
 
 
@@ -64,25 +65,25 @@ def actor_in_role(monkeypatch):
 
 
 def test_register_class(polar, load_policy, query):
-    actor = Actor(name="guest")
+    actor = User(name="guest")
     resource = Widget(id="1")
     action = "get"
     assert query(Predicate(name="allow", args=(actor, action, resource)))
 
 
 def test_is_allowed(polar, load_policy, query):
-    actor = Actor(name="guest")
+    actor = User(name="guest")
     resource = Widget(id="1")
     action = "get"
     assert query(Predicate(name="allow", args=[actor, action, resource]))
-    actor = Actor(name="president")
+    actor = User(name="president")
     assert query(Predicate(name="actorInRole", args=[actor, "admin", resource]))
     assert query(Predicate(name="allowRole", args=["admin", "create", resource]))
 
 
 def test_method_resolution_order(polar, load_policy, query):
     set_frobbed([])
-    actor = Actor(name="guest")
+    actor = User(name="guest")
     resource = Widget(id="1")
     action = "get"
     assert query(Predicate(name="allow", args=[actor, action, resource]))
@@ -97,7 +98,7 @@ def test_method_resolution_order(polar, load_policy, query):
 
 def test_cut(polar, load_policy, query):
     set_frobbed([])
-    actor = Actor(name="guest")
+    actor = User(name="guest")
     resource = Widget(id="1")
     action = "get"
     assert query(Predicate(name="allow_with_cut", args=[actor, action, resource]))
@@ -113,7 +114,7 @@ def test_querystring_resource_map(polar, load_policy, query):
         Predicate(
             name="allow",
             args=[
-                Actor(name="sam"),
+                User(name="sam"),
                 "what",
                 Http(path="/widget/12", query={"param": "foo"}),
             ],
@@ -121,7 +122,7 @@ def test_querystring_resource_map(polar, load_policy, query):
     )
     assert not query(
         Predicate(
-            name="allow", args=[Actor(name="sam"), "what", Http(path="/widget/12")]
+            name="allow", args=[User(name="sam"), "what", Http(path="/widget/12")]
         )
     )
 
@@ -134,7 +135,7 @@ def test_resource_mapping(polar, load_policy, query):
         return pytest.skip("Flask not available in environment.")
 
     def set_user():
-        g.user = Actor(name=request.headers["username"])
+        g.user = User(name=request.headers["username"])
 
     app = Flask(__name__)
     app.before_request(set_user)
@@ -173,7 +174,7 @@ def test_resource_mapping(polar, load_policy, query):
 
 
 def test_patching(polar, widget_in_company, actor_in_role, load_policy, query):
-    user = Actor("test")
+    user = User("test")
     assert not query(
         Predicate(name="actorInRole", args=[user, "admin", Widget(id="1")])
     )
@@ -190,7 +191,7 @@ def test_patching(polar, widget_in_company, actor_in_role, load_policy, query):
 # Instance Caching tests (move these somewhere else eventually)
 def test_instance_round_trip(polar, query, qvar):
     # direct round trip
-    user = Actor("sam")
+    user = User("sam")
     assert polar.host.to_python(polar.host.to_polar(user)) is user
 
 
@@ -200,16 +201,16 @@ def test_instance_round_trip(polar, query, qvar):
 )
 def test_instance_initialization(polar, query, qvar):
     # test round trip through kb query
-    user = Actor("sam")
-    env = query('new Actor(name:"sam") = returned_user')[0]
+    user = User("sam")
+    env = query('new User(name:"sam") = returned_user')[0]
     assert polar.host.to_python(env["returned_user"]) == user
 
-    env = query('new Actor(name:"sam") = returned_user')[0]
+    env = query('new User(name:"sam") = returned_user')[0]
     assert polar.host.to_python(env["returned_user"]) == user
 
 
 def test_instance_from_external_call(polar, load_policy, query):
-    user = Actor(name="guest")
+    user = User(name="guest")
     resource = Widget(id="1", name="name")
     assert query(Predicate(name="allow", args=[user, "frob", resource]))
 
@@ -235,7 +236,7 @@ def test_load_input_checking(polar, query):
     reason="Lists are no longer converted to generators, but are returned as true lists.",
 )
 def test_return_list(polar, load_policy, query):
-    actor = Actor(name="guest")
+    actor = User(name="guest")
     resource = Widget(id="1")
     action = "invite"
     assert query(Predicate(name="allow", args=[actor, action, resource]))
@@ -243,13 +244,13 @@ def test_return_list(polar, load_policy, query):
 
 def test_type_fields(polar, load_policy, query):
     resource = Widget(id=1, name="goldfish")
-    actor = Actor(name="elmo", id=1, widget=resource)
+    actor = User(name="elmo", id=1, widget=resource)
     assert query(Predicate(name="allow", args=[actor, "keep", resource]))
 
 
 def test_iter_fields(polar, load_policy, query):
     resource = Widget(id=1, name="stapler")
-    actor = Actor(name="milton", id=1)
+    actor = User(name="milton", id=1)
     assert query(Predicate(name="allow", args=[actor, "can_have", resource]))
     with pytest.raises(InvalidIteratorError):
         query(Predicate(name="allow", args=[actor, "tries_to_get", resource]))
@@ -264,7 +265,7 @@ def test_clear_rules(polar, load_policy, query):
     polar.clear_rules()
     polar.load_file(old)
 
-    actor = Actor(name="milton", id=1)
+    actor = User(name="milton", id=1)
     resource = Widget(id=1, name="thingy")
     assert query(Predicate(name="allow", args=[actor, "make", resource]))
     assert query(Predicate(name="allow", args=[actor, "get", resource]))

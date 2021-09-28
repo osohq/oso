@@ -18,7 +18,6 @@ from polar.exceptions import (
     UnsupportedError,
     ParameterError,
     PolarApiError,
-    RolesValidationError,
     ValidationError,
 )
 
@@ -40,8 +39,8 @@ def get_python_error(err_str, enrich_message=None):
         subkind = None
         details = None
 
-    if details:
-        if "stack_trace" in details:
+    if details and enrich_message:
+        if details.get("stack_trace"):
             details["stack_trace"] = enrich_message(details["stack_trace"])
         if "msg" in details:
             details["msg"] = enrich_message(details["msg"])
@@ -55,8 +54,6 @@ def get_python_error(err_str, enrich_message=None):
     elif kind == "Parameter":
         # TODO(gj): this is wrong -- method has arity 3.
         return _api_error(message, details)
-    elif kind == "RolesValidation":
-        return _roles_validation_error(message, details)
     elif kind == "Validation":
         return _validation_error(message, details)
 
@@ -90,10 +87,6 @@ def _operational_error(subkind, message, details):
         return UnknownError(message, details)
     else:
         return OperationalError(message, details)
-
-
-def _roles_validation_error(message, details):
-    return RolesValidationError(message, details)
 
 
 def _validation_error(message, details):

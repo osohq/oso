@@ -106,9 +106,10 @@ public class PolarTest {
   @Test
   public void testInlineQueries() throws Exception {
     p.loadStr("f(1); ?= f(1);");
+    p.clearRules();
     assertThrows(
         Exceptions.InlineQueryFailedError.class,
-        () -> p.loadStr("?= f(2);"),
+        () -> p.loadStr("f(1); ?= f(2);"),
         "Expected inline query to fail but it didn't.");
   }
 
@@ -319,6 +320,8 @@ public class PolarTest {
         p.query("id(x)").results().equals(List.of(Map.of("x", 1))),
         "Failed to get attribute on external instance.");
 
+    p.clearRules();
+
     // Test call method
     p.loadStr("method(x) if x = new MyClass(\"test\", 1).myMethod(\"hello world\");");
     assertTrue(
@@ -379,8 +382,8 @@ public class PolarTest {
 
   @Test
   public void testExternalIsSubSpecializer() throws Exception {
-    p.loadStr("f(_: MySubClass, x) if x = 1;");
-    p.loadStr("f(_: MyClass, x) if x = 2;");
+    String policy = "f(_: MySubClass, x) if x = 1;\n" + "f(_: MyClass, x) if x = 2;";
+    p.loadStr(policy);
     List<HashMap<String, Object>> result =
         p.queryRule("f", new MySubClass("test", 1), new Variable("x")).results();
     assertTrue(
@@ -497,8 +500,10 @@ public class PolarTest {
 
   @Test
   public void testLoadMultipleFiles() throws Exception {
-    p.loadFile("src/test/java/com/osohq/oso/test.polar");
-    p.loadFile("src/test/java/com/osohq/oso/test2.polar");
+    p.loadFiles(
+        new String[] {
+          "src/test/java/com/osohq/oso/test.polar", "src/test/java/com/osohq/oso/test2.polar"
+        });
     assertTrue(
         p.query("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
     assertTrue(
@@ -548,6 +553,8 @@ public class PolarTest {
   public void testReturnNull() throws Exception {
     p.loadStr("f(x) if x.myReturnNull() = nil;");
     assertFalse(p.queryRule("f", new MyClass("test", 1)).results().isEmpty());
+
+    p.clearRules();
 
     p.loadStr("g(x) if x.myReturnNull().badCall() = 1;");
     assertThrows(
@@ -638,14 +645,15 @@ public class PolarTest {
   @Test
   public void testPartial() {
     // GIVEN
-    p.loadStr("f(1);");
-    p.loadStr("f(x) if x = 1 and x = 2;");
+    p.loadStr("f(1); f(x) if x = 1 and x = 2;");
 
     // WHEN
     Predicate rule = new Predicate("f", List.of(new Variable("x")));
     List<HashMap<String, Object>> results = p.query(rule, true).results();
     assertEquals(1, results.size());
     assertEquals(1, results.get(0).get("x"));
+
+    p.clearRules();
 
     p.loadStr("g(x) if x.bar = 1 and x.baz = 2;");
 
@@ -682,8 +690,7 @@ public class PolarTest {
   public void testPartialConstraint() {
     p.registerClass(User.class, "User");
     p.registerClass(Post.class, "Post");
-    p.loadStr("f(x: User) if x.user = 1;");
-    p.loadStr("f(x: Post) if x.post = 1;");
+    p.loadStr("f(x: User) if x.user = 1; f(x: Post) if x.post = 1;");
 
     Variable x = new Variable("x");
     Predicate rule = new Predicate("f", List.of(x));
@@ -711,5 +718,56 @@ public class PolarTest {
         Exceptions.UnexpectedPolarTypeError.class,
         () -> p.query("f(x)"),
         "Expected inline query to fail but it didn't.");
+  }
+
+  public static class Bar extends Foo {}
+
+  public static class Baz extends Bar {}
+
+  public static class Bad {}
+
+  @Test
+  public void testRuleTypes() {
+    // NOTE: keep this order of registering classes--confirms that MROs are added at the correct
+    // time
+    p.registerClass(Baz.class, "Baz");
+    p.registerClass(Bar.class, "Bar");
+    p.registerClass(Foo.class, "Foo");
+    p.registerClass(Bad.class, "Bad");
+
+    final String policy1 =
+        "type f(_x: Integer);"
+            + "f(1);"
+            + "type f(_x: Foo);"
+            + "type f(_x: Foo, _y: Bar);"
+            + "f(_x: Bar);"
+            + "f(_x: Baz);";
+
+    p.loadStr(policy1);
+
+    p.clearRules();
+
+    assertThrows(
+        Exceptions.ValidationError.class,
+        () -> p.loadStr(policy1 + "f(_x: Bad);"),
+        "Expected rule type validation error.");
+
+    //  Test with fields
+    final String policy2 = "type f(_x: Foo{id: 1});" + "f(_x: Bar{id: 1});" + "f(_x: Baz{id: 1});";
+
+    p.loadStr(policy2);
+
+    p.clearRules();
+
+    assertThrows(
+        Exceptions.ValidationError.class,
+        () -> p.loadStr(policy2 + "f(_x: Baz);"),
+        "Expected rule type validation error.");
+
+    // Test invalid rule type
+    assertThrows(
+        Exceptions.ValidationError.class,
+        () -> p.loadStr("type f(x: Foo, x.baz);"),
+        "Expected rule type validation error.");
   }
 }

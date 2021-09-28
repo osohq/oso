@@ -71,6 +71,10 @@ jobs:
           path: target/release/libpolar.so
       - uses: actions/upload-artifact@v2
         with:
+          name: oso_library
+          path: polar-c-api/polar.h
+      - uses: actions/upload-artifact@v2
+        with:
           name: oso_static_library
           path: target/release/libpolar-${{runner.os}}.a
       - uses: actions/upload-artifact@v2
@@ -433,7 +437,7 @@ jobs:
       - name: Use Node.js 12.20.0
         uses: actions/setup-node@v1
         with:
-          node-version: 12.20.0
+          node-version: "12.20.0"
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -458,12 +462,13 @@ jobs:
           path: languages/js/*
 
   validate_go:
-    name: Test go on ${{ matrix.os }}
+    name: Test go ${{ matrix.go-version }} on ${{ matrix.os }}
     needs: [build_go]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        go-version: ["1.12", "1.13", "1.14", "1.15", "1.16", "1.17"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -472,7 +477,7 @@ jobs:
       - name: Set up go
         uses: actions/setup-go@v2
         with:
-          go-version: "1.15"
+          go-version: ${{ matrix.go-version }}
       - name: Download go package from package run
         uses: actions/download-artifact@v1
         with:
@@ -483,8 +488,13 @@ jobs:
           go test -v ./tests/
         working-directory: go
       - name: "test musl"
-        if: runner.os == 'Linux'
-        run: docker run --rm -v `pwd`:/oso tetafro/golang-gcc:1.15-alpine /bin/sh -c 'cd /oso && go build && go test -v ./tests/'
+        # TODO(gj): the dependency fetching step in the
+        # tetafro/golang-gcc:1.12-alpine image seems to require Git (unlike Go
+        # versions 1.13 -> 1.17), and the image doesn't contain Git. We could
+        # create our own image that extends tetafro/golang-gcc:1.12-alpine and
+        # contains Git, but for now I'm skipping it.
+        if: runner.os == 'Linux' && matrix.go-version != '1.12'
+        run: docker run --rm -v `pwd`:/oso tetafro/golang-gcc:${{ matrix.go-version }}-alpine /bin/sh -c 'cd /oso && go build && go test -v ./tests/'
         working-directory: go
 
   validate_python_linux:
@@ -660,7 +670,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        node-version: ['10.0.0', '12.0.0', '14.0.0', '16.0.0']
+        node-version: ["12.20.0", "14.0.0", "16.0.0"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -706,10 +716,10 @@ jobs:
           bundler-cache: true
           ruby-version: "2.4.0"
           working-directory: "docs/examples/quickstart/ruby"
-      - name: Use Node.js 10.0.0
+      - name: Use Node.js 12.20.0
         uses: actions/setup-node@v1
         with:
-          node-version: "10.0.0"
+          node-version: "12.20.0"
       - name: Use Java 10
         uses: actions/setup-java@v1
         with:
@@ -725,7 +735,7 @@ jobs:
         with:
           go-version: "1.12"
       - name: Run quickstart tests
-        run: make -C docs test-quickstarts
+        run: make -C docs test-quickstarts-release
 
   release:
     name: Create release

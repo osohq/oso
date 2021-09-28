@@ -3,7 +3,6 @@ import pytest
 
 from sqlalchemy.orm import aliased
 
-from polar.exceptions import UnsupportedError
 from sqlalchemy_oso.session import (
     authorized_sessionmaker,
     scoped_session,
@@ -22,15 +21,6 @@ def log_queries():
     logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
 
-def test_cannot_use_data_filtering_if_polar_roles_enabled(engine, oso):
-    oso.load_str(
-        'resource(_: String, "string", ["get"], _roles); actor_has_role_for_resource(_, _, _);'
-    )
-    oso.enable_roles()
-    with pytest.raises(UnsupportedError, match="Polar roles"):
-        AuthorizedSession(oso, "user", {}, bind=engine)
-
-
 def test_authorize_query_no_access(engine, oso, fixture_data):
     session = AuthorizedSession(oso, "user", {Post: "action"}, bind=engine)
     query = session.query(Post)
@@ -47,13 +37,13 @@ def test_authorize_query_no_access(engine, oso, fixture_data):
 )
 def test_authorize_query_basic(engine, oso, fixture_data, query):
     # TODO: copied from test_authorize_model_basic
-    oso.load_str('allow("user", "read", post: Post) if post.access_level = "public";')
-    oso.load_str('allow("user", "write", post: Post) if post.access_level = "private";')
-    oso.load_str('allow("admin", "read", _post: Post);')
     oso.load_str(
-        'allow("moderator", "read", post: Post) if '
-        '(post.access_level = "private" or post.access_level = "public") and '
-        "post.needs_moderation = true;"
+        """allow("user", "read", post: Post) if post.access_level = "public";
+           allow("user", "write", post: Post) if post.access_level = "private";
+           allow("admin", "read", _post: Post);
+           allow("moderator", "read", post: Post) if
+             (post.access_level = "private" or post.access_level = "public") and
+             post.needs_moderation = true;"""
     )
 
     session = AuthorizedSession(oso, "user", {Post: "read"}, bind=engine)
@@ -87,10 +77,12 @@ def test_authorize_query_basic(engine, oso, fixture_data, query):
 
 def test_authorize_query_multiple_types(engine, oso, fixture_data):
     """Test a query involving multiple models."""
-    oso.load_str('allow("user", "read", post: Post) if post.id = 1;')
-    oso.load_str('allow("user", "read", user: User) if user.id = 0;')
-    oso.load_str('allow("user", "read", user: User) if user.id = 1;')
-    oso.load_str('allow("all_posts", "read", _: Post);')
+    oso.load_str(
+        """allow("user", "read", post: Post) if post.id = 1;
+           allow("user", "read", user: User) if user.id = 0;
+           allow("user", "read", user: User) if user.id = 1;
+           allow("all_posts", "read", _: Post);"""
+    )
 
     # Query two models. Only return authorized objects from each (no join).
     session = AuthorizedSession(oso, "user", {Post: "read", User: "read"}, bind=engine)
@@ -145,10 +137,12 @@ def test_alias(engine, oso, fixture_data):
 
 
 def test_authorized_sessionmaker_relationship(engine, oso, fixture_data):
-    oso.load_str('allow("user", "read", post: Post) if post.id = 1;')
-    # Post with creator id = 1
-    oso.load_str('allow("user", "read", post: Post) if post.id = 7;')
-    oso.load_str('allow("user", "read", user: User) if user.id = 0;')
+    oso.load_str(
+        """allow("user", "read", post: Post) if post.id = 1;
+           # Post with creator id = 1
+           allow("user", "read", post: Post) if post.id = 7;
+           allow("user", "read", user: User) if user.id = 0;"""
+    )
 
     Session = authorized_sessionmaker(
         get_oso=lambda: oso,
@@ -175,10 +169,12 @@ def test_authorized_sessionmaker_relationship(engine, oso, fixture_data):
 
 
 def test_authorized_session_relationship(engine, oso, fixture_data):
-    oso.load_str('allow("user", "read", post: Post) if post.id = 1;')
-    # Post with creator id = 1
-    oso.load_str('allow("user", "read", post: Post) if post.id = 7;')
-    oso.load_str('allow("user", "read", user: User) if user.id = 0;')
+    oso.load_str(
+        """allow("user", "read", post: Post) if post.id = 1;
+           # Post with creator id = 1
+           allow("user", "read", post: Post) if post.id = 7;
+           allow("user", "read", user: User) if user.id = 0;"""
+    )
 
     session = AuthorizedSession(
         oso=oso,
@@ -203,12 +199,14 @@ def test_authorized_session_relationship(engine, oso, fixture_data):
 
 
 def test_scoped_session_relationship(engine, oso, fixture_data):
-    oso.load_str('allow("user", "read", post: Post) if post.id = 1;')
-    # Post with creator id = 1
-    oso.load_str('allow("user", "read", post: Post) if post.id = 7;')
-    oso.load_str('allow("user", "read", user: User) if user.id = 0;')
-    oso.load_str('allow("other", "read", post: Post) if post.id = 3;')
-    oso.load_str('allow("other", "write", post: Post) if post.id = 4;')
+    oso.load_str(
+        """allow("user", "read", post: Post) if post.id = 1;
+           # Post with creator id = 1
+           allow("user", "read", post: Post) if post.id = 7;
+           allow("user", "read", user: User) if user.id = 0;
+           allow("other", "read", post: Post) if post.id = 3;
+           allow("other", "write", post: Post) if post.id = 4;"""
+    )
 
     data = {"user": "user", "checked_permissions": {Post: "read", User: "read"}}
     session = scoped_session(

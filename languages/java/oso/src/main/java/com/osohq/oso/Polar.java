@@ -9,24 +9,20 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import org.json.JSONArray;
 
 public class Polar {
   private Ffi.Polar ffiPolar;
   protected Host host; // visible for tests only
-  private boolean polarRolesEnabled;
 
   public Polar() throws Exceptions.OsoException {
     ffiPolar = Ffi.get().polarNew();
     host = new Host(ffiPolar);
-    polarRolesEnabled = false;
 
     // Register global constants.
     registerConstant(null, "nil");
@@ -38,7 +34,6 @@ public class Polar {
     registerClass(List.class, "List");
     registerClass(Map.class, "Dictionary");
     registerClass(String.class, "String");
-    registerClass(RolesHelper.class, "__oso_internal_roles_helpers__");
   }
 
   /**
@@ -48,33 +43,67 @@ public class Polar {
    */
   public void clearRules() throws Exceptions.OsoException {
     ffiPolar.clearRules();
-    reinitializeRoles();
   }
 
   /**
-   * Enqueue a polar policy file to be loaded. File contents are loaded into a String and saved
-   * here, so changes to the file made after calls to loadFile will not be recognized. If the
-   * filename already exists in the load queue, replace it.
+   * Load Polar policy files. File contents are loaded into a String and saved here, so changes to a
+   * file made after a call to loadFiles will not be recognized.
    *
    * @throws Exceptions.PolarFileExtensionError On incorrect file extension.
+   * @throws Exceptions.PolarFileNotFoundError On nonexistent file.
+   * @throws Exceptions.InlineQueryFailedError On a failed inline query.
    * @throws IOException If unable to open or read the file.
    */
+  public void loadFiles(String[] filenames) throws IOException, OsoException {
+    if (filenames.length == 0) {
+      return;
+    }
+
+    JSONArray sources = new JSONArray();
+
+    for (String filename : filenames) {
+      Optional<String> ext =
+          Optional.ofNullable(filename)
+              .filter(f -> f.contains("."))
+              .map(f -> f.substring(filename.lastIndexOf(".") + 1));
+
+      // check file extension
+      if (!ext.isPresent() || !ext.get().equals("polar")) {
+        throw new Exceptions.PolarFileExtensionError(filename);
+      }
+
+      try {
+        String contents = new String(Files.readAllBytes(Paths.get(filename)));
+        Source source = new Source(contents, filename);
+        sources.put(source.toJSON());
+      } catch (FileNotFoundException e) {
+        throw new Exceptions.PolarFileNotFoundError(filename);
+      }
+    }
+
+    loadSources(sources);
+  }
+
+  /**
+   * Load a Polar policy file. File contents are loaded into a String and saved here, so changes to
+   * the file made after a call to loadFile will not be recognized.
+   *
+   * @throws Exceptions.PolarFileExtensionError On incorrect file extension.
+   * @throws Exceptions.PolarFileNotFoundError On nonexistent file.
+   * @throws Exceptions.InlineQueryFailedError On a failed inline query.
+   * @throws IOException If unable to open or read the file.
+   * @deprecated {@link #loadFile(String)} has been deprecated in favor of {@link
+   *     #loadFiles(String[])} as of the 0.20 release. Please see changelog for migration
+   *     instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html
+   */
+  @Deprecated
   public void loadFile(String filename) throws IOException, OsoException {
-    Optional<String> ext =
-        Optional.ofNullable(filename)
-            .filter(f -> f.contains("."))
-            .map(f -> f.substring(filename.lastIndexOf(".") + 1));
-
-    // check file extension
-    if (!ext.isPresent() || !ext.get().equals("polar")) {
-      throw new Exceptions.PolarFileExtensionError(filename);
-    }
-
-    try {
-      loadStr(new String(Files.readAllBytes(Paths.get(filename))), filename);
-    } catch (FileNotFoundException e) {
-      throw new Exceptions.PolarFileNotFoundError(filename);
-    }
+    System.err.println(
+        "`Oso.loadFile` has been deprecated in favor of `Oso.loadFiles` as of the 0.20"
+            + " release.\n\n"
+            + "Please see changelog for migration instructions:"
+            + " https://docs.osohq.com/project/changelogs/2021-09-15.html");
+    loadFiles(new String[] {filename});
   }
 
   /**
@@ -82,21 +111,23 @@ public class Polar {
    *
    * @param str Polar string to be loaded.
    * @param filename Name of the source file.
+   * @throws Exceptions.InlineQueryFailedError On a failed inline query.
    */
-  public void loadStr(String str, String filename) throws Exceptions.OsoException {
-    ffiPolar.load(str, filename);
-    checkInlineQueries();
-    reinitializeRoles();
+  public void loadStr(String str, String filename) throws OsoException {
+    JSONArray sources = new JSONArray();
+    Source source = new Source(str, filename);
+    sources.put(source.toJSON());
+    loadSources(sources);
   }
 
   /**
    * Load a Polar string into the KB (without filename).
    *
    * @param str Polar string to be loaded.
+   * @throws Exceptions.InlineQueryFailedError On a failed inline query.
    */
-  public void loadStr(String str) throws Exceptions.OsoException {
-    ffiPolar.load(str, null);
-    checkInlineQueries();
+  public void loadStr(String str) throws OsoException {
+    loadStr(str, null);
   }
 
   /** Query for a predicate, parsing it first. */
@@ -174,6 +205,17 @@ public class Polar {
     return new Query(ffiPolar.newQueryFromTerm(pred), new_host, bindings);
   }
 
+  /**
+   * Query for a rule, and check if it has any results. Returns true if there are results, and false
+   * if not.
+   *
+   * @param rule Rule name, e.g. "f" for rule "f(x)".
+   * @param args Variable list of rule arguments.
+   */
+  public boolean queryRuleOnce(String rule, Object... args) throws OsoException {
+    return queryRule(rule, Map.of(), args).hasMoreElements();
+  }
+
   /** Start the Polar REPL. */
   public void repl() throws Exceptions.OsoException, IOException {
     repl(new String[0]);
@@ -181,9 +223,7 @@ public class Polar {
 
   /** Load the given files and start the Polar REPL. */
   public void repl(String[] files) throws Exceptions.OsoException, IOException {
-    for (String file : files) {
-      loadFile(file);
-    }
+    loadFiles(files);
 
     BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
     Ffi.Query ffiQuery;
@@ -251,6 +291,13 @@ public class Polar {
     ffiPolar.registerConstant(host.toPolarTerm(value).toString(), name);
   }
 
+  /** Register MROs, load Polar code, and check inline queries. */
+  private void loadSources(JSONArray sources) throws OsoException {
+    host.registerMros();
+    ffiPolar.load(sources);
+    checkInlineQueries();
+  }
+
   /** Confirm that all queued inline queries succeed. */
   private void checkInlineQueries()
       throws Exceptions.OsoException, Exceptions.InlineQueryFailedError {
@@ -262,49 +309,5 @@ public class Polar {
       }
       nextQuery = ffiPolar.nextInlineQuery();
     }
-  }
-
-  private void reinitializeRoles() {
-    if (!polarRolesEnabled) return;
-    polarRolesEnabled = false;
-    enableRoles();
-  }
-
-  public void enableRoles() throws Exceptions.OsoException {
-    if (polarRolesEnabled) return;
-    ffiPolar.enableRoles();
-
-    List<List<HashMap<String, Object>>> allResults = new ArrayList<List<HashMap<String, Object>>>();
-
-    Ffi.Query nextQuery = ffiPolar.nextInlineQuery();
-    for (; nextQuery != null; nextQuery = ffiPolar.nextInlineQuery()) {
-      Host dupHost = host.clone();
-      dupHost.acceptExpression = true;
-      Query query = new Query(nextQuery, dupHost, Map.of());
-      if (!query.hasMoreElements()) {
-        throw new Exceptions.InlineQueryFailedError(nextQuery.source());
-      } else {
-        allResults.add(query.results());
-      }
-    }
-
-    allResults =
-        allResults.stream()
-            .map(
-                (results) ->
-                    results.stream()
-                        .map(
-                            (result) -> {
-                              HashMap<String, Object> inner = new HashMap<String, Object>(),
-                                  outer = new HashMap<String, Object>();
-                              result.forEach((k, v) -> inner.put(k, host.toPolarTerm(v)));
-                              outer.put("bindings", inner);
-                              return outer;
-                            })
-                        .collect(Collectors.toList()))
-            .collect(Collectors.toList());
-
-    ffiPolar.validateRolesConfig(new JSONArray(allResults).toString());
-    this.polarRolesEnabled = true;
   }
 }

@@ -1,3 +1,4 @@
-import { Oso } from './Oso';
-import { Variable } from './Variable';
-export { Oso, Variable };
+export { Oso } from './Oso';
+export { Variable } from './Variable';
+export { AuthorizationError, ForbiddenError, NotFoundError } from './errors';
+export { Relation } from './dataFiltering';

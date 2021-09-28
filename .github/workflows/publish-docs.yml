@@ -6,16 +6,16 @@ on:
         description: "docs s3 path (docs.oso.dev or docs-preview.oso.dev)"
       oso_version:
         description: "oso release to build docs for"
-        default: "0.15.0" # oso_version
+        default: "0.20.1" # oso_version
       flask_oso_version:
         description: "flask oso release to build docs for"
-        default: "0.12.0" # flask_oso_version
+        default: "0.20.1" # flask_oso_version
       django_oso_version:
         description: "django oso release to build docs for"
-        default: "0.11.0" # django_oso_version
+        default: "0.20.1" # django_oso_version
       sqlalchemy_oso_version:
         description: "sqlalchemy oso release to build docs for"
-        default: "0.11.0" # sqlalchemy_oso_version
+        default: "0.20.1" # sqlalchemy_oso_version
 jobs:
   publish:
     name: Publish docs
@@ -45,7 +45,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v1
         with:
-          node-version: '12.x'
+          node-version: '12.20.0'
 
       # Uncomment this when we want WASM on the docs site again
       # - name: Install Rust stable toolchain
@@ -104,11 +104,15 @@ jobs:
         if: github.event.inputs.url == 'docs.oso.dev'
         run: |
           make ci-prod-docs
-        working-directory: docs
+      - name: Install s3deploy
+        run: |
+          wget https://github.com/bep/s3deploy/releases/download/v2.4.0/s3deploy_2.4.0_Linux-64bit.deb
+          sudo dpkg -i s3deploy_2.4.0_Linux-64bit.deb
 
       ### Push to S3 + invalidate cache
-      - name: s3 publish
-        run: aws s3 sync --delete docs/public/ s3://${{ github.event.inputs.url }}
+      - name: deploy
+        run: s3deploy -bucket ${{ github.event.inputs.url }}  -path v/main -source public -region us-east-1
+        working-directory: docs
       - name: cloudfront invalidate docs preview
         run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"
         if: github.event.inputs.url == 'docs-preview.oso.dev'

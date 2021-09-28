@@ -113,7 +113,10 @@ impl<'kb> Visitor for SingletonVisitor<'kb> {
             Value::Variable(v)
             | Value::RestVariable(v)
             | Value::Pattern(Pattern::Instance(InstanceLiteral { tag: v, .. }))
-                if !v.is_temporary_var() && !v.is_namespaced_var() && !self.kb.is_constant(v) =>
+                if !v.is_temporary_var()
+                    && !v.is_namespaced_var()
+                    && !self.kb.is_constant(v)
+                    && !self.kb.is_union(t) =>
             {
                 match self.singletons.entry(v.clone()) {
                     Entry::Occupied(mut o) => {
@@ -132,6 +135,72 @@ impl<'kb> Visitor for SingletonVisitor<'kb> {
 
 pub fn check_singletons(rule: &Rule, kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
     let mut visitor = SingletonVisitor::new(kb);
+    walk_rule(&mut visitor, rule);
+    visitor.warnings()
+}
+
+struct AndOrPrecendenceCheck<'kb> {
+    kb: &'kb KnowledgeBase,
+    unparenthesized_expr: Vec<(Source, Term)>,
+}
+
+impl<'kb> AndOrPrecendenceCheck<'kb> {
+    fn new(kb: &'kb KnowledgeBase) -> Self {
+        Self {
+            kb,
+            unparenthesized_expr: Default::default(),
+        }
+    }
+
+    fn warnings(&mut self) -> PolarResult<Vec<String>> {
+        let msgs: Vec<String> = self
+            .unparenthesized_expr
+            .iter()
+            .map(|(source, or_term)| {
+                let mut msg = "Expression without parentheses could be ambiguous. \n\
+                    Prior to 0.20, `x and y or z` would parse as `x and (y or z)`. \n\
+                    As of 0.20, it parses as `(x and y) or z`, matching other languages. \n\
+                \n\n"
+                    .to_string();
+                msg.push_str(&source_lines(source, or_term.offset(), 0));
+                msg
+            })
+            .collect();
+        Ok(msgs)
+    }
+}
+
+impl<'kb> Visitor for AndOrPrecendenceCheck<'kb> {
+    fn visit_operation(&mut self, o: &Operation) {
+        if (o.operator == Operator::And || o.operator == Operator::Or) && o.args.len() > 1 {
+            for term in o.args.iter().filter(|t| {
+                // find all inner expressions that are AND/OR terms where the outer
+                // term is OR/AND respectively
+                matches!(t.value(),
+                    Value::Expression(op) if
+                        (op.operator == Operator::Or || op.operator == Operator::And)
+                        && op.operator != o.operator
+                )
+            }) {
+                let span = term.span().unwrap();
+                let source = term
+                    .get_source_id()
+                    .and_then(|src_id| self.kb.sources.get_source(src_id))
+                    .unwrap();
+
+                // check if source _before_ the term contains an opening
+                // parenthesis
+                if !source.src[..span.0].trim().ends_with('(') {
+                    self.unparenthesized_expr.push((source, term.clone()));
+                }
+            }
+        }
+        crate::visitor::walk_operation(self, o)
+    }
+}
+
+pub fn check_ambiguous_precedence(rule: &Rule, kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
+    let mut visitor = AndOrPrecendenceCheck::new(kb);
     walk_rule(&mut visitor, rule);
     visitor.warnings()
 }

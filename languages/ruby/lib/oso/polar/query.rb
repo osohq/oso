@@ -10,11 +10,22 @@ module Oso
 
       # @param ffi_query [FFI::Query]
       # @param host [Oso::Polar::Host]
-      def initialize(ffi_query, host:)
+      def initialize(ffi_query, host:, bindings: {})
         @calls = {}
         @ffi_query = ffi_query
         ffi_query.enrich_message = host.method(:enrich_message)
         @host = host
+        bindings.each { |k, v| ffi_query.bind k, host.to_polar(v) }
+      end
+
+      # Create an enumerator that can be polled to advance the query loop. Yields
+      # results one by one.
+      #
+      # @yieldparam [Hash<String, Object>]
+      # @return [Enumerator]
+      # @raise [Error] if any of the FFI calls raise one.
+      def each(&block)
+        run(&block)
       end
 
       private
@@ -64,13 +75,17 @@ module Oso
       # Fetch the next result from calling a Ruby method and prepare it for
       # transmission across the FFI boundary.
       #
-      # @param method [#to_sym]
-      # @param args [Array<Hash>]
+      # @param attribute [#to_sym]
       # @param call_id [Integer]
       # @param instance [Hash<String, Object>]
+      # @param args [Array<Hash>]
+      # @param kwargs [Hash<String, Object>]
       # @raise [Error] if the FFI call raises one.
       def handle_call(attribute, call_id:, instance:, args:, kwargs:) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         instance = host.to_ruby(instance)
+        rel = get_relationship(instance.class, attribute)
+        return handle_relationship(call_id, instance, rel) unless rel.nil?
+
         args = args.map { |a| host.to_ruby(a) }
         kwargs = Hash[kwargs.map { |k, v| [k.to_sym, host.to_ruby(v)] }]
         # The kwargs.empty? check is for Ruby < 2.7.
@@ -84,6 +99,40 @@ module Oso
       rescue ArgumentError, NoMethodError => e
         application_error(e.message)
         call_result(nil, call_id: call_id)
+      end
+
+      # Get the type information for a field on a class.
+      #
+      # @param cls [UserType]
+      # @param tag [String]
+      # @return [UserType]
+      # @raise [Error] if no information is found
+      def get_field(cls, tag) # rubocop:disable Metrics/AbcSize
+        raise unless cls.fields.key? tag
+
+        ref = cls.fields[tag]
+        return host.types[ref] unless ref.is_a? ::Oso::Polar::DataFiltering::Relation
+
+        case ref.kind
+        when 'one'
+          host.types[ref.other_type]
+        when 'many'
+          host.types[Array]
+        end
+      end
+
+      # Check if a series of dot operations on a base class yield an
+      # instance of another class.
+      def handle_external_isa_with_path(data) # rubocop:disable Metrics/AbcSize
+        sup = host.types[data['class_tag']]
+        bas = host.types[data['base_tag']]
+        path = data['path'].map(&host.method(:to_ruby))
+        sub = path.reduce(bas) { |cls, tag| get_field(cls, tag) }
+        answer = sub.klass.get <= sup.klass.get
+        question_result(answer, call_id: data['call_id'])
+      rescue StandardError => e
+        application_error e.message
+        question_result(nil, call_id: data['call_id'])
       end
 
       def handle_next_external(call_id, iterable)
@@ -114,12 +163,12 @@ module Oso
         host.make_instance(cls_name, args: args, kwargs: kwargs, id: id)
       end
 
-      # Create a generator that can be polled to advance the query loop.
+      # Run the main Polar loop, yielding results as they are emitted from the VM.
       #
       # @yieldparam [Hash<String, Object>]
       # @return [Enumerator]
       # @raise [Error] if any of the FFI calls raise one.
-      def each # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
+      def run # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
         loop do # rubocop:disable Metrics/BlockLength
           event = ffi_query.next_event
           case event.kind
@@ -129,6 +178,8 @@ module Oso
             yield event.data['bindings'].transform_values { |v| host.to_ruby(v) }
           when 'MakeExternal'
             handle_make_external(event.data)
+          when 'ExternalIsaWithPath'
+            handle_external_isa_with_path(event.data)
           when 'ExternalCall'
             call_id = event.data['call_id']
             instance = event.data['instance']
@@ -142,6 +193,12 @@ module Oso
             right_tag = event.data['right_class_tag']
             answer = host.subspecializer?(instance_id, left_tag: left_tag, right_tag: right_tag)
             question_result(answer, call_id: event.data['call_id'])
+          when 'ExternalIsSubclass'
+            call_id = event.data['call_id']
+            left = event.data['left_class_tag']
+            right = event.data['right_class_tag']
+            answer = host.subclass?(left_tag: left, right_tag: right)
+            question_result(answer, call_id: call_id)
           when 'ExternalIsa'
             instance = event.data['instance']
             class_tag = event.data['class_tag']
@@ -174,6 +231,35 @@ module Oso
             raise "Unhandled event: #{JSON.dump(event.inspect)}"
           end
         end
+      end
+
+      def get_relationship(cls, attr)
+        typ = host.types[cls]
+        return unless typ
+
+        rel = typ.fields[attr]
+        return unless rel.is_a? ::Oso::Polar::DataFiltering::Relation
+
+        rel
+      end
+
+      def handle_relationship(call_id, instance, rel) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+        typ = host.types[rel.other_type]
+        constraint = ::Oso::Polar::DataFiltering::Filter.new(
+          kind: 'Eq',
+          field: rel.other_field,
+          value: instance.send(rel.my_field)
+        )
+        res = typ.exec_query[typ.build_query[[constraint]]]
+
+        if rel.kind == 'one'
+          raise "multiple parents: #{res}" unless res.length == 1
+
+          res = res[0]
+        end
+
+        res = JSON.dump host.to_polar res
+        call_result(res, call_id: call_id)
       end
     end
   end

@@ -79,24 +79,39 @@ func (p Polar) checkInlineQueries() error {
 	}
 }
 
-func (p Polar) loadFile(f string) error {
-	if filepath.Ext(f) != ".polar" {
-		return errors.NewPolarFileExtensionError(f)
+func (p Polar) loadFiles(filenames []string) error {
+	if len(filenames) == 0 {
+		return nil
 	}
 
-	data, err := ioutil.ReadFile(f)
-	if err != nil {
-		return err
+	sources := []Source{}
+
+	for _, filename := range filenames {
+		if filepath.Ext(filename) != ".polar" {
+			return errors.NewPolarFileExtensionError(filename)
+		}
+
+		data, err := ioutil.ReadFile(filename)
+		if err != nil {
+			return err
+		}
+		sources = append(sources, Source{Src: string(data), Filename: &filename})
 	}
-	err = p.ffiPolar.Load(string(data), &f)
-	if err != nil {
-		return err
-	}
-	return p.checkInlineQueries()
+
+	return p.loadSources(sources)
 }
 
-func (p Polar) loadString(s string) error {
-	err := p.ffiPolar.Load(s, nil)
+func (p Polar) loadString(str string) error {
+	return p.loadSources([]Source{{Src: str, Filename: nil}})
+}
+
+// Register MROs, load Polar code, and check inline queries.
+func (p Polar) loadSources(sources []Source) error {
+	err := p.host.RegisterMros()
+	if err != nil {
+		return err
+	}
+	err = p.ffiPolar.Load(sources)
 	if err != nil {
 		return err
 	}

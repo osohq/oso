@@ -1,6 +1,9 @@
 run: api_docs install
 	hugo server
 
+dev: install
+	HUGO_PURGECSS=false hugo server
+
 export JAVA_DIR := $(abspath ../languages/java/oso)
 export JS_DIR := $(abspath ../languages/js)
 export PYTHON_DIR := $(abspath ../languages/python)
@@ -73,6 +76,20 @@ build-prod: install api_docs
 	cd themes/oso-webpack && npm run-script build-prod
 	HUGO_ENV=production hugo -b https://docs.osohq.com/
 
+# Look for the s3deploy binary: https://github.com/bep/s3deploy
+S3DEPLOY := $(shell command -v s3deploy 2> /dev/null)
+
+deploy-ci: install api_docs clean
+ifndef S3DEPLOY
+	$(error "you need to install s3deploy to deploy the docs")
+endif
+ifndef DOCS_TAG
+	$(error "you must set the DOCS_TAG environment variable")
+endif
+	cd themes/oso-webpack && npm run-script build-prod
+	HUGO_ENV=production hugo -b https://docs-preview.oso.dev/v/$(DOCS_TAG)/
+	s3deploy -bucket docs-preview.oso.dev -distribution-id E2KU2V8C9KJNU7 -path v/$(DOCS_TAG) -source public -region us-east-1
+
 test: install
 	### TODO: Add Hugo tests
 	$(MAKE) -C examples test
@@ -86,11 +103,11 @@ build-search:
 require-algolia-vars: require-ALGOLIA_APPLICATION_ID require-ALGOLIA_ADMIN_API_KEY require-ALGOLIA_INDEX
 
 ## This is the entry for all doc stuff for preview
-ci-preview-docs: require-ALGOLIA_ADMIN_API_KEY build build-search 
+ci-preview-docs: require-ALGOLIA_ADMIN_API_KEY build build-search
 	./searcher -index='preview_OSODOCS' -app_id='KROZ8F05YT'
 
 ## This is the entry for all doc stuff for production
-ci-prod-docs: require-ALGOLIA_ADMIN_API_KEY build-prod build-search 
+ci-prod-docs: require-ALGOLIA_ADMIN_API_KEY build-prod build-search
 	./searcher -index='prod_OSODOCS' -app_id='KROZ8F05YT'
 
 search: require-algolia-vars build-prod build-search
@@ -110,7 +127,10 @@ check-links-deps: .make.check-links-deps.installed
 
 lint: build spelling check-links
 
-test-quickstarts:
-	$(MAKE) -C examples test-quickstarts
+test-quickstarts-release:
+	$(MAKE) -C examples test-quickstarts-release
 
-.PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean spelling build-search search require-algolia-vars check-links check-links-deps lint test-quickstarts
+test-quickstarts-local:
+	$(MAKE) -C examples test-quickstarts-local
+
+.PHONY: api_docs run build examples global-deps tailwind-deps webpack-deps clean spelling build-search search require-algolia-vars check-links check-links-deps lint test-quickstarts-release test-quickstarts-local

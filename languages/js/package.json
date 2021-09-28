@@ -1,6 +1,6 @@
 {
   "name": "oso",
-  "version": "0.15.0",
+  "version": "0.20.1",
   "description": "oso authorization library.",
   "bin": "bin/repl.js",
   "main": "dist/src/index.js",
@@ -22,11 +22,11 @@
     "bin"
   ],
   "engines": {
-    "node": ">=10",
+    "node": ">=12.20.0",
     "npm": ">=6.4.1"
   },
   "scripts": {
-    "lint": "gts lint",
+    "lint": "gts lint -- . --max-warnings 0",
     "clean": "gts clean",
     "fix": "gts fix",
     "fmt": "prettier --write 'src/**/*.[jt]s' 'test/**/*.[jt]s'",
@@ -39,15 +39,21 @@
   },
   "devDependencies": {
     "@types/jest": "^26.0.9",
-    "@types/node": "^15.0.0",
+    "@types/node": "^15.14.7",
     "chokidar-cli": "^2.1.0",
     "gts": "^3.1.0",
     "jest": "^27.0.4",
     "live-server": "^1.2.1",
+    "reflect-metadata": "^0.1.13",
+    "sqlite3": "^5.0.2",
     "temp-write": "^4.0.0",
     "ts-jest": "^27.0.3",
     "ts-node": "^8.10.2",
     "typedoc": "^0.21.0",
+    "typeorm": "^0.2.37",
     "typescript": "^4.3.4"
+  },
+  "resolutions": {
+    "live-server/object-assign": "^4.1.0"
   }
 }

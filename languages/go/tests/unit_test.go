@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	oso "github.com/osohq/go-oso"
+	"github.com/osohq/go-oso/internal/ffi"
+	"github.com/osohq/go-oso/internal/host"
 	. "github.com/osohq/go-oso/types"
 )
 
@@ -57,7 +59,27 @@ func TestLoadString(t *testing.T) {
 }
 
 func TestClearRules(t *testing.T) {
+	var o oso.Oso
+	var err error
+	if o, err = oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
 
+	o.LoadString("f(1);")
+	o.ClearRules()
+	results, errors := o.QueryStr("f(x)")
+
+	if err = <-errors; err != nil {
+		t.Error(err.Error())
+	} else {
+		var got []map[string]interface{}
+		for elem := range results {
+			got = append(got, elem)
+		}
+		if len(got) > 0 {
+			t.Errorf("Received too many results: %v", got)
+		}
+	}
 }
 
 func TestQueryStr(t *testing.T) {
@@ -84,6 +106,8 @@ func TestQueryStr(t *testing.T) {
 			t.Errorf("Expected: %v, got: %v", expected, got[0])
 		}
 	}
+
+	o.ClearRules()
 
 	o.LoadString("g(x) if x.Fake();")
 	results, errors = o.QueryStr("g(1)")
@@ -118,12 +142,16 @@ func TestQueryRule(t *testing.T) {
 		}
 	}
 
+	o.ClearRules()
+
 	o.LoadString("g(x) if x.Fake();")
 	results, errors = o.QueryRule("g", 1)
 
 	if err = <-errors; err == nil {
 		t.Error("Expected Polar runtime error, got none")
 	}
+
+	o.ClearRules()
 
 	o.LoadString("h(x) if x = 1; h(x) if x.Fake();")
 	results, errors = o.QueryRule("h", 1)
@@ -166,7 +194,7 @@ func TestIsAllowed(t *testing.T) {
 
 }
 
-type Actor struct {
+type User struct {
 	Name string
 }
 
@@ -176,59 +204,6 @@ type Widget struct {
 
 type Company struct {
 	Id int
-}
-
-func TestGetAllowedActions(t *testing.T) {
-	var o oso.Oso
-	var err error
-	if o, err = oso.NewOso(); err != nil {
-		t.Fatalf("Failed to set up Oso: %v", err)
-	}
-
-	o.RegisterClass(reflect.TypeOf(Actor{}), nil)
-	o.RegisterClass(reflect.TypeOf(Widget{}), nil)
-	o.RegisterClass(reflect.TypeOf(Company{}), nil)
-
-	o.LoadString("allow(_actor: Actor{Name: \"Sally\"}, action, _resource: Widget{Id: 1}) if action in [\"CREATE\", \"READ\"];")
-
-	actor := Actor{Name: "Sally"}
-	resource := Widget{Id: 1}
-
-	res, err := o.GetAllowedActions(actor, resource, false)
-	if err != nil {
-		t.Fatalf("Failed to get allowed actions: %v", err)
-	}
-	if _, ok := res["CREATE"]; !ok {
-		t.Error("expected CREATE action")
-	}
-	if _, ok := res["READ"]; !ok {
-		t.Error("expected READ action")
-	}
-
-	o.LoadString("allow(_actor: Actor{Name: \"John\"}, _action, _resource: Widget{Id: 1});")
-
-	actor = Actor{Name: "John"}
-	res, err = o.GetAllowedActions(actor, resource, true)
-	if err != nil {
-		t.Fatalf("Failed to get allowed actions: %v", err)
-	}
-	if _, ok := res["*"]; !ok {
-		t.Error("expected * action")
-	}
-
-	res, err = o.GetAllowedActions(actor, resource, false)
-	if err == nil {
-		t.Fatal("Expected an error from GetAllowedActions")
-	}
-
-	res, err = o.GetAllowedActions(actor, Widget{Id: 2}, false)
-	if err != nil {
-		t.Fatalf("Failed to get allowed actions: %v", err)
-	}
-	if len(res) != 0 {
-		t.Error("expected no actions", res)
-	}
-
 }
 
 type Foo struct {
@@ -291,4 +266,126 @@ func TestExpressionError(t *testing.T) {
 	if !strings.Contains(msg, "unbound") {
 		t.Error("Does not contain unbound in error message.")
 	}
+}
+
+func TestRuleTypes(t *testing.T) {
+	var o oso.Oso
+	var err error
+	var msg string
+
+	if o, err = oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
+
+	if err = o.RegisterClass(reflect.TypeOf(User{}), nil); err != nil {
+		t.Fatalf("Register class failed: %v", err)
+	}
+	if err = o.RegisterClass(reflect.TypeOf(Widget{}), nil); err != nil {
+		t.Fatalf("Register class failed: %v", err)
+	}
+
+	policy := "type is_actor(_actor: Actor); is_actor(_actor: Actor);"
+
+	if err = o.LoadString(policy); err != nil {
+		t.Fatalf("Load string failed: %v", err)
+	}
+	if err = o.ClearRules(); err != nil {
+		t.Fatalf("Clear rules failed: %v", err)
+	}
+
+	policy = "type is_actor(_actor: Actor); is_actor(_actor: Widget);"
+
+	if err = o.LoadString(policy); err == nil {
+		t.Fatalf("Failed to raise validation error.")
+	} else if msg = err.Error(); !strings.Contains(msg, "Invalid rule") {
+		t.Fatalf("Incorrect error message: %v", msg)
+	}
+}
+
+func TestZeroValueRepr(t *testing.T) {
+	ffiPolar := ffi.NewPolarFfi()
+	host := host.NewHost(ffiPolar)
+	polarValue, err := host.ToPolar(Foo{})
+	if err != nil {
+		t.Fatalf("host.ToPolar failed: %v", err)
+	}
+	switch variant := polarValue.ValueVariant.(type) {
+	case ValueExternalInstance:
+		expected := "oso_test.Foo{Name: Num:0}"
+		if *variant.Repr != expected {
+			t.Errorf("repr didn't match!\n\tExpected: %v\n\tReceived: %#v", expected, *variant.Repr)
+		}
+	default:
+		t.Fatalf("Expected ValueExternalInstance; received: %v", variant)
+	}
+
+	polarValue, err = host.ToPolar(Foo{Name: "Zooey", Num: 42})
+	if err != nil {
+		t.Fatalf("host.ToPolar failed: %v", err)
+	}
+	switch variant := polarValue.ValueVariant.(type) {
+	case ValueExternalInstance:
+		expected := "oso_test.Foo{Name:Zooey Num:42}"
+		if *variant.Repr != expected {
+			t.Errorf("repr didn't match!\n\tExpected: %v\n\tReceived: %#v", expected, *variant.Repr)
+		}
+	default:
+		t.Fatalf("Expected ValueExternalInstance; received: %v", variant)
+	}
+}
+
+type Typ struct {
+	x int
+}
+
+func (t Typ) Method() int {
+	return t.x + 1
+}
+
+func (t *Typ) PtrMethod() bool {
+	return t.x == 1
+}
+
+func TestPointerMethods(t *testing.T) {
+	var o oso.Oso
+	var err error
+
+	if o, err = oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
+
+	if err = o.RegisterClass(reflect.TypeOf(Typ{}), nil); err != nil {
+		t.Fatalf("Register class failed: %v", err)
+	}
+
+	typ := Typ{x: 1}
+	if typ.Method() != 2 {
+		t.Errorf("Bad Method")
+	}
+	if !typ.PtrMethod() {
+		t.Errorf("Bad Method")
+	}
+
+	o.LoadString("rule1(x: Typ, y) if y = x.Method(); rule2(x: Typ, y) if y = x.PtrMethod();")
+
+	test := func(rule string, typ interface{}, y_val interface{}) {
+		results, errors := o.QueryRule(rule, typ, ValueVariable("y"))
+		if err = <-errors; err != nil {
+			t.Error(err.Error())
+		} else {
+			var got []map[string]interface{}
+			expected := map[string]interface{}{"y": y_val}
+			for elem := range results {
+				got = append(got, elem)
+			}
+			if len(got) > 1 {
+				t.Errorf("Received too many results: %v", got)
+			} else if !reflect.DeepEqual(got[0], expected) {
+				t.Errorf("Expected: %v, got: %v", expected, got[0])
+			}
+		}
+	}
+
+	test("rule1", typ, int64(2))
+	test("rule2", typ, true)
 }

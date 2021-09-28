@@ -2,9 +2,6 @@ name: Publish Docs Preview
 on:
   push:
     branches:
-      - main
-  pull_request:
-    types: [opened, synchronize, reopened]
 
 jobs:
   publish-preview:
@@ -17,7 +14,6 @@ jobs:
       ALGOLIA_ADMIN_API_KEY: ${{ secrets.ALGOLIA_ADMIN_API_KEY }}
     steps:
       - uses: actions/checkout@v2
-
       - uses: actions/cache@v2
         with:
           path: |
@@ -47,7 +43,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v1
         with:
-          node-version: '12.x'
+          node-version: '12.20.0'
 
       ### Build Rust WASM target
       - name: Add WebAssembly target
@@ -66,24 +62,19 @@ jobs:
         uses: peaceiris/actions-hugo@v2
         with:
           hugo-version: '0.79.1'
-      - name: Build Hugo docs
-        run: make build
-        working-directory: docs
-      - name: Build docs for CI preview
-        if: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/main' }}
-        run: make ci-preview-docs
-        working-directory: docs
+      - name: Get branch name (branch)
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / -)" >> $GITHUB_ENV
 
-
-      ### Push to S3 + invalidate cache
-      - name: s3 preview publish
-        if: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/main' }}
+      - name: Get branch name (pull request)
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr / -)" >> $GITHUB_ENV
+      - name: download s3-deploy package
         run: |
-          aws s3 sync --delete docs/public/ s3://docs-preview.oso.dev/
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
-
-      - name: cloudfront invalidate docs preview
-        if: ${{ github.event_name == 'push' && github.repository == 'osohq/oso' && github.ref == 'refs/heads/main' }}
-        run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"
+          wget https://github.com/bep/s3deploy/releases/download/v2.4.0/s3deploy_2.4.0_Linux-64bit.deb
+          sudo dpkg -i s3deploy_2.4.0_Linux-64bit.deb
+      - name: Build docs for CI preview
+        run: make deploy-ci DOCS_TAG=${{ env.BRANCH_NAME }}
+        working-directory: docs

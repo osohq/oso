@@ -1,8 +1,8 @@
 AllCops:
   TargetRubyVersion: 2.4
   Exclude:
-    - '**/*~'
-    - 'bin/oso'
-    - 'lib/oso-oso.rb'
-    - 'vendor/**/*'
+    - "**/*~"
+    - "bin/oso"
+    - "vendor/**/*"
+    - "lib/oso-oso.rb"
   NewCops: enable

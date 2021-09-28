@@ -206,7 +206,10 @@ impl Runnable for IsaConstraintCheck {
 
     fn external_question_result(&mut self, call_id: u64, answer: bool) -> PolarResult<()> {
         if call_id != self.last_call_id {
-            return Err(OperationalError::InvalidState(String::from("Unexpected call id")).into());
+            return Err(OperationalError::InvalidState {
+                msg: String::from("Unexpected call id"),
+            }
+            .into());
         }
 
         self.result = Some(answer);

@@ -1,3 +1,6 @@
+import type { Filter, Relation } from './dataFiltering';
+import { isObj } from './helpers';
+
 /**
  * Polar string type.
  *
@@ -282,8 +285,9 @@ export interface PolarTerm {
  *
  * @internal
  */
-function isPolarValue(v: any): v is PolarValue {
-  if (typeof v !== 'object' || v === null) return false;
+function isPolarValue(x: unknown): x is PolarValue {
+  if (!isObj(x)) return false;
+  const v = x as unknown as PolarValue;
   return (
     isPolarStr(v) ||
     isPolarNum(v) ||
@@ -304,8 +308,9 @@ function isPolarValue(v: any): v is PolarValue {
  *
  * @internal
  */
-export function isPolarTerm(v: any): v is PolarTerm {
-  return isPolarValue(v?.value);
+export function isPolarTerm(v: unknown): v is PolarTerm {
+  if (!isObj(v)) return false;
+  return isPolarValue(v.value);
 }
 
 /**
@@ -313,7 +318,7 @@ export function isPolarTerm(v: any): v is PolarTerm {
  *
  * @internal
  */
-export type Class<T extends {} = {}> = new (...args: any[]) => T;
+export type Class<T = unknown> = new (...args: any[]) => T; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 /**
  * The `Result` [[`QueryEvent`]] represents a single result from a query
@@ -384,6 +389,31 @@ export interface ExternalIsSubspecializer {
 export interface ExternalIsa {
   instance: PolarTerm;
   tag: string;
+  callId: number;
+}
+
+/**
+ * The `ExternalIsaWithPath` [[`QueryEvent`]] is how Polar determines whether a given
+ * sequence of field accesses on a value is an instance of a particular class.
+ *
+ * @internal
+ */
+export interface ExternalIsaWithPath {
+  baseTag: string;
+  path: PolarTerm[];
+  classTag: string;
+  callId: number;
+}
+
+/**
+ * The `ExternalIsSubclass` [[`QueryEvent`]] is how Polar determines whether a given
+ * class is a subclass of a particular class.
+ *
+ * @internal
+ */
+export interface ExternalIsSubclass {
+  leftTag: string;
+  rightTag: string;
   callId: number;
 }
 
@@ -465,7 +495,9 @@ export enum QueryEventKind {
   Done,
   ExternalCall,
   ExternalIsa,
+  ExternalIsaWithPath,
   ExternalIsSubspecializer,
+  ExternalIsSubclass,
   ExternalOp,
   MakeExternal,
   NextExternal,
@@ -483,7 +515,9 @@ export interface QueryEvent {
     | Debug
     | ExternalCall
     | ExternalIsa
+    | ExternalIsaWithPath
     | ExternalIsSubspecializer
+    | ExternalIsSubclass
     | ExternalOp
     | MakeExternal
     | NextExternal
@@ -498,12 +532,12 @@ export interface QueryEvent {
  *
  * If you don't need access to the bindings and only wish to know whether a
  * query succeeded or failed, you may check the `done` property of the yielded
- * value (and then optionally "complete" the generator by calling its
+ * value (and then optionally "complete" the generator by calling and awaiting its
  * `return()` method). If `done` is `true`, the query failed. If `done` is
  * `false`, the query yielded at least one result and therefore succeeded.
  */
 export type QueryResult = AsyncGenerator<
-  Map<string, any>,
+  Map<string, unknown>,
   void,
   undefined | void
 >;
@@ -513,7 +547,7 @@ export type QueryResult = AsyncGenerator<
  *
  * @hidden
  */
-export type obj = { [key: string]: any };
+export type obj<T = unknown> = { [key: string]: T };
 
 /**
  * A function that compares two values and returns `true` if they are equal and
@@ -523,13 +557,30 @@ export type obj = { [key: string]: any };
  * [[`Oso.constructor`]] in order to override the default equality function,
  * which uses `==` (loose equality).
  */
-export type EqualityFn = (x: any, y: any) => boolean;
+export type EqualityFn = (x: unknown, y: unknown) => boolean;
+
+export type CustomError = new (...args: any[]) => Error; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 /**
  * Optional configuration for the [[`Oso.constructor`]].
  */
 export interface Options {
   equalityFn?: EqualityFn;
+  /**
+   * Optionally override the "not found" error class thrown by `authorize`.
+   * Defaults to {@link NotFoundError}.
+   */
+  notFoundError?: CustomError;
+  /**
+   * Optionally override the "forbidden" error class thrown by the `authorize*`
+   * methods. Defaults to {@link ForbiddenError}.
+   */
+  forbiddenError?: CustomError;
+  /**
+   * The action used by the `authorize` method to determine whether an
+   * authorization failure should raise a `NotFoundError` or a `ForbiddenError`.
+   */
+  readAction?: unknown;
 }
 
 /**
@@ -539,17 +590,42 @@ export interface Options {
  *
  * @internal
  */
-export function isIterableIterator(x: any): boolean {
-  return typeof x?.next === 'function' && Symbol.iterator in Object(x);
+export function isIterableIterator(x: unknown): x is IterableIterator<unknown> {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  return typeof x?.next === 'function' && isIterable(x);
 }
 
 /**
- * Type guard to test if a value is an `AsyncIterator`.
+ * Type guard to test if a value is an `Iterable`.
  *
  * @internal
  */
-export function isAsyncIterator(x: any): boolean {
-  return Symbol.asyncIterator in Object(x);
+export function isIterable(x: unknown): x is Iterable<unknown> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    return Symbol.iterator in x;
+  } catch (e) {
+    if (e instanceof TypeError) return false;
+    throw e;
+  }
+}
+
+/**
+ * Type guard to test if a value is an `AsyncIterable`.
+ *
+ * @internal
+ */
+export function isAsyncIterable(x: unknown): x is AsyncIterable<unknown> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    return Symbol.asyncIterator in x;
+  } catch (e) {
+    if (e instanceof TypeError) return false;
+    throw e;
+  }
 }
 
 /**
@@ -565,5 +641,78 @@ export function isAsyncIterator(x: any): boolean {
  * @internal
  */
 export class Dict extends Object {
-  [index: string]: any;
+  [index: string]: unknown;
 }
+
+export type BuildQueryFn<Q = any> = (filters: Filter[]) => Q; // eslint-disable-line @typescript-eslint/no-explicit-any
+export type ExecQueryFn<Q = any, ReturnType = any> = (query: Q) => ReturnType; // eslint-disable-line @typescript-eslint/no-explicit-any
+export type CombineQueryFn<Q = any> = (a: Q, b: Q) => Q; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+// NOTE(gj): these are *required* if the user wants to use Data Filtering.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface DataFilteringQueryParams<Query = any, ReturnType = any> {
+  /**
+   * A function to produce a query.
+   */
+  buildQuery?: BuildQueryFn<Query>;
+  /**
+   * A function to execute a query produced by [[`ClassParams.buildQuery`]].
+   */
+  execQuery?: ExecQueryFn<Query, ReturnType>;
+  /**
+   * A function to merge two queries produced by [[`ClassParams.buildQuery`]].
+   */
+  combineQuery?: CombineQueryFn<Query>;
+}
+
+/**
+ * Optional parameters for [[`Polar.registerClass`]] and [[`Host.cacheClass`]].
+ */
+export interface ClassParams extends DataFilteringQueryParams {
+  /**
+   * Explicit name to use for the class in Polar. Defaults to the class's
+   * `name` property.
+   */
+  name?: string;
+  /**
+   * A Map or object with string keys containing types for fields. Used for
+   * data filtering.
+   */
+  fields?: obj<Class | Relation> | Map<string, Class | Relation>;
+}
+
+/**
+ * Parameters for [[`UserType`]].
+ */
+export interface UserTypeParams<Type extends Class>
+  extends Required<DataFilteringQueryParams> {
+  /**
+   * Class registered as a user type.
+   */
+  cls: Type;
+  /**
+   * Explicit name to use for the class in Polar.
+   */
+  name: string;
+  /**
+   * A Map with string keys containing types for fields. Used for data
+   * filtering.
+   */
+  fields: Map<string, Class | Relation>;
+  /**
+   * Polar instance ID for the registered class.
+   *
+   * @internal
+   */
+  id: number;
+}
+
+/**
+ * Utility type to represent a JS value that either does or does not have a
+ * constructor property.
+ *
+ * NOTE(gj): I *think* `null` & `undefined` are the only JS values w/o a
+ * `constructor` property (e.g., `(1).constructor` returns `[Function:
+ * Number]`), but I'm not 100% sure of that.
+ */
+export type NullishOrHasConstructor = { constructor: Class } | null | undefined;

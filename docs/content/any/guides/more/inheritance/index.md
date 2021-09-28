@@ -4,13 +4,14 @@ docname: using/examples/inheritance
 images: {}
 path: /using-examples-inheritance
 title: Share Rules Across Resources
+weight: 10
 description: |
   Oso policies make it possible to share rules across related resource types, and override them as needed.
 aliases:
-    - ../../../using/examples/inheritance.html
+  - ../../../using/examples/inheritance.html
 ---
 
-# Resources with Inheritance
+# Share Rules Across Resources
 
 Some applications have many resources that should have similar authorization
 rules applied to them. This is a common scenario in workflow driven
@@ -46,7 +47,7 @@ actor to perform the `"read"` action on an `Order` if:
 
 Note the head of the rule. Each argument uses a type specializer to ensure this
 rule only applies to certain types of resources and actors. This rule indicates
-that the `actor` argument must be an instance of the `Actor` class and the
+that the `actor` argument must be an instance of the `User` class and the
 `resource` argument must be an instance of the `Order` class.
 
 This policy meets our goal above. We have expressed the same rule for the three

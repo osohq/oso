@@ -1,9 +1,11 @@
-const extname = require('path')?.extname;
-const createInterface = require('readline')?.createInterface;
+import { extname } from 'path';
+import { createInterface } from 'readline';
+import type { REPLServer } from 'repl';
+import { start } from 'repl';
+import { Context } from 'vm';
 
 import {
   InlineQueryFailedError,
-  InvalidConstructorError,
   PolarError,
   PolarFileExtensionError,
   PolarFileNotFoundError,
@@ -12,9 +14,20 @@ import { Query } from './Query';
 import { Host } from './Host';
 import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
+import type { Message } from './messages';
 import { processMessage } from './messages';
-import type { Class, obj, Options, QueryResult } from './types';
-import { isConstructor, printError, PROMPT, readFile, repr } from './helpers';
+import type { Class, ClassParams, Options, QueryResult } from './types';
+import { isObj, isString, printError, PROMPT, readFile, repr } from './helpers';
+
+class Source {
+  readonly src: string;
+  readonly filename?: string;
+
+  constructor(src: string, filename?: string) {
+    this.src = src;
+    this.filename = filename;
+  }
+}
 
 /** Create and manage an instance of the Polar runtime. */
 export class Polar {
@@ -31,29 +44,42 @@ export class Polar {
    * @internal
    */
   #host: Host;
-  /**
-   * Flag that tracks if the roles feature is enabled.
-   *
-   * @internal
-   */
-  #rolesEnabled: boolean;
 
   constructor(opts: Options = {}) {
+    function defaultEqual(a: unknown, b: unknown) {
+      if (
+        isObj(a) &&
+        isObj(b) &&
+        Object.getPrototypeOf(a) === Object.getPrototypeOf(b)
+      ) {
+        const check = new Set();
+
+        for (const x in a) {
+          if (!defaultEqual(a[x], b[x])) return false;
+          check.add(x);
+        }
+
+        for (const x in b) if (!check.has(x)) return false;
+
+        return true;
+      }
+      return a == b; // eslint-disable-line eqeqeq
+    }
+
     this.#ffiPolar = new FfiPolar();
-    const equalityFn = opts.equalityFn || ((x, y) => x == y);
+    const equalityFn = opts.equalityFn || defaultEqual;
     this.#host = new Host(this.#ffiPolar, equalityFn);
-    this.#rolesEnabled = false;
 
     // Register global constants.
     this.registerConstant(null, 'nil');
 
     // Register built-in classes.
     this.registerClass(Boolean);
-    this.registerClass(Number, 'Integer');
-    this.registerClass(Number, 'Float');
+    this.registerClass(Number, { name: 'Integer' });
+    this.registerClass(Number, { name: 'Float' });
     this.registerClass(String);
-    this.registerClass(Array, 'List');
-    this.registerClass(Object, 'Dictionary');
+    this.registerClass(Array, { name: 'List' });
+    this.registerClass(Object, { name: 'Dictionary' });
   }
 
   /**
@@ -67,17 +93,8 @@ export class Polar {
    * instances are spun up and not cleanly reaped by the GC, such as during a
    * long-running test process in 'watch' mode.
    */
-  free() {
+  free(): void {
     this.#ffiPolar.free();
-  }
-
-  /**
-   * For tests only.
-   *
-   * @hidden
-   */
-  __host() {
-    return this.#host;
   }
 
   /**
@@ -86,129 +103,118 @@ export class Polar {
    * @internal
    */
   private processMessages() {
-    while (true) {
-      let msg = this.#ffiPolar.nextMessage();
+    for (;;) {
+      const msg = this.#ffiPolar.nextMessage() as Message | undefined;
       if (msg === undefined) break;
       processMessage(msg);
     }
   }
 
   /**
-   * Enable Oso's built-in roles feature.
-   */
-  async enableRoles() {
-    if (!this.#rolesEnabled) {
-      const helpers = {
-        join: (sep: string, l: string, r: string) => [l, r].join(sep),
-      };
-      this.registerConstant(helpers, '__oso_internal_roles_helpers__');
-      this.#ffiPolar.enableRoles();
-      this.processMessages();
-      await this.validateRolesConfig();
-      this.#rolesEnabled = true;
-    }
-  }
-
-  /**
-   * Validate roles config.
-   *
-   * @internal
-   */
-  private async validateRolesConfig() {
-    const validationQueryResults = [];
-    while (true) {
-      const query = this.#ffiPolar.nextInlineQuery();
-      this.processMessages();
-      if (query === undefined) break;
-      const { results } = new Query(query, this.#host);
-      const queryResults = [];
-      for await (const result of results) {
-        queryResults.push(result);
-      }
-      validationQueryResults.push(queryResults);
-    }
-
-    const results = validationQueryResults.map(results =>
-      results.map(result => ({
-        // `Map<string, any> -> {[key: string]: PolarTerm}` b/c Maps aren't
-        // trivially `JSON.stringify()`-able.
-        bindings: [...result.entries()].reduce((obj: obj, [k, v]) => {
-          obj[k] = this.#host.toPolar(v);
-          return obj;
-        }, {}),
-      }))
-    );
-
-    this.#ffiPolar.validateRolesConfig(JSON.stringify(results));
-    this.processMessages();
-  }
-
-  /**
    * Clear rules from the Polar KB, but
    * retain all registered classes and constants.
    */
-  clearRules() {
+  clearRules(): void {
     this.#ffiPolar.clearRules();
     this.processMessages();
-    this.#rolesEnabled = false;
+  }
+
+  /**
+   * Load Polar policy files.
+   */
+  async loadFiles(filenames: string[]): Promise<void> {
+    if (filenames.length === 0) return;
+
+    if (!extname) {
+      throw new PolarError('loadFiles is not supported in the browser');
+    }
+    const sources = await Promise.all(
+      filenames.map(async filename => {
+        if (extname(filename) !== '.polar')
+          throw new PolarFileExtensionError(filename);
+
+        try {
+          const contents = await readFile(filename);
+          return new Source(contents, filename);
+        } catch (e) {
+          if ((e as NodeJS.ErrnoException).code === 'ENOENT')
+            throw new PolarFileNotFoundError(filename);
+          throw e;
+        }
+      })
+    );
+
+    return this.loadSources(sources);
   }
 
   /**
    * Load a Polar policy file.
+   *
+   * @deprecated `Oso.loadFile` has been deprecated in favor of `Oso.loadFiles`
+   * as of the 0.20 release. Please see changelog for migration instructions:
+   * https://docs.osohq.com/project/changelogs/2021-09-15.html
    */
-  async loadFile(file: string): Promise<void> {
-    if (!extname) {
-      throw new PolarError('loadFile is not supported in the browser');
-    }
-    if (extname(file) !== '.polar') throw new PolarFileExtensionError(file);
-    let contents;
-    try {
-      contents = await readFile(file);
-    } catch (e) {
-      if (e.code === 'ENOENT') throw new PolarFileNotFoundError(file);
-      throw e;
-    }
-    await this.loadStr(contents, file);
+  async loadFile(filename: string): Promise<void> {
+    console.error(
+      '`Oso.loadFile` has been deprecated in favor of `Oso.loadFiles` as of the 0.20 release.\n\n' +
+        'Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html'
+    );
+    return this.loadFiles([filename]);
   }
 
   /**
    * Load a Polar policy string.
    */
-  async loadStr(contents: string, name?: string): Promise<void> {
-    this.#ffiPolar.load(contents, name);
-    this.processMessages();
+  async loadStr(contents: string, filename?: string): Promise<void> {
+    return this.loadSources([new Source(contents, filename)]);
+  }
 
-    while (true) {
+  // Register MROs, load Polar code, and check inline queries.
+  private async loadSources(sources: Source[]): Promise<void> {
+    this.getHost().registerMros();
+    this.#ffiPolar.load(sources);
+    this.processMessages();
+    return this.checkInlineQueries();
+  }
+
+  private async checkInlineQueries(): Promise<void> {
+    for (;;) {
       const query = this.#ffiPolar.nextInlineQuery();
       this.processMessages();
       if (query === undefined) break;
       const source = query.source();
-      const { results } = new Query(query, this.#host);
+      const { results } = new Query(query, this.getHost());
       const { done } = await results.next();
-      results.return();
+      await results.return();
       if (done) throw new InlineQueryFailedError(source);
-    }
-
-    if (this.#rolesEnabled) {
-      this.#rolesEnabled = false;
-      await this.enableRoles();
     }
   }
 
   /**
    * Query for a Polar predicate or string.
    */
-  query(q: Predicate | string): QueryResult {
-    const host = Host.clone(this.#host);
+  query(q: Predicate | string, bindings?: Map<string, unknown>): QueryResult {
+    const host = Host.clone(this.getHost());
     let ffiQuery;
-    if (typeof q === 'string') {
+    if (isString(q)) {
       ffiQuery = this.#ffiPolar.newQueryFromStr(q);
     } else {
       const term = JSON.stringify(host.toPolar(q));
       ffiQuery = this.#ffiPolar.newQueryFromTerm(term);
     }
     this.processMessages();
-    return new Query(ffiQuery, host).results;
+    return new Query(ffiQuery, host, bindings).results;
+  }
+
+  /**
+   * Query for a Polar rule with bindings.
+   */
+  queryRuleWithBindings(
+    name: string,
+    bindings: Map<string, unknown>,
+    ...args: unknown[]
+  ): QueryResult {
+    return this.query(new Predicate(name, args), bindings);
   }
 
   /**
@@ -219,46 +225,73 @@ export class Polar {
   }
 
   /**
-   * Register a JavaScript class for use in Polar policies.
+   * Query for a Polar rule, returning true if there are any results.
    */
-  registerClass<T>(cls: Class<T>, alias?: string): void {
-    if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
-    const name = this.#host.cacheClass(cls, alias);
-    this.registerConstant(cls, name);
+  async queryRuleOnce(name: string, ...args: unknown[]): Promise<boolean> {
+    const results = this.query(new Predicate(name, args));
+    const { done } = await results.next();
+    await results.return();
+    return !done;
+  }
+
+  /**
+   * Register a JavaScript class for use in Polar policies.
+   *
+   * @param cls The class to register.
+   * @param params An optional object with extra parameters.
+   */
+  registerClass(cls: Class, params?: ClassParams): void {
+    const clsName = this.getHost().cacheClass(cls, params);
+    this.registerConstant(cls, clsName);
   }
 
   /**
    * Register a JavaScript value for use in Polar policies.
    */
-  registerConstant(value: any, name: string): void {
-    const term = this.#host.toPolar(value);
+  registerConstant(value: unknown, name: string): void {
+    const term = this.getHost().toPolar(value);
     this.#ffiPolar.registerConstant(name, JSON.stringify(term));
+  }
+
+  getHost(): Host {
+    return this.#host;
+  }
+
+  getFfi(): FfiPolar {
+    return this.#ffiPolar;
   }
 
   /** Start a REPL session. */
   async repl(files?: string[]): Promise<void> {
-    if (createInterface == null) {
+    if (typeof createInterface !== 'function')
       throw new PolarError('REPL is not supported in the browser');
-    }
+
     try {
-      if (files?.length) await Promise.all(files.map(f => this.loadFile(f)));
+      if (files?.length) await this.loadFiles(files);
     } catch (e) {
-      printError(e);
+      printError(e as Error);
     }
 
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
-    const repl = global.repl?.repl;
+    const repl = global.repl?.repl as REPLServer | undefined; // eslint-disable-line @typescript-eslint/no-unsafe-member-access
 
     if (repl) {
       repl.setPrompt(PROMPT);
       const evalQuery = this.evalReplInput.bind(this);
-      repl.eval = async (cmd: string, _ctx: any, _file: string, cb: Function) =>
-        cb(null, await evalQuery(cmd));
-      const listeners: Function[] = repl.listeners('exit');
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      repl.eval = async (
+        evalCmd: string,
+        _ctx: Context,
+        _file: string,
+        cb: (err: Error | null, result: boolean | void) => void
+      ) => cb(null, await evalQuery(evalCmd));
+      const listeners = repl.listeners('exit') as (() => void)[];
       repl.removeAllListeners('exit');
       repl.prependOnceListener('exit', () => {
         listeners.forEach(l => repl.addListener('exit', l));
-        require('repl').start({ useGlobal: true });
+        start({ useGlobal: true });
       });
     } else {
       const rl = createInterface({
@@ -268,6 +301,7 @@ export class Polar {
         tabSize: 4,
       });
       rl.prompt();
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
       rl.on('line', async (line: string) => {
         const result = await this.evalReplInput(line);
         if (result !== undefined) console.log(result);
@@ -286,7 +320,7 @@ export class Polar {
     try {
       if (input !== '') {
         const ffiQuery = this.#ffiPolar.newQueryFromStr(input);
-        const query = new Query(ffiQuery, this.#host);
+        const query = new Query(ffiQuery, this.getHost());
         const results = [];
         for await (const result of query.results) {
           results.push(result);
@@ -303,7 +337,7 @@ export class Polar {
         }
       }
     } catch (e) {
-      printError(e);
+      printError(e as Error);
     }
   }
 }

@@ -78,23 +78,17 @@ pub extern "C" fn polar_new() -> *mut Polar {
 }
 
 #[no_mangle]
-pub extern "C" fn polar_load(
-    polar_ptr: *mut Polar,
-    src: *const c_char,
-    filename: *const c_char,
-) -> i32 {
+pub extern "C" fn polar_load(polar_ptr: *mut Polar, sources: *const c_char) -> i32 {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
-        let src = unsafe { ffi_string!(src) };
-        let filename = unsafe {
-            filename
-                .as_ref()
-                .map(|ptr| CStr::from_ptr(ptr).to_string_lossy().to_string())
-        };
-
-        match polar.load(&src, filename) {
-            Err(err) => set_error(err),
-            Ok(_) => POLAR_SUCCESS,
+        let sources = unsafe { ffi_string!(sources) };
+        let sources = serde_json::from_str(&sources);
+        match sources {
+            Ok(sources) => match polar.load(sources) {
+                Err(err) => set_error(err),
+                Ok(_) => POLAR_SUCCESS,
+            },
+            Err(e) => set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into()),
         }
     })
 }
@@ -120,10 +114,13 @@ pub extern "C" fn polar_register_constant(
         let value = unsafe { ffi_string!(value) };
         let value = serde_json::from_str(&value);
         match value {
-            Ok(value) => {
-                polar.register_constant(terms::Symbol::new(name.as_ref()), value);
-                POLAR_SUCCESS
-            }
+            Ok(value) => match polar.register_constant(terms::Symbol::new(name.as_ref()), value) {
+                Err(e) => {
+                    set_error(e);
+                    POLAR_FAILURE
+                }
+                Ok(()) => POLAR_SUCCESS,
+            },
             Err(e) => set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into()),
         }
     })
@@ -424,33 +421,6 @@ pub extern "C" fn query_free(query: *mut Query) -> i32 {
     ffi_try!({
         std::mem::drop(unsafe { Box::from_raw(query) });
         POLAR_SUCCESS
-    })
-}
-
-#[no_mangle]
-pub extern "C" fn polar_enable_roles(polar_ptr: *mut Polar) -> i32 {
-    ffi_try!({
-        let polar = unsafe { ffi_ref!(polar_ptr) };
-        match polar.enable_roles() {
-            Err(err) => set_error(err),
-            Ok(_) => POLAR_SUCCESS,
-        }
-    })
-}
-
-#[no_mangle]
-pub extern "C" fn polar_validate_roles_config(
-    polar_ptr: *mut Polar,
-    validation_query_results: *const c_char,
-) -> i32 {
-    ffi_try!({
-        let polar = unsafe { ffi_ref!(polar_ptr) };
-        let validation_query_results = unsafe { ffi_string!(validation_query_results) };
-        serde_json::from_str(&validation_query_results)
-            .map_err(|_| error::RolesValidationError("Invalid config query result".into()).into())
-            .and_then(|results| polar.validate_roles_config(results))
-            .err()
-            .map_or(POLAR_SUCCESS, set_error)
     })
 }
 

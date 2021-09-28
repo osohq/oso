@@ -15,6 +15,7 @@ import (
 	"unsafe"
 
 	"github.com/osohq/go-oso/errors"
+	_ "github.com/osohq/go-oso/internal/ffi/native"
 	"github.com/osohq/go-oso/types"
 )
 
@@ -104,15 +105,13 @@ func (p PolarFfi) NewId() (uint64, error) {
 	return uint64(id), nil
 }
 
-func (p PolarFfi) Load(s string, filename *string) error {
-	cString := C.CString(s)
-	defer C.free(unsafe.Pointer(cString))
-	var cFilename *C.char
-	if filename != nil {
-		cFilename = C.CString(*filename)
-		defer C.free(unsafe.Pointer(cFilename))
+func (p PolarFfi) Load(sources []types.Source) error {
+	json, err := ffiSerialize(sources)
+	defer C.free(unsafe.Pointer(json))
+	if err != nil {
+		return err
 	}
-	result := C.polar_load(p.ptr, cString, cFilename)
+	result := C.polar_load(p.ptr, json)
 	processMessages(p)
 	if result == 0 {
 		return getError()
@@ -173,6 +172,22 @@ func (p PolarFfi) RegisterConstant(term types.Term, name string) error {
 		return err
 	}
 	result := C.polar_register_constant(p.ptr, cName, cTerm)
+	processMessages(p)
+	if result == 0 {
+		return getError()
+	}
+	return nil
+}
+
+func (p PolarFfi) RegisterMro(name string, mro []uint64) error {
+	cName := C.CString(name)
+	defer C.free(unsafe.Pointer(cName))
+	cMro, err := ffiSerialize(mro)
+	defer C.free(unsafe.Pointer(cMro))
+	if err != nil {
+		return err
+	}
+	result := C.polar_register_mro(p.ptr, cName, cMro)
 	processMessages(p)
 	if result == 0 {
 		return getError()

@@ -1,10 +1,18 @@
 import {
+  DataFilteringConfigurationError,
   DuplicateClassAliasError,
+  InvalidConstructorError,
   PolarError,
   UnregisteredClassError,
   UnregisteredInstanceError,
 } from './errors';
-import { ancestors, repr } from './helpers';
+import {
+  ancestors,
+  isConstructor,
+  isString,
+  promisify1,
+  repr,
+} from './helpers';
 import type { Polar as FfiPolar } from './polar_wasm_api';
 import { Expression } from './Expression';
 import { Pattern } from './Pattern';
@@ -12,10 +20,16 @@ import { Predicate } from './Predicate';
 import { Variable } from './Variable';
 import type {
   Class,
+  ClassParams,
   EqualityFn,
   PolarComparisonOperator,
   PolarTerm,
-  PolarDictPattern,
+  UserTypeParams,
+  BuildQueryFn,
+  ExecQueryFn,
+  CombineQueryFn,
+  DataFilteringQueryParams,
+  NullishOrHasConstructor,
 } from './types';
 import {
   Dict,
@@ -30,17 +44,56 @@ import {
   isPolarStr,
   isPolarVariable,
 } from './types';
+import { Relation } from './dataFiltering';
+import type { SerializedFields } from './dataFiltering';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export class UserType<Type extends Class<T>, T = any, Query = any> {
+  name: string;
+  cls: Type;
+  id: number;
+  fields: Map<string, Class | Relation>;
+  buildQuery: BuildQueryFn<Promise<Query>>;
+  execQuery: ExecQueryFn<Query, Promise<T[]>>;
+  combineQuery: CombineQueryFn<Query>;
+
+  constructor({
+    name,
+    cls,
+    id,
+    fields,
+    buildQuery,
+    execQuery,
+    combineQuery,
+  }: UserTypeParams<Type>) {
+    this.name = name;
+    this.cls = cls;
+    this.fields = fields;
+    // NOTE(gj): these `promisify1()` calls are for Promisifying synchronous
+    // return values from {build,exec}Query. Since a user's implementation
+    // *might* return a Promise, we want to `await` _all_ invocations.
+    this.buildQuery = promisify1(buildQuery);
+    this.execQuery = promisify1(execQuery);
+    this.combineQuery = combineQuery;
+    this.id = id;
+  }
+}
 
 /**
  * Translator between Polar and JavaScript.
  *
  * @internal
  */
-export class Host {
+export class Host implements Required<DataFilteringQueryParams> {
   #ffiPolar: FfiPolar;
-  #classes: Map<string, Class>;
-  #instances: Map<number, any>;
+  #instances: Map<number, unknown>;
+  types: Map<string | Class, UserType<any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
   #equalityFn: EqualityFn;
+
+  // global data filtering config
+  buildQuery: BuildQueryFn;
+  execQuery: ExecQueryFn;
+  combineQuery: CombineQueryFn;
 
   /**
    * Shallow clone a host to extend its state for the duration of a particular
@@ -50,17 +103,29 @@ export class Host {
    */
   static clone(host: Host): Host {
     const clone = new Host(host.#ffiPolar, host.#equalityFn);
-    clone.#classes = new Map(host.#classes);
     clone.#instances = new Map(host.#instances);
+    clone.types = new Map(host.types);
+    clone.buildQuery = host.buildQuery;
+    clone.execQuery = host.execQuery;
+    clone.combineQuery = host.combineQuery;
     return clone;
   }
 
   /** @internal */
   constructor(ffiPolar: FfiPolar, equalityFn: EqualityFn) {
     this.#ffiPolar = ffiPolar;
-    this.#classes = new Map();
     this.#instances = new Map();
     this.#equalityFn = equalityFn;
+    this.types = new Map();
+    this.buildQuery = () => {
+      throw new DataFilteringConfigurationError('buildQuery');
+    };
+    this.execQuery = () => {
+      throw new DataFilteringConfigurationError('execQuery');
+    };
+    this.combineQuery = () => {
+      throw new DataFilteringConfigurationError('combineQuery');
+    };
   }
 
   /**
@@ -71,30 +136,89 @@ export class Host {
    * @internal
    */
   private getClass(name: string): Class {
-    const cls = this.#classes.get(name);
-    if (cls === undefined) throw new UnregisteredClassError(name);
-    return cls;
+    const typ = this.types.get(name);
+    if (typ === undefined) throw new UnregisteredClassError(name);
+    return typ.cls as Class;
+  }
+
+  /**
+   * Get user type for `cls`.
+   *
+   * @param cls Class or class name.
+   */
+  getType<Type extends Class>(cls?: Type | string): UserType<Type> | undefined {
+    if (cls === undefined) return undefined;
+    return this.types.get(cls);
+  }
+
+  /**
+   * Return user types that are registered with Host.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private *distinctUserTypes(): IterableIterator<UserType<any>> {
+    for (const [name, typ] of this.types) if (isString(name)) yield typ;
+  }
+
+  serializeTypes(): string {
+    const polarTypes: { [tag: string]: SerializedFields } = {};
+    for (const [tag, userType] of this.types) {
+      if (isString(tag)) {
+        const fields = userType.fields;
+        const fieldTypes: SerializedFields = {};
+        for (const [k, v] of fields) {
+          if (v instanceof Relation) {
+            fieldTypes[k] = v.serialize();
+          } else {
+            const class_tag = this.getType(v)?.name;
+            if (class_tag === undefined)
+              throw new UnregisteredClassError(v.name);
+            fieldTypes[k] = { Base: { class_tag } };
+          }
+        }
+        polarTypes[tag] = fieldTypes;
+      }
+    }
+    return JSON.stringify(polarTypes);
   }
 
   /**
    * Store a JavaScript class in the class cache.
    *
    * @param cls Class to cache.
-   * @param name Optional alias under which to cache the class. Defaults to the
-   * class's `name` property.
+   * @param params Optional parameters.
    *
    * @internal
    */
-  cacheClass<T>(cls: Class<T>, name?: string): string {
-    const clsName = name === undefined ? cls.name : name;
-    const existing = this.#classes.get(clsName);
-    if (existing !== undefined)
+  cacheClass(cls: Class, params?: ClassParams): string {
+    params = params ? params : {};
+
+    // TODO(gw) maybe we only want to support plain objects?
+    let fields = params.fields || {};
+    if (!(fields instanceof Map)) fields = new Map(Object.entries(fields));
+
+    const { name, buildQuery, execQuery, combineQuery } = params;
+    if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
+    const clsName: string = name ? name : cls.name;
+    const existing = this.types.get(clsName);
+    if (existing) {
       throw new DuplicateClassAliasError({
         name: clsName,
         cls,
-        existing,
+        existing: existing.cls as Class,
       });
-    this.#classes.set(clsName, cls);
+    }
+
+    const userType = new UserType({
+      name: clsName,
+      cls,
+      fields,
+      buildQuery: buildQuery || this.buildQuery,
+      execQuery: execQuery || this.execQuery,
+      combineQuery: combineQuery || this.combineQuery,
+      id: this.cacheInstance(cls),
+    });
+    this.types.set(cls, userType);
+    this.types.set(clsName, userType);
     return clsName;
   }
 
@@ -105,7 +229,7 @@ export class Host {
    *
    * @internal
    */
-  instances(): any[] {
+  instances(): unknown[] {
     return Array.from(this.#instances.values());
   }
 
@@ -125,7 +249,7 @@ export class Host {
    *
    * @internal
    */
-  getInstance(id: number): any {
+  getInstance(id: number): unknown {
     if (!this.hasInstance(id)) throw new UnregisteredInstanceError(id);
     return this.#instances.get(id);
   }
@@ -136,13 +260,32 @@ export class Host {
    *
    * @internal
    */
-  private cacheInstance(instance: any, id?: number): number {
+  cacheInstance(instance: unknown, id?: number): number {
     let instanceId = id;
     if (instanceId === undefined) {
       instanceId = this.#ffiPolar.newId();
     }
     this.#instances.set(instanceId, instance);
     return instanceId;
+  }
+
+  /**
+   * Register the MROs of all registered classes.
+   */
+  registerMros(): void {
+    // Get MRO of all registered classes
+    // NOTE: not ideal that the MRO gets updated each time loadStr is
+    // called, but since we are planning to move to only calling load once
+    // with the include feature, I think it's okay for now.
+    for (const typ of this.distinctUserTypes()) {
+      // Get MRO for type.
+      const mro = ancestors(typ.cls)
+        .map(c => this.getType(c as Class)?.id)
+        .filter(id => id !== undefined);
+
+      // Register with core.
+      this.#ffiPolar.registerMro(typ.name, mro);
+    }
   }
 
   /**
@@ -172,10 +315,9 @@ export class Host {
     left: string,
     right: string
   ): Promise<boolean> {
-    let instance = this.getInstance(id);
-    instance = instance instanceof Promise ? await instance : instance;
-    if (!(instance?.constructor instanceof Function)) return false;
-    const mro = ancestors(instance.constructor);
+    let instance = this.getInstance(id) as NullishOrHasConstructor;
+    instance = instance instanceof Promise ? await instance : instance; // eslint-disable-line @typescript-eslint/no-unsafe-assignment
+    const mro = ancestors(instance?.constructor);
     const leftIndex = mro.indexOf(this.getClass(left));
     const rightIndex = mro.indexOf(this.getClass(right));
     if (leftIndex === -1) {
@@ -188,14 +330,71 @@ export class Host {
   }
 
   /**
+   * Check if the left class is a subclass of the right class.
+   *
+   * @internal
+   */
+  isSubclass(left: string, right: string): boolean {
+    const leftCls = this.getClass(left);
+    const rightCls = this.getClass(right);
+    const mro = ancestors(leftCls);
+    return mro.includes(rightCls);
+  }
+
+  /**
    * Check if the given instance is an instance of a particular class.
    *
    * @internal
    */
   async isa(polarInstance: PolarTerm, name: string): Promise<boolean> {
-    const instance = await this.toJs(polarInstance);
+    const instance = (await this.toJs(
+      polarInstance
+    )) as NullishOrHasConstructor;
     const cls = this.getClass(name);
     return instance instanceof cls || instance?.constructor === cls;
+  }
+
+  /**
+   * Check if a sequence of field accesses on the given class is an
+   * instance of another class.
+   *
+   * @internal
+   */
+  async isaWithPath(
+    baseTag: string,
+    path: PolarTerm[],
+    classTag: string
+  ): Promise<boolean> {
+    let tag = baseTag;
+    for (const fld of path) {
+      const field = await this.toJs(fld);
+      if (!isString(field)) throw new Error(`Not a field name: ${repr(field)}`);
+      const userType = this.types.get(tag);
+      if (userType === undefined) return false;
+
+      let fieldType = userType.fields.get(field);
+      if (fieldType === undefined) return false;
+
+      if (fieldType instanceof Relation) {
+        switch (fieldType.kind) {
+          case 'one': {
+            const otherCls = this.getType(fieldType.otherType)?.cls;
+            if (otherCls === undefined)
+              throw new UnregisteredClassError(fieldType.otherType);
+            fieldType = otherCls;
+            break;
+          }
+          case 'many':
+            fieldType = Array;
+            break;
+        }
+      }
+
+      const newBase = this.getType(fieldType);
+      if (newBase === undefined) return false;
+      tag = newBase.name;
+    }
+    return classTag === tag;
   }
 
   /**
@@ -208,8 +407,10 @@ export class Host {
     leftTerm: PolarTerm,
     rightTerm: PolarTerm
   ): Promise<boolean> {
-    const left = await this.toJs(leftTerm);
-    const right = await this.toJs(rightTerm);
+    // NOTE(gj): These are `any` because JS puts no type boundaries on what's
+    // comparable. Want to resolve `{} > NaN` to an arbitrary boolean? Go nuts!
+    const left = (await this.toJs(leftTerm)) as any; // eslint-disable-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+    const right = (await this.toJs(rightTerm)) as any; // eslint-disable-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
     switch (op) {
       case 'Eq':
         return this.#equalityFn(left, right);
@@ -223,9 +424,10 @@ export class Host {
         return left < right;
       case 'Neq':
         return !this.#equalityFn(left, right);
-      default:
+      default: {
         const _: never = op;
         return _;
+      }
     }
   }
 
@@ -235,12 +437,12 @@ export class Host {
    *
    * @internal
    */
-  toPolar(v: any): PolarTerm {
+  toPolar(v: unknown): PolarTerm {
     switch (true) {
       case typeof v === 'boolean':
-        return { value: { Boolean: v } };
+        return { value: { Boolean: v as boolean } };
       case Number.isInteger(v):
-        return { value: { Number: { Integer: v } } };
+        return { value: { Number: { Integer: v as number } } };
       case typeof v === 'number':
         if (v === Infinity) {
           v = 'Infinity';
@@ -249,48 +451,45 @@ export class Host {
         } else if (Number.isNaN(v)) {
           v = 'NaN';
         }
-        return { value: { Number: { Float: v } } };
-      case typeof v === 'string':
-        return { value: { String: v } };
-      case Array.isArray(v):
-        return { value: { List: v.map((el: unknown) => this.toPolar(el)) } };
-      case v instanceof Predicate:
-        const args = v.args.map((el: unknown) => this.toPolar(el));
-        return { value: { Call: { name: v.name, args } } };
+        return { value: { Number: { Float: v as number } } };
+      case isString(v):
+        return { value: { String: v as string } };
+      case Array.isArray(v): {
+        const polarTermList = (v as Array<unknown>).map(a => this.toPolar(a));
+        return { value: { List: polarTermList } };
+      }
+      case v instanceof Predicate: {
+        const { name, args } = v as Predicate;
+        const polarArgs = args.map(a => this.toPolar(a));
+        return { value: { Call: { name, args: polarArgs } } };
+      }
       case v instanceof Variable:
-        return { value: { Variable: v.name } };
-      case v instanceof Expression:
+        return { value: { Variable: (v as Variable).name } };
+      case v instanceof Expression: {
+        const { operator, args } = v as Expression;
+        const polarArgs = args.map(a => this.toPolar(a));
+        return { value: { Expression: { operator, args: polarArgs } } };
+      }
+      case v instanceof Pattern: {
+        const { tag, fields } = v as Pattern;
+        let dict = this.toPolar(fields).value;
+        // TODO(gj): will `dict.Dictionary` ever be undefined?
+        if (!isPolarDict(dict)) dict = { Dictionary: { fields: new Map() } };
+        if (tag === undefined) return { value: { Pattern: dict } };
         return {
-          value: {
-            Expression: {
-              operator: v.operator,
-              args: v.args.map((a: unknown) => this.toPolar(a)),
-            },
-          },
+          value: { Pattern: { Instance: { tag, fields: dict.Dictionary } } },
         };
-      case v instanceof Pattern:
-        const dict = this.toPolar(v.fields).value as PolarDictPattern;
-        if (v.tag === undefined) {
-          return { value: { Pattern: dict } };
-        } else {
-          return {
-            value: {
-              Pattern: {
-                Instance: {
-                  tag: v.tag,
-                  fields: dict.Dictionary,
-                },
-              },
-            },
-          };
-        }
-      case v instanceof Dict:
+      }
+      case v instanceof Dict: {
         const fields = new Map(
-          Object.entries(v).map(([k, v]) => [k, this.toPolar(v)])
+          Object.entries(v as Dict).map(([k, v]) => [k, this.toPolar(v)])
         );
         return { value: { Dictionary: { fields } } };
-      default:
-        const instance_id = this.cacheInstance(v);
+      }
+      default: {
+        let instanceId: number | undefined = undefined;
+        if (isConstructor(v)) instanceId = this.getType(v)?.id;
+        const instance_id = this.cacheInstance(v, instanceId);
         return {
           value: {
             ExternalInstance: {
@@ -300,6 +499,7 @@ export class Host {
             },
           },
         };
+      }
     }
   }
 
@@ -308,7 +508,7 @@ export class Host {
    *
    * @internal
    */
-  async toJs(v: PolarTerm): Promise<any> {
+  async toJs(v: PolarTerm): Promise<unknown> {
     const t = v.value;
     if (isPolarStr(t)) {
       return t.String;
@@ -337,8 +537,9 @@ export class Host {
     } else if (isPolarList(t)) {
       return await Promise.all(t.List.map(async el => await this.toJs(el)));
     } else if (isPolarDict(t)) {
-      const valueToJs = ([k, v]: [string, PolarTerm]) =>
-        this.toJs(v).then(v => [k, v]) as Promise<[string, any]>;
+      const valueToJs = ([k, v]: [string, PolarTerm]): Promise<
+        [string, unknown]
+      > => this.toJs(v).then(v => [k, v]);
       const { fields } = t.Dictionary;
       const entries = await Promise.all([...fields.entries()].map(valueToJs));
       return entries.reduce((dict: Dict, [k, v]) => {
@@ -347,11 +548,11 @@ export class Host {
       }, new Dict());
     } else if (isPolarInstance(t)) {
       const i = this.getInstance(t.ExternalInstance.instance_id);
-      return i instanceof Promise ? await i : i;
+      return i instanceof Promise ? await i : i; // eslint-disable-line @typescript-eslint/no-unsafe-return
     } else if (isPolarPredicate(t)) {
-      let { name, args } = t.Call;
-      args = await Promise.all(args.map(a => this.toJs(a)));
-      return new Predicate(name, args);
+      const { name, args } = t.Call;
+      const jsArgs = await Promise.all(args.map(a => this.toJs(a)));
+      return new Predicate(name, jsArgs);
     } else if (isPolarVariable(t)) {
       return new Variable(t.Variable);
     } else if (isPolarExpression(t)) {
@@ -361,15 +562,15 @@ export class Host {
       return new Expression(operator, args);
     } else if (isPolarPattern(t)) {
       if ('Dictionary' in t.Pattern) {
-        const fields = await this.toJs({ value: t.Pattern });
+        const fields = (await this.toJs({ value: t.Pattern })) as Dict;
         return new Pattern({ fields });
       } else {
-        let {
+        const {
           tag,
           fields: { fields },
         } = t.Pattern.Instance;
         const dict = await this.toJs({ value: { Dictionary: { fields } } });
-        return new Pattern({ tag, fields: dict });
+        return new Pattern({ tag, fields: dict as Dict });
       }
     } else {
       const _: never = t;

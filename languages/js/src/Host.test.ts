@@ -4,12 +4,12 @@ import { Pattern } from './Pattern';
 import { Dict } from './types';
 import { Host } from './Host';
 import { pred } from '../test/helpers';
-import { Actor, User, Widget } from '../test/classes';
+import { BaseActor, User, Widget } from '../test/classes';
 import { Variable } from './Variable';
 
 describe('conversions between JS + Polar values', () => {
   test('converts Polar values into JS values', async () => {
-    const h = new Host(new FfiPolar(), (x, y) => x == y);
+    const h = new Host(new FfiPolar(), (x, y) => x == y); // eslint-disable-line eqeqeq
     const int = 1;
     const float = Math.PI;
     const str = '2';
@@ -24,7 +24,7 @@ describe('conversions between JS + Polar values', () => {
     const dictPattern = new Pattern({ fields: dict });
     const promises = {
       resolved: Promise.resolve(int),
-      pending: Promise.reject(str).catch(() => {}),
+      pending: Promise.reject(str).catch(() => {}), // eslint-disable-line @typescript-eslint/no-empty-function
       constructor: Promise.prototype,
     };
     const functions = {
@@ -42,7 +42,7 @@ describe('conversions between JS + Polar values', () => {
       list,
       obj,
       map,
-      pred('a', new Actor('b'), new User('c'), new Widget(str)),
+      pred('a', new BaseActor('b'), new User('c'), new Widget(str)),
       new Variable('x'),
       promises,
       functions,

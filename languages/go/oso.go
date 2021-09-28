@@ -2,6 +2,10 @@ package oso
 
 import (
 	"errors"
+	"fmt"
+	"os"
+
+	osoErrors "github.com/osohq/go-oso/errors"
 	"github.com/osohq/go-oso/types"
 )
 
@@ -9,7 +13,10 @@ import (
 The central object to manage policy state and verify requests.
 */
 type Oso struct {
-	p *Polar
+	p              *Polar
+	readAction     interface{}
+	forbiddenError func() error
+	notFoundError  func() error
 }
 
 /*
@@ -24,15 +31,66 @@ func NewOso() (Oso, error) {
 	if p, e := newPolar(); e != nil {
 		return Oso{}, e
 	} else {
-		return Oso{p: p}, nil
+		return Oso{
+			p:              p,
+			readAction:     "read",
+			forbiddenError: func() error { return &osoErrors.ForbiddenError{} },
+			notFoundError:  func() error { return &osoErrors.NotFoundError{} },
+		}, nil
 	}
 }
 
 /*
+Override the "read" action, which is used to differentiate between a
+NotFoundError and a ForbiddenError on authorization failures.
+
+	o, _ = oso.NewOso()
+	o.SetReadAction("READ")
+*/
+func (o *Oso) SetReadAction(readAction interface{}) {
+	o.readAction = readAction
+}
+
+/*
+Override the default ForbiddenError, returned when authorization fails.
+
+	o, _ = oso.NewOso()
+	o.SetForbiddenError(func() error { return &MyCustomError{} })
+*/
+func (o *Oso) SetForbiddenError(forbiddenError func() error) {
+	o.forbiddenError = forbiddenError
+}
+
+/*
+Override the default NotFoundError, returned by the Authorize method when a user
+does not have read permission.
+
+	o, _ = oso.NewOso()
+	o.SetNotFoundError(func() error { return &MyCustomError{} })
+*/
+func (o *Oso) SetNotFoundError(notFoundError func() error) {
+	o.notFoundError = notFoundError
+}
+
+/*
+Load Polar policy from ".polar" files, checking that all inline queries succeed.
+*/
+func (o Oso) LoadFiles(files []string) error {
+	return (*o.p).loadFiles(files)
+}
+
+/*
 Load Polar policy from a ".polar" file, checking that all inline queries succeed.
+
+Deprecated: `Oso.LoadFile` has been deprecated in favor of `Oso.LoadFiles` as
+of the 0.20 release. Please see changelog for migration instructions:
+https://docs.osohq.com/project/changelogs/2021-09-15.html
 */
 func (o Oso) LoadFile(f string) error {
-	return (*o.p).loadFile(f)
+	fmt.Fprintln(os.Stderr,
+		"`Oso.LoadFile` has been deprecated in favor of `Oso.LoadFiles` as of the 0.20 release.\n\n"+
+			"Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html")
+	return (*o.p).loadFiles([]string{f})
 }
 
 /*
@@ -117,6 +175,27 @@ func (o Oso) QueryRule(name string, args ...interface{}) (<-chan map[string]inte
 }
 
 /*
+Query the policy for a rule, and return true if there are any results. Returns
+false if there are no results.
+*/
+func (o Oso) QueryRuleOnce(name string, args ...interface{}) (bool, error) {
+	query, err := (*o.p).queryRule(name, args...)
+	if err != nil {
+		return false, err
+	}
+	results, err := query.Next()
+	if err != nil {
+		return false, err
+	} else if results != nil {
+		// Manually clean up query since we are not pulling all results.
+		defer query.Cleanup()
+		return true, nil
+	} else {
+		return false, nil
+	}
+}
+
+/*
 Create policy query from a query string.
 Accepts the string to query for.
 Returns a new *Query, on which `Next()` can be called to get the next result,
@@ -141,27 +220,115 @@ Check if an (actor, action, resource) combination is allowed by the policy.
 Returns the result as a bool, or an error.
 */
 func (o Oso) IsAllowed(actor interface{}, action interface{}, resource interface{}) (bool, error) {
-	query, err := (*o.p).queryRule("allow", actor, action, resource)
+	return o.QueryRuleOnce("allow", actor, action, resource)
+}
+
+/*
+Return a set of actions allowed by the given (actor, resource) combination allowed
+by the policy.
+
+Deprecated: Use AuthorizedActions instead.
+*/
+func (o Oso) GetAllowedActions(actor interface{}, resource interface{}, allowWildcard bool) (map[interface{}]struct{}, error) {
+	return o.AuthorizedActions(actor, resource, allowWildcard)
+}
+
+/*
+Ensure that `actor` is allowed to perform `action` on `resource`.
+
+If the action is permitted with an `allow` rule in the policy, then this method
+returns `nil`. If the action is not permitted by the policy, this method will
+return an error.
+
+The error returned by this method depends on whether the actor can perform the
+`"read"` action on the resource. If they cannot read the resource, then a
+`NotFoundError` error is returned. Otherwise, a `ForbiddenError` is returned.
+
+You can customize the errors returned by this function using the
+`SetReadAction`, `SetForbiddenError`, and `SetNotFoundError` configuration
+functions.
+*/
+func (o Oso) Authorize(actor interface{}, action interface{}, resource interface{}) error {
+	isAllowed, err := o.QueryRuleOnce("allow", actor, action, resource)
 	if err != nil {
-		return false, err
+		return err
 	}
-	results, err := query.Next()
-	if err != nil {
-		return false, err
-	} else if results != nil {
-		// Manually clean up query since we are not pulling all results.
-		defer query.Cleanup()
-		return true, nil
+
+	if isAllowed {
+		return nil
+	}
+
+	// Decide whether to return not found or forbidden error
+	isNotFound := false
+	if action == o.readAction {
+		isNotFound = true
 	} else {
-		return false, nil
+		isReadAllowed, err := o.QueryRuleOnce("allow", actor, o.readAction, resource)
+		if err != nil {
+			return err
+		}
+		if !isReadAllowed {
+			isNotFound = true
+		}
 	}
+
+	if isNotFound {
+		return o.notFoundError()
+	} else {
+		return o.forbiddenError()
+	}
+}
+
+/*
+Ensure that `actor` is allowed to send `request` to the server.
+
+Checks the `allow_request` rule of a policy.
+
+If the request is permitted with an `allow_request` rule in the
+policy, then this method returns `nil`. Otherwise, this method returns a
+`ForbiddenError`.
+*/
+func (o Oso) AuthorizeRequest(actor interface{}, request interface{}) error {
+	isAllowed, err := o.QueryRuleOnce("allow_request", actor, request)
+	if err != nil {
+		return err
+	}
+
+	if !isAllowed {
+		return o.forbiddenError()
+	}
+
+	return nil
+}
+
+/*
+Ensure that `actor` is allowed to perform `action` on a given
+`resource`'s `field`.
+
+Checks the `allow_field` rule of a policy.
+
+If the action is permitted by an `allow_field` rule in the policy,
+then this method returns `nil`. If the action is not permitted by the
+policy, this method returns a `ForbiddenError`.
+*/
+func (o Oso) AuthorizeField(actor interface{}, action interface{}, resource interface{}, field interface{}) error {
+	isAllowed, err := o.QueryRuleOnce("allow_field", actor, action, resource, field)
+	if err != nil {
+		return err
+	}
+
+	if !isAllowed {
+		return o.forbiddenError()
+	}
+
+	return nil
 }
 
 /*
 Return a set of actions allowed by the given (actor, resource) combination allowed
 by the policy.
 */
-func (o Oso) GetAllowedActions(actor interface{}, resource interface{}, allowWildcard bool) (map[interface{}]struct{}, error) {
+func (o Oso) AuthorizedActions(actor interface{}, resource interface{}, allowWildcard bool) (map[interface{}]struct{}, error) {
 	results := make(map[interface{}]struct{})
 	query, err := (*o.p).queryRule("allow", actor, types.ValueVariable("action"), resource)
 	if err != nil {
@@ -179,11 +346,49 @@ func (o Oso) GetAllowedActions(actor interface{}, resource interface{}, allowWil
 				if allowWildcard {
 					results["*"] = struct{}{}
 				} else {
-					return nil, errors.New(`The result of get_allowed_actions() contained an
+					return nil, errors.New(`the result of AuthorizedActions() contained an
 												"unconstrained" action that could represent any
 												action, but allow_wildcard was set to False. To fix,
 												set allow_wildcard to True and compare with the "*"
-												string.`)
+												string`)
+				}
+			default:
+				results[val] = struct{}{}
+			}
+		}
+	}
+	return results, nil
+}
+
+/*
+Determine the fields of `resource` on which `actor` is allowed to perform
+`action`.
+
+Uses `allow_field` rules in the policy to find all allowed fields.
+*/
+func (o Oso) AuthorizedFields(actor interface{}, action interface{}, resource interface{}, allowWildcard bool) (map[interface{}]struct{}, error) {
+	results := make(map[interface{}]struct{})
+	query, err := (*o.p).queryRule("allow_field", actor, action, resource, types.ValueVariable("field"))
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		if v, err := query.Next(); err != nil {
+			return nil, err
+		} else if v == nil {
+			break
+		} else if field, ok := (*v)["field"].(interface{}); ok {
+			switch val := (field).(type) {
+			case types.ValueVariable:
+				if allowWildcard {
+					results["*"] = struct{}{}
+				} else {
+					return nil, errors.New(`the result of AuthorizedFields() contained an
+												"unconstrained" field that could represent any
+												field, but allow_wildcard was set to False. To fix,
+												set allow_wildcard to True and compare with the "*"
+												string`)
 				}
 			default:
 				results[val] = struct{}{}

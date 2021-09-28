@@ -1,7 +1,5 @@
 ---
-title: "More"
-weight: 4
-any: true
+title: More
+description: Read more guides here
+weight: 1000
 ---
-
-# More Guides

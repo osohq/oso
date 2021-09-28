@@ -78,6 +78,18 @@ func (h Host) CacheClass(cls reflect.Type, name string, constructor reflect.Valu
 	return nil
 }
 
+func (h Host) RegisterMros() error {
+	// Go does not support inheritance, so all MROs are empty
+	var err error
+	for name, _ := range h.classes {
+		err = h.ffiPolar.RegisterMro(name, []uint64{})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (h Host) getInstance(id uint64) (*reflect.Value, error) {
 	if v, ok := h.instances[id]; ok {
 		return &v, nil
@@ -298,6 +310,10 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 		fields := make(map[types.Symbol]types.Term)
 		iter := rt.MapRange()
 		for iter.Next() {
+			// TODO(gj): error on maps w/o string keys since we're just gonna
+			// stringify 'em here and something will blow up way later (probably in
+			// query.go where we call
+			// `reflect.ValueOf(instance).FieldByName(string(event.Attribute)`).
 			k := iter.Key().String()
 			v := iter.Value().Interface()
 			converted, err := h.ToPolar(v)
@@ -313,13 +329,7 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		var repr string
-		value := reflect.ValueOf(v)
-		if value.IsZero() {
-			repr = fmt.Sprintf("%v{}", value.Type())
-		} else {
-			repr = fmt.Sprintf("%v{%v}", value.Type(), v)
-		}
+		repr := fmt.Sprintf("%T%+v", v, v)
 		inner := ValueExternalInstance{
 			InstanceId:  *instanceID,
 			Constructor: nil,

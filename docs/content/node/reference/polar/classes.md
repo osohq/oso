@@ -3,6 +3,8 @@ title: JavaScript Types in Polar
 weight: 2
 aliases:
   - /using/libraries/node/index.html
+description:
+  Reference for using JavaScript types in Polar.
 ---
 
 [mdn-array]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
@@ -25,7 +27,7 @@ More detailed examples of working with application objects can be found in our
 ### Objects
 
 You can pass any JavaScript object into Oso and access its properties from your
-policy (see [Application Types](getting-started/policies#application-types)).
+policy (see [Application Types](guides/policies#instances-and-fields)).
 
 ### Class Instances
 
@@ -34,7 +36,7 @@ constructed from inside an Oso policy using Polar's [`new`
 operator](polar-syntax#new) if the constructor (a `class` or `function` that
 responds to JavaScript's [`new` operator][mdn-new]) has been **registered**
 using the `oso.registerClass()` method. An example of this can be found
-[here](getting-started/policies#application-types).
+[here](guides/policies#instances-and-fields).
 
 ### Numbers and Booleans
 

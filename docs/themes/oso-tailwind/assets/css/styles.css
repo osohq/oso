@@ -42,9 +42,9 @@ button > * {
         @apply visible delay-500
     }
 
-
     .toc a {
-        @apply flex items-center hover:text-gray-900 transition-colors duration-200 mb-2
+      @apply hover:text-gray-900 transition-colors duration-200 mb-2;
+      display: block;
     }
 
     .toc nav {
@@ -84,15 +84,14 @@ button > * {
       @apply bg-primary-800 !important
     }
 
-    .code pre {
+    .code > pre {
+      @apply rounded-t-md
+    }
+
+    .code > .filename + pre,
+    .code > .filename + .highlight > pre {
       @apply rounded-t-none mt-0
     }
-}
-:target::before {
-  content: "";
-  display: block;
-  height: 120px; /* fixed header height*/
-  margin: -120px 0 0; /* negative fixed header height */
 }
 
 /* Making the sidebar sticky. See: https://github.com/tailwindlabs/discuss/issues/193 */
@@ -152,7 +151,7 @@ button > * {
 
 code {
   @apply bg-gray-200;
-  word-wrap: break-word;
+  overflow-wrap: normal;
   box-decoration-break: clone;
   padding: .1rem .3rem .2rem;
   border-radius: 2px;
@@ -161,7 +160,7 @@ code {
 pre code {
   display: block;
   background: none;
-  white-space: pre;
+  white-space: pre-wrap;
   -webkit-overflow-scrolling: touch;
   overflow-x: auto;
   max-width: 100%;
@@ -178,4 +177,42 @@ pre code {
   pointer: default;
   pointer-events: none;
   background-color: rgb(167, 243, 208);
+}
+
+/* purgecss ignore */
+.highlight-me-pls {
+  background-color: #573992;
+  display: inline-block;
+  width: 100%;
+}
+
+/* purgecss ignore */
+.tab-group-tabs {
+  @apply text-gray-700;
+  @apply bg-gray-200;
+  @apply text-sm;
+  @apply flex;
+  @apply rounded-t-md;
+}
+
+/* purgecss ignore */
+.tab-group-tab {
+  padding: 0.6rem 0.4rem;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: normal;
+  box-shadow: none;
+}
+
+/* purgecss ignore */
+.tab-group-tab.selected {
+  font-weight: bold;
+  box-shadow: inset 0 -2px 0 #666;
+}
+
+/* purgecss ignore */
+.tab-group-code pre {
+  @apply rounded-t-none;
+  margin-top: 0
 }

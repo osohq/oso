@@ -1,0 +1,41 @@
+PATH
+  remote: ../../../languages/ruby
+  specs:
+    oso-oso (0.20.1)
+      ffi (~> 1.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    ffi (1.15.4)
+    mustermann (1.1.1)
+      ruby2_keywords (~> 0.0.1)
+    power_assert (2.0.1)
+    rack (2.2.3)
+    rack-protection (2.1.0)
+      rack
+    rack-test (1.1.0)
+      rack (>= 1.0, < 3)
+    ruby2_keywords (0.0.5)
+    sinatra (2.1.0)
+      mustermann (~> 1.0)
+      rack (~> 2.2)
+      rack-protection (= 2.1.0)
+      tilt (~> 2.0)
+    test-unit (3.4.7)
+      power_assert
+    tilt (2.0.10)
+    webrick (1.7.0)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  oso-oso!
+  rack-test
+  sinatra
+  test-unit
+  webrick
+
+BUNDLED WITH
+   2.1.4

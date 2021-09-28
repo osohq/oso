@@ -1,4 +1,4 @@
-use polar_core::{polar, terms::Term};
+use polar_core::{polar, terms::Symbol, terms::Term};
 use wasm_bindgen::prelude::*;
 
 use crate::errors::{serde_serialization_error, serialization_error, Error};
@@ -73,9 +73,20 @@ impl Query {
     }
 
     #[wasm_bindgen(js_class = Query, js_name = source)]
-    pub fn wasm_source(&self) -> JsResult<JsValue> {
-        let source = self.0.source_info();
-        serde_wasm_bindgen::to_value(&source).map_err(|e| serialization_error(e.to_string()))
+    pub fn wasm_source(&self) -> String {
+        self.0.source_info()
+    }
+
+    #[wasm_bindgen(js_class = Query, js_name = bind)]
+    pub fn wasm_bind(&mut self, name: &str, value: &str) -> JsResult<()> {
+        let term = match serde_json::from_str(value) {
+            Ok(term) => term,
+            Err(e) => return Err(serde_serialization_error(e)),
+        };
+        self.0
+            .bind(Symbol::new(name), term)
+            .map_err(Error::from)
+            .map_err(Error::into)
     }
 
     #[cfg(target_arch = "wasm32")]

@@ -16,8 +16,8 @@ impl OsoTest {
     }
 
     #[track_caller]
-    pub fn enable_roles(&mut self) {
-        self.oso.enable_roles().unwrap();
+    pub fn clear_rules(&mut self) {
+        self.oso.clear_rules().unwrap();
     }
 
     #[track_caller]
@@ -28,7 +28,7 @@ impl OsoTest {
         let mut file = folder.parent().unwrap().to_path_buf();
         file.push(name);
         println!("{:?}", file);
-        self.oso.load_file(file.to_str().unwrap())
+        self.oso.load_files(vec![file.to_str().unwrap()])
     }
 
     #[track_caller]

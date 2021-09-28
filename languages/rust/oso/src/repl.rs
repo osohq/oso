@@ -1,4 +1,4 @@
-//! Code for making interactive oso queries from a REPL
+//! Code for making interactive Oso queries from a REPL.
 
 use clap::{App, Arg};
 use rustyline::error::ReadlineError;
@@ -23,13 +23,6 @@ fn build_app() -> App<'static, 'static> {
                 .multiple(true)
                 .help("Specify one or more .polar files to load"),
         )
-}
-
-pub fn load_files(oso: &mut Oso, files: &mut dyn Iterator<Item = &str>) -> anyhow::Result<()> {
-    for file in files {
-        oso.load_file(&file)?;
-    }
-    Ok(())
 }
 
 /// Attempt to create a new temporary directory to store
@@ -123,7 +116,7 @@ pub fn main() -> anyhow::Result<()> {
 
     let matches = build_app().get_matches();
     if matches.is_present("FILES") {
-        load_files(&mut oso, &mut matches.values_of("FILES").unwrap())?;
+        oso.load_files(matches.values_of("FILES").unwrap().collect())?;
     }
 
     loop {
@@ -136,12 +129,6 @@ pub fn main() -> anyhow::Result<()> {
             }
         };
 
-        if let Some(define) = input.strip_prefix("%def") {
-            if let Err(e) = oso.load_str(define) {
-                println!("{}", e);
-            }
-            continue;
-        }
         let query = match oso.query(&input) {
             Err(e) => {
                 println!("{}", e);

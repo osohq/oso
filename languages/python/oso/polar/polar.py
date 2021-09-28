@@ -1,11 +1,10 @@
 """Communicate with the Polar virtual machine: load rules, make queries, etc."""
 
 from datetime import datetime, timedelta
-import inspect
 import os
 from pathlib import Path
 import sys
-from typing import Dict
+from typing import Dict, List, Union
 
 try:
     # importing readline on compatible platforms
@@ -22,13 +21,10 @@ from .exceptions import (
     PolarFileNotFoundError,
     InvalidQueryTypeError,
 )
-from .ffi import Polar as FfiPolar
+from .ffi import Polar as FfiPolar, PolarSource as Source
 from .host import Host
 from .query import Query
 from .predicate import Predicate
-from .variable import Variable
-from .expression import Expression, Pattern
-from .data_filtering import serialize_types, filter_data
 
 
 # https://github.com/django/django/blob/3e753d3de33469493b1f0947a2e0152c4000ed40/django/core/management/color.py
@@ -69,8 +65,6 @@ class Polar:
         self.ffi_polar = FfiPolar()
         self.host = Host(self.ffi_polar)
         self.ffi_polar.set_message_enricher(self.host.enrich_message)
-        # TODO(gj): rename to _oso_roles_enabled
-        self._polar_roles_enabled = False
 
         # Register global constants.
         self.register_constant(None, name="nil")
@@ -93,75 +87,57 @@ class Polar:
         del self.host
         del self.ffi_polar
 
-    def enable_roles(self):
-        if not self._polar_roles_enabled:
+    def load_files(self, filenames: List[Union[Path, str]] = []):
+        """Load Polar policy from ".polar" files."""
+        if not filenames:
+            return
 
-            class InternalRolesHelpers:
-                @staticmethod
-                def join(separator, left, right):
-                    return separator.join([left, right])
+        sources: List[Source] = []
 
-            self.register_constant(
-                InternalRolesHelpers, "__oso_internal_roles_helpers__"
-            )
-            self.ffi_polar.enable_roles()
-            self._polar_roles_enabled = True
+        for filename in filenames:
+            path = Path(filename)
+            extension = path.suffix
+            filename = str(path)
+            if not extension == ".polar":
+                raise PolarFileExtensionError(filename)
 
-            # validate config
-            validation_query_results = []
-            while True:
-                query = self.ffi_polar.next_inline_query()
-                if query is None:  # Load is done
-                    break
-                try:
-                    host = self.host.copy()
-                    host.set_accept_expression(True)
-                    validation_query_results.append(list(Query(query, host=host).run()))
-                except StopIteration:
-                    source = query.source()
-                    raise InlineQueryFailedError(source.get())
+            try:
+                with open(filename, "rb") as f:
+                    src = f.read().decode("utf-8")
+                    sources.append(Source(src, filename))
+            except FileNotFoundError:
+                raise PolarFileNotFoundError(filename)
 
-            # turn bindings back into polar
-            for results in validation_query_results:
-                for result in results:
-                    for k, v in result["bindings"].items():
-                        result["bindings"][k] = host.to_polar(v)
+        self._load_sources(sources)
 
-            self.ffi_polar.validate_roles_config(validation_query_results)
+    def load_file(self, filename: Union[Path, str]):
+        """Load Polar policy from a ".polar" file.
 
-    def load_file(self, policy_file):
-        """Load Polar policy from a ".polar" file."""
-        policy_file = Path(policy_file)
-        extension = policy_file.suffix
-        fname = str(policy_file)
-        if not extension == ".polar":
-            raise PolarFileExtensionError(fname)
+        `Oso.load_file` has been deprecated in favor of `Oso.load_files` as of
+        the 0.20 release. Please see changelog for migration instructions:
+        https://docs.osohq.com/project/changelogs/2021-09-15.html
+        """
+        print(
+            "`Oso.load_file` has been deprecated in favor of `Oso.load_files` as of the 0.20 release.\n\n"
+            + "Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html",
+            file=sys.stderr,
+        )
+        self.load_files([filename])
 
-        try:
-            with open(fname, "rb") as f:
-                file_data = f.read()
-        except FileNotFoundError:
-            raise PolarFileNotFoundError(fname)
-
-        self.load_str(file_data.decode("utf-8"), policy_file)
-
-    def load_str(self, string, filename=None):
+    def load_str(self, string: str):
         """Load a Polar string, checking that all inline queries succeed."""
-        # Get MRO of all registered classes
         # NOTE: not ideal that the MRO gets updated each time load_str is
         # called, but since we are planning to move to only calling load once
         # with the include feature, I think it's okay for now.
-        for (cls_name, cls) in self.host.classes.items():
-            mro = [
-                self.host.class_ids.get(c)
-                for c in inspect.getmro(cls)
-                if c in self.host.class_ids
-            ]
-            self.ffi_polar.register_mro(cls_name, mro)
+        self._load_sources([Source(string)])
 
-        self.ffi_polar.load(string, filename)
+    # Register MROs, load Polar code, and check inline queries.
+    def _load_sources(self, sources: List[Source]):
+        self.host.register_mros()
+        self.ffi_polar.load(sources)
+        self.check_inline_queries()
 
-        # check inline queries
+    def check_inline_queries(self):
         while True:
             query = self.ffi_polar.next_inline_query()
             if query is None:  # Load is done
@@ -173,14 +149,8 @@ class Polar:
                     source = query.source()
                     raise InlineQueryFailedError(source.get())
 
-        # If roles are enabled, re-validate config when new rules are loaded.
-        if self._polar_roles_enabled:
-            self._polar_roles_enabled = False
-            self.enable_roles()
-
     def clear_rules(self):
         self.ffi_polar.clear_rules()
-        self._polar_roles_enabled = False
 
     def query(self, query, *, bindings=None, accept_expression=False):
         """Query for a predicate, parsing it if necessary.
@@ -228,8 +198,7 @@ class Polar:
 
     def repl(self, files=[]):
         """Start an interactive REPL session."""
-        for f in files:
-            self.load_file(f)
+        self.load_files(files)
 
         while True:
             try:
@@ -261,15 +230,43 @@ class Polar:
             if not result:
                 print(False)
 
-    def register_class(self, cls, *, name=None, types=None, fetcher=None):
-        """Register `cls` as a class accessible by Polar."""
-        cls_name = self.host.cache_class(cls, name)
+    def register_class(
+        self,
+        cls,
+        *,
+        name=None,
+        types=None,
+        build_query=None,
+        exec_query=None,
+        combine_query=None
+    ):
+        """
+        Register `cls` as a class accessible by Polar.
+
+        :param name:
+            Optionally specify the name for the class inside of Polar. Defaults
+            to `cls.__name__`
+        :param types:
+            Optional dict mapping field names to types or Relation objects for
+            data filtering.
+        :param build_query:
+            Optional function to generate a query for resources of type `cls`
+            from a list of Filters.
+        :param exec_query:
+            Optional function to execute a query produced by `build_query`.
+        :param combine_query:
+            Optional function to merge two queries produced by `build_query`.
+        """
+        # TODO: let's add example usage here or at least a proper docstring for the arguments
+        cls_name = self.host.cache_class(
+            cls,
+            name=name,
+            fields=types,
+            build_query=build_query,
+            exec_query=exec_query,
+            combine_query=combine_query,
+        )
         self.register_constant(cls, cls_name)
-        self.host.cls_names[cls] = cls_name
-        if types:
-            self.host.types[cls_name] = types
-        if fetcher:
-            self.host.fetchers[cls_name] = fetcher
 
     def register_constant(self, value, name):
         """Register `value` as a Polar constant variable called `name`."""
@@ -281,45 +278,6 @@ class Polar:
         :raises UnregisteredClassError: If the class is not registered.
         """
         return self.host.get_class(name)
-
-    def get_allowed_resources(self, actor, action, cls) -> list:
-        """
-        Returns all the resources the actor is allowed to perform action on.
-
-        :param actor: The actor for whom to collect allowed resources.
-
-        :param action: The action that user wants to perform.
-
-        :param cls: The type of the resources.
-
-        :return: A list of the unique allowed resources.
-        """
-        # Data filtering.
-        resource = Variable("resource")
-        # Get registered class name somehow
-        class_name = self.host.cls_names[cls]
-        constraint = Expression(
-            "And", [Expression("Isa", [resource, Pattern(class_name, {})])]
-        )
-        results = list(
-            self.query_rule(
-                "allow",
-                actor,
-                action,
-                resource,
-                bindings={"resource": constraint},
-                accept_expression=True,
-            )
-        )
-
-        for result in results:
-            for k, v in result["bindings"].items():
-                result["bindings"][k] = self.host.to_polar(v)
-                del result["trace"]
-
-        types = serialize_types(self.host.types, self.host.cls_names)
-        plan = self.ffi_polar.build_filter_plan(types, results, "resource", class_name)
-        return filter_data(self, plan)
 
 
 def polar_class(_cls=None, *, name=None):

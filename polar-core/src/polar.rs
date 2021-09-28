@@ -5,12 +5,11 @@ use super::kb::*;
 use super::messages::*;
 use super::parser;
 use super::rewrites::*;
-use super::roles_validation::{validate_roles_config, VALIDATE_ROLES_CONFIG_RESOURCES};
 use super::runnable::Runnable;
 use super::sources::*;
 use super::terms::*;
 use super::vm::*;
-use super::warnings::check_singletons;
+use super::warnings::{check_ambiguous_precedence, check_singletons};
 
 use std::sync::{Arc, RwLock};
 
@@ -135,8 +134,6 @@ impl Iterator for Query {
     }
 }
 
-const ROLES_POLICY: &str = include_str!("roles.polar");
-
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
     messages: MessageQueue,
@@ -148,6 +145,9 @@ impl Default for Polar {
     }
 }
 
+const MULTIPLE_LOAD_ERROR_MSG: &str =
+    "Cannot load additional Polar code -- all Polar code must be loaded at the same time.";
+
 impl Polar {
     pub fn new() -> Self {
         Self {
@@ -156,15 +156,14 @@ impl Polar {
         }
     }
 
-    pub fn load(&self, src: &str, filename: Option<String>) -> PolarResult<()> {
-        let source = Source {
-            filename,
-            src: src.to_owned(),
-        };
-        let mut kb = self.kb.write().unwrap();
-        let source_id = kb.add_source(source.clone())?;
+    /// Load `Source`s into the KB.
+    pub fn load(&self, sources: Vec<Source>) -> PolarResult<()> {
+        if self.kb.read().unwrap().has_rules() {
+            let msg = MULTIPLE_LOAD_ERROR_MSG.to_owned();
+            return Err(error::RuntimeError::FileLoading { msg }.into());
+        }
 
-        // we extract this into a seperate function
+        // we extract this into a separate function
         // so that any errors returned with `?` are captured
         fn load_source(
             source_id: u64,
@@ -180,17 +179,18 @@ impl Polar {
                     parser::Line::Rule(rule) => {
                         let mut rule_warnings = check_singletons(&rule, &*kb)?;
                         warnings.append(&mut rule_warnings);
+                        warnings.append(&mut check_ambiguous_precedence(&rule, &*kb)?);
                         let rule = rewrite_rule(rule, kb);
                         kb.add_rule(rule);
                     }
                     parser::Line::Query(term) => {
                         kb.inline_queries.push(term);
                     }
-                    parser::Line::RulePrototype(prototype) => {
-                        // make sure prototype doesn't have anything that needs to be rewritten in the head
-                        let prototype = rewrite_rule(prototype, kb);
+                    parser::Line::RuleType(rule_type) => {
+                        // make sure rule_type doesn't have anything that needs to be rewritten in the head
+                        let rule_type = rewrite_rule(rule_type, kb);
                         if !matches!(
-                            prototype.body.value(),
+                            rule_type.body.value(),
                             Value::Expression(
                                 Operation {
                                     operator: Operator::And,
@@ -199,44 +199,68 @@ impl Polar {
                             ) if args.is_empty()
                         ) {
                             return Err(kb.set_error_context(
-                                &prototype.body,
-                                error::ValidationError::InvalidPrototype {
-                                    prototype: prototype.to_polar(),
-                                    msg: "\nPrototypes cannot contain dot lookups.".to_owned(),
+                                &rule_type.body,
+                                error::ValidationError::InvalidRuleType {
+                                    rule_type: rule_type.to_polar(),
+                                    msg: "\nRule types cannot contain dot lookups.".to_owned(),
                                 },
                             ));
                         }
-                        kb.add_rule_prototype(prototype);
+                        kb.add_rule_type(rule_type);
+                    }
+                    parser::Line::ResourceBlock(block) => {
+                        block.add_to_kb(kb)?;
                     }
                 }
             }
-            // check rules are valid against rule prototypes
-            kb.validate_rules()?;
             Ok(warnings)
         }
 
-        // if any of the lines fail to load, we need to remove the source from
-        // the knowledge base
-        match load_source(source_id, &source, &mut kb) {
-            Ok(warnings) => {
-                self.messages.extend(warnings.iter().map(|m| Message {
-                    kind: MessageKind::Warning,
-                    msg: m.to_owned(),
-                }));
-                Ok(())
-            }
-            Err(e) => {
-                kb.remove_source(source_id);
-                Err(e)
+        let mut kb = self.kb.write().unwrap();
+        for source in &sources {
+            let result = kb.add_source(source.clone());
+            let result = result.and_then(|source_id| load_source(source_id, source, &mut kb));
+            match result {
+                Ok(warnings) => {
+                    let warnings = warnings.into_iter().map(|msg| Message {
+                        kind: MessageKind::Warning,
+                        msg,
+                    });
+                    self.messages.extend(warnings);
+                }
+                Err(e) => {
+                    // If any source fails to load, clear the KB.
+                    kb.clear_rules();
+                    return Err(e);
+                }
             }
         }
+
+        // Rewrite shorthand rules in resource blocks before validating rule types.
+        if let Err(e) = kb.rewrite_shorthand_rules() {
+            // If rewriting shorthand rules fails, clear the KB.
+            kb.clear_rules();
+            return Err(e);
+        }
+
+        // check rules are valid against rule types
+        if let Err(e) = kb.validate_rules() {
+            // If rule type validation fails, clear the KB.
+            kb.clear_rules();
+            return Err(e);
+        }
+        Ok(())
     }
 
     // Used in integration tests
     pub fn load_str(&self, src: &str) -> PolarResult<()> {
-        self.load(src, None)
+        self.load(vec![Source {
+            src: src.to_owned(),
+            filename: None,
+        }])
     }
 
+    // TODO(gj): ask Sam if we still need this.
     pub fn remove_file(&self, filename: &str) -> Option<String> {
         let mut kb = self.kb.write().unwrap();
         kb.remove_file(filename)
@@ -286,38 +310,22 @@ impl Polar {
         self.kb.read().unwrap().new_id()
     }
 
-    pub fn register_constant(&self, name: Symbol, value: Term) {
+    pub fn register_constant(&self, name: Symbol, value: Term) -> PolarResult<()> {
         self.kb.write().unwrap().constant(name, value)
     }
 
+    /// Register MRO for `name` with `mro`.
+    ///
+    /// Params:
+    ///
+    /// - `mro`: Should go from `name`, `name`'s next superclass, `name's furthest away superclass.
+    ///          `mro` is a list of class ids.
     pub fn register_mro(&self, name: Symbol, mro: Vec<u64>) -> PolarResult<()> {
         self.kb.write().unwrap().add_mro(name, mro)
     }
 
     pub fn next_message(&self) -> Option<Message> {
         self.messages.next()
-    }
-
-    /// Load the Polar roles policy idempotently.
-    pub fn enable_roles(&self) -> PolarResult<()> {
-        let result = match self.load(ROLES_POLICY, Some("Built-in Polar Roles Policy".to_owned())) {
-            Err(error::PolarError {
-                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { .. }),
-                ..
-            }) => Ok(()),
-            result => result,
-        };
-
-        // Push inline queries to validate config.
-        let src_id = self.kb.read().unwrap().new_id();
-        let term = parser::parse_query(src_id, VALIDATE_ROLES_CONFIG_RESOURCES)?;
-        self.kb.write().unwrap().inline_queries.push(term);
-
-        result
-    }
-
-    pub fn validate_roles_config(&self, results: Vec<Vec<ResultEvent>>) -> PolarResult<()> {
-        validate_roles_config(self.kb.read().unwrap().get_rules(), results)
     }
 
     pub fn build_filter_plan(
@@ -343,43 +351,80 @@ mod tests {
     }
 
     #[test]
-    fn roles_policy_loads_idempotently() {
-        let polar = Polar::new();
-        assert!(polar.enable_roles().is_ok());
-        {
-            let kb = polar.kb.read().unwrap();
-            assert_eq!(kb.loaded_files.len(), 1);
-            assert_eq!(kb.loaded_content.len(), 1);
-        }
-        assert!(polar.enable_roles().is_ok());
-        {
-            let kb = polar.kb.read().unwrap();
-            assert_eq!(kb.loaded_files.len(), 1);
-            assert_eq!(kb.loaded_content.len(), 1);
-        }
-    }
-
-    #[test]
     fn load_remove_files() {
         let polar = Polar::new();
-        polar
-            .load("f(x) if x = 1;", Some("test.polar".to_string()))
-            .unwrap();
+        let valid = Source {
+            src: "f(x) if x = 1;".to_owned(),
+            filename: Some("test.polar".to_string()),
+        };
+        polar.load(vec![valid.clone()]).unwrap();
         polar.remove_file("test.polar");
+
         // loading works after removing
-        polar
-            .load("f(x) if x = 1;", Some("test.polar".to_string()))
-            .unwrap();
+        polar.load(vec![valid.clone()]).unwrap();
         polar.remove_file("test.polar");
 
         // load a broken file
-        polar
-            .load("f(x) if x", Some("test.polar".to_string()))
-            .unwrap_err();
+        let invalid = Source {
+            src: "f(x) if x".to_owned(),
+            filename: Some("test.polar".to_string()),
+        };
+        polar.load(vec![invalid]).unwrap_err();
 
         // can still load files again
-        polar
-            .load("f(x) if x = 1;", Some("test.polar".to_string()))
-            .unwrap();
+        polar.load(vec![valid]).unwrap();
+    }
+
+    #[test]
+    fn loading_a_second_time_fails() {
+        let polar = Polar::new();
+        let src = "f();";
+        let source = Source {
+            src: src.to_owned(),
+            filename: None,
+        };
+
+        // Loading once is fine.
+        polar.load(vec![source.clone()]).unwrap();
+
+        // Loading twice is not.
+        let msg = match polar.load(vec![source]).unwrap_err() {
+            error::PolarError {
+                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
+                ..
+            } => msg,
+            e => panic!("{}", e),
+        };
+        assert_eq!(msg, MULTIPLE_LOAD_ERROR_MSG);
+
+        // Even with load_str().
+        let msg = match polar.load_str(src).unwrap_err() {
+            error::PolarError {
+                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
+                ..
+            } => msg,
+            e => panic!("{}", e),
+        };
+        assert_eq!(msg, MULTIPLE_LOAD_ERROR_MSG);
+    }
+
+    #[test]
+    fn loading_duplicate_files_clears_the_kb() {
+        let polar = Polar::new();
+        let source = Source {
+            src: "f();".to_owned(),
+            filename: Some("file".to_owned()),
+        };
+
+        let msg = match polar.load(vec![source.clone(), source]).unwrap_err() {
+            error::PolarError {
+                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
+                ..
+            } => msg,
+            e => panic!("{}", e),
+        };
+        assert_eq!(msg, "File file has already been loaded.");
+
+        assert!(!polar.kb.read().unwrap().has_rules());
     }
 }

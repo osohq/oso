@@ -1,5 +1,6 @@
 ---
 title: FAQ
+weight: 8
 aliases: 
     - ../more/faq.html
 ---
@@ -19,7 +20,7 @@ the HTTP request, and the path supplied – as well as checks on the data access
 e.g. when your application is retrieving data from the database.
 
 For more detailed discussion on where to integrate Oso in your application
-depending on your requirements, please visit our guide, [Add Oso to an App](getting-started/application).
+depending on your requirements, please visit our guide, [Add Oso to an App](/getting-started/application).
 
 ## What data does Oso store?
 

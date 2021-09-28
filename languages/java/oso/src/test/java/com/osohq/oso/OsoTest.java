@@ -16,10 +16,10 @@ import org.junit.jupiter.api.Test;
 public class OsoTest {
   protected Oso o;
 
-  public static class Actor {
+  public static class User {
     public String name;
 
-    public Actor(String name) {
+    public User(String name) {
       this.name = name;
     }
 
@@ -43,7 +43,7 @@ public class OsoTest {
       this.id = id;
     }
 
-    public String role(Actor a) {
+    public String role(User a) {
       if (a.name.equals("president")) {
         return "admin";
       }
@@ -68,7 +68,7 @@ public class OsoTest {
       URL testOso = getClass().getClassLoader().getResource("test_oso.polar");
 
       o = new Oso();
-      o.registerClass(Actor.class, "Actor");
+      o.registerClass(User.class, "User");
       o.registerClass(Widget.class, "Widget");
       o.registerClass(Company.class, "Company");
 
@@ -80,18 +80,18 @@ public class OsoTest {
 
   @Test
   public void testIsAllowed() throws Exception {
-    Actor guest = new Actor("guest");
+    User guest = new User("guest");
     Widget resource1 = new Widget(1);
     assertTrue(o.isAllowed(guest, "get", resource1));
 
-    Actor president = new Actor("president");
+    User president = new User("president");
     Company company = new Company(1);
     assertTrue(o.isAllowed(president, "create", company));
   }
 
   @Test
   public void testFail() throws Exception {
-    Actor guest = new Actor("guest");
+    User guest = new User("guest");
     Widget widget = new Widget(1);
     assertFalse(o.isAllowed(guest, "not_allowed", widget));
   }
@@ -99,7 +99,7 @@ public class OsoTest {
   @Test
   public void testInstanceFromExternalCall() throws Exception {
     Company company = new Company(1);
-    Actor guest = new Actor("guest");
+    User guest = new User("guest");
     assertTrue(o.isAllowed(guest, "frob", company));
 
     // if the guest user can do it, then the dict should
@@ -111,7 +111,7 @@ public class OsoTest {
 
   @Test
   public void testAllowModel() throws Exception {
-    Actor auditor = new Actor("auditor");
+    User auditor = new User("auditor");
 
     assertTrue(o.isAllowed(auditor, "list", Company.class));
     assertFalse(o.isAllowed(auditor, "list", Widget.class));
@@ -121,14 +121,14 @@ public class OsoTest {
   public void testGetAllowedActions() throws Exception {
 
     Oso o = new Oso();
-    o.registerClass(Actor.class, "Actor");
+    o.registerClass(User.class, "User");
     o.registerClass(Widget.class, "Widget");
 
     o.loadStr(
-        "allow(_actor: Actor{name: \"sally\"}, action, _resource: Widget{id: 1})"
+        "allow(_actor: User{name: \"sally\"}, action, _resource: Widget{id: 1})"
             + " if action in [\"CREATE\", \"READ\"];");
 
-    Actor actor = new Actor("sally");
+    User actor = new User("sally");
     Widget widget = new Widget(1);
     HashSet<Object> actions = o.getAllowedActions(actor, widget);
 
@@ -136,11 +136,13 @@ public class OsoTest {
     assertTrue(actions.contains("CREATE"));
     assertTrue(actions.contains("READ"));
 
+    o.clearRules();
+
     o.loadStr(
-        "allow(_actor: Actor{name: \"fred\"}, action, _resource: Widget{id: 2})"
+        "allow(_actor: User{name: \"fred\"}, action, _resource: Widget{id: 2})"
             + " if action in [1, 2, 3, 4];");
 
-    Actor actor2 = new Actor("fred");
+    User actor2 = new User("fred");
     Widget widget2 = new Widget(2);
     HashSet<Object> actions2 = o.getAllowedActions(actor2, widget2);
 
@@ -150,7 +152,7 @@ public class OsoTest {
     assertTrue(actions2.contains(3));
     assertTrue(actions2.contains(4));
 
-    Actor actor3 = new Actor("doug");
+    User actor3 = new User("doug");
     Widget widget3 = new Widget(4);
     assertTrue(o.getAllowedActions(actor3, widget3).isEmpty());
   }
@@ -159,12 +161,12 @@ public class OsoTest {
   public void testGetAllowedActionsWildcard() throws Exception {
     Oso o = new Oso();
 
-    o.registerClass(Actor.class, "Actor");
+    o.registerClass(User.class, "User");
     o.registerClass(Widget.class, "Widget");
 
-    o.loadStr("allow(_actor: Actor{name: \"John\"}, _action, _resource: Widget{id: 1});");
+    o.loadStr("allow(_actor: User{name: \"John\"}, _action, _resource: Widget{id: 1});");
 
-    Actor actor = new Actor("John");
+    User actor = new User("John");
     Widget widget = new Widget(1);
 
     assertEquals(Set.of("*"), o.getAllowedActions(actor, widget, true));
@@ -174,8 +176,8 @@ public class OsoTest {
   @Test
   public void testNotEqualOperator() {
     Oso oso = new Oso();
-    oso.registerClass(Actor.class, "Actor");
-    oso.loadStr("allow(actor: Actor, _action, _resource) if actor != nil;");
+    oso.registerClass(User.class, "User");
+    oso.loadStr("allow(actor: User, _action, _resource) if actor != nil;");
     assertFalse(oso.isAllowed(null, "foo", "foo"));
   }
 }

@@ -3,7 +3,7 @@ import { map, query } from '../test/helpers';
 
 test('#isAllowed', async () => {
   const o = new Oso();
-  o.loadStr('allow(1, 2, 3);');
+  await o.loadStr('allow(1, 2, 3);');
   expect(await o.isAllowed(1, 2, 3)).toBe(true);
   expect(await o.isAllowed(3, 2, 1)).toBe(false);
 });
