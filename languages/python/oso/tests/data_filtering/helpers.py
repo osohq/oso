@@ -17,10 +17,13 @@ def check_authz(oso, actor, action, resource, expected):
         assert oso.is_allowed(actor, action, re)
 
 
-def filter_array(array, constraints):
-    check = reduce(
-        lambda f, g: lambda x: f(x) and g(x),
-        [c.check for c in constraints],
-        lambda _: True,
-    )
-    return [x for x in array if check(x)]
+def filter_array(array):
+    def go(constraints):
+        check = reduce(
+            lambda f, g: lambda x: f(x) and g(x),
+            [c.check for c in constraints],
+            lambda _: True,
+        )
+        return [x for x in array if check(x)]
+
+    return go

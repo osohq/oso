@@ -65,26 +65,18 @@ logs = [fourth_log_a, third_log_b, another_log_c]
 def oso():
     oso = Oso()
 
-    def get_bars(constraints):
-        return filter_array(bars, constraints)
-
-    def get_foos(constraints):
-        return filter_array(foos, constraints)
-
-    def get_foo_logs(constraints):
-        return filter_array(logs, constraints)
-
     # Combining is combining but filtering out duplicates.
     def combine_query(q1, q2):
         results = q1 + q2
         return [i for n, i in enumerate(results) if i not in results[:n]]
 
     oso.set_data_filtering_query_defaults(
-        exec_query=lambda results: results, combine_query=combine_query
+        exec_query=lambda x: x, combine_query=combine_query
     )
 
     oso.register_class(
         Bar,
+        build_query=filter_array(bars),
         fields={
             "id": str,
             "is_cool": bool,
@@ -93,10 +85,10 @@ def oso():
                 kind="many", other_type="Foo", my_field="id", other_field="bar_id"
             ),
         },
-        build_query=get_bars,
     )
     oso.register_class(
         Foo,
+        build_query=filter_array(foos),
         fields={
             "id": str,
             "bar_id": str,
@@ -112,10 +104,10 @@ def oso():
                 other_field="foo_id",
             ),
         },
-        build_query=get_foos,
     )
     oso.register_class(
         Log,
+        build_query=filter_array(logs),
         fields={
             "id": str,
             "foo_id": str,
@@ -124,26 +116,21 @@ def oso():
                 kind="one", other_type="Foo", my_field="foo_id", other_field="id"
             ),
         },
-        build_query=get_foo_logs,
     )
     return oso
 
 
 # cf. test_flask_model
 def test_model(oso):
-    oso.load_str(
-        """
-        allow("gwen", "get", foo: Foo) if foo.id = "something";
-    """
-    )
+    oso.load_str('allow("gwen", "get", foo: Foo) if foo.id = "something";')
     check_authz(oso, "gwen", "get", Foo, [something_foo])
 
     oso.clear_rules()
     oso.load_str(
         """
-        allow("gwen", "get", foo: Foo) if foo.id = "something";
-        allow("gwen", "get", foo: Foo) if foo.id = "another";
-    """
+            allow("gwen", "get", foo: Foo) if foo.id = "something";
+            allow("gwen", "get", foo: Foo) if foo.id = "another";
+        """
     )
     check_authz(oso, "gwen", "get", Foo, [another_foo, something_foo])
 
@@ -180,12 +167,9 @@ def test_authorize_scalar_attribute_condition(oso):
         expected = [
             foo
             for foo in foos
-            if foo.bar().is_cool
-            and foo.bar() is bar
-            or foo.bar().is_cool
-            and foo.is_fooey
-            or not foo.bar().is_cool
-            and bar.is_still_cool
+            if (foo.bar().is_cool and foo.bar() is bar)
+            or (foo.bar().is_cool and foo.is_fooey)
+            or (not foo.bar().is_cool and bar.is_still_cool)
         ]
         check_authz(oso, bar, "read", Foo, expected)
 
@@ -212,8 +196,7 @@ def test_in_multiple_attribute_relationship(oso):
             for foo in foos
             if not foo.is_fooey
             or foo.bar() is bar
-            or foo.bar().is_cool
-            and (1 in foo.numbers or 2 in foo.numbers)
+            or (foo.bar().is_cool and (1 in foo.numbers or 2 in foo.numbers))
         ]
         check_authz(oso, bar, "read", Foo, expected)
 
@@ -281,21 +264,13 @@ def test_partial_in_collection(oso):
 
 
 def test_empty_constraints_in(oso):
-    oso.load_str(
-        """
-        allow(_, "read", foo: Foo) if _n in foo.logs;
-    """
-    )
-    expected = [foo for foo in foos if foo.numbers]
+    oso.load_str('allow(_, "read", foo: Foo) if _n in foo.logs;')
+    expected = [foo for foo in foos if foo.logs()]
     check_authz(oso, "gwen", "read", Foo, expected)
 
 
 def test_in_with_constraints_but_no_matching_object(oso):
-    oso.load_str(
-        """
-        allow(_, "read", foo: Foo) if 99 in foo.numbers;
-    """
-    )
+    oso.load_str('allow(_, "read", foo: Foo) if log in foo.logs and log.data = "nope";')
     check_authz(oso, "gwen", "read", Foo, [])
 
 
@@ -303,11 +278,11 @@ def test_redundant_in_on_same_field(oso):
     # gwen can read any foo whose numbers include 1 and 2
     oso.load_str(
         """
-        allow("gwen", "read", foo: Foo) if
-            m in foo.numbers and
-            n in foo.numbers and
-            m = 1 and n = 2;
-    """
+            allow("gwen", "read", foo: Foo) if
+                m in foo.numbers and
+                n in foo.numbers and
+                m = 1 and n = 2;
+        """
     )
 
     expected = [foo for foo in foos if 1 in foo.numbers and 2 in foo.numbers]
@@ -319,11 +294,11 @@ def test_unify_ins(oso):
     # gwen can read any bar with at least one foo
     oso.load_str(
         """
-        allow("gwen", "read", bar: Bar) if
-            foo in bar.foos and
-            goo in bar.foos and
-            foo = goo;
-    """
+            allow("gwen", "read", bar: Bar) if
+                foo in bar.foos and
+                goo in bar.foos and
+                foo = goo;
+        """
     )
 
     expected = [
@@ -335,81 +310,13 @@ def test_unify_ins(oso):
     check_authz(oso, "gwen", "read", Bar, expected)
 
 
-@pytest.mark.xfail(reason="a bug")
-def test_unify_ins_neq(oso):
-    # gwen can read any bar with at least two foos
-    oso.load_str(
-        """
-        allow(_, "read", bar: Bar) if
-            foo in bar.foos and
-            goo in bar.foos and
-            foo != goo;
-    """
-    )
-
-    expected = [
-        bar
-        for bar in bars
-        if [foo for foo in bar.foos() for goo in bar.foos() if foo is not goo]
-    ]
-    check_authz(oso, "gwen", "read", Bar, expected)
-
-
-@pytest.mark.xfail(reason="a bug")
-def test_unify_ins_field_eq(oso):
-    oso.load_str(
-        """
-        allow(_, "read", bar: Bar) if
-            foo in bar.foos and
-            goo in bar.foos and
-            foo.id = goo.id;
-    """
-    )
-
-    result = oso.authorized_resources("gwen", "read", Bar)
-    assert len(result) == 2
-
-
-@pytest.mark.xfail(reason="a bug")
-def test_deeply_nested_in(oso):
-    # gwen can read any foo whose bar has another foo.
-    oso.load_str(
-        """
-        allow("gwen", "read", a: Foo) if
-            b in a.bar.foos and b != a and
-            c in b.bar.foos and c != b and
-            d in c.bar.foos and d != c and
-            e in d.bar.foos and e != d;
-    """
-    )
-
-    result = oso.authorized_resources("gwen", "read", Foo)
-    assert len(result) == 3
-
-
-@pytest.mark.xfail(reason="a bug")
-def test_in_intersection(oso):
-    # gwen can read any foo with a sibling foo with a number in common
-    oso.load_str(
-        """
-        allow("gwen", "read", foo: Foo) if
-            num in foo.numbers and
-            goo in foo.bar.foos and
-            goo != foo and
-            num in goo.numbers;
-    """
-    )
-    result = oso.authorized_resources("gwen", "read", Foo)
-    assert len(result) == 0
-
-
 def test_partial_isa_with_path(oso):
     oso.load_str(
         """
-        allow(_, _, foo: Foo) if check(foo.bar);
-        check(bar: Bar) if bar.id = "goodbye";   # this should match
-        check(foo: Foo) if foo.bar.id = "hello"; # this shouldn't match
-    """
+            allow(_, _, foo: Foo) if check(foo.bar);
+            check(bar: Bar) if bar.id = "goodbye";   # this should match
+            check(foo: Foo) if foo.bar.id = "hello"; # this shouldn't match
+        """
     )
     check_authz(oso, "gwen", "read", Foo, goodbye_bar.foos())
 
@@ -421,11 +328,7 @@ def test_no_relationships(oso):
 
 
 def test_neq(oso):
-    oso.load_str(
-        """
-        allow("steve", action, foo: Foo) if foo.bar.id != action;
-    """
-    )
+    oso.load_str('allow("steve", action, foo: Foo) if foo.bar.id != action;')
 
     for bar in bars:
         expected = [foo for foo in foos if foo.bar() != bar]
@@ -435,11 +338,11 @@ def test_neq(oso):
 def test_relationship(oso):
     oso.load_str(
         """
-        allow("steve", "get", resource: Foo) if
-            resource.bar = bar and
-            bar.is_cool = true and
-            resource.is_fooey = true;
-    """
+            allow("steve", "get", resource: Foo) if
+                resource.bar = bar and
+                bar.is_cool = true and
+                resource.is_fooey = true;
+        """
     )
 
     expected = [foo for foo in foos if foo.bar().is_cool and foo.is_fooey]
@@ -456,10 +359,10 @@ def test_duplex_relationship(oso):
 def test_scalar_in_list(oso):
     oso.load_str(
         """
-        allow("steve", "get", resource: Foo) if
-            resource.bar = bar and
-            bar.is_cool in [true, false];
-    """
+            allow("steve", "get", resource: Foo) if
+                resource.bar = bar and
+                bar.is_cool in [true, false];
+        """
     )
     check_authz(oso, "steve", "get", Foo, foos)
 
@@ -467,10 +370,10 @@ def test_scalar_in_list(oso):
 def test_var_in_var(oso):
     oso.load_str(
         """
-        allow("steve", "get", resource: Foo) if
-            log in resource.logs and
-            log.data = "hello";
-    """
+            allow("steve", "get", resource: Foo) if
+                log in resource.logs and
+                log.data = "hello";
+        """
     )
     expected = [foo for foo in foos for log in foo.logs() if log.data == "hello"]
     assert fourth_foo in expected
@@ -478,8 +381,7 @@ def test_var_in_var(oso):
 
 
 def test_parent_child_cases(oso):
-    oso.load_str(
-        """
+    policy = """
         allow(log: Log, "A", foo: Foo) if
           log.foo = foo;
         allow(log: Log, "B", foo: Foo) if
@@ -489,15 +391,14 @@ def test_parent_child_cases(oso):
         allow(log: Log, "D", foo: Foo) if
           log in foo.logs and log.foo = foo;
     """
-    )
+    oso.load_str(policy)
     for action in ["A", "B", "C", "D"]:
         for log in logs:
             check_authz(oso, log, action, Foo, [log.foo()])
 
 
 def test_specializers(oso):
-    oso.load_str(
-        """
+    policy = """
         allow(foo: Foo,             "NoneNone", log) if foo = log.foo;
         allow(foo,                  "NoneCls",  log: Log) if foo = log.foo;
         allow(foo,                  "NoneDict", _: {foo:foo});
@@ -515,7 +416,7 @@ def test_specializers(oso):
         allow(foo: Foo{logs: logs}, "PtnDict",  log: {foo: foo}) if log in logs;
         allow(foo: Foo{logs: logs}, "PtnPtn",   log: Log{foo: foo}) if log in logs;
     """
-    )
+    oso.load_str(policy)
     parts = ["None", "Cls", "Dict", "Ptn"]
     for a in parts:
         for b in parts:
@@ -527,12 +428,98 @@ def test_ground_object_in_collection(oso):
     # value in var
     oso.load_str(
         """
-        allow("steve", "get", resource: Foo) if
-            1 in resource.numbers and
-            2 in resource.numbers;
-    """
+            allow("steve", "get", resource: Foo) if
+                1 in resource.numbers and
+                2 in resource.numbers;
+        """
     )
     check_authz(oso, "steve", "get", Foo, [fourth_foo])
+
+
+def test_var_in_value(oso):
+    # @TODO(steve): There is maybe a way to optimize the filter plan where if we are doing
+    # two different of the same fetch with different fields we can combine them into an `in`.
+
+    # var in value, This currently doesn't come through as an `in`
+    # This is I think the thing that MikeD wants though, for this to come through
+    # as an in so the SQL can do an IN.
+    oso.load_str(
+        """
+            allow("steve", "get", resource: Log) if
+                resource.data in ["hello", "world"];
+        """
+    )
+    expected = [log for log in logs if log.data in ["hello", "world"]]
+    assert fourth_log_a in expected
+    check_authz(oso, "steve", "get", Log, expected)
+
+
+def test_field_comparison(oso):
+    policy = """
+        allow("gwen", "eq", bar: Bar) if
+            bar.is_cool = bar.is_still_cool;
+        allow("gwen", "neq", bar: Bar) if
+            bar.is_cool != bar.is_still_cool;
+    """
+    oso.load_str(policy)
+    expected = [b for b in bars if b.is_cool == b.is_still_cool]
+    check_authz(oso, "gwen", "eq", Bar, expected)
+    expected = [b for b in bars if b.is_cool != b.is_still_cool]
+    check_authz(oso, "gwen", "neq", Bar, expected)
+
+
+def test_const_in_coll(oso):
+    magic = 1
+    oso.register_constant(magic, "magic")
+    oso.load_str("allow(_, _, foo: Foo) if magic in foo.numbers;")
+    expected = [f for f in foos if magic in f.numbers]
+    check_authz(oso, "gwen", "eat", Foo, expected)
+
+
+def test_param_field(oso):
+    oso.load_str(
+        """
+            allow(actor, action, resource: Log) if
+                actor = resource.data and
+                action = resource.id;
+        """
+    )
+    expected = [log for log in logs if log.data == "steve" and log.id == "c"]
+    assert another_log_c in expected
+    check_authz(oso, "steve", "c", Log, expected)
+
+
+@pytest.mark.skip(
+    """
+    `or` constraints come from `not` negations and should instead be expanded in the
+    simplifier"""
+)
+def test_or(oso):
+    oso.load_str(
+        """
+            allow("steve", "get", r: Foo) if
+                not (r.id = "something" and r.bar_id = "hello");
+        """
+    )
+
+    results = oso.authorized_resources("steve", "get", Foo)
+    assert len(results) == 2
+
+
+@pytest.mark.xfail(reason="not yet supported")
+def test_field_cmp_rel_field(oso):
+    oso.load_str("allow(_, _, foo: Foo) if foo.bar.is_cool = foo.is_fooey;")
+    expected = [foo for foo in foos if foo.is_fooey == foo.bar().is_cool]
+    check_authz(oso, "gwen", "get", Foo, expected)
+
+
+@pytest.mark.xfail(reason="not yet supported")
+def test_const_not_in_coll(oso):
+    magic = 1
+    oso.register_constant(magic, "magic")
+    oso.load_str("allow(_, _, foo: Foo) if not (magic in foo.numbers);")
+    expected = [f for f in foos if magic not in f.numbers]
+    check_authz(oso, "gwen", "eat", Foo, expected)
 
 
 @pytest.mark.xfail(reason="not yet supported")
@@ -551,98 +538,69 @@ def test_no_objects_collection_condition(oso):
     assert len(results) == 0
 
 
-def test_var_in_value(oso):
-    # @TODO(steve): There is maybe a way to optimize the filter plan where if we are doing
-    # two different of the same fetch with different fields we can combine them into an `in`.
-
-    # var in value, This currently doesn't come through as an `in`
-    # This is I think the thing that MikeD wants though, for this to come through
-    # as an in so the SQL can do an IN.
+@pytest.mark.xfail(reason="a bug")
+def test_unify_ins_neq(oso):
+    # gwen can read any bar with at least two foos
     oso.load_str(
         """
-        allow("steve", "get", resource: Log) if
-            resource.data in ["hello", "world"];
-    """
+            allow(_, "read", bar: Bar) if
+                foo in bar.foos and
+                goo in bar.foos and
+                foo != goo;
+        """
     )
-    expected = [log for log in logs if log.data in ["hello", "world"]]
-    assert fourth_log_a in expected
-    check_authz(oso, "steve", "get", Log, expected)
+
+    expected = [
+        bar
+        for bar in bars
+        if [foo for foo in bar.foos() for goo in bar.foos() if foo is not goo]
+    ]
+    check_authz(oso, "gwen", "read", Bar, expected)
 
 
-@pytest.mark.skip(
-    """
-    `or` constraints come from `not` negations and should instead be expanded in the
-    simplifier"""
-)
-def test_or(oso):
+@pytest.mark.xfail(reason="a bug")
+def test_unify_ins_field_eq(oso):
     oso.load_str(
         """
-        allow("steve", "get", r: Foo) if
-            not (r.id = "something" and r.bar_id = "hello");
-    """
+            allow(_, "read", bar: Bar) if
+                foo in bar.foos and
+                goo in bar.foos and
+                foo.id = goo.id;
+        """
     )
 
-    results = oso.authorized_resources("steve", "get", Foo)
-    assert len(results) == 2
+    result = oso.authorized_resources("gwen", "read", Bar)
+    assert len(result) == 2
 
 
-def test_field_comparison(oso):
+@pytest.mark.xfail(reason="a bug")
+def test_deeply_nested_in(oso):
+    # gwen can read any foo whose bar has another foo.
     oso.load_str(
         """
-        allow("gwen", "eq", bar: Bar) if
-            bar.is_cool = bar.is_still_cool;
-        allow("gwen", "neq", bar: Bar) if
-            bar.is_cool != bar.is_still_cool;
-    """
+            allow("gwen", "read", a: Foo) if
+                b in a.bar.foos and b != a and
+                c in b.bar.foos and c != b and
+                d in c.bar.foos and d != c and
+                e in d.bar.foos and e != d;
+        """
     )
-    expected = [b for b in bars if b.is_cool == b.is_still_cool]
-    check_authz(oso, "gwen", "eq", Bar, expected)
-    expected = [b for b in bars if b.is_cool != b.is_still_cool]
-    check_authz(oso, "gwen", "neq", Bar, expected)
+
+    result = oso.authorized_resources("gwen", "read", Foo)
+    assert len(result) == 3
 
 
-@pytest.mark.xfail(reason="doesn't work yet!")
-def test_field_cmp_rel_field(oso):
-    oso.load_str("allow(_, _, foo: Foo) if foo.bar.is_cool = foo.is_fooey;")
-    expected = [foo for foo in foos if foo.is_fooey == foo.bar().is_cool]
-    check_authz(oso, "gwen", "get", Foo, expected)
-
-
-def test_const_in_coll(oso):
-    magic = 1
-    oso.register_constant(magic, "magic")
+@pytest.mark.xfail(reason="a bug")
+def test_in_intersection(oso):
+    # gwen can read any foo with a sibling foo with a number in common
     oso.load_str(
         """
-        allow(_, _, foo: Foo) if
-            magic in foo.numbers;
-    """
-    )
-    expected = [f for f in foos if magic in f.numbers]
-    check_authz(oso, "gwen", "eat", Foo, expected)
-
-
-@pytest.mark.xfail(reason="negation unsupported")
-def test_const_not_in_coll(oso):
-    magic = 1
-    oso.register_constant(magic, "magic")
-    oso.load_str(
+            allow("gwen", "read", foo: Foo) if
+                num in foo.numbers and
+                goo in foo.bar.foos and
+                goo != foo and
+                num in goo.numbers;
         """
-        allow(_, _, foo: Foo) if
-            not (magic in foo.numbers);
-    """
     )
-    expected = [f for f in foos if magic not in f.numbers]
-    check_authz(oso, "gwen", "eat", Foo, expected)
-
-
-def test_param_field(oso):
-    oso.load_str(
-        """
-        allow(actor, action, resource: Log) if
-            actor = resource.data and
-            action = resource.id;
-    """
-    )
-    expected = [log for log in logs if log.data == "steve" and log.id == "c"]
-    assert another_log_c in expected
-    check_authz(oso, "steve", "c", Log, expected)
+    result = oso.authorized_resources("gwen", "read", Foo)
+    assert len(result) == 0

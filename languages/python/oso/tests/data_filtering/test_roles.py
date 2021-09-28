@@ -63,37 +63,23 @@ roles = [
 def oso():
     oso = Oso()
 
-    def get_orgs(constraints):
-        return filter_array(orgs, constraints)
-
-    def get_repos(constraints):
-        return filter_array(repos, constraints)
-
-    def get_issues(constraints):
-        return filter_array(issues, constraints)
-
-    def get_roles(constraints):
-        return filter_array(roles, constraints)
-
-    def get_users(constraints):
-        return filter_array(users, constraints)
-
-    def exec_query(results):
-        return results
-
     def combine_query(q1, q2):
         results = q1 + q2
         return [i for n, i in enumerate(results) if i not in results[:n]]
 
+    oso.set_data_filtering_query_defaults(
+        combine_query=combine_query,
+        exec_query=lambda x: x,
+    )
+
     oso.register_class(
         Org,
         fields={"name": str},
-        build_query=get_orgs,
-        exec_query=exec_query,
-        combine_query=combine_query,
+        build_query=filter_array(orgs),
     )
     oso.register_class(
         Repo,
+        build_query=filter_array(repos),
         fields={
             "name": str,
             "org_name": str,
@@ -101,12 +87,10 @@ def oso():
                 kind="one", other_type="Org", my_field="org_name", other_field="name"
             ),
         },
-        build_query=get_repos,
-        exec_query=exec_query,
-        combine_query=combine_query,
     )
     oso.register_class(
         Issue,
+        build_query=filter_array(issues),
         fields={
             "name": str,
             "repo_name": str,
@@ -117,23 +101,19 @@ def oso():
                 other_field="name",
             ),
         },
-        build_query=get_issues,
-        exec_query=exec_query,
-        combine_query=combine_query,
     )
     oso.register_class(
         Role,
+        build_query=filter_array(roles),
         fields={
             "user_name": str,
             "resource_name": str,
             "role": str,
         },
-        build_query=get_roles,
-        exec_query=exec_query,
-        combine_query=combine_query,
     )
     oso.register_class(
         User,
+        build_query=filter_array(users),
         fields={
             "name": str,
             "roles": Relation(
@@ -143,61 +123,58 @@ def oso():
                 other_field="user_name",
             ),
         },
-        build_query=get_users,
-        exec_query=exec_query,
-        combine_query=combine_query,
     )
 
-    policy = """
-      allow(actor, action, resource) if
-        has_permission(actor, action, resource);
+    oso.load_str(
+        """
+        allow(actor, action, resource) if
+          has_permission(actor, action, resource);
 
-      has_role(user: User, name: String, resource: Resource) if
-        role in user.roles and
-        role.role = name and
-        role.resource_name = resource.name;
+        has_role(user: User, name: String, resource: Resource) if
+          role in user.roles and
+          role.role = name and
+          role.resource_name = resource.name;
 
-      actor User {}
+        actor User {}
 
-      resource Org {
-        roles = [ "owner", "member" ];
-        permissions = [ "invite", "create_repo" ];
+        resource Org {
+          roles = [ "owner", "member" ];
+          permissions = [ "invite", "create_repo" ];
 
-        "create_repo" if "member";
-        "invite" if "owner";
+          "create_repo" if "member";
+          "invite" if "owner";
 
-        "member" if "owner";
-      }
+          "member" if "owner";
+        }
 
-      resource Repo {
-        roles = [ "writer", "reader" ];
-        permissions = [ "push", "pull" ];
-        relations = { parent: Org };
+        resource Repo {
+          roles = [ "writer", "reader" ];
+          permissions = [ "push", "pull" ];
+          relations = { parent: Org };
 
-        "pull" if "reader";
-        "push" if "writer";
+          "pull" if "reader";
+          "push" if "writer";
 
-        "reader" if "writer";
+          "reader" if "writer";
 
-        "reader" if "member" on "parent";
-        "writer" if "owner" on "parent";
-      }
+          "reader" if "member" on "parent";
+          "writer" if "owner" on "parent";
+        }
 
-      has_relation(org: Org, "parent", repo: Repo) if
-        org = repo.org;
+        has_relation(org: Org, "parent", repo: Repo) if
+          org = repo.org;
 
-      resource Issue {
-        permissions = [ "edit" ];
-        relations = { parent: Repo };
+        resource Issue {
+          permissions = [ "edit" ];
+          relations = { parent: Repo };
 
-        "edit" if "writer" on "parent";
-      }
+          "edit" if "writer" on "parent";
+        }
 
-      has_relation(repo: Repo, "parent", issue: Issue) if
-        repo = issue.repo;
+        has_relation(repo: Repo, "parent", issue: Issue) if
+          repo = issue.repo;
     """
-
-    oso.load_str(policy)
+    )
 
     return oso
 
