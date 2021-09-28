@@ -415,9 +415,8 @@ def test_partial_in_collection(oso, t):
     assert result == [t['fourth_foo']]
 
 def test_empty_constraints_in(oso, t):
-    # FIXME 2nd clause shouldn't be needed
     oso.load_str("""
-        allow(_, "read", foo: Foo) if _n in foo.numbers;
+        allow(_, "read", foo: Foo) if _n in foo.logs;
     """)
 
     result = list(oso.authorized_resources('gwen', 'read', t['Foo']))
