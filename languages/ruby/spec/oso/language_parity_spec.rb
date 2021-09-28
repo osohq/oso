@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'oso-oso'
+require 'oso'
 
 oso = Oso.new
 
