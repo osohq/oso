@@ -484,6 +484,7 @@ jobs:
         with:
           name: go
       - name: "test"
+        if: runner.os == 'Windows' || runner.os == 'Linux' || matrix.go-version != '1.17'
         run: |
           go build
           go test -v ./tests/
