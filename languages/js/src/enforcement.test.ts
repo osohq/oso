@@ -3,7 +3,7 @@ import { BaseActor, User, Widget } from '../test/classes';
 import { ForbiddenError, NotFoundError, OsoError } from './errors';
 
 describe(Oso, () => {
-  let oso: Oso<BaseActor, String>;
+  let oso: Oso<BaseActor, string>;
 
   beforeEach(() => {
     oso = new Oso();
@@ -204,7 +204,7 @@ describe(Oso, () => {
         notFoundError: TestNotFound,
         forbiddenError: TestForbidden,
       });
-      oso.loadStr('allow("graham", "read", "bar");');
+      await oso.loadStr('allow("graham", "read", "bar");');
 
       await expect(oso.authorize('graham', 'frob', 'foo')).rejects.toThrow(
         TestNotFound

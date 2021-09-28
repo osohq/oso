@@ -9,7 +9,6 @@ import {
 import {
   ancestors,
   isConstructor,
-  isObj,
   isString,
   promisify1,
   repr,
@@ -30,6 +29,7 @@ import type {
   ExecQueryFn,
   CombineQueryFn,
   DataFilteringQueryParams,
+  NullishOrHasConstructor,
 } from './types';
 import {
   Dict,
@@ -70,9 +70,8 @@ export class UserType<Type extends Class<T>, T = any, Query = any> {
     this.cls = cls;
     this.fields = fields;
     // NOTE(gj): these `promisify1()` calls are for Promisifying synchronous
-    // return values from {build,exec,combine}Query. Since a user's
-    // implementation *might* return a Promise, we want to `await` _all_
-    // invocations.
+    // return values from {build,exec}Query. Since a user's implementation
+    // *might* return a Promise, we want to `await` _all_ invocations.
     this.buildQuery = promisify1(buildQuery);
     this.execQuery = promisify1(execQuery);
     this.combineQuery = combineQuery;
@@ -139,7 +138,7 @@ export class Host implements Required<DataFilteringQueryParams> {
   private getClass(name: string): Class {
     const typ = this.types.get(name);
     if (typ === undefined) throw new UnregisteredClassError(name);
-    return typ.cls;
+    return typ.cls as Class;
   }
 
   /**
@@ -147,7 +146,8 @@ export class Host implements Required<DataFilteringQueryParams> {
    *
    * @param cls Class or class name.
    */
-  getType<Type extends Class>(cls: Type | string): UserType<Type> | undefined {
+  getType<Type extends Class>(cls?: Type | string): UserType<Type> | undefined {
+    if (cls === undefined) return undefined;
     return this.types.get(cls);
   }
 
@@ -204,7 +204,7 @@ export class Host implements Required<DataFilteringQueryParams> {
       throw new DuplicateClassAliasError({
         name: clsName,
         cls,
-        existing,
+        existing: existing.cls as Class,
       });
     }
 
@@ -272,7 +272,7 @@ export class Host implements Required<DataFilteringQueryParams> {
   /**
    * Register the MROs of all registered classes.
    */
-  registerMros() {
+  registerMros(): void {
     // Get MRO of all registered classes
     // NOTE: not ideal that the MRO gets updated each time loadStr is
     // called, but since we are planning to move to only calling load once
@@ -315,10 +315,9 @@ export class Host implements Required<DataFilteringQueryParams> {
     left: string,
     right: string
   ): Promise<boolean> {
-    let instance = this.getInstance(id);
-    instance = instance instanceof Promise ? await instance : instance;
-    if (!isObj(instance)) return false;
-    const mro = ancestors(instance.constructor);
+    let instance = this.getInstance(id) as NullishOrHasConstructor;
+    instance = instance instanceof Promise ? await instance : instance; // eslint-disable-line @typescript-eslint/no-unsafe-assignment
+    const mro = ancestors(instance?.constructor);
     const leftIndex = mro.indexOf(this.getClass(left));
     const rightIndex = mro.indexOf(this.getClass(right));
     if (leftIndex === -1) {
@@ -335,7 +334,7 @@ export class Host implements Required<DataFilteringQueryParams> {
    *
    * @internal
    */
-  async isSubclass(left: string, right: string): Promise<boolean> {
+  isSubclass(left: string, right: string): boolean {
     const leftCls = this.getClass(left);
     const rightCls = this.getClass(right);
     const mro = ancestors(leftCls);
@@ -348,9 +347,11 @@ export class Host implements Required<DataFilteringQueryParams> {
    * @internal
    */
   async isa(polarInstance: PolarTerm, name: string): Promise<boolean> {
-    const instance = await this.toJs(polarInstance);
+    const instance = (await this.toJs(
+      polarInstance
+    )) as NullishOrHasConstructor;
     const cls = this.getClass(name);
-    return instance instanceof cls || (instance as any)?.constructor === cls; // eslint-disable-line @typescript-eslint/no-explicit-any
+    return instance instanceof cls || instance?.constructor === cls;
   }
 
   /**
@@ -367,7 +368,7 @@ export class Host implements Required<DataFilteringQueryParams> {
     let tag = baseTag;
     for (const fld of path) {
       const field = await this.toJs(fld);
-      if (!isString(field)) throw new Error(`Not a field name: ${field}`);
+      if (!isString(field)) throw new Error(`Not a field name: ${repr(field)}`);
       const userType = this.types.get(tag);
       if (userType === undefined) return false;
 
@@ -408,8 +409,8 @@ export class Host implements Required<DataFilteringQueryParams> {
   ): Promise<boolean> {
     // NOTE(gj): These are `any` because JS puts no type boundaries on what's
     // comparable. Want to resolve `{} > NaN` to an arbitrary boolean? Go nuts!
-    const left = (await this.toJs(leftTerm)) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
-    const right = (await this.toJs(rightTerm)) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const left = (await this.toJs(leftTerm)) as any; // eslint-disable-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+    const right = (await this.toJs(rightTerm)) as any; // eslint-disable-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
     switch (op) {
       case 'Eq':
         return this.#equalityFn(left, right);
@@ -536,8 +537,9 @@ export class Host implements Required<DataFilteringQueryParams> {
     } else if (isPolarList(t)) {
       return await Promise.all(t.List.map(async el => await this.toJs(el)));
     } else if (isPolarDict(t)) {
-      const valueToJs = ([k, v]: [string, PolarTerm]) =>
-        this.toJs(v).then(v => [k, v]) as Promise<[string, unknown]>;
+      const valueToJs = ([k, v]: [string, PolarTerm]): Promise<
+        [string, unknown]
+      > => this.toJs(v).then(v => [k, v]);
       const { fields } = t.Dictionary;
       const entries = await Promise.all([...fields.entries()].map(valueToJs));
       return entries.reduce((dict: Dict, [k, v]) => {
@@ -546,7 +548,7 @@ export class Host implements Required<DataFilteringQueryParams> {
       }, new Dict());
     } else if (isPolarInstance(t)) {
       const i = this.getInstance(t.ExternalInstance.instance_id);
-      return i instanceof Promise ? await i : i;
+      return i instanceof Promise ? await i : i; // eslint-disable-line @typescript-eslint/no-unsafe-return
     } else if (isPolarPredicate(t)) {
       const { name, args } = t.Call;
       const jsArgs = await Promise.all(args.map(a => this.toJs(a)));

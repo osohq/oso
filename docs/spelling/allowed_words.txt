@@ -45,6 +45,7 @@ LoadString
 Lodash's
 MVC
 MinGW
+MyPy
 NFA
 NaN
 NestJS

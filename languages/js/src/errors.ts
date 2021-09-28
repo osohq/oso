@@ -1,7 +1,7 @@
 import { repr } from './helpers';
-/**
- * Base class for all Oso errors.
- */
+import type { Class } from './types';
+
+/** Base class for all Oso errors. */
 export class OsoError extends Error {
   constructor(message?: string) {
     // If we ever switch to supporting ES5, we'll have to make sure that
@@ -39,11 +39,11 @@ export class DuplicateClassAliasError extends PolarError {
     existing,
   }: {
     name: string;
-    cls: object;
-    existing: object;
+    cls: Class;
+    existing: Class;
   }) {
     super(
-      `Attempted to alias ${cls} as '${name}', but ${existing} already has that alias.`
+      `Attempted to alias ${cls.name} as '${name}', but ${existing.name} already has that alias.`
     );
   }
 }
@@ -76,7 +76,7 @@ export class InvalidCallError extends PolarError {
 
 export class InvalidIteratorError extends PolarError {
   constructor(term: unknown) {
-    super(`${term} is not iterable`);
+    super(`${repr(term)} is not iterable`);
   }
 }
 

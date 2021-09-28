@@ -1,6 +1,5 @@
 import { inspect } from 'util';
-
-const _readFile = require('fs')?.readFile;
+import { readFile as _readFile } from 'fs';
 
 import { InvalidQueryEventError, KwargsError, PolarError } from './errors';
 import {
@@ -19,11 +18,13 @@ import type { Class, obj, PolarTerm, QueryEvent } from './types';
  *
  * @internal
  */
-export function ancestors(cls: Function): Function[] {
+export function ancestors(cls: unknown): unknown[] {
+  if (!isConstructor(cls)) return [];
   const ancestors = [cls];
-  function next(cls: Function): void {
-    const parent = Object.getPrototypeOf(cls);
+  function next(current: Class): void {
+    const parent = Object.getPrototypeOf(current); // eslint-disable-line @typescript-eslint/no-unsafe-assignment
     if (parent === Function.prototype) return;
+    if (!isConstructor(parent)) return;
     ancestors.push(parent);
     next(parent);
   }
@@ -290,7 +291,7 @@ function parseDebug(event: unknown): QueryEvent {
  */
 export function readFile(file: string): Promise<string> {
   return new Promise((res, rej) =>
-    _readFile!(file, { encoding: 'utf8' }, (err: string, contents: string) =>
+    _readFile(file, { encoding: 'utf8' }, (err: unknown, contents: string) =>
       err === null ? res(contents) : rej(err)
     )
   );
@@ -314,7 +315,7 @@ if (
 export const PROMPT = FG_BLUE + 'query> ' + RESET;
 
 /** @internal */
-export function printError(e: Error) {
+export function printError(e: Error): void {
   console.error(FG_RED + e.name + RESET);
   console.error(e.message);
 }
@@ -386,5 +387,5 @@ function isSafeInteger(x: unknown): x is number {
  */
 export const promisify1 =
   <A, B>(f: (a: A) => B) =>
-  (a: A) =>
+  (a: A): Promise<B> =>
     Promise.resolve(f(a));

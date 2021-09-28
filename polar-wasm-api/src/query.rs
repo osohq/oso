@@ -73,9 +73,8 @@ impl Query {
     }
 
     #[wasm_bindgen(js_class = Query, js_name = source)]
-    pub fn wasm_source(&self) -> JsResult<JsValue> {
-        let source = self.0.source_info();
-        serde_wasm_bindgen::to_value(&source).map_err(|e| serialization_error(e.to_string()))
+    pub fn wasm_source(&self) -> String {
+        self.0.source_info()
     }
 
     #[wasm_bindgen(js_class = Query, js_name = bind)]
