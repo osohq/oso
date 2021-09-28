@@ -1,7 +1,7 @@
 PATH
   remote: ../../../../languages/ruby
   specs:
-    oso-oso (0.20.1)
+    oso-oso (0.21.0)
       ffi (~> 1.0)
 
 GEM
