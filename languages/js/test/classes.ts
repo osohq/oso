@@ -116,6 +116,14 @@ export class ConstructorMapObjectArgs {
   }
 }
 
+// ignoring a bunch of TS checks intentionally
+export class ConstructorAnyArg {
+  readonly opts: any
+  constructor(opts: any) {
+    this.opts = opts;
+  }
+}
+
 let counter = 0;
 
 export class Counter {
