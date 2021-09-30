@@ -5,7 +5,6 @@ import { Pattern } from './Pattern';
 import type {
   Options,
   CustomError,
-  obj,
   Class,
   PolarTerm,
   DataFilteringQueryParams,
