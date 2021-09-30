@@ -291,6 +291,19 @@ def test_unify_ins(oso):
     oso.check_authz("gwen", "read", Bar, expected)
 
 
+def test_unify_ins_field_eq(oso):
+    oso.load_str(
+        """
+            allow(_, "read", _: Bar{foos:foos}) if
+                foo in foos and goo in foos and foo.id = goo.id;
+        """
+    )
+
+    result = oso.authorized_resources("gwen", "read", Bar)
+    expected = [ bar for bar in bars if bar.foos() ]
+    assert unord_eq(expected, result)
+
+
 def test_partial_isa_with_path(oso):
     oso.load_str(
         """
@@ -418,6 +431,10 @@ def test_field_neq(oso):
     oso.check_authz("gwen", "get", Bar, expected)
 
 
+def test_field_cmp_rel_field(oso):
+    oso.load_str("allow(_, _, foo: Foo) if foo.bar.is_cool = foo.is_fooey;")
+    expected = [foo for foo in foos if foo.is_fooey == foo.bar().is_cool]
+    oso.check_authz("gwen", "get", Foo, expected)
 def test_const_in_coll(oso):
     magic = 1
     oso.register_constant(magic, "magic")
@@ -430,6 +447,21 @@ def test_param_field(oso):
     oso.load_str("allow(data, id, _: Log{data: data, id: id});")
     for log in logs:
         oso.check_authz(log.data, log.id, Log, [log])
+
+
+def test_in_intersection(oso):
+    # gwen can read any foo with a sibling foo with a number in common
+    oso.load_str(
+        """
+            allow("gwen", "read", foo: Foo) if
+                num in foo.numbers and
+                goo in foo.bar.foos and
+                goo != foo and
+                num in goo.numbers;
+        """
+    )
+    result = oso.authorized_resources("gwen", "read", Foo)
+    assert len(result) == 0
 
 
 @pytest.mark.skip(
@@ -447,13 +479,6 @@ def test_or(oso):
 
     results = oso.authorized_resources("steve", "get", Foo)
     assert len(results) == 2
-
-
-@pytest.mark.xfail(reason="not yet supported")
-def test_field_cmp_rel_field(oso):
-    oso.load_str("allow(_, _, foo: Foo) if foo.bar.is_cool = foo.is_fooey;")
-    expected = [foo for foo in foos if foo.is_fooey == foo.bar().is_cool]
-    oso.check_authz("gwen", "get", Foo, expected)
 
 
 @pytest.mark.xfail(reason="not yet supported")
@@ -494,22 +519,10 @@ def test_unify_ins_neq(oso):
     expected = [
         bar
         for bar in bars
-        if [foo for foo in bar.foos() for goo in bar.foos() if foo is not goo]
+        if len(bar.foos()) >= 2
     ]
-    oso.check_authz("gwen", "read", Bar, expected)
-
-
-@pytest.mark.xfail(reason="a bug")
-def test_unify_ins_field_eq(oso):
-    oso.load_str(
-        """
-            allow(_, "read", _: Bar{foos:foos}) if
-                foo in foos and goo in foos and foo.id = goo.id;
-        """
-    )
-
-    result = oso.authorized_resources("gwen", "read", Bar)
-    assert len(result) == 2
+    result = oso.authorized_resources('gwen', 'read', Bar)
+    assert unord_eq(expected, result)
 
 
 @pytest.mark.xfail(reason="a bug")
@@ -518,28 +531,10 @@ def test_deeply_nested_in(oso):
     oso.load_str(
         """
             allow("gwen", "read", a: Foo) if
-                b in a.bar.foos and b != a and
-                c in b.bar.foos and c != b and
-                d in c.bar.foos and d != c and
-                e in d.bar.foos and e != d;
+                b in a.bar.foos and b != a;
         """
     )
 
+    expected = [foo for foo in foos if len(foo.bar().foos()) >= 2]
     result = oso.authorized_resources("gwen", "read", Foo)
-    assert len(result) == 3
-
-
-@pytest.mark.xfail(reason="a bug")
-def test_in_intersection(oso):
-    # gwen can read any foo with a sibling foo with a number in common
-    oso.load_str(
-        """
-            allow("gwen", "read", foo: Foo) if
-                num in foo.numbers and
-                goo in foo.bar.foos and
-                goo != foo and
-                num in goo.numbers;
-        """
-    )
-    result = oso.authorized_resources("gwen", "read", Foo)
-    assert len(result) == 0
+    assert len(result) == len(expected)
