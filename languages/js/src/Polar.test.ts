@@ -29,6 +29,7 @@ import {
   User,
   Widget,
   X,
+  ConstructorAnyArg,
 } from '../test/classes';
 import {
   DuplicateClassAliasError,
@@ -517,14 +518,18 @@ describe('#makeInstance', () => {
   test('handles JS Maps & Polar dicts', async () => {
     const p = new Polar();
     p.registerClass(ConstructorMapObjectArgs);
+    p.registerClass(ConstructorAnyArg);
     p.registerClass(Map);
     const shouldPass = [
       // All args match ctor's expectation.
       '?= x = new ConstructorMapObjectArgs(new Map([["one", 1]]), {two: 2}, new Map([["three", 3]]), {four: 4}) and x.one = 1 and x.two = 2 and x.three = 3 and x.four = 4;',
       // All Maps passed instead of dicts. Field lookups on Maps return undefined.
       '?= x = new ConstructorMapObjectArgs(new Map([["one", 1]]), new Map([["two", 2]]), new Map([["three", 3]]), new Map([["four", 4]])) and x.one = 1 and x.two = undefined and x.three = 3 and x.four = undefined;',
+      '?= new ConstructorAnyArg({x: 1}).opts.x = 1;',
     ];
-    expect(Promise.all(shouldPass.map(x => p.loadStr(x)))).resolves;
+    await expect(
+      Promise.all(shouldPass.map(x => p.loadStr(x)))
+    ).resolves.not.toThrow();
 
     // All dicts passed instead of Maps. TypeErrors abound when we try to
     // call Map methods on the dicts.
@@ -621,11 +626,11 @@ describe('#registerConstant', () => {
     );
   });
 
-  test('registering the same constant twice overwrites', () => {
+  test('registering the same constant twice overwrites', async () => {
     const p = new Polar();
     p.registerConstant(1, 'x');
     p.registerConstant(2, 'x');
-    expect(p.loadStr('?= x == 2;')).resolves;
+    await expect(p.loadStr('?= x == 2;')).resolves.not.toThrow();
   });
 });
 
@@ -674,9 +679,11 @@ describe('unifying a promise', () => {
 
 describe('errors', () => {
   describe('with inline queries', () => {
-    test('succeeds if all inline queries succeed', () => {
+    test('succeeds if all inline queries succeed', async () => {
       const p = new Polar();
-      expect(p.loadStr('f(1); f(2); ?= f(1); ?= not f(3);')).resolves;
+      await expect(
+        p.loadStr('f(1); f(2); ?= f(1); ?= not f(3);')
+      ).resolves.not.toThrow();
     });
 
     test('fails if an inline query fails', async () => {

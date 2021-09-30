@@ -159,7 +159,7 @@ export class Host implements Required<DataFilteringQueryParams> {
     for (const [name, typ] of this.types) if (isString(name)) yield typ;
   }
 
-  serializeTypes(): string {
+  serializeTypes(): { [tag: string]: SerializedFields } {
     const polarTypes: { [tag: string]: SerializedFields } = {};
     for (const [tag, userType] of this.types) {
       if (isString(tag)) {
@@ -178,7 +178,7 @@ export class Host implements Required<DataFilteringQueryParams> {
         polarTypes[tag] = fieldTypes;
       }
     }
-    return JSON.stringify(polarTypes);
+    return polarTypes;
   }
 
   /**

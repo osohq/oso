@@ -3,17 +3,19 @@ use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_test::*;
 
 use polar_core::sources::Source;
+use polar_core::terms::*;
 
 #[wasm_bindgen_test]
 #[allow(clippy::float_cmp)]
 fn call_result_succeeds() {
     let mut polar = polar_wasm_api::Polar::wasm_new();
-    polar
-        .wasm_register_constant(
-            "y",
-            r#"{"value":{"ExternalInstance":{"instance_id":1,"literal":null,"repr":null}}}"#,
-        )
-        .unwrap();
+    let term = Value::ExternalInstance(ExternalInstance {
+        instance_id: 1,
+        constructor: None,
+        repr: None,
+    });
+    let term = serde_wasm_bindgen::to_value(&term).unwrap();
+    polar.wasm_register_constant("y", term).unwrap();
     let source = Source {
         src: "x() if y.z;".to_owned(),
         filename: None,
@@ -29,7 +31,7 @@ fn call_result_succeeds() {
     let call_id = Reflect::get(&event_data, &event_field).unwrap();
     assert_eq!(call_id, 3.0);
 
-    let call_result = Some(r#"{"value":{"Boolean":true}}"#.to_string());
+    let call_result = serde_wasm_bindgen::to_value(&Value::Boolean(true)).unwrap();
     query.wasm_call_result(3.0, call_result).unwrap();
 
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
@@ -39,7 +41,7 @@ fn call_result_succeeds() {
     let bindings = Reflect::get(&event_data, &data_key).unwrap();
     assert_eq!(bindings.dyn_into::<Map>().unwrap().size(), 0);
 
-    query.wasm_call_result(3.0, None).unwrap();
+    query.wasm_call_result(3.0, JsValue::undefined()).unwrap();
 
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
     let event_kind: JsValue = "Done".into();
@@ -50,12 +52,13 @@ fn call_result_succeeds() {
 #[allow(clippy::float_cmp)]
 fn app_error_succeeds() {
     let mut polar = polar_wasm_api::Polar::wasm_new();
-    polar
-        .wasm_register_constant(
-            "y",
-            r#"{"value":{"ExternalInstance":{"instance_id":1,"literal":null,"repr":null}}}"#,
-        )
-        .unwrap();
+    let term = Value::ExternalInstance(ExternalInstance {
+        instance_id: 1,
+        constructor: None,
+        repr: None,
+    });
+    let term = serde_wasm_bindgen::to_value(&term).unwrap();
+    polar.wasm_register_constant("y", term).unwrap();
     let source = Source {
         src: "x() if y.z;".to_owned(),
         filename: None,

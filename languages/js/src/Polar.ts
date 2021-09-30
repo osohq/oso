@@ -199,7 +199,7 @@ export class Polar {
     if (isString(q)) {
       ffiQuery = this.#ffiPolar.newQueryFromStr(q);
     } else {
-      const term = JSON.stringify(host.toPolar(q));
+      const term = host.toPolar(q);
       ffiQuery = this.#ffiPolar.newQueryFromTerm(term);
     }
     this.processMessages();
@@ -250,7 +250,7 @@ export class Polar {
    */
   registerConstant(value: unknown, name: string): void {
     const term = this.getHost().toPolar(value);
-    this.#ffiPolar.registerConstant(name, JSON.stringify(term));
+    this.#ffiPolar.registerConstant(name, term);
   }
 
   getHost(): Host {
