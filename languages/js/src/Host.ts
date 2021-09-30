@@ -30,6 +30,7 @@ import type {
   CombineQueryFn,
   DataFilteringQueryParams,
   NullishOrHasConstructor,
+  IsaCheck,
 } from './types';
 import {
   Dict,
@@ -56,6 +57,7 @@ export class UserType<Type extends Class<T>, T = any, Query = any> {
   buildQuery: BuildQueryFn<Promise<Query>>;
   execQuery: ExecQueryFn<Query, Promise<T[]>>;
   combineQuery: CombineQueryFn<Query>;
+  isaCheck: IsaCheck;
 
   constructor({
     name,
@@ -65,6 +67,7 @@ export class UserType<Type extends Class<T>, T = any, Query = any> {
     buildQuery,
     execQuery,
     combineQuery,
+    isaCheck
   }: UserTypeParams<Type>) {
     this.name = name;
     this.cls = cls;
@@ -76,6 +79,7 @@ export class UserType<Type extends Class<T>, T = any, Query = any> {
     this.execQuery = promisify1(execQuery);
     this.combineQuery = combineQuery;
     this.id = id;
+    this.isaCheck = isaCheck;
   }
 }
 
@@ -208,6 +212,10 @@ export class Host implements Required<DataFilteringQueryParams> {
       });
     }
 
+    function defaultCheck(instance: any): boolean {
+      return instance instanceof cls || instance?.constructor === cls;
+    }
+
     const userType = new UserType({
       name: clsName,
       cls,
@@ -216,6 +224,7 @@ export class Host implements Required<DataFilteringQueryParams> {
       execQuery: execQuery || this.execQuery,
       combineQuery: combineQuery || this.combineQuery,
       id: this.cacheInstance(cls),
+      isaCheck: params.isaCheck || defaultCheck
     });
     this.types.set(cls, userType);
     this.types.set(clsName, userType);
@@ -350,8 +359,14 @@ export class Host implements Required<DataFilteringQueryParams> {
     const instance = (await this.toJs(
       polarInstance
     )) as NullishOrHasConstructor;
-    const cls = this.getClass(name);
-    return instance instanceof cls || instance?.constructor === cls;
+
+    const userType = this.types.get(name);
+    if (userType !== undefined) {
+      return userType.isaCheck(instance)
+    } else {
+      const cls = this.getClass(name)
+      return instance instanceof cls || instance?.constructor === cls;
+    }
   }
 
   /**
