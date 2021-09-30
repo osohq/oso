@@ -1,5 +1,7 @@
 from typing import Any, Optional
 from dataclasses import dataclass
+from collections import defaultdict
+from functools import reduce
 
 
 # Used so we know what fetchers to call and how to match up constraints.
@@ -54,6 +56,13 @@ class Ref:
     field: Optional[str]
     result_id: int
 
+binary_predicates = {
+    'Eq': lambda a, b: a == b,
+    'Neq': lambda a, b: a != b,
+    'In': lambda a, b: a in b,
+    'Nin': lambda a, b: a not in b,
+    'Contains': lambda a, b: b in a,
+}
 
 @dataclass
 class Filter:
@@ -63,33 +72,21 @@ class Filter:
     field: str
     value: Any
 
-    def Eq(a, b):
-        return a == b
-
-    def Neq(a, b):
-        return a != b
-
-    def In(a, b):
-        return a in b
-
-    def Contains(a, b):
-        return b in a
-
     def __post_init__(self):
         if isinstance(self.value, Field):
-            self.getter = lambda x: getattr(x, self.value.field)
+            self.other_val = lambda x: getattr(x, self.value.field)
         else:
-            self.getter = lambda x: self.value
+            self.other_val = lambda x: self.value
 
         if self.field is None:
-            self.iget = lambda x: x
-        else:
-            self.iget = lambda x: getattr(x, self.field)
-
-        self.checker = getattr(Filter, self.kind)
+            self.my_val = lambda x: x
+        elif type(self.field) is list:
+            self.my_val = lambda x: [_getattr(x, f) for f in self.field]
+        elif type(self.field) is str:
+            self.my_val = lambda x: getattr(x, self.field)
 
     def check(self, item):
-        return self.checker(self.iget(item), self.getter(item))
+        return binary_predicates[self.kind](self.my_val(item), self.other_val(item))
 
     def ground(self, polar, results):
         if isinstance(self.value, Ref):
@@ -99,9 +96,40 @@ class Filter:
                 self.value = [getattr(v, ref.field) for v in self.value]
 
 
+def _getattr(x, attr):
+    return x if attr is None else getattr(x, attr)
+
+def _part_test(fil):
+    return isinstance(fil.value, Ref) and fil.value.result_id is not None
+
+
+def _ground_filters(polar, results, filters):
+    _refs, rest = partition(filters, _part_test)
+    yrefs, nrefs = partition(_refs, lambda r: r.kind == 'In' or r.kind == 'Eq')
+    for refs, kind in [(yrefs, 'In'), (nrefs, 'Nin')]:
+        if refs:
+            for rid, fils in group_by(refs, lambda f: f.value.result_id).items():
+                fields = [[_getattr(r, f.value.field) for f in fils] for r in results[rid]]
+                rest.append(Filter(value=fields, kind=kind, field=list([f.field for f in fils])))
+    return rest
+
+
+def partition(coll, pred):
+    def step(m, x):
+        (m[0] if pred(x) else m[1]).append(x)
+        return m
+    return reduce(step, coll, ([], []))
+
+def group_by(coll, kfn):
+    def step(m, x):
+        m[kfn(x)].append(x)
+        return m
+    return reduce(step, coll, defaultdict(list))
+
+
 def parse_constraint(polar, constraint):
     kind = constraint["kind"]
-    assert kind in ["Eq", "Neq", "In", "Contains"]
+    assert kind in ["Eq", "Neq", "In", "Nin", "Contains"]
     field = constraint["field"]
     value = constraint["value"]
 
@@ -142,9 +170,8 @@ def builtin_filter_plan_resolver(polar, filter_plan):
             constraints = req["constraints"]
 
             constraints = [parse_constraint(polar, c) for c in constraints]
+            constraints = _ground_filters(polar, set_results, constraints)
             # Substitute in results from previous requests.
-            for constraint in constraints:
-                constraint.ground(polar, set_results)
             cls_type = polar.host.types[class_name]
             query = cls_type.build_query(constraints)
             if i != result_id:
@@ -166,4 +193,5 @@ def builtin_filter_plan_resolver(polar, filter_plan):
 
 
 def filter_data(polar, filter_plan, filter_plan_resolver=builtin_filter_plan_resolver):
+    print("filter plan", filter_plan)
     return filter_plan_resolver(polar, filter_plan)
