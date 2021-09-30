@@ -1,6 +1,6 @@
 module github.com/osohq/oso
 
-go 1.12
+go 1.12.7
 
 require github.com/osohq/go-oso v0.21.0
 
