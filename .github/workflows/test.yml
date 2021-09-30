@@ -78,9 +78,9 @@ jobs:
         run: rustup target add wasm32-unknown-unknown
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      - name: Typecheck JS library
+      - name: Lint JS library
         working-directory: "languages/js"
-        run: make typecheck
+        run: make lint
 
       ## Check Java
       - name: Install Java
@@ -369,4 +369,6 @@ jobs:
       - name: Install yard (for doc build)
         run: gem install yard
       - name: Doc test
+        env:
+          MVN_FLAGS: "-q"
         run: make -C docs test

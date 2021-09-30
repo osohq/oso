@@ -116,6 +116,13 @@ export class ConstructorMapObjectArgs {
   }
 }
 
+export class ConstructorAnyArg {
+  readonly opts;
+  constructor(opts: unknown) {
+    this.opts = opts;
+  }
+}
+
 let counter = 0;
 
 export class Counter {

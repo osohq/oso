@@ -5,7 +5,6 @@ import { Pattern } from './Pattern';
 import type {
   Options,
   CustomError,
-  obj,
   Class,
   PolarTerm,
   DataFilteringQueryParams,
@@ -289,23 +288,19 @@ export class Oso<
       resource
     );
 
-    const queryResults = [];
+    const queryResults: { bindings: Map<string, PolarTerm> }[] = [];
     for await (const result of results) {
-      queryResults.push(result);
+      queryResults.push({
+        // convert bindings back into Polar
+        bindings: new Map(
+          [...result.entries()].map(([k, v]) => [k, host.toPolar(v)])
+        ),
+      });
     }
 
-    const jsonResults = queryResults.map(result => ({
-      // `Map<string, unknown> -> {[key: string]: PolarTerm}` b/c Maps aren't
-      // trivially `JSON.stringify()`-able.
-      bindings: [...result.entries()].reduce((obj: obj<PolarTerm>, [k, v]) => {
-        obj[k] = host.toPolar(v);
-        return obj;
-      }, {}),
-    }));
-    const resultsStr = JSON.stringify(jsonResults);
     const plan = this.getFfi().buildFilterPlan(
       host.serializeTypes(),
-      resultsStr,
+      queryResults,
       'resource',
       clsName
     ) as FilterPlan;

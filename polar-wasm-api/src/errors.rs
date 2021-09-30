@@ -10,10 +10,6 @@ pub struct Error {
     inner: FormattedPolarError,
 }
 
-pub fn serde_serialization_error(e: serde_json::Error) -> JsValue {
-    serialization_error(e.to_string())
-}
-
 pub fn serialization_error(msg: String) -> JsValue {
     Error::from(PolarError::from(RuntimeError::Serialization { msg })).into()
 }
