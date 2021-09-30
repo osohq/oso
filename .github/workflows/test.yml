@@ -369,4 +369,6 @@ jobs:
       - name: Install yard (for doc build)
         run: gem install yard
       - name: Doc test
+        env:
+          MVN_FLAGS: "-q"
         run: make -C docs test
