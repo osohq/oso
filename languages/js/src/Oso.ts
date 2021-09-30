@@ -28,7 +28,7 @@ export class Oso<
   Resource = unknown,
   Field = unknown,
   Request = unknown
-  > extends Polar {
+> extends Polar {
   #notFoundError: CustomError = NotFoundError;
   #forbiddenError: CustomError = ForbiddenError;
   #readAction: unknown = 'read';
@@ -295,7 +295,7 @@ export class Oso<
         // convert bindings back into Polar
         bindings: new Map(
           [...result.entries()].map(([k, v]) => [k, host.toPolar(v)])
-        )
+        ),
       });
     }
 

@@ -103,7 +103,7 @@ export class Polar {
    * @internal
    */
   private processMessages() {
-    for (; ;) {
+    for (;;) {
       const msg = this.#ffiPolar.nextMessage() as Message | undefined;
       if (msg === undefined) break;
       processMessage(msg);
@@ -157,7 +157,7 @@ export class Polar {
   async loadFile(filename: string): Promise<void> {
     console.error(
       '`Oso.loadFile` has been deprecated in favor of `Oso.loadFiles` as of the 0.20 release.\n\n' +
-      'Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html'
+        'Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html'
     );
     return this.loadFiles([filename]);
   }
@@ -178,7 +178,7 @@ export class Polar {
   }
 
   private async checkInlineQueries(): Promise<void> {
-    for (; ;) {
+    for (;;) {
       const query = this.#ffiPolar.nextInlineQuery();
       this.processMessages();
       if (query === undefined) break;
