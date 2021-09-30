@@ -56,13 +56,15 @@ class Ref:
     field: Optional[str]
     result_id: int
 
+
 binary_predicates = {
-    'Eq': lambda a, b: a == b,
-    'Neq': lambda a, b: a != b,
-    'In': lambda a, b: a in b,
-    'Nin': lambda a, b: a not in b,
-    'Contains': lambda a, b: b in a,
+    "Eq": lambda a, b: a == b,
+    "Neq": lambda a, b: a != b,
+    "In": lambda a, b: a in b,
+    "Nin": lambda a, b: a not in b,
+    "Contains": lambda a, b: b in a,
 }
+
 
 @dataclass
 class Filter:
@@ -99,18 +101,23 @@ class Filter:
 def _getattr(x, attr):
     return x if attr is None else getattr(x, attr)
 
+
 def _part_test(fil):
     return isinstance(fil.value, Ref) and fil.value.result_id is not None
 
 
-def _ground_filters(polar, results, filters):
+def _ground_filters(results, filters):
     _refs, rest = partition(filters, _part_test)
-    yrefs, nrefs = partition(_refs, lambda r: r.kind == 'In' or r.kind == 'Eq')
-    for refs, kind in [(yrefs, 'In'), (nrefs, 'Nin')]:
+    yrefs, nrefs = partition(_refs, lambda r: r.kind == "In" or r.kind == "Eq")
+    for refs, kind in [(yrefs, "In"), (nrefs, "Nin")]:
         if refs:
             for rid, fils in group_by(refs, lambda f: f.value.result_id).items():
-                fields = [[_getattr(r, f.value.field) for f in fils] for r in results[rid]]
-                rest.append(Filter(value=fields, kind=kind, field=list([f.field for f in fils])))
+                fields = [
+                    [_getattr(r, f.value.field) for f in fils] for r in results[rid]
+                ]
+                rest.append(
+                    Filter(value=fields, kind=kind, field=list([f.field for f in fils]))
+                )
     return rest
 
 
@@ -118,12 +125,15 @@ def partition(coll, pred):
     def step(m, x):
         (m[0] if pred(x) else m[1]).append(x)
         return m
+
     return reduce(step, coll, ([], []))
+
 
 def group_by(coll, kfn):
     def step(m, x):
         m[kfn(x)].append(x)
         return m
+
     return reduce(step, coll, defaultdict(list))
 
 
@@ -170,7 +180,7 @@ def builtin_filter_plan_resolver(polar, filter_plan):
             constraints = req["constraints"]
 
             constraints = [parse_constraint(polar, c) for c in constraints]
-            constraints = _ground_filters(polar, set_results, constraints)
+            constraints = _ground_filters(set_results, constraints)
             # Substitute in results from previous requests.
             cls_type = polar.host.types[class_name]
             query = cls_type.build_query(constraints)

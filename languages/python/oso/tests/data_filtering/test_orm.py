@@ -1,13 +1,12 @@
 import pytest
 from oso import Relation
-from polar.data_filtering import Field
-from sqlalchemy import create_engine, not_, or_, tuple_, and_, false
+from polar.data_filtering import Field, _getattr
+from sqlalchemy import create_engine, not_, or_, and_, false
 from sqlalchemy.types import String, Boolean
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from helpers import unord_eq, DfTestOso
-from functools import reduce
 
 Base = declarative_base()
 
@@ -78,6 +77,13 @@ for objs in [bars, foos, logs]:
         session.add(obj)
         session.commit()
 
+binary_predicates = {
+    "Eq": lambda a, b: a == b,
+    "Neq": lambda a, b: a != b,
+    "In": lambda a, b: a.in_(b),
+    "Nin": lambda a, b: not_(a.in_(b)),
+}
+
 
 @pytest.fixture
 def oso():
@@ -89,7 +95,6 @@ def oso():
 
     def get(cls):
         def get_(fils):
-            print("get_", fils)
             query = session.query(cls)
             for fil in fils:
                 if fil.field is None:
@@ -99,7 +104,7 @@ def oso():
                     else:
                         value = [value.id for value in fil.value]
                 elif isinstance(fil.field, list):
-                    field = [getattr(cls, fld) for fld in fil.field]
+                    field = [_getattr(cls, fld) for fld in fil.field]
                     value = fil.value
                 else:
                     field = getattr(cls, fil.field)
@@ -108,35 +113,14 @@ def oso():
                 if isinstance(value, Field):
                     value = getattr(cls, value.field)
 
-                def co_eq(a, b):
-                    return a == b
-                def co_neq(a, b):
-                    return a != b
-                def co_in(a, b):
-                    return a.in_(b)
-                def co_nin(a, b):
-                    return not_(a.in_(b))
-
                 if isinstance(field, list):
-                    def fold(co):
-                        co = co_eq if co == co_in else co_neq
-                        conds = [and_(*[co(*f) for f in zip(field, v)]) for v in value]
-                        cond = or_(*conds) if conds else false()
-                        ret = query.filter(cond)
-                        return ret
+                    co = binary_predicates["Eq" if fil.kind == "In" else "Neq"]
+                    conds = [and_(*[co(*f) for f in zip(field, v)]) for v in value]
+                    cond = or_(*conds) if conds else false()
                 else:
-                    def fold(co):
-                        return query.filter(co(field, value))
+                    cond = binary_predicates[fil.kind](field, value)
 
-                if fil.kind == "Eq":
-                    query = fold(co_eq)
-                elif fil.kind == "Neq":
-                    query = fold(co_neq)
-                elif fil.kind == "In":
-                    query = fold(co_in)
-                elif fil.kind == "Nin":
-                    query = fold(co_nin)
-                # ...
+                query = query.filter(cond)
             return query
 
         return get_
@@ -322,6 +306,20 @@ def test_unify_ins(oso):
     oso.check_authz("gwen", "read", Bar, expected)
 
 
+def test_unify_ins_field_eq(oso):
+    oso.load_str(
+        """
+            allow(_, "read", bar: Bar) if
+                foo in bar.foos and
+                goo in bar.foos and
+                foo.id = goo.id;
+        """
+    )
+
+    result = oso.authorized_resources("gwen", "read", Bar)
+    assert len(result) == 2
+
+
 def test_partial_isa_with_path(oso):
     oso.load_str(
         """
@@ -458,6 +456,12 @@ def test_param_field(oso):
         oso.check_authz(log.data, log.id, Log, [log])
 
 
+def test_field_cmp_rel_field(oso):
+    oso.load_str("allow(_, _, foo: Foo) if foo.bar.is_cool = foo.is_fooey;")
+    expected = [foo for foo in foos if foo.is_fooey == foo.bar().is_cool]
+    oso.check_authz("gwen", "get", Foo, expected)
+
+
 @pytest.mark.skip(
     """
     `or` constraints come from `not` negations and should instead be expanded in the
@@ -473,13 +477,6 @@ def test_or(oso):
 
     results = oso.authorized_resources("steve", "get", Foo)
     assert len(results) == 2
-
-
-#@pytest.mark.xfail(reason="not yet supported")
-def test_field_cmp_rel_field(oso):
-    oso.load_str("allow(_, _, foo: Foo) if foo.bar.is_cool = foo.is_fooey;")
-    expected = [foo for foo in foos if foo.is_fooey == foo.bar().is_cool]
-    oso.check_authz("gwen", "get", Foo, expected)
 
 
 @pytest.mark.xfail(reason="not yet supported")
@@ -516,21 +513,6 @@ def test_unify_ins_neq(oso):
         if [foo for foo in bar.foos() for goo in bar.foos() if foo is not goo]
     ]
     oso.check_authz("gwen", "read", Bar, expected)
-
-
-#@pytest.mark.xfail(reason="a bug")
-def test_unify_ins_field_eq(oso):
-    oso.load_str(
-        """
-            allow(_, "read", bar: Bar) if
-                foo in bar.foos and
-                goo in bar.foos and
-                foo.id = goo.id;
-        """
-    )
-
-    result = oso.authorized_resources("gwen", "read", Bar)
-    assert len(result) == 2
 
 
 @pytest.mark.xfail(reason="a bug")

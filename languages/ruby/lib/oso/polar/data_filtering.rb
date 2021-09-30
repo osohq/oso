@@ -78,19 +78,19 @@ module Oso
             new(constraints: constraints, class_tag: class_tag)
           end
 
-          def ground(results)
-            _refs, rest = constraints.partition do |c|
-              c.value.is_a?(Ref) and not c.value.result_id.nil?
+          def ground(results) # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity, Metrics/AbcSize, Metrics/PerceivedComplexity
+            xrefs, rest = constraints.partition do |c|
+              c.value.is_a?(Ref) and !c.value.result_id.nil?
             end
 
-            yrefs, nrefs = _refs.partition { |r| %w[In Eq].include? r.kind }
+            yrefs, nrefs = xrefs.partition { |r| %w[In Eq].include? r.kind }
             [[yrefs, 'In'], [nrefs, 'Nin']].each do |refs, kind|
-              if refs.any?
-                refs.group_by { |f| f.value.result_id }.each do |rid, fils|
-                  value = results[rid].map { |r| fils.map { |f| GETATTR[r, f.value.field] } }
-                  field = fils.map(&:field)
-                  rest.push(Filter.new(kind: kind, value: value, field: field))
-                end
+              next unless refs.any?
+
+              refs.group_by { |f| f.value.result_id }.each do |rid, fils|
+                value = results[rid].map { |r| fils.map { |f| GETATTR[r, f.value.field] } }
+                field = fils.map(&:field)
+                rest.push(Filter.new(kind: kind, value: value, field: field))
               end
             end
             rest
@@ -169,7 +169,7 @@ module Oso
           @value = value.map { |v| v.send ref.field } unless ref.field.nil?
         end
 
-        def check(item)
+        def check(item) # rubocop:disable Metrics/AbcSize
           val = value.is_a?(Field) ? item.send(value.field) : value
           item = if field.nil?
                    item

@@ -300,7 +300,7 @@ def test_unify_ins_field_eq(oso):
     )
 
     result = oso.authorized_resources("gwen", "read", Bar)
-    expected = [ bar for bar in bars if bar.foos() ]
+    expected = [bar for bar in bars if bar.foos()]
     assert unord_eq(expected, result)
 
 
@@ -435,6 +435,8 @@ def test_field_cmp_rel_field(oso):
     oso.load_str("allow(_, _, foo: Foo) if foo.bar.is_cool = foo.is_fooey;")
     expected = [foo for foo in foos if foo.is_fooey == foo.bar().is_cool]
     oso.check_authz("gwen", "get", Foo, expected)
+
+
 def test_const_in_coll(oso):
     magic = 1
     oso.register_constant(magic, "magic")
@@ -516,12 +518,8 @@ def test_unify_ins_neq(oso):
         """
     )
 
-    expected = [
-        bar
-        for bar in bars
-        if len(bar.foos()) >= 2
-    ]
-    result = oso.authorized_resources('gwen', 'read', Bar)
+    expected = [bar for bar in bars if len(bar.foos()) >= 2]
+    result = oso.authorized_resources("gwen", "read", Bar)
     assert unord_eq(expected, result)
 
 

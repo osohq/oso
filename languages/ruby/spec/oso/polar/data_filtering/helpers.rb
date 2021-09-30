@@ -48,18 +48,12 @@ module DataFilteringHelpers
   end
 
   module ActiveRecordFetcher
-    def self.included(base) # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
-      base.class_eval do
+    def self.included(base) # rubocop:disable Metrics/MethodLength, Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+      base.class_eval do # rubocop:disable Metrics/BlockLength
         it = {}
         param = lambda do |field, value|
-          if field.nil?
-            { primary_key => value.send(primary_key) }
-          else
-            { field => value }
-          end
+          field.nil? ? { primary_key => value.send(primary_key) } : { field => value }
         end
-
-        getattr = ->(x, attr) { attr.nil? ? x : x.send(attr) }
 
         it['Eq'] = it['In'] = ->(q, f, v) { q.where param[f, v] }
         it['Neq'] = it['Nin'] = ->(q, f, v) { q.where.not param[f, v] }
@@ -68,18 +62,18 @@ module DataFilteringHelpers
 
         instance_variable_set :@constrain, it
 
-        def self.build_query(cons)
-          cons.reduce(all) do |q, c|
+        def self.build_query(cons) # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
+          cons.reduce(all) do |qu, c|
             if c.field.is_a? Array
               co =  @constrain[c.kind == 'In' ? 'Eq' : 'Neq']
               conds = c.value.map do |v|
-                c.field.zip(v).reduce(q) do |q, z|
+                c.field.zip(v).reduce(qu) do |q, z|
                   co[q, *z]
                 end
               end
               conds.any? ? conds.reduce(:or) : none
             else
-              @constrain[c.kind][q, c.field, c.value]
+              @constrain[c.kind][qu, c.field, c.value]
             end
           end
         end
