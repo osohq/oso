@@ -28,7 +28,7 @@ export class Oso<
   Resource = unknown,
   Field = unknown,
   Request = unknown
-> extends Polar {
+  > extends Polar {
   #notFoundError: CustomError = NotFoundError;
   #forbiddenError: CustomError = ForbiddenError;
   #readAction: unknown = 'read';
@@ -294,18 +294,9 @@ export class Oso<
       queryResults.push(result);
     }
 
-    const jsonResults = queryResults.map(result => ({
-      // `Map<string, unknown> -> {[key: string]: PolarTerm}` b/c Maps aren't
-      // trivially `JSON.stringify()`-able.
-      bindings: [...result.entries()].reduce((obj: obj<PolarTerm>, [k, v]) => {
-        obj[k] = host.toPolar(v);
-        return obj;
-      }, {}),
-    }));
-    const resultsStr = JSON.stringify(jsonResults);
     const plan = this.getFfi().buildFilterPlan(
       host.serializeTypes(),
-      resultsStr,
+      queryResults,
       'resource',
       clsName
     ) as FilterPlan;

@@ -86,21 +86,16 @@ fn register_constant_succeeds() {
     let mut polar = polar_wasm_api::Polar::wasm_new();
     let res = polar.wasm_register_constant(
         "mathematics",
-        r#"{"value":{"ExternalInstance":{"instance_id":1,"literal":null,"repr":null}}}"#,
+        serde_wasm_bindgen::to_value(
+            Value::ExternalInstance(ExternalInstance {
+                instance_id: 1,
+                literal: None,
+                repr: None,
+            })
+            .unwrap(),
+        ),
     );
     assert!(matches!(res, Ok(())));
-}
-
-#[wasm_bindgen_test]
-fn register_constant_errors() {
-    let mut polar = polar_wasm_api::Polar::wasm_new();
-    let err = polar.wasm_register_constant("mathematics", "").unwrap_err();
-    let err: Error = err.dyn_into().unwrap();
-    assert_eq!(err.name(), "RuntimeError::Serialization");
-    assert_eq!(
-        err.message(),
-        "Serialization error: EOF while parsing a value at line 1 column 0"
-    );
 }
 
 #[wasm_bindgen_test]
@@ -125,6 +120,11 @@ fn new_query_from_str_errors() {
 fn new_query_from_term_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
     let term = r#"{"value":{"Call":{"name":"x","args":[]}}}"#;
+    let term = Value::Call(Call {
+        name: "x",
+        args: vec![],
+    });
+    let term = serde_wasm_bindgen::to_value(&term).unwrap();
     let mut query = polar.wasm_new_query_from_term(term).unwrap();
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
     assert!(is_done_event(event));
