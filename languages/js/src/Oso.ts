@@ -289,9 +289,14 @@ export class Oso<
       resource
     );
 
-    const queryResults = [];
+    const queryResults: { bindings: Map<string, PolarTerm> }[] = [];
     for await (const result of results) {
-      queryResults.push(result);
+      queryResults.push({
+        // convert bindings back into Polar
+        bindings: new Map(
+          [...result.entries()].map(([k, v]) => [k, host.toPolar(v)])
+        )
+      });
     }
 
     const plan = this.getFfi().buildFilterPlan(
