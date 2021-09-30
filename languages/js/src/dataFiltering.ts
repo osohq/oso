@@ -1,5 +1,5 @@
 import { Host } from './Host';
-import { isPolarTerm } from './types';
+import { obj, isPolarTerm } from './types';
 import type { CombineQueryFn } from './types';
 import { isObj, isString } from './helpers';
 import { UnregisteredClassError } from './errors';
@@ -79,13 +79,15 @@ class Ref {
   }
 }
 
-export type FilterKind = 'Eq' | 'Neq' | 'In' | 'Contains';
+export type FilterKind = 'Eq' | 'Neq' | 'In' | 'Contains' | 'Nin';
+
+export type FilterField = string | undefined | FilterField[];
 
 /** Represents a condition that must hold on a resource. */
 export interface Filter {
   kind: FilterKind;
   value: unknown; // Ref | Field | Term
-  field?: string;
+  field: FilterField;
 }
 
 export type SerializedFields = {
@@ -94,7 +96,7 @@ export type SerializedFields = {
 
 async function parseFilter(host: Host, filter: Filter): Promise<Filter> {
   const { kind, field } = filter;
-  if (!['Eq', 'Neq', 'In', 'Contains'].includes(kind)) throw new Error();
+  if (!['Eq', 'Neq', 'In', 'Contains', 'Nin'].includes(kind)) throw new Error();
   if (field !== undefined && !isString(field)) throw new Error();
 
   let { value } = filter;
@@ -116,7 +118,46 @@ async function parseFilter(host: Host, filter: Filter): Promise<Filter> {
   return { kind, value, field };
 }
 
-function groundFilter(results: Map<number, unknown[]>, filter: Filter): Filter {
+type SetResults = Map<number, unknown[]>;
+
+
+function partition<A>(coll: A[], pred: (a: A)=>boolean): A[][] {
+  const yes: A[] = [], no: A[] = [];
+  for (const a of coll) (pred(a) ? yes : no).push(a);
+  return [yes, no];
+}
+
+function groupBy<A, B>(coll: A[], fn: (a: A)=>B): Map<B, A[]> {
+  const map = new Map();
+  for (const a of coll) {
+    const key = fn(a);
+    if (map.get(key) === undefined) map.set(key, []);
+    map.get(key)!.push(a);
+  }
+  return map;
+}
+
+function getattr(x: obj, attr: string | undefined): unknown {
+  return attr ? x[attr] : x;
+}
+
+function groundFilters(results: SetResults, filters: Filter[]): Filter[] {
+  const pred1 = (f: Filter) =>  (f.value instanceof Ref) && !(f.value.resultId === undefined),
+        [_refs, rest] = partition(filters, pred1),
+        pred2 = (f: Filter) => f.kind === 'In' || f.kind === 'Eq',
+        [yrefs, nrefs] = partition(_refs, pred2);
+  for (const {refs, kind} of [{refs: yrefs, kind: 'In'}, {refs: nrefs, kind: 'Nin'}])
+    if (refs.length)
+      for (const [rid, fils] of groupBy(refs, (f: Filter) => (f.value as Ref).resultId)) {
+        const
+          value = results.get(rid)!.map((r: unknown) => fils.map((f: Filter) => getattr(r as obj, (f.value as Ref).field))),
+          field = fils.map((f: Filter) => f.field);
+        rest.push({ kind: kind as FilterKind, value, field });
+      }
+  return rest;
+}
+
+function groundFilter(results: SetResults, filter: Filter): Filter {
   const ref = filter.value;
   if (!(ref instanceof Ref)) return filter;
 
@@ -149,13 +190,8 @@ export async function filterData<T>(
       const req = rs.requests.get(i);
       if (req === undefined) throw new Error();
 
-      const filters = await Promise.all(
-        req.constraints.map(async constraint => {
-          const con = await parseFilter(host, constraint);
-          // Substitute in results from previous requests.
-          return groundFilter(setResults, con);
-        })
-      );
+      const filters = groundFilters(setResults, await Promise.all(
+        req.constraints.map(async f => await parseFilter(host, f))));
 
       // NOTE(gj|gw): The class_tag on the request comes from serializeTypes(),
       // a function we use to pass type information to the core in order to
