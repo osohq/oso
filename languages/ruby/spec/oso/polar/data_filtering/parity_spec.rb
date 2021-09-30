@@ -327,8 +327,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       expect(results).to have_length 2
     end
 
-    # not supported
-    xit 'test_field_cmp_rel_field' do
+    it 'test_field_cmp_rel_field' do
       subject.load_str 'allow(_, _, foo: Foo) if foo.bar.is_cool = foo.is_fooey;'
       expected = foos.select { |foo| foo.bar.is_cool == foo.is_fooey }
       check_authz 'gwen', 'get', Foo, expected
@@ -363,8 +362,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       check_authz 'gwen', 'read', Bar, expected
     end
 
-    # buggy
-    xit 'test_unify_ins_field_eq' do
+    it 'test_unify_ins_field_eq' do
       subject.load_str <<~POL
         allow(_, _, _: Bar{foos:foos}) if
             foo in foos and
@@ -388,7 +386,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       check_authz 'gwen', 'get', Foo, expected
     end
 
-    xit 'test_in_intersection' do
+    it 'test_in_intersection' do
       subject.load_str <<~POL
         allow(_, _, foo: Foo) if
           num in foo.numbers and
