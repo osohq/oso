@@ -259,14 +259,14 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         it 'can compare two fields on an indirectly related object' do
           policy = <<~POL
             allow("gwen", "put", log: Log) if
-              log.data = "hello" and
+              log.data = "goodbye" and
               log.foo.bar.is_cool != log.foo.bar.is_still_cool;
           POL
           subject.load_str(policy)
 
           results = subject.authorized_resources('gwen', 'put', Log)
           expected = Log.all.select do |log|
-            log.data == 'hello' and log.foo.bar.is_still_cool != log.foo.bar.is_cool
+            log.data == 'goodbye' and log.foo.bar.is_still_cool != log.foo.bar.is_cool
           end
           expect(expected).not_to be_empty
           expect(results).to contain_exactly(*expected)
@@ -288,7 +288,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       end
 
       it 'handles one-to-many relationships' do
-        policy = 'allow("gwen", "get", foo: Foo) if log in foo.logs and log.data = "hello";'
+        policy = 'allow("gwen", "get", foo: Foo) if log in foo.logs and log.data = "goodbye";'
         subject.load_str policy
         expected = Foo.all.select { |foo| foo.id == 'fourth' }
         check_authz 'gwen', 'get', Foo, expected
@@ -297,14 +297,14 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       it 'handles nested one-to-one relationships' do
         policy = <<~POL
           allow("gwen", "put", log: Log) if
-            log.data = "hello" and
+            log.data = "goodbye" and
             log.foo.is_fooey = true and
             log.foo.bar.is_cool != true;
         POL
         subject.load_str(policy)
 
         results = subject.authorized_resources('gwen', 'put', Log)
-        expected = Log.all.select { |log| log.data == 'hello' and log.foo.is_fooey and !log.foo.bar.is_cool }
+        expected = Log.all.select { |log| log.data == 'goodbye' and log.foo.is_fooey and !log.foo.bar.is_cool }
         expect(expected).not_to be_empty
         expect(results).to contain_exactly(*expected)
       end

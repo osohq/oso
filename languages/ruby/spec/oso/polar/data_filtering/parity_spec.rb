@@ -289,7 +289,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     end
 
     it 'test_var_in_value' do
-      subject.load_str 'allow(_, _, log: Log) if log.data in ["hello", "world"];'
+      subject.load_str 'allow(_, _, log: Log) if log.data in ["goodbye", "world"];'
       check_authz 'steve', 'get', Log, [third_log_b, fourth_log_a]
     end
 
@@ -331,6 +331,12 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       subject.load_str 'allow(_, _, foo: Foo) if foo.bar.is_cool = foo.is_fooey;'
       expected = foos.select { |foo| foo.bar.is_cool == foo.is_fooey }
       check_authz 'gwen', 'get', Foo, expected
+    end
+
+    it 'test_field_cmp_rel_rel_field' do
+      subject.load_str('allow(_, _, log: Log) if log.data = log.foo.bar.id;')
+      expected = [fourth_log_a]
+      check_authz 'gwen', 'get', Log, expected
     end
 
     # not supported

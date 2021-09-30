@@ -31,7 +31,7 @@ Bar.new('hello', true, true)
 Bar.new('goodbye', false, true)
 Bar.new('hershey', false, false)
 
-Log.new('a', 'fourth', 'hello')
+Log.new('a', 'fourth', 'goodbye')
 Log.new('b', 'third', 'world')
 Log.new('c', 'another', 'steve')
 
