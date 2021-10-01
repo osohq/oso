@@ -12,7 +12,7 @@ from typing import List
 Base = declarative_base()
 
 
-class Bar(Base): # type: ignore
+class Bar(Base):  # type: ignore
     __tablename__ = "bars"
 
     id = Column(String(), primary_key=True)
@@ -23,7 +23,7 @@ class Bar(Base): # type: ignore
         return [foo for foo in foos if foo.bar_id == self.id]
 
 
-class Foo(Base): # type: ignore
+class Foo(Base):  # type: ignore
     __tablename__ = "foos"
 
     id = Column(String(), primary_key=True)
@@ -39,7 +39,7 @@ class Foo(Base): # type: ignore
         return [log for log in logs if self.id == log.foo_id]
 
 
-class Log(Base): # type: ignore
+class Log(Base):  # type: ignore
     __tablename__ = "logs"
 
     id = Column(String(), primary_key=True)
