@@ -7,7 +7,7 @@ from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from helpers import unord_eq, DfTestOso
-from typing import Type
+from typing import List
 
 Base = declarative_base()
 
@@ -74,7 +74,7 @@ bars = [hello_bar, goodbye_bar, hershey_bar]
 foos = [something_foo, another_foo, third_foo, fourth_foo]
 logs = [fourth_log_a, third_log_b, another_log_c]
 
-colls: list[list] = [bars, foos, logs]
+colls: List[list] = [bars, foos, logs]
 for coll in colls:
     for obj in coll:
         session.add(obj)
