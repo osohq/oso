@@ -367,7 +367,7 @@ impl FilterPlan {
 
                             ResultSet::build(&types, &vars, class_tag)
                         }
-                        _ => Ok(ResultSet::from((term.clone(), class_tag))),
+                        _ => Ok(ResultSet::immediate(term.clone(), class_tag)),
                     }
                 })
             })
@@ -387,14 +387,12 @@ impl FilterPlan {
 
     fn opt_pass(mut self, explain: bool) -> Self {
         // Remove duplicate result set in a union.
-        let drop_plan = self.result_sets.iter().enumerate().find_map(|(i, rs1)| {
+        match self.result_sets.iter().enumerate().find_map(|(i, rs1)| {
             self.result_sets
                 .iter()
                 .enumerate()
                 .find_map(|(j, rs2)| (i != j && rs1 == rs2).then(|| j))
-        });
-
-        match drop_plan {
+        }) {
             None => self.opt_fin(explain),
             Some(plan_id) => {
                 if explain {
@@ -455,28 +453,24 @@ impl FilterPlan {
     }
 }
 
-impl From<(Term, &str)> for ResultSet {
-    fn from(pair: (Term, &str)) -> Self {
-        let (term, tag) = pair;
-        let fetch = FetchRequest {
-            class_tag: tag.to_owned(),
-            constraints: vec![term.into()],
-        };
-        let result_id = 0;
-        let resolve_order = vec![result_id];
-
+impl ResultSet {
+    fn immediate(term: Term, tag: &str) -> Self {
         let mut requests = HashMap::new();
-        requests.insert(result_id, fetch);
+        requests.insert(
+            0,
+            FetchRequest {
+                class_tag: tag.to_string(),
+                constraints: vec![Constraint::from(term)],
+            },
+        );
 
         Self {
-            resolve_order,
-            result_id,
+            resolve_order: vec![0],
+            result_id: 0,
             requests,
         }
     }
-}
 
-impl ResultSet {
     fn build(types: &Types, vars: &Vars, this_type: &str) -> PolarResult<Self> {
         let result_set = ResultSet {
             requests: HashMap::new(),
@@ -492,7 +486,7 @@ impl ResultSet {
         };
 
         result_set_builder.constrain_var(vars.this_id, this_type)?;
-        result_set_builder.validate_and_finish()
+        result_set_builder.into_result_set()
     }
 }
 
@@ -513,21 +507,20 @@ impl FetchRequest {
 }
 
 impl<'a> ResultSetBuilder<'a> {
-    fn validate_and_finish(self) -> PolarResult<ResultSet> {
+    fn into_result_set(self) -> PolarResult<ResultSet> {
         let mut rset = self.result_set;
         for (i, rid1) in rset.resolve_order.iter().enumerate() {
-            let req = rset.requests.get_mut(rid1).unwrap();
             let ro = &rset.resolve_order;
-            req.constraints.retain(|c| {
-                if let ConstraintValue::Ref(Ref {
-                    result_id: rid2, ..
-                }) = c.value
-                {
-                    ro[..i].iter().any(|x| *x == rid2)
-                } else {
-                    true
-                }
-            })
+            rset.requests
+                .get_mut(rid1)
+                .unwrap()
+                .constraints
+                .retain(|c| match c.value {
+                    ConstraintValue::Ref(Ref {
+                        result_id: rid2, ..
+                    }) => ro[..i].iter().any(|x| *x == rid2),
+                    _ => true,
+                })
         }
         let order = &rset.resolve_order;
 
@@ -579,51 +572,45 @@ impl<'a> ResultSetBuilder<'a> {
                 .constrain_eq_vars(id)?
                 .constrain_neq_vars(id)?;
 
-            // constrain dependencies FIRST
-            for dep in self.result_set.requests.get(&id).unwrap().deps() {
-                self.try_constrain_var(dep)?;
-            }
-
-            // THEN add this request to resolve_order
+            // then add this request to resolve_order
             self.result_set.resolve_order.push(id);
         }
         Ok(self)
     }
 
     fn constrain_neq_vars(&mut self, id: Id) -> PolarResult<&mut Self> {
-        let mut request = self.result_set.requests.remove(&id).unwrap();
-        if let Some(un) = self.vars.uncycles.get(&id) {
-            for v in un {
-                let (kind, value) = if let Some(val) = self.vars.eq_values.get(v) {
-                    (ConstraintKind::Neq, ConstraintValue::Term(val.clone()))
-                } else {
-                    (
-                        ConstraintKind::Nin,
-                        ConstraintValue::Ref(Ref {
-                            field: None,
-                            result_id: *v,
-                        }),
-                    )
-                };
-                request.constrain(kind, None, value)
-            }
+        let request = self.result_set.requests.get_mut(&id).unwrap();
+        for v in self.vars.uncycles.get(&id).into_iter().flatten() {
+            let (kind, value) = if let Some(val) = self.vars.eq_values.get(v) {
+                (ConstraintKind::Neq, ConstraintValue::Term(val.clone()))
+            } else {
+                (
+                    ConstraintKind::Nin,
+                    ConstraintValue::Ref(Ref {
+                        field: None,
+                        result_id: *v,
+                    }),
+                )
+            };
+            request.constrain(kind, None, value)
         }
-        self.result_set.requests.insert(id, request);
         Ok(self)
     }
 
     fn constrain_eq_vars(&mut self, id: Id) -> PolarResult<&mut Self> {
-        if let Some(l) = self.vars.eq_values.get(&id) {
-            let mut request = self.result_set.requests.remove(&id).unwrap();
-            let val = ConstraintValue::Term(l.clone());
-            request.constrain(ConstraintKind::Eq, None, val);
-            self.result_set.requests.insert(id, request);
+        if let Some(t) = self.vars.eq_values.get(&id) {
+            self.result_set.requests.get_mut(&id).unwrap().constrain(
+                ConstraintKind::Eq,
+                None,
+                ConstraintValue::Term(t.clone()),
+            );
         }
         Ok(self)
     }
 
     fn constrain_in_vars(&mut self, id: Id, var_type: &str) -> PolarResult<&mut Self> {
         let mut request = self.result_set.requests.remove(&id).unwrap();
+
         // Constrain any vars that are `in` this var.
         // Add their constraints to this one.
         // @NOTE(steve): I think this is right, but I'm not totally sure.
@@ -635,201 +622,226 @@ impl<'a> ResultSetBuilder<'a> {
             .filter_map(|(l, r)| (*r == id).then(|| l))
         {
             self.constrain_var(*l, var_type)?;
-            if let Some(in_result_set) = self.result_set.requests.get(l) {
-                request
-                    .constraints
-                    .extend(in_result_set.constraints.clone());
+            if let Some(other) = self.result_set.requests.get(l) {
+                request.constraints.extend(other.constraints.clone());
             }
         }
 
-        if let Some(vs) = self.vars.contained_values.get(&id) {
-            for l in vs {
-                request.constrain(ConstraintKind::Eq, None, ConstraintValue::Term(l.clone()));
-            }
+        for v in self.vars.contained_values.get(&id).into_iter().flatten() {
+            request.constrain(ConstraintKind::Eq, None, ConstraintValue::Term(v.clone()));
         }
 
+        // remember to put it back in !!
         self.result_set.requests.insert(id, request);
         Ok(self)
     }
 
-    fn constrain_field_eq(&mut self, me: Id, field: &str, child: Id) -> PolarResult<&mut Self> {
-        let mut request = self.result_set.requests.remove(&me).unwrap();
-        self.vars
-            .eq_values
-            .get(&child)
-            .into_iter()
-            .for_each(|value| {
-                request.constrain(
-                    ConstraintKind::Eq,
-                    Some(field.to_string()),
-                    ConstraintValue::Term(value.clone()),
-                );
-            });
-        self.result_set.requests.insert(me, request);
+    fn constrain_field_eq(&mut self, id: Id, field: &str, child: Id) -> PolarResult<&mut Self> {
+        if let Some(v) = self.vars.eq_values.get(&child) {
+            self.result_set.requests.get_mut(&id).unwrap().constrain(
+                ConstraintKind::Eq,
+                Some(field.to_string()),
+                ConstraintValue::Term(v.clone()),
+            );
+        }
         Ok(self)
     }
 
-    fn constrain_field_neq(&mut self, me: Id, field: &str, child: Id) -> PolarResult<&mut Self> {
-        let mut request = self.result_set.requests.remove(&me).unwrap();
-        if let Some(un) = self.vars.uncycles.get(&child) {
-            for k in un.iter() {
-                match (self.vars.eq_values.get(k), self.vars.eq_values.get(&child)) {
-                    (Some(val), None) => {
-                        request.constrain(
-                            ConstraintKind::Neq,
-                            Some(field.to_string()),
-                            ConstraintValue::Term(val.clone()),
-                        );
-                    }
-                    (None, None) => {
-                        request.constrain(
-                            ConstraintKind::Nin,
-                            Some(field.to_string()),
-                            ConstraintValue::Ref(Ref {
-                                result_id: *k,
-                                field: None,
-                            }),
-                        );
-                    }
-                    _ => (),
+    fn constrain_field_neq(&mut self, id: Id, field: &str, child: Id) -> PolarResult<&mut Self> {
+        let request = self.result_set.requests.get_mut(&id).unwrap();
+        for other_id in self.vars.uncycles.get(&child).into_iter().flatten() {
+            match (
+                self.vars.eq_values.get(other_id),
+                self.vars.eq_values.get(&child),
+            ) {
+                (Some(val), None) => {
+                    request.constrain(
+                        ConstraintKind::Neq,
+                        Some(field.to_string()),
+                        ConstraintValue::Term(val.clone()),
+                    );
                 }
+                (None, None) => {
+                    request.constrain(
+                        ConstraintKind::Nin,
+                        Some(field.to_string()),
+                        ConstraintValue::Ref(Ref {
+                            result_id: *other_id,
+                            field: None,
+                        }),
+                    );
+                }
+                _ => (),
             }
         }
-        self.result_set.requests.insert(me, request);
         Ok(self)
     }
 
     fn constrain_field_contained(
         &mut self,
-        me: Id,
+        id: Id,
         field: &str,
         child: Id,
     ) -> PolarResult<&mut Self> {
-        let mut request = self.result_set.requests.remove(&me).unwrap();
-        if let Some(vs) = self.vars.contained_values.get(&child) {
-            for v in vs {
+        let request = self.result_set.requests.get_mut(&id).unwrap();
+        self.vars
+            .contained_values
+            .get(&child)
+            .into_iter()
+            .flatten()
+            .for_each(|v| {
                 request.constrain(
                     ConstraintKind::Contains,
                     Some(field.to_string()),
                     ConstraintValue::Term(v.clone()),
-                );
-            }
-        }
-        self.result_set.requests.insert(me, request);
+                )
+            });
         Ok(self)
     }
 
     fn constrain_field_others_with_same_parent(
         &mut self,
-        me: Id,
+        id: Id,
         my_field: &str,
         my_child: Id,
     ) -> PolarResult<&mut Self> {
-        let mut request = self.result_set.requests.remove(&me).unwrap();
-        if let Some(fs) = self.vars.field_relationships.get(&me) {
-            for (f, c) in fs.iter().filter(|(f, _)| *f != my_field) {
-                let my_field = Some(my_field.to_string());
-                let value = ConstraintValue::Field(f.clone());
-                if c == &my_child {
-                    request.constrain(ConstraintKind::Eq, my_field, value);
-                } else if let Some(un) = self.vars.uncycles.get(c) {
-                    if un.contains(&my_child) {
-                        request.constrain(ConstraintKind::Neq, my_field, value);
-                    }
-                }
-            }
+        for (other_field, other_child) in self
+            .vars
+            .field_relationships
+            .get(&id)
+            .into_iter()
+            .flatten()
+            .filter(|(f, _)| *f != my_field)
+        {
+            self.constrain_other_field(
+                id,
+                my_field,
+                my_child,
+                *other_child,
+                ConstraintValue::Field(other_field.clone()),
+            );
         }
-        self.result_set.requests.insert(me, request);
         Ok(self)
     }
 
     fn constrain_field_others(
         &mut self,
-        me: Id,
+        id: Id,
         my_field: &str,
         my_child: Id,
     ) -> PolarResult<&mut Self> {
-        let mut request = self.result_set.requests.remove(&me).unwrap();
-        let others = self
+        for (other_parent, other_children) in self
             .vars
             .field_relationships
             .iter()
-            .filter(|(k, _)| **k != me);
-        for (other_parent, other_children) in others {
+            .filter(|(k, _)| **k != id)
+        {
             for (other_field, other_child) in other_children {
-                let my_field = Some(my_field.to_string());
-                let value = ConstraintValue::Ref(Ref {
-                    field: Some(other_field.clone()),
-                    result_id: *other_parent,
-                });
-                if *other_child == my_child {
-                    request.constrain(ConstraintKind::Eq, my_field, value);
-                } else if let Some(un) = self.vars.uncycles.get(other_child) {
-                    if un.contains(&my_child) {
-                        request.constrain(ConstraintKind::Neq, my_field, value);
-                    }
-                }
+                self.constrain_other_field(
+                    id,
+                    my_field,
+                    my_child,
+                    *other_child,
+                    ConstraintValue::Ref(Ref {
+                        field: Some(other_field.clone()),
+                        result_id: *other_parent,
+                    }),
+                )
             }
         }
-        self.result_set.requests.insert(me, request);
         Ok(self)
     }
 
-    fn try_constrain_var(&mut self, id: Id) -> PolarResult<&mut Self> {
-        if let Some(class_tag) = self.vars.types.get(&id) {
-            self.constrain_var(id, class_tag)
-        } else {
-            //            eprintln!("can't constrain var {}", id);
-            Ok(self)
+    fn constrain_other_field(
+        &mut self,
+        id: Id,
+        my_field: &str,
+        my_child: Id,
+        other_child: Id,
+        value: ConstraintValue,
+    ) {
+        let request = self.result_set.requests.get_mut(&id).unwrap();
+        let field = Some(my_field.to_string());
+        if other_child == my_child {
+            request.constrain(ConstraintKind::Eq, field, value);
+        } else if let Some(un) = self.vars.uncycles.get(&other_child) {
+            if un.contains(&my_child) {
+                request.constrain(ConstraintKind::Neq, field, value);
+            }
         }
     }
+
     fn constrain_relation(
         &mut self,
-        me: Id,
+        id: Id,
         child: Id,
         other_class_tag: &str,
         my_field: &str,
         other_field: &str,
     ) -> PolarResult<&mut Self> {
-        self.constrain_var(child, other_class_tag)?;
-        let mut request = self.result_set.requests.remove(&me).unwrap();
-        request.constrain(
-            ConstraintKind::In,
-            Some(my_field.to_string()),
-            ConstraintValue::Ref(Ref {
-                field: Some(other_field.to_string()),
-                result_id: child,
-            }),
-        );
+        self.constrain_var(child, other_class_tag)?
+            .result_set
+            .requests
+            .get_mut(&id)
+            .unwrap()
+            .constrain(
+                ConstraintKind::In,
+                Some(my_field.to_string()),
+                ConstraintValue::Ref(Ref {
+                    field: Some(other_field.to_string()),
+                    result_id: child,
+                }),
+            );
 
-        self.result_set.requests.insert(me, request);
         Ok(self)
     }
+
+    /*
+    fn ensure_added_constraint(
+        &mut self,
+        id: Id,
+        field: &str,
+        before: usize,
+    ) -> PolarResult<&mut Self> {
+        let after = self.result_set.requests.get(&id).unwrap().len();
+        if before != after {
+            Ok(self)
+        } else {
+            err_invalid(format!(
+                "Field access produced no constraint: {}.{}",
+                id, field
+            ))
+        }
+    }
+    */
 
     fn constrain_fields(&mut self, id: Id, var_type: &str) -> PolarResult<&mut Self> {
         match self.vars.field_relationships.get(&id) {
             None => Ok(self),
             Some(fs) => fs.iter().fold(Ok(self), |s, (field, child)| {
                 s.and_then(
-                    |me| match me.types.get(var_type).and_then(|m| m.get(field)) {
+                    |this| match this.types.get(var_type).and_then(|m| m.get(field)) {
                         Some(Type::Relation {
                             other_class_tag,
                             my_field,
                             other_field,
                             ..
-                        }) => me.constrain_relation(
+                        }) => this.constrain_relation(
                             id,
                             *child,
                             other_class_tag,
                             my_field,
                             other_field,
                         ),
-                        _ => me
-                            .constrain_field_eq(id, field, *child)?
-                            .constrain_field_neq(id, field, *child)?
-                            .constrain_field_contained(id, field, *child)?
-                            .constrain_field_others_with_same_parent(id, field, *child)?
-                            .constrain_field_others(id, field, *child),
+                        _ => {
+                            // let before = this.result_set.requests.get(&id).unwrap().len();
+                            this.constrain_field_eq(id, field, *child)?
+                                .constrain_field_neq(id, field, *child)?
+                                .constrain_field_contained(id, field, *child)?
+                                .constrain_field_others_with_same_parent(id, field, *child)?
+                                .constrain_field_others(id, field, *child)
+                            // ?.ensure_added_constraint(id, field, before)
+                        }
                     },
                 )
             }),
@@ -845,27 +857,6 @@ impl Vars {
     /// Collapses the var info that we obtained from walking the expressions.
     /// Track equivalence classes of variables and assign each one an id.
     fn from_info(info: VarInfo) -> PolarResult<Self> {
-        /// try to find an existing id for this variable.
-        fn seek_var_id(vars: &HashMap<Id, HashSet<Symbol>>, var: &Symbol) -> Option<Id> {
-            vars.iter()
-                .find_map(|(id, set)| set.contains(var).then(|| *id))
-        }
-
-        /// get the id for this variable, or create one if the variable is new.
-        fn get_var_id(
-            vars: &mut HashMap<Id, HashSet<Symbol>>,
-            var: Symbol,
-            counter: &Counter,
-        ) -> Id {
-            seek_var_id(vars, &var).unwrap_or_else(|| {
-                let new_id = counter.next();
-                let mut new_set = HashSet::new();
-                new_set.insert(var);
-                vars.insert(new_id, new_set);
-                new_id
-            })
-        }
-
         let counter = info.counter;
 
         // group the variables into equivalence classes.
@@ -886,7 +877,6 @@ impl Vars {
             });
 
         // now convert the remaining VarInfo fields into equivalent Vars fields.
-
         let in_relationships = info
             .in_relationships
             .into_iter()
@@ -902,13 +892,11 @@ impl Vars {
             .map(|(var, val)| (assign_id(var), val))
             .collect::<HashMap<_, _>>();
 
-        //        eprintln!("input types {:?}", &info.types);
         let types = info
             .types
             .into_iter()
             .map(|(var, typ)| (assign_id(var), typ))
             .collect::<HashMap<_, _>>();
-        //        eprintln!("types {:?}", types);
 
         let contained_values = info
             .contained_values
@@ -921,19 +909,21 @@ impl Vars {
             hash_map_set_add(map, assign_id(p), (f, assign_id(c)))
         });
 
-        match seek_var_id(&variables, &sym!("_this")) {
-            None => err_invalid("No `_this` variable".to_string()),
-            Some(this_id) => Ok(Vars {
-                variables,
-                uncycles,
-                field_relationships,
-                in_relationships,
-                eq_values,
-                contained_values,
-                types,
-                this_id,
-            }),
-        }
+        seek_var_id(&variables, &sym!("_this")).map_or_else(
+            || err_invalid("No `_this` variable".to_string()),
+            |this_id| {
+                Ok(Vars {
+                    variables,
+                    uncycles,
+                    field_relationships,
+                    in_relationships,
+                    eq_values,
+                    contained_values,
+                    types,
+                    this_id,
+                })
+            },
+        )
     }
 
     fn explain(&self) {
@@ -985,6 +975,23 @@ impl Vars {
             eprintln!("      {} in {}", x, y);
         }
     }
+}
+
+/// try to find an existing id for this variable.
+fn seek_var_id(vars: &HashMap<Id, HashSet<Symbol>>, var: &Symbol) -> Option<Id> {
+    vars.iter()
+        .find_map(|(id, set)| set.contains(var).then(|| *id))
+}
+
+/// get the id for this variable, or create one if the variable is new.
+fn get_var_id(vars: &mut HashMap<Id, HashSet<Symbol>>, var: Symbol, counter: &Counter) -> Id {
+    seek_var_id(vars, &var).unwrap_or_else(|| {
+        let new_id = counter.next();
+        let mut new_set = HashSet::new();
+        new_set.insert(var);
+        vars.insert(new_id, new_set);
+        new_id
+    })
 }
 
 /// generate equivalence classes from equivalencies.
