@@ -424,6 +424,15 @@ describe('#loadFiles', () => {
     );
   });
 
+  test('can load two files with the same name but different paths', async () => {
+    const p = new Polar();
+    const filename1 = await tempFile('f();', 'a.polar');
+    const filename2 = await tempFile('g();', 'other/a.polar');
+    await expect(p.loadFiles([filename1, filename2])).resolves.not.toThrow();
+    expect(await query(p, 'f()')).toStrictEqual([map()]);
+    expect(await query(p, 'g()')).toStrictEqual([map()]);
+  });
+
   test('throws if the same file is loaded twice', async () => {
     const p = new Polar();
     const file = await tempFileFx();
