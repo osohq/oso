@@ -21,26 +21,26 @@ func TestNewOso(t *testing.T) {
 	}
 }
 
-func TestLoadFile(t *testing.T) {
+func TestLoadFiles(t *testing.T) {
 	var o oso.Oso
 	var err error
 	if o, err = oso.NewOso(); err != nil {
 		t.Fatalf("Failed to set up Oso: %v", err)
 	}
 
-	if err = o.LoadFile("test.polar"); err != nil {
+	if err = o.LoadFiles([]string{"test.polar"}); err != nil {
 		t.Error(err.Error())
 	}
 
-	if err = o.LoadFile("test.polar"); err == nil {
+	if err = o.LoadFiles([]string{"test.polar"}); err == nil {
 		t.Error("Failed to error on loading duplicate file")
 	}
 
-	if err = o.LoadFile("test.txt"); err == nil {
+	if err = o.LoadFiles([]string{"test.txt"}); err == nil {
 		t.Error("Failed to error on loading non-polar file (.txt)")
 	}
 
-	if err = o.LoadFile("fake.polar"); err == nil {
+	if err = o.LoadFiles([]string{"fake.polar"}); err == nil {
 		t.Error("Failed to error on loading non-existent file")
 	}
 }
