@@ -167,7 +167,7 @@ export class OrgRole {
 }
 
 let i = 0;
-const gensym = (tag?: unknown) => `_${tag || 'anon'}_${i++}`;
+const gensym = (tag?: string) => `_${tag || 'anon'}_${i++}`;
 
 async function fixtures() {
   const connection = await createConnection({
@@ -246,12 +246,9 @@ async function fixtures() {
 
   const oso = new TestOso();
 
-  const getattr = (x: obj, attr?: string) =>
-    typeof attr === 'string' ? x[attr] : x;
-
   function zip<A, B>(as: A[], bs: B[]): (A | B)[][] {
     const out = [];
-    for (const i in as) out.push([as[i], bs[i]]);
+    for (let i = 0; i < as.length; i++) out.push([as[i], bs[i]]);
     return out;
   }
 
@@ -292,14 +289,16 @@ async function fixtures() {
       let clause: string;
 
       if (field instanceof Array) {
-        field = field.map(
-          (f: FilterField) => `${name}.${typeof f === 'string' ? f : 'id'}`
-        );
-        kind = kind == 'In' ? 'Eq' : 'Neq';
+        field = field.map((f: FilterField) => {
+          const fld: string = typeof f === 'string' ? f : 'id';
+          return `${name}.${fld}`;
+        });
+        kind = kind === 'In' ? 'Eq' : 'Neq';
         const co: string = sqlOps[kind],
           conds: string[] = (value as unknown[][]).map((view: unknown[]) => {
             const z: string[] = zip(field as FilterField[], view).map(
-              ([l, r]) => `(${l} ${co} ${toRhs(r, kind, name, param)})`
+              ([l, r]) =>
+                `(${l as string} ${co} ${toRhs(r, kind, name, param)})`
             );
             return z.reduce((l: string, r: string) => `(${l} AND ${r})`);
           });
@@ -514,12 +513,12 @@ async function fixtures() {
     byeBar,
     hersheyBar,
     bars: allBars,
-    fooBar: (foo: Foo) => allBars.filter((bar: Bar) => bar.id == foo.barId)[0],
-    barFoos: (bar: Bar) => allFoos.filter((foo: Foo) => foo.barId == bar.id),
-    logFoo: (log: Log) => allFoos.filter((foo: Foo) => foo.id == log.fooId)[0],
-    fooLogs: (foo: Foo) => allLogs.filter((log: Log) => log.fooId == foo.id),
-    fooNums: (foo: Foo) => allNums.filter(num => num.fooId == foo.id),
-    numFoo: (num: Num) => allFoos.filter(foo => foo.id == num.fooId)[0],
+    fooBar: (foo: Foo) => allBars.filter((bar: Bar) => bar.id === foo.barId)[0],
+    barFoos: (bar: Bar) => allFoos.filter((foo: Foo) => foo.barId === bar.id),
+    logFoo: (log: Log) => allFoos.filter((foo: Foo) => foo.id === log.fooId)[0],
+    fooLogs: (foo: Foo) => allLogs.filter((log: Log) => log.fooId === foo.id),
+    fooNums: (foo: Foo) => allNums.filter(num => num.fooId === foo.id),
+    numFoo: (num: Num) => allFoos.filter(foo => foo.id === num.fooId)[0],
     lag,
     bug,
     apple,
@@ -540,7 +539,7 @@ describe('Data filtering parity tests', () => {
     const { oso, somethingFoo, anotherFoo } = await fixtures();
     await oso.loadStr('allow(_, _, _: Foo{id: "something"});');
     await oso.checkAuthz('gwen', 'get', Foo, [somethingFoo]);
-    await oso.clearRules();
+    oso.clearRules();
     await oso.loadStr(`
       allow(_, _, _: Foo{id: "something"});
       allow(_, _, _: Foo{id: "another"});
@@ -555,9 +554,7 @@ describe('Data filtering parity tests', () => {
       allow(bar: Bar, "read", _: Foo{bar: bar});
     `);
     for (const bar of bars) {
-      const expected = foos.filter(
-        (foo: Foo) => foo.isFooey || foo.barId == bar.id
-      );
+      const expected = foos.filter(foo => foo.isFooey || foo.barId === bar.id);
       await oso.checkAuthz(bar, 'read', Foo, expected);
     }
   });
@@ -571,11 +568,11 @@ describe('Data filtering parity tests', () => {
         foo.bar.isCool = false;
     `);
     for (const bar of bars) {
-      const expected = foos.filter((foo: Foo) => {
+      const expected = foos.filter(foo => {
         // typeORM fails to perform the basic functions of an ORM :|
         const myBar = fooBar(foo);
         return (
-          (myBar.isCool && myBar.id == bar.id) ||
+          (myBar.isCool && myBar.id === bar.id) ||
           (myBar.isCool && foo.isFooey) ||
           (!myBar.isCool && bar.isStillCool)
         );
@@ -588,7 +585,7 @@ describe('Data filtering parity tests', () => {
   //  });
 
   test('test_nested_relationship_many_single', async () => {
-    const { oso, logs, bars, foos, fooBar, logFoo } = await fixtures();
+    const { oso, logs, fooBar, logFoo } = await fixtures();
     await oso.loadStr(`
       allow(log: Log, "read", bar: Bar) if log.foo in bar.foos;
     `);
@@ -597,7 +594,7 @@ describe('Data filtering parity tests', () => {
   });
 
   test('test_nested_relationships_many_many', async () => {
-    const { oso, logs, bars, foos, fooBar, logFoo } = await fixtures();
+    const { oso, logs, fooBar, logFoo } = await fixtures();
     await oso.loadStr(`
       allow(log: Log, "read", bar: Bar) if
         foo in bar.foos and log in foo.logs;
@@ -607,15 +604,15 @@ describe('Data filtering parity tests', () => {
   });
 
   test('test_nested_relationship_many_many_constrained', async () => {
-    const { oso, logs, bars, foos, logFoo, barFoos } = await fixtures();
+    const { oso, logs, bars, barFoos } = await fixtures();
     await oso.loadStr(`
       allow(log: Log{data: "steve"}, "read", bar: Bar) if
         foo in bar.foos and log in foo.logs;
     `);
     for (const log of logs) {
-      const expected = bars.filter((bar: Bar) => {
-        if (log.data != 'steve') return false;
-        for (const foo of barFoos(bar)) if (foo.id == log.fooId) return true;
+      const expected = bars.filter(bar => {
+        if (log.data !== 'steve') return false;
+        for (const foo of barFoos(bar)) if (foo.id === log.fooId) return true;
         return false;
       });
       await oso.checkAuthz(log, 'read', Bar, expected);
@@ -623,7 +620,7 @@ describe('Data filtering parity tests', () => {
   });
 
   test('test_partial_in_collection', async () => {
-    const { oso, bars, foos, barFoos } = await fixtures();
+    const { oso, bars, barFoos } = await fixtures();
     await oso.loadStr(`
       allow(bar, "read", foo: Foo) if foo in bar.foos;
     `);
@@ -657,7 +654,7 @@ describe('Data filtering parity tests', () => {
       allow(_, action, foo: Foo) if foo.bar.id != action;
     `);
     for (const bar of bars) {
-      const expected = foos.filter((foo: Foo) => foo.barId != bar.id);
+      const expected = foos.filter(foo => foo.barId !== bar.id);
       await oso.checkAuthz('gwen', bar.id, Foo, expected);
     }
   });
@@ -701,7 +698,7 @@ describe('Data filtering parity tests', () => {
         log.data = "goodbye";
     `);
     const expected = foos.filter((foo: Foo) => {
-      for (const log of fooLogs(foo)) if (log.data == 'goodbye') return true;
+      for (const log of fooLogs(foo)) if (log.data === 'goodbye') return true;
       return false;
     });
     await oso.checkAuthz('gwen', 'get', Foo, expected);
@@ -746,7 +743,7 @@ describe('Data filtering parity tests', () => {
   });
 
   test('test_in_with_constraints_but_no_matching_object', async () => {
-    const { oso, foos, fooLogs } = await fixtures();
+    const { oso } = await fixtures();
     await oso.loadStr(`
       allow(_, "read", foo: Foo) if
         log in foo.logs and
@@ -764,7 +761,7 @@ describe('Data filtering parity tests', () => {
         foo = goo;
     `);
     const expected = bars.filter((bar: Bar) => {
-      for (const foo of foos) if (foo.barId == bar.id) return true;
+      for (const foo of foos) if (foo.barId === bar.id) return true;
       return false;
     });
 
@@ -797,7 +794,7 @@ describe('Data filtering parity tests', () => {
     await oso.loadStr(`
       allow(_, _, _: Bar{isCool: cool, isStillCool: cool});
     `);
-    const expected = bars.filter(bar => bar.isCool == bar.isStillCool);
+    const expected = bars.filter(bar => bar.isCool === bar.isStillCool);
     await oso.checkAuthz('gwen', 'get', Bar, expected);
   });
 
@@ -806,7 +803,7 @@ describe('Data filtering parity tests', () => {
     await oso.loadStr(`
       allow(_, _, bar: Bar) if bar.isCool != bar.isStillCool;
     `);
-    const expected = bars.filter(bar => bar.isCool != bar.isStillCool);
+    const expected = bars.filter(bar => bar.isCool !== bar.isStillCool);
     await oso.checkAuthz('gwen', 'get', Bar, expected);
   });
 
@@ -819,7 +816,7 @@ describe('Data filtering parity tests', () => {
     `);
 
     const expected = foos.filter(
-      foo => fooNums(foo).filter(num => num.number == 1).length
+      foo => fooNums(foo).filter(num => num.number === 1).length
     );
     await oso.checkAuthz('gwen', 'get', Foo, expected);
   });
@@ -833,7 +830,7 @@ describe('Data filtering parity tests', () => {
     `);
 
     const expected = foos.filter((foo: Foo) =>
-      fooNums(foo).some((num: Num) => [1, 2].every(n => n == num.number))
+      fooNums(foo).some((num: Num) => [1, 2].every(n => n === num.number))
     );
 
     await oso.checkAuthz('gwen', 'get', Foo, expected);
@@ -848,7 +845,7 @@ describe('Data filtering parity tests', () => {
     `);
 
     const expected = foos.filter((foo: Foo) =>
-      fooNums(foo).some((num: Num) => [1, 2].every(n => n == num.number))
+      fooNums(foo).some((num: Num) => [1, 2].every(n => n === num.number))
     );
 
     await oso.checkAuthz('gwen', 'get', Foo, expected);
@@ -868,7 +865,7 @@ describe('Data filtering parity tests', () => {
       allow(_, _, foo: Foo) if foo.bar.isCool = foo.isFooey;
     `);
 
-    const expected = foos.filter(foo => fooBar(foo).isCool == foo.isFooey);
+    const expected = foos.filter(foo => fooBar(foo).isCool === foo.isFooey);
     await oso.checkAuthz('gwen', 'get', Foo, expected);
   });
 
@@ -877,7 +874,7 @@ describe('Data filtering parity tests', () => {
     await oso.loadStr(`
       allow(_, _, log: Log) if log.data = log.foo.bar.id;
     `);
-    const expected = logs.filter(log => fooBar(logFoo(log)).id == log.data);
+    const expected = logs.filter(log => fooBar(logFoo(log)).id === log.data);
     await oso.checkAuthz('gwen', 'get', Log, expected);
   });
 
@@ -943,7 +940,7 @@ describe('Data filtering using typeorm/sqlite', () => {
   });
 
   test('returning, modifying and executing a query', async () => {
-    const { oso, somethingFoo, anotherFoo, thirdFoo } = await fixtures();
+    const { oso, somethingFoo, anotherFoo } = await fixtures();
     await oso.loadStr(`
       allow("gwen", "put", foo: Foo) if
         rec in foo.numbers and

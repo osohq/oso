@@ -128,11 +128,12 @@ function partition<A>(coll: A[], pred: (a: A) => boolean): A[][] {
 }
 
 function groupBy<A, B>(coll: A[], fn: (a: A) => B): Map<B, A[]> {
-  const map = new Map();
+  const map: Map<B, A[]> = new Map();
   for (const a of coll) {
     const key = fn(a);
-    if (map.get(key) === undefined) map.set(key, []);
-    map.get(key)!.push(a);
+    const maybe = map.get(key);
+    if (maybe) maybe.push(a);
+    else map.set(key, [a]);
   }
   return map;
 }
@@ -142,50 +143,25 @@ function getattr(x: obj, attr: string | undefined): unknown {
 }
 
 function groundFilters(results: SetResults, filters: Filter[]): Filter[] {
-  const pred1 = (f: Filter) =>
-      f.value instanceof Ref && !(f.value.resultId === undefined),
-    [_refs, rest] = partition(filters, pred1),
-    pred2 = (f: Filter) => f.kind === 'In' || f.kind === 'Eq',
-    [yrefs, nrefs] = partition(_refs, pred2);
+  const [_refs, rest] = partition(
+      filters,
+      f => f.value instanceof Ref && !(f.value.resultId === undefined)
+    ),
+    [yrefs, nrefs] = partition(_refs, f => f.kind === 'In' || f.kind === 'Eq');
+
   for (const { refs, kind } of [
     { refs: yrefs, kind: 'In' },
     { refs: nrefs, kind: 'Nin' },
   ])
-    if (refs.length)
-      for (const [rid, fils] of groupBy(
-        refs,
-        (f: Filter) => (f.value as Ref).resultId
-      )) {
-        const value = results
-            .get(rid)!
-            .map((r: unknown) =>
-              fils.map((f: Filter) => getattr(r as obj, (f.value as Ref).field))
-            ),
-          field = fils.map((f: Filter) => f.field);
-        rest.push({ kind: kind as FilterKind, value, field });
-      }
+    for (const [rid, fils] of groupBy(refs, f => (f.value as Ref).resultId))
+      rest.push({
+        kind: kind as FilterKind,
+        field: fils.map(f => f.field),
+        value: results // eslint-disable-line @typescript-eslint/no-non-null-assertion
+          .get(rid)!
+          .map(r => fils.map(f => getattr(r as obj, (f.value as Ref).field))),
+      });
   return rest;
-}
-
-function groundFilter(results: SetResults, filter: Filter): Filter {
-  const ref = filter.value;
-  if (!(ref instanceof Ref)) return filter;
-
-  const { field, resultId } = ref;
-  let value = results.get(resultId);
-
-  if (field !== undefined) {
-    value = value?.map(v => {
-      // NOTE(gj): if `v` can't be indexed by `field`, it'll blow up at
-      // runtime. This indicates something is wrong either with the data
-      // filtering configuration, the user's ORM, etc.
-      //
-      // ref: https://github.com/osohq/oso/pull/1227#discussion_r715813796
-      return (v as any)[field]; // eslint-disable-line
-    });
-  }
-
-  return { ...filter, value };
 }
 
 export async function filterData<T>(
