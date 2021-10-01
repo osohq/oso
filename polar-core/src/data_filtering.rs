@@ -552,14 +552,14 @@ impl<'a> ResultSetBuilder<'a> {
                 },
             );
 
-            // apply constraints to this request
+            // apply constraints to this request, then add to resolve order
             self.constrain_fields(id, var_type)?
                 .constrain_in_vars(id, var_type)?
                 .constrain_eq_vars(id)?
-                .constrain_neq_vars(id)?;
-
-            // then add this request to resolve_order
-            self.result_set.resolve_order.push(id);
+                .constrain_neq_vars(id)?
+                .result_set
+                .resolve_order
+                .push(id);
         }
         Ok(self)
     }
@@ -595,7 +595,7 @@ impl<'a> ResultSetBuilder<'a> {
     }
 
     fn constrain_in_vars(&mut self, id: Id, var_type: &str) -> PolarResult<&mut Self> {
-        let mut request = self.result_set.requests.remove(&id).unwrap();
+        let mut req = self.result_set.requests.remove(&id).unwrap();
 
         // Constrain any vars that are `in` this var.
         // Add their constraints to this one.
@@ -609,16 +609,16 @@ impl<'a> ResultSetBuilder<'a> {
         {
             self.constrain_var(*l, var_type)?;
             if let Some(other) = self.result_set.requests.get(l) {
-                request.constraints.extend(other.constraints.clone());
+                req.constraints.extend(other.constraints.clone());
             }
         }
 
         for v in self.vars.contained_values.get(&id).into_iter().flatten() {
-            request.constrain(ConstraintKind::Eq, None, ConstraintValue::Term(v.clone()));
+            req.constrain(ConstraintKind::Eq, None, ConstraintValue::Term(v.clone()));
         }
 
         // remember to put it back in !!
-        self.result_set.requests.insert(id, request);
+        self.result_set.requests.insert(id, req);
         Ok(self)
     }
 
@@ -634,21 +634,21 @@ impl<'a> ResultSetBuilder<'a> {
     }
 
     fn constrain_field_neq(&mut self, id: Id, field: &str, child: Id) -> PolarResult<&mut Self> {
-        let request = self.result_set.requests.get_mut(&id).unwrap();
+        let req = self.result_set.requests.get_mut(&id).unwrap();
         for other_id in self.vars.uncycles.get(&child).into_iter().flatten() {
             match (
                 self.vars.eq_values.get(other_id),
                 self.vars.eq_values.get(&child),
             ) {
                 (Some(val), None) => {
-                    request.constrain(
+                    req.constrain(
                         ConstraintKind::Neq,
                         Some(field.to_string()),
                         ConstraintValue::Term(val.clone()),
                     );
                 }
                 (None, None) => {
-                    request.constrain(
+                    req.constrain(
                         ConstraintKind::Nin,
                         Some(field.to_string()),
                         ConstraintValue::Ref(Ref {
