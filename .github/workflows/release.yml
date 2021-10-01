@@ -468,7 +468,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        go-version: ["1.12.7", "1.13", "1.14", "1.15", "1.16", "1.17"]
+        go-version: ["1.12", "1.13", "1.14", "1.15", "1.16", "1.17"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -494,11 +494,7 @@ jobs:
         # versions 1.13 -> 1.17), and the image doesn't contain Git. We could
         # create our own image that extends tetafro/golang-gcc:1.12-alpine and
         # contains Git, but for now I'm skipping it.
-        #
-        # TODO(gj): leaving the above comment but noting that
-        # tetafro/golang-gcc:1.12-alpine bundles Go version 1.12.17 instead of
-        # our minimum supported version of 1.12.7.
-        if: runner.os == 'Linux' && matrix.go-version != '1.12.7'
+        if: runner.os == 'Linux' && matrix.go-version != '1.12'
         run: docker run --rm -v `pwd`:/oso tetafro/golang-gcc:${{ matrix.go-version }}-alpine /bin/sh -c 'cd /oso && go build && go test -v ./tests/'
         working-directory: go
 
@@ -735,10 +731,10 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - name: Use Go 1.12.7
+      - name: Use Go 1.12
         uses: actions/setup-go@v2
         with:
-          go-version: "1.12.7"
+          go-version: "1.12"
       - name: Run quickstart tests
         run: make -C docs test-quickstarts-release
 
