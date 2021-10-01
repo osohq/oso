@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1633016434047,
+  "lastUpdate": 1633064557942,
   "repoUrl": "https://github.com/osohq/oso",
   "entries": {
     "Rust Benchmark": [
@@ -110703,6 +110703,240 @@ window.BENCHMARK_DATA = {
             "name": "partial_rule_depth/100",
             "value": 108365932,
             "range": "± 5198458",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "17556281+gj@users.noreply.github.com",
+            "name": "Gabe Jackson",
+            "username": "gj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9173f964b9d6fe2b03129e0b50a3696e4b87e820",
+          "message": "Add note that Go 1.12.7 is the minimum supported version on macOS (#1244)\n\n* Raise minimum Go version from 1.12 -> 1.12.7\r\n\r\n* Update oso-go-quickstart submodule\r\n\r\n* go.mod go directive must be formatted as X.Y\r\n\r\nref: https://golang.org/ref/mod#go-mod-file-go\r\n\r\nIt's fine to leave the minimum supported Go version at 1.12 b/c (A) the\r\ncgo issue only affects macOS and (B) folks who are on 1.12->1.12.6 on\r\nmacOS should be able to easily upgrade to at least 1.12.7 without\r\ndisrupting anything.\r\n\r\n* Revert more",
+          "timestamp": "2021-10-01T04:49:12Z",
+          "tree_id": "23261e642078c9e1700b1774ee2fe2f97f469f44",
+          "url": "https://github.com/osohq/oso/commit/9173f964b9d6fe2b03129e0b50a3696e4b87e820"
+        },
+        "date": 1633064554396,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "rust_get_attribute",
+            "value": 58248,
+            "range": "± 6264",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/100",
+            "value": 2752858,
+            "range": "± 123752",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/500",
+            "value": 13361806,
+            "range": "± 486796",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "n_plus_one/1000",
+            "value": 25615943,
+            "range": "± 392050",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_once",
+            "value": 1104,
+            "range": "± 417",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "unify_twice",
+            "value": 2892,
+            "range": "± 58",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "many_rules",
+            "value": 67373,
+            "range": "± 1509",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "fib/5",
+            "value": 609939,
+            "range": "± 26723",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/3",
+            "value": 24171,
+            "range": "± 1453",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/23",
+            "value": 23516,
+            "range": "± 975",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/43",
+            "value": 23462,
+            "range": "± 1190",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/83",
+            "value": 23976,
+            "range": "± 1260",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "prime/255",
+            "value": 20915,
+            "range": "± 866",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/100",
+            "value": 6615,
+            "range": "± 863",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/500",
+            "value": 7596,
+            "range": "± 1872",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/1000",
+            "value": 11380,
+            "range": "± 1434",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "indexed/10000",
+            "value": 28052,
+            "range": "± 6217",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "not",
+            "value": 7479,
+            "range": "± 215",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "double_not",
+            "value": 16255,
+            "range": "± 832",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "De_Morgan_not",
+            "value": 9613,
+            "range": "± 441",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "load_policy",
+            "value": 1054088,
+            "range": "± 2515",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/1",
+            "value": 42183,
+            "range": "± 2215",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/5",
+            "value": 154535,
+            "range": "± 8182",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/10",
+            "value": 279503,
+            "range": "± 6665",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/20",
+            "value": 578847,
+            "range": "± 6352",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/40",
+            "value": 1294727,
+            "range": "± 45040",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/80",
+            "value": 2808255,
+            "range": "± 6092",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_and/100",
+            "value": 3682296,
+            "range": "± 13327",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/1",
+            "value": 134084,
+            "range": "± 5960",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/5",
+            "value": 416127,
+            "range": "± 7772",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/10",
+            "value": 875918,
+            "range": "± 13621",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/20",
+            "value": 2350374,
+            "range": "± 9355",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/40",
+            "value": 8063801,
+            "range": "± 94121",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/80",
+            "value": 46032679,
+            "range": "± 2557843",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "partial_rule_depth/100",
+            "value": 81365299,
+            "range": "± 1248657",
             "unit": "ns/iter"
           }
         ]
