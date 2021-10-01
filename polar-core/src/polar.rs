@@ -9,7 +9,7 @@ use super::runnable::Runnable;
 use super::sources::*;
 use super::terms::*;
 use super::vm::*;
-use super::warnings::{check_ambiguous_precedence, check_singletons};
+use super::warnings::{check_ambiguous_precedence, check_singletons, full_policy_warnings};
 
 use std::sync::{Arc, RwLock};
 
@@ -249,6 +249,16 @@ impl Polar {
             kb.clear_rules();
             return Err(e);
         }
+
+        // TODO(@gkaemmer) is this the right place for this?
+        let mut warnings = vec![];
+        warnings.append(&mut full_policy_warnings(&*kb)?);
+        let warnings = warnings.into_iter().map(|msg| Message {
+            kind: MessageKind::Warning,
+            msg,
+        });
+        self.messages.extend(warnings);
+
         Ok(())
     }
 
