@@ -180,22 +180,6 @@ impl VarInfo {
                     self.counter.next()
                 ));
 
-                /*
-                match self.field_type(&sym, field_str) {
-                    Some(Type::Base { class_tag }) => {
-                        if self.fields.contains_key(class_tag) {
-                            self.types.push((new_var.clone(), class_tag.clone()));
-                        }
-                    }
-                    Some(Type::Relation { other_class_tag, kind, .. }) if kind == "one" => {
-                        if self.fields.contains_key(other_class_tag) {
-                            self.types.push((new_var.clone(), other_class_tag.clone()));
-                        }
-                    }
-                    _ => (),
-                };
-                */
-
                 // Record the relationship between the vars.
                 self.field_relationships
                     .push((sym, field_str.to_string(), new_var.clone()));
@@ -219,9 +203,9 @@ impl VarInfo {
 
     fn do_and(self, args: &[Term]) -> PolarResult<Self> {
         args.iter().fold(Ok(self), |s, arg| {
-            s.and_then(|s| {
+            s.and_then(|this| {
                 let inner_exp = arg.value().as_expression().unwrap();
-                s.process_exp(inner_exp)
+                this.process_exp(inner_exp)
             })
         })
     }
@@ -354,14 +338,16 @@ impl FilterPlan {
 
         let result_sets = partial_results
             .into_iter()
+            .enumerate()
             // if the result doesn't include a binding for this variable,
             // or if the binding isn't an expression, then just ignore it.
-            .filter_map(|result| {
+            .filter_map(|(i, result)| {
                 result.bindings.get(&Symbol::new(var)).map(|term| {
                     match term.value().as_expression() {
                         Ok(exp) if exp.operator == Operator::And => {
                             let vars = Vars::from_op(exp)?;
                             if explain {
+                                eprintln!("  {}: {}", i, term.to_polar());
                                 vars.explain()
                             }
 
