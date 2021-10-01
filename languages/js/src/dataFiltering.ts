@@ -143,11 +143,11 @@ function getattr(x: obj, attr: string | undefined): unknown {
 }
 
 function groundFilters(results: SetResults, filters: Filter[]): Filter[] {
-  const [_refs, rest] = partition(
-      filters,
-      f => f.value instanceof Ref && !(f.value.resultId === undefined)
-    ),
-    [yrefs, nrefs] = partition(_refs, f => f.kind === 'In' || f.kind === 'Eq');
+  const [refs, rest] = partition(filters, f => f.value instanceof Ref);
+  const [yrefs, nrefs] = partition(
+    refs,
+    f => f.kind === 'In' || f.kind === 'Eq'
+  );
 
   for (const { refs, kind } of [
     { refs: yrefs, kind: 'In' },
