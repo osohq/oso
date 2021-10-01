@@ -206,15 +206,11 @@ pub fn check_ambiguous_precedence(rule: &Rule, kb: &KnowledgeBase) -> PolarResul
 }
 
 pub fn check_no_allow_rule(kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
-    let has_allow_rule = kb
-        .get_rules()
-        .iter()
-        .find(|(name, _)| name.0 == "allow")
-        .is_some();
+    let has_allow_rule = kb.get_rules().iter().any(|(name, _)| name.0 == "allow");
     if has_allow_rule {
-        return Ok(vec![]);
+        Ok(vec![])
     } else {
-        return Ok(vec![
+        Ok(vec![
             "Your policy does not contain an allow rule, which means \
 that no actions are allowed. Did you mean to add an allow rule to \
 the top of your policy?
@@ -225,7 +221,7 @@ For more information about allow rules, see:
 
   https://docs.osohq.com/reference/polar/builtin_rule_types.html#allow"
                 .to_string(),
-        ]);
+        ])
     }
 }
 
