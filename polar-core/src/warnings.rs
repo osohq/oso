@@ -205,7 +205,7 @@ pub fn check_ambiguous_precedence(rule: &Rule, kb: &KnowledgeBase) -> PolarResul
     visitor.warnings()
 }
 
-pub fn full_policy_warnings(kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
+pub fn check_no_allow_rule(kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
     let has_allow_rule = kb
         .get_rules()
         .iter()
@@ -226,5 +226,35 @@ For more information about allow rules, see:
   https://docs.osohq.com/reference/polar/builtin_rule_types.html#allow"
                 .to_string(),
         ]);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::kb::KnowledgeBase;
+    use crate::rules::*;
+    use crate::terms::*;
+    use crate::warnings::check_no_allow_rule;
+
+    #[test]
+    fn test_check_no_allow_rule_no_allow() {
+        let mut kb = KnowledgeBase::new();
+        kb.add_rule(rule!("f", [sym!("x")]));
+        kb.add_rule(rule!("g", [sym!("x")]));
+        let warnings = check_no_allow_rule(&kb);
+        assert_eq!(warnings.unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_check_no_allow_rule_with_allow() {
+        let mut kb = KnowledgeBase::new();
+        kb.add_rule(rule!("f", [sym!("x")]));
+        kb.add_rule(rule!(
+            "allow",
+            [sym!("actor"), sym!("action"), sym!("resource")]
+        ));
+        kb.add_rule(rule!("g", [sym!("x")]));
+        let warnings = check_no_allow_rule(&kb);
+        assert_eq!(warnings.unwrap().len(), 0);
     }
 }

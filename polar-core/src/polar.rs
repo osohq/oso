@@ -9,7 +9,7 @@ use super::runnable::Runnable;
 use super::sources::*;
 use super::terms::*;
 use super::vm::*;
-use super::warnings::{check_ambiguous_precedence, check_singletons, full_policy_warnings};
+use super::warnings::{check_ambiguous_precedence, check_no_allow_rule, check_singletons};
 
 use std::sync::{Arc, RwLock};
 
@@ -252,7 +252,7 @@ impl Polar {
 
         // TODO(@gkaemmer) is this the right place for this?
         let mut warnings = vec![];
-        warnings.append(&mut full_policy_warnings(&*kb)?);
+        warnings.append(&mut check_no_allow_rule(&*kb)?);
         let warnings = warnings.into_iter().map(|msg| Message {
             kind: MessageKind::Warning,
             msg,
