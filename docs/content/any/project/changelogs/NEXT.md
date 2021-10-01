@@ -22,15 +22,6 @@ draft: true
   [raising](https://github.com/osohq/oso/issues/1242) and reproducing
   the issue, and confirming the fix!
 
-### Go
-
-#### Other bugs & improvements
-
-- The minimum supported Go version has been raised from 1.12 to 1.12.7 due to
-  [an issue with the `cgo` dependency][cgo issue].
-
-[cgo issue]: https://github.com/golang/go/issues/32697
-
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
 #### Breaking changes

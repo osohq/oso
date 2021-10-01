@@ -25,10 +25,12 @@ import "github.com/osohq/go-oso"
 
 ## Requirements
 
-- Go version 1.12.7 or higher
+- Go version 1.12+
 - Supported platforms (x64 only):
   - Linux
   - macOS
+    - Go 1.12.7 is the minimum supported version on macOS due to [this cgo
+      issue][cgo issue].
   - Windows
 
 {{% minicallout %}}
@@ -36,5 +38,6 @@ import "github.com/osohq/go-oso"
   toolchain][tdm-gcc].
 {{% /minicallout %}}
 
+[cgo issue]: https://github.com/golang/go/issues/32697
 [cgo]: https://pkg.go.dev/cmd/cgo
 [tdm-gcc]: https://jmeubank.github.io/tdm-gcc/
