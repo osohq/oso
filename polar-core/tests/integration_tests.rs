@@ -1604,7 +1604,6 @@ fn test_and_or_warning() -> TestResult {
     while let Some(msg) = p.next_message() {
         messages.push(msg);
     }
-    println!("{:?}", messages);
     assert!(messages.iter().any(|msg| {
       matches!(&msg.kind, MessageKind::Warning) &&
       (msg.msg ==
