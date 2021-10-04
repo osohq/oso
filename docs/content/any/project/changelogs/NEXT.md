@@ -11,6 +11,15 @@ draft: true
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
+### Core
+
+#### Other bugs & improvements
+
+- Fixed the way we build our static library on Linux so it doesn't embed
+  musl and instead links to the system c runtime library.
+  Language that depend on the static lib Linux build such as python and go
+  should support more platforms now.
+
 ### Node.js
 
 #### Other bugs & improvements
