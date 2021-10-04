@@ -206,8 +206,7 @@ pub fn check_ambiguous_precedence(rule: &Rule, kb: &KnowledgeBase) -> PolarResul
 }
 
 pub fn check_no_allow_rule(kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
-    let has_allow_rule = kb.get_rules().iter().any(|(name, _)| name.0 == "allow");
-    if has_allow_rule {
+    if kb.get_rules().contains_key(&sym!("allow")) {
         Ok(vec![])
     } else {
         Ok(vec![
