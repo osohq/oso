@@ -222,11 +222,8 @@ impl Polar {
             let result = result.and_then(|source_id| load_source(source_id, source, &mut kb));
             match result {
                 Ok(warnings) => {
-                    let warnings = warnings.into_iter().map(|msg| Message {
-                        kind: MessageKind::Warning,
-                        msg,
-                    });
-                    self.messages.extend(warnings);
+                    self.messages
+                        .extend(warnings.into_iter().map(Message::warning));
                 }
                 Err(e) => {
                     // If any source fails to load, clear the KB.
@@ -253,11 +250,8 @@ impl Polar {
         // TODO(@gkaemmer) is this the right place for this?
         let mut warnings = vec![];
         warnings.append(&mut check_no_allow_rule(&*kb)?);
-        let warnings = warnings.into_iter().map(|msg| Message {
-            kind: MessageKind::Warning,
-            msg,
-        });
-        self.messages.extend(warnings);
+        self.messages
+            .extend(warnings.into_iter().map(Message::warning));
 
         Ok(())
     }
