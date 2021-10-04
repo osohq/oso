@@ -5,7 +5,6 @@ on:
       - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
     branches:
       - main
-      - steve/gooooo
 
 jobs:
   # TODO(gj): is it weird that the wheel jobs depend on `version` but the lib jobs don't?
