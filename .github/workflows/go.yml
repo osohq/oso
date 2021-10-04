@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - steve/gooooo
-
+jobs:
   linux_libs:
     name: Build release libraries on Linux
     runs-on: ubuntu-latest
