@@ -23,7 +23,7 @@ jobs:
           toolchain: stable
           override: true
       - name: Build release libraries
-        run: RUSTFLAGS="-C target-feature=-crt-static" cargo build --release
+        run: cargo build --release
       - name: Build release musl library
         run: |
           rustup target add x86_64-unknown-linux-musl
@@ -147,7 +147,7 @@ jobs:
           mkdir -p languages/go/native
           cp -r oso_static_library/polar.h languages/go/internal/ffi/native/polar.h
           mkdir -p languages/go/native/linux
-          cp -r oso_static_library/libpolar-Linux.a languages/go/internal/ffi/native/linux/libpolar.a
+          cp -r oso_static_library/libpolar-musl.a languages/go/internal/ffi/native/linux/libpolar.a
           mkdir -p languages/go/native/macos
           cp -r oso_static_library/libpolar-macOS.a languages/go/internal/ffi/native/macos/libpolar.a
           mkdir -p languages/go/native/windows
