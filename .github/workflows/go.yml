@@ -195,6 +195,9 @@ jobs:
         # contains Git, but for now I'm skipping it.
         if: runner.os == 'Linux' && matrix.go-version != '1.12'
         run: docker run --rm -v `pwd`:/oso tetafro/golang-gcc:${{ matrix.go-version }}-alpine /bin/sh -c 'cd /oso && go build && go test -v ./tests/'
+        working-directory: go
+      - name: "test buster"
         # Try on a buster image
+        if: runner.os == 'Linux' && matrix.go-version != '1.12'
         run: docker run --rm -v `pwd`:/oso golang:${{ matrix.go-version }}-buster /bin/sh -c 'cd /oso && go build && go test -v ./tests/'
         working-directory: go
