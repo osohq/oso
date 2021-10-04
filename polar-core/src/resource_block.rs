@@ -36,22 +36,6 @@ pub enum Production {
     ShorthandRule(Term, (Term, Option<Term>)), // (String, (String, Option<String>))
 }
 
-pub fn validate_relation_keyword(
-    (keyword, relation): (Term, Term),
-) -> Result<Term, LalrpopError<usize, Token, error::ParseError>> {
-    if keyword.value().as_symbol().unwrap().0 == "on" {
-        Ok(relation)
-    } else {
-        let (loc, ranges) = (keyword.offset(), vec![]);
-        let msg = format!(
-            "Unexpected relation keyword '{}'. Did you mean 'on'?",
-            keyword
-        );
-        Err(LalrpopError::User {
-            error: ParseError::ResourceBlock { loc, msg, ranges },
-        })
-    }
-}
 
 // TODO(gj): Create a Parsed<Term> or something that _always_ has source info.
 fn term_source_range(term: &Term) -> Range<usize> {
@@ -1198,11 +1182,6 @@ mod tests {
             r#"resource Org{foo={};}"#,
             r#"Unexpected declaration 'foo'. Did you mean for this to be 'relations = { ... };'?"#,
         );
-        expect_error(
-            &p,
-            r#"resource Org{"foo" if "bar" onn "baz";}"#,
-            r#"Unexpected relation keyword 'onn'. Did you mean 'on'?"#,
-        );
     }
 
     #[test]
@@ -1220,15 +1199,6 @@ mod tests {
             "seahorse Org{}",
             "Expected 'actor' or 'resource' but found 'seahorse'.",
         );
-    }
-
-    #[test]
-    fn test_resource_block_declaration_keywords_are_not_reserved_words() {
-        let p = Polar::new();
-        p.load_str(
-            "on(actor, resource, roles, permissions, relations) if on(actor, resource, roles, permissions, relations);",
-        )
-        .unwrap();
     }
 
     // TODO(gj): test union types in all of the positions where classes can appear, such as in

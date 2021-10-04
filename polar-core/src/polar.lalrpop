@@ -58,6 +58,7 @@ extern {
         "debug" => lexer::Token::Debug,     // debug
         "print" => lexer::Token::Print,     // print
         "in" => lexer::Token::In,           // in
+        "on" => lexer::Token::On,           // on
         "forall" => lexer::Token::ForAll,   // forall
         "if" => lexer::Token::If,           // if
         "and" => lexer::Token::And,         // and
@@ -657,16 +658,15 @@ RuleHead: (Symbol, Vec<Parameter>) = {
     }
 };
 
-Define = {"if"};
 
 Rule: Rule = {
-    <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";" => {
+    <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";"? => {
         let (name, params) = head;
         let op = Operation{operator: Operator::And, args: vec![]};
         let body = Term::new_from_parser(src_id, start, end, Value::Expression(op));
         Rule::new_from_parser(src_id, start_head, start, name, params, body)
     },
-    <start_head:@L> <head:RuleHead> <end_head:@R> Define <body:TermExp> ";" => {
+    <start_head:@L> <head:RuleHead> <end_head:@R> "if" <body:TermExp> ";"? => {
         let (name, params) = head;
         let body = match body.value() {
             Value::Expression(Operation{operator: Operator::And, ..}) => {
@@ -682,7 +682,7 @@ Rule: Rule = {
 }
 
 RuleType: Rule = {
-    "type" <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";" => {
+    "type" <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";"? => {
         let (name, params) = head;
         let op = Operation{operator: Operator::And, args: vec![]};
         let body = Term::new_from_parser(src_id, start, end, Value::Expression(op));
@@ -708,19 +708,19 @@ StringList: Value = {
 }
 RelationsDict: Value = <Object<Spanned<Variable>>> => Value::Dictionary(<>);
 Declaration: resource_block::Production = {
-    <start:@L> <keyword:Name> "=" <value:StringList> <end:@R> ";" =>? {
+    <start:@L> <keyword:Name> "=" <value:StringList> <end:@R> ";"? =>? {
         let term = Term::new_from_parser(src_id, start, end, value);
         return resource_block::validate_parsed_declaration((keyword, term));
     },
-    <start:@L> <keyword:Name> "=" <value:RelationsDict> <end:@R> ";" =>? {
+    <start:@L> <keyword:Name> "=" <value:RelationsDict> <end:@R> ";"? =>? {
         let term = Term::new_from_parser(src_id, start, end, value);
         return resource_block::validate_parsed_declaration((keyword, term));
     },
 }
 
-OnRelation: Term = <Spanned<Variable>> <Spanned<PolarString>> =>? resource_block::validate_relation_keyword((<>));
+OnRelation: Term = "on" <Spanned<PolarString>> => <>;
 ShorthandRuleBody: (Term, Option<Term>) = <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => (<>);
-ShorthandRule: resource_block::Production = <head:Spanned<PolarString>> Define <body:ShorthandRuleBody> => resource_block::Production::ShorthandRule(<>);
+ShorthandRule: resource_block::Production = <head:Spanned<PolarString>> "if" <body:ShorthandRuleBody> => resource_block::Production::ShorthandRule(<>);
 
 ResourceBlockProduction: resource_block::Production = {
     <Declaration> => <>,
@@ -732,7 +732,7 @@ ResourceBlockProductions: Vec<resource_block::Production> = <ResourceBlockProduc
 Line: Line = {
     <Rule> => Line::Rule(<>),
     <RuleType> => Line::RuleType(<>),
-    "?=" <TermExp> ";" => Line::Query(<>),
+    "?=" <TermExp> ";"? => Line::Query(<>),
 
     <start:@L> <keyword:Spanned<Variable>?> <resource:Variable> "{" <productions:ResourceBlockProductions> "}" <end:@R> =>? {
         let resource = Term::new_from_parser(src_id, start, end, resource);

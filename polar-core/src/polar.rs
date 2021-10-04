@@ -366,7 +366,7 @@ mod tests {
 
         // load a broken file
         let invalid = Source {
-            src: "f(x) if x".to_owned(),
+            src: "f(x) if".to_owned(),
             filename: Some("test.polar".to_string()),
         };
         polar.load(vec![invalid]).unwrap_err();

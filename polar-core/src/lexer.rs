@@ -79,6 +79,7 @@ pub enum Token {
     SemiColon, // ;
     Query,     // ?=
     In,        // in
+    On,        // on
     Cut,       // cut
     Debug,     // debug()
     Print,     // print()
@@ -100,35 +101,36 @@ impl ToString for Token {
             Token::String(s) => s.clone(),
             Token::Boolean(b) => b.to_string(),
             Token::Symbol(sym) => sym.0.clone(),
-            Token::Colon => ":".to_owned(),         // :
-            Token::Comma => ",".to_owned(),         // ,
-            Token::LB => "[".to_owned(),            // [
-            Token::RB => "]".to_owned(),            // ]
-            Token::LP => "(".to_owned(),            // (
-            Token::RP => ")".to_owned(),            // )
-            Token::LCB => "{".to_owned(),           // {
-            Token::RCB => "}".to_owned(),           // }
-            Token::Dot => ".".to_owned(),           // .
-            Token::New => "new".to_owned(),         // new
-            Token::Bang => "!".to_owned(),          // !
-            Token::Mul => "*".to_owned(),           // *
-            Token::Div => "/".to_owned(),           // /
-            Token::Mod => "mod".to_owned(),         // mod
-            Token::Rem => "rem".to_owned(),         // rem
-            Token::Add => "+".to_owned(),           // +
-            Token::Sub => "-".to_owned(),           // -
-            Token::Eq => "==".to_owned(),           // ==
-            Token::Neq => "!=".to_owned(),          // !=
-            Token::Leq => "<=".to_owned(),          // <=
-            Token::Geq => ">=".to_owned(),          // >=
-            Token::Lt => "<".to_owned(),            // <
-            Token::Gt => ">".to_owned(),            // >
-            Token::Unify => "=".to_owned(),         // =
-            Token::Assign => ":=".to_owned(),       // :=
-            Token::Pipe => "|".to_owned(),          // |
-            Token::SemiColon => ";".to_owned(),     // ;
-            Token::Query => "?=".to_owned(),        // ?=
-            Token::In => "in".to_owned(),           // in
+            Token::Colon => ":".to_owned(),     // :
+            Token::Comma => ",".to_owned(),     // ,
+            Token::LB => "[".to_owned(),        // [
+            Token::RB => "]".to_owned(),        // ]
+            Token::LP => "(".to_owned(),        // (
+            Token::RP => ")".to_owned(),        // )
+            Token::LCB => "{".to_owned(),       // {
+            Token::RCB => "}".to_owned(),       // }
+            Token::Dot => ".".to_owned(),       // .
+            Token::New => "new".to_owned(),     // new
+            Token::Bang => "!".to_owned(),      // !
+            Token::Mul => "*".to_owned(),       // *
+            Token::Div => "/".to_owned(),       // /
+            Token::Mod => "mod".to_owned(),     // mod
+            Token::Rem => "rem".to_owned(),     // rem
+            Token::Add => "+".to_owned(),       // +
+            Token::Sub => "-".to_owned(),       // -
+            Token::Eq => "==".to_owned(),       // ==
+            Token::Neq => "!=".to_owned(),      // !=
+            Token::Leq => "<=".to_owned(),      // <=
+            Token::Geq => ">=".to_owned(),      // >=
+            Token::Lt => "<".to_owned(),        // <
+            Token::Gt => ">".to_owned(),        // >
+            Token::Unify => "=".to_owned(),     // =
+            Token::Assign => ":=".to_owned(),   // :=
+            Token::Pipe => "|".to_owned(),      // |
+            Token::SemiColon => ";".to_owned(), // ;
+            Token::Query => "?=".to_owned(),    // ?=
+            Token::In => "in".to_owned(),       // in
+            Token::On => "on".to_string(),
             Token::Cut => "cut".to_owned(),         // cut
             Token::Debug => "debug".to_owned(),     // debug
             Token::Print => "print".to_owned(),     // print
@@ -222,6 +224,7 @@ impl<'input> Lexer<'input> {
             "nan" => Token::Float(f64::NAN),
             "new" => Token::New,
             "in" => Token::In,
+            "on" => Token::On,
             "cut" => Token::Cut,
             "debug" => Token::Debug,
             "print" => Token::Print,
