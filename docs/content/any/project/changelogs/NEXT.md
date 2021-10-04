@@ -15,9 +15,9 @@ draft: true
 
 #### Other bugs & improvements
 
-- Fixed the way we build our static library on linux so it doesn't embed
+- Fixed the way we build our static library on Linux so it doesn't embed
   musl and instead links to the system c runtime library.
-  Language that depend on the static lib linux build such as python and go
+  Language that depend on the static lib Linux build such as python and go
   should support more platforms now.
 
 ### Node.js
