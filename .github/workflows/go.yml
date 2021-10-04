@@ -27,7 +27,7 @@ jobs:
       - name: Build release musl library
         run: |
           rustup target add x86_64-unknown-linux-musl
-          cargo build --target x86_64-unknown-linux-musl --release
+          RUSTFLAGS="-C target-feature=-crt-static" cargo build --target x86_64-unknown-linux-musl --release
       - name: Rename static lib
         run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
       - name: Rename static lib
