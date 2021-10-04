@@ -211,7 +211,7 @@ pub fn check_no_allow_rule(kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
         Ok(vec![])
     } else {
         Ok(vec![
-            "Your policy does not contain an allow rule, which means \
+            "Your policy does not contain an allow rule, which usually means \
 that no actions are allowed. Did you mean to add an allow rule to \
 the top of your policy?
 
