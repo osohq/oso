@@ -18,7 +18,7 @@ jobs:
       - name: Set version env
         run: echo "oso_version=$(cat VERSION)" >> $GITHUB_ENV
       - name: Check github ref matches
-        if: github.ref != 'refs/heads/main'
+        if: github.ref != 'refs/heads/steve/gooooo'
         env:
           github_ref: ${{ github.ref }}
         run: grep "${github_ref/refs\/tags\/v/}" VERSION
@@ -746,7 +746,7 @@ jobs:
   release:
     name: Create release
     runs-on: ubuntu-latest
-    if: github.ref != 'refs/heads/main'
+    if: github.ref != 'refs/heads/steve/gooooo'
     needs:
       [
         build_linux_wheels,
