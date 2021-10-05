@@ -316,7 +316,7 @@ impl PolarVirtualMachine {
             call_id_symbols: HashMap::new(),
             // `log` controls internal VM logging
             log: polar_log_vars.iter().any(|var| var == &"trace"),
-            // `polar_log` if for tracing policy evaluation
+            // `polar_log` for tracing policy evaluation
             polar_log: !polar_log_vars.is_empty()
                 && !polar_log_vars.iter().any(|var| ["0", "off"].contains(var)),
             // `polar_log_stderr` prints things immediately to stderr
