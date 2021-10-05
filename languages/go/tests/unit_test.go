@@ -41,7 +41,8 @@ func TestLoadFiles(t *testing.T) {
 	}
 }
 
-func TestLoadFilesSameNameDifferentPath(t *testing.T) {
+// test_load_multiple_files_same_name_different_path
+func TestLoadMultipleFilesSameNameDifferentPath(t *testing.T) {
 	t.Skip("Fixing test is outside scope of current task.")
 
 	var o oso.Oso

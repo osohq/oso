@@ -424,6 +424,7 @@ describe('#loadFiles', () => {
     );
   });
 
+  // test_load_multiple_files_same_name_different_path
   test('can load two files with the same name but different paths', async () => {
     const p = new Polar();
     const filename1 = await tempFile('f();', 'a.polar');
