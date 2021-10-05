@@ -206,7 +206,10 @@ pub fn check_ambiguous_precedence(rule: &Rule, kb: &KnowledgeBase) -> PolarResul
 }
 
 pub fn check_no_allow_rule(kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
-    if kb.get_rules().contains_key(&sym!("allow")) {
+    let has_allow = kb.get_rules().contains_key(&sym!("allow"));
+    let has_allow_field = kb.get_rules().contains_key(&sym!("allow_field"));
+    let has_allow_request = kb.get_rules().contains_key(&sym!("allow_request"));
+    if has_allow || has_allow_field || has_allow_request {
         Ok(vec![])
     } else {
         Ok(vec![
@@ -216,7 +219,8 @@ the top of your policy?
 
   allow(actor, action, resource) if ...
 
-For more information about allow rules, see:
+You can also suppress this warning by adding an allow_field or allow_request \
+rule. For more information about allow rules, see:
 
   https://docs.osohq.com/reference/polar/builtin_rule_types.html#allow"
                 .to_string(),
@@ -248,6 +252,34 @@ mod tests {
             "allow",
             [sym!("actor"), sym!("action"), sym!("resource")]
         ));
+        kb.add_rule(rule!("g", [sym!("x")]));
+        let warnings = check_no_allow_rule(&kb);
+        assert_eq!(warnings.unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_check_no_allow_rule_with_allow_field() {
+        let mut kb = KnowledgeBase::new();
+        kb.add_rule(rule!("f", [sym!("x")]));
+        kb.add_rule(rule!(
+            "allow_field",
+            [
+                sym!("actor"),
+                sym!("action"),
+                sym!("resource"),
+                sym!("field")
+            ]
+        ));
+        kb.add_rule(rule!("g", [sym!("x")]));
+        let warnings = check_no_allow_rule(&kb);
+        assert_eq!(warnings.unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_check_no_allow_rule_with_allow_request() {
+        let mut kb = KnowledgeBase::new();
+        kb.add_rule(rule!("f", [sym!("x")]));
+        kb.add_rule(rule!("allow_request", [sym!("actor"), sym!("request")]));
         kb.add_rule(rule!("g", [sym!("x")]));
         let warnings = check_no_allow_rule(&kb);
         assert_eq!(warnings.unwrap().len(), 0);
