@@ -40,6 +40,10 @@ If you have any questions on Oso or authorization more generally, you can join o
 
 [![Button][join-slack-link]][badge-slack-link]
 
+## Share your story
+
+We'd love to hear about your use case and experience with Oso. Share your story in our [Success Stories issue](https://github.com/osohq/oso/issues/1081) or fill out [this form](https://osohq.typeform.com/to/mIFfkN05) for some Oso swag.
+
 ## Development
 
 ### Core
@@ -106,7 +110,3 @@ See: [LICENSE][license].
 [rust]: https://www.rust-lang.org/tools/install
 [use-cases]: https://www.osohq.com/use-cases
 [wasm-pack]: https://rustwasm.github.io/wasm-pack/installer/
-
-## Share your story
-
-We'd love to hear about your use case and experience with Oso. Share your story in our [Success Stories issue](https://github.com/osohq/oso/issues/1081) or fill out [this form](https://osohq.typeform.com/to/mIFfkN05) for some Oso swag.
