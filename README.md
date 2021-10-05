@@ -26,13 +26,10 @@ Oso offers libraries for [Node.js][badge-nodejs-link],
 
 ## Documentation
 
-To get up and running with Oso, try the [Getting Started guide](https://docs.osohq.com/getting-started/quickstart.html).
-
-Full documentation is available at [docs.osohq.com](https://docs.osohq.com).
-
-Check out [Use Cases][use-cases] to learn more about how teams are using Oso in production.
-
-To learn about authorization best practices (not specific to Oso), read the [Authorization Academy](https://www.osohq.com/developers/authorization-academy) guides.
+- To get up and running with Oso, try the [Getting Started guide](https://docs.osohq.com/getting-started/quickstart.html).
+- Full documentation is available at [docs.osohq.com](https://docs.osohq.com).
+- Check out [Use Cases][use-cases] to learn more about how teams are using Oso in production.
+- To learn about authorization best practices (not specific to Oso), read the [Authorization Academy](https://www.osohq.com/developers/authorization-academy) guides.
 
 ## Community & Support
 
