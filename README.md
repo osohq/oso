@@ -19,21 +19,24 @@ With Oso, you can:
 - **Filter**: Go beyond yes/no authorization questions. Implement authorization over collections too - e.g., “Show me only the records that Juno can see.”
 - **Test**: Write unit tests over your authorization logic now that you have a single interface for it. Use the debugger or tracing to track down unexpected behavior.
 
-Read through [Use Cases][use-cases] to learn more about how teams are using
-Oso.
-
 Oso offers libraries for [Node.js][badge-nodejs-link],
 [Python][badge-python-link], [Go][badge-go-link],
 [Rust][badge-rust-link], [Ruby][badge-ruby-link], and
 [Java][badge-java-link].
 
-## Getting started
+## Documentation
 
-To get up and running with Oso, check out the [Getting Started
-guides](https://docs.osohq.com/getting-started/quickstart.html) in the [Oso
-documentation][docs].
+To get up and running with Oso, try the [Getting Started guide](https://docs.osohq.com/getting-started/quickstart.html).
 
-If you have questions or need help getting started come chat with our engineering team & hundreds of other developers using Oso:
+Full documentation is available at [docs.osohq.com](https://docs.osohq.com).
+
+Check out [Use Cases][use-cases] to learn more about how teams are using Oso in production.
+
+To learn about authorization best practices (not specific to Oso), read the [Authorization Academy](https://www.osohq.com/developers/authorization-academy) guides.
+
+## Community & Support
+
+If you have any questions on Oso or authorization more generally, you can join our engineering team & hundreds of other developers using Oso in our community Slack:
 
 [![Button][join-slack-link]][badge-slack-link]
 
