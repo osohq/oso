@@ -1,0 +1,202 @@
+name: Gooooo
+on:
+  push:
+    branches:
+      - steve/goooooooooo
+jobs:
+  linux_libs:
+    name: Build release libraries on Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Build release libraries
+        run: cargo build --release
+      - name: Build release musl library
+        run: |
+          rustup target add x86_64-unknown-linux-musl
+          RUSTFLAGS="-C target-feature=-crt-static" cargo build --target x86_64-unknown-linux-musl --release
+      - name: Rename static lib
+        run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
+      - name: Rename static lib
+        run: mv target/x86_64-unknown-linux-musl/release/libpolar.a target/x86_64-unknown-linux-musl/release/libpolar-musl.a
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_library
+          path: target/release/libpolar.so
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_library
+          path: polar-c-api/polar.h
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_static_library
+          path: target/release/libpolar-${{runner.os}}.a
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_static_library
+          path: target/x86_64-unknown-linux-musl/release/libpolar-musl.a
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_static_library
+          path: polar-c-api/polar.h
+
+  macos_libs:
+    name: Build release libraries on MacOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Build release library
+        run: cargo build --release
+      - name: Rename static lib
+        run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_library
+          path: target/release/libpolar.dylib
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_static_library
+          path: target/release/libpolar-${{runner.os}}.a
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_static_library
+          path: polar-c-api/polar.h
+
+  windows_libs:
+    name: Build release libraries on Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Build release library
+        run: cargo build --release
+      - name: Build release MinGW library
+        run: |
+          rustup target add x86_64-pc-windows-gnu
+          cargo build --target x86_64-pc-windows-gnu --release
+      - name: Rename static lib
+        run: |
+          mv -Force target/x86_64-pc-windows-gnu/release/libpolar.a target/x86_64-pc-windows-gnu/release/libpolar-${{runner.os}}.a
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_library
+          path: target/release/polar.dll
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_static_library
+          path: target/release/polar.lib
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_static_library
+          path: target/x86_64-pc-windows-gnu/release/libpolar-${{runner.os}}.a
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_static_library
+          path: polar-c-api/polar.h
+
+  build_go:
+    name: Build go.
+    runs-on: ubuntu-latest
+    needs: [linux_libs, macos_libs, windows_libs]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set version env
+        id: version
+        run: echo "::set-output name=oso_version::$(cat VERSION)"
+      - name: Download static libs
+        uses: actions/download-artifact@v1
+        with:
+          name: oso_static_library
+      - name: Copy specs into go test package.
+        run: cp -r test/spec languages/go/tests/spec
+      - name: Copy policies into go test package.
+        run: cp -r test/policies languages/go/tests/policies
+      - name: Copy libraries into go package.
+        run: |
+          mkdir -p languages/go/native
+          cp -r oso_static_library/polar.h languages/go/internal/ffi/native/polar.h
+          mkdir -p languages/go/native/linux
+          cp -r oso_static_library/libpolar-musl.a languages/go/internal/ffi/native/linux/libpolar.a
+          mkdir -p languages/go/native/macos
+          cp -r oso_static_library/libpolar-macOS.a languages/go/internal/ffi/native/macos/libpolar.a
+          mkdir -p languages/go/native/windows
+          cp -r oso_static_library/libpolar-Windows.a languages/go/internal/ffi/native/windows/libpolar.a
+          rm languages/go/Makefile
+      - name: Copy license.
+        run: cp LICENSE languages/go/LICENSE
+      - uses: actions/upload-artifact@v2
+        with:
+          name: go
+          path: languages/go
+
+  validate_go:
+    name: Test go ${{ matrix.go-version }} on ${{ matrix.os }}
+    needs: [build_go]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go-version: ["1.12", "1.13", "1.14", "1.15", "1.16", "1.17"]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set version env
+        id: version
+        run: echo "::set-output name=oso_version::$(cat VERSION)"
+      - name: Set up go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Download go package from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: go
+      - name: "test"
+        if: runner.os == 'Windows' || runner.os == 'Linux' || matrix.go-version != '1.17'
+        run: |
+          go build
+          go test -v ./tests/
+        working-directory: go
+      - name: "test musl"
+        # TODO(gj): the dependency fetching step in the
+        # tetafro/golang-gcc:1.12-alpine image seems to require Git (unlike Go
+        # versions 1.13 -> 1.17), and the image doesn't contain Git. We could
+        # create our own image that extends tetafro/golang-gcc:1.12-alpine and
+        # contains Git, but for now I'm skipping it.
+        if: runner.os == 'Linux' && matrix.go-version != '1.12'
+        run: docker run --rm -v `pwd`:/oso tetafro/golang-gcc:${{ matrix.go-version }}-alpine /bin/sh -c 'cd /oso && go test -v ./tests/'
+        working-directory: go
+      - name: "test buster"
+        if: runner.os == 'Linux'
+        run: docker run --rm -v `pwd`:/oso golang:${{ matrix.go-version }}-buster /bin/sh -c 'cd /oso && go test -v ./tests/'
+        working-directory: go
