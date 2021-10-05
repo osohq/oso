@@ -9,7 +9,7 @@ use super::runnable::Runnable;
 use super::sources::*;
 use super::terms::*;
 use super::vm::*;
-use super::warnings::{check_ambiguous_precedence, check_singletons};
+use super::warnings::{check_ambiguous_precedence, check_no_allow_rule, check_singletons};
 
 use std::sync::{Arc, RwLock};
 
@@ -177,9 +177,9 @@ impl Polar {
             while let Some(line) = lines.pop() {
                 match line {
                     parser::Line::Rule(rule) => {
-                        let mut rule_warnings = check_singletons(&rule, &*kb)?;
+                        let mut rule_warnings = check_singletons(&rule, kb)?;
                         warnings.append(&mut rule_warnings);
-                        warnings.append(&mut check_ambiguous_precedence(&rule, &*kb)?);
+                        warnings.append(&mut check_ambiguous_precedence(&rule, kb)?);
                         let rule = rewrite_rule(rule, kb);
                         kb.add_rule(rule);
                     }
@@ -222,11 +222,8 @@ impl Polar {
             let result = result.and_then(|source_id| load_source(source_id, source, &mut kb));
             match result {
                 Ok(warnings) => {
-                    let warnings = warnings.into_iter().map(|msg| Message {
-                        kind: MessageKind::Warning,
-                        msg,
-                    });
-                    self.messages.extend(warnings);
+                    self.messages
+                        .extend(warnings.into_iter().map(Message::warning));
                 }
                 Err(e) => {
                     // If any source fails to load, clear the KB.
@@ -249,6 +246,13 @@ impl Polar {
             kb.clear_rules();
             return Err(e);
         }
+
+        // Perform validation checks against the whole policy
+        let mut warnings = vec![];
+        warnings.append(&mut check_no_allow_rule(&kb)?);
+        self.messages
+            .extend(warnings.into_iter().map(Message::warning));
+
         Ok(())
     }
 

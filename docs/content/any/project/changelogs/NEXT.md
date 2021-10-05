@@ -19,6 +19,8 @@ draft: true
   musl and instead links to the system c runtime library.
   Languages that depend on the static lib Linux build such as python and go
   should support more platforms now.
+- Oso will now issue a warning if there is no `allow` rule in your policy (and
+  also no `allow_request` or `allow_field` rules).
 
 ### Node.js
 
