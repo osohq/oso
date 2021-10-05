@@ -31,6 +31,13 @@ draft: true
   [raising](https://github.com/osohq/oso/issues/1242) and reproducing
   the issue, and confirming the fix!
 
+### Rust
+
+#### Other bugs & improvements
+
+- Changed an internal debugging flag away from using `RUST_LOG` so that
+  Rust users wont be flooded with messages that they probably don't want.
+
 
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
