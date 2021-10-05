@@ -1,13 +1,13 @@
----
+* * *
+
 title: Release YYYY-MM-DD
 menuTitle: YYYY-MM-DD
 any: true
 description: >-
   Changelog for Release YYYY-MM-DD (RELEASED_VERSIONS) containing new features,
   bug fixes, and more.
-draft: true
----
 
+## draft: true
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
@@ -15,23 +15,21 @@ draft: true
 
 #### Other bugs & improvements
 
-- Fixed the way we build our static library on Linux so it doesn't embed
-  musl and instead links to the system c runtime library.
-  Language that depend on the static lib Linux build such as python and go
-  should support more platforms now.
+-   Fixed the way we build our static library on Linux so it doesn't embed
+    musl and instead links to the system c runtime library.
+    Languages that depend on the static lib Linux build such as python and go
+    should support more platforms now.
 
 ### Node.js
 
 #### Other bugs & improvements
 
-- Fixed a bug preventing dictionaries created in Polar from making the round-trip
-  to JS and back.
+-   Fixed a bug preventing dictionaries created in Polar from making the round-trip
+    to JS and back.
 
-  Many thanks to [`@rradczewski`](https://github.com/rradczewski) for
-  [raising](https://github.com/osohq/oso/issues/1242) and reproducing
-  the issue, and confirming the fix!
-
-
+    Many thanks to [`@rradczewski`](https://github.com/rradczewski) for
+    [raising](https://github.com/osohq/oso/issues/1242) and reproducing
+    the issue, and confirming the fix!
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
@@ -48,7 +46,7 @@ draft: true
 
 Summary of breaking change.
 
-Link to [migration guide]().
+Link to [migration guide](<>).
 
 #### New features
 
@@ -56,10 +54,10 @@ Link to [migration guide]().
 
 Summary of user-facing changes.
 
-Link to [relevant documentation section]().
+Link to [relevant documentation section](<>).
 
 #### Other bugs & improvements
 
-- Bulleted list
-- Of smaller improvements
-- Potentially with doc [links]().
+-   Bulleted list
+-   Of smaller improvements
+-   Potentially with doc [links](<>).
