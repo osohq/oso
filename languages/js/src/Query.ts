@@ -70,7 +70,7 @@ export class Query {
    * @internal
    */
   private bind(name: string, value: unknown) {
-    this.#ffiQuery.bind(name, JSON.stringify(this.#host.toPolar(value)));
+    this.#ffiQuery.bind(name, this.#host.toPolar(value));
   }
 
   /**
@@ -101,7 +101,7 @@ export class Query {
    *
    * @internal
    */
-  private callResult(callId: number, result?: string): void {
+  private callResult(callId: number, result?: PolarTerm): void {
     this.#ffiQuery.callResult(callId, result);
   }
 
@@ -111,12 +111,12 @@ export class Query {
    *
    * @internal
    */
-  private async nextCallResult(callId: number): Promise<string | undefined> {
+  private async nextCallResult(callId: number): Promise<PolarTerm | undefined> {
     const call = this.#calls.get(callId);
     if (call === undefined) throw new Error('invalid call');
     const { done, value } = await call.next(); // eslint-disable-line @typescript-eslint/no-unsafe-assignment
     if (done) return undefined;
-    return JSON.stringify(this.#host.toPolar(value));
+    return this.#host.toPolar(value);
   }
 
   /**
@@ -234,7 +234,7 @@ export class Query {
       // resolve promise if necessary
       // convert result to JSON and return
       value = await Promise.resolve(value); // eslint-disable-line @typescript-eslint/no-unsafe-assignment
-      value = JSON.stringify(this.#host.toPolar(value));
+      value = this.#host.toPolar(value);
       this.callResult(callId, value);
     }
   }

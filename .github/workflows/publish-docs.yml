@@ -6,16 +6,16 @@ on:
         description: "docs s3 path (docs.oso.dev or docs-preview.oso.dev)"
       oso_version:
         description: "oso release to build docs for"
-        default: "0.20.1" # oso_version
+        default: "0.21.0" # oso_version
       flask_oso_version:
         description: "flask oso release to build docs for"
-        default: "0.20.1" # flask_oso_version
+        default: "0.21.0" # flask_oso_version
       django_oso_version:
         description: "django oso release to build docs for"
-        default: "0.20.1" # django_oso_version
+        default: "0.21.0" # django_oso_version
       sqlalchemy_oso_version:
         description: "sqlalchemy oso release to build docs for"
-        default: "0.20.1" # sqlalchemy_oso_version
+        default: "0.21.0" # sqlalchemy_oso_version
 jobs:
   publish:
     name: Publish docs
@@ -104,6 +104,7 @@ jobs:
         if: github.event.inputs.url == 'docs.oso.dev'
         run: |
           make ci-prod-docs
+        working-directory: docs
       - name: Install s3deploy
         run: |
           wget https://github.com/bep/s3deploy/releases/download/v2.4.0/s3deploy_2.4.0_Linux-64bit.deb

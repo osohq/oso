@@ -41,10 +41,12 @@ JWZ
 Jullmann
 LDAP
 LLDB
+Linux
 LoadString
 Lodash's
 MVC
 MinGW
+MyPy
 NFA
 NaN
 NestJS

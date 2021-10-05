@@ -3,6 +3,7 @@ use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_test::*;
 
 use polar_core::sources::Source;
+use polar_core::terms::*;
 
 fn is_done_event(event: Object) -> bool {
     let event_kind: JsValue = "Done".into();
@@ -86,21 +87,14 @@ fn register_constant_succeeds() {
     let mut polar = polar_wasm_api::Polar::wasm_new();
     let res = polar.wasm_register_constant(
         "mathematics",
-        r#"{"value":{"ExternalInstance":{"instance_id":1,"literal":null,"repr":null}}}"#,
+        serde_wasm_bindgen::to_value(&Value::ExternalInstance(ExternalInstance {
+            instance_id: 1,
+            constructor: None,
+            repr: None,
+        }))
+        .unwrap(),
     );
     assert!(matches!(res, Ok(())));
-}
-
-#[wasm_bindgen_test]
-fn register_constant_errors() {
-    let mut polar = polar_wasm_api::Polar::wasm_new();
-    let err = polar.wasm_register_constant("mathematics", "").unwrap_err();
-    let err: Error = err.dyn_into().unwrap();
-    assert_eq!(err.name(), "RuntimeError::Serialization");
-    assert_eq!(
-        err.message(),
-        "Serialization error: EOF while parsing a value at line 1 column 0"
-    );
 }
 
 #[wasm_bindgen_test]
@@ -124,7 +118,12 @@ fn new_query_from_str_errors() {
 #[wasm_bindgen_test]
 fn new_query_from_term_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let term = r#"{"value":{"Call":{"name":"x","args":[]}}}"#;
+    let term = Value::Call(Call {
+        name: Symbol("x".into()),
+        args: vec![],
+        kwargs: None,
+    });
+    let term = serde_wasm_bindgen::to_value(&term).unwrap();
     let mut query = polar.wasm_new_query_from_term(term).unwrap();
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
     assert!(is_done_event(event));
@@ -133,7 +132,7 @@ fn new_query_from_term_succeeds() {
 #[wasm_bindgen_test]
 fn new_query_from_term_errors() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let res = polar.wasm_new_query_from_term("");
+    let res = polar.wasm_new_query_from_term("".into());
     if let Err(err) = res {
         let err: Error = err.dyn_into().unwrap();
         assert_eq!(err.name(), "RuntimeError::Serialization");

@@ -1,7 +1,7 @@
 use polar_core::{polar, sources::Source, terms::Symbol};
 use wasm_bindgen::prelude::*;
 
-use crate::errors::{serde_serialization_error, serialization_error, Error};
+use crate::errors::{serialization_error, Error};
 use crate::JsResult;
 use crate::Query;
 
@@ -31,14 +31,12 @@ impl Polar {
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = registerConstant)]
-    pub fn wasm_register_constant(&mut self, name: &str, value: &str) -> JsResult<()> {
-        match serde_json::from_str(value) {
-            Ok(term) => Ok(self
-                .0
-                .register_constant(Symbol::new(name), term)
-                .map_err(Error::from)?),
-            Err(e) => Err(serde_serialization_error(e)),
-        }
+    pub fn wasm_register_constant(&mut self, name: &str, value: JsValue) -> JsResult<()> {
+        let term = serde_wasm_bindgen::from_value(value)?;
+        self.0
+            .register_constant(Symbol::new(name), term)
+            .map_err(Error::from)?;
+        Ok(())
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = nextInlineQuery)]
@@ -56,10 +54,9 @@ impl Polar {
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = newQueryFromTerm)]
-    pub fn wasm_new_query_from_term(&self, value: &str) -> JsResult<Query> {
-        serde_json::from_str(value)
-            .map(|term| Query::from(self.0.new_query_from_term(term, false)))
-            .map_err(serde_serialization_error)
+    pub fn wasm_new_query_from_term(&self, value: JsValue) -> JsResult<Query> {
+        let term = serde_wasm_bindgen::from_value(value)?;
+        Ok(Query::from(self.0.new_query_from_term(term, false)))
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = newId)]
@@ -85,19 +82,13 @@ impl Polar {
     #[wasm_bindgen(js_class = Polar, js_name = buildFilterPlan)]
     pub fn wasm_build_filter_plan(
         &self,
-        types: &str,
-        partial_results: &str,
+        types: JsValue,
+        partial_results: JsValue,
         variable: &str,
         class_tag: &str,
     ) -> JsResult<JsValue> {
-        let types = match serde_json::from_str(types) {
-            Ok(t) => t,
-            Err(e) => return Err(serde_serialization_error(e)),
-        };
-        let partial_results = match serde_json::from_str(partial_results) {
-            Ok(r) => r,
-            Err(e) => return Err(serde_serialization_error(e)),
-        };
+        let types = serde_wasm_bindgen::from_value(types)?;
+        let partial_results = serde_wasm_bindgen::from_value(partial_results)?;
         self.0
             .build_filter_plan(types, partial_results, variable, class_tag)
             .map_err(Error::from)

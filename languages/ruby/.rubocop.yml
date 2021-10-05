@@ -5,3 +5,6 @@ AllCops:
     - "bin/oso"
     - "vendor/**/*"
   NewCops: enable
+Naming/FileName:
+  Exclude:
+    - "lib/oso-oso.rb"

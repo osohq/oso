@@ -60,7 +60,7 @@ jobs:
       - name: Build release musl library
         run: |
           rustup target add x86_64-unknown-linux-musl
-          cargo build --target x86_64-unknown-linux-musl --release
+          RUSTFLAGS="-C target-feature=-crt-static" cargo build --target x86_64-unknown-linux-musl --release
       - name: Rename static lib
         run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
       - name: Rename static lib
@@ -483,6 +483,7 @@ jobs:
         with:
           name: go
       - name: "test"
+        if: runner.os == 'Windows' || runner.os == 'Linux' || matrix.go-version != '1.17'
         run: |
           go build
           go test -v ./tests/
@@ -494,7 +495,11 @@ jobs:
         # create our own image that extends tetafro/golang-gcc:1.12-alpine and
         # contains Git, but for now I'm skipping it.
         if: runner.os == 'Linux' && matrix.go-version != '1.12'
-        run: docker run --rm -v `pwd`:/oso tetafro/golang-gcc:${{ matrix.go-version }}-alpine /bin/sh -c 'cd /oso && go build && go test -v ./tests/'
+        run: docker run --rm -v `pwd`:/oso tetafro/golang-gcc:${{ matrix.go-version }}-alpine /bin/sh -c 'cd /oso && go test -v ./tests/'
+        working-directory: go
+      - name: "test buster"
+        if: runner.os == 'Linux'
+        run: docker run --rm -v `pwd`:/oso golang:${{ matrix.go-version }}-buster /bin/sh -c 'cd /oso && go test -v ./tests/'
         working-directory: go
 
   validate_python_linux:
@@ -758,7 +763,7 @@ jobs:
         validate_java,
         validate_js,
         validate_go,
-        test_quickstarts,
+        # test_quickstarts,
       ]
     steps:
       - name: Set version env
@@ -899,7 +904,7 @@ jobs:
         validate_java,
         validate_js,
         validate_go,
-        test_quickstarts,
+        # test_quickstarts,
       ]
     steps:
       - uses: rtCamp/action-slack-notify@master
