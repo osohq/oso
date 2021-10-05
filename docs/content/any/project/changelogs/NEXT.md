@@ -17,8 +17,10 @@ draft: true
 
 - Fixed the way we build our static library on Linux so it doesn't embed
   musl and instead links to the system c runtime library.
-  Language that depend on the static lib Linux build such as python and go
+  Languages that depend on the static lib Linux build such as python and go
   should support more platforms now.
+- Oso will now issue a warning if there is no `allow` rule in your policy (and
+  also no `allow_request` or `allow_field` rules).
 
 ### Node.js
 
@@ -30,6 +32,13 @@ draft: true
   Many thanks to [`@rradczewski`](https://github.com/rradczewski) for
   [raising](https://github.com/osohq/oso/issues/1242) and reproducing
   the issue, and confirming the fix!
+
+### Rust
+
+#### Other bugs & improvements
+
+- Changed an internal debugging flag away from using `RUST_LOG` so that
+  Rust users wont be flooded with messages that they probably don't want.
 
 
 
