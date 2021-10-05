@@ -1,0 +1,116 @@
+"""Utilities for interacting with SQLAlchemy types."""
+import sqlalchemy
+from sqlalchemy import inspect
+from sqlalchemy.orm.util import AliasedClass
+
+try:
+    def all_entities_in_statement(statement):
+        """
+        Get all ORM entities that will be loaded in a select statement.
+
+        The includes entities that will be loaded eagerly through relationship
+        loading: https://docs.sqlalchemy.org/en/14/orm/loading_relationships.html#relationship-loading-with-loader-options
+        """
+        entities = get_column_entities(statement)
+        entities |= set(get_joinedload_entities(statement))
+        entities |= default_load_entities(entities)
+
+        def to_class(entity):
+            if isinstance(entity, AliasedClass):
+                return inspect(entity).class_
+            elif inspect(entity, False) is not None:
+                return inspect(entity).class_
+            else:
+                return entity
+
+        return set(map(to_class, entities))
+
+    def get_column_entities(statement):
+        """Get entities in statement that are loaded directly in the FROM clause.
+
+        Does not include eager loaded or pre-populated entities.
+        """
+        def _entities_in_statement(statement):
+            try:
+                entities = (cd["entity"] for cd in statement.column_descriptions)
+                return set(e for e in entities if e is not None)
+            except AttributeError:
+                return set()
+
+        entities = _entities_in_statement(statement)
+
+        # TODO(gj): currently walking way more than we have to. Probably
+        # some points in the tree where we can safely call it good for that
+        # branch and continue on to more fruitful pastures.
+        for child in statement.get_children():
+            entities |= _entities_in_statement(child)
+
+        return entities
+
+    def default_load_entities(entities):
+        """Find relationships that will have entities loaded due to the default
+        loader strategy."""
+        default_entities = set()
+
+        for entity in entities:
+            mapper = sqlalchemy.inspect(entity)
+            relationships = mapper.relationships
+            for rel in relationships.values():
+                # TODO: other lazy values?
+                if rel.lazy == "joined":
+                    default_entities |= default_load_entities([rel.mapper])
+                    default_entities.add(rel.mapper)
+
+        return default_entities
+
+    # Start POC code from @zzzeek (Mike Bayer)
+    # Still needs to be generalized & support other options.
+
+    # the structure we're dealing with is essentially:
+
+    # (path, strategy, options)
+    # where "path" indicates what it is we are loading,
+    # like (A, A.bs, B, B.cs, C)
+    # "strategy" is a tuple that keys to one of the loader strategies,
+    # some of them apply to relationships and others to column attributes
+    # then "options" is extra stuff like "innerjoin=True"
+    def get_joinedload_entities(stmt):
+        # there are two kinds of options that both represent the same information,
+        # just in different ways.  This is largely a product of legacy options
+        # that have things like strings, i.e. joinedload("addresses").  note we
+        # aren't covering that here, which is legacy form.  you can if you want
+        # raise an exception if you detect that form here.
+
+        for opt in stmt._with_options:
+            if hasattr(opt, "_to_bind"):
+                # these options are called _UnboundLoad
+                for b in opt._to_bind:
+                    if ("lazy", "joined") in b.strategy:
+                        # the "path" is a tuple showing the entity/relationships
+                        # being targeted
+
+                        # NOTE: I am not checking "of_type()" here yet
+                        yield b.path[-1].entity
+            elif hasattr(opt, "context"):
+                # these options are called Load
+                for key, loadopt in opt.context.items():
+                    if (
+                        key[0] == "loader"
+                        and ("lazy", "joined") in loadopt.strategy
+                    ):
+                        # the "path" is a tuple showing the entity/relationships
+                        # being targeted
+
+                        # NOTE: I am not checking "of_type()" here yet
+                        yield key[1][-1].entity
+            elif isinstance(opt, sqlalchemy.orm.util.LoaderCriteriaOption):
+                # TODO: check these other types of options?
+                # one example is sqlalchemy.orm.util.LoaderCriteriaOption
+                # (which I'm realizing might be added by ourselves)
+                pass
+
+    # End POC code.
+
+except ImportError:
+    def all_entities_in_statement(_):
+        raise NotImplementedError("Unsupported on SQLAlchemy < 1.4")

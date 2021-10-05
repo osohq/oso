@@ -12,7 +12,6 @@ from oso import Oso
 from sqlalchemy_oso.auth import authorize_model
 from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 
-
 class _OsoSession:
     set = False
 
@@ -272,6 +271,9 @@ try:
     # TODO(gj): remove type ignore once we upgrade to 1.4-aware MyPy types.
     from sqlalchemy.orm import with_loader_criteria  # type: ignore
     import sqlalchemy
+    from sqlalchemy_oso.sqlalchemy_utils import (
+        all_entities_in_statement,
+        entities_in_statement)
 
     # Start POC code from @zzzeek (Mike Bayer)
     # Still needs to be generalized & support other options.
@@ -323,6 +325,7 @@ try:
 
     @event.listens_for(Session, "do_orm_execute")
     def do_orm_execute(execute_state):
+        # TODO - check other states that we maybe want to add here.
         if not execute_state.is_select:
             return
 
@@ -339,24 +342,6 @@ try:
         # Early return if no authorization is to be applied.
         if checked_permissions is None:
             return
-
-        def entities_in_statement(statement):
-            def _entities_in_statement(statement):
-                try:
-                    entities = (cd["entity"] for cd in statement.column_descriptions)
-                    return set(e for e in entities if e is not None)
-                except AttributeError:
-                    return set()
-
-            entities = _entities_in_statement(statement)
-
-            # TODO(gj): currently walking way more than we have to. Probably
-            # some points in the tree where we can safely call it good for that
-            # branch and continue on to more fruitful pastures.
-            for child in statement.get_children():
-                entities |= entities_in_statement(child)
-
-            return entities
 
         entities = entities_in_statement(execute_state.statement)
         entities |= set(get_joinedload_entities(execute_state.statement))
