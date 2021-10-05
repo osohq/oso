@@ -54,6 +54,46 @@ func TestLoadMultipleFilesSameNameDifferentPath(t *testing.T) {
 	if err = o.LoadFiles([]string{"other/test.polar", "test.polar"}); err != nil {
 		t.Error(err.Error())
 	}
+
+	expected := []map[string]interface{}{{"x": int64(1)}, {"x": int64(2)}, {"x": int64(3)}}
+
+	results, errors := o.QueryStr("f(x)")
+
+	if err = <-errors; err != nil {
+		t.Error(err.Error())
+	} else {
+		var got []map[string]interface{}
+		for elem := range results {
+			got = append(got, elem)
+		}
+		if len(got) != 3 {
+			t.Errorf("Expected 3 results; received: %v", len(got))
+		}
+		for i, e := range expected {
+			if !reflect.DeepEqual(got[i], e) {
+				t.Errorf("Expected: %v, got: %v", e, got[i])
+			}
+		}
+	}
+
+	results, errors = o.QueryStr("g(x)")
+
+	if err = <-errors; err != nil {
+		t.Error(err.Error())
+	} else {
+		var got []map[string]interface{}
+		for elem := range results {
+			got = append(got, elem)
+		}
+		if len(got) != 3 {
+			t.Errorf("Expected 3 results; received: %v", len(got))
+		}
+		for i, e := range expected {
+			if !reflect.DeepEqual(got[i], e) {
+				t.Errorf("Expected: %v, got: %v", e, got[i])
+			}
+		}
+	}
 }
 
 func TestLoadString(t *testing.T) {
