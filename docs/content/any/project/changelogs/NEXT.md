@@ -11,6 +11,15 @@ draft: true
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
+### Core
+
+#### Other bugs & improvements
+
+- Fixed the way we build our static library on Linux so it doesn't embed
+  musl and instead links to the system c runtime library.
+  Languages that depend on the static lib Linux build such as python and go
+  should support more platforms now.
+
 ### Node.js
 
 #### Other bugs & improvements
@@ -21,6 +30,13 @@ draft: true
   Many thanks to [`@rradczewski`](https://github.com/rradczewski) for
   [raising](https://github.com/osohq/oso/issues/1242) and reproducing
   the issue, and confirming the fix!
+
+### Rust
+
+#### Other bugs & improvements
+
+- Changed an internal debugging flag away from using `RUST_LOG` so that
+  Rust users wont be flooded with messages that they probably don't want.
 
 
 
