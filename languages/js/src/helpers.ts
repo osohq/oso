@@ -346,6 +346,9 @@ export function isObj(x: unknown): x is obj {
   return typeof x === 'object' && x !== null;
 }
 
+/**
+ * Default equality function used by Oso
+ */
 export function defaultEquals(a: unknown, b: unknown): boolean {
   return isEqual(a, b);
 }
