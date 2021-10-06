@@ -57,17 +57,17 @@ func TestLoadMultipleFilesSameNameDifferentPath(t *testing.T) {
 
 	for _, query := range []string{"f(x)", "g(x)"} {
 		if testQuery, err := o.NewQueryFromStr(query); err != nil {
-			t.Fatal(err.Error())
+			t.Error(err.Error())
 		} else {
 			if results, err := testQuery.GetAllResults(); err != nil {
-				t.Fatal(err.Error())
+				t.Error(err.Error())
 			} else {
 				if len(results) != 3 {
-					t.Fatalf("Expected 3 results; received: %v", len(results))
+					t.Errorf("Expected 3 results; received: %v", len(results))
 				} else {
 					for i, e := range expected {
 						if !reflect.DeepEqual(results[i], e) {
-							t.Fatalf("Expected: %v, got: %v", e, results[i])
+							t.Errorf("Expected: %v, got: %v", e, results[i])
 						}
 					}
 				}
