@@ -1,13 +1,16 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    hash::Hash,
+};
+
+use crate::{
+    error::{OperationalError, PolarResult},
+    events::ResultEvent,
+    counter::Counter,
+    terms::*,
+};
 
 use serde::{Deserialize, Serialize};
-
-use crate::error::{OperationalError, PolarResult};
-use crate::events::ResultEvent;
-
-use crate::counter::*;
-use crate::terms::*;
-use std::hash::Hash;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Type {
@@ -304,8 +307,9 @@ impl VarInfo {
             }
 
             _ => err_unimplemented(format!(
-                "the expression `{}` is not supported for data filtering",
-                exp.to_polar()
+                "the expression {:?}/{} is not supported for data filtering",
+                exp.operator,
+                exp.args.len()
             )),
         }
     }
@@ -1119,5 +1123,21 @@ mod test {
         let vars = Vars::from_op(&op)?;
         assert_eq!(vars.variables.len(), 2);
         Ok(())
+    }
+
+    #[test]
+    fn test_unsupported_op_msgs() {
+        use crate::error::{
+            PolarError,
+            ErrorKind::Operational,
+            OperationalError::Unimplemented,
+        };
+
+        let err = Vars::from_op(&op!(Dot)).expect_err("should've failed");
+        match err {
+            PolarError { kind: Operational(Unimplemented { msg }), .. } =>
+                assert_eq!(&msg, "the expression Dot/0 is not supported for data filtering"),
+            _ => panic!("unexpected"),
+        }
     }
 }
