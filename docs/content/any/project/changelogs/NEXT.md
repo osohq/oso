@@ -40,7 +40,11 @@ draft: true
 - Changed an internal debugging flag away from using `RUST_LOG` so that
   Rust users wont be flooded with messages that they probably don't want.
 
+### Go
 
+#### Other bugs & improvements
+
+- Fixed a bug that prevented loading multiple files via the `LoadFiles` API.
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
