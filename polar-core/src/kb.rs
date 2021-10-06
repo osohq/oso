@@ -268,9 +268,9 @@ impl KnowledgeBase {
                             if rule_type_instance.tag == sym!("Actor") {
                                 return Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} must be a member of rule type specializer {}
 
-    Perhaps you meant to add an actor block to the top of your policy, like this:
+\tPerhaps you meant to add an actor block to the top of your policy, like this:
 
-    actor {} {{}}",
+\t  actor {} {{}}",
                                 rule_instance.tag, index, rule_type_instance.tag, rule_instance.tag)));
 
                             } else {
