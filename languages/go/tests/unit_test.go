@@ -21,27 +21,58 @@ func TestNewOso(t *testing.T) {
 	}
 }
 
-func TestLoadFile(t *testing.T) {
+func TestLoadFiles(t *testing.T) {
 	var o oso.Oso
 	var err error
 	if o, err = oso.NewOso(); err != nil {
 		t.Fatalf("Failed to set up Oso: %v", err)
 	}
 
-	if err = o.LoadFile("test.polar"); err != nil {
-		t.Error(err.Error())
-	}
-
-	if err = o.LoadFile("test.polar"); err == nil {
+	if err = o.LoadFiles([]string{"test.polar", "test.polar"}); err == nil {
 		t.Error("Failed to error on loading duplicate file")
 	}
 
-	if err = o.LoadFile("test.txt"); err == nil {
+	if err = o.LoadFiles([]string{"test.txt"}); err == nil {
 		t.Error("Failed to error on loading non-polar file (.txt)")
 	}
 
-	if err = o.LoadFile("fake.polar"); err == nil {
+	if err = o.LoadFiles([]string{"fake.polar"}); err == nil {
 		t.Error("Failed to error on loading non-existent file")
+	}
+}
+
+// test_load_multiple_files_same_name_different_path
+func TestLoadMultipleFilesSameNameDifferentPath(t *testing.T) {
+	var o oso.Oso
+	var err error
+	if o, err = oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
+
+	if err = o.LoadFiles([]string{"other/test.polar", "test.polar"}); err != nil {
+		t.Error(err.Error())
+	}
+
+	expected := []map[string]interface{}{{"x": int64(1)}, {"x": int64(2)}, {"x": int64(3)}}
+
+	for _, query := range []string{"f(x)", "g(x)"} {
+		if testQuery, err := o.NewQueryFromStr(query); err != nil {
+			t.Error(err.Error())
+		} else {
+			if results, err := testQuery.GetAllResults(); err != nil {
+				t.Error(err.Error())
+			} else {
+				if len(results) != 3 {
+					t.Errorf("Expected 3 results; received: %v", len(results))
+				} else {
+					for i, e := range expected {
+						if !reflect.DeepEqual(results[i], e) {
+							t.Errorf("Expected: %v, got: %v", e, results[i])
+						}
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -388,4 +419,27 @@ func TestPointerMethods(t *testing.T) {
 
 	test("rule1", typ, int64(2))
 	test("rule2", typ, true)
+}
+
+func TestFailingALot(t *testing.T) {
+	var o oso.Oso
+	var err error
+	if o, err = oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
+
+	o.LoadString("f(x) if x.Foo();")
+
+	// Do it 100 times, hoping for bad stuff to happen.
+	for i := 0; i < 100; i++ {
+		_, errors := o.QueryStr("f(1)")
+
+		if err = <-errors; err != nil {
+			if !strings.Contains(err.Error(), "'1' object has no attribute 'Foo'") {
+				t.Error("Expected Polar runtime error, got none")
+			}
+		} else {
+			t.Fatal("oops")
+		}
+	}
 }

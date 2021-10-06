@@ -17,6 +17,11 @@ fn test_file_path() -> PathBuf {
     path.join(Path::new("tests/test_file.polar"))
 }
 
+fn test_file_other_path() -> PathBuf {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"));
+    path.join(Path::new("tests/other/test_file.polar"))
+}
+
 fn test_file_gx_path() -> PathBuf {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"));
     path.join(Path::new("tests/test_file_gx.polar"))
@@ -263,6 +268,22 @@ fn test_load_multiple_files() -> oso::Result<()> {
     let path_gx = test_file_gx_path();
 
     oso.oso.load_files(vec![path, path_gx])?;
+
+    assert_eq!(oso.qvar::<i64>("f(x)", "x"), vec![1, 2, 3]);
+    assert_eq!(oso.qvar::<i64>("g(x)", "x"), vec![1, 2, 3]);
+
+    Ok(())
+}
+
+#[test]
+fn test_load_multiple_files_same_name_different_path() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+    let path = test_file_path();
+    let other_path = test_file_other_path();
+
+    oso.oso.load_files(vec![path, other_path])?;
 
     assert_eq!(oso.qvar::<i64>("f(x)", "x"), vec![1, 2, 3]);
     assert_eq!(oso.qvar::<i64>("g(x)", "x"), vec![1, 2, 3]);

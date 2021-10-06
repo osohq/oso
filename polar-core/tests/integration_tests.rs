@@ -1600,21 +1600,29 @@ fn test_and_or_warning() -> TestResult {
 
     p.clear_rules();
     p.load_str("f(x) if x = 1 and x > 1 or x < 3;")?;
-    let msg = p.next_message().unwrap();
-    assert!(matches!(&msg.kind, MessageKind::Warning));
-    assert_eq!(
-        &msg.msg,
-        "Expression without parentheses could be ambiguous. \nPrior to 0.20, `x and y or z` would parse as `x and (y or z)`. \nAs of 0.20, it parses as `(x and y) or z`, matching other languages. \n\n\n001: f(x) if x = 1 and x > 1 or x < 3;\n             ^"
-    );
+    let mut messages = vec![];
+    while let Some(msg) = p.next_message() {
+        messages.push(msg);
+    }
+    assert!(messages.iter().any(|msg| {
+      matches!(&msg.kind, MessageKind::Warning) &&
+      (msg.msg ==
+        "Expression without parentheses could be ambiguous. \nPrior to 0.20, `x and y or z` would parse as `x and (y or z)`. \nAs of 0.20, it parses as `(x and y) or z`, matching other languages. \n\n\n001: f(x) if x = 1 and x > 1 or x < 3;\n             ^")
+    }));
 
     p.clear_rules();
     p.load_str("f(x) if x = 1 or x > 1 and x < 3;")?;
-    let msg = p.next_message().unwrap();
-    assert!(matches!(&msg.kind, MessageKind::Warning));
-    assert_eq!(
-        &msg.msg,
-        "Expression without parentheses could be ambiguous. \nPrior to 0.20, `x and y or z` would parse as `x and (y or z)`. \nAs of 0.20, it parses as `(x and y) or z`, matching other languages. \n\n\n001: f(x) if x = 1 or x > 1 and x < 3;\n                      ^"
-    );
+
+    let mut msgs: Vec<Message> = vec![];
+    while let Some(msg) = p.next_message() {
+        msgs.push(msg);
+    }
+    assert!(msgs.iter().any(|msg| {
+      matches!(&msg.kind, MessageKind::Warning) &&
+      (msg.msg ==
+        "Expression without parentheses could be ambiguous. \nPrior to 0.20, `x and y or z` would parse as `x and (y or z)`. \nAs of 0.20, it parses as `(x and y) or z`, matching other languages. \n\n\n001: f(x) if x = 1 or x > 1 and x < 3;\n                      ^")
+    }));
+
     Ok(())
 }
 
@@ -1623,12 +1631,15 @@ fn test_print() -> TestResult {
     // TODO: If POLAR_LOG is on this test will fail.
     let p = Polar::new();
     p.load_str("f(x,y,z) if print(x, y, z);")?;
+    let mut messages = vec![];
     let message_handler = |output: &Message| {
-        assert!(matches!(&output.kind, MessageKind::Print));
-        assert_eq!(&output.msg, "1, 2, 3");
+        messages.push(output.clone());
     };
     let q = p.new_query("f(1, 2, 3)", false)?;
     let _results = query_results!(q, @msgs message_handler);
+    assert!(messages
+        .iter()
+        .any(|msg| { matches!(&msg.kind, MessageKind::Print) && (msg.msg == "1, 2, 3") }));
     Ok(())
 }
 

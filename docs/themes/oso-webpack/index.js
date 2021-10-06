@@ -184,7 +184,7 @@ import('monaco-editor-core').then(monaco => {
   window.addEventListener('load', async () => {
     const els = document.getElementsByClassName('language-polar');
     for (const el of els) {
-      const colorized = await monaco.editor.colorize(el.innerText, 'polar', { theme: 'polarTheme' });
+      const colorized = await monaco.editor.colorize(el.innerText.trim("\n"), 'polar', { theme: 'polarTheme' });
       el.innerHTML = colorized;
       el.parentNode.classList.add('polar-code-in-here');
       highlightPolarCode(el);

@@ -292,6 +292,12 @@ impl PolarVirtualMachine {
             .expect("cannot acquire KB read lock")
             .constants
             .clone();
+        // get all comma-delimited POLAR_LOG variables
+        let polar_log = std::env::var("POLAR_LOG");
+        let polar_log_vars = polar_log
+            .iter()
+            .flat_map(|pl| pl.split(','))
+            .collect::<Vec<&str>>();
         let mut vm = Self {
             goals: GoalStack::new_reversed(goals),
             binding_manager: BindingManager::new(),
@@ -308,14 +314,13 @@ impl PolarVirtualMachine {
             debugger: Debugger::default(),
             kb,
             call_id_symbols: HashMap::new(),
-            log: std::env::var("RUST_LOG").is_ok(),
-            polar_log: match std::env::var("POLAR_LOG") {
-                Ok(s) => s != "0" && s != "off",
-                Err(_) => false,
-            },
-            polar_log_stderr: std::env::var("POLAR_LOG")
-                .map(|pl| pl == "now")
-                .unwrap_or(false),
+            // `log` controls internal VM logging
+            log: polar_log_vars.iter().any(|var| var == &"trace"),
+            // `polar_log` for tracing policy evaluation
+            polar_log: !polar_log_vars.is_empty()
+                && !polar_log_vars.iter().any(|var| ["0", "off"].contains(var)),
+            // `polar_log_stderr` prints things immediately to stderr
+            polar_log_stderr: polar_log_vars.iter().any(|var| var == &"now"),
             polar_log_mute: false,
             query_contains_partial: false,
             inverting: false,

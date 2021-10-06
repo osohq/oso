@@ -14,6 +14,15 @@ pub struct Message {
     pub msg: String,
 }
 
+impl Message {
+    pub fn warning(msg: String) -> Message {
+        Self {
+            kind: MessageKind::Warning,
+            msg,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct MessageQueue {
     messages: Arc<Mutex<VecDeque<Message>>>,
