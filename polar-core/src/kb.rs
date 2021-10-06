@@ -268,6 +268,7 @@ impl KnowledgeBase {
                             let mut err = format!("Rule specializer {} on parameter {} must be a member of rule type specializer {}", rule_instance.tag,index, rule_type_instance.tag);
                             if rule_type_instance.tag == sym!("Actor") {
                                 err.push_str(&format!("
+
 \tPerhaps you meant to add an actor block to the top of your policy, like this:
 
 \t  actor {} {{}}", rule_instance.tag));
