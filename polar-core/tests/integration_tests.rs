@@ -1596,11 +1596,11 @@ has_role(user: User, "owner", organization: Organization) if
 "#;
     let err = p.load_str(policy).expect_err("Expected validation error");
     assert!(matches!(&err.kind, ErrorKind::Validation(_)));
-    assert!(format!("{}", err).contains("Perhaps you meant to add an actor block to the top of your policy, like this:"));
+    assert!(format!("{}", err)
+        .contains("Perhaps you meant to add an actor block to the top of your policy, like this:"));
 
     Ok(())
 }
-
 
 #[test]
 fn test_and_or_warning() -> TestResult {
