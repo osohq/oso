@@ -265,7 +265,18 @@ impl KnowledgeBase {
                             }
                         }
                         if !success {
-                            return Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} must be a member of rule type specializer {}", rule_instance.tag,index, rule_type_instance.tag)));
+                            if rule_type_instance.tag == sym!("Actor") {
+                                return Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} must be a member of rule type specializer {}
+
+    Perhaps you meant to add an actor block to the top of your policy, like this:
+
+    actor {} {{}}",
+                                rule_instance.tag, index, rule_type_instance.tag, rule_instance.tag)));
+
+                            } else {
+                                return Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} must be a member of rule type specializer {}", rule_instance.tag,index, rule_type_instance.tag)));
+                            }
+
                         }
                     }
                     if !self.param_fields_match(&rule_type_instance.fields, &rule_instance.fields) {
