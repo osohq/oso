@@ -1577,7 +1577,7 @@ fn test_unknown_specializer_warning() -> TestResult {
 }
 
 #[test]
-fn test_missing_actor_warning() -> TestResult {
+fn test_missing_actor_hint() -> TestResult {
     let p = Polar::new();
 
     p.register_constant(sym!("Organization"), term!(true))?;
