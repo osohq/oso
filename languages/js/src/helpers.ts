@@ -9,7 +9,7 @@ import {
   QueryEventKind,
 } from './types';
 import type { Class, obj, PolarTerm, QueryEvent } from './types';
-import { isEqual } from 'lodash';
+import isEqual = require('lodash.isequal');
 
 /**
  * Assemble the prototypal inheritance chain of a class.

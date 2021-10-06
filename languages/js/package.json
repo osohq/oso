@@ -40,6 +40,7 @@
   "devDependencies": {
     "@types/jest": "^26.0.9",
     "@types/lodash": "^4.14.175",
+    "@types/lodash.isequal": "^4.5.5",
     "@types/node": "^15.14.7",
     "chokidar-cli": "^2.1.0",
     "gts": "^3.1.0",
@@ -58,6 +59,6 @@
     "live-server/object-assign": "^4.1.0"
   },
   "dependencies": {
-    "lodash": "^4.17.21"
+    "lodash.isequal": "^4.5.0"
   }
 }
