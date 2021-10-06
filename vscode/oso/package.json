@@ -1,15 +1,19 @@
 {
   "version": "0.1.1",
-
   "name": "oso",
   "displayName": "Oso",
   "author": "Oso Security Inc.",
   "publisher": "osohq",
   "icon": "oso_logo.png",
   "description": "Support for Oso policies written in Polar.",
-  "keywords": ["authorization", "access control", "multi-root ready"],
-  "categories": ["Programming Languages"],
-
+  "keywords": [
+    "authorization",
+    "access control",
+    "multi-root ready"
+  ],
+  "categories": [
+    "Programming Languages"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/osohq/oso"
@@ -18,8 +22,10 @@
   "engines": {
     "vscode": "^1.43.0"
   },
-
-  "activationEvents": ["onLanguage:polar"],
+  "main": "./dist/src/extension",
+  "activationEvents": [
+    "*"
+  ],
   "contributes": {
     "languages": [
       {
@@ -41,5 +47,20 @@
         "path": "./syntaxes/polar.tmLanguage.json"
       }
     ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc --project tsconfig.build.json",
+    "clean": "gts clean",
+    "lint": "gts lint -- . --max-warnings 0",
+    "fmt": "prettier --write 'src/**/*.[jt]s'",
+    "fmtcheck": "prettier --check 'src/**/*.[jt]s'",
+    "fix": "gts fix",
+    "watch": "tsc -watch --project tsconfig.build.json"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.43.0",
+    "gts": "^3.1.0",
+    "typescript": "^4.4.3"
   }
 }
