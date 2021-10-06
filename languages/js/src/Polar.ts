@@ -18,7 +18,7 @@ import type { Message } from './messages';
 import { processMessage } from './messages';
 import type { Class, ClassParams, Options, QueryResult } from './types';
 import {
-  defaultEquals,
+  defaultEqualityFn,
   isString,
   printError,
   PROMPT,
@@ -54,7 +54,7 @@ export class Polar {
 
   constructor(opts: Options = {}) {
     this.#ffiPolar = new FfiPolar();
-    const equalityFn = opts.equalityFn || defaultEquals;
+    const equalityFn = opts.equalityFn || defaultEqualityFn;
     this.#host = new Host(this.#ffiPolar, equalityFn);
 
     // Register global constants.
