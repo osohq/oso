@@ -43,8 +43,6 @@ func TestLoadFiles(t *testing.T) {
 
 // test_load_multiple_files_same_name_different_path
 func TestLoadMultipleFilesSameNameDifferentPath(t *testing.T) {
-	t.Skip("Fixing test is outside scope of current task.")
-
 	var o oso.Oso
 	var err error
 	if o, err = oso.NewOso(); err != nil {
@@ -57,40 +55,22 @@ func TestLoadMultipleFilesSameNameDifferentPath(t *testing.T) {
 
 	expected := []map[string]interface{}{{"x": int64(1)}, {"x": int64(2)}, {"x": int64(3)}}
 
-	results, errors := o.QueryStr("f(x)")
-
-	if err = <-errors; err != nil {
-		t.Error(err.Error())
-	} else {
-		var got []map[string]interface{}
-		for elem := range results {
-			got = append(got, elem)
-		}
-		if len(got) != 3 {
-			t.Errorf("Expected 3 results; received: %v", len(got))
-		}
-		for i, e := range expected {
-			if !reflect.DeepEqual(got[i], e) {
-				t.Errorf("Expected: %v, got: %v", e, got[i])
-			}
-		}
-	}
-
-	results, errors = o.QueryStr("g(x)")
-
-	if err = <-errors; err != nil {
-		t.Error(err.Error())
-	} else {
-		var got []map[string]interface{}
-		for elem := range results {
-			got = append(got, elem)
-		}
-		if len(got) != 3 {
-			t.Errorf("Expected 3 results; received: %v", len(got))
-		}
-		for i, e := range expected {
-			if !reflect.DeepEqual(got[i], e) {
-				t.Errorf("Expected: %v, got: %v", e, got[i])
+	for _, query := range []string{"f(x)", "g(x)"} {
+		if testQuery, err := o.NewQueryFromStr(query); err != nil {
+			t.Fatal(err.Error())
+		} else {
+			if results, err := testQuery.GetAllResults(); err != nil {
+				t.Fatal(err.Error())
+			} else {
+				if len(results) != 3 {
+					t.Fatalf("Expected 3 results; received: %v", len(results))
+				} else {
+					for i, e := range expected {
+						if !reflect.DeepEqual(results[i], e) {
+							t.Fatalf("Expected: %v, got: %v", e, results[i])
+						}
+					}
+				}
 			}
 		}
 	}

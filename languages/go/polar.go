@@ -87,6 +87,8 @@ func (p Polar) loadFiles(filenames []string) error {
 	sources := []Source{}
 
 	for _, filename := range filenames {
+		localFilename := filename
+
 		if filepath.Ext(filename) != ".polar" {
 			return errors.NewPolarFileExtensionError(filename)
 		}
@@ -95,7 +97,7 @@ func (p Polar) loadFiles(filenames []string) error {
 		if err != nil {
 			return err
 		}
-		sources = append(sources, Source{Src: string(data), Filename: &filename})
+		sources = append(sources, Source{Src: string(data), Filename: &localFilename})
 	}
 
 	return p.loadSources(sources)
