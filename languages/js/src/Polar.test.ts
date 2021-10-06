@@ -424,6 +424,16 @@ describe('#loadFiles', () => {
     );
   });
 
+  // test_load_multiple_files_same_name_different_path
+  test('can load two files with the same name but different paths', async () => {
+    const p = new Polar();
+    const filename1 = await tempFile('f(1);f(2);f(3);', 'a.polar');
+    const filename2 = await tempFile('g(1);g(2);g(3);', 'other/a.polar');
+    await expect(p.loadFiles([filename1, filename2])).resolves.not.toThrow();
+    expect(await qvar(p, 'f(x)', 'x')).toStrictEqual([1, 2, 3]);
+    expect(await qvar(p, 'g(x)', 'x')).toStrictEqual([1, 2, 3]);
+  });
+
   test('throws if the same file is loaded twice', async () => {
     const p = new Polar();
     const file = await tempFileFx();
