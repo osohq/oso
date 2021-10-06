@@ -17,7 +17,14 @@ import { Predicate } from './Predicate';
 import type { Message } from './messages';
 import { processMessage } from './messages';
 import type { Class, ClassParams, Options, QueryResult } from './types';
-import { isObj, isString, printError, PROMPT, readFile, repr } from './helpers';
+import {
+  defaultEquals,
+  isString,
+  printError,
+  PROMPT,
+  readFile,
+  repr,
+} from './helpers';
 
 class Source {
   readonly src: string;
@@ -46,28 +53,8 @@ export class Polar {
   #host: Host;
 
   constructor(opts: Options = {}) {
-    function defaultEqual(a: unknown, b: unknown) {
-      if (
-        isObj(a) &&
-        isObj(b) &&
-        Object.getPrototypeOf(a) === Object.getPrototypeOf(b)
-      ) {
-        const check = new Set();
-
-        for (const x in a) {
-          if (!defaultEqual(a[x], b[x])) return false;
-          check.add(x);
-        }
-
-        for (const x in b) if (!check.has(x)) return false;
-
-        return true;
-      }
-      return a == b; // eslint-disable-line eqeqeq
-    }
-
     this.#ffiPolar = new FfiPolar();
-    const equalityFn = opts.equalityFn || defaultEqual;
+    const equalityFn = opts.equalityFn || defaultEquals;
     this.#host = new Host(this.#ffiPolar, equalityFn);
 
     // Register global constants.

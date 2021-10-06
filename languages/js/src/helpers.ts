@@ -9,6 +9,7 @@ import {
   QueryEventKind,
 } from './types';
 import type { Class, obj, PolarTerm, QueryEvent } from './types';
+import { isEqual } from 'lodash';
 
 /**
  * Assemble the prototypal inheritance chain of a class.
@@ -343,6 +344,10 @@ export function isConstructor(f: unknown): f is Class {
  */
 export function isObj(x: unknown): x is obj {
   return typeof x === 'object' && x !== null;
+}
+
+export function defaultEquals(a: unknown, b: unknown): boolean {
+  return isEqual(a, b);
 }
 
 /**

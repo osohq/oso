@@ -9,17 +9,10 @@ test('#isAllowed', async () => {
 });
 
 describe('Equality function used for unification', () => {
-  test('defaults to loose equality (==)', async () => {
-    const o = new Oso();
-    o.registerConstant(undefined, 'undefined');
-    o.registerConstant(null, 'null');
-    expect(await query(o, 'undefined = null')).toStrictEqual([map()]);
-  });
-
   test('can be overridden with a custom equality function', async () => {
-    const o = new Oso({ equalityFn: (x, y) => x === y });
-    o.registerConstant(undefined, 'undefined');
-    o.registerConstant(null, 'null');
-    expect(await query(o, 'undefined = null')).toStrictEqual([]);
+    const o = new Oso({ equalityFn: () => true });
+    expect(
+      await query(o, 'new String("lol") = new Integer("wut")')
+    ).toStrictEqual([map()]);
   });
 });
