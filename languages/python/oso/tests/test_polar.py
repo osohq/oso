@@ -75,6 +75,14 @@ def test_load_function(polar, query, qvar):
     assert query("g(x)") == [{"x": 1}, {"x": 2}, {"x": 3}]
 
 
+def test_load_multiple_files_same_name_different_path(polar, qvar):
+    file1 = Path(__file__).parent / "test_file.polar"
+    file2 = Path(__file__).parent / "other/test_file.polar"
+    polar.load_files([file1, file2])
+    assert qvar("f(x)", "x") == [1, 2, 3]
+    assert qvar("g(x)", "x") == [1, 2, 3]
+
+
 def test_clear_rules(polar, query):
     class Test:
         pass
