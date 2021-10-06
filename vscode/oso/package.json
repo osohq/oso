@@ -1,22 +1,25 @@
 {
+  "version": "0.1.1",
+
   "name": "oso",
+  "displayName": "Oso",
   "author": "Oso Security Inc.",
   "publisher": "osohq",
-  "license": "Apache-2.0",
-  "displayName": "Oso",
-  "description": "Support for Oso policies written in Polar.",
   "icon": "oso_logo.png",
-  "version": "0.1.1",
-  "engines": {
-    "vscode": "^1.43.0"
-  },
-  "categories": [
-    "Programming Languages"
-  ],
+  "description": "Support for Oso policies written in Polar.",
+  "keywords": ["authorization", "access control", "multi-root ready"],
+  "categories": ["Programming Languages"],
+
   "repository": {
     "type": "git",
     "url": "https://github.com/osohq/oso"
   },
+  "license": "Apache-2.0",
+  "engines": {
+    "vscode": "^1.43.0"
+  },
+
+  "activationEvents": ["onLanguage:polar"],
   "contributes": {
     "languages": [
       {
