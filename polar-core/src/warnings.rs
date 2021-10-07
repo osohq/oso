@@ -4,7 +4,7 @@ use super::kb::*;
 use super::rules::*;
 use super::sources::Source;
 use super::terms::*;
-use super::visitor::{walk_rule, walk_term, Visitor};
+use super::visitor::{walk_call, walk_rule, walk_term, Visitor};
 
 use std::collections::{hash_map::Entry, HashMap};
 
@@ -228,12 +228,54 @@ rule. For more information about allow rules, see:
     }
 }
 
+struct ResourceMissingHasPermissionVisitor<'kb> {
+    kb: &'kb KnowledgeBase,
+    uses_has_permission: bool,
+}
+
+impl<'kb> Visitor for ResourceMissingHasPermissionVisitor<'kb> {
+    fn visit_call(&mut self, call: &Call) {
+        if call.name == sym!("has_permission") {
+            self.uses_has_permission = true;
+        }
+        walk_call(self, call)
+    }
+}
+
+impl<'kb> ResourceMissingHasPermissionVisitor<'kb> {
+    fn new(kb: &'kb KnowledgeBase) -> Self {
+        Self {
+            kb,
+            uses_has_permission: false,
+        }
+    }
+
+    fn warnings(&mut self) -> PolarResult<Vec<String>> {
+        if !self.uses_has_permission {
+            return Ok(vec![String::from("foobar")]);
+        }
+        Ok(vec![])
+    }
+}
+
+pub fn check_resource_missing_has_permission(kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
+    if kb.resource_blocks.resources.len() == 0 {
+        return Ok(vec![]);
+    }
+
+    let mut visitor = ResourceMissingHasPermissionVisitor::new(kb);
+    for (_, rule) in kb.get_rules() {
+        visitor.visit_generic_rule(&rule);
+    }
+    visitor.warnings()
+}
+
 #[cfg(test)]
 mod tests {
     use crate::kb::KnowledgeBase;
     use crate::rules::*;
     use crate::terms::*;
-    use crate::warnings::check_no_allow_rule;
+    use crate::warnings::{check_no_allow_rule, check_resource_missing_has_permission};
 
     #[test]
     fn test_check_no_allow_rule_no_allow() {
@@ -283,5 +325,32 @@ mod tests {
         kb.add_rule(rule!("g", [sym!("x")]));
         let warnings = check_no_allow_rule(&kb);
         assert_eq!(warnings.unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_resource_missing_has_permission_warning() {
+        let mut kb = KnowledgeBase::new();
+        kb.resource_blocks
+            .resources
+            .insert(term!(sym!("Organization")));
+        // kb.add_rule(rule!("f", [sym!("x")] => call!("has_permission", [sym!("y")])));
+
+        let warnings =
+            check_resource_missing_has_permission(&kb).expect("failed to execute visitor");
+
+        assert_eq!(warnings.len(), 1);
+    }
+
+    #[test]
+    fn test_resource_missing_has_permission_clean() {
+        let mut kb = KnowledgeBase::new();
+        kb.resource_blocks
+            .resources
+            .insert(term!(sym!("Organization")));
+        kb.add_rule(rule!("f", [sym!("x")] => call!("has_permission", [sym!("y")])));
+        let warnings =
+            check_resource_missing_has_permission(&kb).expect("failed to execute visitor");
+
+        assert_eq!(warnings.len(), 0);
     }
 }

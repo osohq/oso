@@ -68,6 +68,9 @@ pub trait Visitor: Sized {
     fn visit_param(&mut self, p: &Parameter) {
         walk_param(self, p)
     }
+    fn visit_generic_rule(&mut self, rule: &GenericRule) {
+        walk_generic_rule(self, rule);
+    }
 }
 
 macro_rules! walk_elements {
@@ -155,6 +158,12 @@ pub fn walk_param<V: Visitor>(visitor: &mut V, param: &Parameter) {
     visitor.visit_term(&param.parameter);
     if let Some(ref specializer) = param.specializer {
         visitor.visit_term(specializer);
+    }
+}
+
+pub fn walk_generic_rule<V: Visitor>(visitor: &mut V, rule: &GenericRule) {
+    for (_, rule) in &rule.rules {
+        visitor.visit_rule(&rule);
     }
 }
 
