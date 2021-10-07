@@ -59,6 +59,7 @@
     "watch": "tsc -watch --project tsconfig.build.json"
   },
   "devDependencies": {
+    "@types/node": "^16.10.3",
     "@types/vscode": "^1.43.0",
     "gts": "^3.1.0",
     "typescript": "^4.4.3"
