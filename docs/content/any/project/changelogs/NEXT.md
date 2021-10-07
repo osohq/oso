@@ -34,6 +34,8 @@ draft: true
   Many thanks to [`@rradczewski`](https://github.com/rradczewski) for
   [raising](https://github.com/osohq/oso/issues/1242) and reproducing
   the issue, and confirming the fix!
+- Oso now defaults to using Lodash's `isEqual` function when comparing JavaScript values
+  for equality.
 
 ### Rust
 
