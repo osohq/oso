@@ -340,7 +340,6 @@ mod tests {
         kb.resource_blocks
             .resources
             .insert(term!(sym!("Organization")));
-        // kb.add_rule(rule!("f", [sym!("x")] => call!("has_permission", [sym!("y")])));
 
         let warnings =
             check_resource_missing_has_permission(&kb).expect("failed to execute visitor");
