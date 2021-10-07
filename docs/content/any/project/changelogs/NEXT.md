@@ -23,6 +23,7 @@ draft: true
   also no `allow_request` or `allow_field` rules).
 - Oso will propose a suggested fix if you forget to write an actor block when
   using resource blocks.
+- Fixed a bug which led to `var matches Type` failing when `var` was unbound.
 
 ### Node.js
 
