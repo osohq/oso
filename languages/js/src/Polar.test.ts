@@ -1030,3 +1030,47 @@ test('can specialize on a dict with undefineds', async () => {
   const result3 = await query(p, pred('f', noAttr));
   expect(result3).toStrictEqual([map()]);
 });
+
+test('can deal with lookups on unbound but typed values', async () => {
+  class Base {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    constructor(args: any) {
+      Object.assign(this, args);
+    }
+  }
+  class Repo extends Base {
+    id!: number;
+    orgId!: number;
+  }
+
+  class Org extends Base {
+    id!: number;
+  }
+
+  class Role extends Base {
+    orgId!: number;
+  }
+  class User extends Base {
+    roles!: Role[];
+  }
+
+  const org2Repo = new Repo({ id: 2, orgId: 2 });
+  const org1Role = new Role({ orgId: 1 });
+  const user = new User({ roles: [org1Role] });
+
+  const p = new Polar();
+  await p.registerClass(User);
+  await p.registerClass(Repo);
+  await p.registerClass(Org);
+  await p.loadStr(`
+user_in_role(user: User, "reader", org: Org) if
+  role in user.roles and
+  role.orgId = org.id;
+
+allow(user: User, "read", repo: Repo) if
+  user_in_role(user, "reader", org) and
+  repo.orgId = org.id;
+  `);
+
+  expect(await p.queryRuleOnce('allow', user, 'read', org2Repo)).toBeFalsy();
+});
