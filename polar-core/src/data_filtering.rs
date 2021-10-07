@@ -4,40 +4,49 @@ use std::{
 };
 
 use crate::{
+    counter::Counter,
     error::{OperationalError, PolarResult},
     events::ResultEvent,
-    counter::Counter,
     terms::*,
 };
 
 use serde::{Deserialize, Serialize};
 
+type Id = u64;
+type VarId = Id;
+type TypeName = String;
+type FieldName = String;
+type RelationKind = String;
+type VarName = Symbol;
+type Map<A, B> = HashMap<A, B>;
+type Set<A> = HashSet<A>;
+pub type Types = Map<TypeName, Map<FieldName, Type>>;
+pub type PartialResults = Vec<ResultEvent>;
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Type {
     Base {
-        class_tag: String,
+        class_tag: TypeName,
     },
     Relation {
-        kind: String,
-        other_class_tag: String,
-        my_field: String,
-        other_field: String,
+        kind: RelationKind,
+        other_class_tag: TypeName,
+        my_field: FieldName,
+        other_field: FieldName,
     },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Ref {
-    field: Option<String>, // An optional field to map over the result objects with.
-    result_id: Id,         // Id of the FetchResult that should be an input.
+    field: Option<FieldName>, // An optional field to map over the result objects with.
+    result_id: VarId,         // Id of the FetchResult that should be an input.
 }
-
-type Id = u64;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum ConstraintValue {
-    Term(Term),    // An actual value
-    Ref(Ref),      // A reference to a different result.
-    Field(String), // Another field on the same result
+    Term(Term),       // An actual value
+    Ref(Ref),         // A reference to a different result.
+    Field(FieldName), // Another field on the same result
 }
 
 // @TODO(steve): These are all constraints on a field. If we need to add constraints
@@ -55,14 +64,14 @@ pub enum ConstraintKind {
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Constraint {
     kind: ConstraintKind,
-    field: Option<String>,
+    field: Option<FieldName>,
     value: ConstraintValue,
 }
 
 // The list of constraints passed to a fetching function for a particular type.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct FetchRequest {
-    class_tag: String,
+    class_tag: TypeName,
     constraints: Vec<Constraint>,
 }
 
@@ -72,16 +81,16 @@ pub struct FetchRequest {
 // @Q(steve): Is it always the last one in the resolve_order?
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct ResultSet {
-    requests: HashMap<Id, FetchRequest>,
-    resolve_order: Vec<Id>,
-    result_id: Id,
+    requests: Map<VarId, FetchRequest>,
+    resolve_order: Vec<VarId>,
+    result_id: VarId,
 }
 
 struct ResultSetBuilder<'a> {
     result_set: ResultSet,
     types: &'a Types,
     vars: &'a Vars,
-    seen: HashSet<Id>,
+    seen: Set<VarId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Default)]
@@ -89,31 +98,28 @@ pub struct FilterPlan {
     result_sets: Vec<ResultSet>,
 }
 
-pub type Types = HashMap<String, HashMap<String, Type>>;
-pub type PartialResults = Vec<ResultEvent>;
-
 #[derive(Debug, Default)]
 struct VarInfo {
-    cycles: Vec<(Symbol, Symbol)>,                      // x = y
-    uncycles: Vec<(Symbol, Symbol)>,                    // x != y
-    types: Vec<(Symbol, String)>,                       // x matches XClass
-    eq_values: Vec<(Symbol, Term)>,                     // x = 1
-    contained_values: Vec<(Term, Symbol)>,              // 1 in x
-    field_relationships: Vec<(Symbol, String, Symbol)>, // x.a = y
-    in_relationships: Vec<(Symbol, Symbol)>,            // x in y
+    cycles: Vec<(VarName, VarName)>,                         // x = y
+    uncycles: Vec<(VarName, VarName)>,                       // x != y
+    types: Vec<(VarName, TypeName)>,                         // x matches XClass
+    eq_values: Vec<(VarName, Term)>,                         // x = 1
+    contained_values: Vec<(Term, VarName)>,                  // 1 in x
+    field_relationships: Vec<(VarName, FieldName, VarName)>, // x.a = y
+    in_relationships: Vec<(VarName, VarName)>,               // x in y
     counter: Counter,
 }
 
 #[derive(Debug)]
 struct Vars {
-    variables: HashMap<Id, HashSet<Symbol>>,
-    field_relationships: HashMap<Id, HashSet<(String, Id)>>,
-    uncycles: HashMap<Id, HashSet<Id>>,
-    in_relationships: HashSet<(Id, Id)>,
-    eq_values: HashMap<Id, Term>,
-    contained_values: HashMap<Id, HashSet<Term>>,
-    types: HashMap<Id, String>,
-    this_id: Id,
+    variables: Map<VarId, Set<VarName>>,
+    field_relationships: Map<VarId, Set<(FieldName, VarId)>>,
+    uncycles: Map<VarId, Set<VarId>>,
+    in_relationships: Set<(VarId, VarId)>,
+    eq_values: Map<VarId, Term>,
+    contained_values: Map<VarId, Set<Term>>,
+    types: Map<VarId, TypeName>,
+    this_id: VarId,
 }
 
 pub fn build_filter_plan(
@@ -141,7 +147,7 @@ impl VarInfo {
     }
 
     /// for when you absolutely, definitely need a symbol.
-    fn symbolize(&mut self, val: &Term) -> Symbol {
+    fn symbolize(&mut self, val: &Term) -> VarName {
         match val.value() {
             Value::Variable(var) | Value::RestVariable(var) => var.clone(),
             Value::Expression(Operation {
@@ -164,7 +170,7 @@ impl VarInfo {
     }
 
     /// convert a binary dot expression into a symbol.
-    fn dot_var(&mut self, base: &Term, field: &Term) -> Symbol {
+    fn dot_var(&mut self, base: &Term, field: &Term) -> VarName {
         // handle nested dot ops.
         let sym = self.symbolize(base);
         let field_str = field.value().as_string().unwrap();
@@ -205,11 +211,8 @@ impl VarInfo {
     }
 
     fn do_and(self, args: &[Term]) -> PolarResult<Self> {
-        args.iter().fold(Ok(self), |s, arg| {
-            s.and_then(|this| {
-                let inner_exp = arg.value().as_expression().unwrap();
-                this.process_exp(inner_exp)
-            })
+        args.iter().fold(Ok(self), |this, arg| {
+            this?.process_exp(arg.value().as_expression().unwrap())
         })
     }
 
@@ -295,17 +298,15 @@ impl VarInfo {
 
     /// Process an expression in the context of this VarInfo. Just does side effects.
     fn process_exp(self, exp: &Operation) -> PolarResult<Self> {
+        use Operator::*;
         let args = &exp.args;
         match exp.operator {
-            Operator::And => self.do_and(args),
-            Operator::Dot if args.len() == 2 => self.do_dot(&args[0], &args[1]),
-            Operator::Isa if args.len() == 2 => self.do_isa(&args[0], &args[1]),
-            Operator::Neq if args.len() == 2 => self.do_neq(&args[0], &args[1]),
-            Operator::In if args.len() == 2 => self.do_in(&args[0], &args[1]),
-            Operator::Unify | Operator::Eq | Operator::Assign if args.len() == 2 => {
-                self.do_unify(&args[0], &args[1])
-            }
-
+            And => self.do_and(args),
+            Dot if args.len() == 2 => self.do_dot(&args[0], &args[1]),
+            Isa if args.len() == 2 => self.do_isa(&args[0], &args[1]),
+            Neq if args.len() == 2 => self.do_neq(&args[0], &args[1]),
+            In if args.len() == 2 => self.do_in(&args[0], &args[1]),
+            Unify | Eq | Assign if args.len() == 2 => self.do_unify(&args[0], &args[1]),
             _ => err_unimplemented(format!(
                 "the expression {:?}/{} is not supported for data filtering",
                 exp.operator,
@@ -481,7 +482,15 @@ impl ResultSet {
 }
 
 impl FetchRequest {
-    fn constrain(&mut self, kind: ConstraintKind, field: Option<String>, value: ConstraintValue) {
+    fn len(&self) -> usize {
+        self.constraints.len()
+    }
+    fn constrain(
+        &mut self,
+        kind: ConstraintKind,
+        field: Option<FieldName>,
+        value: ConstraintValue,
+    ) {
         self.constraints.push(Constraint { kind, field, value });
     }
 
@@ -786,11 +795,11 @@ impl<'a> ResultSetBuilder<'a> {
         Ok(self)
     }
 
-    /*
     fn ensure_added_constraint(
         &mut self,
         id: Id,
         field: &str,
+        child: Id,
         before: usize,
     ) -> PolarResult<&mut Self> {
         let after = self.result_set.requests.get(&id).unwrap().len();
@@ -798,42 +807,36 @@ impl<'a> ResultSetBuilder<'a> {
             Ok(self)
         } else {
             err_invalid(format!(
-                "Field access produced no constraint: {}.{}",
-                id, field
+                "Field access produced no constraint: {}.{} = {}",
+                id, field, child
             ))
         }
     }
-    */
 
     fn constrain_fields(&mut self, id: Id, var_type: &str) -> PolarResult<&mut Self> {
         match self.vars.field_relationships.get(&id) {
             None => Ok(self),
-            Some(fs) => fs.iter().fold(Ok(self), |s, (field, child)| {
-                s.and_then(
-                    |this| match this.types.get(var_type).and_then(|m| m.get(field)) {
-                        Some(Type::Relation {
-                            other_class_tag,
-                            my_field,
-                            other_field,
-                            ..
-                        }) => this.constrain_relation(
-                            id,
-                            *child,
-                            other_class_tag,
-                            my_field,
-                            other_field,
-                        ),
-                        _ => {
-                            // let before = this.result_set.requests.get(&id).unwrap().len();
-                            this.constrain_field_eq(id, field, *child)?
-                                .constrain_field_neq(id, field, *child)?
-                                .constrain_field_contained(id, field, *child)?
-                                .constrain_field_others_with_same_parent(id, field, *child)?
-                                .constrain_field_others(id, field, *child)
-                            // ?.ensure_added_constraint(id, field, before)
-                        }
-                    },
-                )
+            Some(fs) => fs.iter().fold(Ok(self), |this, (field, child)| {
+                let this = this?;
+                match this.types.get(var_type).and_then(|m| m.get(field)) {
+                    Some(Type::Relation {
+                        other_class_tag,
+                        my_field,
+                        other_field,
+                        ..
+                    }) => {
+                        this.constrain_relation(id, *child, other_class_tag, my_field, other_field)
+                    }
+                    _ => {
+                        let before = this.result_set.requests.get(&id).unwrap().len();
+                        this.constrain_field_eq(id, field, *child)?
+                            .constrain_field_neq(id, field, *child)?
+                            .constrain_field_contained(id, field, *child)?
+                            .constrain_field_others_with_same_parent(id, field, *child)?
+                            .constrain_field_others(id, field, *child)?
+                            .ensure_added_constraint(id, field, *child, before)
+                    }
+                }
             }),
         }
     }
@@ -968,13 +971,13 @@ impl Vars {
 }
 
 /// try to find an existing id for this variable.
-fn seek_var_id(vars: &HashMap<Id, HashSet<Symbol>>, var: &Symbol) -> Option<Id> {
+fn seek_var_id(vars: &HashMap<Id, HashSet<VarName>>, var: &VarName) -> Option<Id> {
     vars.iter()
         .find_map(|(id, set)| set.contains(var).then(|| *id))
 }
 
 /// get the id for this variable, or create one if the variable is new.
-fn get_var_id(vars: &mut HashMap<Id, HashSet<Symbol>>, var: Symbol, counter: &Counter) -> Id {
+fn get_var_id(vars: &mut HashMap<Id, HashSet<VarName>>, var: VarName, counter: &Counter) -> Id {
     seek_var_id(vars, &var).unwrap_or_else(|| {
         let new_id = counter.next();
         let mut new_set = HashSet::new();
@@ -1127,16 +1130,17 @@ mod test {
 
     #[test]
     fn test_unsupported_op_msgs() {
-        use crate::error::{
-            PolarError,
-            ErrorKind::Operational,
-            OperationalError::Unimplemented,
-        };
+        use crate::error::{ErrorKind::Operational, OperationalError::Unimplemented, PolarError};
 
         let err = Vars::from_op(&op!(Dot)).expect_err("should've failed");
         match err {
-            PolarError { kind: Operational(Unimplemented { msg }), .. } =>
-                assert_eq!(&msg, "the expression Dot/0 is not supported for data filtering"),
+            PolarError {
+                kind: Operational(Unimplemented { msg }),
+                ..
+            } => assert_eq!(
+                &msg,
+                "the expression Dot/0 is not supported for data filtering"
+            ),
             _ => panic!("unexpected"),
         }
     }
