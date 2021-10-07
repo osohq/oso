@@ -250,7 +250,7 @@ impl ResourceMissingHasPermissionVisitor {
 
     fn warnings(&mut self) -> PolarResult<Vec<String>> {
         if !self.calls_has_permission {
-            return Ok(vec!["Warning: your policy uses resource blocks but does not use the \
+            return Ok(vec!["Warning: your policy uses resource blocks but does not call the \
 has_permission rule. This means that permissions you define in a \
 resource block will not have any effect. Did you mean to add a \
 top-level allow rule?
