@@ -162,8 +162,8 @@ pub fn walk_param<V: Visitor>(visitor: &mut V, param: &Parameter) {
 }
 
 pub fn walk_generic_rule<V: Visitor>(visitor: &mut V, rule: &GenericRule) {
-    for (_, rule) in &rule.rules {
-        visitor.visit_rule(&rule);
+    for rule in rule.rules.values() {
+        visitor.visit_rule(rule);
     }
 }
 

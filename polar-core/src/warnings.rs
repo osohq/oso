@@ -257,13 +257,13 @@ impl ResourceMissingHasPermissionVisitor {
 }
 
 pub fn check_resource_missing_has_permission(kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
-    if kb.resource_blocks.resources.len() == 0 {
+    if kb.resource_blocks.resources.is_empty() {
         return Ok(vec![]);
     }
 
     let mut visitor = ResourceMissingHasPermissionVisitor::new();
-    for (_, rule) in kb.get_rules() {
-        visitor.visit_generic_rule(&rule);
+    for rule in kb.get_rules().values() {
+        visitor.visit_generic_rule(rule);
     }
     visitor.warnings()
 }
