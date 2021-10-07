@@ -21,6 +21,8 @@ draft: true
   should support more platforms now.
 - Oso will now issue a warning if there is no `allow` rule in your policy (and
   also no `allow_request` or `allow_field` rules).
+- Oso will propose a suggested fix if you forget to write an actor block when
+  using resource blocks.
 
 ### Node.js
 
@@ -32,6 +34,8 @@ draft: true
   Many thanks to [`@rradczewski`](https://github.com/rradczewski) for
   [raising](https://github.com/osohq/oso/issues/1242) and reproducing
   the issue, and confirming the fix!
+- Oso now defaults to using Lodash's `isEqual` function when comparing JavaScript values
+  for equality.
 
 ### Rust
 
