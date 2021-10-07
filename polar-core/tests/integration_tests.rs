@@ -2207,6 +2207,14 @@ fn test_list_results() -> TestResult {
 }
 
 #[test]
+fn test_partial_fail_closed() -> TestResult {
+    let mut p = Polar::new();
+    p.load_str("foo(x, y) if z.c in x.a and z.c = y.b;")?;
+    qnull(&mut p, "foo({a: [1]}, {b: 2})");
+    Ok(())
+}
+
+#[test]
 fn test_expressions_in_lists() -> TestResult {
     let mut p = Polar::new();
     p.load_str(
@@ -2284,7 +2292,6 @@ fn error_on_binding_expressions_and_patterns_to_variables() -> TestResult {
 #[test]
 fn test_builtin_iterables() {
     let mut p = Polar::new();
-
     qnull(&mut p, r#"x in """#);
     qvar(
         &mut p,
