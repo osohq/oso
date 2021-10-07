@@ -216,7 +216,6 @@ impl Polar {
                     }
                 }
             }
-            warnings.append(&mut check_resource_missing_has_permission(kb)?);
             Ok(warnings)
         }
 
@@ -254,6 +253,10 @@ impl Polar {
         // Perform validation checks against the whole policy
         let mut warnings = vec![];
         warnings.append(&mut check_no_allow_rule(&kb)?);
+
+        // Check for has_permission calls alongside resource block definitions
+        warnings.append(&mut check_resource_missing_has_permission(&kb)?);
+
         self.messages
             .extend(warnings.into_iter().map(Message::warning));
 
