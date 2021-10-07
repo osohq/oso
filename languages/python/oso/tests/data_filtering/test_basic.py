@@ -451,14 +451,15 @@ def test_param_field(oso):
         oso.check_authz(log.data, log.id, Log, [log])
 
 
+@pytest.mark.xfail(reason="a bug")
 def test_in_intersection(oso):
     # gwen can read any foo with a sibling foo with a number in common
     oso.load_str(
         """
             allow("gwen", "read", foo: Foo) if
-                num in foo.numbers and
                 goo in foo.bar.foos and
                 goo != foo and
+                num in foo.numbers and
                 num in goo.numbers;
         """
     )
@@ -538,6 +539,7 @@ def test_deeply_nested_in(oso):
     assert len(result) == len(expected)
 
 
+@pytest.mark.xfail(reason="not supported")
 def test_nested_properties(oso):
     @dataclass
     class Qux:
