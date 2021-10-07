@@ -536,3 +536,19 @@ def test_deeply_nested_in(oso):
     expected = [foo for foo in foos if len(foo.bar().foos()) >= 2]
     result = oso.authorized_resources("gwen", "read", Foo)
     assert len(result) == len(expected)
+
+
+def test_nested_properties(oso):
+    @dataclass
+    class Qux:
+        attr: dict
+    quxs = [Qux(attr={"foo": n}) for n in range(3)]
+    oso.register_class(Qux, build_query=filter_array(quxs),
+            fields={'attr': dict})
+    oso.load_str("""
+        allow("gwen", "read", _: Qux{attr: attr}) if attr.foo = 2;
+    """)
+
+    result = oso.authorized_resources("gwen", "read", Qux)
+    assert len(result) == 1
+
