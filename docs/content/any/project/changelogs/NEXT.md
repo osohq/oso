@@ -23,8 +23,8 @@ draft: true
   also no `allow_request` or `allow_field` rules).
 - Oso will propose a suggested fix if you forget to write an actor block when
   using resource blocks.
-- Oso will now issue a warning if there are resource blocks in your policy no
-  calls to `has_permission` in any rules.
+- Oso will now issue a warning if there are resource blocks in your policy but
+  no calls to `has_permission` in any rules.
 
 ### Node.js
 
