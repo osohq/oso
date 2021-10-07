@@ -257,6 +257,7 @@ call to has_permission in a top-level allow rule?
 
   allow(actor, action, resource) if
       has_permission(actor, action, resource);
+
 For more information about resource blocks, see https://docs.osohq.com/any/reference/polar/polar-syntax.html#actor-and-resource-blocks".to_string(),
 
             ]);
