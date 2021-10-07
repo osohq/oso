@@ -9,7 +9,10 @@ use super::runnable::Runnable;
 use super::sources::*;
 use super::terms::*;
 use super::vm::*;
-use super::warnings::{check_ambiguous_precedence, check_no_allow_rule, check_singletons};
+use super::warnings::{
+    check_ambiguous_precedence, check_no_allow_rule, check_resource_missing_has_permission,
+    check_singletons,
+};
 
 use std::sync::{Arc, RwLock};
 
@@ -213,6 +216,7 @@ impl Polar {
                     }
                 }
             }
+            warnings.append(&mut check_resource_missing_has_permission(kb)?);
             Ok(warnings)
         }
 

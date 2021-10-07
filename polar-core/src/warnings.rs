@@ -228,12 +228,11 @@ rule. For more information about allow rules, see:
     }
 }
 
-struct ResourceMissingHasPermissionVisitor<'kb> {
-    kb: &'kb KnowledgeBase,
+struct ResourceMissingHasPermissionVisitor {
     uses_has_permission: bool,
 }
 
-impl<'kb> Visitor for ResourceMissingHasPermissionVisitor<'kb> {
+impl Visitor for ResourceMissingHasPermissionVisitor {
     fn visit_call(&mut self, call: &Call) {
         if call.name == sym!("has_permission") {
             self.uses_has_permission = true;
@@ -242,10 +241,9 @@ impl<'kb> Visitor for ResourceMissingHasPermissionVisitor<'kb> {
     }
 }
 
-impl<'kb> ResourceMissingHasPermissionVisitor<'kb> {
-    fn new(kb: &'kb KnowledgeBase) -> Self {
+impl ResourceMissingHasPermissionVisitor {
+    fn new() -> Self {
         Self {
-            kb,
             uses_has_permission: false,
         }
     }
@@ -263,7 +261,7 @@ pub fn check_resource_missing_has_permission(kb: &KnowledgeBase) -> PolarResult<
         return Ok(vec![]);
     }
 
-    let mut visitor = ResourceMissingHasPermissionVisitor::new(kb);
+    let mut visitor = ResourceMissingHasPermissionVisitor::new();
     for (_, rule) in kb.get_rules() {
         visitor.visit_generic_rule(&rule);
     }
