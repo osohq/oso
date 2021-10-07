@@ -229,13 +229,13 @@ rule. For more information about allow rules, see:
 }
 
 struct ResourceMissingHasPermissionVisitor {
-    uses_has_permission: bool,
+    calls_has_permission: bool,
 }
 
 impl Visitor for ResourceMissingHasPermissionVisitor {
     fn visit_call(&mut self, call: &Call) {
         if call.name == sym!("has_permission") {
-            self.uses_has_permission = true;
+            self.calls_has_permission = true;
         }
         walk_call(self, call)
     }
@@ -244,13 +244,22 @@ impl Visitor for ResourceMissingHasPermissionVisitor {
 impl ResourceMissingHasPermissionVisitor {
     fn new() -> Self {
         Self {
-            uses_has_permission: false,
+            calls_has_permission: false,
         }
     }
 
     fn warnings(&mut self) -> PolarResult<Vec<String>> {
-        if !self.uses_has_permission {
-            return Ok(vec![String::from("foobar")]);
+        if !self.calls_has_permission {
+            return Ok(vec!["Warning: your policy uses resource blocks but does not use the \
+has_permission rule. This means that permissions you define in a \
+resource block will not have any effect. Did you mean to add a \
+top-level allow rule?
+
+  allow(actor, action, resource) if
+      has_permission(actor, action, resource)
+For more information about resource blocks, see https://docs.osohq.com/any/reference/polar/polar-syntax.html#actor-and-resource-blocks".to_string(),
+
+            ]);
         }
         Ok(vec![])
     }
