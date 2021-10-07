@@ -37,6 +37,9 @@ pub trait Visitor: Sized {
     fn visit_rule(&mut self, r: &Rule) {
         walk_rule(self, r)
     }
+    fn visit_generic_rule(&mut self, rule: &GenericRule) {
+        walk_generic_rule(self, rule);
+    }
     fn visit_term(&mut self, t: &Term) {
         walk_term(self, t)
     }
@@ -68,9 +71,6 @@ pub trait Visitor: Sized {
     fn visit_param(&mut self, p: &Parameter) {
         walk_param(self, p)
     }
-    fn visit_generic_rule(&mut self, rule: &GenericRule) {
-        walk_generic_rule(self, rule);
-    }
 }
 
 macro_rules! walk_elements {
@@ -93,6 +93,12 @@ pub fn walk_rule<V: Visitor>(visitor: &mut V, rule: &Rule) {
     visitor.visit_symbol(&rule.name);
     walk_elements!(visitor, visit_param, &rule.params);
     visitor.visit_term(&rule.body);
+}
+
+pub fn walk_generic_rule<V: Visitor>(visitor: &mut V, rule: &GenericRule) {
+    for rule in rule.rules.values() {
+        visitor.visit_rule(rule);
+    }
 }
 
 pub fn walk_term<V: Visitor>(visitor: &mut V, term: &Term) {
@@ -161,11 +167,6 @@ pub fn walk_param<V: Visitor>(visitor: &mut V, param: &Parameter) {
     }
 }
 
-pub fn walk_generic_rule<V: Visitor>(visitor: &mut V, rule: &GenericRule) {
-    for rule in rule.rules.values() {
-        visitor.visit_rule(rule);
-    }
-}
 
 #[cfg(test)]
 mod tests {

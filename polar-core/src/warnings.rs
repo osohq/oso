@@ -228,20 +228,20 @@ rule. For more information about allow rules, see:
     }
 }
 
-struct ResourceMissingHasPermissionVisitor {
+struct ResourceBlocksMissingHasPermissionVisitor {
     calls_has_permission: bool,
 }
 
-impl Visitor for ResourceMissingHasPermissionVisitor {
+impl Visitor for ResourceBlocksMissingHasPermissionVisitor {
     fn visit_call(&mut self, call: &Call) {
-        if call.name == sym!("has_permission") {
+        if call.name.0 == "has_permission" {
             self.calls_has_permission = true;
         }
         walk_call(self, call)
     }
 }
 
-impl ResourceMissingHasPermissionVisitor {
+impl ResourceBlocksMissingHasPermissionVisitor {
     fn new() -> Self {
         Self {
             calls_has_permission: false,
@@ -256,7 +256,7 @@ resource block will not have any effect. Did you mean to include a \
 call to has_permission in a top-level allow rule?
 
   allow(actor, action, resource) if
-      has_permission(actor, action, resource)
+      has_permission(actor, action, resource);
 For more information about resource blocks, see https://docs.osohq.com/any/reference/polar/polar-syntax.html#actor-and-resource-blocks".to_string(),
 
             ]);
@@ -270,7 +270,7 @@ pub fn check_resource_missing_has_permission(kb: &KnowledgeBase) -> PolarResult<
         return Ok(vec![]);
     }
 
-    let mut visitor = ResourceMissingHasPermissionVisitor::new();
+    let mut visitor = ResourceBlocksMissingHasPermissionVisitor::new();
     for rule in kb.get_rules().values() {
         visitor.visit_generic_rule(rule);
     }
