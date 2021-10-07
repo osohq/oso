@@ -21,6 +21,8 @@ draft: true
   should support more platforms now.
 - Oso will now issue a warning if there is no `allow` rule in your policy (and
   also no `allow_request` or `allow_field` rules).
+- Oso will propose a suggested fix if you forget to write an actor block when
+  using resource blocks.
 
 ### Node.js
 
