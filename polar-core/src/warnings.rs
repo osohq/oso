@@ -252,8 +252,8 @@ impl ResourceMissingHasPermissionVisitor {
         if !self.calls_has_permission {
             return Ok(vec!["Warning: your policy uses resource blocks but does not call the \
 has_permission rule. This means that permissions you define in a \
-resource block will not have any effect. Did you mean to add a \
-top-level allow rule?
+resource block will not have any effect. Did you mean to include a \
+call to has_permission in a top-level allow rule?
 
   allow(actor, action, resource) if
       has_permission(actor, action, resource)
