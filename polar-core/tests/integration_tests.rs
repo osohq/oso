@@ -1867,6 +1867,7 @@ fn test_matches() {
     qeval(&mut p, "x = {foo: 1, bar: 2} and x matches {foo: 1}");
     qnull(&mut p, "x = {foo: 1} and x matches {foo: 1, bar: 2}");
     qnull(&mut p, "x = {foo: 1} and x matches {foo: 2}");
+    qeval(&mut p, "x matches Integer and x = 1");
 }
 
 #[test]
@@ -2294,17 +2295,6 @@ fn test_list_matches() {
         "xs",
         vec![value!([3, Value::RestVariable(Symbol::new("ys"))])],
     );
-}
-
-#[test]
-#[allow(clippy::unnecessary_wraps)]
-fn error_on_binding_expressions_and_patterns_to_variables() -> TestResult {
-    qruntime!(
-        "x matches y",
-        RuntimeError::TypeError { msg: m, .. },
-        m == "cannot unify patterns directly `x` = `y{}`"
-    );
-    Ok(())
 }
 
 #[test]
