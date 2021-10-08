@@ -4,7 +4,7 @@ isAdmin: isAdmin
 forbiddenError: ForbiddenError
 notFoundError: NotFoundError
 authorizeLink: |-
-  <a href="https://docs-preview.oso.dev/node/reference/api/classes/oso.oso-1.html#authorize">`Oso.authorize`</a>
+  <a href="/node/reference/api/classes/oso.oso-1.html#authorize">`Oso.authorize`</a>
 forbiddenErrorLink: |-
   <a href="/node/reference/api/classes/errors.forbiddenerror.html">`ForbiddenError`</a>
 notFoundErrorLink: |-
