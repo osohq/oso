@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::error::ParameterError;
 use crate::error::{PolarError, PolarResult};
+use crate::warnings::check_undefined_rule_calls;
 
 pub use super::bindings::Bindings;
 use super::counter::Counter;
@@ -107,8 +108,21 @@ impl KnowledgeBase {
         generic_rule.add_rule(Arc::new(rule));
     }
 
-    /// Validate that all rules loaded into the knowledge base are valid based on rule types.
     pub fn validate_rules(&self) -> PolarResult<()> {
+        self.validate_rule_types()?;
+        self.validate_rule_calls()
+    }
+
+    fn validate_rule_calls(&self) -> PolarResult<()> {
+        let errors = check_undefined_rule_calls(self)?;
+        match errors.first() {
+            Some(e) => Err(e.clone()),
+            None => Ok(()),
+        }
+    }
+
+    /// Validate that all rules loaded into the knowledge base are valid based on rule types.
+    fn validate_rule_types(&self) -> PolarResult<()> {
         for (rule_name, generic_rule) in &self.rules {
             if let Some(types) = self.rule_types.get(rule_name) {
                 // If a type with the same name exists, then the parameters must match for each rule

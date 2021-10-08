@@ -6,6 +6,7 @@ use super::sources::Source;
 use super::terms::*;
 use super::visitor::{walk_call, walk_rule, walk_term, Visitor};
 
+use std::collections::HashSet;
 use std::collections::{hash_map::Entry, HashMap};
 
 fn common_misspellings(t: &str) -> Option<String> {
@@ -266,7 +267,9 @@ For more information about resource blocks, see https://docs.osohq.com/any/refer
     }
 }
 
-pub fn check_resource_missing_has_permission(kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
+pub fn check_resource_blocks_missing_has_permission(
+    kb: &KnowledgeBase,
+) -> PolarResult<Vec<String>> {
     if kb.resource_blocks.resources.is_empty() {
         return Ok(vec![]);
     }
@@ -278,12 +281,71 @@ pub fn check_resource_missing_has_permission(kb: &KnowledgeBase) -> PolarResult<
     visitor.warnings()
 }
 
+struct UndefinedRuleVisitor<'kb> {
+    kb: &'kb KnowledgeBase,
+    call_terms: Vec<Term>,
+    defined_rules: HashSet<Symbol>,
+}
+
+impl<'kb> UndefinedRuleVisitor<'kb> {
+    fn new(kb: &'kb KnowledgeBase) -> Self {
+        Self {
+            kb,
+            call_terms: Vec::new(),
+            defined_rules: HashSet::new(),
+        }
+    }
+
+    fn warnings(&mut self) -> PolarResult<Vec<PolarError>> {
+        let mut warnings = vec![];
+        for term in &self.call_terms {
+            let call = term.value().as_call().unwrap();
+            if !self.defined_rules.contains(&call.name) {
+                warnings.push(self.kb.set_error_context(
+                    term,
+                    error::ValidationError::UndefinedRule {
+                        rule_name: call.name.0.clone(),
+                    },
+                ));
+            }
+        }
+        Ok(warnings)
+    }
+}
+
+impl<'kb> Visitor for UndefinedRuleVisitor<'kb> {
+    fn visit_term(&mut self, term: &Term) {
+        match term.value() {
+            Value::Call(_) => self.call_terms.push(term.clone()),
+            _ => (),
+        }
+        walk_term(self, term)
+    }
+
+    fn visit_rule(&mut self, rule: &Rule) {
+        self.defined_rules.insert(rule.name.clone());
+        walk_rule(self, rule)
+    }
+}
+
+pub fn check_undefined_rule_calls(kb: &KnowledgeBase) -> PolarResult<Vec<PolarError>> {
+    let mut visitor = UndefinedRuleVisitor::new(kb);
+    for rule in kb.get_rules().values() {
+        visitor.visit_generic_rule(rule);
+    }
+
+    visitor.warnings()
+}
+
 #[cfg(test)]
 mod tests {
     use crate::kb::KnowledgeBase;
     use crate::rules::*;
     use crate::terms::*;
-    use crate::warnings::{check_no_allow_rule, check_resource_missing_has_permission};
+    use crate::warnings::{
+        check_no_allow_rule, check_resource_blocks_missing_has_permission,
+        check_undefined_rule_calls,
+    };
 
     #[test]
     fn test_check_no_allow_rule_no_allow() {
@@ -343,7 +405,7 @@ mod tests {
             .insert(term!(sym!("Organization")));
 
         let warnings =
-            check_resource_missing_has_permission(&kb).expect("failed to execute visitor");
+            check_resource_blocks_missing_has_permission(&kb).expect("failed to execute visitor");
 
         assert_eq!(warnings.len(), 1);
     }
@@ -356,8 +418,29 @@ mod tests {
             .insert(term!(sym!("Organization")));
         kb.add_rule(rule!("f", [sym!("x")] => call!("has_permission", [sym!("y")])));
         let warnings =
-            check_resource_missing_has_permission(&kb).expect("failed to execute visitor");
+            check_resource_blocks_missing_has_permission(&kb).expect("failed to execute visitor");
 
+        assert_eq!(warnings.len(), 0);
+    }
+
+    #[test]
+    fn test_undefined_rule_warning() {
+        let mut kb = KnowledgeBase::new();
+        kb.add_rule(rule!("f", [sym!("x")] => call!("no_such_rule", [sym!("y")])));
+        let warnings = check_undefined_rule_calls(&kb).expect("failed to execute visitor");
+        assert_eq!(warnings.len(), 1);
+
+        println!("{}", warnings.first().unwrap());
+        assert!(format!("{}", warnings.first().unwrap())
+            .contains(r#"Call to undefined rule "no_such_rule""#));
+    }
+
+    #[test]
+    fn test_undefined_rule_warning_clean() {
+        let mut kb = KnowledgeBase::new();
+        kb.add_rule(rule!("f", [sym!("x")] => call!("defined_rule", [sym!("y")])));
+        kb.add_rule(rule!("defined_rule", [sym!("x")]));
+        let warnings = check_undefined_rule_calls(&kb).expect("failed to execute visitor");
         assert_eq!(warnings.len(), 0);
     }
 }
