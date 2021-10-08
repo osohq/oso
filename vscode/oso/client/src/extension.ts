@@ -66,7 +66,7 @@ const clients: Map<string, LanguageClient> = new Map();
 // If the user only opens `folderA`, then we'll treat `a.polar` & `b.polar` as
 // part of the same policy.
 
-function filesInWorkspaceFolderPattern(folder: WorkspaceFolder) {
+function polarFilesInWorkspaceFolderPattern(folder: WorkspaceFolder) {
   return new RelativePattern(folder, '**/*.polar');
 }
 
@@ -83,16 +83,32 @@ function filesInWorkspaceFolderPattern(folder: WorkspaceFolder) {
 // - https://github.com/microsoft/vscode/issues/15723
 // - https://github.com/microsoft/vscode/issues/33046
 async function openPolarFilesInWorkspaceFolder(folder: WorkspaceFolder) {
-  const pattern = filesInWorkspaceFolderPattern(folder);
+  const pattern = polarFilesInWorkspaceFolderPattern(folder);
   const files = await workspace.findFiles(pattern);
   return Promise.all(files.map(f => workspace.openTextDocument(f)));
 }
 
-async function startClient(
-  server: string,
-  workspaceFolder: WorkspaceFolder,
-  context: ExtensionContext
-) {
+async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
+  const server = context.asAbsolutePath(join('server', 'out', 'server.js'));
+
+  const pattern = polarFilesInWorkspaceFolderPattern(folder);
+  // Watch `FileChangeType.Deleted` events for files in the current workspace,
+  // including those not open in any editor in the workspace.
+  const deleteWatcher = workspace.createFileSystemWatcher(pattern, true, true);
+  // Watch `FileChangeType.Created` and `FileChangeType.Changed` events for
+  // files in the current workspace, including those not open in any editor in
+  // the workspace.
+  const createChangeWatcher = workspace.createFileSystemWatcher(
+    pattern,
+    false,
+    false,
+    true
+  );
+
+  // Clean up watchers when extension is deactivated.
+  context.subscriptions.push(deleteWatcher);
+  context.subscriptions.push(createChangeWatcher);
+
   // TODO(gj): remove debugOpts when we move server from TS -> Rust.
   const debugOpts = {
     execArgv: ['--nolazy', `--inspect=${6011 + clients.size}`],
@@ -104,22 +120,32 @@ async function startClient(
   const clientOpts: LanguageClientOptions = {
     // TODO(gj): seems like I should be able to use a RelativePattern here, but
     // the TS type for DocumentFilter.pattern doesn't seem to like that.
-    documentSelector: [{ pattern: `${workspaceFolder.uri.fsPath}/**/*.polar` }],
-    synchronize: {
-      fileEvents: workspace.createFileSystemWatcher(
-        filesInWorkspaceFolderPattern(workspaceFolder)
-      ),
-    },
+    documentSelector: [{ pattern: `${folder.uri.fsPath}/**/*.polar` }],
+    synchronize: { fileEvents: deleteWatcher },
     diagnosticCollectionName: extensionName,
-    workspaceFolder,
+    workspaceFolder: folder,
     outputChannel,
   };
   const client = new LanguageClient(extensionName, serverOpts, clientOpts);
 
   // Start client and mark it for cleanup when the extension is deactivated.
   context.subscriptions.push(client.start());
-  await openPolarFilesInWorkspaceFolder(workspaceFolder);
-  clients.set(workspaceFolder.uri.toString(), client);
+
+  // When a Polar file in `folder` (even files not currently open in VSCode) is
+  // created or changed, trigger a `workspace.onDidOpenTextDocument` event that
+  // the language server is listening for.
+  context.subscriptions.push(
+    createChangeWatcher.onDidCreate(file => workspace.openTextDocument(file))
+  );
+  context.subscriptions.push(
+    createChangeWatcher.onDidChange(file => workspace.openTextDocument(file))
+  );
+
+  // Trigger a `workspace.onDidOpenTextDocument` event for every Polar file in
+  // `folder` (even files not currently open in VSCode).
+  await openPolarFilesInWorkspaceFolder(folder);
+
+  clients.set(folder.uri.toString(), client);
 }
 
 async function stopClient(folder: string) {
@@ -128,25 +154,24 @@ async function stopClient(folder: string) {
   clients.delete(folder);
 }
 
-function updateClients(server: string, context: ExtensionContext) {
+function updateClients(context: ExtensionContext) {
   return async function ({ added, removed }: WorkspaceFoldersChangeEvent) {
     // Clean up clients for removed folders.
     for (const folder of removed) await stopClient(folder.uri.toString());
 
     // Create clients for added folders.
-    for (const folder of added) await startClient(server, folder, context);
+    for (const folder of added) await startClient(folder, context);
   };
 }
 
 export async function activate(context: ExtensionContext): Promise<void> {
-  const server = context.asAbsolutePath(join('server', 'out', 'server.js'));
   const folders = workspace.workspaceFolders || [];
 
   // Start a client for every folder in the workspace.
-  for (const folder of folders) await startClient(server, folder, context);
+  for (const folder of folders) await startClient(folder, context);
 
-  // When workspace folders change, update the set of clients.
-  workspace.onDidChangeWorkspaceFolders(updateClients(server, context));
+  // Update clients when workspace folders change.
+  workspace.onDidChangeWorkspaceFolders(updateClients(context));
 
   // TODO(gj): is it possible to go from workspace -> no workspace? What about
   // from no workspace -> workspace?

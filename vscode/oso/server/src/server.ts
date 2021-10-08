@@ -4,7 +4,7 @@ import {
   createConnection,
   TextDocuments,
   ProposedFeatures,
-  TextDocumentSyncKind,
+  // TextDocumentSyncKind,
 } from 'vscode-languageserver/node';
 
 import 'vscode-languageserver';
@@ -41,14 +41,17 @@ connection.onInitialize(params => {
   folder = params.rootUri.split('/').pop();
   connection.console.log(`[${process.pid} ${folder}] onInitialize`);
   // TODO(gj): what does returning `capabilities.workspace.fileOperations` do?
+  //
+  // TODO(gj): everything seems to work fine even when I return no
+  // capabilities?
   return {
     capabilities: {
-      textDocumentSync: {
-        openClose: true,
-        save: true,
-        change: TextDocumentSyncKind.Full,
-      },
-      workspace: { workspaceFolders: { supported: true } },
+      //   // textDocumentSync: {
+      //   //   openClose: true,
+      //   //   save: true,
+      //   //   change: TextDocumentSyncKind.Full,
+      //   // },
+      //   workspace: { workspaceFolders: { supported: true } },
     },
   };
 });
