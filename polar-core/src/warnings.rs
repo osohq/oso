@@ -4,7 +4,7 @@ use super::kb::*;
 use super::rules::*;
 use super::sources::Source;
 use super::terms::*;
-use super::visitor::{walk_rule, walk_term, Visitor};
+use super::visitor::{walk_call, walk_rule, walk_term, Visitor};
 
 use std::collections::{hash_map::Entry, HashMap};
 
@@ -228,12 +228,62 @@ rule. For more information about allow rules, see:
     }
 }
 
+struct ResourceBlocksMissingHasPermissionVisitor {
+    calls_has_permission: bool,
+}
+
+impl Visitor for ResourceBlocksMissingHasPermissionVisitor {
+    fn visit_call(&mut self, call: &Call) {
+        if call.name.0 == "has_permission" {
+            self.calls_has_permission = true;
+        }
+        walk_call(self, call)
+    }
+}
+
+impl ResourceBlocksMissingHasPermissionVisitor {
+    fn new() -> Self {
+        Self {
+            calls_has_permission: false,
+        }
+    }
+
+    fn warnings(&mut self) -> PolarResult<Vec<String>> {
+        if !self.calls_has_permission {
+            return Ok(vec!["Warning: your policy uses resource blocks but does not call the \
+has_permission rule. This means that permissions you define in a \
+resource block will not have any effect. Did you mean to include a \
+call to has_permission in a top-level allow rule?
+
+  allow(actor, action, resource) if
+      has_permission(actor, action, resource);
+
+For more information about resource blocks, see https://docs.osohq.com/any/reference/polar/polar-syntax.html#actor-and-resource-blocks".to_string(),
+
+            ]);
+        }
+        Ok(vec![])
+    }
+}
+
+pub fn check_resource_missing_has_permission(kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
+    if kb.resource_blocks.resources.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let mut visitor = ResourceBlocksMissingHasPermissionVisitor::new();
+    for rule in kb.get_rules().values() {
+        visitor.visit_generic_rule(rule);
+    }
+    visitor.warnings()
+}
+
 #[cfg(test)]
 mod tests {
     use crate::kb::KnowledgeBase;
     use crate::rules::*;
     use crate::terms::*;
-    use crate::warnings::check_no_allow_rule;
+    use crate::warnings::{check_no_allow_rule, check_resource_missing_has_permission};
 
     #[test]
     fn test_check_no_allow_rule_no_allow() {
@@ -283,5 +333,31 @@ mod tests {
         kb.add_rule(rule!("g", [sym!("x")]));
         let warnings = check_no_allow_rule(&kb);
         assert_eq!(warnings.unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_resource_missing_has_permission_warning() {
+        let mut kb = KnowledgeBase::new();
+        kb.resource_blocks
+            .resources
+            .insert(term!(sym!("Organization")));
+
+        let warnings =
+            check_resource_missing_has_permission(&kb).expect("failed to execute visitor");
+
+        assert_eq!(warnings.len(), 1);
+    }
+
+    #[test]
+    fn test_resource_missing_has_permission_clean() {
+        let mut kb = KnowledgeBase::new();
+        kb.resource_blocks
+            .resources
+            .insert(term!(sym!("Organization")));
+        kb.add_rule(rule!("f", [sym!("x")] => call!("has_permission", [sym!("y")])));
+        let warnings =
+            check_resource_missing_has_permission(&kb).expect("failed to execute visitor");
+
+        assert_eq!(warnings.len(), 0);
     }
 }
