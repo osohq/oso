@@ -1,5 +1,7 @@
 ---
 title: "Build Attribute-Based Access Control (ABAC)"
+aliases:
+  - /learn/abac.html
 weight: 1
 ---
 
