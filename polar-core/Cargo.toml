@@ -32,7 +32,7 @@ criterion = "0.3.3"
 permute = "0.1.0"
 pipe = "0.4.0"
 proptest = "0.10.1"
-pretty_assertions = "0.6.1"
+pretty_assertions = "1.0.0"
 maplit = "1.0.2"
 indoc = "1.0.3"
 
