@@ -3,11 +3,14 @@
   "compilerOptions": {
     "allowJs": true,
     "esModuleInterop": true,
-    "noEmit": true,
-    "outDir": "dist",
-    "rootDir": ".",
+    "outDir": "out",
+    "rootDir": "src",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
   },
-  "include": ["src/**/*"]
+  "include": ["src"],
+  "references": [
+    { "path": "./client" },
+    { "path": "./server" }
+  ]
 }

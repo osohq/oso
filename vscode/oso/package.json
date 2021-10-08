@@ -20,9 +20,9 @@
   },
   "license": "Apache-2.0",
   "engines": {
-    "vscode": "^1.43.0"
+    "vscode": "^1.52.0"
   },
-  "main": "./dist/src/extension",
+  "main": "./client/out/extension",
   "activationEvents": [
     "*"
   ],
@@ -46,21 +46,37 @@
         "scopeName": "source.polar",
         "path": "./syntaxes/polar.tmLanguage.json"
       }
-    ]
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Polar Analyzer configuration",
+      "properties": {
+        "polarAnalyzer.trace.server": {
+          "scope": "window",
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Traces the communication between VSCode and the language server."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc --project tsconfig.build.json",
+    "compile": "tsc --build",
+    "watch": "tsc --build --watch",
     "clean": "gts clean",
     "lint": "gts lint -- . --max-warnings 0",
-    "fmt": "prettier --write 'src/**/*.[jt]s'",
-    "fmtcheck": "prettier --check 'src/**/*.[jt]s'",
+    "fmt": "prettier --write 'client/src/**/*.ts'",
+    "fmtcheck": "prettier --check 'client/src/**/*.ts'",
     "fix": "gts fix",
-    "watch": "tsc -watch --project tsconfig.build.json"
+    "postinstall": "cd client && npm i && cd ../server && npm i && cd .."
   },
   "devDependencies": {
-    "@types/node": "^16.10.3",
-    "@types/vscode": "^1.43.0",
     "gts": "^3.1.0",
     "typescript": "^4.4.3"
   }

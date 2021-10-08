@@ -3,7 +3,7 @@ module.exports = {
   extends: ['./node_modules/gts/'],
   ignorePatterns: [
     'node_modules', // Self-explanatory.
-    'dist', // Don't lint built library.
+    'client/out', // Don't lint built library.
   ],
   overrides: [
     {
@@ -14,7 +14,11 @@ module.exports = {
       ],
       parserOptions: {
         tsconfigRootDir: __dirname,
-        project: ['./tsconfig.json'],
+        project: [
+          './client/tsconfig.json',
+          // TODO(gj): remove server when moving from toy TS server -> Rust.
+          './server/tsconfig.json',
+        ],
       },
     },
   ],
