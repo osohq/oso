@@ -718,11 +718,11 @@ jobs:
         uses: actions/setup-python@v1
         with:
           python-version: 3.6
-      - name: Use Ruby 2.4.0
+      - name: Use Ruby 2.4
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-          ruby-version: "2.4.0"
+          ruby-version: "2.4"
           working-directory: "docs/examples/quickstart/ruby"
       - name: Use Node.js 12
         uses: actions/setup-node@v1
