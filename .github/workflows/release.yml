@@ -17,11 +17,11 @@ jobs:
       - uses: ./.github/actions/check_version
       - name: Set version env
         run: echo "oso_version=$(cat VERSION)" >> $GITHUB_ENV
-      - name: Check github ref matches
-        if: github.ref != 'refs/heads/main'
-        env:
-          github_ref: ${{ github.ref }}
-        run: grep "${github_ref/refs\/tags\/v/}" VERSION
+      # - name: Check github ref matches
+      #   if: github.ref != 'refs/heads/main'
+      #   env:
+      #     github_ref: ${{ github.ref }}
+      #   run: grep "${github_ref/refs\/tags\/v/}" VERSION
 
   # # Dispatch an oso_release event to other repos to test against this commit
   # dispatch:
