@@ -509,7 +509,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.6, 3.7, 3.8, 3.9, "3.10"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -535,7 +535,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.6, 3.7, 3.8, 3.9, "3.10"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -561,7 +561,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.6, 3.7, 3.8, 3.9, "3.10"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -587,7 +587,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8, 3.9, "3.10"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
