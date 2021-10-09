@@ -102,6 +102,13 @@
           "patterns": [
             {
               "include": "#specializer"
+            },
+            {
+              "include": "#comment"
+            },
+            {
+              "name": "punctuation.separator.sequence.dict",
+              "match": ","
             }
           ]
         },
