@@ -243,7 +243,7 @@ jobs:
       - name: Install Java
         uses: actions/setup-java@v1
         with:
-          java-version: "11"
+          java-version: "10"
       - name: Test java
         run: make java-test
         env:
@@ -356,7 +356,7 @@ jobs:
       - name: Install Java
         uses: actions/setup-java@v1
         with:
-          java-version: "11"
+          java-version: "10"
       - name: Build python lib
         run: make python-build
       - name: Python test deps
