@@ -802,6 +802,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "polar-language-server"
+version = "0.21.0"
+
+[[package]]
 name = "polar-wasm-api"
 version = "0.21.0"
 dependencies = [
