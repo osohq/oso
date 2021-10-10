@@ -6,9 +6,6 @@ import {
   ProposedFeatures,
   // TextDocumentSyncKind,
 } from 'vscode-languageserver/node';
-
-import 'vscode-languageserver';
-
 import { TextDocument } from 'vscode-languageserver-textdocument';
 
 // Create LSP connection
