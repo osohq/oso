@@ -180,9 +180,8 @@ impl Polar {
             while let Some(line) = lines.pop() {
                 match line {
                     parser::Line::Rule(rule) => {
-                        let mut rule_warnings = check_singletons(&rule, kb)?;
-                        warnings.append(&mut rule_warnings);
-                        warnings.append(&mut check_ambiguous_precedence(&rule, kb)?);
+                        warnings.append(&mut check_singletons(&rule, kb)?);
+                        warnings.append(&mut check_ambiguous_precedence(&rule, kb));
                         let rule = rewrite_rule(rule, kb);
                         kb.add_rule(rule);
                     }
@@ -252,10 +251,10 @@ impl Polar {
 
         // Perform validation checks against the whole policy
         let mut warnings = vec![];
-        warnings.append(&mut check_no_allow_rule(&kb)?);
+        warnings.append(&mut check_no_allow_rule(&kb));
 
         // Check for has_permission calls alongside resource block definitions
-        warnings.append(&mut check_resource_missing_has_permission(&kb)?);
+        warnings.append(&mut check_resource_missing_has_permission(&kb));
 
         self.messages
             .extend(warnings.into_iter().map(Message::warning));
