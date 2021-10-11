@@ -14,29 +14,23 @@ const connection = createConnection(ProposedFeatures.all);
 // Create manager for open text documents
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
-let folderLen: number;
-let folder: string | null;
+const files: Map<string, TextDocument> = new Map();
 
 documents.onDidChangeContent(({ document }) => {
-  const file = document.uri.slice(folderLen);
-  const charCount = document.getText().length;
-  connection.console.log(
-    `[${process.pid} ${folder}] onDidChangeContent => ${file} [${charCount}]`
-  );
+  files.set(document.uri, document);
+  console.log('Files loaded:', files.size);
 });
 
 documents.listen(connection);
 
 connection.onDidChangeWatchedFiles(({ changes }) => {
-  connection.console.log(
-    `[${process.pid} ${folder}] onDidChangeWatchedFiles => ${inspect(changes)}`
-  );
+  for (const { uri } of changes) {
+    files.delete(uri);
+  }
+  console.log('Files loaded:', files.size);
 });
 
-connection.onInitialize(params => {
-  folderLen = params.rootUri.length + 1;
-  folder = params.rootUri.split('/').pop();
-  connection.console.log(`[${process.pid} ${folder}] onInitialize`);
+connection.onInitialize(() => {
   // TODO(gj): what does returning `capabilities.workspace.fileOperations` do?
   //
   // TODO(gj): everything seems to work fine even when I return no

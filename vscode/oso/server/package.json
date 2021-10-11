@@ -5,7 +5,7 @@
 	"author": "Microsoft Corporation",
 	"license": "MIT",
 	"engines": {
-		"node": "*"
+		"node": ">=12.20.0"
 	},
 	"repository": {
 		"type": "git",
