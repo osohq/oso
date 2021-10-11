@@ -555,7 +555,7 @@ export type obj<T = unknown> = { [key: string]: T };
  *
  * A custom `EqualityFn` may be passed in the [[`Options`]] provided to the
  * [[`Oso.constructor`]] in order to override the default equality function,
- * which uses `==` (loose equality).
+ * which uses `isEqual` from the `lodash.isequal` package.
  */
 export type EqualityFn = (x: unknown, y: unknown) => boolean;
 

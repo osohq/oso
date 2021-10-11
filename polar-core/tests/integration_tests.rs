@@ -1577,6 +1577,32 @@ fn test_unknown_specializer_warning() -> TestResult {
 }
 
 #[test]
+fn test_missing_actor_hint() -> TestResult {
+    let p = Polar::new();
+
+    p.register_constant(sym!("Organization"), term!(true))?;
+    p.register_constant(sym!("User"), term!(true))?;
+
+    let policy = r#"
+resource Organization {
+	roles = ["owner"];
+	permissions = ["read"];
+
+	"read" if "owner";
+}
+
+has_role(user: User, "owner", organization: Organization) if
+	organization.owner_id = user.id;
+"#;
+    let err = p.load_str(policy).expect_err("Expected validation error");
+    assert!(matches!(&err.kind, ErrorKind::Validation(_)));
+    assert!(format!("{}", err)
+        .contains("Perhaps you meant to add an actor block to the top of your policy, like this:"));
+
+    Ok(())
+}
+
+#[test]
 fn test_and_or_warning() -> TestResult {
     let p = Polar::new();
 
@@ -1841,6 +1867,7 @@ fn test_matches() {
     qeval(&mut p, "x = {foo: 1, bar: 2} and x matches {foo: 1}");
     qnull(&mut p, "x = {foo: 1} and x matches {foo: 1, bar: 2}");
     qnull(&mut p, "x = {foo: 1} and x matches {foo: 2}");
+    qeval(&mut p, "x matches Integer and x = 1");
 }
 
 #[test]
@@ -2268,17 +2295,6 @@ fn test_list_matches() {
         "xs",
         vec![value!([3, Value::RestVariable(Symbol::new("ys"))])],
     );
-}
-
-#[test]
-#[allow(clippy::unnecessary_wraps)]
-fn error_on_binding_expressions_and_patterns_to_variables() -> TestResult {
-    qruntime!(
-        "x matches y",
-        RuntimeError::TypeError { msg: m, .. },
-        m == "cannot unify patterns directly `x` = `y{}`"
-    );
-    Ok(())
 }
 
 #[test]

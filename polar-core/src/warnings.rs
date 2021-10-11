@@ -4,7 +4,7 @@ use super::kb::*;
 use super::rules::*;
 use super::sources::Source;
 use super::terms::*;
-use super::visitor::{walk_rule, walk_term, Visitor};
+use super::visitor::{walk_call, walk_rule, walk_term, Visitor};
 
 use std::collections::{hash_map::Entry, HashMap};
 
@@ -152,9 +152,8 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
         }
     }
 
-    fn warnings(&mut self) -> PolarResult<Vec<String>> {
-        let msgs: Vec<String> = self
-            .unparenthesized_expr
+    fn warnings(&mut self) -> Vec<String> {
+        self.unparenthesized_expr
             .iter()
             .map(|(source, or_term)| {
                 let mut msg = "Expression without parentheses could be ambiguous. \n\
@@ -165,8 +164,7 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
                 msg.push_str(&source_lines(source, or_term.offset(), 0));
                 msg
             })
-            .collect();
-        Ok(msgs)
+            .collect()
     }
 }
 
@@ -199,20 +197,20 @@ impl<'kb> Visitor for AndOrPrecendenceCheck<'kb> {
     }
 }
 
-pub fn check_ambiguous_precedence(rule: &Rule, kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
+pub fn check_ambiguous_precedence(rule: &Rule, kb: &KnowledgeBase) -> Vec<String> {
     let mut visitor = AndOrPrecendenceCheck::new(kb);
     walk_rule(&mut visitor, rule);
     visitor.warnings()
 }
 
-pub fn check_no_allow_rule(kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
+pub fn check_no_allow_rule(kb: &KnowledgeBase) -> Vec<String> {
     let has_allow = kb.get_rules().contains_key(&sym!("allow"));
     let has_allow_field = kb.get_rules().contains_key(&sym!("allow_field"));
     let has_allow_request = kb.get_rules().contains_key(&sym!("allow_request"));
     if has_allow || has_allow_field || has_allow_request {
-        Ok(vec![])
+        vec![]
     } else {
-        Ok(vec![
+        vec![
             "Your policy does not contain an allow rule, which usually means \
 that no actions are allowed. Did you mean to add an allow rule to \
 the top of your policy?
@@ -224,8 +222,58 @@ rule. For more information about allow rules, see:
 
   https://docs.osohq.com/reference/polar/builtin_rule_types.html#allow"
                 .to_string(),
-        ])
+        ]
     }
+}
+
+struct ResourceBlocksMissingHasPermissionVisitor {
+    calls_has_permission: bool,
+}
+
+impl Visitor for ResourceBlocksMissingHasPermissionVisitor {
+    fn visit_call(&mut self, call: &Call) {
+        if call.name.0 == "has_permission" {
+            self.calls_has_permission = true;
+        }
+        walk_call(self, call)
+    }
+}
+
+impl ResourceBlocksMissingHasPermissionVisitor {
+    fn new() -> Self {
+        Self {
+            calls_has_permission: false,
+        }
+    }
+
+    fn warnings(&mut self) -> Vec<String> {
+        if !self.calls_has_permission {
+            return vec!["Warning: your policy uses resource blocks but does not call the \
+has_permission rule. This means that permissions you define in a \
+resource block will not have any effect. Did you mean to include a \
+call to has_permission in a top-level allow rule?
+
+  allow(actor, action, resource) if
+      has_permission(actor, action, resource);
+
+For more information about resource blocks, see https://docs.osohq.com/any/reference/polar/polar-syntax.html#actor-and-resource-blocks".to_string(),
+
+            ];
+        }
+        vec![]
+    }
+}
+
+pub fn check_resource_missing_has_permission(kb: &KnowledgeBase) -> Vec<String> {
+    if kb.resource_blocks.resources.is_empty() {
+        return vec![];
+    }
+
+    let mut visitor = ResourceBlocksMissingHasPermissionVisitor::new();
+    for rule in kb.get_rules().values() {
+        visitor.visit_generic_rule(rule);
+    }
+    visitor.warnings()
 }
 
 #[cfg(test)]
@@ -233,15 +281,14 @@ mod tests {
     use crate::kb::KnowledgeBase;
     use crate::rules::*;
     use crate::terms::*;
-    use crate::warnings::check_no_allow_rule;
+    use crate::warnings::{check_no_allow_rule, check_resource_missing_has_permission};
 
     #[test]
     fn test_check_no_allow_rule_no_allow() {
         let mut kb = KnowledgeBase::new();
         kb.add_rule(rule!("f", [sym!("x")]));
         kb.add_rule(rule!("g", [sym!("x")]));
-        let warnings = check_no_allow_rule(&kb);
-        assert_eq!(warnings.unwrap().len(), 1);
+        assert_eq!(check_no_allow_rule(&kb).len(), 1);
     }
 
     #[test]
@@ -253,8 +300,7 @@ mod tests {
             [sym!("actor"), sym!("action"), sym!("resource")]
         ));
         kb.add_rule(rule!("g", [sym!("x")]));
-        let warnings = check_no_allow_rule(&kb);
-        assert_eq!(warnings.unwrap().len(), 0);
+        assert_eq!(check_no_allow_rule(&kb).len(), 0);
     }
 
     #[test]
@@ -271,8 +317,7 @@ mod tests {
             ]
         ));
         kb.add_rule(rule!("g", [sym!("x")]));
-        let warnings = check_no_allow_rule(&kb);
-        assert_eq!(warnings.unwrap().len(), 0);
+        assert_eq!(check_no_allow_rule(&kb).len(), 0);
     }
 
     #[test]
@@ -281,7 +326,25 @@ mod tests {
         kb.add_rule(rule!("f", [sym!("x")]));
         kb.add_rule(rule!("allow_request", [sym!("actor"), sym!("request")]));
         kb.add_rule(rule!("g", [sym!("x")]));
-        let warnings = check_no_allow_rule(&kb);
-        assert_eq!(warnings.unwrap().len(), 0);
+        assert_eq!(check_no_allow_rule(&kb).len(), 0);
+    }
+
+    #[test]
+    fn test_resource_missing_has_permission_warning() {
+        let mut kb = KnowledgeBase::new();
+        kb.resource_blocks
+            .resources
+            .insert(term!(sym!("Organization")));
+        assert_eq!(check_resource_missing_has_permission(&kb).len(), 1);
+    }
+
+    #[test]
+    fn test_resource_missing_has_permission_clean() {
+        let mut kb = KnowledgeBase::new();
+        kb.resource_blocks
+            .resources
+            .insert(term!(sym!("Organization")));
+        kb.add_rule(rule!("f", [sym!("x")] => call!("has_permission", [sym!("y")])));
+        assert_eq!(check_resource_missing_has_permission(&kb).len(), 0);
     }
 }
