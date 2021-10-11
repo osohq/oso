@@ -510,6 +510,19 @@ public class PolarTest {
         p.query("g(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
   }
 
+  // test_load_multiple_files_same_name_different_path
+  @Test
+  public void testLoadMultipleFilesSameNameDifferentPath() throws Exception {
+    p.loadFiles(
+        new String[] {
+          "src/test/java/com/osohq/oso/test.polar", "src/test/java/com/osohq/oso/other/test.polar"
+        });
+    assertTrue(
+        p.query("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
+    assertTrue(
+        p.query("g(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
+  }
+
   @Test
   public void testClearRules() throws Exception {
     p.loadFile("src/test/java/com/osohq/oso/test.polar");

@@ -9,6 +9,7 @@ import {
   QueryEventKind,
 } from './types';
 import type { Class, obj, PolarTerm, QueryEvent } from './types';
+import isEqual = require('lodash.isequal');
 
 /**
  * Assemble the prototypal inheritance chain of a class.
@@ -343,6 +344,13 @@ export function isConstructor(f: unknown): f is Class {
  */
 export function isObj(x: unknown): x is obj {
   return typeof x === 'object' && x !== null;
+}
+
+/**
+ * Default equality function used by Oso
+ */
+export function defaultEqualityFn(a: unknown, b: unknown): boolean {
+  return isEqual(a, b);
 }
 
 /**

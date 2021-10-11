@@ -11,6 +11,7 @@ end
 RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   let(:test_file) { File.join(__dir__, 'test_file.polar') }
   let(:test_file_gx) { File.join(__dir__, 'test_file_gx.polar') }
+  let(:other_test_file) { File.join(__dir__, 'other/test_file.polar') }
 
   # test_anything_works
   it 'works' do
@@ -138,6 +139,14 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     # test_load_multiple_files
     it 'can load multiple files' do
       subject.load_files([test_file, test_file_gx])
+      expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
+      expect(qvar(subject, 'g(x)', 'x')).to eq([1, 2, 3])
+    end
+
+    # test_load_multiple_files_same_name_different_path
+    it 'can load multiple files with the same name but different paths' do
+      subject.load_files([test_file, other_test_file])
+      puts test_file, other_test_file
       expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
       expect(qvar(subject, 'g(x)', 'x')).to eq([1, 2, 3])
     end
