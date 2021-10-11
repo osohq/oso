@@ -1,5 +1,3 @@
-import { inspect } from 'util';
-
 import {
   createConnection,
   TextDocuments,
@@ -7,6 +5,7 @@ import {
   // TextDocumentSyncKind,
 } from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
+import { Oso } from 'oso';
 
 // Create LSP connection
 const connection = createConnection(ProposedFeatures.all);
@@ -16,18 +15,29 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
 const files: Map<string, TextDocument> = new Map();
 
-documents.onDidChangeContent(({ document }) => {
-  files.set(document.uri, document);
-  console.log('Files loaded:', files.size);
-});
+const oso = new Oso();
 
+async function reloadFiles() {
+  oso.clearRules();
+  const sourceStrings = [...files.entries()].map(([filename, document]) => ({
+    filename,
+    contents: document.getText(),
+  }));
+  await oso.loadStrings(sourceStrings);
+}
+
+documents.onDidChangeContent(async ({ document }) => {
+  files.set(document.uri, document);
+  await reloadFiles();
+});
 documents.listen(connection);
 
-connection.onDidChangeWatchedFiles(({ changes }) => {
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
+connection.onDidChangeWatchedFiles(async ({ changes }) => {
   for (const { uri } of changes) {
     files.delete(uri);
   }
-  console.log('Files loaded:', files.size);
+  await reloadFiles();
 });
 
 connection.onInitialize(() => {
