@@ -311,9 +311,8 @@ impl<'kb> UndefinedRuleVisitor<'kb> {
 
 impl<'kb> Visitor for UndefinedRuleVisitor<'kb> {
     fn visit_term(&mut self, term: &Term) {
-        match term.value() {
-            Value::Call(_) => self.call_terms.push(term.clone()),
-            _ => (),
+        if let Value::Call(_) = term.value() {
+            self.call_terms.push(term.clone())
         }
         walk_term(self, term)
     }
