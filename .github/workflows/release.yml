@@ -689,6 +689,9 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: oso_js_node
+      - name: Install production dependencies
+        run: yarn install --production
+        working-directory: oso_js_node
       - name: Run parity tests
         run: node dist/test/parity.js
         working-directory: oso_js_node

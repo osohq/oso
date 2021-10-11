@@ -153,9 +153,8 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
         }
     }
 
-    fn warnings(&mut self) -> PolarResult<Vec<String>> {
-        let msgs: Vec<String> = self
-            .unparenthesized_expr
+    fn warnings(&mut self) -> Vec<String> {
+        self.unparenthesized_expr
             .iter()
             .map(|(source, or_term)| {
                 let mut msg = "Expression without parentheses could be ambiguous. \n\
@@ -166,8 +165,7 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
                 msg.push_str(&source_lines(source, or_term.offset(), 0));
                 msg
             })
-            .collect();
-        Ok(msgs)
+            .collect()
     }
 }
 
@@ -200,20 +198,20 @@ impl<'kb> Visitor for AndOrPrecendenceCheck<'kb> {
     }
 }
 
-pub fn check_ambiguous_precedence(rule: &Rule, kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
+pub fn check_ambiguous_precedence(rule: &Rule, kb: &KnowledgeBase) -> Vec<String> {
     let mut visitor = AndOrPrecendenceCheck::new(kb);
     walk_rule(&mut visitor, rule);
     visitor.warnings()
 }
 
-pub fn check_no_allow_rule(kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
+pub fn check_no_allow_rule(kb: &KnowledgeBase) -> Vec<String> {
     let has_allow = kb.get_rules().contains_key(&sym!("allow"));
     let has_allow_field = kb.get_rules().contains_key(&sym!("allow_field"));
     let has_allow_request = kb.get_rules().contains_key(&sym!("allow_request"));
     if has_allow || has_allow_field || has_allow_request {
-        Ok(vec![])
+        vec![]
     } else {
-        Ok(vec![
+        vec![
             "Your policy does not contain an allow rule, which usually means \
 that no actions are allowed. Did you mean to add an allow rule to \
 the top of your policy?
@@ -225,7 +223,7 @@ rule. For more information about allow rules, see:
 
   https://docs.osohq.com/reference/polar/builtin_rule_types.html#allow"
                 .to_string(),
-        ])
+        ]
     }
 }
 
@@ -249,9 +247,9 @@ impl ResourceBlocksMissingHasPermissionVisitor {
         }
     }
 
-    fn warnings(&mut self) -> PolarResult<Vec<String>> {
+    fn warnings(&mut self) -> Vec<String> {
         if !self.calls_has_permission {
-            return Ok(vec!["Warning: your policy uses resource blocks but does not call the \
+            return vec!["Warning: your policy uses resource blocks but does not call the \
 has_permission rule. This means that permissions you define in a \
 resource block will not have any effect. Did you mean to include a \
 call to has_permission in a top-level allow rule?
@@ -261,17 +259,15 @@ call to has_permission in a top-level allow rule?
 
 For more information about resource blocks, see https://docs.osohq.com/any/reference/polar/polar-syntax.html#actor-and-resource-blocks".to_string(),
 
-            ]);
+            ];
         }
-        Ok(vec![])
+        vec![]
     }
 }
 
-pub fn check_resource_blocks_missing_has_permission(
-    kb: &KnowledgeBase,
-) -> PolarResult<Vec<String>> {
+pub fn check_resource_blocks_missing_has_permission(kb: &KnowledgeBase) -> Vec<String> {
     if kb.resource_blocks.resources.is_empty() {
-        return Ok(vec![]);
+        return vec![];
     }
 
     let mut visitor = ResourceBlocksMissingHasPermissionVisitor::new();
@@ -296,7 +292,7 @@ impl<'kb> UndefinedRuleVisitor<'kb> {
         }
     }
 
-    fn warnings(&mut self) -> PolarResult<Vec<PolarError>> {
+    fn warnings(&mut self) -> Vec<PolarError> {
         let mut warnings = vec![];
         for term in &self.call_terms {
             let call = term.value().as_call().unwrap();
@@ -309,7 +305,7 @@ impl<'kb> UndefinedRuleVisitor<'kb> {
                 ));
             }
         }
-        Ok(warnings)
+        warnings
     }
 }
 
@@ -328,7 +324,7 @@ impl<'kb> Visitor for UndefinedRuleVisitor<'kb> {
     }
 }
 
-pub fn check_undefined_rule_calls(kb: &KnowledgeBase) -> PolarResult<Vec<PolarError>> {
+pub fn check_undefined_rule_calls(kb: &KnowledgeBase) -> Vec<PolarError> {
     let mut visitor = UndefinedRuleVisitor::new(kb);
     for rule in kb.get_rules().values() {
         visitor.visit_generic_rule(rule);
@@ -352,8 +348,7 @@ mod tests {
         let mut kb = KnowledgeBase::new();
         kb.add_rule(rule!("f", [sym!("x")]));
         kb.add_rule(rule!("g", [sym!("x")]));
-        let warnings = check_no_allow_rule(&kb);
-        assert_eq!(warnings.unwrap().len(), 1);
+        assert_eq!(check_no_allow_rule(&kb).len(), 1);
     }
 
     #[test]
@@ -365,8 +360,7 @@ mod tests {
             [sym!("actor"), sym!("action"), sym!("resource")]
         ));
         kb.add_rule(rule!("g", [sym!("x")]));
-        let warnings = check_no_allow_rule(&kb);
-        assert_eq!(warnings.unwrap().len(), 0);
+        assert_eq!(check_no_allow_rule(&kb).len(), 0);
     }
 
     #[test]
@@ -383,8 +377,7 @@ mod tests {
             ]
         ));
         kb.add_rule(rule!("g", [sym!("x")]));
-        let warnings = check_no_allow_rule(&kb);
-        assert_eq!(warnings.unwrap().len(), 0);
+        assert_eq!(check_no_allow_rule(&kb).len(), 0);
     }
 
     #[test]
@@ -393,8 +386,7 @@ mod tests {
         kb.add_rule(rule!("f", [sym!("x")]));
         kb.add_rule(rule!("allow_request", [sym!("actor"), sym!("request")]));
         kb.add_rule(rule!("g", [sym!("x")]));
-        let warnings = check_no_allow_rule(&kb);
-        assert_eq!(warnings.unwrap().len(), 0);
+        assert_eq!(check_no_allow_rule(&kb).len(), 0);
     }
 
     #[test]
@@ -403,11 +395,7 @@ mod tests {
         kb.resource_blocks
             .resources
             .insert(term!(sym!("Organization")));
-
-        let warnings =
-            check_resource_blocks_missing_has_permission(&kb).expect("failed to execute visitor");
-
-        assert_eq!(warnings.len(), 1);
+        assert_eq!(check_resource_blocks_missing_has_permission(&kb).len(), 1);
     }
 
     #[test]
@@ -417,8 +405,7 @@ mod tests {
             .resources
             .insert(term!(sym!("Organization")));
         kb.add_rule(rule!("f", [sym!("x")] => call!("has_permission", [sym!("y")])));
-        let warnings =
-            check_resource_blocks_missing_has_permission(&kb).expect("failed to execute visitor");
+        let warnings = check_resource_blocks_missing_has_permission(&kb);
 
         assert_eq!(warnings.len(), 0);
     }
@@ -427,10 +414,9 @@ mod tests {
     fn test_undefined_rule_warning() {
         let mut kb = KnowledgeBase::new();
         kb.add_rule(rule!("f", [sym!("x")] => call!("no_such_rule", [sym!("y")])));
-        let warnings = check_undefined_rule_calls(&kb).expect("failed to execute visitor");
+        let warnings = check_undefined_rule_calls(&kb);
         assert_eq!(warnings.len(), 1);
 
-        println!("{}", warnings.first().unwrap());
         assert!(format!("{}", warnings.first().unwrap())
             .contains(r#"Call to undefined rule "no_such_rule""#));
     }
@@ -440,7 +426,8 @@ mod tests {
         let mut kb = KnowledgeBase::new();
         kb.add_rule(rule!("f", [sym!("x")] => call!("defined_rule", [sym!("y")])));
         kb.add_rule(rule!("defined_rule", [sym!("x")]));
-        let warnings = check_undefined_rule_calls(&kb).expect("failed to execute visitor");
+        let warnings = check_undefined_rule_calls(&kb);
         assert_eq!(warnings.len(), 0);
+        assert_eq!(check_resource_blocks_missing_has_permission(&kb).len(), 0);
     }
 }

@@ -114,7 +114,7 @@ impl KnowledgeBase {
     }
 
     fn validate_rule_calls(&self) -> PolarResult<()> {
-        let errors = check_undefined_rule_calls(self)?;
+        let errors = check_undefined_rule_calls(self);
         match errors.first() {
             Some(e) => Err(e.clone()),
             None => Ok(()),
