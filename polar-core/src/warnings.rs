@@ -152,9 +152,8 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
         }
     }
 
-    fn warnings(&mut self) -> PolarResult<Vec<String>> {
-        let msgs: Vec<String> = self
-            .unparenthesized_expr
+    fn warnings(&mut self) -> Vec<String> {
+        self.unparenthesized_expr
             .iter()
             .map(|(source, or_term)| {
                 let mut msg = "Expression without parentheses could be ambiguous. \n\
@@ -165,8 +164,7 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
                 msg.push_str(&source_lines(source, or_term.offset(), 0));
                 msg
             })
-            .collect();
-        Ok(msgs)
+            .collect()
     }
 }
 
@@ -199,7 +197,7 @@ impl<'kb> Visitor for AndOrPrecendenceCheck<'kb> {
     }
 }
 
-pub fn check_ambiguous_precedence(rule: &Rule, kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
+pub fn check_ambiguous_precedence(rule: &Rule, kb: &KnowledgeBase) -> Vec<String> {
     let mut visitor = AndOrPrecendenceCheck::new(kb);
     walk_rule(&mut visitor, rule);
     visitor.warnings()
