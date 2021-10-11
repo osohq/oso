@@ -716,3 +716,11 @@ export interface UserTypeParams<Type extends Class>
  * Number]`), but I'm not 100% sure of that.
  */
 export type NullishOrHasConstructor = { constructor: Class } | null | undefined;
+
+/**
+ * Polar source string with optional filename.
+ */
+export interface SourceString {
+  contents: string;
+  filename?: string;
+}

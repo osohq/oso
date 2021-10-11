@@ -16,7 +16,13 @@ import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import type { Message } from './messages';
 import { processMessage } from './messages';
-import type { Class, ClassParams, Options, QueryResult } from './types';
+import type {
+  Class,
+  ClassParams,
+  Options,
+  QueryResult,
+  SourceString,
+} from './types';
 import {
   defaultEqualityFn,
   isString,
@@ -115,14 +121,14 @@ export class Polar {
     if (!extname) {
       throw new PolarError('loadFiles is not supported in the browser');
     }
-    const sources = await Promise.all(
+    const sourceStrings = await Promise.all(
       filenames.map(async filename => {
         if (extname(filename) !== '.polar')
           throw new PolarFileExtensionError(filename);
 
         try {
           const contents = await readFile(filename);
-          return new Source(contents, filename);
+          return { contents, filename };
         } catch (e) {
           if ((e as NodeJS.ErrnoException).code === 'ENOENT')
             throw new PolarFileNotFoundError(filename);
@@ -130,8 +136,7 @@ export class Polar {
         }
       })
     );
-
-    return this.loadSources(sources);
+    return this.loadStrings(sourceStrings);
   }
 
   /**
@@ -150,10 +155,20 @@ export class Polar {
   }
 
   /**
+   * Load Polar policy strings.
+   */
+  async loadStrings(strings: SourceString[]): Promise<void> {
+    const sources = strings.map(
+      ({ contents, filename }) => new Source(contents, filename)
+    );
+    return this.loadSources(sources);
+  }
+
+  /**
    * Load a Polar policy string.
    */
   async loadStr(contents: string, filename?: string): Promise<void> {
-    return this.loadSources([new Source(contents, filename)]);
+    return this.loadStrings([{ contents, filename }]);
   }
 
   // Register MROs, load Polar code, and check inline queries.
