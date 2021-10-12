@@ -155,7 +155,6 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
     }
 
     b
-
 }
 
 #[derive(Clone)]
@@ -275,7 +274,11 @@ impl Simplifier {
     /// Also inverts negation operations.
     ///
     /// May require multiple calls to perform all eliminiations.
-    fn simplify_operation_variables(&mut self, o: &mut Operation, simplify_term: &TermSimplifier) -> Option<()> {
+    fn simplify_operation_variables(
+        &mut self,
+        o: &mut Operation,
+        simplify_term: &TermSimplifier,
+    ) -> Option<()> {
         if o.operator == Operator::And || o.operator == Operator::Or {
             toss_trivial_unifies(&mut o.args);
         }
@@ -364,7 +367,7 @@ impl Simplifier {
             if let Some(x) = xs.pop() {
                 for y in xs {
                     if x != y {
-                        return None
+                        return None;
                     }
                 }
             }
@@ -374,7 +377,11 @@ impl Simplifier {
 
     /// Deduplicate an operation by removing terms that are mirrors or duplicates
     /// of other terms.
-    fn deduplicate_operation(&mut self, o: &mut Operation, simplify_term: &TermSimplifier) -> Option<()> {
+    fn deduplicate_operation(
+        &mut self,
+        o: &mut Operation,
+        simplify_term: &TermSimplifier,
+    ) -> Option<()> {
         fn preprocess_and(args: &mut TermList) {
             // HashSet of term hash values used to deduplicate. We use hash values
             // to avoid cloning to insert terms.
@@ -476,7 +483,7 @@ impl Simplifier {
         let (nhash, nlen) = (term.hash_value(), self.bindings.len());
         if hash == nhash && len == nlen {
             self.simplify_term(term, Simplifier::deduplicate_operation)
-        } else  {
+        } else {
             self.simplify_partial_loop(term, nhash, nlen)
         }
     }

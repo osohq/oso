@@ -2193,6 +2193,16 @@ fn test_external_unify() -> TestResult {
 }
 
 #[test]
+fn test_dot_transparency() -> TestResult {
+    let mut p = Polar::new();
+    p.load_str("foo(x, y) if z.c in x.a and z.c = y.b;")?;
+    qnull(&mut p, "foo({a: [1]}, {b: 2})");
+    qnull(&mut p, "z.a=1 and z.a=2");
+    //    qnull(&mut p, "z.a.b=1 and z.a.b=3"); // FIXME
+    Ok(())
+}
+
+#[test]
 fn test_list_results() -> TestResult {
     let mut p = Polar::new();
     p.load_str(

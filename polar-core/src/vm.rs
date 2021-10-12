@@ -1125,7 +1125,7 @@ impl PolarVirtualMachine {
                 let names = self.get_names(var);
                 let simplified = simplify_partial(partial, names.clone());
                 if simplified.is_none() {
-                    return self.backtrack()
+                    return self.backtrack();
                 }
                 let simplified = simplified.unwrap();
                 let simplified = simplified.value().as_expression()?;
