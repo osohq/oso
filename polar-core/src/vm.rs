@@ -402,7 +402,7 @@ impl PolarVirtualMachine {
 
     fn new_call_var(&mut self, var_prefix: &str, initial_value: Value) -> (u64, Term) {
         let sym = self.kb().gensym(var_prefix);
-        self.bind(&sym, Term::from(initial_value)).unwrap();
+        self.bind(&sym, term!(initial_value)).unwrap();
         let call_id = self.new_call_id(&sym);
         (call_id, Term::from(sym))
     }
@@ -411,6 +411,11 @@ impl PolarVirtualMachine {
         self.call_id_symbols
             .get(&call_id)
             .expect("unregistered external call ID")
+    }
+
+    fn cut(&mut self, i: usize) -> PolarResult<QueryEvent> {
+        self.choices.truncate(i);
+        self.query_event_none()
     }
 
     /// Try to achieve one goal. Return `Some(QueryEvent)` if an external
@@ -425,10 +430,7 @@ impl PolarVirtualMachine {
         use Goal::*;
         match goal.as_ref() {
             Backtrack => self.backtrack()?.query_event_none(),
-            Cut { choice_index } => {
-                self.choices.truncate(*choice_index);
-                self.query_event_none()
-            }
+            Cut { choice_index } => self.cut(*choice_index),
             Debug { message } => self.query_event_debug(message),
             Halt => {
                 self.log("HALT", &[]);
@@ -449,10 +451,7 @@ impl PolarVirtualMachine {
                 right,
                 arg,
             } => self.is_subspecializer(answer, left, right, arg),
-            Lookup { dict, field, value } => {
-                self.lookup(dict, field, value)?;
-                self.query_event_none()
-            }
+            Lookup { dict, field, value } => self.lookup(dict, field, value),
             LookupExternal {
                 call_id,
                 instance,
@@ -688,7 +687,7 @@ impl PolarVirtualMachine {
 
     /// Augment the bindings stack with constants from a hash map.
     /// There must be no temporaries bound yet.
-    pub fn bind_constants(&mut self, bindings: Bindings) {
+    fn bind_constants(&mut self, bindings: Bindings) {
         assert_eq!(self.bsp(), self.csp);
         for (var, value) in bindings.iter() {
             self.bind(var, value.clone()).unwrap();
@@ -896,6 +895,34 @@ impl PolarVirtualMachine {
 
 /// Implementations of instructions.
 impl PolarVirtualMachine {
+    fn do_backtrack(&mut self) -> PolarResult<&mut Self> {
+        match self.choices.pop() {
+            None => self.push_goal(Goal::Halt),
+            Some(mut ch) => {
+                self.binding_manager.backtrack(&ch.bsp);
+                match ch.alternatives.pop() {
+                    None => self.do_backtrack(),
+                    Some(mut alternative) => {
+                        if ch.alternatives.is_empty() {
+                            self.goals = ch.goals;
+                            self.queries = ch.queries;
+                            self.trace = ch.trace;
+                            self.trace_stack = ch.trace_stack;
+                        } else {
+                            self.goals.clone_from(&ch.goals);
+                            self.queries.clone_from(&ch.queries);
+                            self.trace.clone_from(&ch.trace);
+                            self.trace_stack.clone_from(&ch.trace_stack);
+                            self.choices.push(ch)
+                        }
+                        self.goals.append(&mut alternative);
+                        Ok(self)
+                    }
+                }
+            }
+        }
+    }
+
     /// Remove all bindings after the last choice point, and try the
     /// next available alternative. If no choice is possible, halt.
     fn backtrack(&mut self) -> PolarResult<&mut Self> {
@@ -903,55 +930,15 @@ impl PolarVirtualMachine {
             self.print("⇒ backtrack");
         }
         self.log("BACKTRACK", &[]);
-
-        loop {
-            match self.choices.pop() {
-                None => return self.push_goal(Goal::Halt),
-                Some(Choice {
-                    mut alternatives,
-                    bsp,
-                    goals,
-                    queries,
-                    trace,
-                    trace_stack,
-                }) => {
-                    self.binding_manager.backtrack(&bsp);
-                    if let Some(mut alternative) = alternatives.pop() {
-                        if alternatives.is_empty() {
-                            self.goals = goals;
-                            self.queries = queries;
-                            self.trace = trace;
-                            self.trace_stack = trace_stack;
-                        } else {
-                            self.goals.clone_from(&goals);
-                            self.queries.clone_from(&queries);
-                            self.trace.clone_from(&trace);
-                            self.trace_stack.clone_from(&trace_stack);
-                            self.choices.push(Choice {
-                                alternatives,
-                                bsp,
-                                goals,
-                                queries,
-                                trace,
-                                trace_stack,
-                            })
-                        }
-                        self.goals.append(&mut alternative);
-                        return Ok(self);
-                    }
-                }
-            }
-        }
+        self.do_backtrack()
     }
 
     /// Interact with the debugger.
     fn query_event_debug(&mut self, message: &str) -> PolarResult<QueryEvent> {
         // Query start time is reset when a debug event occurs.
         self.query_start_time.take();
-
-        Ok(QueryEvent::Debug {
-            message: message.to_string(),
-        })
+        let message = message.to_string();
+        Ok(QueryEvent::Debug { message })
     }
 
     fn query_event_none(&self) -> PolarResult<QueryEvent> {
@@ -976,7 +963,7 @@ impl PolarVirtualMachine {
                 unreachable!("encountered bare expression")
             }
 
-            _ if self.kb().is_union(left) => {
+            _ if left.is_union() => {
                 // A union (currently) only matches itself.
                 //
                 // TODO(gj): when we have unions beyond `Actor` and `Resource`, we'll need to be
@@ -990,7 +977,7 @@ impl PolarVirtualMachine {
                     Ok(self)
                 }
             }
-            _ if self.kb().is_union(right) => self.isa_union(left, right),
+            _ if right.is_union() => self.isa_union(left, right),
 
             // TODO(gj): (Var, Rest) + (Rest, Var) cases might be unreachable.
             (Value::Variable(l), Value::Variable(r))
@@ -1130,17 +1117,13 @@ impl PolarVirtualMachine {
                 // TODO(gj): assert that a simplified expression contains at most 1 unification
                 // involving a particular variable.
                 // TODO(gj): Ensure `op!(And) matches X{}` doesn't die after these changes.
-                let var = left.value().as_symbol()?;
-
                 // Get the existing partial on the LHS variable.
-                let partial = self.binding_manager.get_constraints(var);
+                let var = left.value().as_symbol()?;
+                let partial = term!(self.binding_manager.get_constraints(var));
 
+                // get the aliases for this variable
                 let names = self.get_names(var);
-                let output = names.clone();
-
-                let partial = partial.into();
-                let (simplified, _) = simplify_partial(var, partial, output, false);
-
+                let (simplified, _) = simplify_partial(var, partial, names.clone(), false);
                 let simplified = simplified.value().as_expression()?;
 
                 // TODO (dhatch): what if there is more than one var = dot_op constraint?
@@ -1226,12 +1209,7 @@ impl PolarVirtualMachine {
         self.choose(member_isas)
     }
 
-    pub fn lookup(
-        &mut self,
-        dict: &Dictionary,
-        field: &Term,
-        value: &Term,
-    ) -> PolarResult<&mut Self> {
+    fn lookup(&mut self, dict: &Dictionary, field: &Term, value: &Term) -> PolarResult<QueryEvent> {
         let field = self.deref(field);
         match field.value() {
             Value::Variable(_) => {
@@ -1256,10 +1234,7 @@ impl PolarVirtualMachine {
             }
             Value::String(field) => {
                 if let Some(retrieved) = dict.fields.get(&Symbol(field.clone())) {
-                    self.push_goal(Goal::Unify {
-                        left: retrieved.clone(),
-                        right: value.clone(),
-                    })
+                    self.unify(retrieved, value)
                 } else {
                     self.backtrack()
                 }
@@ -1268,7 +1243,8 @@ impl PolarVirtualMachine {
                 &field,
                 format!("cannot look up field {:?} on a dictionary", v),
             ),
-        }
+        }?
+        .query_event_none()
     }
 
     /// Return an external call event to look up a field's value
@@ -1481,7 +1457,7 @@ impl PolarVirtualMachine {
     fn query_for_operation(&mut self, term: &Term) -> PolarResult<QueryEvent> {
         use crate::inverter::Inverter;
         use Operator::*;
-        let operation = term.value().as_expression().unwrap();
+        let operation = term.value().as_expression()?;
         let mut args = operation.args.clone();
         match operation.operator {
             And => {
@@ -1629,8 +1605,7 @@ impl PolarVirtualMachine {
                         }
                     }
 
-                    self.push_goal(Goal::Cut { choice_index })?
-                        .query_event_none()
+                    self.cut(choice_index)
                 }
             }
             Isa => {
@@ -1656,8 +1631,7 @@ impl PolarVirtualMachine {
                         ],
                     }))],
                 };
-                let double_negation = term.clone_with_value(Value::Expression(op));
-                self.query(&double_negation)
+                self.query(&term.clone_with_value(Value::Expression(op)))
             }
         }
     }
@@ -1754,8 +1728,12 @@ impl PolarVirtualMachine {
                     args: vec![left.clone(), right.clone()],
                 })
             }
-            _ if !compare(*op, left, right)? => self.backtrack()?.query_event_none(),
-            _ => self.query_event_none(),
+            _ => if !compare(*op, left, right)? {
+                self.backtrack()?
+            } else {
+                self
+            }
+            .query_event_none(),
         }
     }
 
