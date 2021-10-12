@@ -12,6 +12,7 @@ from oso import Oso
 from sqlalchemy_oso.auth import authorize_model
 from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 
+
 class _OsoSession:
     set = False
 
@@ -270,62 +271,10 @@ class AuthorizedSession(AuthorizedSessionBase, Session):
 try:
     # TODO(gj): remove type ignore once we upgrade to 1.4-aware MyPy types.
     from sqlalchemy.orm import with_loader_criteria  # type: ignore
-    import sqlalchemy
-    from sqlalchemy_oso.sqlalchemy_utils import (
-        all_entities_in_statement,
-        entities_in_statement)
-
-    # Start POC code from @zzzeek (Mike Bayer)
-    # Still needs to be generalized & support other options.
-
-    # the structure we're dealing with is essentially:
-
-    # (path, strategy, options)
-    # where "path" indicates what it is we are loading,
-    # like (A, A.bs, B, B.cs, C)
-    # "strategy" is a tuple that keys to one of the loader strategies,
-    # some of them apply to relationships and others to column attributes
-    # then "options" is extra stuff like "innerjoin=True"
-    def get_joinedload_entities(stmt):
-        # there are two kinds of options that both represent the same information,
-        # just in different ways.  This is largely a product of legacy options
-        # that have things like strings, i.e. joinedload("addresses").  note we
-        # aren't covering that here, which is legacy form.  you can if you want
-        # raise an exception if you detect that form here.
-
-        for opt in stmt._with_options:
-            if hasattr(opt, "_to_bind"):
-                # these options are called _UnboundLoad
-                for b in opt._to_bind:
-                    if ("lazy", "joined") in b.strategy:
-                        # the "path" is a tuple showing the entity/relationships
-                        # being targeted
-
-                        # NOTE: I am not checking "of_type()" here yet
-                        yield b.path[-1].entity
-            elif hasattr(opt, "context"):
-                # these options are called Load
-                for key, loadopt in opt.context.items():
-                    if (
-                        key[0] == "loader"
-                        and ("lazy", "joined") in loadopt.strategy
-                    ):
-                        # the "path" is a tuple showing the entity/relationships
-                        # being targeted
-
-                        # NOTE: I am not checking "of_type()" here yet
-                        yield key[1][-1].entity
-            elif isinstance(opt, sqlalchemy.orm.util.LoaderCriteriaOption):
-                # TODO: check these other types of options?
-                # one example is sqlalchemy.orm.util.LoaderCriteriaOption
-                # (which I'm realizing might be added by ourselves)
-                pass
-
-    # End POC code.
+    from sqlalchemy_oso.sqlalchemy_utils import get_joinedload_entities
 
     @event.listens_for(Session, "do_orm_execute")
     def do_orm_execute(execute_state):
-        # TODO - check other states that we maybe want to add here.
         if not execute_state.is_select:
             return
 
@@ -343,6 +292,24 @@ try:
         if checked_permissions is None:
             return
 
+        def entities_in_statement(statement):
+            def _entities_in_statement(statement):
+                try:
+                    entities = (cd["entity"] for cd in statement.column_descriptions)
+                    return set(e for e in entities if e is not None)
+                except AttributeError:
+                    return set()
+
+            entities = _entities_in_statement(statement)
+
+            # TODO(gj): currently walking way more than we have to. Probably
+            # some points in the tree where we can safely call it good for that
+            # branch and continue on to more fruitful pastures.
+            for child in statement.get_children():
+                entities |= entities_in_statement(child)
+
+            return entities
+
         entities = entities_in_statement(execute_state.statement)
         entities |= set(get_joinedload_entities(execute_state.statement))
         for entity in entities:
@@ -351,7 +318,7 @@ try:
                 action = checked_permissions.get(inspect(entity).class_)  # type: ignore
             elif inspect(entity, False) is not None:
                 entity = inspect(entity).class_
-                action = checked_permissions.get(entity)
+                action = checked_permissions.get(inspect(entity).class_)
             else:
                 action = checked_permissions.get(entity)
 

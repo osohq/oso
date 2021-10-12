@@ -1,7 +1,5 @@
-"""Test SQLAlchemy utilities.
-
-The primary tests in this file confirm that `get_joinedload_entities` properly
-loads all entities referenced in a query.
+"""Test advanced SQLAlchemy queries using features like joinedload, contains_eager,
+and subquery.
 """
 import pytest
 
@@ -72,6 +70,17 @@ def test_get_column_entities(stmt, o):
                  marks=pytest.mark.xfail(reason="* doesn't work")),
 ))
 def test_get_joinedload_entities(stmt, o):
+    assert set(get_joinedload_entities(stmt)) == o
+
+@pytest.mark.parametrize('stmt,o', (
+    (select(A), set()),
+    (select(A).options(joinedload(A.bs)), {B}),
+    (select(A).options(joinedload(A.bs).joinedload(B.cs)), {B, C}),
+    (select(A).options(Load(A).joinedload("bs")), {B}),
+    pytest.param(select(A).options(Load(A).joinedload("*")), set(),
+                 marks=pytest.mark.xfail(reason="* doesn't work")),
+))
+def test_get_joinedload_entities_str(stmt, o):
     assert set(get_joinedload_entities(stmt)) == o
 
 

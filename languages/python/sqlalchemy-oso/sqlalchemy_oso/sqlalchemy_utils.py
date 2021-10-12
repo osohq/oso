@@ -112,5 +112,6 @@ try:
     # End POC code.
 
 except ImportError:
+    # TODO (dhatch): What should we do on 1.3?
     def all_entities_in_statement(_):
         raise NotImplementedError("Unsupported on SQLAlchemy < 1.4")
