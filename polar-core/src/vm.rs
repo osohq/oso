@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 use std::rc::Rc;
 use std::string::ToString;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, RwLockReadGuard};
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
@@ -345,6 +345,10 @@ impl PolarVirtualMachine {
         }
     }
 
+    fn kb(&self) -> RwLockReadGuard<KnowledgeBase> {
+        self.kb.read().unwrap()
+    }
+
     fn query_contains_partial(&mut self) {
         struct VarVisitor<'vm> {
             has_partial: bool,
@@ -413,7 +417,7 @@ impl PolarVirtualMachine {
     }
 
     fn new_call_var(&mut self, var_prefix: &str, initial_value: Value) -> (u64, Term) {
-        let sym = self.kb.read().unwrap().gensym(var_prefix);
+        let sym = self.kb().gensym(var_prefix);
         self.bind(&sym, Term::from(initial_value)).unwrap();
         let call_id = self.new_call_id(&sym);
         (call_id, Term::from(sym))
@@ -436,62 +440,77 @@ impl PolarVirtualMachine {
 
         match goal.as_ref() {
             Goal::Backtrack => {
-                self.backtrack()?;
+                self.backtrack()?.query_event_none()
             }
             Goal::Cut { choice_index } => {
                 self.choices.truncate(*choice_index);
+                self.query_event_none()
             }
-            Goal::Debug { message } => return Ok(self.debug(message)),
-            Goal::Halt => return Ok(self.halt()),
-            Goal::Error { error } => return Err(error.clone()),
-            Goal::Isa { left, right } => self.isa(left, right)?,
+            Goal::Debug { message } => Ok(self.debug(message)),
+            Goal::Halt => Ok(self.halt()),
+            Goal::Error { error } => Err(error.clone()),
+            Goal::Isa { left, right } => {
+                self.isa(left, right)?.query_event_none()
+            }
             Goal::IsMoreSpecific { left, right, args } => {
-                self.is_more_specific(left, right, args)?
+                self.is_more_specific(left, right, args)?;
+                self.query_event_none()
             }
             Goal::IsSubspecializer {
                 answer,
                 left,
                 right,
                 arg,
-            } => return self.is_subspecializer(answer, left, right, arg),
-            Goal::Lookup { dict, field, value } => self.lookup(dict, field, value)?,
+            } => self.is_subspecializer(answer, left, right, arg),
+            Goal::Lookup { dict, field, value } => {
+                self.lookup(dict, field, value)?;
+                self.query_event_none()
+            }
             Goal::LookupExternal {
                 call_id,
                 instance,
                 field,
-            } => return self.lookup_external(*call_id, instance, field),
-            Goal::IsaExternal { instance, literal } => return self.isa_external(instance, literal),
+            } => self.lookup_external(*call_id, instance, field),
+            Goal::IsaExternal { instance, literal } => self.isa_external(instance, literal),
             Goal::MakeExternal {
                 constructor,
                 instance_id,
-            } => return Ok(self.make_external(constructor, *instance_id)),
+            } => Ok(self.make_external(constructor, *instance_id)),
             Goal::NextExternal { call_id, iterable } => {
-                return self.next_external(*call_id, iterable)
+                self.next_external(*call_id, iterable)
             }
-            Goal::CheckError => return self.check_error(),
-            Goal::Noop => {}
+            Goal::CheckError => self.check_error(),
+            Goal::Noop => self.query_event_none(),
             Goal::Query { term } => {
                 let result = self.query(term);
                 self.maybe_break(DebugEvent::Query)?;
-                return result;
+                result
             }
             Goal::PopQuery { .. } => {
                 self.queries.pop();
+                self.query_event_none()
             }
             Goal::FilterRules {
                 applicable_rules,
                 unfiltered_rules,
                 args,
-            } => self.filter_rules(applicable_rules, unfiltered_rules, args)?,
+            } => {
+                self.filter_rules(applicable_rules, unfiltered_rules, args)?;
+                self.query_event_none()
+            }
             Goal::SortRules {
                 rules,
                 outer,
                 inner,
                 args,
-            } => self.sort_rules(rules, args, *outer, *inner)?,
+            } => {
+                self.sort_rules(rules, args, *outer, *inner)?;
+                self.query_event_none()
+            }
             Goal::TraceStackPush => {
                 self.trace_stack.push(Rc::new(self.trace.clone()));
                 self.trace = vec![];
+                self.query_event_none()
             }
             Goal::TraceStackPop => {
                 let mut children = self.trace.clone();
@@ -501,6 +520,7 @@ impl PolarVirtualMachine {
                 trace.children.append(&mut children);
                 self.trace.push(Rc::new(trace.clone()));
                 self.maybe_break(DebugEvent::Pop)?;
+                self.query_event_none()
             }
             Goal::TraceRule { trace } => {
                 if let Node::Rule(rule) = &trace.node {
@@ -514,19 +534,22 @@ impl PolarVirtualMachine {
                 }
                 self.trace.push(trace.clone());
                 self.maybe_break(DebugEvent::Rule)?;
+                self.query_event_none()
             }
-            Goal::Unify { left, right } => self.unify(left, right)?,
+            Goal::Unify { left, right } => {
+                self.unify(left, right)?;
+                self.query_event_none()
+            }
             Goal::AddConstraint { term } => {
-                self.add_constraint(term)?;
+                self.add_constraint(term)?.query_event_none()
             }
             Goal::AddConstraintsBatch { add_constraints } => {
                 add_constraints.borrow_mut().drain().fold(Ok(self), |this, (_, con)| {
                     this?.add_constraint(&con)
-                })?;
+                })?.query_event_none()
             }
-            Goal::Run { runnable } => return self.run_runnable(runnable.clone_runnable()),
+            Goal::Run { runnable } => self.run_runnable(runnable.clone_runnable()),
         }
-        Ok(QueryEvent::None)
     }
 
     /// Push a goal onto the goal stack.
@@ -961,9 +984,13 @@ impl PolarVirtualMachine {
         QueryEvent::Done { result: true }
     }
 
+    fn query_event_none(&self) -> PolarResult<QueryEvent> {
+        Ok(QueryEvent::None)
+    }
+
     /// Comparison operator that essentially performs partial unification.
     #[allow(clippy::many_single_char_names)]
-    pub fn isa(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
+    pub fn isa(&mut self, left: &Term, right: &Term) -> PolarResult<&mut Self> {
         self.log_with(
             || format!("MATCHES: {} matches {}", left.to_polar(), right.to_polar()),
             &[left, right],
@@ -975,7 +1002,7 @@ impl PolarVirtualMachine {
                 unreachable!("encountered bare expression")
             }
 
-            _ if self.kb.read().unwrap().is_union(left) => {
+            _ if self.kb().is_union(left) => {
                 // A union (currently) only matches itself.
                 //
                 // TODO(gj): when we have unions beyond `Actor` and `Resource`, we'll need to be
@@ -984,10 +1011,12 @@ impl PolarVirtualMachine {
                 let unions_match = (left.is_actor_union() && right.is_actor_union())
                     || (left.is_resource_union() && right.is_resource_union());
                 if !unions_match {
-                    return self.push_goal(Goal::Backtrack).map(|_|());
+                    self.push_goal(Goal::Backtrack)
+                } else {
+                    Ok(self)
                 }
             }
-            _ if self.kb.read().unwrap().is_union(right) => self.isa_union(left, right)?,
+            _ if self.kb().is_union(right) => self.isa_union(left, right),
 
             // TODO(gj): (Var, Rest) + (Rest, Var) cases might be unreachable.
             (Value::Variable(l), Value::Variable(r))
@@ -1000,17 +1029,16 @@ impl PolarVirtualMachine {
                         self.push_goal(Goal::Isa {
                             left: x,
                             right: right.clone(),
-                        })?;
+                        })
                     }
                     (_, VariableState::Bound(y)) => {
                         self.push_goal(Goal::Isa {
                             left: left.clone(),
                             right: y,
-                        })?;
+                        })
                     }
-                    (_, _) => {
-                        self.add_constraint(&term!(op!(Isa, left.clone(), right.clone())))?;
-                    }
+                    (_, _) =>
+                        self.add_constraint(&term!(op!(Isa, left.clone(), right.clone()))),
                 }
             }
             (Value::Variable(l), _) | (Value::RestVariable(l), _) => match self.variable_state(l) {
@@ -1018,22 +1046,22 @@ impl PolarVirtualMachine {
                     self.push_goal(Goal::Isa {
                         left: x,
                         right: right.clone(),
-                    })?;
+                    })
                 }
-                _ => self.isa_expr(left, right)?,
+                _ => self.isa_expr(left, right),
             },
             (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => match self.variable_state(r) {
                 VariableState::Bound(y) => {
                         self.push_goal(Goal::Isa {
                         left: left.clone(),
                         right: y,
-                    })?;
+                    })
                 }
                 _ => {
                     self.push_goal(Goal::Unify {
-                    left: left.clone(),
-                    right: right.clone(),
-                })?;
+                        left: left.clone(),
+                        right: right.clone(),
+                    })
                 }
             },
 
@@ -1041,7 +1069,7 @@ impl PolarVirtualMachine {
                 self.unify_lists(left, right, |(left, right)| Goal::Isa {
                     left: left.clone(),
                     right: right.clone(),
-                })?;
+                })
             }
 
             (Value::Dictionary(left), Value::Pattern(Pattern::Dictionary(right))) => {
@@ -1049,8 +1077,7 @@ impl PolarVirtualMachine {
                 let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
                 let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
                 if !right_fields.is_subset(&left_fields) {
-                    self.push_goal(Goal::Backtrack)?;
-                    return Ok(())
+                    return self.push_goal(Goal::Backtrack)
                 }
 
                 // For each field on the right, isa its value against the corresponding value on
@@ -1066,6 +1093,7 @@ impl PolarVirtualMachine {
                         right: v.clone(),
                     })?;
                 }
+                Ok(self)
             }
 
             (_, Value::Pattern(Pattern::Dictionary(right))) => {
@@ -1088,6 +1116,7 @@ impl PolarVirtualMachine {
                     };
                     self.append_goals(vec![lookup, isa])?;
                 }
+                Ok(self)
             }
 
             (_, Value::Pattern(Pattern::Instance(right_literal))) => {
@@ -1097,12 +1126,12 @@ impl PolarVirtualMachine {
                     right: right.clone_with_value(Value::Pattern(Pattern::Dictionary(
                         right_literal.fields.clone(),
                     ))),
-                })?;
+                })?
                 // Check class
-                self.push_goal(Goal::IsaExternal {
+                .push_goal(Goal::IsaExternal {
                     instance: left.clone(),
                     literal: right_literal.clone(),
-                })?;
+                })
             }
 
             // Default case: x isa y if x = y.
@@ -1110,10 +1139,9 @@ impl PolarVirtualMachine {
                 self.push_goal(Goal::Unify {
                     left: left.clone(),
                     right: right.clone(),
-                })?;
+                })
             }
         }
-        Ok(())
     }
 
     fn get_names(&self, s: &Symbol) -> HashSet<Symbol> {
@@ -1146,7 +1174,7 @@ impl PolarVirtualMachine {
             })
     }
 
-    fn isa_expr(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
+    fn isa_expr(&mut self, left: &Term, right: &Term) -> PolarResult<&mut Self> {
         match right.value() {
             Value::Pattern(Pattern::Dictionary(fields)) => {
                 // Produce a constraint like left.field = value
@@ -1161,6 +1189,7 @@ impl PolarVirtualMachine {
                 for op in constraints {
                     self.add_constraint(&op)?;
                 }
+                Ok(self)
             }
             Value::Pattern(Pattern::Instance(InstanceLiteral { fields, tag })) => {
                 // TODO(gj): assert that a simplified expression contains at most 1 unification
@@ -1232,7 +1261,7 @@ impl PolarVirtualMachine {
                         .map(|op| Goal::AddConstraint { term: op.into() })
                         .collect(),
                     vec![Goal::CheckError, Goal::Backtrack],
-                )?;
+                )
             }
             // if the RHS isn't a pattern or a dictionary, we'll fall back to unifying
             // this is not the _best_ behaviour, but it's what we've been doing
@@ -1240,16 +1269,15 @@ impl PolarVirtualMachine {
             _ => self.push_goal(Goal::Unify {
                 left: left.clone(),
                 right: right.clone(),
-            }).map(|_|())?,
+            }),
         }
-        Ok(())
     }
 
     /// To evaluate `left matches Union`, look up `Union`'s member classes and create a choicepoint
     /// to check if `left` matches any of them.
-    fn isa_union(&mut self, left: &Term, union: &Term) -> PolarResult<()> {
+    fn isa_union(&mut self, left: &Term, union: &Term) -> PolarResult<&mut Self> {
         let member_isas = {
-            let kb = self.kb.read().unwrap();
+            let kb = self.kb();
             let members = kb.get_union_members(union).iter();
             members
                 .map(|member| {
@@ -1264,8 +1292,7 @@ impl PolarVirtualMachine {
                 })
                 .collect::<Vec<Goals>>()
         };
-        self.choose(member_isas)?;
-        Ok(())
+        self.choose(member_isas)
     }
 
     pub fn lookup(&mut self, dict: &Dictionary, field: &Term, value: &Term) -> PolarResult<()> {
@@ -2209,7 +2236,7 @@ impl PolarVirtualMachine {
             (Value::List(l), Value::List(r)) => self.unify_lists(l, r, |(l, r)| Goal::Unify {
                 left: l.clone(),
                 right: r.clone(),
-            })?,
+            }).map(|_|())?,
 
             (Value::Dictionary(left), Value::Dictionary(right)) => {
                 // Check that the set of keys are the same.
@@ -2281,7 +2308,7 @@ impl PolarVirtualMachine {
     /// Used by both `unify` and `isa`; hence the third argument,
     /// a closure that builds sub-goals.
     #[allow(clippy::ptr_arg)]
-    fn unify_lists<F>(&mut self, left: &TermList, right: &TermList, unify: F) -> PolarResult<()>
+    fn unify_lists<F>(&mut self, left: &TermList, right: &TermList, unify: F) -> PolarResult<&mut Self>
     where
         F: FnMut((&Term, &Term)) -> Goal,
     {
@@ -2293,9 +2320,9 @@ impl PolarVirtualMachine {
             self.unify_rest_list_with_list(right, left, unify)
         } else if left.len() == right.len() {
             // No rest-variables; unify element-wise.
-            self.append_goals(left.iter().zip(right).map(unify)).map(|_|())
+            self.append_goals(left.iter().zip(right).map(unify))
         } else {
-            self.push_goal(Goal::Backtrack).map(|_|())
+            self.push_goal(Goal::Backtrack)
         }
     }
 
@@ -2307,7 +2334,7 @@ impl PolarVirtualMachine {
         rest_list_a: &TermList,
         rest_list_b: &TermList,
         mut unify: F,
-    ) -> PolarResult<()>
+    ) -> PolarResult<&mut Self>
     where
         F: FnMut((&Term, &Term)) -> Goal,
     {
@@ -2341,7 +2368,7 @@ impl PolarVirtualMachine {
                     .chain(vec![rest]),
             )
         }?;
-        Ok(())
+        Ok(self)
     }
 
     /// Unify a list that ends with a rest-variable with another that doesn't.
@@ -2352,7 +2379,7 @@ impl PolarVirtualMachine {
         rest_list: &TermList,
         list: &TermList,
         mut unify: F,
-    ) -> PolarResult<()>
+    ) -> PolarResult<&mut Self>
     where
         F: FnMut((&Term, &Term)) -> Goal,
     {
@@ -2369,8 +2396,7 @@ impl PolarVirtualMachine {
             )
         } else {
             self.push_goal(Goal::Backtrack)
-        }?;
-        Ok(())
+        }
     }
 
     /// Filter rules to just those applicable to a list of arguments,
