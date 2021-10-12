@@ -1,8 +1,7 @@
 import {
   createConnection,
-  DiagnosticSeverity,
-  ProposedFeatures,
   TextDocuments,
+  ProposedFeatures,
   // TextDocumentSyncKind,
 } from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -20,57 +19,11 @@ const oso = new Oso();
 
 async function reloadFiles() {
   oso.clearRules();
-
   const sourceStrings = [...files.entries()].map(([filename, document]) => ({
     filename,
     contents: document.getText(),
   }));
-
-  type Severity = 'error' | 'warning';
-
-  interface Position {
-    line: number;
-    character: number;
-  }
-
-  interface Range {
-    start: Position;
-    end: Position;
-  }
-
-  const polarDiagnosticsForFiles = (await oso.loadStrings(
-    sourceStrings
-  )) as unknown as Map<
-    string,
-    { message: string; href?: string; severity: Severity; range: Range }[]
-  >;
-
-  function polarSeverityToDiagnosticSeverity(severity: Severity) {
-    switch (severity) {
-      case 'error':
-        return DiagnosticSeverity.Error;
-      case 'warning':
-        return DiagnosticSeverity.Warning;
-    }
-  }
-
-  for (const [file, polarDiagnostics] of polarDiagnosticsForFiles) {
-    const { uri, version } = files.get(file);
-    const diagnostics = polarDiagnostics.map(
-      ({ message, href, severity: sev, range }) => {
-        const codeDescription = href && { href };
-        const severity = polarSeverityToDiagnosticSeverity(sev);
-        return {
-          range,
-          severity,
-          codeDescription,
-          source: 'polar-analyzer',
-          message,
-        };
-      }
-    );
-    connection.sendDiagnostics({ uri, version, diagnostics });
-  }
+  await oso.loadStrings(sourceStrings);
 }
 
 documents.onDidChangeContent(async ({ document }) => {
@@ -79,11 +32,12 @@ documents.onDidChangeContent(async ({ document }) => {
 });
 documents.listen(connection);
 
-connection.onDidChangeWatchedFiles(({ changes }) => {
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
+connection.onDidChangeWatchedFiles(async ({ changes }) => {
   for (const { uri } of changes) {
     files.delete(uri);
   }
-  reloadFiles(); // eslint-disable-line @typescript-eslint/no-floating-promises
+  await reloadFiles();
 });
 
 connection.onInitialize(() => {

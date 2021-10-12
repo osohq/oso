@@ -115,8 +115,8 @@ export class Polar {
   /**
    * Load Polar policy files.
    */
-  async loadFiles(filenames: string[]): Promise<string[]> {
-    if (filenames.length === 0) return [];
+  async loadFiles(filenames: string[]): Promise<void> {
+    if (filenames.length === 0) return;
 
     if (!extname) {
       throw new PolarError('loadFiles is not supported in the browser');
@@ -146,7 +146,7 @@ export class Polar {
    * as of the 0.20 release. Please see changelog for migration instructions:
    * https://docs.osohq.com/project/changelogs/2021-09-15.html
    */
-  async loadFile(filename: string): Promise<string[]> {
+  async loadFile(filename: string): Promise<void> {
     console.error(
       '`Oso.loadFile` has been deprecated in favor of `Oso.loadFiles` as of the 0.20 release.\n\n' +
         'Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html'
@@ -157,7 +157,7 @@ export class Polar {
   /**
    * Load Polar policy strings.
    */
-  async loadStrings(strings: SourceString[]): Promise<string[]> {
+  async loadStrings(strings: SourceString[]): Promise<void> {
     const sources = strings.map(
       ({ contents, filename }) => new Source(contents, filename)
     );
@@ -167,17 +167,16 @@ export class Polar {
   /**
    * Load a Polar policy string.
    */
-  async loadStr(contents: string, filename?: string): Promise<string[]> {
+  async loadStr(contents: string, filename?: string): Promise<void> {
     return this.loadStrings([{ contents, filename }]);
   }
 
   // Register MROs, load Polar code, and check inline queries.
-  private async loadSources(sources: Source[]): Promise<string[]> {
+  private async loadSources(sources: Source[]): Promise<void> {
     this.getHost().registerMros();
-    const warnings = this.#ffiPolar.load(sources) as string[];
+    this.#ffiPolar.load(sources);
     this.processMessages();
-    await this.checkInlineQueries();
-    return warnings;
+    return this.checkInlineQueries();
   }
 
   private async checkInlineQueries(): Promise<void> {

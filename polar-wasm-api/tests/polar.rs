@@ -19,7 +19,7 @@ fn load_file_succeeds() {
     };
     let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
     let res = polar.wasm_load(sources);
-    assert!(matches!(res, Ok(_)));
+    assert!(matches!(res, Ok(())));
 }
 
 #[wasm_bindgen_test]
@@ -48,7 +48,7 @@ fn next_inline_query_succeeds() {
     };
     let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
     let res = polar.wasm_load(sources);
-    assert!(matches!(res, Ok(_)));
+    assert!(matches!(res, Ok(())));
 
     let mut query = polar.wasm_next_inline_query().unwrap();
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
@@ -73,7 +73,7 @@ fn next_inline_query_errors() {
     };
     let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
     let res = polar.wasm_load(sources);
-    assert!(matches!(res, Ok(_)));
+    assert!(matches!(res, Ok(())));
     let mut query = polar.wasm_next_inline_query().unwrap();
 
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
