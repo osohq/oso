@@ -22,7 +22,6 @@ use crate::{
     sources::*,
     terms::*,
     traces::*,
-    visitor::{walk_term, Visitor},
 };
 
 #[cfg(target_arch = "wasm32")]
@@ -349,6 +348,7 @@ impl PolarVirtualMachine {
     }
 
     fn query_contains_partial(&mut self) {
+        use crate::visitor::{walk_term, Visitor};
         struct VarVisitor<'vm> {
             has_partial: bool,
             vm: &'vm PolarVirtualMachine,
@@ -422,70 +422,69 @@ impl PolarVirtualMachine {
 
         self.check_timeout()?;
 
+        use Goal::*;
         match goal.as_ref() {
-            Goal::Backtrack => self.backtrack()?.query_event_none(),
-            Goal::Cut { choice_index } => {
+            Backtrack => self.backtrack()?.query_event_none(),
+            Cut { choice_index } => {
                 self.choices.truncate(*choice_index);
                 self.query_event_none()
             }
-            Goal::Debug { message } => self.query_event_debug(message),
-            Goal::Halt => {
+            Debug { message } => self.query_event_debug(message),
+            Halt => {
                 self.log("HALT", &[]);
                 self.goals.clear();
                 self.choices.clear();
-                Ok(QueryEvent::Done { result: true })
+                self.query_event_done(true)
             }
 
-            Goal::Error { error } => Err(error.clone()),
-            Goal::Isa { left, right } => self.isa(left, right)?.query_event_none(),
-            Goal::IsMoreSpecific { left, right, args } => {
+            Error { error } => Err(error.clone()),
+            Isa { left, right } => self.isa(left, right)?.query_event_none(),
+            IsMoreSpecific { left, right, args } => {
                 self.is_more_specific(left, right, args)?;
                 self.query_event_none()
             }
-            Goal::IsSubspecializer {
+            IsSubspecializer {
                 answer,
                 left,
                 right,
                 arg,
             } => self.is_subspecializer(answer, left, right, arg),
-            Goal::Lookup { dict, field, value } => {
+            Lookup { dict, field, value } => {
                 self.lookup(dict, field, value)?;
                 self.query_event_none()
             }
-            Goal::LookupExternal {
+            LookupExternal {
                 call_id,
                 instance,
                 field,
             } => self.lookup_external(*call_id, instance, field),
-            Goal::IsaExternal { instance, literal } => {
-                self.query_event_isa_external(instance, literal)
-            }
-            Goal::MakeExternal {
+            IsaExternal { instance, literal } => self.query_event_isa_external(instance, literal),
+            MakeExternal {
                 constructor,
                 instance_id,
             } => self.query_event_make_external(constructor, *instance_id),
-            Goal::NextExternal { call_id, iterable } => {
+            NextExternal { call_id, iterable } => {
                 self.query_event_next_external(*call_id, iterable)
             }
-            Goal::CheckError => self.check_error()?.query_event_none(),
-            Goal::Noop => self.query_event_none(),
-            Goal::Query { term } => {
+            CheckError => self.check_error()?.query_event_none(),
+            Noop => self.query_event_none(),
+            Query { term } => {
                 let result = self.query(term);
                 self.maybe_break(DebugEvent::Query)?;
                 result
             }
-            Goal::PopQuery { .. } => {
+            PopQuery { .. } => {
                 self.queries.pop();
                 self.query_event_none()
             }
-            Goal::FilterRules {
+            FilterRules {
                 applicable_rules,
                 unfiltered_rules,
                 args,
             } => self
                 .filter_rules(applicable_rules, unfiltered_rules, args)?
                 .query_event_none(),
-            Goal::SortRules {
+            SortRules {
                 rules,
                 outer,
                 inner,
@@ -493,12 +492,12 @@ impl PolarVirtualMachine {
             } => self
                 .sort_rules(rules, args, *outer, *inner)?
                 .query_event_none(),
-            Goal::TraceStackPush => {
+            TraceStackPush => {
                 self.trace_stack.push(Rc::new(self.trace.clone()));
                 self.trace = vec![];
                 self.query_event_none()
             }
-            Goal::TraceStackPop => {
+            TraceStackPop => {
                 let mut children = self.trace.clone();
                 self.trace = self.trace_stack.pop().unwrap().as_ref().clone();
                 let mut trace = self.trace.pop().unwrap();
@@ -508,7 +507,7 @@ impl PolarVirtualMachine {
                 self.maybe_break(DebugEvent::Pop)?;
                 self.query_event_none()
             }
-            Goal::TraceRule { trace } => {
+            TraceRule { trace } => {
                 if let Node::Rule(rule) = &trace.node {
                     self.log_with(
                         || {
@@ -522,17 +521,17 @@ impl PolarVirtualMachine {
                 self.maybe_break(DebugEvent::Rule)?;
                 self.query_event_none()
             }
-            Goal::Unify { left, right } => {
+            Unify { left, right } => {
                 self.unify(left, right)?;
                 self.query_event_none()
             }
-            Goal::AddConstraint { term } => self.add_constraint(term)?.query_event_none(),
-            Goal::AddConstraintsBatch { add_constraints } => add_constraints
+            AddConstraint { term } => self.add_constraint(term)?.query_event_none(),
+            AddConstraintsBatch { add_constraints } => add_constraints
                 .borrow_mut()
                 .drain()
                 .fold(Ok(self), |this, (_, con)| this?.add_constraint(&con))?
                 .query_event_none(),
-            Goal::Run { runnable } => self.run_runnable(runnable.clone_runnable()),
+            Run { runnable } => self.run_runnable(runnable.clone_runnable()),
         }
     }
 
@@ -804,7 +803,7 @@ impl PolarVirtualMachine {
 
     pub fn source(&self, term: &Term) -> Option<Source> {
         term.get_source_id()
-            .and_then(|id| self.kb.read().unwrap().sources.get_source(id))
+            .and_then(|id| self.kb().sources.get_source(id))
     }
 
     /// Get the query stack as a string for printing in error messages.
@@ -959,6 +958,10 @@ impl PolarVirtualMachine {
         Ok(QueryEvent::None)
     }
 
+    fn query_event_done(&self, result: bool) -> PolarResult<QueryEvent> {
+        Ok(QueryEvent::Done { result })
+    }
+
     /// Comparison operator that essentially performs partial unification.
     #[allow(clippy::many_single_char_names)]
     pub fn isa(&mut self, left: &Term, right: &Term) -> PolarResult<&mut Self> {
@@ -982,7 +985,7 @@ impl PolarVirtualMachine {
                 let unions_match = (left.is_actor_union() && right.is_actor_union())
                     || (left.is_resource_union() && right.is_resource_union());
                 if !unions_match {
-                    self.push_goal(Goal::Backtrack)
+                    self.backtrack()
                 } else {
                     Ok(self)
                 }
@@ -996,33 +999,18 @@ impl PolarVirtualMachine {
             | (Value::RestVariable(l), Value::RestVariable(r)) => {
                 // Two variables.
                 match (self.variable_state(l), self.variable_state(r)) {
-                    (VariableState::Bound(x), _) => self.push_goal(Goal::Isa {
-                        left: x,
-                        right: right.clone(),
-                    }),
-                    (_, VariableState::Bound(y)) => self.push_goal(Goal::Isa {
-                        left: left.clone(),
-                        right: y,
-                    }),
+                    (VariableState::Bound(x), _) => self.isa(&x, right),
+                    (_, VariableState::Bound(y)) => self.isa(left, &y),
                     (_, _) => self.add_constraint(&term!(op!(Isa, left.clone(), right.clone()))),
                 }
             }
             (Value::Variable(l), _) | (Value::RestVariable(l), _) => match self.variable_state(l) {
-                VariableState::Bound(x) => self.push_goal(Goal::Isa {
-                    left: x,
-                    right: right.clone(),
-                }),
+                VariableState::Bound(x) => self.isa(&x, right),
                 _ => self.isa_expr(left, right),
             },
             (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => match self.variable_state(r) {
-                VariableState::Bound(y) => self.push_goal(Goal::Isa {
-                    left: left.clone(),
-                    right: y,
-                }),
-                _ => self.push_goal(Goal::Unify {
-                    left: left.clone(),
-                    right: right.clone(),
-                }),
+                VariableState::Bound(y) => self.isa(left, &y),
+                _ => self.unify(left, right),
             },
 
             (Value::List(left), Value::List(right)) => {
@@ -1037,68 +1025,56 @@ impl PolarVirtualMachine {
                 let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
                 let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
                 if !right_fields.is_subset(&left_fields) {
-                    return self.push_goal(Goal::Backtrack);
-                }
-
-                // For each field on the right, isa its value against the corresponding value on
-                // the left.
-                for (k, v) in right.fields.iter() {
-                    let left = left
-                        .fields
-                        .get(k)
-                        .expect("left fields should be a superset of right fields")
-                        .clone();
-                    self.push_goal(Goal::Isa {
-                        left,
+                    self.backtrack()
+                } else {
+                    // For each field on the right, isa its value against the corresponding value on
+                    // the left.
+                    self.append_goals(right.fields.iter().map(|(k, v)| Goal::Isa {
+                        left: left.fields.get(k).unwrap().clone(),
                         right: v.clone(),
-                    })?;
+                    }))
                 }
-                Ok(self)
             }
 
             (_, Value::Pattern(Pattern::Dictionary(right))) => {
-                // For each field in the dict, look up the corresponding field on the instance and
-                // then isa them.
-                for (field, right_value) in right.fields.iter() {
-                    // Generate symbol for the lookup result and leave the variable unbound, so that unification with the result does not fail.
-                    // Unification with the lookup result happens in `fn external_call_result()`.
-                    let answer = self.kb.read().unwrap().gensym("isa_value");
-                    let call_id = self.new_call_id(&answer);
+                right
+                    .fields
+                    .iter()
+                    .fold(Ok(self), |this, (field, right_value)| {
+                        let this = this?;
+                        // Generate symbol for the lookup result and leave the variable unbound, so that unification with the result does not fail.
+                        // Unification with the lookup result happens in `fn external_call_result()`.
+                        let answer = this.kb().gensym("isa_value");
+                        let call_id = this.new_call_id(&answer);
 
-                    let lookup = Goal::LookupExternal {
-                        instance: left.clone(),
-                        call_id,
-                        field: right_value.clone_with_value(Value::String(field.0.clone())),
-                    };
-                    let isa = Goal::Isa {
-                        left: Term::from(answer),
-                        right: right_value.clone(),
-                    };
-                    self.append_goals(vec![lookup, isa])?;
-                }
-                Ok(self)
+                        let lookup = Goal::LookupExternal {
+                            instance: left.clone(),
+                            call_id,
+                            field: right_value.clone_with_value(Value::String(field.0.clone())),
+                        };
+                        let isa = Goal::Isa {
+                            left: Term::from(answer),
+                            right: right_value.clone(),
+                        };
+                        this.append_goals(vec![lookup, isa])
+                    })
             }
 
-            (_, Value::Pattern(Pattern::Instance(right_literal))) => {
-                // Check fields
-                self.push_goal(Goal::Isa {
+            (_, Value::Pattern(Pattern::Instance(right_literal))) => self.append_goals(vec![
+                Goal::IsaExternal {
+                    instance: left.clone(),
+                    literal: right_literal.clone(),
+                },
+                Goal::Isa {
                     left: left.clone(),
                     right: right.clone_with_value(Value::Pattern(Pattern::Dictionary(
                         right_literal.fields.clone(),
                     ))),
-                })?
-                // Check class
-                .push_goal(Goal::IsaExternal {
-                    instance: left.clone(),
-                    literal: right_literal.clone(),
-                })
-            }
+                },
+            ]),
 
             // Default case: x isa y if x = y.
-            _ => self.push_goal(Goal::Unify {
-                left: left.clone(),
-                right: right.clone(),
-            }),
+            _ => self.unify(left, right),
         }
     }
 
@@ -1225,10 +1201,7 @@ impl PolarVirtualMachine {
             // if the RHS isn't a pattern or a dictionary, we'll fall back to unifying
             // this is not the _best_ behaviour, but it's what we've been doing
             // previously
-            _ => self.push_goal(Goal::Unify {
-                left: left.clone(),
-                right: right.clone(),
-            }),
+            _ => self.unify(left, right),
         }
     }
 
@@ -1288,7 +1261,7 @@ impl PolarVirtualMachine {
                         right: value.clone(),
                     })
                 } else {
-                    self.push_goal(Goal::Backtrack)
+                    self.backtrack()
                 }
             }
             v => self.type_error(
@@ -1432,10 +1405,11 @@ impl PolarVirtualMachine {
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
     fn query(&mut self, term: &Term) -> PolarResult<QueryEvent> {
+        use {Goal::*, Operator::*, Value::*, VariableState::*};
         // Don't log if it's just a single element AND like lots of rule bodies tend to be.
         match &term.value() {
-            Value::Expression(Operation {
-                operator: Operator::And,
+            Expression(Operation {
+                operator: And,
                 args,
             }) if args.len() < 2 => (),
             _ => {
@@ -1444,7 +1418,7 @@ impl PolarVirtualMachine {
         };
 
         self.queries.push(term.clone());
-        self.push_goal(Goal::PopQuery { term: term.clone() })?
+        self.push_goal(PopQuery { term: term.clone() })?
             .trace
             .push(Rc::new(Trace {
                 node: Node::Term(term.clone()),
@@ -1452,46 +1426,31 @@ impl PolarVirtualMachine {
             }));
 
         match &term.value() {
-            Value::Call(predicate) => self
-                .query_for_predicate(predicate.clone())?
-                .query_event_none(),
-            Value::Expression(_) => self.query_for_operation(term),
-            Value::Variable(sym) => {
-                let goal = if let VariableState::Bound(val) = self.variable_state(sym) {
-                    Goal::Query { term: val }
+            Boolean(true) => self.query_event_none(),
+            Boolean(false) => self.backtrack()?.query_event_none(),
+            Expression(_) => self.query_for_operation(term),
+            Call(p) => self.query_for_predicate(p.clone()),
+            Variable(sym) => {
+                if let Bound(term) = self.variable_state(sym) {
+                    self.query(&term)
                 } else {
-                    // variable was unbound
-                    // apply a constraint to variable that it must be truthy
-                    Goal::Unify {
-                        left: term.clone(),
-                        right: term!(true),
-                    }
-                };
-                self.push_goal(goal)?.query_event_none()
+                    self.unify(term, &term!(true))?.query_event_none()
+                }
             }
-            Value::Boolean(value) => if *value {
-                self
-            } else {
-                self.push_goal(Goal::Backtrack)?
-            }
-            .query_event_none(),
-            _ => {
-                // everything else dies horribly and in pain
-                self.type_error(
-                    term,
-                    format!(
-                        "{} isn't something that is true or false so can't be a condition",
-                        term.value().to_polar()
-                    ),
-                )
-            }
+            _ => self.type_error(
+                term,
+                format!(
+                    "{} isn't something that is true or false so can't be a condition",
+                    term.value().to_polar()
+                ),
+            ),
         }
     }
 
     /// Select applicable rules for predicate.
     /// Sort applicable rules by specificity.
     /// Create a choice over the applicable rules.
-    fn query_for_predicate(&mut self, predicate: Call) -> PolarResult<&mut Self> {
+    fn query_for_predicate(&mut self, predicate: Call) -> PolarResult<QueryEvent> {
         assert!(predicate.kwargs.is_none());
         let goals = match self.kb.read().unwrap().get_generic_rule(&predicate.name) {
             None => vec![Goal::Backtrack],
@@ -1516,7 +1475,7 @@ impl PolarVirtualMachine {
                 ]
             }
         };
-        self.append_goals(goals)
+        self.append_goals(goals)?.query_event_none()
     }
 
     fn query_for_operation(&mut self, term: &Term) -> PolarResult<QueryEvent> {
@@ -1557,34 +1516,29 @@ impl PolarVirtualMachine {
             }
             Assign => {
                 assert_eq!(args.len(), 2);
-                let right = args.pop().unwrap();
-                let left = args.pop().unwrap();
+                let (left, right) = (&args[0], &args[1]);
                 match (left.value(), right.value()) {
                     (Value::Variable(var), _)
                         if self.variable_state(var) == VariableState::Unbound =>
                     {
-                        self.push_goal(Goal::Unify { left, right })?
-                            .query_event_none()
+                        self.unify(left, right)?.query_event_none()
                     }
                     (Value::Variable(var), _) => self.type_error(
-                        &left,
+                        left,
                         format!(
                             "Can only assign to unbound variables, {} is not unbound.",
                             var.to_polar()
                         ),
                     ),
-                    _ => self
-                        .type_error(&left, format!("Cannot assign to type {}.", left.to_polar())),
+                    _ => {
+                        self.type_error(left, format!("Cannot assign to type {}.", left.to_polar()))
+                    }
                 }
             }
 
             Unify => {
-                // Push a `Unify` goal
                 assert_eq!(args.len(), 2);
-                let right = args.pop().unwrap();
-                let left = args.pop().unwrap();
-                self.push_goal(Goal::Unify { left, right })?
-                    .query_event_none()
+                self.unify(&args[0], &args[1])?.query_event_none()
             }
             Dot => self.query_op_helper(term, Self::dot_op_helper, false, false),
 
@@ -1682,10 +1636,7 @@ impl PolarVirtualMachine {
             Isa => {
                 // TODO (dhatch): Use query op helper.
                 assert_eq!(args.len(), 2);
-                let right = args.pop().unwrap();
-                let left = args.pop().unwrap();
-                self.push_goal(Goal::Isa { left, right })?
-                    .query_event_none()
+                self.isa(&args[0], &args[1])?.query_event_none()
             }
             ForAll => {
                 assert_eq!(args.len(), 2);
@@ -1706,10 +1657,7 @@ impl PolarVirtualMachine {
                     }))],
                 };
                 let double_negation = term.clone_with_value(Value::Expression(op));
-                self.push_goal(Goal::Query {
-                    term: double_negation,
-                })?
-                .query_event_none()
+                self.query(&double_negation)
             }
         }
     }
@@ -1754,14 +1702,10 @@ impl PolarVirtualMachine {
         if let Value::Variable(r) = right.value() {
             if let VariableState::Bound(x) = self.variable_state(r) {
                 args[1] = x;
-                return self
-                    .push_goal(Goal::Query {
-                        term: term.clone_with_value(Value::Expression(Operation {
-                            operator: *op,
-                            args,
-                        })),
-                    })?
-                    .query_event_none();
+                return self.query(&term.clone_with_value(Value::Expression(Operation {
+                    operator: *op,
+                    args,
+                })));
             } else if !handle_unbound_right_var && left.value().as_symbol().is_err() {
                 return eval(self, term);
             }
@@ -1770,14 +1714,10 @@ impl PolarVirtualMachine {
         if let Value::Variable(l) = left.value() {
             if let VariableState::Bound(x) = self.variable_state(l) {
                 args[0] = x;
-                return self
-                    .push_goal(Goal::Query {
-                        term: term.clone_with_value(Value::Expression(Operation {
-                            operator: *op,
-                            args,
-                        })),
-                    })?
-                    .query_event_none();
+                return self.query(&term.clone_with_value(Value::Expression(Operation {
+                    operator: *op,
+                    args,
+                })));
             } else if !handle_unbound_left_var && right.value().as_symbol().is_err() {
                 return eval(self, term);
             }
@@ -1814,12 +1754,8 @@ impl PolarVirtualMachine {
                     args: vec![left.clone(), right.clone()],
                 })
             }
-            _ => if !compare(*op, left, right)? {
-                self.push_goal(Goal::Backtrack)?
-            } else {
-                self
-            }
-            .query_event_none(),
+            _ if !compare(*op, left, right)? => self.backtrack()?.query_event_none(),
+            _ => self.query_event_none(),
         }
     }
 
@@ -1854,11 +1790,8 @@ impl PolarVirtualMachine {
                         );
                     }
                 } {
-                    self.push_goal(Goal::Unify {
-                        left: term.clone_with_value(Value::Number(answer)),
-                        right: result.clone(),
-                    })?
-                    .query_event_none()
+                    self.unify(&Term::from(Value::Number(answer)), result)?
+                        .query_event_none()
                 } else {
                     self.set_error_context(
                         term,
@@ -1906,7 +1839,7 @@ impl PolarVirtualMachine {
             | Value::List(_)
             | Value::Number(_)
             | Value::String(_) => {
-                let answer = self.kb.read().unwrap().gensym("lookup_value");
+                let answer = self.kb().gensym("lookup_value");
                 let call_id = self.new_call_id(&answer);
                 self.append_goals(vec![
                     Goal::LookupExternal {
@@ -2097,12 +2030,8 @@ impl PolarVirtualMachine {
                     Ok(self)
                 } else {
                     match (self.variable_state(l), self.variable_state(r)) {
-                        (VariableState::Bound(x), VariableState::Bound(y)) => {
-                            self.push_goal(Goal::Unify { left: x, right: y })
-                        }
-                        _ if self.bind(l, right.clone()).is_err() => {
-                            self.push_goal(Goal::Backtrack)
-                        }
+                        (VariableState::Bound(x), VariableState::Bound(y)) => self.unify(&x, &y),
+                        _ if self.bind(l, right.clone()).is_err() => self.backtrack(),
                         _ => Ok(self),
                     }
                 }
@@ -2112,10 +2041,8 @@ impl PolarVirtualMachine {
             (Value::Variable(var), _) | (Value::RestVariable(var), _) => {
                 let right = right.clone();
                 match self.variable_state(var) {
-                    VariableState::Bound(value) => {
-                        self.push_goal(Goal::Unify { left: value, right })
-                    }
-                    _ if self.bind(var, right).is_err() => self.push_goal(Goal::Backtrack),
+                    VariableState::Bound(value) => self.unify(&value, &right),
+                    _ if self.bind(var, right).is_err() => self.backtrack(),
                     _ => Ok(self),
                 }
             }
@@ -2127,7 +2054,7 @@ impl PolarVirtualMachine {
                     VariableState::Bound(value) => {
                         self.push_goal(Goal::Unify { left, right: value })
                     }
-                    _ if self.bind(var, left).is_err() => self.push_goal(Goal::Backtrack),
+                    _ if self.bind(var, left).is_err() => self.backtrack(),
                     _ => Ok(self),
                 }
             }
@@ -2161,14 +2088,11 @@ impl PolarVirtualMachine {
                 let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
                 let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
                 if left_fields != right_fields {
-                    self.push_goal(Goal::Backtrack)
+                    self.backtrack()
                 } else {
                     left.fields.iter().fold(Ok(self), |this, (k, v)| {
-                        let right = right.fields.get(k).unwrap().clone();
-                        this?.push_goal(Goal::Unify {
-                            left: v.clone(),
-                            right,
-                        })
+                        let right = right.fields.get(k).unwrap();
+                        this?.unify(v, right)
                     })
                 }
             }
@@ -2200,7 +2124,7 @@ impl PolarVirtualMachine {
             }
 
             // Anything else fails.
-            _ => self.push_goal(Goal::Backtrack),
+            _ => self.backtrack(),
         }
     }
 
@@ -2227,7 +2151,7 @@ impl PolarVirtualMachine {
             // No rest-variables; unify element-wise.
             self.append_goals(left.iter().zip(right).map(unify))
         } else {
-            self.push_goal(Goal::Backtrack)
+            self.backtrack()
         }
     }
 
@@ -2299,7 +2223,7 @@ impl PolarVirtualMachine {
                     .chain(vec![rest]),
             )
         } else {
-            self.push_goal(Goal::Backtrack)
+            self.backtrack()
         }
     }
 
@@ -2385,7 +2309,7 @@ impl PolarVirtualMachine {
         inner: usize,
     ) -> PolarResult<&mut Self> {
         if rules.is_empty() {
-            return self.push_goal(Goal::Backtrack);
+            return self.backtrack();
         }
 
         assert!(outer <= rules.len(), "bad outer index");
@@ -2529,15 +2453,15 @@ impl PolarVirtualMachine {
                             arg: arg.clone(),
                         },
                         Goal::Unify {
-                            left: Term::from(answer),
-                            right: Term::from(true),
+                            left: term!(answer),
+                            right: term!(true),
                         },
                     ]);
                 }
             }
         }
         // Fail on any of the above branches that do not return
-        self.push_goal(Goal::Backtrack)
+        self.backtrack()
     }
 
     /// Determine if `left` is a more specific specializer ("subspecializer") than `right`
@@ -2599,11 +2523,11 @@ impl PolarVirtualMachine {
                 Ok(QueryEvent::None)
             }
             (_, Value::Pattern(Pattern::Instance(_)), Value::Pattern(Pattern::Dictionary(_))) => {
-                self.rebind_external_answer(answer, Term::from(true));
+                self.rebind_external_answer(answer, term!(true));
                 Ok(QueryEvent::None)
             }
             _ => {
-                self.rebind_external_answer(answer, Term::from(false));
+                self.rebind_external_answer(answer, term!(false));
                 Ok(QueryEvent::None)
             }
         }
@@ -2671,14 +2595,14 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
-    /// VM entry point.
+    /// VM main loop entry point.
     fn run_query(&mut self) -> PolarResult<QueryEvent> {
         if !self.goals.is_empty() {
             self.do_goals()
         } else if !self.choices.is_empty() {
             self.backtrack()?.run_query()
         } else {
-            Ok(QueryEvent::Done { result: true })
+            self.query_event_done(true)
         }
     }
 
@@ -3608,7 +3532,7 @@ mod tests {
             fields: btreemap! {sym!("a") => term!("a")},
         })));
 
-        let answer = vm.kb.read().unwrap().gensym("is_subspecializer");
+        let answer = vm.kb().gensym("is_subspecializer");
 
         match vm.is_subspecializer(&answer, &left, &right, &arg).unwrap() {
             QueryEvent::None => (),
