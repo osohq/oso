@@ -311,8 +311,16 @@ impl<'kb> UndefinedRuleVisitor<'kb> {
 
 impl<'kb> Visitor for UndefinedRuleVisitor<'kb> {
     fn visit_term(&mut self, term: &Term) {
-        if let Value::Call(_) = term.value() {
-            self.call_terms.push(term.clone())
+        match term.value() {
+            Value::Expression(op) => {
+                if op.operator == Operator::Dot || op.operator == Operator::New {
+                    return;
+                }
+            }
+            Value::Call(_) => {
+                self.call_terms.push(term.clone())
+            }
+            _ => {}
         }
         walk_term(self, term)
     }
