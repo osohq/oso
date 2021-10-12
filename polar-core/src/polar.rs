@@ -160,7 +160,7 @@ impl Polar {
     }
 
     /// Load `Source`s into the KB.
-    pub fn load(&self, sources: Vec<Source>) -> PolarResult<()> {
+    pub fn load(&self, sources: Vec<Source>) -> PolarResult<Vec<String>> {
         if self.kb.read().unwrap().has_rules() {
             let msg = MULTIPLE_LOAD_ERROR_MSG.to_owned();
             return Err(error::RuntimeError::FileLoading { msg }.into());
@@ -218,14 +218,16 @@ impl Polar {
             Ok(warnings)
         }
 
+        let mut warnings = vec![];
+
         let mut kb = self.kb.write().unwrap();
         for source in &sources {
             let result = kb.add_source(source.clone());
             let result = result.and_then(|source_id| load_source(source_id, source, &mut kb));
             match result {
-                Ok(warnings) => {
-                    self.messages
-                        .extend(warnings.into_iter().map(Message::warning));
+                Ok(mut ws) => {
+                    warnings.append(&mut ws);
+                    self.messages.extend(ws.into_iter().map(Message::warning));
                 }
                 Err(e) => {
                     // If any source fails to load, clear the KB.
@@ -250,16 +252,16 @@ impl Polar {
         }
 
         // Perform validation checks against the whole policy
-        let mut warnings = vec![];
         warnings.append(&mut check_no_allow_rule(&kb));
 
         // Check for has_permission calls alongside resource block definitions
         warnings.append(&mut check_resource_missing_has_permission(&kb));
 
+        // TODO(gj): this is duplicative now that warnings are returned directly from this method.
         self.messages
-            .extend(warnings.into_iter().map(Message::warning));
+            .extend(warnings.clone().into_iter().map(Message::warning));
 
-        Ok(())
+        Ok(warnings)
     }
 
     // Used in integration tests
@@ -267,7 +269,8 @@ impl Polar {
         self.load(vec![Source {
             src: src.to_owned(),
             filename: None,
-        }])
+        }])?;
+        Ok(())
     }
 
     // TODO(gj): ask Sam if we still need this.

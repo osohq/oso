@@ -17,12 +17,16 @@ impl Polar {
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = load)]
-    pub fn wasm_load(&self, sources: JsValue) -> JsResult<()> {
+    pub fn wasm_load(&self, sources: JsValue) -> JsResult<JsValue> {
         let sources: Vec<Source> = serde_wasm_bindgen::from_value(sources)?;
         self.0
             .load(sources)
             .map_err(Error::from)
             .map_err(Error::into)
+            .and_then(|warnings| {
+                serde_wasm_bindgen::to_value(&warnings)
+                    .map_err(|e| serialization_error(e.to_string()))
+            })
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = clearRules)]
