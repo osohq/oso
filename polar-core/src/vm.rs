@@ -1808,8 +1808,7 @@ impl PolarVirtualMachine {
                     dict: dict.clone(),
                     field: field.clone(),
                     value: args.remove(2),
-                })?
-                .query_event_none()
+                })
             }
             // Push an `ExternalLookup` goal for external instances and built-ins.
             Value::Dictionary(_)
@@ -1830,8 +1829,7 @@ impl PolarVirtualMachine {
                         left: value.clone(),
                         right: Term::from(answer),
                     },
-                ])?
-                .query_event_none()
+                ])
             }
             Value::Variable(v) => {
                 if matches!(field.value(), Value::Call(_)) {
@@ -1846,7 +1844,7 @@ impl PolarVirtualMachine {
                     let dot2 = op!(Dot, object.clone(), field.clone());
                     let value = self.deref(value);
                     let term = Term::from(op!(Unify, value, dot2.into()));
-                    self.add_constraint(&term)?.query_event_none()
+                    self.add_constraint(&term)
                 }
             }
             _ => self.type_error(
@@ -1856,7 +1854,8 @@ impl PolarVirtualMachine {
                     object.to_polar()
                 ),
             ),
-        }
+        }?
+        .query_event_none()
     }
 
     fn in_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {
@@ -1869,57 +1868,51 @@ impl PolarVirtualMachine {
 
         match iterable.value() {
             // Unify item with each element of the list, skipping non-matching ground terms.
-            Value::List(terms) => self
-                .choose(terms.iter().filter_map(|term| {
-                    (!item_is_ground || !term.is_ground() || term.value() == item.value()).then(
-                        || match term.value() {
-                            Value::RestVariable(v) => {
-                                let term = op!(In, item.clone(), Term::from(v.clone())).into();
-                                vec![Goal::Query { term }]
-                            }
-                            _ => vec![Goal::Unify {
-                                left: item.clone(),
-                                right: term.clone(),
-                            }],
-                        },
-                    )
-                }))?
-                .query_event_none(),
+            Value::List(terms) => self.choose(terms.iter().filter_map(|term| {
+                (!item_is_ground || !term.is_ground() || term.value() == item.value()).then(|| {
+                    match term.value() {
+                        Value::RestVariable(v) => {
+                            let term = op!(In, item.clone(), Term::from(v.clone())).into();
+                            vec![Goal::Query { term }]
+                        }
+                        _ => vec![Goal::Unify {
+                            left: item.clone(),
+                            right: term.clone(),
+                        }],
+                    }
+                })
+            })),
             // Unify item with each (k, v) pair of the dict, skipping non-matching ground terms.
-            Value::Dictionary(dict) => self
-                .choose(
-                    dict.fields
-                        .iter()
-                        .map(|(k, v)| {
-                            iterable.clone_with_value(Value::List(vec![
-                                v.clone_with_value(Value::String(k.0.clone())),
-                                v.clone(),
-                            ]))
-                        })
-                        .filter(|term| {
-                            !item_is_ground || !term.is_ground() || term.value() == item.value()
-                        })
-                        .map(|term| {
-                            vec![Goal::Unify {
-                                left: item.clone(),
-                                right: term,
-                            }]
-                        }),
-                )?
-                .query_event_none(),
-            // Unify item with each element of the string
-            // FIXME (gw): this seems strange, wouldn't a substring search make more sense?
-            Value::String(s) => self
-                .choose(s.chars().filter_map(|c| {
-                    let c = Value::String(c.to_string());
-                    (!item_is_ground || c == *item.value()).then(|| {
+            Value::Dictionary(dict) => self.choose(
+                dict.fields
+                    .iter()
+                    .map(|(k, v)| {
+                        iterable.clone_with_value(Value::List(vec![
+                            v.clone_with_value(Value::String(k.0.clone())),
+                            v.clone(),
+                        ]))
+                    })
+                    .filter(|term| {
+                        !item_is_ground || !term.is_ground() || term.value() == item.value()
+                    })
+                    .map(|term| {
                         vec![Goal::Unify {
                             left: item.clone(),
-                            right: iterable.clone_with_value(c),
+                            right: term,
                         }]
-                    })
-                }))?
-                .query_event_none(),
+                    }),
+            ),
+            // Unify item with each element of the string
+            // FIXME (gw): this seems strange, wouldn't a substring search make more sense?
+            Value::String(s) => self.choose(s.chars().filter_map(|c| {
+                let c = Value::String(c.to_string());
+                (!item_is_ground || c == *item.value()).then(|| {
+                    vec![Goal::Unify {
+                        left: item.clone(),
+                        right: iterable.clone_with_value(c),
+                    }]
+                })
+            })),
             // Push an `ExternalLookup` goal for external instances
             Value::ExternalInstance(_) => {
                 // Generate symbol for next result and leave the variable unbound, so that unification with the result does not fail
@@ -1940,8 +1933,7 @@ impl PolarVirtualMachine {
                         left: item.clone(),
                         right: Term::from(next_sym),
                     },
-                ])?
-                .query_event_none()
+                ])
             }
             _ => self.type_error(
                 iterable,
@@ -1950,7 +1942,8 @@ impl PolarVirtualMachine {
                     iterable.value()
                 ),
             ),
-        }
+        }?
+        .query_event_none()
     }
 
     /// Unify `left` and `right` terms.
@@ -2585,7 +2578,7 @@ impl PolarVirtualMachine {
     }
 
     /// VM main loop. It'd be nice to make it recursive but rustc
-    /// doesn't TCO it :(
+    /// has trouble TCOing it :(
     fn do_goals(&mut self) -> PolarResult<QueryEvent> {
         while let Some(goal) = self.goals.pop() {
             match self.do_goal(goal.clone())? {
@@ -2622,21 +2615,18 @@ impl PolarVirtualMachine {
             None
         };
 
-        use crate::partial::{simplify_bindings, sub_this};
         let mut bindings = self.bindings(true);
+        use crate::partial::{simplify_bindings, sub_this};
         if !self.inverting {
-            if let Some(bs) = simplify_bindings(bindings, false) {
-                bindings = bs;
-            } else {
-                return Ok(QueryEvent::None);
+            match simplify_bindings(bindings, false) {
+                None => return self.query_event_none(),
+                Some(bs) => {
+                    bindings = bs
+                        .into_iter()
+                        .map(|(var, value)| (var.clone(), sub_this(var, value)))
+                        .collect()
+                }
             }
-
-            bindings = bindings
-                .clone()
-                .into_iter()
-                .filter(|(var, _)| !var.is_temporary_var())
-                .map(|(var, value)| (var.clone(), sub_this(var, value)))
-                .collect();
         }
         Ok(QueryEvent::Result { bindings, trace })
     }

@@ -82,6 +82,21 @@ pub fn simplify_partial(mut term: Term, output_vars: HashSet<Symbol>) -> Term {
     }
 }
 
+fn toss_trivial_unifies(args: &mut TermList) {
+    args.retain(|c| {
+        let o = c.value().as_expression().unwrap();
+        match o.operator {
+            Operator::Unify | Operator::Eq => {
+                assert_eq!(o.args.len(), 2);
+                let left = &o.args[0];
+                let right = &o.args[1];
+                left != right
+            }
+            _ => true,
+        }
+    });
+}
+
 fn simplify_var(all: bool, bindings: &Bindings, var: &Symbol, term: &Term) -> Option<Term> {
     let output_vars: HashSet<_> = bindings
         .keys()
@@ -127,7 +142,7 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
 }
 
 #[derive(Clone)]
-pub struct Simplifier {
+struct Simplifier {
     bindings: Bindings,
     output_vars: HashSet<Symbol>,
     seen: HashSet<Term>,
@@ -136,7 +151,7 @@ pub struct Simplifier {
 type TermSimplifier = dyn Fn(&mut Simplifier, &mut Term);
 
 impl Simplifier {
-    pub fn new(output_vars: HashSet<Symbol>) -> Self {
+    fn new(output_vars: HashSet<Symbol>) -> Self {
         Self {
             output_vars,
             bindings: Bindings::new(),
@@ -144,14 +159,14 @@ impl Simplifier {
         }
     }
 
-    pub fn bind(&mut self, var: Symbol, value: Term) {
+    fn bind(&mut self, var: Symbol, value: Term) {
         // We do not allow rebindings.
         if !self.is_bound(&var) {
             self.bindings.insert(var, self.deref(&value));
         }
     }
 
-    pub fn deref(&self, term: &Term) -> Term {
+    fn deref(&self, term: &Term) -> Term {
         match term.value() {
             Value::Variable(var) | Value::RestVariable(var) => {
                 self.bindings.get(var).unwrap_or(term).clone()
@@ -165,10 +180,9 @@ impl Simplifier {
     }
 
     fn is_output(&self, t: &Term) -> bool {
-        match t.value() {
-            Value::Variable(v) | Value::RestVariable(v) => self.output_vars.contains(v),
-            _ => false,
-        }
+        t.value()
+            .as_symbol()
+            .map_or(false, |v| self.output_vars.contains(v))
     }
 
     /// Determine whether to keep, drop, bind or conditionally bind a unification operation.
@@ -236,26 +250,7 @@ impl Simplifier {
     /// Also inverts negation operations.
     ///
     /// May require multiple calls to perform all eliminiations.
-    pub fn simplify_operation_variables(
-        &mut self,
-        o: &mut Operation,
-        simplify_term: &TermSimplifier,
-    ) {
-        fn toss_trivial_unifies(args: &mut TermList) {
-            args.retain(|c| {
-                let o = c.value().as_expression().unwrap();
-                match o.operator {
-                    Operator::Unify | Operator::Eq => {
-                        assert_eq!(o.args.len(), 2);
-                        let left = &o.args[0];
-                        let right = &o.args[1];
-                        left != right
-                    }
-                    _ => true,
-                }
-            });
-        }
-
+    fn simplify_operation_variables(&mut self, o: &mut Operation, simplify_term: &TermSimplifier) {
         if o.operator == Operator::And || o.operator == Operator::Or {
             toss_trivial_unifies(&mut o.args);
         }
@@ -342,7 +337,7 @@ impl Simplifier {
 
     /// Deduplicate an operation by removing terms that are mirrors or duplicates
     /// of other terms.
-    pub fn deduplicate_operation(&mut self, o: &mut Operation, simplify_term: &TermSimplifier) {
+    fn deduplicate_operation(&mut self, o: &mut Operation, simplify_term: &TermSimplifier) {
         fn preprocess_and(args: &mut TermList) {
             // HashSet of term hash values used to deduplicate. We use hash values
             // to avoid cloning to insert terms.
@@ -385,13 +380,14 @@ impl Simplifier {
     /// `simplify_operation` should perform simplification operations in-place
     /// on the operation argument. To recursively simplify sub-terms in that operation,
     /// it must call the passed TermSimplifier.
-    pub fn simplify_term<F>(&mut self, term: &mut Term, simplify_operation: F)
+    fn simplify_term<F>(&mut self, term: &mut Term, simplify_operation: F)
     where
         F: Fn(&mut Self, &mut Operation, &TermSimplifier) + 'static + Clone,
     {
         if self.seen.contains(term) {
             return;
         }
+
         let orig = term.clone();
         self.seen.insert(term.clone());
 
@@ -438,7 +434,7 @@ impl Simplifier {
     }
 
     /// Simplify a partial until quiescence.
-    pub fn simplify_partial(&mut self, term: &mut Term) {
+    fn simplify_partial(&mut self, term: &mut Term) {
         // TODO(ap): This does not handle hash collisions.
         let mut last = term.hash_value();
         let mut nbindings = self.bindings.len();
