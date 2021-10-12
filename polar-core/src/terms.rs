@@ -499,6 +499,10 @@ impl Term {
         }
     }
 
+    pub fn is_union(&self) -> bool {
+        self.is_actor_union() || self.is_resource_union()
+    }
+
     pub fn is_actor_union(&self) -> bool {
         matches!(self.value(), Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) | Value::Variable(tag) if tag.0 == ACTOR_UNION_NAME)
     }
