@@ -1123,7 +1123,7 @@ impl PolarVirtualMachine {
 
                 // get the aliases for this variable
                 let names = self.get_names(var);
-                let (simplified, _) = simplify_partial(var, partial, names.clone(), false);
+                let simplified = simplify_partial(partial, names.clone());
                 let simplified = simplified.value().as_expression()?;
 
                 // TODO (dhatch): what if there is more than one var = dot_op constraint?
