@@ -1,9 +1,12 @@
 use std::collections::HashSet;
 
-use crate::folder::{fold_operation, fold_term, Folder};
-use crate::terms::{Operation, Operator, Symbol, Term, Value};
-use crate::visitor::{walk_operation, Visitor};
-use crate::vm::compare;
+use crate::{
+    folder::{fold_operation, fold_term, Folder},
+    terms::{Operation, Operator, Symbol, Term, Value},
+    visitor::{walk_operation, Visitor},
+    vm::compare,
+    formatting::to_polar::ToPolarString,
+};
 
 /// A trivially true expression.
 pub const TRUE: Operation = op!(And);
@@ -188,11 +191,10 @@ impl Operation {
             consistent: true,
         };
         let grounded = grounder.fold_operation(self.clone());
-        if grounder.consistent {
-            Some(grounded)
-        } else {
-            None
-        }
+        grounder.consistent.then(|| {
+            eprintln!("gr ----- {}", grounded.to_polar());
+            grounded
+        })
     }
 
     fn constrain(&mut self, t: Term) {

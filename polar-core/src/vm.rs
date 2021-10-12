@@ -1840,10 +1840,11 @@ impl PolarVirtualMachine {
                         },
                     )
                 } else {
+                    let sym = var!(format!("__{}_dot_{}", v, field));
                     // Translate `.(object, field, value)` → `value = .(object, field)`.
-                    let dot2 = op!(Dot, object.clone(), field.clone());
-                    let value = self.deref(value);
-                    let term = Term::from(op!(Unify, value, dot2.into()));
+                    let dot2 = term!(op!(Dot, object.clone(), field.clone()));
+                    let term = term!(op!(Unify, value.clone(), dot2));
+                    let term = term!(op!(And, term, term!(op!(Unify, sym, value.clone()))));
                     self.add_constraint(&term)
                 }
             }
