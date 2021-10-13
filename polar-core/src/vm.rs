@@ -426,8 +426,7 @@ impl PolarVirtualMachine {
             Error(error) => Err(error.clone()),
             Isa(left, right) => self.isa(left, right)?.query_event_none(),
             IsMoreSpecific { left, right, args } => {
-                self.is_more_specific(left, right, args)?;
-                self.query_event_none()
+                self.is_more_specific(left, right, args)?.query_event_none()
             }
             IsSubspecializer {
                 answer,
@@ -494,7 +493,7 @@ impl PolarVirtualMachine {
                 if let Node::Rule(rule) = &trace.node {
                     self.log_with(
                         || {
-                            let source_str = self.rule_source(rule);
+                            let source_str = rule.to_polar();
                             format!("RULE: {}", source_str)
                         },
                         &[],
@@ -504,10 +503,7 @@ impl PolarVirtualMachine {
                 self.maybe_break(DebugEvent::Rule)?;
                 self.query_event_none()
             }
-            Unify(left, right) => {
-                self.unify(left, right)?;
-                self.query_event_none()
-            }
+            Unify(left, right) => self.unify(left, right)?.query_event_none(),
             AddConstraint(term) => self.add_constraint(term)?.query_event_none(),
             AddConstraints(constraints) => constraints
                 .borrow_mut()
@@ -706,7 +702,7 @@ impl PolarVirtualMachine {
     }
 
     /// Investigate the current state of a variable and return a variable state variant.
-    pub fn variable_state(&self, variable: &Symbol) -> VariableState {
+    fn variable_state(&self, variable: &Symbol) -> VariableState {
         self.binding_manager.variable_state(variable)
     }
 
@@ -871,17 +867,24 @@ impl PolarVirtualMachine {
             .into())
         }
     }
-}
 
-/// Implementations of instructions.
-impl PolarVirtualMachine {
-    fn do_backtrack(&mut self) -> PolarResult<&mut Self> {
+    /// Remove all bindings after the last choice point, and try the
+    /// next available alternative. If no choice is possible, halt.
+    fn backtrack(&mut self) -> PolarResult<&mut Self> {
+        if self.log {
+            self.print("⇒ backtrack");
+        }
+        self.log("BACKTRACK", &[]);
+        self.backtrack_loop()
+    }
+
+    fn backtrack_loop(&mut self) -> PolarResult<&mut Self> {
         match self.choices.pop() {
             None => self.push_goal(Goal::Halt),
             Some(mut ch) => {
                 self.binding_manager.backtrack(&ch.bsp);
                 match ch.alternatives.pop() {
-                    None => self.do_backtrack(),
+                    None => self.backtrack_loop(),
                     Some(mut alternative) => {
                         if ch.alternatives.is_empty() {
                             self.goals = ch.goals;
@@ -903,16 +906,6 @@ impl PolarVirtualMachine {
         }
     }
 
-    /// Remove all bindings after the last choice point, and try the
-    /// next available alternative. If no choice is possible, halt.
-    fn backtrack(&mut self) -> PolarResult<&mut Self> {
-        if self.log {
-            self.print("⇒ backtrack");
-        }
-        self.log("BACKTRACK", &[]);
-        self.do_backtrack()
-    }
-
     /// Interact with the debugger.
     fn query_event_debug(&mut self, message: &str) -> PolarResult<QueryEvent> {
         // Query start time is reset when a debug event occurs.
@@ -931,7 +924,6 @@ impl PolarVirtualMachine {
     }
 
     /// Comparison operator that essentially performs partial unification.
-    #[allow(clippy::many_single_char_names)]
     pub fn isa(&mut self, left: &Term, right: &Term) -> PolarResult<&mut Self> {
         self.log_with(
             || format!("MATCHES: {} matches {}", left.to_polar(), right.to_polar()),
@@ -2148,7 +2140,7 @@ impl PolarVirtualMachine {
             || {
                 let mut rule_strs = "APPLICABLE_RULES:".to_owned();
                 for rule in rules.iter() {
-                    rule_strs.push_str(&format!("\n  {}", self.rule_source(rule)));
+                    rule_strs.push_str(&format!("\n  {}", rule.to_polar()));
                 }
                 rule_strs
             },
@@ -2390,10 +2382,6 @@ impl PolarVirtualMachine {
         source_string
     }
 
-    pub fn rule_source(&self, rule: &Rule) -> String {
-        rule.to_polar()
-    }
-
     fn set_error_context<A>(
         &self,
         term: &Term,
@@ -2427,7 +2415,7 @@ impl PolarVirtualMachine {
     /// VM main loop entry point.
     fn run_query(&mut self) -> PolarResult<QueryEvent> {
         if !self.goals.is_empty() {
-            self.do_goals()
+            self.goal_loop()
         } else if !self.choices.is_empty() {
             self.backtrack()?.run_query()
         } else {
@@ -2435,9 +2423,9 @@ impl PolarVirtualMachine {
         }
     }
 
-    /// VM main loop. It'd be nice to make it recursive but rustc
+    /// VM main loop. It'd be nice to make this recursive but rustc
     /// has trouble TCOing it :(
-    fn do_goals(&mut self) -> PolarResult<QueryEvent> {
+    fn goal_loop(&mut self) -> PolarResult<QueryEvent> {
         while let Some(goal) = self.goals.pop() {
             match self.do_goal(goal.clone())? {
                 QueryEvent::None => {
@@ -2463,14 +2451,13 @@ impl PolarVirtualMachine {
             }
         }
 
-        let trace = if self.tracing {
-            let trace = self.trace.first().cloned();
-            trace.map(|trace| TraceResult {
+        let trace = if !self.tracing {
+            None
+        } else {
+            self.trace.first().cloned().map(|trace| TraceResult {
                 formatted: trace.draw(self),
                 trace,
             })
-        } else {
-            None
         };
 
         let mut bindings = self.bindings(true);

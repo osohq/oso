@@ -33,7 +33,7 @@ impl Trace {
             }
         } else {
             let polar_str = match self.node {
-                Node::Rule(ref r) => vm.rule_source(r),
+                Node::Rule(ref r) => r.to_polar(),
                 Node::Term(ref t) => vm.term_source(t, false),
             };
             let indented = polar_str
