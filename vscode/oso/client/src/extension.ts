@@ -143,7 +143,6 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   context.subscriptions.push(deleteWatcher);
   context.subscriptions.push(createChangeWatcher);
 
-  // TODO(gj): remove debugOpts when we move server from TS -> Rust.
   const debugOpts = {
     execArgv: ['--nolazy', `--inspect=${6011 + clients.size}`],
   };
