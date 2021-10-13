@@ -7,7 +7,6 @@ description: |
 aliases:
   - /guides/roles/index.html
   - /guides/roles/sqlalchemy/index.html
-one_on_one: "To learn more about roles"
 ---
 
 # Build Role-Based Access Control (RBAC)
