@@ -133,7 +133,6 @@ def test_subquery_joined():
     )
 
     assert all_entities_in_statement(query_for_c) == {A, B, A1}
-    assert False
 
 # TODO test subquery, selectin. These are okay I believe because the
 # compiles of the select in & subquery trigger separate with orm execute
