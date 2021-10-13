@@ -191,10 +191,7 @@ impl Operation {
             consistent: true,
         };
         let grounded = grounder.fold_operation(self.clone());
-        grounder.consistent.then(|| {
-            eprintln!("gr ----- {}", grounded.to_polar());
-            grounded
-        })
+        grounder.consistent.then(|| grounded)
     }
 
     fn constrain(&mut self, t: Term) {
