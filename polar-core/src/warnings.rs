@@ -8,6 +8,7 @@ use super::visitor::{walk_call, walk_rule, walk_term, Visitor};
 
 use std::collections::HashSet;
 use std::collections::{hash_map::Entry, HashMap};
+use std::iter::FromIterator;
 
 fn common_misspellings(t: &str) -> Option<String> {
     let misspelled_type = match t {
@@ -280,15 +281,15 @@ pub fn check_resource_blocks_missing_has_permission(kb: &KnowledgeBase) -> Vec<S
 struct UndefinedRuleVisitor<'kb> {
     kb: &'kb KnowledgeBase,
     call_terms: Vec<Term>,
-    defined_rules: HashSet<Symbol>,
+    defined_rules: HashSet<&'kb Symbol>,
 }
 
 impl<'kb> UndefinedRuleVisitor<'kb> {
-    fn new(kb: &'kb KnowledgeBase) -> Self {
+    fn new(kb: &'kb KnowledgeBase, defined_rules: HashSet<&'kb Symbol>) -> Self {
         Self {
             kb,
+            defined_rules,
             call_terms: Vec::new(),
-            defined_rules: HashSet::new(),
         }
     }
 
@@ -322,15 +323,10 @@ impl<'kb> Visitor for UndefinedRuleVisitor<'kb> {
         }
         walk_term(self, term)
     }
-
-    fn visit_rule(&mut self, rule: &Rule) {
-        self.defined_rules.insert(rule.name.clone());
-        walk_rule(self, rule)
-    }
 }
 
 pub fn check_undefined_rule_calls(kb: &KnowledgeBase) -> Vec<PolarError> {
-    let mut visitor = UndefinedRuleVisitor::new(kb);
+    let mut visitor = UndefinedRuleVisitor::new(kb, HashSet::from_iter(kb.get_rules().keys()));
     for rule in kb.get_rules().values() {
         visitor.visit_generic_rule(rule);
     }
@@ -433,6 +429,5 @@ mod tests {
         kb.add_rule(rule!("defined_rule", [sym!("x")]));
         let warnings = check_undefined_rule_calls(&kb);
         assert_eq!(warnings.len(), 0);
-        assert_eq!(check_resource_blocks_missing_has_permission(&kb).len(), 0);
     }
 }
