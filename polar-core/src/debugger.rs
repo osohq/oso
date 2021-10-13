@@ -111,13 +111,11 @@ impl Debugger {
     ///
     /// ## Returns
     ///
-    /// - `Some(Goal::Debug { message })` -> Pause evaluation.
+    /// - `Some(Goal::Debug(message))` -> Pause evaluation.
     /// - `None` -> Continue evaluation.
     fn maybe_break(&self, event: DebugEvent, vm: &PolarVirtualMachine) -> Option<Goal> {
         self.step.as_ref().and_then(|step| match (step, event) {
-            (Step::Goal, DebugEvent::Goal(goal)) => Some(Goal::Debug {
-                message: goal.to_string(),
-            }),
+            (Step::Goal, DebugEvent::Goal(goal)) => Some(Goal::Debug(goal.to_string())),
             (Step::Into, DebugEvent::Query) => self.break_query(vm),
             (Step::Out { level }, DebugEvent::Query)
                 if vm.trace_stack.is_empty() || vm.trace_stack.len() < *level =>
@@ -127,11 +125,9 @@ impl Debugger {
             (Step::Over { level }, DebugEvent::Query) if vm.trace_stack.len() == *level => {
                 self.break_query(vm)
             }
-            (Step::Error, DebugEvent::Error(error)) => {
-                self.break_msg(vm).map(|message| Goal::Debug {
-                    message: format!("{}\nERROR: {}\n", message, error.to_string()),
-                })
-            }
+            (Step::Error, DebugEvent::Error(error)) => self
+                .break_msg(vm)
+                .map(|message| Goal::Debug(format!("{}\nERROR: {}\n", message, error.to_string()))),
             (Step::Rule, DebugEvent::Rule) => self.break_query(vm),
             _ => None,
         })
@@ -156,7 +152,7 @@ impl Debugger {
     /// Produce the `Goal::Debug` for breaking on a Query (as opposed to breaking on a Goal).
     /// This is used to implement the `step`, `over`, and `out` debug commands.
     fn break_query(&self, vm: &PolarVirtualMachine) -> Option<Goal> {
-        self.break_msg(vm).map(|message| Goal::Debug { message })
+        self.break_msg(vm).map(|m| Goal::Debug(m))
     }
 
     /// Process debugging commands from the user.
@@ -175,13 +171,13 @@ impl Debugger {
         where
             T: std::fmt::Display,
         {
-            Goal::Debug {
-                message: stack
+            Goal::Debug(
+                stack
                     .iter()
                     .map(ToString::to_string)
                     .collect::<Vec<_>>()
                     .join("\n"),
-            }
+            )
         }
         let parts: Vec<&str> = command.split_whitespace().collect();
         let default_command = match self.last.take() {
@@ -213,12 +209,12 @@ impl Debugger {
             }
             "l" | "line" => {
                 let lines = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
-                return Some(Goal::Debug {
-                    message: vm.queries.last().map_or_else(
+                return Some(Goal::Debug(
+                    vm.queries.last().map_or_else(
                         || "".to_string(),
                         |query| self.query_source(query, &vm.kb.read().unwrap().sources, lines),
                     ),
-                });
+                ));
             }
             "query" => {
                 let mut level = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
@@ -235,19 +231,18 @@ impl Debugger {
                             }
                         }
                     } else {
-                        return Some(Goal::Debug {
-                            message: "Error: level is out of range".to_owned()
-                        })
+                        return Some(Goal::Debug (
+                            "Error: level is out of range".to_owned()
+                        ))
                     }
                 }
 
                 if let Some(query) = term {
-                    return Some(Goal::Debug {
-                        message: vm.query_summary(&query)});
+                    return Some(Goal::Debug(
+                        vm.query_summary(&query)));
                 } else {
-                    return Some(Goal::Debug {
-                        message: "".to_owned()
-                    })
+                    return Some(Goal::Debug(
+                        "".to_owned()))
                 }
             }
             "stack" | "trace" => {
@@ -303,9 +298,7 @@ impl Debugger {
                     }
                 }
 
-                return Some(Goal::Debug {
-                    message: st
-                })
+                return Some(Goal::Debug(st))
             }
             "goals" => return Some(show(&vm.goals)),
             "bindings" => {
@@ -347,12 +340,11 @@ impl Debugger {
                     if vars.is_empty() {
                         vars = "No variables in scope.".to_string();
                     }
-                    return Some(Goal::Debug { message: vars });
+                    return Some(Goal::Debug(vars));
                 }
             }
             _ => {
-                return Some(Goal::Debug {
-                    message: "Debugger Commands
+                return Some(Goal::Debug("Debugger Commands
   h[elp]                  Print this help documentation.
   c[ontinue]              Continue evaluation.
   s[tep] | into           Step to the next query (will step into rules).
@@ -369,8 +361,7 @@ impl Debugger {
   var [<name> ...]        Print available variables. If one or more arguments
                           are provided, print the value of those variables.
   q[uit]                  Alias for 'continue'."
-                        .to_string(),
-                })
+                        .to_string()))
             }
         }
         None

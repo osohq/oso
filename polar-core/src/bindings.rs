@@ -165,9 +165,7 @@ impl BindingManager {
             .into()),
             Some(grounded) => {
                 self.add_binding(var, val);
-                Ok(Goal::Query {
-                    term: grounded.into(),
-                })
+                Ok(Goal::Query(grounded.into()))
             }
         }
     }

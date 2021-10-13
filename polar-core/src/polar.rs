@@ -309,7 +309,7 @@ impl Polar {
             let mut kb = self.kb.write().unwrap();
             term = rewrite_term(term, &mut kb);
         }
-        let query = Goal::Query { term: term.clone() };
+        let query = Goal::Query(term.clone());
         let vm =
             PolarVirtualMachine::new(self.kb.clone(), trace, vec![query], self.messages.clone());
         Query::new(vm, term)
