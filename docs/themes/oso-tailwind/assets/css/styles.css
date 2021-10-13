@@ -122,6 +122,12 @@ button > * {
 .btn-blue:hover {
     @apply bg-blue-700;
 }
+.btn-purple {
+    @apply bg-primary-500 text-white;
+}
+.btn-purple:hover {
+    @apply bg-primary-700;
+}
 
 .btn-outline {
     @apply rounded border border-solid border-gray-700 text-gray-700 px-2;
