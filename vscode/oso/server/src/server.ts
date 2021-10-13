@@ -1,59 +1,39 @@
 import {
   createConnection,
-  TextDocuments,
   ProposedFeatures,
-  // TextDocumentSyncKind,
+  PublishDiagnosticsParams,
+  TextDocumentSyncKind,
 } from 'vscode-languageserver/node';
-import { TextDocument } from 'vscode-languageserver-textdocument';
-import { Oso } from 'oso';
+import { PolarLanguageServer } from '../out/polar_language_server';
 
 // Create LSP connection
 const connection = createConnection(ProposedFeatures.all);
 
-// Create manager for open text documents
-const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
+const pls = new PolarLanguageServer((params: PublishDiagnosticsParams) =>
+  connection.sendDiagnostics(params)
+);
 
-const files: Map<string, TextDocument> = new Map();
-
-const oso = new Oso();
-
-async function reloadFiles() {
-  oso.clearRules();
-  const sourceStrings = [...files.entries()].map(([filename, document]) => ({
-    filename,
-    contents: document.getText(),
-  }));
-  await oso.loadStrings(sourceStrings);
-}
-
-documents.onDidChangeContent(async ({ document }) => {
-  files.set(document.uri, document);
-  await reloadFiles();
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+connection.onRequest((method, params, _token) => {
+  console.log('[TS onRequest]:', method, params);
+  pls.onRequest(method, params);
 });
-documents.listen(connection);
 
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
-connection.onDidChangeWatchedFiles(async ({ changes }) => {
-  for (const { uri } of changes) {
-    files.delete(uri);
-  }
-  await reloadFiles();
-});
+connection.onNotification((method, params) =>
+  pls.onNotification(method, params)
+);
 
 connection.onInitialize(() => {
-  // TODO(gj): what does returning `capabilities.workspace.fileOperations` do?
-  //
-  // TODO(gj): everything seems to work fine even when I return no
-  // capabilities?
   return {
     capabilities: {
-      //   // textDocumentSync: {
-      //   //   openClose: true,
-      //   //   save: true,
-      //   //   change: TextDocumentSyncKind.Full,
-      //   // },
-      //   workspace: { workspaceFolders: { supported: true } },
+      textDocumentSync: {
+        openClose: true,
+        save: true,
+        change: TextDocumentSyncKind.Full,
+      },
+      workspace: { workspaceFolders: { supported: true } },
     },
   };
 });
+
 connection.listen();

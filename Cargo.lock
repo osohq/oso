@@ -580,18 +580,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lsp-server"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c351c75989da23b355226dc188dc2b52538a7f4f218d70fd7393c6b62b110444"
-dependencies = [
- "crossbeam-channel",
- "log",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "lsp-types"
 version = "0.90.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -863,10 +851,11 @@ dependencies = [
 name = "polar-language-server"
 version = "0.21.0"
 dependencies = [
- "lsp-server",
+ "console_error_panic_hook",
+ "js-sys",
  "lsp-types",
- "serde",
- "serde_json",
+ "serde-wasm-bindgen",
+ "wasm-bindgen",
 ]
 
 [[package]]
