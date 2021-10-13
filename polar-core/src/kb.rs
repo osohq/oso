@@ -115,8 +115,8 @@ impl KnowledgeBase {
 
     fn validate_rule_calls(&self) -> PolarResult<()> {
         let errors = check_undefined_rule_calls(self);
-        match errors.first() {
-            Some(e) => Err(e.clone()),
+        match errors.into_iter().next() {
+            Some(e) => Err(e),
             None => Ok(()),
         }
     }
