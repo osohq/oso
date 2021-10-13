@@ -56,6 +56,7 @@ fn diagnostics_for_document(document: &TextDocumentItem) -> Option<PublishDiagno
     })
 }
 
+/// Public API exposed via WASM.
 #[wasm_bindgen]
 impl PolarLanguageServer {
     #[wasm_bindgen(constructor)]
@@ -68,6 +69,10 @@ impl PolarLanguageServer {
         }
     }
 
+    /// Catch-all handler for notifications sent by the LSP client.
+    ///
+    /// This function receives a notification's `method` and `params` and dispatches to the
+    /// appropriate handler function based on `method`.
     #[wasm_bindgen(js_class = PolarLanguageServer, js_name = onNotification)]
     pub fn on_notification(&mut self, method: &str, params: JsValue) {
         match method {
@@ -97,11 +102,15 @@ impl PolarLanguageServer {
         }
     }
 
+    // TODO(gj): not sure we need this yet.
     #[wasm_bindgen(js_class = PolarLanguageServer, js_name = onRequest)]
     pub fn on_request(&self, method: &str, params: JsValue) {
         log(&format!("[WASM on_request] {} => {:?}", method, params));
     }
+}
 
+/// Helper methods.
+impl PolarLanguageServer {
     fn send_diagnostics(&self, params: PublishDiagnosticsParams) {
         let this = &JsValue::null();
         let params = &serde_wasm_bindgen::to_value(&params).unwrap();
