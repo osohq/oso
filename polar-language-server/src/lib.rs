@@ -1,10 +1,13 @@
 use std::collections::HashMap;
 
 use lsp_types::{
-    notification::{DidChangeTextDocument, DidOpenTextDocument, Notification},
-    Diagnostic, DiagnosticSeverity, DidChangeTextDocumentParams, DidOpenTextDocumentParams,
-    Position, PublishDiagnosticsParams, Range, TextDocumentItem, Url,
-    VersionedTextDocumentIdentifier,
+    notification::{
+        DidChangeTextDocument, DidChangeWatchedFiles, DidCloseTextDocument, DidOpenTextDocument,
+        DidSaveTextDocument, Initialized, Notification,
+    },
+    Diagnostic, DiagnosticSeverity, DidChangeTextDocumentParams, DidChangeWatchedFilesParams,
+    DidOpenTextDocumentParams, FileChangeType, FileEvent, Position, PublishDiagnosticsParams,
+    Range, TextDocumentItem, Url, VersionedTextDocumentIdentifier,
 };
 use wasm_bindgen::prelude::*;
 
@@ -17,18 +20,51 @@ extern "C" {
 #[wasm_bindgen]
 pub struct PolarLanguageServer {
     documents: HashMap<Url, TextDocumentItem>,
-    send_diagnostics: js_sys::Function,
+    send_diagnostics_callback: js_sys::Function,
+}
+
+// Temporary helper until we get real errors/warnings from `polar-core` to turn into Diagnostics.
+fn diagnostics_for_document(document: &TextDocumentItem) -> Option<PublishDiagnosticsParams> {
+    let first_line = document.text.split('\n').next().unwrap();
+    if first_line.is_empty() {
+        return None;
+    }
+    let diagnostic = Diagnostic {
+        range: Range {
+            start: Position {
+                line: 0,
+                character: 0,
+            },
+            end: Position {
+                line: 0,
+                character: first_line.len() as u32,
+            },
+        },
+        severity: Some(DiagnosticSeverity::Error),
+        code: None,
+        code_description: None,
+        source: Some("polar-language-server".to_owned()),
+        message: first_line.to_owned(),
+        related_information: None,
+        tags: None,
+        data: None,
+    };
+    Some(PublishDiagnosticsParams {
+        uri: document.uri.clone(),
+        version: Some(document.version),
+        diagnostics: vec![diagnostic],
+    })
 }
 
 #[wasm_bindgen]
 impl PolarLanguageServer {
     #[wasm_bindgen(constructor)]
-    pub fn new(send_diagnostics: &js_sys::Function) -> Self {
+    pub fn new(send_diagnostics_callback: &js_sys::Function) -> Self {
         console_error_panic_hook::set_once();
 
         Self {
             documents: HashMap::new(),
-            send_diagnostics: send_diagnostics.clone(),
+            send_diagnostics_callback: send_diagnostics_callback.clone(),
         }
     }
 
@@ -41,6 +77,17 @@ impl PolarLanguageServer {
             DidChangeTextDocument::METHOD => {
                 self.on_did_change_text_document(serde_wasm_bindgen::from_value(params).unwrap())
             }
+            DidChangeWatchedFiles::METHOD => {
+                self.on_did_change_watched_files(serde_wasm_bindgen::from_value(params).unwrap())
+            }
+            // We don't care when a document is saved -- we already have the updated state thanks
+            // to `DidChangeTextDocument`.
+            DidSaveTextDocument::METHOD => (),
+            // We don't care when a document is closed -- we care about all Polar files in a
+            // workspace folder regardless of which ones remain open.
+            DidCloseTextDocument::METHOD => (),
+            // Nothing to do when we receive the `Initialized` notification.
+            Initialized::METHOD => (),
             _ => {
                 log(&format!(
                     "[WASM] on_notification\n\t{} => {:?}",
@@ -55,43 +102,26 @@ impl PolarLanguageServer {
         log(&format!("[WASM on_request] {} => {:?}", method, params));
     }
 
-    fn send_diagnostics_to_js(&self) {
+    fn send_diagnostics(&self, params: PublishDiagnosticsParams) {
+        let this = &JsValue::null();
+        let params = &serde_wasm_bindgen::to_value(&params).unwrap();
+        self.send_diagnostics_callback.call1(this, params).unwrap();
+    }
+
+    fn clear_diagnostics_for_document(&self, document: TextDocumentItem) {
+        let params = PublishDiagnosticsParams {
+            uri: document.uri.clone(),
+            version: Some(document.version),
+            diagnostics: vec![],
+        };
+        self.send_diagnostics(params);
+    }
+
+    fn send_diagnostics_for_documents(&self) {
         for document in self.documents.values() {
-            let first_line = document.text.split('\n').next().unwrap();
-            if first_line.is_empty() {
-                continue;
+            if let Some(params) = diagnostics_for_document(document) {
+                self.send_diagnostics(params);
             }
-            let diagnostic = Diagnostic {
-                range: Range {
-                    start: Position {
-                        line: 0,
-                        character: 0,
-                    },
-                    end: Position {
-                        line: 0,
-                        character: first_line.len() as u32,
-                    },
-                },
-                severity: Some(DiagnosticSeverity::Error),
-                code: None,
-                code_description: None,
-                source: Some("polar-language-server".to_owned()),
-                message: first_line.to_owned(),
-                related_information: None,
-                tags: None,
-                data: None,
-            };
-            let params = PublishDiagnosticsParams {
-                uri: document.uri.clone(),
-                version: Some(document.version),
-                diagnostics: vec![diagnostic],
-            };
-            self.send_diagnostics
-                .call1(
-                    &JsValue::null(),
-                    &serde_wasm_bindgen::to_value(&params).unwrap(),
-                )
-                .unwrap();
         }
     }
 }
@@ -99,23 +129,12 @@ impl PolarLanguageServer {
 /// Individual LSP notification handlers.
 impl PolarLanguageServer {
     fn on_did_open_text_document(&mut self, params: DidOpenTextDocumentParams) {
-        // log(&format!(
-        //     "[WASM] on_did_open_text_document\n\tloaded: {}\n\ttotal documents loaded: {}",
-        //     params.text_document.uri,
-        //     self.documents.len() + 1
-        // ));
-
-        self.documents
-            .insert(params.text_document.uri.clone(), params.text_document);
-        self.send_diagnostics_to_js();
+        let DidOpenTextDocumentParams { text_document: doc } = params;
+        self.documents.insert(doc.uri.clone(), doc);
+        self.send_diagnostics_for_documents();
     }
 
     fn on_did_change_text_document(&mut self, params: DidChangeTextDocumentParams) {
-        // log(&format!(
-        //     "[WASM] on_did_change_text_document\n\tchanged: {}",
-        //     params.text_document.uri,
-        // ));
-
         let DidChangeTextDocumentParams {
             text_document: VersionedTextDocumentIdentifier { uri, version },
             content_changes,
@@ -128,6 +147,15 @@ impl PolarLanguageServer {
             previous.version = version;
             previous.text = content_changes[0].text.clone();
         });
-        self.send_diagnostics_to_js();
+        self.send_diagnostics_for_documents();
+    }
+
+    fn on_did_change_watched_files(&mut self, params: DidChangeWatchedFilesParams) {
+        for FileEvent { uri, typ } in params.changes {
+            assert_eq!(typ, FileChangeType::Deleted); // We only watch for `Deleted` events.
+            let deleted = self.documents.remove(&uri).unwrap();
+            self.clear_diagnostics_for_document(deleted);
+        }
+        self.send_diagnostics_for_documents();
     }
 }
