@@ -3,6 +3,7 @@ and subquery.
 """
 import pytest
 
+import sqlalchemy
 from sqlalchemy import Column, ForeignKey, Integer, select, String
 from sqlalchemy.orm import (
     declarative_base,
@@ -10,6 +11,7 @@ from sqlalchemy.orm import (
     lazyload,
     selectinload,
     subqueryload,
+    contains_eager,
     Load,
     relationship)
 
@@ -17,7 +19,9 @@ from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 from sqlalchemy_oso.sqlalchemy_utils import (
     all_entities_in_statement,
     get_column_entities,
-    get_joinedload_entities)
+    get_joinedload_entities,
+    to_class
+)
 
 
 pytestmark = pytest.mark.skipif(USING_SQLAlchemy_v1_3,
@@ -27,12 +31,19 @@ pytestmark = pytest.mark.skipif(USING_SQLAlchemy_v1_3,
 Base = declarative_base()
 
 
+"""Test models
+
+A => B => C
+ \\=> A1
+"""
+
 class A(Base):
     __tablename__ = "a"
 
     id = Column(Integer, primary_key=True)
     data = Column(String)
     bs = relationship("B")
+    a1s = relationship("A1")
 
 
 class B(Base):
@@ -48,6 +59,13 @@ class C(Base):
     id = Column(Integer, primary_key=True)
     b_id = Column(ForeignKey("b.id"))
     data = Column(String)
+
+
+class A1(Base):
+    __tablename__ = "a1"
+    id = Column(Integer, primary_key=True)
+    data = Column(String)
+    a_id = Column(ForeignKey("a.id"))
 
 
 @pytest.mark.parametrize('stmt,o', (
@@ -67,21 +85,18 @@ def test_get_column_entities(stmt, o):
     (select(A).options(joinedload(A.bs).joinedload(B.cs)), {B, C}),
     (select(A).options(Load(A).joinedload("bs")), {B}),
     pytest.param(select(A).options(Load(A).joinedload("*")), set(),
-                 marks=pytest.mark.xfail(reason="* doesn't work")),
+                 marks=pytest.mark.xfail(reason="wildcard doesn't work")),
+    pytest.param(select(A).options(joinedload("*")), set(),
+                 marks=pytest.mark.xfail(reason="wildcard doesn't work")),
 ))
 def test_get_joinedload_entities(stmt, o):
-    assert set(get_joinedload_entities(stmt)) == o
+    assert set(map(to_class, get_joinedload_entities(stmt))) == o
 
 @pytest.mark.parametrize('stmt,o', (
-    (select(A), set()),
-    (select(A).options(joinedload(A.bs)), {B}),
-    (select(A).options(joinedload(A.bs).joinedload(B.cs)), {B, C}),
-    (select(A).options(Load(A).joinedload("bs")), {B}),
-    pytest.param(select(A).options(Load(A).joinedload("*")), set(),
-                 marks=pytest.mark.xfail(reason="* doesn't work")),
+    pytest.param(select(A).options(joinedload("A.bs")), {B}, marks=pytest.mark.xfail(reason="String doesn't work")),
 ))
 def test_get_joinedload_entities_str(stmt, o):
-    assert set(get_joinedload_entities(stmt)) == o
+    assert set(map(to_class, get_joinedload_entities(stmt))) == o
 
 
 def test_default_loader_strategies():
@@ -107,6 +122,18 @@ def test_default_loader_strategies():
 
     assert all_entities_in_statement(select(D, E)) == {D, E, F}
     assert all_entities_in_statement(select(E)) == {E, F}
+
+
+def test_subquery_joined():
+    subquery = select(A).join(B).subquery(name='sub')
+    subquery_aliased = sqlalchemy.orm.aliased(A, alias=subquery, flat=True, adapt_on_names=True)
+    query_for_c = select(subquery_aliased).outerjoin(A1).options(
+        contains_eager(A.a1s),
+        contains_eager(A.bs, alias=subquery_aliased)
+    )
+
+    assert all_entities_in_statement(query_for_c) == {A, B, A1}
+    assert False
 
 # TODO test subquery, selectin. These are okay I believe because the
 # compiles of the select in & subquery trigger separate with orm execute

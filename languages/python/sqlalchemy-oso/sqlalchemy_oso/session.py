@@ -1,5 +1,7 @@
 """SQLAlchemy session classes and factories for oso."""
 from typing import Any, Callable, Dict, Optional, Type
+import os
+import sys
 
 from sqlalchemy import event, inspect
 from sqlalchemy.orm import sessionmaker, Session
@@ -12,6 +14,13 @@ from oso import Oso
 from sqlalchemy_oso.auth import authorize_model
 from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 
+LOG_ON = os.getenv("SQLALCHEMY_OSO_LOG_Q", None) == "1"
+
+def log(msg):
+    if LOG_ON:
+        print(msg, file=sys.stderr)
+
+log("Logging on")
 
 class _OsoSession:
     set = False
@@ -271,7 +280,7 @@ class AuthorizedSession(AuthorizedSessionBase, Session):
 try:
     # TODO(gj): remove type ignore once we upgrade to 1.4-aware MyPy types.
     from sqlalchemy.orm import with_loader_criteria  # type: ignore
-    from sqlalchemy_oso.sqlalchemy_utils import get_joinedload_entities
+    from sqlalchemy_oso.sqlalchemy_utils import all_entities_in_statement
 
     @event.listens_for(Session, "do_orm_execute")
     def do_orm_execute(execute_state):
@@ -292,26 +301,8 @@ try:
         if checked_permissions is None:
             return
 
-        def entities_in_statement(statement):
-            def _entities_in_statement(statement):
-                try:
-                    entities = (cd["entity"] for cd in statement.column_descriptions)
-                    return set(e for e in entities if e is not None)
-                except AttributeError:
-                    return set()
-
-            entities = _entities_in_statement(statement)
-
-            # TODO(gj): currently walking way more than we have to. Probably
-            # some points in the tree where we can safely call it good for that
-            # branch and continue on to more fruitful pastures.
-            for child in statement.get_children():
-                entities |= entities_in_statement(child)
-
-            return entities
-
-        entities = entities_in_statement(execute_state.statement)
-        entities |= set(get_joinedload_entities(execute_state.statement))
+        entities = all_entities_in_statement(execute_state.statement)
+        log(f"Authorizing entities: {entities}")
         for entity in entities:
             # If entity is an alias, get the action for the underlying class.
             if isinstance(entity, AliasedClass):

@@ -3,6 +3,16 @@ import sqlalchemy
 from sqlalchemy import inspect
 from sqlalchemy.orm.util import AliasedClass
 
+
+def to_class(entity):
+    """Get mapped class from SQLAlchemy entity."""
+    if isinstance(entity, AliasedClass):
+        return inspect(entity).class_
+    elif inspect(entity, False) is not None:
+        return inspect(entity).class_
+    else:
+        return entity
+
 try:
     def all_entities_in_statement(statement):
         """
@@ -14,14 +24,6 @@ try:
         entities = get_column_entities(statement)
         entities |= set(get_joinedload_entities(statement))
         entities |= default_load_entities(entities)
-
-        def to_class(entity):
-            if isinstance(entity, AliasedClass):
-                return inspect(entity).class_
-            elif inspect(entity, False) is not None:
-                return inspect(entity).class_
-            else:
-                return entity
 
         return set(map(to_class, entities))
 
@@ -43,7 +45,7 @@ try:
         # some points in the tree where we can safely call it good for that
         # branch and continue on to more fruitful pastures.
         for child in statement.get_children():
-            entities |= _entities_in_statement(child)
+            entities |= get_column_entities(child)
 
         return entities
 
@@ -54,6 +56,10 @@ try:
 
         for entity in entities:
             mapper = sqlalchemy.inspect(entity)
+            # If the entity is an alias, get the mapper for the underlying entity.
+            if isinstance(mapper, sqlalchemy.orm.util.AliasedInsp):
+                mapper = mapper.mapper
+
             relationships = mapper.relationships
             for rel in relationships.values():
                 # TODO: other lazy values?
