@@ -5,14 +5,13 @@
 	"author": "Microsoft Corporation",
 	"license": "MIT",
 	"engines": {
-		"node": ">=12.20.0"
+		"node": "*"
 	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Microsoft/vscode-extension-samples"
 	},
 	"dependencies": {
-		"oso": "../../../languages/js",
 		"vscode-languageserver": "^7.0.0",
 		"vscode-languageserver-textdocument": "^1.0.1"
 	},
