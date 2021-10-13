@@ -678,9 +678,9 @@ impl KnowledgeBase {
         }
 
         let mut rules = vec![];
-        for (resource_block, shorthand_rules) in &self.resource_blocks.shorthand_rules {
+        for (resource_name, shorthand_rules) in &self.resource_blocks.shorthand_rules {
             for shorthand_rule in shorthand_rules {
-                match shorthand_rule.as_rule(resource_block, &self.resource_blocks) {
+                match shorthand_rule.as_rule(resource_name, &self.resource_blocks) {
                     Ok(rule) => rules.push(rule),
                     Err(error) => errors.push(error),
                 }

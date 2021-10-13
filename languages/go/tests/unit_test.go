@@ -242,6 +242,20 @@ type Foo struct {
 	Num  int
 }
 
+type RecursiveType struct {
+	Parent *RecursiveType
+	User User
+}
+
+func (r RecursiveType) GetParent() RecursiveType {
+	if r.Parent != nil {
+		return *r.Parent
+	} else {
+
+	}
+	return *r.Parent
+}
+
 func MakeFoo(name string, num int) Foo {
 	return Foo{name, num}
 }
@@ -442,4 +456,87 @@ func TestFailingALot(t *testing.T) {
 			t.Fatal("oops")
 		}
 	}
+}
+
+func TestRecursiveTypes(t *testing.T) {
+	var o oso.Oso
+	var err error
+	if o, err = oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
+	if err = o.RegisterClass(reflect.TypeOf(User{}), nil); err != nil {
+		t.Fatalf("Register class failed: %v", err)
+	}
+	if err = o.RegisterClass(reflect.TypeOf(RecursiveType{}), nil); err != nil {
+		t.Fatalf("Register class failed: %v", err)
+	}
+	var p string = `
+		allow(actor, action, resource) if
+			has_permission(actor, action, resource);
+
+		actor User {}
+
+		resource RecursiveType {
+			permissions=["read"];
+			roles=["member", "admin"];
+			relations={parent: RecursiveType};
+
+			"read" if "member";
+			"read" if "read" on "parent";
+			"read" if "member" on "parent";
+		}
+		has_role(actor: User, role_name: String, resource: RecursiveType) if
+			actor.Name == role_name and
+			resource.User == actor;
+
+		has_relation(parent: RecursiveType, "parent", child: RecursiveType) if
+			parent = child.GetParent();
+
+	`
+	if err =o.LoadString(p); err != nil {
+		t.Error(err.Error())
+	}
+
+	// Test one level
+	member := User{"member"}
+	guest := User{"guest"}
+
+	parent := RecursiveType{nil, member}
+	child := RecursiveType{&parent, guest}
+
+	if a, e := o.IsAllowed(member, "read", child); e != nil {
+		t.Error(e.Error())
+	} else if !a {
+		t.Error("IsAllowed returned false, expected true")
+	}
+
+	// Test two levels
+	grandparent := RecursiveType{nil, member}
+	parent1 := RecursiveType{&grandparent, guest}
+	child1 := RecursiveType{&parent1, guest}
+
+	if a, e := o.IsAllowed(member, "read", child1); e != nil {
+		t.Error(e.Error())
+	} else if !a {
+		t.Error("IsAllowed returned false, expected true")
+	}
+
+	// Test three levels??
+	greatGrandparent := RecursiveType{nil, member}
+	grandparent1 := RecursiveType{&greatGrandparent, guest}
+	parent2 := RecursiveType{&grandparent1, guest}
+	child2 := RecursiveType{&parent2, guest}
+
+	if a, e := o.IsAllowed(member, "read", child2); e != nil {
+		t.Error(e.Error())
+	} else if !a {
+		t.Error("IsAllowed returned false, expected true")
+	}
+
+	if a, e := o.IsAllowed(member, "read", child1); e != nil {
+		t.Error(e.Error())
+	} else if !a {
+		t.Error("IsAllowed returned false, expected true")
+	}
+
 }
