@@ -317,9 +317,7 @@ impl<'kb> Visitor for UndefinedRuleVisitor<'kb> {
                     return;
                 }
             }
-            Value::Call(_) => {
-                self.call_terms.push(term.clone())
-            }
+            Value::Call(_) => self.call_terms.push(term.clone()),
             _ => {}
         }
         walk_term(self, term)
