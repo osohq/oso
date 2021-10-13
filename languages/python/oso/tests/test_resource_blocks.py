@@ -189,8 +189,8 @@ def test_recursive_relations(polar, is_allowed):
         roles=["member", "admin"];
         relations={parent: RecursiveType};
 
-        # "read" if "member";
-        # "read" if "read" on "parent";
+        "read" if "member";
+        "read" if "read" on "parent";
         "read" if "member" on "parent";
     }
     has_role(actor: User, role_name: String, resource: RecursiveType) if
@@ -202,9 +202,27 @@ def test_recursive_relations(polar, is_allowed):
 
     """
     polar.load_str(p)
+
     member = User(name="member")
     guest = User(name="guest")
+
+    # Test 1 level of nesting
     parent = RecursiveType(parent=None, user=member)
+    child = RecursiveType(parent=parent, user=guest)
+
+    assert is_allowed(member, "read", child)
+
+    # Test 2 levels of nesting
+    grandparent = parent
+    parent = RecursiveType(parent=grandparent, user=guest)
+    child = RecursiveType(parent=parent, user=guest)
+
+    assert is_allowed(member, "read", child)
+
+    # Test 3 levels of nesting
+    great_grandparent = grandparent
+    grandparent = RecursiveType(parent=great_grandparent, user=guest)
+    parent = RecursiveType(parent=grandparent, user=guest)
     child = RecursiveType(parent=parent, user=guest)
 
     assert is_allowed(member, "read", child)
