@@ -1,4 +1,4 @@
-name: Create Release
+name: ARM release
 on:
   push:
     tags:
