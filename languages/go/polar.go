@@ -87,6 +87,12 @@ func (p Polar) loadFiles(filenames []string) error {
 	sources := []Source{}
 
 	for _, filename := range filenames {
+		// NOTE(gj): Initializing an iteration-local variable so that when we
+		// construct a `Source` below we're passing a pointer to the filename as of
+		// *this* iteration instead of a pointer to the `filename` loop variable
+		// that's updated on each subsequent iteration.
+		localFilename := filename
+
 		if filepath.Ext(filename) != ".polar" {
 			return errors.NewPolarFileExtensionError(filename)
 		}
@@ -95,7 +101,7 @@ func (p Polar) loadFiles(filenames []string) error {
 		if err != nil {
 			return err
 		}
-		sources = append(sources, Source{Src: string(data), Filename: &filename})
+		sources = append(sources, Source{Src: string(data), Filename: &localFilename})
 	}
 
 	return p.loadSources(sources)

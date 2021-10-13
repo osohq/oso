@@ -1019,10 +1019,6 @@ impl PolarVirtualMachine {
                     left: x,
                     right: right.clone(),
                 })?,
-                VariableState::Unbound => self.push_goal(Goal::Unify {
-                    left: left.clone(),
-                    right: right.clone(),
-                })?,
                 _ => self.isa_expr(left, right)?,
             },
             (_, Value::Variable(r)) | (_, Value::RestVariable(r)) => match self.variable_state(r) {
@@ -1230,7 +1226,13 @@ impl PolarVirtualMachine {
                     vec![Goal::CheckError, Goal::Backtrack],
                 )?;
             }
-            _ => self.add_constraint(&op!(Unify, left.clone(), right.clone()).into())?,
+            // if the RHS isn't a pattern or a dictionary, we'll fall back to unifying
+            // this is not the _best_ behaviour, but it's what we've been doing
+            // previously
+            _ => self.push_goal(Goal::Unify {
+                left: left.clone(),
+                right: right.clone(),
+            })?,
         }
         Ok(())
     }

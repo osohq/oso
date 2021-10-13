@@ -1577,6 +1577,32 @@ fn test_unknown_specializer_warning() -> TestResult {
 }
 
 #[test]
+fn test_missing_actor_hint() -> TestResult {
+    let p = Polar::new();
+
+    p.register_constant(sym!("Organization"), term!(true))?;
+    p.register_constant(sym!("User"), term!(true))?;
+
+    let policy = r#"
+resource Organization {
+	roles = ["owner"];
+	permissions = ["read"];
+
+	"read" if "owner";
+}
+
+has_role(user: User, "owner", organization: Organization) if
+	organization.owner_id = user.id;
+"#;
+    let err = p.load_str(policy).expect_err("Expected validation error");
+    assert!(matches!(&err.kind, ErrorKind::Validation(_)));
+    assert!(format!("{}", err)
+        .contains("Perhaps you meant to add an actor block to the top of your policy, like this:"));
+
+    Ok(())
+}
+
+#[test]
 fn test_and_or_warning() -> TestResult {
     let p = Polar::new();
 
@@ -1600,21 +1626,29 @@ fn test_and_or_warning() -> TestResult {
 
     p.clear_rules();
     p.load_str("f(x) if x = 1 and x > 1 or x < 3;")?;
-    let msg = p.next_message().unwrap();
-    assert!(matches!(&msg.kind, MessageKind::Warning));
-    assert_eq!(
-        &msg.msg,
-        "Expression without parentheses could be ambiguous. \nPrior to 0.20, `x and y or z` would parse as `x and (y or z)`. \nAs of 0.20, it parses as `(x and y) or z`, matching other languages. \n\n\n001: f(x) if x = 1 and x > 1 or x < 3;\n             ^"
-    );
+    let mut messages = vec![];
+    while let Some(msg) = p.next_message() {
+        messages.push(msg);
+    }
+    assert!(messages.iter().any(|msg| {
+      matches!(&msg.kind, MessageKind::Warning) &&
+      (msg.msg ==
+        "Expression without parentheses could be ambiguous. \nPrior to 0.20, `x and y or z` would parse as `x and (y or z)`. \nAs of 0.20, it parses as `(x and y) or z`, matching other languages. \n\n\n001: f(x) if x = 1 and x > 1 or x < 3;\n             ^")
+    }));
 
     p.clear_rules();
     p.load_str("f(x) if x = 1 or x > 1 and x < 3;")?;
-    let msg = p.next_message().unwrap();
-    assert!(matches!(&msg.kind, MessageKind::Warning));
-    assert_eq!(
-        &msg.msg,
-        "Expression without parentheses could be ambiguous. \nPrior to 0.20, `x and y or z` would parse as `x and (y or z)`. \nAs of 0.20, it parses as `(x and y) or z`, matching other languages. \n\n\n001: f(x) if x = 1 or x > 1 and x < 3;\n                      ^"
-    );
+
+    let mut msgs: Vec<Message> = vec![];
+    while let Some(msg) = p.next_message() {
+        msgs.push(msg);
+    }
+    assert!(msgs.iter().any(|msg| {
+      matches!(&msg.kind, MessageKind::Warning) &&
+      (msg.msg ==
+        "Expression without parentheses could be ambiguous. \nPrior to 0.20, `x and y or z` would parse as `x and (y or z)`. \nAs of 0.20, it parses as `(x and y) or z`, matching other languages. \n\n\n001: f(x) if x = 1 or x > 1 and x < 3;\n                      ^")
+    }));
+
     Ok(())
 }
 
@@ -1623,12 +1657,15 @@ fn test_print() -> TestResult {
     // TODO: If POLAR_LOG is on this test will fail.
     let p = Polar::new();
     p.load_str("f(x,y,z) if print(x, y, z);")?;
+    let mut messages = vec![];
     let message_handler = |output: &Message| {
-        assert!(matches!(&output.kind, MessageKind::Print));
-        assert_eq!(&output.msg, "1, 2, 3");
+        messages.push(output.clone());
     };
     let q = p.new_query("f(1, 2, 3)", false)?;
     let _results = query_results!(q, @msgs message_handler);
+    assert!(messages
+        .iter()
+        .any(|msg| { matches!(&msg.kind, MessageKind::Print) && (msg.msg == "1, 2, 3") }));
     Ok(())
 }
 
@@ -1830,6 +1867,7 @@ fn test_matches() {
     qeval(&mut p, "x = {foo: 1, bar: 2} and x matches {foo: 1}");
     qnull(&mut p, "x = {foo: 1} and x matches {foo: 1, bar: 2}");
     qnull(&mut p, "x = {foo: 1} and x matches {foo: 2}");
+    qeval(&mut p, "x matches Integer and x = 1");
 }
 
 #[test]
@@ -2257,17 +2295,6 @@ fn test_list_matches() {
         "xs",
         vec![value!([3, Value::RestVariable(Symbol::new("ys"))])],
     );
-}
-
-#[test]
-#[allow(clippy::unnecessary_wraps)]
-fn error_on_binding_expressions_and_patterns_to_variables() -> TestResult {
-    qruntime!(
-        "x matches y",
-        RuntimeError::TypeError { msg: m, .. },
-        m == "cannot unify patterns directly `x` = `y{}`"
-    );
-    Ok(())
 }
 
 #[test]

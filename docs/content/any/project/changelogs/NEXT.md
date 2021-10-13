@@ -19,6 +19,13 @@ draft: true
   musl and instead links to the system c runtime library.
   Languages that depend on the static lib Linux build such as python and go
   should support more platforms now.
+- Oso will now issue a warning if there is no `allow` rule in your policy (and
+  also no `allow_request` or `allow_field` rules).
+- Oso will propose a suggested fix if you forget to write an actor block when
+  using resource blocks.
+- Oso will now issue a warning if there are resource blocks in your policy but
+  no calls to `has_permission` in any rules.
+- Fixed a bug which led to `var matches Type` failing when `var` was unbound.
 
 ### Node.js
 
@@ -30,6 +37,8 @@ draft: true
   Many thanks to [`@rradczewski`](https://github.com/rradczewski) for
   [raising](https://github.com/osohq/oso/issues/1242) and reproducing
   the issue, and confirming the fix!
+- Oso now defaults to using Lodash's `isEqual` function when comparing JavaScript values
+  for equality.
 
 ### Rust
 
@@ -38,7 +47,11 @@ draft: true
 - Changed an internal debugging flag away from using `RUST_LOG` so that
   Rust users wont be flooded with messages that they probably don't want.
 
+### Go
 
+#### Other bugs & improvements
+
+- Fixed a bug that prevented loading multiple files via the `LoadFiles` API.
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
