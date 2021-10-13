@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::error::ParameterError;
 use crate::error::{PolarError, PolarResult};
-use crate::warnings::check_undefined_rule_calls;
+use crate::validations::check_undefined_rule_calls;
 
 pub use super::bindings::Bindings;
 use super::counter::Counter;

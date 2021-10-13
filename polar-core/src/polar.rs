@@ -9,7 +9,7 @@ use super::runnable::Runnable;
 use super::sources::*;
 use super::terms::*;
 use super::vm::*;
-use super::warnings::{
+use super::validations::{
     check_ambiguous_precedence, check_no_allow_rule, check_resource_blocks_missing_has_permission,
     check_singletons,
 };
