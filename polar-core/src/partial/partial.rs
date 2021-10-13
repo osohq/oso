@@ -2,7 +2,6 @@ use std::collections::HashSet;
 
 use crate::{
     folder::{fold_operation, fold_term, Folder},
-    formatting::to_polar::ToPolarString,
     terms::{Operation, Operator, Symbol, Term, Value},
     visitor::{walk_operation, Visitor},
     vm::compare,
