@@ -316,11 +316,14 @@ try:
             # If permissions map does not specify an action to authorize for entity
             # or if the specified action is `None`, deny access.
             if action is None:
+                log(f"No allowed action for entity {entity}")
                 where = with_loader_criteria(entity, expr.false(), include_aliases=True)
                 execute_state.statement = execute_state.statement.options(where)
             else:
                 filter = authorize_model(oso, user, action, session, entity)
+                log(f"Policy did not return filter for entity {entity}")
                 if filter is not None:
+                    log(f"Applying filter {filter} to entity {entity}")
                     where = with_loader_criteria(entity, filter, include_aliases=True)
                     execute_state.statement = execute_state.statement.options(where)
 
