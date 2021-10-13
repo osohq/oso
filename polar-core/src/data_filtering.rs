@@ -807,10 +807,20 @@ impl<'a> ResultSetBuilder<'a> {
             Ok(self)
         } else {
             err_invalid(format!(
-                "Field access produced no constraint: {}.{} = {}",
-                id, field, child
+                "Unsupported field access: {}.{} = {}",
+                self.var_name(id).unwrap_or_else(|| Symbol(format!("{}", id))),
+                field,
+                self.var_name(child).unwrap_or_else(|| Symbol(format!("{}", child))),
             ))
         }
+    }
+
+    fn var_name(&self, id: Id) -> Option<VarName> {
+        self.vars.variables.get(&id).map(|noms| {
+            noms.iter().find(|n| !n.is_temporary_var())
+                .unwrap_or_else(|| noms.iter().next().unwrap())
+
+        }).map(|x| x.clone())
     }
 
     fn constrain_fields(&mut self, id: Id, var_type: &str) -> PolarResult<&mut Self> {
