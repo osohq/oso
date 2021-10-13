@@ -127,19 +127,11 @@ fn simplify_var(all: bool, bindings: &Bindings, var: &Symbol, term: &Term) -> Op
     }
 }
 
-fn show_bindings(b: &Bindings) {
-    for (k, v) in b {
-        eprintln!("{}: {}", k, v.to_polar());
-    }
-}
-
 /// Simplify the values of the bindings to be returned to the host language.
 ///
 /// - For partials, simplify the constraint expressions.
 /// - For non-partials, deep deref. TODO(ap/gj): deep deref.
 pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
-    eprintln!("simp in");
-    show_bindings(&bindings);
     let b = bindings
         .iter()
         .filter_map(|(var, value)| {
@@ -147,12 +139,6 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
                 .then(|| simplify_var(all, &bindings, var, value).map(|s| (var.clone(), s)))
         })
         .collect();
-    if let Some(b) = &b {
-        eprintln!("simp out");
-        show_bindings(b);
-    } else {
-        eprintln!("simp ---");
-    }
 
     b
 }

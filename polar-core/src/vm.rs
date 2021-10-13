@@ -981,11 +981,7 @@ impl PolarVirtualMachine {
                 _ => self.unify(left, right),
             },
 
-            (Value::List(left), Value::List(right)) => {
-                self.unify_lists(left, right, |(left, right)| {
-                    Goal::Isa(left.clone(), right.clone())
-                })
-            }
+            (Value::List(left), Value::List(right)) => self.unify_lists(Goal::Isa, left, right),
 
             (Value::Dictionary(left), Value::Pattern(Pattern::Dictionary(right))) => {
                 // Check that the left is more specific than the right.
@@ -1992,9 +1988,7 @@ impl PolarVirtualMachine {
             }
 
             // Unify lists by recursively unifying their elements.
-            (Value::List(l), Value::List(r)) => {
-                self.unify_lists(l, r, |(l, r)| Goal::Unify(l.clone(), r.clone()))
-            }
+            (Value::List(l), Value::List(r)) => self.unify_lists(Goal::Unify, l, r),
 
             (Value::Dictionary(left), Value::Dictionary(right)) => {
                 // Check that the set of keys are the same.
@@ -2042,99 +2036,61 @@ impl PolarVirtualMachine {
     /// "Unify" two lists element-wise, respecting rest-variables.
     /// Used by both `unify` and `isa`; hence the third argument,
     /// a closure that builds sub-goals.
-    #[allow(clippy::ptr_arg)]
-    fn unify_lists<F>(
+    fn unify_lists<'a, G>(
         &mut self,
-        left: &TermList,
-        right: &TermList,
-        unify: F,
+        goal: G,
+        l: &'a [Term],
+        r: &'a [Term],
     ) -> PolarResult<&mut Self>
     where
-        F: FnMut((&Term, &Term)) -> Goal,
+        G: Fn(Term, Term) -> Goal,
     {
-        if has_rest_var(left) && has_rest_var(right) {
-            self.unify_two_lists_with_rest(left, right, unify)
-        } else if has_rest_var(left) {
-            self.unify_rest_list_with_list(left, right, unify)
-        } else if has_rest_var(right) {
-            self.unify_rest_list_with_list(right, left, unify)
-        } else if left.len() == right.len() {
-            // No rest-variables; unify element-wise.
-            self.append_goals(left.iter().zip(right).map(unify))
-        } else {
-            self.backtrack()
-        }
+        self.join_lists(goal, vec![], l.iter(), r.iter())
     }
 
-    /// Unify two list that end with a rest-variable with eachother.
-    /// A helper method for `unify_lists`.
-    #[allow(clippy::ptr_arg)]
-    fn unify_two_lists_with_rest<F>(
+    fn join_lists<'a, G, I>(
         &mut self,
-        rest_list_a: &TermList,
-        rest_list_b: &TermList,
-        mut unify: F,
+        goal: G,
+        mut goals: Vec<Goal>,
+        mut l: I,
+        mut r: I,
     ) -> PolarResult<&mut Self>
     where
-        F: FnMut((&Term, &Term)) -> Goal,
+        G: Fn(Term, Term) -> Goal,
+        I: Iterator<Item = &'a Term>,
     {
-        if rest_list_a.len() == rest_list_b.len() {
-            let n = rest_list_b.len() - 1;
-            let rest = unify((&rest_list_b[n].clone(), &rest_list_a[n].clone()));
-            self.append_goals(
-                rest_list_b
-                    .iter()
-                    .take(n)
-                    .zip(rest_list_a)
-                    .map(unify)
-                    .chain(vec![rest]),
-            )
-        } else {
-            let (shorter, longer) = {
-                if rest_list_a.len() < rest_list_b.len() {
-                    (rest_list_a, rest_list_b)
-                } else {
-                    (rest_list_b, rest_list_a)
+        use std::iter::once;
+        use Value::{List, RestVariable, Variable};
+        let cons = |x, i| term!(List(once(x).chain(i).cloned().collect()));
+        let rest = |y: &Symbol| Term::from(Value::Variable(y.clone()));
+
+        match (l.next(), r.next()) {
+            (None, None) => self.append_goals(goals),
+            (Some(v), None) | (None, Some(v)) => match v.value() {
+                RestVariable(y) => {
+                    goals.push(goal(term!(Variable(y.clone())), term!(vec![])));
+                    self.append_goals(goals)
                 }
-            };
-            let n = shorter.len() - 1;
-            let rest = unify((&shorter[n].clone(), &Term::from(longer[n..].to_vec())));
-            self.append_goals(
-                shorter
-                    .iter()
-                    .take(n)
-                    .zip(longer)
-                    .map(unify)
-                    .chain(vec![rest]),
-            )
-        }
-    }
-
-    /// Unify a list that ends with a rest-variable with another that doesn't.
-    /// A helper method for `unify_lists`.
-    #[allow(clippy::ptr_arg)]
-    fn unify_rest_list_with_list<F>(
-        &mut self,
-        rest_list: &TermList,
-        list: &TermList,
-        mut unify: F,
-    ) -> PolarResult<&mut Self>
-    where
-        F: FnMut((&Term, &Term)) -> Goal,
-    {
-        let n = rest_list.len() - 1;
-        if list.len() >= n {
-            let rest = unify((&rest_list[n].clone(), &Term::from(list[n..].to_vec())));
-            self.append_goals(
-                rest_list
-                    .iter()
-                    .take(n)
-                    .zip(list)
-                    .map(unify)
-                    .chain(vec![rest]),
-            )
-        } else {
-            self.backtrack()
+                _ => self.backtrack(),
+            },
+            (Some(l0), Some(r0)) => match (l0.value(), r0.value()) {
+                (RestVariable(_), RestVariable(_)) => {
+                    goals.push(goal(l0.clone(), r0.clone()));
+                    self.append_goals(goals)
+                }
+                (RestVariable(ll), _) => {
+                    goals.push(goal(rest(ll), cons(r0, r)));
+                    self.append_goals(goals)
+                }
+                (_, RestVariable(rr)) => {
+                    goals.push(goal(cons(l0, l), rest(rr)));
+                    self.append_goals(goals)
+                }
+                _ => {
+                    goals.push(goal(l0.clone(), r0.clone()));
+                    self.join_lists(goal, goals, l, r)
+                }
+            },
         }
     }
 
