@@ -84,8 +84,8 @@ function polarFilesInWorkspaceFolderPattern(folder: WorkspaceFolder) {
 // - https://github.com/microsoft/vscode/issues/33046
 async function openPolarFilesInWorkspaceFolder(folder: WorkspaceFolder) {
   const pattern = polarFilesInWorkspaceFolderPattern(folder);
-  const files = await workspace.findFiles(pattern);
-  return Promise.all(files.map(f => workspace.openTextDocument(f)));
+  const uris = await workspace.findFiles(pattern);
+  return Promise.all(uris.map(u => workspace.openTextDocument(u)));
 }
 
 async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
