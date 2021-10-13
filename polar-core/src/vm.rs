@@ -465,7 +465,7 @@ impl PolarVirtualMachine {
                 unfiltered_rules,
                 args,
             } => self
-                .filter_rules(applicable_rules, unfiltered_rules, args)?
+                .filter_rules(applicable_rules.clone(), unfiltered_rules.clone(), args)?
                 .query_event_none(),
             SortRules {
                 rules,
@@ -473,7 +473,7 @@ impl PolarVirtualMachine {
                 inner,
                 args,
             } => self
-                .sort_rules(rules, args, *outer, *inner)?
+                .sort_rules(rules.clone(), args, *outer, *inner)?
                 .query_event_none(),
             TraceStackPush => {
                 self.trace_stack.push(Rc::new(self.trace.clone()));
@@ -1992,9 +1992,9 @@ impl PolarVirtualMachine {
 
             (Value::Dictionary(left), Value::Dictionary(right)) => {
                 // Check that the set of keys are the same.
-                let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
-                let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
-                if left_fields != right_fields {
+                let lfs = left.fields.keys().collect::<HashSet<_>>();
+                let rfs = right.fields.keys().collect();
+                if lfs != rfs {
                     self.backtrack()
                 } else {
                     left.fields.iter().fold(Ok(self), |this, (k, v)| {
@@ -2062,7 +2062,7 @@ impl PolarVirtualMachine {
         use std::iter::once;
         use Value::{List, RestVariable, Variable};
         let cons = |x, i| term!(List(once(x).chain(i).cloned().collect()));
-        let rest = |y: &Symbol| Term::from(Value::Variable(y.clone()));
+        let rest = |y: &Symbol| term!(Variable(y.clone()));
 
         match (l.next(), r.next()) {
             (None, None) => self.append_goals(goals),
@@ -2096,61 +2096,94 @@ impl PolarVirtualMachine {
 
     /// Filter rules to just those applicable to a list of arguments,
     /// then sort them by specificity.
-    #[allow(clippy::ptr_arg)]
     fn filter_rules(
         &mut self,
-        applicable_rules: &Rules,
-        unfiltered_rules: &Rules,
-        args: &TermList,
+        mut applicable_rules: Rules,
+        mut unfiltered_rules: Rules,
+        args: &[Term],
     ) -> PolarResult<&mut Self> {
         if unfiltered_rules.is_empty() {
-            // The rules have been filtered. Sort them.
-
-            self.push_goal(Goal::SortRules {
-                rules: applicable_rules.iter().rev().cloned().collect(),
-                args: args.clone(),
-                outer: 1,
-                inner: 1,
-            })
+            return self.sort_rules(applicable_rules.into_iter().rev().collect(), args, 1, 1);
+        }
+        let rule = unfiltered_rules.pop().unwrap();
+        if rule.params.len() != args.len() {
+            self.filter_rules(applicable_rules, unfiltered_rules, args) // wrong arity, filter out
+        } else if rule.is_ground() {
+            applicable_rules.push(rule);
+            self.filter_rules(applicable_rules, unfiltered_rules, args)
         } else {
-            // Check one rule for applicability.
-            let mut unfiltered_rules = unfiltered_rules.clone();
-            let rule = unfiltered_rules.pop().unwrap();
-
-            let inapplicable = Goal::FilterRules {
-                args: args.clone(),
+            use Goal::*;
+            let inapplicable = FilterRules {
+                args: args.to_vec(),
                 applicable_rules: applicable_rules.clone(),
                 unfiltered_rules: unfiltered_rules.clone(),
             };
-            if rule.params.len() != args.len() {
-                return self.push_goal(inapplicable); // wrong arity
-            }
-
-            let mut applicable_rules = applicable_rules.clone();
-            applicable_rules.push(rule.clone());
-            let applicable = Goal::FilterRules {
-                args: args.clone(),
-                applicable_rules,
-                unfiltered_rules,
+            let Rule { params, .. } = self.rename_rule_vars(&rule);
+            applicable_rules.push(rule);
+            let applicable = FilterRules {
+                args: args.to_vec(),
+                applicable_rules: applicable_rules.clone(),
+                unfiltered_rules: unfiltered_rules.clone(),
             };
-
-            // The prefilter already checks applicability for ground rules.
-            if rule.is_ground() {
-                return self.push_goal(applicable);
-            }
 
             // Rename the variables in the rule (but not the args).
             // This avoids clashes between arg vars and rule vars.
-            let Rule { params, .. } = self.rename_rule_vars(&rule);
             let mut check_applicability = vec![];
             for (arg, param) in args.iter().zip(params.iter()) {
-                check_applicability.push(Goal::Unify(arg.clone(), param.parameter.clone()));
+                check_applicability.push(Unify(arg.clone(), param.parameter.clone()));
                 if let Some(specializer) = &param.specializer {
-                    check_applicability.push(Goal::Isa(arg.clone(), specializer.clone()));
+                    check_applicability.push(Isa(arg.clone(), specializer.clone()));
                 }
             }
             self.choose_conditional(check_applicability, vec![applicable], vec![inapplicable])
         }
+    }
+
+    fn call_rules(&mut self, rules: Rules, args: &[Term]) -> PolarResult<&mut Self> {
+        use Goal::*;
+        // We're done; the rules are sorted.
+        // Make alternatives for calling them.
+        self.polar_log_mute = false;
+        self.log_with(
+            || {
+                let mut rule_strs = "APPLICABLE_RULES:".to_owned();
+                for rule in rules.iter() {
+                    rule_strs.push_str(&format!("\n  {}", self.rule_source(rule)));
+                }
+                rule_strs
+            },
+            &[],
+        );
+
+        let alternatives = rules
+            .iter()
+            .map(|rule| {
+                let Rule { body, params, .. } = self.rename_rule_vars(rule);
+                let mut goals = vec![
+                    TraceRule(Rc::new(Trace {
+                        node: Node::Rule(rule.clone()),
+                        children: vec![],
+                    })),
+                    TraceStackPush,
+                ];
+
+                // Unify the arguments with the formal parameters.
+                for (arg, param) in args.iter().zip(params.iter()) {
+                    goals.push(Unify(arg.clone(), param.parameter.clone()));
+                    if let Some(specializer) = &param.specializer {
+                        goals.push(Isa(param.parameter.clone(), specializer.clone()));
+                    }
+                }
+
+                // Query for the body clauses.
+                goals.push(Query(body));
+                goals.push(TraceStackPop);
+                goals
+            })
+            .collect::<Vec<_>>(); // call the closures so self isn't borrowed
+
+        // Choose the first alternative, and push a choice for the rest.
+        self.choose(alternatives)
     }
 
     /// Sort a list of rules with respect to a list of arguments
@@ -2161,97 +2194,46 @@ impl PolarVirtualMachine {
     /// unsorted. The `inner` index tracks our search through the sorted sublist for the correct
     /// position of the candidate rule (the rule at the head of the unsorted portion of the
     /// list).
-    #[allow(clippy::ptr_arg)]
     fn sort_rules(
         &mut self,
-        rules: &Rules,
-        args: &TermList,
+        rules: Rules,
+        args: &[Term],
         outer: usize,
         inner: usize,
     ) -> PolarResult<&mut Self> {
+        use Goal::*;
         if rules.is_empty() {
-            return self.backtrack();
-        }
-
-        assert!(outer <= rules.len(), "bad outer index");
-        assert!(inner <= rules.len(), "bad inner index");
-        assert!(inner <= outer, "bad insertion sort state");
-
-        let next_outer = Goal::SortRules {
-            rules: rules.clone(),
-            args: args.clone(),
-            outer: outer + 1,
-            inner: outer + 1,
-        };
-        // Because `outer` starts as `1`, if there is only one rule in the `Rules`, this check
-        // fails and we jump down to the evaluation of that lone rule.
-        if outer < rules.len() {
-            if inner > 0 {
-                let compare = Goal::IsMoreSpecific {
-                    left: rules[inner].clone(),
-                    right: rules[inner - 1].clone(),
-                    args: args.clone(),
-                };
-
-                let mut rules = rules.clone();
-                rules.swap(inner - 1, inner);
-                let next_inner = Goal::SortRules {
-                    rules,
-                    outer,
-                    inner: inner - 1,
-                    args: args.clone(),
-                };
-
-                // If the comparison fails, break out of the inner loop.
-                // If the comparison succeeds, continue the inner loop with the swapped rules.
-                self.choose_conditional(vec![compare], vec![next_inner], vec![next_outer])
-            } else {
-                assert_eq!(inner, 0);
-                self.push_goal(next_outer)
-            }
+            self.backtrack()
+        } else if outer >= rules.len() {
+            self.call_rules(rules, args) // finished
+        } else if inner == 0 {
+            self.sort_rules(rules, args, outer + 1, outer + 1)
         } else {
-            // We're done; the rules are sorted.
-            // Make alternatives for calling them.
+            let compare = IsMoreSpecific {
+                left: rules[inner].clone(),
+                right: rules[inner - 1].clone(),
+                args: args.to_vec(),
+            };
 
-            self.polar_log_mute = false;
-            self.log_with(
-                || {
-                    let mut rule_strs = "APPLICABLE_RULES:".to_owned();
-                    for rule in rules {
-                        rule_strs.push_str(&format!("\n  {}", self.rule_source(rule)));
-                    }
-                    rule_strs
-                },
-                &[],
-            );
+            let mut sw = rules.clone();
+            sw.swap(inner - 1, inner);
+            let next_inner = SortRules {
+                rules: sw,
+                outer,
+                inner: inner - 1,
+                args: args.to_vec(),
+            };
 
-            let mut alternatives = Vec::with_capacity(rules.len());
-            for rule in rules.iter() {
-                let mut goals = Vec::with_capacity(2 * args.len() + 4);
-                goals.push(Goal::TraceRule(Rc::new(Trace {
-                    node: Node::Rule(rule.clone()),
-                    children: vec![],
-                })));
-                goals.push(Goal::TraceStackPush);
-                let Rule { body, params, .. } = self.rename_rule_vars(rule);
+            let next_outer = SortRules {
+                rules,
+                args: args.to_vec(),
+                outer: outer + 1,
+                inner: outer + 1,
+            };
 
-                // Unify the arguments with the formal parameters.
-                for (arg, param) in args.iter().zip(params.iter()) {
-                    goals.push(Goal::Unify(arg.clone(), param.parameter.clone()));
-                    if let Some(specializer) = &param.specializer {
-                        goals.push(Goal::Isa(param.parameter.clone(), specializer.clone()));
-                    }
-                }
-
-                // Query for the body clauses.
-                goals.push(Goal::Query(body.clone()));
-                goals.push(Goal::TraceStackPop);
-
-                alternatives.push(goals)
-            }
-
-            // Choose the first alternative, and push a choice for the rest.
-            self.choose(alternatives)
+            // If the comparison fails, break out of the inner loop.
+            // If the comparison succeeds, continue the inner loop with the swapped rules.
+            self.choose_conditional(vec![compare], vec![next_inner], vec![next_outer])
         }
     }
 
