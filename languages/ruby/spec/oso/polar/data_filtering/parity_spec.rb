@@ -392,7 +392,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       check_authz 'gwen', 'get', Foo, expected
     end
 
-    it 'test_in_intersection' do
+    xit 'test_in_intersection' do
       subject.load_str <<~POL
         allow(_, _, foo: Foo) if
           num in foo.numbers and
