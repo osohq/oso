@@ -152,7 +152,7 @@ impl Debugger {
     /// Produce the `Goal::Debug` for breaking on a Query (as opposed to breaking on a Goal).
     /// This is used to implement the `step`, `over`, and `out` debug commands.
     fn break_query(&self, vm: &PolarVirtualMachine) -> Option<Goal> {
-        self.break_msg(vm).map(|m| Goal::Debug(m))
+        self.break_msg(vm).map(Goal::Debug)
     }
 
     /// Process debugging commands from the user.

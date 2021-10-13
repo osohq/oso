@@ -231,11 +231,10 @@ pub struct PolarVirtualMachine {
 impl Default for PolarVirtualMachine {
     fn default() -> Self {
         PolarVirtualMachine::new(
-            Arc::new(RwLock::new(KnowledgeBase::default())),
-            false,
-            vec![],
-            // Messages will not be exposed, only use default() for testing.
-            MessageQueue::new(),
+            Default::default(),
+            Default::default(),
+            Default::default(),
+            Default::default(),
         )
     }
 }
@@ -266,39 +265,48 @@ impl PolarVirtualMachine {
             .expect("cannot acquire KB read lock")
             .constants
             .clone();
-        // get all comma-delimited POLAR_LOG variables
-        let polar_log = std::env::var("POLAR_LOG");
-        let polar_log_vars = polar_log
-            .iter()
-            .flat_map(|pl| pl.split(','))
-            .collect::<Vec<&str>>();
+        let stack_limit = MAX_STACK_SIZE;
+        // logging options ... there's a lot :O
+        let (log, polar_log, polar_log_stderr) = {
+            // get all comma-delimited POLAR_LOG variables
+            let polar_log = std::env::var("POLAR_LOG");
+            let polar_log_vars = polar_log
+                .iter()
+                .flat_map(|pl| pl.split(','))
+                .collect::<Vec<&str>>();
+            (
+                // `log` controls internal VM logging
+                polar_log_vars.iter().any(|var| var == &"trace"),
+                // `polar_log` for tracing policy evaluation
+                !polar_log_vars.is_empty()
+                    && !polar_log_vars.iter().any(|var| ["0", "off"].contains(var)),
+                // `polar_log_stderr` prints things immediately to stderr
+                polar_log_vars.iter().any(|var| var == &"now"),
+            )
+        };
         let mut vm = Self {
-            goals: GoalStack::new_reversed(goals),
-            binding_manager: BindingManager::new(),
-            query_start_time: None,
             query_timeout_ms,
-            stack_limit: MAX_STACK_SIZE,
-            csp: Bsp::default(),
-            choices: vec![],
-            queries: vec![],
             tracing,
-            trace_stack: vec![],
-            trace: vec![],
-            external_error: None,
-            debugger: Debugger::default(),
             kb,
-            call_id_symbols: HashMap::new(),
-            // `log` controls internal VM logging
-            log: polar_log_vars.iter().any(|var| var == &"trace"),
-            // `polar_log` for tracing policy evaluation
-            polar_log: !polar_log_vars.is_empty()
-                && !polar_log_vars.iter().any(|var| ["0", "off"].contains(var)),
-            // `polar_log_stderr` prints things immediately to stderr
-            polar_log_stderr: polar_log_vars.iter().any(|var| var == &"now"),
-            polar_log_mute: false,
-            query_contains_partial: false,
-            inverting: false,
             messages,
+            log,
+            polar_log,
+            polar_log_stderr,
+            stack_limit,
+            goals: GoalStack::new_reversed(goals),
+            binding_manager: Default::default(),
+            query_start_time: Default::default(),
+            csp: Default::default(),
+            choices: Default::default(),
+            queries: Default::default(),
+            trace_stack: Default::default(),
+            trace: Default::default(),
+            external_error: Default::default(),
+            debugger: Default::default(),
+            call_id_symbols: Default::default(),
+            polar_log_mute: Default::default(),
+            query_contains_partial: Default::default(),
+            inverting: Default::default(),
         };
         vm.bind_constants(constants);
         vm.query_contains_partial();
@@ -1426,7 +1434,7 @@ impl PolarVirtualMachine {
             And => {
                 // Query for each conjunct.
                 self.push_goal(Goal::TraceStackPop)?
-                    .append_goals(args.into_iter().map(|term| Goal::Query(term)))?
+                    .append_goals(args.into_iter().map(Goal::Query))?
                     .push_goal(Goal::TraceStackPush)?
                     .query_event_none()
             }
