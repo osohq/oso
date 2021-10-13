@@ -18,14 +18,14 @@ import {
 // https://code.visualstudio.com/api/language-extensions/embedded-languages
 
 // TODO(gj): do we need to maintain state for all (potentially dirty) Polar
-// files in the current workspace?
+// docs in the current workspace?
 
 // TODO(gj): maybe just punt on non-workspace use cases entirely for now? At
 // least until progress is made on
 // https://github.com/Microsoft/vscode/issues/15178 so we have a less hacky way
 // to list all open editors (instead of just the currently visible ones).
 
-// TODO(gj): what about when a workspace is open and you open a new file/editor
+// TODO(gj): what about when a workspace is open and you open a new doc/editor
 // (via command-N) that may or may not ultimately be saved in a folder that
 // exists in the current workspace?
 //
@@ -38,7 +38,7 @@ const outputChannel = window.createOutputChannel(extensionName);
 
 // One client per workspace folder.
 //
-// TODO(gj): handle 'Untitled' files like this example?
+// TODO(gj): handle 'Untitled' docs like this example?
 // https://github.com/microsoft/vscode-extension-samples/blob/355d5851a8e87301cf814a3d20f3918cb162ff73/lsp-multi-server-sample/client/src/extension.ts#L62-L79
 const clients: Map<string, LanguageClient> = new Map();
 
@@ -181,10 +181,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
   // `polar` syntax. Maybe think about linking all open editors together once
   // progress is made on https://github.com/Microsoft/vscode/issues/15178, but
   // at present I think it'd be too hacky for too little benefit.
-
-  // TODO(gj): need to track files separately per workspace folder; currently
-  // tracking all files across the entire workspace. Use case is opening
-  // osohq/gitclub in one workspace folder and osohq/oso in another.
 
   // TODO(gj): what happens when someone opens the osohq/oso folder and there
   // are a ton of different Polar files in different subfolders that should
