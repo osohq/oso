@@ -6,8 +6,7 @@ use super::sources::Source;
 use super::terms::*;
 use super::visitor::{walk_call, walk_rule, walk_term, Visitor};
 
-use std::collections::HashSet;
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::{hash_map::Entry, HashMap, HashSet};
 use std::iter::FromIterator;
 
 fn common_misspellings(t: &str) -> Option<String> {
