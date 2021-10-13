@@ -17,7 +17,7 @@ Oso is a batteries-included framework for building authorization in your applica
 With Oso, you can:
 - **Model**: Set up common permissions patterns like role-based access control (RBAC) and relationships using Oso’s built-in primitives. Extend them however you need with Oso’s declarative policy language, Polar.
 - **Filter**: Go beyond yes/no authorization questions. Implement authorization over collections too - e.g., “Show me only the records that Juno can see.”
-- **Test**: Write unit tests over your authorization logic now that you have a single interface for it. Use the debugger or tracing to track down unexpected behavior.
+- **Test**: Write unit tests over your authorization logic now that you have a single interface for it. Use the Oso debugger or REPL to track down unexpected behavior.
 
 Oso offers libraries for [Node.js][badge-nodejs-link],
 [Python][badge-python-link], [Go][badge-go-link],
