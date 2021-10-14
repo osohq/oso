@@ -109,7 +109,7 @@ jobs:
       - name: Rename static lib
         run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
       - name: Rename static lib
-        run: mv target/aarch64-apple-darwin/release/libpolar.a target/aarch64-apple-darwin/release/libpolar-arm.a
+        run: mv target/aarch64-apple-darwin/release/libpolar.a target/aarch64-apple-darwin/release/libpolar-macOS-arm.a
       - name: Rename dynamic lib
         run: mv target/aarch64-apple-darwin/release/libpolar.dylib target/aarch64-apple-darwin/release/libpolar-arm.dylib
       - uses: actions/upload-artifact@v2
