@@ -67,10 +67,10 @@ jobs:
         run: make typecheck | grep '0 problems found in 0 of'
 
       ## Check Node.js
-      - name: Use Node.js 12.20.0
+      - name: Use Node.js 12
         uses: actions/setup-node@v1
         with:
-          node-version: "12.20.0"
+          node-version: "12"
       - name: Check formatting of JS library
         working-directory: "languages/js"
         run: make fmtcheck
@@ -243,7 +243,7 @@ jobs:
       - name: Install Java
         uses: actions/setup-java@v1
         with:
-          java-version: "11"
+          java-version: "10"
       - name: Test java
         run: make java-test
         env:
@@ -271,10 +271,10 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt, clippy
-      - name: Use Node.js 12.20.0
+      - name: Use Node.js 12
         uses: actions/setup-node@v1
         with:
-          node-version: "12.20.0"
+          node-version: "12"
       - name: Add WebAssembly target
         run: rustup target add wasm32-unknown-unknown
       - name: Install wasm-pack
@@ -349,14 +349,14 @@ jobs:
         with:
           ruby-version: 2.4
           bundler-cache: true
-      - name: Use Node.js 12.20.0
+      - name: Use Node.js 12
         uses: actions/setup-node@v1
         with:
-          node-version: "12.20.0"
+          node-version: "12"
       - name: Install Java
         uses: actions/setup-java@v1
         with:
-          java-version: "11"
+          java-version: "10"
       - name: Build python lib
         run: make python-build
       - name: Python test deps
