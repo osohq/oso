@@ -402,11 +402,11 @@ impl KnowledgeBase {
                     Some(Value::Pattern(rule_spec)),
                 ) => self.check_pattern_param(index, rule_spec, rule_type_spec)?,
                 // RuleType has specializer but rule doesn't
-                (Value::Variable(_), Some(rule_type_spec), Value::Variable(_), None) => {
+                (Value::Variable(_), Some(Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. }))), Value::Variable(parameter), None) => {
                     RuleParamMatch::False(format!(
-                        "Invalid rule parameter {}. Rule type expected {}",
-                        index,
-                        rule_type_spec.to_polar()
+                        "Parameter `{}` should have a {} type constraint.",
+                        parameter,
+                        tag
                     ))
                 }
                 // Rule has value or value specializer, rule type has pattern specializer
