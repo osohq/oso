@@ -103,7 +103,9 @@ jobs:
       - name: Build release arm library
         run: |
           rustup target add aarch64-apple-darwin
-          RUSTFLAGS="-C target-feature=-crt-static" cargo build --target aarch64-apple-darwin --release
+          SDKROOT=$(xcrun -sdk macosx11.0 --show-sdk-path) \
+            MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx11.0 --show-sdk-platform-version) \
+            cargo build --target aarch64-apple-darwin --release
       - name: Rename static lib
         run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
       - name: Rename static lib
