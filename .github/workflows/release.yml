@@ -7,19 +7,19 @@ on:
       - steve/arm
 
 jobs:
-  # version:
-  #   name: Compute and verify the version number
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - uses: ./.github/actions/check_version
-  #     - name: Set version env
-  #       run: echo "oso_version=$(cat VERSION)" >> $GITHUB_ENV
-  #     - name: Check github ref matches
-  #       if: github.ref != 'refs/heads/steve/arm'
-  #       env:
-  #         github_ref: ${{ github.ref }}
-  #       run: grep "${github_ref/refs\/tags\/v/}" VERSION
+  version:
+    name: Compute and verify the version number
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/check_version
+      - name: Set version env
+        run: echo "oso_version=$(cat VERSION)" >> $GITHUB_ENV
+      - name: Check github ref matches
+        if: github.ref != 'refs/heads/steve/arm'
+        env:
+          github_ref: ${{ github.ref }}
+        run: grep "${github_ref/refs\/tags\/v/}" VERSION
 
   # Dispatch an oso_release event to other repos to test against this commit
   # dispatch:
