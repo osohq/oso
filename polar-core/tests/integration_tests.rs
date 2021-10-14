@@ -1723,7 +1723,6 @@ fn test_dict_destructuring() -> TestResult {
     qnull(&mut p, "moo(1, {x: 2})");
     qnull(&mut p, "moo(2, {x: 2, y: 3})");
 
-
     qeval(&mut p, "roo(1, {a: 1, b: 1})");
     qeval(&mut p, "too(1, {a: 1, b: 1})");
     qnull(&mut p, "roo(1, {a: 1, b: 1, c: 2})");
@@ -1740,7 +1739,6 @@ fn test_dict_destructuring() -> TestResult {
     Ok(())
 }
 
-#[test]
 #[test]
 fn test_rest_vars() -> TestResult {
     let mut p = Polar::new();
