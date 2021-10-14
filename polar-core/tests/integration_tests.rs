@@ -1705,11 +1705,12 @@ fn test_dict_destructuring() -> TestResult {
         foo(x, _: {x});
         goo(x, y) if y matches {x};
         moo(x, {x});
-        boo(x: {y:z}, y: {z:x}, z: {x:y});
         roo(a, {a, b: a});
         too(a, _: {a, b: a});
+        boo(x: {y}, y: {z}, z: {x});
    "#,
     )?;
+
     for s in &["foo", "goo"] {
         qeval(&mut p, &format!("{}(1, {{x: 1}})", s));
         qnull(&mut p, &format!("{}(2, {{x: 1}})", s));
@@ -1722,12 +1723,20 @@ fn test_dict_destructuring() -> TestResult {
     qnull(&mut p, "moo(1, {x: 2})");
     qnull(&mut p, "moo(2, {x: 2, y: 3})");
 
-    qeval(&mut p, "x={y:z} and z={x:y} and boo(x, y, z)");
 
     qeval(&mut p, "roo(1, {a: 1, b: 1})");
     qeval(&mut p, "too(1, {a: 1, b: 1})");
     qnull(&mut p, "roo(1, {a: 1, b: 1, c: 2})");
     qeval(&mut p, "too(1, {a: 1, b: 1, c: 2})");
+
+    qnull(&mut p, "boo(1, 2, 3)");
+    qnull(&mut p, "boo({}, {}, {})");
+    qnull(&mut p, "x={y} and boo(x, y, {x:y})");
+    qnull(&mut p, "x={y} and y={z: {x: y}} and boo(x, y, y.z)");
+    qeval(&mut p, "x={y} and z={x} and boo(x,y,z)");
+    qeval(&mut p, "x={y} and y={z} and z={x} and boo(x,y,z)");
+    qeval(&mut p, "q={x:{y:{z:q}}} and boo(q.x, q.x.y, q.x.y.z)");
+
     Ok(())
 }
 

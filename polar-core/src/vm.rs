@@ -973,16 +973,17 @@ impl PolarVirtualMachine {
 
             (Value::List(left), Value::List(right)) => self.unify_lists(Goal::Isa, left, right),
 
-            (Value::Dictionary(left), Value::Pattern(Pattern::Dictionary(right)))
-            | (Value::Dictionary(left), Value::Dictionary(right)) => {
-                // Check that the left is more specific than the right.
+            // FIXME(gw/ss) recursive isa could be expressed better
+            (Value::Dictionary(left), Value::Pattern(Pattern::Dictionary(right))) => {
+                // if both sides are plain dictionaries, the isa falls through to a unify.
+                // if the right side is a pattern, then the isa succeeds if
+                // - each key in the pattern is present in the dict and
+                // - for each key in pattern, dict[key] `isa` pattern[key]
                 let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
                 let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
                 if !right_fields.is_subset(&left_fields) {
                     self.backtrack()
                 } else {
-                    // For each field on the right, isa its value against the corresponding value on
-                    // the left.
                     self.append_goals(
                         right.fields.iter().map(|(k, v)| {
                             Goal::Isa(left.fields.get(k).unwrap().clone(), v.clone())

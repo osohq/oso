@@ -34,6 +34,34 @@ def test_helpers(polar, query, qvar):
     assert qvar("f(x)", "x") == [1, 2, 3]
 
 
+def test_type_subspecializers(polar, query):
+    polar.load_str(
+        """
+        a(_: {x: Integer});
+        b(_: {x: Integer{}});
+    """
+    )
+    assert query("a({x: 2})") == []
+    assert query("a({x: Integer})")
+    assert query("b({x: 2})")
+    assert query("b({x: Integer})") == []
+
+
+# FIXME(gw/ss)
+@pytest.mark.xfail(reason="this is how it should be")
+def test_alternate_type_subspecializers(polar, query):
+    polar.load_str(
+        """
+        a(_: {x: Integer});
+        b(_: {x}) if x = Integer;
+    """
+    )
+    assert query("a({x: 2})")
+    assert query("a({x: Integer})") == []
+    assert query("b({x: 2})") == []
+    assert query("b({x: Integer})")
+
+
 def test_data_conversions(polar, qvar):
     polar.load_str('a(1);b("two");c(true);d([1,"two",true]);')
     assert qvar("a(x)", "x", one=True) == 1
