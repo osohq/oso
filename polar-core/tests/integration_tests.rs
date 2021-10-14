@@ -2198,7 +2198,11 @@ fn test_dot_transparency() -> TestResult {
     p.load_str("foo(x, y) if z.c in x.a and z.c = y.b;")?;
     qnull(&mut p, "foo({a: [1]}, {b: 2})");
     qnull(&mut p, "z.a=1 and z.a=2");
-    qnull(&mut p, "z.a.b=1 and z.a.b=3"); // FIXME
+    qnull(&mut p, "z.a.b=1 and z.a.b=3");
+    qnull(
+        &mut p,
+        "a.z = a.b.c.d and a.b.c.d = a.b.x.y.z and a.b.x.y.z = 1 and a.z = 2",
+    );
     Ok(())
 }
 
