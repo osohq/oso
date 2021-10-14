@@ -1698,6 +1698,17 @@ fn test_partial_grounding() -> TestResult {
 }
 
 #[test]
+fn test_dict_destructuring() -> TestResult {
+    let mut p = Polar::new();
+    p.load_str("foo(x, _: {x});")?;
+    qeval(&mut p, "foo(1, {x: 1})");
+    qnull(&mut p, "foo(2, {x: 1})");
+    qnull(&mut p, "foo(1, {x: 2})");
+    qeval(&mut p, "foo(2, {x: 2, y: 3})");
+    Ok(())
+}
+
+#[test]
 fn test_rest_vars() -> TestResult {
     let mut p = Polar::new();
     qvar(&mut p, "[1,2,3] = [*rest]", "rest", vec![value!([1, 2, 3])]);
