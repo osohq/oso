@@ -1705,7 +1705,6 @@ fn test_dict_destructuring() -> TestResult {
         foo(x, _: {x});
         goo(x, y) if y matches {x};
         moo(x, {x});
-        boo(x: {y:z}, y: {z:x}, z: {x:y});
         roo(a, {a, b: a});
         too(a, _: {a, b: a});
    "#,
@@ -1731,7 +1730,6 @@ fn test_dict_destructuring() -> TestResult {
     Ok(())
 }
 
-#[test]
 #[test]
 fn test_rest_vars() -> TestResult {
     let mut p = Polar::new();
