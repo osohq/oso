@@ -2199,9 +2199,21 @@ fn test_dot_transparency() -> TestResult {
     qnull(&mut p, "foo({a: [1]}, {b: 2})");
     qnull(&mut p, "z.a=1 and z.a=2");
     qnull(&mut p, "z.a.b=1 and z.a.b=3");
+    qeval(
+        &mut p,
+        "a.z = a.b.c.d and a.b.c.d = a.b.x.y.z and a.b.x.y.z = 1 and a.z = 1",
+    );
     qnull(
         &mut p,
         "a.z = a.b.c.d and a.b.c.d = a.b.x.y.z and a.b.x.y.z = 1 and a.z = 2",
+    );
+    qeval(
+        &mut p,
+        "a.z = q.z and a.b.c.d = q.z and q = a.b.x.y and a.b.c.d = 1 and q.z  = 1 and a.z = 1",
+    );
+    qnull(
+        &mut p,
+        "a.z = q.z and a.b.c.d = q.z and q = a.b.x.y and a.b.c.d = 1 and q.z  = 1 and a.z = 2",
     );
     Ok(())
 }
