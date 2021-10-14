@@ -70,7 +70,7 @@ Oso will now raise an error if your policy contains calls to rules which are not
 
 For example this policy which relies on an undefined `is_admin` rule
 
-```
+```polar
 allow(actor, action, resource) if is_admin(actor)
 ```
 
