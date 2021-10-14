@@ -208,7 +208,7 @@ impl Simplifier {
     /// Params:
     ///     constraint: The constraint to consider removing from its parent.
     fn maybe_bind_constraint(&mut self, constraint: &Operation) -> MaybeDrop {
-        use { Operator::*, Value::*, MaybeDrop::* };
+        use {MaybeDrop::*, Operator::*, Value::*};
         match constraint.operator {
             // X and X is always true, so drop.
             And if constraint.args.is_empty() => Drop,
@@ -266,7 +266,7 @@ impl Simplifier {
         o: &mut Operation,
         simplify_term: &TermSimplifier,
     ) -> Option<()> {
-        use { MaybeDrop::*, Operator::* };
+        use {MaybeDrop::*, Operator::*};
         if o.operator == And || o.operator == Or {
             toss_trivial_unifies(&mut o.args);
         }

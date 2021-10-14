@@ -1,20 +1,17 @@
 use std::{
-    collections::{
-        hash_map::DefaultHasher,
-        BTreeMap, HashSet
-    },
+    collections::{hash_map::DefaultHasher, BTreeMap, HashSet},
     fmt,
     hash::{Hash, Hasher},
     sync::Arc,
 };
 
 pub use super::{
+    error::{self, RuntimeError},
+    formatting::ToPolarString,
     numerics::Numeric,
     resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME},
     sources::SourceInfo,
     visitor::{walk_operation, walk_term, Visitor},
-    error::{self, RuntimeError},
-    formatting::ToPolarString
 };
 
 use serde::{Deserialize, Serialize};

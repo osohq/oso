@@ -1,11 +1,6 @@
 use std::collections::HashMap;
 
-use super::{
-    folder::*,
-    kb::*,
-    rules::*,
-    terms::*,
-};
+use super::{folder::*, kb::*, rules::*, terms::*};
 
 /// Rename each non-constant variable in a term or rule to a fresh variable.
 pub struct Renamer<'kb> {
@@ -75,6 +70,18 @@ impl<'kb> Rewriter<'kb> {
             _ => false,
         }
     }
+
+    fn temp_name(&mut self, op: &Operation) -> Symbol {
+        if op.operator == Operator::Dot {
+            if let (Ok(y), Ok(s)) = (
+                &op.args[0].value().as_symbol(),
+                &op.args[1].value().as_string(),
+            ) {
+                return Symbol(format!("_{}_dot_{}", y.0, s));
+            }
+        }
+        self.kb.gensym(temp_name(&op.operator))
+    }
 }
 
 fn temp_name(o: &Operator) -> &'static str {
@@ -138,7 +145,7 @@ impl<'kb> Folder for Rewriter<'kb> {
             Value::Expression(o) if self.needs_rewrite(o) => {
                 // Rewrite sub-expressions, then push a temp onto the args.
                 let mut new = fold_operation(o.clone(), self);
-                let temp = Value::Variable(self.kb.gensym(temp_name(&o.operator)));
+                let temp = Value::Variable(self.temp_name(o));
                 new.args.push(term!(temp.clone()));
 
                 // Push the rewritten expression into the top stack frame.
@@ -183,8 +190,14 @@ impl<'kb> Folder for Rewriter<'kb> {
                         self.stack.push(vec![]);
                         let mut arg = self.fold_term(arg);
                         let mut rewrites = self.stack.pop().unwrap();
-                        let is_unify = arg.value().as_expression().map(|e| e.operator).map_or(false, |o| o == Unify);
-                        let only_dots = rewrites.iter().all(|rw| rw.val().expr().map_or(false, |o| o.operator == Dot));
+                        let is_unify = arg
+                            .value()
+                            .as_expression()
+                            .map(|e| e.operator)
+                            .map_or(false, |o| o == Unify);
+                        let only_dots = rewrites
+                            .iter()
+                            .all(|rw| rw.val().expr().map_or(false, |o| o.operator == Dot));
                         if is_unify && only_dots {
                             for rewrite in rewrites {
                                 arg.replace_value(binary(And, arg.clone(), rewrite));
@@ -278,7 +291,7 @@ mod tests {
 
         // First rewrite
         let rule = rewrite_rule(rule, &mut kb);
-        assert_eq!(rule.to_polar(), "f(_value_1) if a.b = _value_1;");
+        assert_eq!(rule.to_polar(), "f(_a_dot_b) if a.b = _a_dot_b;");
 
         // Check we can parse the rules back again
         let again = parse_rules(&rule.to_polar());
@@ -292,7 +305,7 @@ mod tests {
         let rule = rewrite_rule(rule, &mut kb);
         assert_eq!(
             rule.to_polar(),
-            "f(_value_3) if a.b = _value_2 and _value_2.c = _value_3;"
+            "f(_value_1) if a.b = _a_dot_b and _a_dot_b.c = _value_1;"
         );
     }
 
@@ -328,26 +341,26 @@ mod tests {
         assert_eq!(term.to_polar(), "x and a.b");
         assert_eq!(
             rewrite_term(term, &mut kb).to_polar(),
-            "x and a.b = _value_1 and _value_1"
+            "x and a.b = _a_dot_b and _a_dot_b"
         );
 
         let query = parse_query("f(a.b().c)");
         assert_eq!(query.to_polar(), "f(a.b().c)");
         assert_eq!(
             rewrite_term(query, &mut kb).to_polar(),
-            "a.b() = _value_2 and _value_2.c = _value_3 and f(_value_3)"
+            "a.b() = _value_1 and _value_1.c = _value_2 and f(_value_2)"
         );
 
         let term = parse_query("a.b = 1");
         assert_eq!(
             rewrite_term(term, &mut kb).to_polar(),
-            "a.b = _value_4 and _value_4 = 1"
+            "a.b = _a_dot_b and _a_dot_b = 1"
         );
         let term = parse_query("{x: 1}.x = 1");
         assert_eq!(term.to_polar(), "{x: 1}.x = 1");
         assert_eq!(
             rewrite_term(term, &mut kb).to_polar(),
-            "{x: 1}.x = _value_5 and _value_5 = 1"
+            "{x: 1}.x = _value_3 and _value_3 = 1"
         );
     }
 
@@ -381,14 +394,14 @@ mod tests {
         assert_eq!(term.to_polar(), "new Foo(x: bar.y)");
         assert_eq!(
             rewrite_term(term, &mut kb).to_polar(),
-            "bar.y = _value_1 and new (Foo(x: _value_1), _instance_2) and _instance_2"
+            "bar.y = _bar_dot_y and new (Foo(x: _bar_dot_y), _instance_1) and _instance_1"
         );
 
         let term = parse_query("f(new Foo(x: bar.y))");
         assert_eq!(term.to_polar(), "f(new Foo(x: bar.y))");
         assert_eq!(
             rewrite_term(term, &mut kb).to_polar(),
-            "bar.y = _value_3 and new (Foo(x: _value_3), _instance_4) and f(_instance_4)"
+            "bar.y = _bar_dot_y and new (Foo(x: _bar_dot_y), _instance_2) and f(_instance_2)"
         );
     }
 
@@ -441,7 +454,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             rewrite_term(term, &mut kb).to_polar(),
-            "not (_value_1 = 1 and foo.x = _value_1)"
+            "not (_foo_dot_x = 1 and foo.x = _foo_dot_x)"
         )
     }
 }
