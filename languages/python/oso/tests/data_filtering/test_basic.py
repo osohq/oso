@@ -544,13 +544,14 @@ def test_nested_properties(oso):
     @dataclass
     class Qux:
         attr: dict
+
     quxs = [Qux(attr={"foo": n}) for n in range(3)]
-    oso.register_class(Qux, build_query=filter_array(quxs),
-            fields={'attr': dict})
-    oso.load_str("""
+    oso.register_class(Qux, build_query=filter_array(quxs), fields={"attr": dict})
+    oso.load_str(
+        """
         allow("gwen", "read", _: Qux{attr: attr}) if attr.foo = 2;
-    """)
+    """
+    )
 
     result = oso.authorized_resources("gwen", "read", Qux)
     assert len(result) == 1
-
