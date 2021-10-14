@@ -84,7 +84,7 @@ impl<'kb> SingletonVisitor<'kb> {
         }
     }
 
-    fn errors(&mut self) -> PolarResult<Vec<String>> {
+    fn warnings(&mut self) -> PolarResult<Vec<String>> {
         let mut singletons = self
             .singletons
             .drain()
@@ -137,7 +137,7 @@ impl<'kb> Visitor for SingletonVisitor<'kb> {
 pub fn check_singletons(rule: &Rule, kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
     let mut visitor = SingletonVisitor::new(kb);
     walk_rule(&mut visitor, rule);
-    visitor.errors()
+    visitor.warnings()
 }
 
 struct AndOrPrecendenceCheck<'kb> {
@@ -153,7 +153,7 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
         }
     }
 
-    fn errors(&mut self) -> Vec<String> {
+    fn warnings(&mut self) -> Vec<String> {
         self.unparenthesized_expr
             .iter()
             .map(|(source, or_term)| {
@@ -201,7 +201,7 @@ impl<'kb> Visitor for AndOrPrecendenceCheck<'kb> {
 pub fn check_ambiguous_precedence(rule: &Rule, kb: &KnowledgeBase) -> Vec<String> {
     let mut visitor = AndOrPrecendenceCheck::new(kb);
     walk_rule(&mut visitor, rule);
-    visitor.errors()
+    visitor.warnings()
 }
 
 pub fn check_no_allow_rule(kb: &KnowledgeBase) -> Vec<String> {
@@ -247,7 +247,7 @@ impl ResourceBlocksMissingHasPermissionVisitor {
         }
     }
 
-    fn errors(&mut self) -> Vec<String> {
+    fn warnings(&mut self) -> Vec<String> {
         if !self.calls_has_permission {
             return vec!["Warning: your policy uses resource blocks but does not call the \
 has_permission rule. This means that permissions you define in a \
@@ -274,7 +274,7 @@ pub fn check_resource_blocks_missing_has_permission(kb: &KnowledgeBase) -> Vec<S
     for rule in kb.get_rules().values() {
         visitor.visit_generic_rule(rule);
     }
-    visitor.errors()
+    visitor.warnings()
 }
 
 struct UndefinedRuleVisitor<'kb> {
@@ -338,10 +338,7 @@ mod tests {
     use crate::kb::KnowledgeBase;
     use crate::rules::*;
     use crate::terms::*;
-    use crate::validations::{
-        check_no_allow_rule, check_resource_blocks_missing_has_permission,
-        check_undefined_rule_calls,
-    };
+    use super::*;
 
     #[test]
     fn test_check_no_allow_rule_no_allow() {
@@ -390,7 +387,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_missing_has_permission_error() {
+    fn test_resource_blocks_missing_has_permission_warning() {
         let mut kb = KnowledgeBase::new();
         kb.resource_blocks
             .resources
@@ -399,7 +396,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_missing_has_permission_clean() {
+    fn test_resource_blocks_missing_has_permission_clean() {
         let mut kb = KnowledgeBase::new();
         kb.resource_blocks
             .resources
@@ -416,7 +413,6 @@ mod tests {
         kb.add_rule(rule!("f", [sym!("x")] => call!("no_such_rule", [sym!("y")])));
         let errors = check_undefined_rule_calls(&kb);
         assert_eq!(errors.len(), 1);
-
         assert!(format!("{}", errors.first().unwrap())
             .contains(r#"Call to undefined rule "no_such_rule""#));
     }
