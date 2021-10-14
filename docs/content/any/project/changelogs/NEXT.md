@@ -56,7 +56,7 @@ draft: true
 
 - Fixed a bug that prevented loading multiple files via the `LoadFiles` API.
 
-### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
+### Core
 
 #### Breaking changes
 
@@ -67,12 +67,24 @@ draft: true
   before upgrading.
 {{% /callout %}}
 
-##### Breaking change 1
+##### Undefined rule validation
 
-Summary of breaking change.
+Oso will now raise an error if your policy contains calls to rules which are not defined.
 
-Link to [migration guide]().
+For example this policy which relies on an undefined `is_admin` rule
 
+```polar
+allow(actor, action, resource) if is_admin(actor)
+```
+
+will produce the following error:
+
+```console
+ValidationError: Call to undefined rule "is_admin" at line 1, column 37
+```
+
+To resolve these validation errors you can either update the policy to include a
+definition for the missing rule or remove the offending call entirely.
 #### New features
 
 ##### Feature 1
