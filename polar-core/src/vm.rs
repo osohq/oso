@@ -930,7 +930,6 @@ impl PolarVirtualMachine {
         );
 
         match (left.value(), right.value()) {
-            (_, Value::Dictionary(_)) => unreachable!("parsed as pattern"),
             (Value::Expression(_), _) | (_, Value::Expression(_)) => {
                 unreachable!("encountered bare expression")
             }
@@ -974,7 +973,8 @@ impl PolarVirtualMachine {
 
             (Value::List(left), Value::List(right)) => self.unify_lists(Goal::Isa, left, right),
 
-            (Value::Dictionary(left), Value::Pattern(Pattern::Dictionary(right))) => {
+            (Value::Dictionary(left), Value::Pattern(Pattern::Dictionary(right)))
+            | (Value::Dictionary(left), Value::Dictionary(right)) => {
                 // Check that the left is more specific than the right.
                 let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
                 let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
@@ -1789,11 +1789,11 @@ impl PolarVirtualMachine {
                         },
                     )
                 } else {
-                    let sym = var!(format!("__{}_dot_{}", v, field));
+                    //                    let sym = var!(format!("__{}_dot_{}", v, field.value().as_string().unwrap()));
                     // Translate `.(object, field, value)` → `value = .(object, field)`.
                     let dot2 = term!(op!(Dot, object.clone(), field.clone()));
                     let term = term!(op!(Unify, value.clone(), dot2));
-                    let term = term!(op!(And, term, term!(op!(Unify, sym, value.clone()))));
+                    //      let term = term!(op!(And, term, term!(op!(Unify, sym, value.clone()))));
                     self.add_constraint(&term)
                 }
             }
