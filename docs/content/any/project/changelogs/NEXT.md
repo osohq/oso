@@ -26,8 +26,6 @@ draft: true
 - Oso will now issue a warning if there are resource blocks in your policy but
   no calls to `has_permission` in any rules.
 - Fixed a bug which led to `var matches Type` failing when `var` was unbound.
-- Oso will now raise an error if your policy contains references to rules that
-  are not defined.
 
 ### Node.js
 
@@ -66,11 +64,9 @@ draft: true
   before upgrading.
 {{% /callout %}}
 
-##### Breaking change 1
+##### Undefined rule validation
 
-Summary of breaking change.
-
-Link to [migration guide]().
+Oso will now raise an error if your policy contains calls to rules which are not defined.
 
 #### New features
 
