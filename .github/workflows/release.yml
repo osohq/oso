@@ -84,7 +84,6 @@ jobs:
   macos_libs:
     name: Build release libraries on MacOS
     runs-on: macos-11
-    needs: [version]
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust stable toolchain
