@@ -53,7 +53,7 @@ draft: true
 
 - Fixed a bug that prevented loading multiple files via the `LoadFiles` API.
 
-### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
+### Core
 
 #### Breaking changes
 
@@ -68,6 +68,20 @@ draft: true
 
 Oso will now raise an error if your policy contains calls to rules which are not defined.
 
+For example this policy which relies on an undefined `is_admin` rule
+
+```
+allow(actor, action, resource) if is_admin(actor)
+```
+
+will produce the following error:
+
+```
+ValidationError: Call to undefined rule "is_admin" at line 1, column 37
+```
+
+To resolve these validation errors you can either update the policy to include a
+definition for your missing rule, or remove the offending call entirely.
 #### New features
 
 ##### Feature 1

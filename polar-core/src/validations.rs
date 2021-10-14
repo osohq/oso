@@ -400,9 +400,9 @@ mod tests {
             .resources
             .insert(term!(sym!("Organization")));
         kb.add_rule(rule!("f", [sym!("x")] => call!("has_permission", [sym!("y")])));
-        let errors = check_resource_blocks_missing_has_permission(&kb);
+        let warnings = check_resource_blocks_missing_has_permission(&kb);
 
-        assert_eq!(errors.len(), 0);
+        assert_eq!(warnings.len(), 0);
     }
 
     #[test]
