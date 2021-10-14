@@ -86,6 +86,15 @@ For example:
 {first_name: "Yogi", last_name: "Bear"}
 ```
 
+If you want to associate a variable with the value in a dictionary under the
+key of the same name, you can use a shorter syntax similar to JavaScript object
+literals:
+
+```polar
+{ first_name, last_name } # or 
+{ first_name, last_name: "Bear" }
+```
+
 ### Class Instances
 
 A similar syntax is used to represent instances of classes. The class name is
