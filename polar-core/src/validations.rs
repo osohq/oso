@@ -337,8 +337,6 @@ pub fn check_undefined_rule_calls(kb: &KnowledgeBase) -> Vec<PolarError> {
 mod tests {
     use super::*;
     use crate::kb::KnowledgeBase;
-    use crate::rules::*;
-    use crate::terms::*;
 
     #[test]
     fn test_check_no_allow_rule_no_allow() {
