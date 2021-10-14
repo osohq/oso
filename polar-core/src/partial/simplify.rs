@@ -150,7 +150,7 @@ struct Simplifier {
     seen: HashSet<Term>,
 }
 
-type TermSimplifier = dyn Fn(&mut Simplifier, &mut Term) -> Option<()>;
+type TermSimplifier = dyn Fn(&mut Simplifier, &mut Term) -> Option<()>; // cursed return type
 
 impl Simplifier {
     fn new(output_vars: HashSet<Symbol>) -> Self {
@@ -208,49 +208,50 @@ impl Simplifier {
     /// Params:
     ///     constraint: The constraint to consider removing from its parent.
     fn maybe_bind_constraint(&mut self, constraint: &Operation) -> MaybeDrop {
+        use { Operator::*, Value::*, MaybeDrop::* };
         match constraint.operator {
             // X and X is always true, so drop.
-            Operator::And if constraint.args.is_empty() => MaybeDrop::Drop,
+            And if constraint.args.is_empty() => Drop,
 
             // Choose a unification to maybe drop.
-            Operator::Unify | Operator::Eq => {
+            Unify | Eq => {
                 let left = &constraint.args[0];
                 let right = &constraint.args[1];
 
                 if left == right {
                     // The sides are exactly equal, so drop.
-                    MaybeDrop::Drop
+                    Drop
                 } else {
                     // Maybe bind one side to the other.
                     match (left.value(), right.value()) {
                         // Always keep unifications of two output variables (x = y).
-                        (Value::Variable(_), Value::Variable(_))
+                        (Variable(_), Variable(_))
                             if self.is_output(left) && self.is_output(right) =>
                         {
-                            MaybeDrop::Keep
+                            Keep
                         }
                         // Replace non-output variable l with right.
-                        (Value::Variable(l), _) if !self.is_bound(l) && !self.is_output(left) => {
-                            MaybeDrop::Bind(l.clone(), right.clone())
+                        (Variable(l), _) if !self.is_bound(l) && !self.is_output(left) => {
+                            Bind(l.clone(), right.clone())
                         }
                         // Replace non-output variable r with left.
-                        (_, Value::Variable(r)) if !self.is_bound(r) && !self.is_output(right) => {
-                            MaybeDrop::Bind(r.clone(), left.clone())
+                        (_, Variable(r)) if !self.is_bound(r) && !self.is_output(right) => {
+                            Bind(r.clone(), left.clone())
                         }
                         // Replace unbound variable with ground value.
-                        (Value::Variable(var), val) if val.is_ground() && !self.is_bound(var) => {
-                            MaybeDrop::Check(var.clone(), right.clone())
+                        (Variable(var), val) if val.is_ground() && !self.is_bound(var) => {
+                            Check(var.clone(), right.clone())
                         }
                         // Replace unbound variable with ground value.
-                        (val, Value::Variable(var)) if val.is_ground() && !self.is_bound(var) => {
-                            MaybeDrop::Check(var.clone(), left.clone())
+                        (val, Variable(var)) if val.is_ground() && !self.is_bound(var) => {
+                            Check(var.clone(), left.clone())
                         }
                         // Keep everything else.
-                        _ => MaybeDrop::Keep,
+                        _ => Keep,
                     }
                 }
             }
-            _ => MaybeDrop::Keep,
+            _ => Keep,
         }
     }
 
@@ -265,17 +266,18 @@ impl Simplifier {
         o: &mut Operation,
         simplify_term: &TermSimplifier,
     ) -> Option<()> {
-        if o.operator == Operator::And || o.operator == Operator::Or {
+        use { MaybeDrop::*, Operator::* };
+        if o.operator == And || o.operator == Or {
             toss_trivial_unifies(&mut o.args);
         }
 
         match o.operator {
             // Zero-argument conjunctions & disjunctions represent constants
             // TRUE and FALSE, respectively. We do not simplify them.
-            Operator::And | Operator::Or if o.args.is_empty() => (),
+            And | Or if o.args.is_empty() => (),
 
             // Replace one-argument conjunctions & disjunctions with their argument.
-            Operator::And | Operator::Or if o.args.len() == 1 => {
+            And | Or if o.args.len() == 1 => {
                 if let Value::Expression(operation) = o.args[0].value() {
                     *o = operation.clone();
                     self.simplify_operation_variables(o, simplify_term)?;
@@ -284,19 +286,19 @@ impl Simplifier {
 
             // Non-trivial conjunctions. Choose unification constraints
             // to make bindings from and throw away; fold the rest.
-            Operator::And if o.args.len() > 1 => {
+            And if o.args.len() > 1 => {
                 // Compute which constraints to keep.
-                let mut keep = o.args.iter().map(|_| true).collect::<Vec<bool>>();
-                let mut references = o.args.iter().map(|_| false).collect::<Vec<bool>>();
+                let mut keep: Vec<_> = o.args.iter().map(|_| true).collect();
+                let mut references: Vec<_> = o.args.iter().map(|_| false).collect();
                 for (i, arg) in o.args.iter().enumerate() {
                     match self.maybe_bind_constraint(arg.value().as_expression().unwrap()) {
-                        MaybeDrop::Keep => (),
-                        MaybeDrop::Drop => keep[i] = false,
-                        MaybeDrop::Bind(var, value) => {
+                        Keep => (),
+                        Drop => keep[i] = false,
+                        Bind(var, value) => {
                             keep[i] = false;
                             self.bind(var, value)?;
                         }
-                        MaybeDrop::Check(var, value) => {
+                        Check(var, value) => {
                             for (j, arg) in o.args.iter().enumerate() {
                                 if j != i && arg.contains_variable(&var) {
                                     self.bind(var, value)?;
@@ -326,7 +328,7 @@ impl Simplifier {
 
             // Negation. Simplify the negated term, saving & restoring the
             // current bindings because bindings may not leak out of a negation.
-            Operator::Not => {
+            Not => {
                 assert_eq!(o.args.len(), 1);
                 let mut simplified = o.args[0].clone();
                 let mut simplifier = self.clone();
@@ -348,7 +350,9 @@ impl Simplifier {
             }
         }
 
-        if matches!(o.operator, Operator::Eq | Operator::Unify) {
+        // FIXME(gw) last minute consistency check hack. this shouldn't exist,
+        // we should have failed already
+        if matches!(o.operator, Eq | Unify) {
             let mut xs: Vec<_> = o.args.iter().filter(|x| x.is_ground()).collect();
             if let Some(x) = xs.pop() {
                 for y in xs {

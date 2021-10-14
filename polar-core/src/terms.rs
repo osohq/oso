@@ -1,16 +1,23 @@
-use std::collections::hash_map::DefaultHasher;
-use std::collections::{BTreeMap, HashSet};
-use std::fmt;
-use std::hash::{Hash, Hasher};
-use std::sync::Arc;
+use std::{
+    collections::{
+        hash_map::DefaultHasher,
+        BTreeMap, HashSet
+    },
+    fmt,
+    hash::{Hash, Hasher},
+    sync::Arc,
+};
+
+pub use super::{
+    numerics::Numeric,
+    resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME},
+    sources::SourceInfo,
+    visitor::{walk_operation, walk_term, Visitor},
+    error::{self, RuntimeError},
+    formatting::ToPolarString
+};
 
 use serde::{Deserialize, Serialize};
-
-pub use super::numerics::Numeric;
-use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
-use super::sources::SourceInfo;
-use super::visitor::{walk_operation, walk_term, Visitor};
-pub use super::{error, formatting::ToPolarString};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {
@@ -174,6 +181,10 @@ impl Value {
                 stack_trace: None, // @TODO
             }),
         }
+    }
+
+    pub fn expr(&self) -> Result<&Operation, RuntimeError> {
+        self.as_expression()
     }
 
     pub fn as_call(&self) -> Result<&Call, error::RuntimeError> {
@@ -415,6 +426,10 @@ impl Term {
 
     /// Get a reference to the underlying data of this term
     pub fn value(&self) -> &Value {
+        &self.value
+    }
+
+    pub fn val(&self) -> &Value {
         &self.value
     }
 

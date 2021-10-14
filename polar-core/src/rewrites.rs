@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
-use super::folder::*;
-use super::kb::*;
-use super::rules::*;
-use super::terms::*;
+use super::{
+    folder::*,
+    kb::*,
+    rules::*,
+    terms::*,
+};
 
 /// Rename each non-constant variable in a term or rule to a fresh variable.
 pub struct Renamer<'kb> {
@@ -45,7 +47,7 @@ impl<'kb> Folder for Renamer<'kb> {
 }
 
 /// Rewrite expressions, etc.
-pub struct Rewriter<'kb> {
+struct Rewriter<'kb> {
     kb: &'kb KnowledgeBase,
     stack: Vec<Vec<Term>>,
 }
@@ -128,7 +130,7 @@ impl<'kb> Folder for Rewriter<'kb> {
                 let mut new = self.fold_term(t);
                 let mut rewrites = self.stack.pop().unwrap();
                 for rewrite in rewrites.drain(..).rev() {
-                    and_prepend(&mut new, rewrite);
+                    new.replace_value(binary(Operator::And, rewrite, new.clone()))
                 }
 
                 new
@@ -137,7 +139,7 @@ impl<'kb> Folder for Rewriter<'kb> {
                 // Rewrite sub-expressions, then push a temp onto the args.
                 let mut new = fold_operation(o.clone(), self);
                 let temp = Value::Variable(self.kb.gensym(temp_name(&o.operator)));
-                new.args.push(Term::from(temp.clone()));
+                new.args.push(term!(temp.clone()));
 
                 // Push the rewritten expression into the top stack frame.
                 self.stack
@@ -153,18 +155,14 @@ impl<'kb> Folder for Rewriter<'kb> {
     }
 
     fn fold_operation(&mut self, o: Operation) -> Operation {
-        match o.operator {
-            Operator::And | Operator::Or | Operator::Not => Operation {
-                operator: fold_operator(o.operator, self),
-                args: o
-                    .args
+        use Operator::*;
+        let Operation { operator, args } = o;
+        match operator {
+            And | Or | Not => Operation {
+                operator,
+                args: args
                     .into_iter()
                     .map(|arg| {
-                        let arg_operator = arg.value().as_expression().map(|e| e.operator).ok();
-
-                        self.stack.push(vec![]);
-                        let mut arg = self.fold_term(arg);
-                        let mut rewrites = self.stack.pop().unwrap();
                         // Decide whether to prepend, or append
 
                         // If the current operator is unify and rewrites are only
@@ -182,31 +180,30 @@ impl<'kb> Folder for Rewriter<'kb> {
                         //
                         // We prepend when the rewritten variable needs to be bound before it is
                         // used.
-                        if only_dots(&rewrites)
-                            && arg_operator.map_or(false, |o| o == Operator::Unify)
-                        {
+                        self.stack.push(vec![]);
+                        let mut arg = self.fold_term(arg);
+                        let mut rewrites = self.stack.pop().unwrap();
+                        let is_unify = arg.value().as_expression().map(|e| e.operator).map_or(false, |o| o == Unify);
+                        let only_dots = rewrites.iter().all(|rw| rw.val().expr().map_or(false, |o| o.operator == Dot));
+                        if is_unify && only_dots {
                             for rewrite in rewrites {
-                                and_append(&mut arg, rewrite);
+                                arg.replace_value(binary(And, arg.clone(), rewrite));
                             }
                         } else {
                             for rewrite in rewrites.drain(..).rev() {
-                                and_prepend(&mut arg, rewrite);
+                                arg.replace_value(binary(And, rewrite, arg.clone()));
                             }
                         }
                         arg
                     })
                     .collect(),
             },
-            _ => fold_operation(o, self),
+            _ => fold_operation(Operation { operator, args }, self),
         }
     }
 
     fn fold_rest_variable(&mut self, v: Symbol) -> Symbol {
-        if v.0 == "_" {
-            self.kb.gensym("_")
-        } else {
-            v
-        }
+        self.fold_variable(v)
     }
 
     fn fold_variable(&mut self, v: Symbol) -> Symbol {
@@ -218,30 +215,11 @@ impl<'kb> Folder for Rewriter<'kb> {
     }
 }
 
-fn only_dots(rewrites: &[Term]) -> bool {
-    rewrites.iter().all(|t| {
-        t.value()
-            .as_expression()
-            .map_or(false, |op| op.operator == Operator::Dot)
+fn binary(operator: Operator, left: Term, right: Term) -> Value {
+    Value::Expression(Operation {
+        operator,
+        args: vec![left, right],
     })
-}
-
-/// Replace the left value with And(right, left).
-fn and_prepend(left: &mut Term, right: Term) {
-    let new_value = Value::Expression(Operation {
-        operator: Operator::And,
-        args: vec![right, left.clone()],
-    });
-    left.replace_value(new_value);
-}
-
-/// Replace the left value with And(left, right).
-fn and_append(left: &mut Term, right: Term) {
-    let new_value = Value::Expression(Operation {
-        operator: Operator::And,
-        args: vec![left.clone(), right],
-    });
-    left.replace_value(new_value);
 }
 
 /// Return a cloned list of arguments from And(*args).

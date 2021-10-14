@@ -332,7 +332,6 @@ impl PolarVirtualMachine {
     }
 
     fn query_contains_partial(&mut self) {
-        use crate::visitor::{walk_term, Visitor};
         struct VarVisitor<'vm> {
             has_partial: bool,
             vm: &'vm PolarVirtualMachine,
