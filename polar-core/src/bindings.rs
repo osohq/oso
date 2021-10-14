@@ -4,9 +4,9 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::error::{PolarResult, RuntimeError};
-use crate::folder::{fold_term, Folder};
-use crate::formatting::ToPolarString;
+use crate::folder::{fold_list, fold_term, Folder};
 use crate::terms::{has_rest_var, Operation, Operator, Symbol, Term, Value};
+use crate::vm::Goal;
 
 #[derive(Clone, Debug)]
 pub struct Binding(pub Symbol, pub Term);
@@ -16,8 +16,17 @@ pub struct Binding(pub Symbol, pub Term);
 pub type BindingStack = Vec<Binding>;
 pub type Bindings = HashMap<Symbol, Term>;
 
-pub type Bsp = usize;
+pub type Bsp = Bsps;
 pub type FollowerId = usize;
+
+/// Bsps represents bsps of a binding manager and its followers as a tree.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Bsps {
+    /// Index into `bindings` array
+    bindings_index: usize,
+    /// Store bsps of followers (and their followers) by follower id.
+    followers: HashMap<FollowerId, Bsps>,
+}
 
 /// Variable binding state.
 ///
@@ -28,7 +37,56 @@ pub type FollowerId = usize;
 pub enum VariableState {
     Unbound,
     Bound(Term),
-    Partial(),
+    Partial,
+}
+
+struct Derefer<'a> {
+    binding_manager: &'a BindingManager,
+    seen: HashSet<u64>,
+}
+
+impl<'a> Derefer<'a> {
+    fn new(binding_manager: &'a BindingManager) -> Self {
+        Self {
+            binding_manager,
+            seen: HashSet::new(),
+        }
+    }
+}
+
+impl<'a> Folder for Derefer<'a> {
+    fn fold_list(&mut self, list: Vec<Term>) -> Vec<Term> {
+        let has_rest = has_rest_var(&list);
+        let mut list = fold_list(list, self);
+        if has_rest {
+            let last = list.pop().unwrap();
+            if let Value::List(rest) = last.value() {
+                list.append(&mut rest.clone());
+            } else {
+                list.push(last);
+            }
+        }
+        list
+    }
+
+    fn fold_term(&mut self, t: Term) -> Term {
+        match t.value() {
+            Value::Expression(_) => t,
+            Value::Variable(v) | Value::RestVariable(v) => {
+                let hash = t.hash_value();
+                if self.seen.contains(&hash) {
+                    t
+                } else {
+                    self.seen.insert(hash);
+                    let t = self.binding_manager.lookup(v).unwrap_or(t);
+                    let t = fold_term(t, self);
+                    self.seen.remove(&hash);
+                    t
+                }
+            }
+            _ => fold_term(t, self),
+        }
+    }
 }
 
 /// Represent each binding in a cycle as a unification constraint.
@@ -41,7 +99,7 @@ fn cycle_constraints(cycle: Vec<Symbol>) -> Operation {
     constraints
 }
 
-impl From<BindingManagerVariableState> for VariableState {
+impl From<BindingManagerVariableState<'_>> for VariableState {
     fn from(other: BindingManagerVariableState) -> Self {
         // We represent Cycles as a Partial VariableState. This information is not
         // needed in the VM, so unbound could be an acceptable representation as well.
@@ -51,8 +109,8 @@ impl From<BindingManagerVariableState> for VariableState {
         match other {
             BindingManagerVariableState::Unbound => VariableState::Unbound,
             BindingManagerVariableState::Bound(b) => VariableState::Bound(b),
-            BindingManagerVariableState::Cycle(_) => VariableState::Partial(),
-            BindingManagerVariableState::Partial(_) => VariableState::Partial(),
+            BindingManagerVariableState::Cycle(_) => VariableState::Partial,
+            BindingManagerVariableState::Partial(_) => VariableState::Partial,
         }
     }
 }
@@ -61,11 +119,11 @@ impl From<BindingManagerVariableState> for VariableState {
 ///
 /// Includes the Cycle representation in addition to VariableState.
 #[derive(Clone, Debug, PartialEq, Eq)]
-enum BindingManagerVariableState {
+enum BindingManagerVariableState<'a> {
     Unbound,
     Bound(Term),
     Cycle(Vec<Symbol>),
-    Partial(Operation),
+    Partial(&'a Operation),
 }
 
 /// The `BindingManager` maintains associations between variables and values,
@@ -85,7 +143,7 @@ enum BindingManagerVariableState {
 #[derive(Clone, Debug, Default)]
 pub struct BindingManager {
     bindings: BindingStack,
-    followers: HashMap<FollowerId, (BindingManager, Bsp)>,
+    followers: HashMap<FollowerId, BindingManager>,
     next_follower_id: FollowerId,
 }
 
@@ -95,22 +153,43 @@ impl BindingManager {
         Self::default()
     }
 
+    /// Bind `var` to `val` in the expression `partial`.
+    ///
+    /// If the binding succeeds, the new expression is returned as a goal. Otherwise,
+    /// an error is returned.
+    fn partial_bind(&mut self, partial: Operation, var: &Symbol, val: Term) -> PolarResult<Goal> {
+        match partial.ground(var, val.clone()) {
+            None => Err(RuntimeError::IncompatibleBindings {
+                msg: "Grounding failed A".into(),
+            }
+            .into()),
+            Some(grounded) => {
+                self.add_binding(var, val);
+                Ok(Goal::Query {
+                    term: grounded.into(),
+                })
+            }
+        }
+    }
+
     // **** State Mutation ***
 
     /// Bind `var` to `val`.
     ///
-    /// If the binding succeeds, Ok is returned. If the binding is *incompatible*
-    /// an error is returned.
+    /// If the binding succeeds, Ok with an optional goal is returned. The goal will be
+    /// present if the binding replaces a partial, which then needs to be reevaluated
+    /// to ensure compatibility.
     ///
-    /// A binding is considered *incompatible* if either:
+    /// If the binding is *incompatible* an error is returned. A binding is considered
+    /// *incompatible* if either:
     ///
     /// 1. `var` is already bound to some value (rebindings are not allowed, even if the
     ///    rebinding is to the same value).
     /// 2. `var` is constrained, and the new binding of `val` is not compatible with those
-    ///    constraints.
+    ///    constraints (as determined by `Operation::ground()`)
     ///
     /// If a binding is compatible, it is recorded. If the binding was to a ground value,
-    /// subsequent calls to `variable_state` or `deref` will return that value.
+    /// subsequent calls to `variable_state` or `deep_deref` will return that value.
     ///
     /// If the binding was between two variables, the two will always have the same value
     /// or constraints going forward. Further, a unification constraint is recorded between
@@ -121,35 +200,36 @@ impl BindingManager {
     ///
     /// If a binding between two variables is made, and one is bound and the other unbound, the
     /// unbound variable will take the value of the bound one.
-    pub fn bind(&mut self, var: &Symbol, val: Term) -> PolarResult<()> {
+    pub fn bind(&mut self, var: &Symbol, val: Term) -> PolarResult<Option<Goal>> {
+        let mut goal = None;
         if let Ok(symbol) = val.value().as_symbol() {
-            self.bind_variables(var, symbol)?;
-        } else if let BindingManagerVariableState::Partial(p) = self._variable_state(var) {
-            if let Some(grounded) = p.ground(var.clone(), val.clone()) {
-                self.add_binding(var, val.clone());
-                self.constrain(&grounded)?;
-            } else {
-                return Err(RuntimeError::IncompatibleBindings {
-                    msg: "Grounding failed".into(),
-                }
-                .into());
-            }
+            goal = self.bind_variables(var, symbol)?;
         } else {
-            if let BindingManagerVariableState::Bound(_) = self._variable_state(var) {
-                return Err(RuntimeError::IncompatibleBindings {
-                    msg: format!("Cannot rebind {:?}", var),
+            match self._variable_state(var) {
+                BindingManagerVariableState::Partial(p) => {
+                    let p = p.clone();
+                    let val = val.clone();
+                    goal = Some(self.partial_bind(p, var, val)?)
                 }
-                .into());
-            }
 
-            self.add_binding(var, val.clone());
+                BindingManagerVariableState::Bound(_) => {
+                    return Err(RuntimeError::IncompatibleBindings {
+                        msg: format!("Cannot rebind {:?}", var),
+                    }
+                    .into())
+                }
+                _ => self.add_binding(var, val.clone()),
+            }
         }
 
         // If the main binding succeeded, the follower binding must succeed.
-        self.do_followers(|_, follower| follower.bind(var, val.clone()))
-            .unwrap();
+        self.do_followers(|_, follower| {
+            follower.bind(var, val.clone())?;
+            Ok(())
+        })
+        .unwrap();
 
-        Ok(())
+        Ok(goal)
     }
 
     /// Rebind `var` to `val`, regardless of compatibility.
@@ -176,113 +256,68 @@ impl BindingManager {
     /// `term` must be an expression`.
     ///
     /// An error is returned if the constraint is incompatible with existing constraints.
-    ///
-    /// (Currently all constraints are considered compatible).
     pub fn add_constraint(&mut self, term: &Term) -> PolarResult<()> {
         self.do_followers(|_, follower| follower.add_constraint(term))?;
 
         assert!(term.value().as_expression().is_ok());
         let mut op = op!(And, term.clone());
+
+        // include all constraints applying to any of its variables.
         for var in op.variables().iter().rev() {
-            match self._variable_state(&var) {
-                BindingManagerVariableState::Unbound => {}
+            match self._variable_state(var) {
                 BindingManagerVariableState::Cycle(c) => {
-                    let mut cycle = cycle_constraints(c);
-                    cycle.merge_constraints(op.clone());
-                    op = cycle;
+                    op = cycle_constraints(c).merge_constraints(op)
                 }
-                BindingManagerVariableState::Partial(mut e) => {
-                    e.merge_constraints(op);
-                    op = e;
-                }
-                BindingManagerVariableState::Bound(_) => {
-                    panic!("Unexpected bound variable {} in constraint.", var);
+                BindingManagerVariableState::Partial(e) => op = e.clone().merge_constraints(op),
+                _ => {}
+            }
+        }
+
+        let vars = op.variables();
+        let mut varset = vars.iter().collect::<HashSet<_>>();
+
+        // replace any bound variables with their values.
+        for var in vars.iter() {
+            if let BindingManagerVariableState::Bound(val) = self._variable_state(var) {
+                varset.remove(var);
+                match op.ground(var, val) {
+                    Some(o) => op = o,
+                    None => {
+                        return Err(RuntimeError::IncompatibleBindings {
+                            msg: "Grounding failed B".into(),
+                        }
+                        .into())
+                    }
                 }
             }
         }
 
-        self.constrain(&op)
+        // apply the new constraint to every remaining variable.
+        for var in varset {
+            self.add_binding(var, op.clone().into())
+        }
+        Ok(())
     }
 
     /// Reset the state of `BindingManager` to what it was at `to`.
-    pub fn backtrack(&mut self, to: Bsp) {
-        self.do_followers(|follower_bsp, follower| {
-            let follower_backtrack_to = to.saturating_sub(follower_bsp);
-            follower.backtrack(follower_backtrack_to);
+    pub fn backtrack(&mut self, to: &Bsp) {
+        self.do_followers(|follower_id, follower| {
+            if let Some(follower_to) = to.followers.get(&follower_id) {
+                follower.backtrack(follower_to);
+            } else {
+                follower.backtrack(&Bsp::default());
+            }
             Ok(())
         })
         .unwrap();
 
-        self.bindings.truncate(to)
+        self.bindings.truncate(to.bindings_index)
     }
 
     // *** Binding Inspection ***
-
-    /// If `term` is a variable, return the value bound to that variable.
-    /// If `term` is a list, dereference all items in the list.
-    /// Otherwise, return `term`.
-    pub fn deref(&self, term: &Term) -> Term {
-        match &term.value() {
-            Value::List(list) => {
-                // Deref all elements.
-                let mut derefed: Vec<Term> =
-                    // TODO(gj): reduce recursion here.
-                    list.iter().map(|t| self.deref(t)).collect();
-
-                // If last element was a rest variable, append the list it derefed to.
-                if has_rest_var(list) {
-                    if let Some(last_term) = derefed.pop() {
-                        if let Value::List(terms) = last_term.value() {
-                            derefed.append(&mut terms.clone());
-                        } else {
-                            derefed.push(last_term);
-                        }
-                    }
-                }
-                term.clone_with_value(Value::List(derefed))
-            }
-            Value::Variable(v) => match self.variable_state(v) {
-                VariableState::Bound(value) => value,
-                _ => term.clone(),
-            },
-            Value::RestVariable(v) => match self.variable_state(v) {
-                VariableState::Bound(value) => match value.value() {
-                    Value::List(l) if has_rest_var(l) => self.deref(&value),
-                    _ => value,
-                },
-                _ => term.clone(),
-            },
-            _ => term.clone(),
-        }
-    }
-
     /// Dereference all variables in term, including within nested structures like
     /// lists and dictionaries.
     pub fn deep_deref(&self, term: &Term) -> Term {
-        pub struct Derefer<'a> {
-            binding_manager: &'a BindingManager,
-        }
-
-        impl<'a> Derefer<'a> {
-            pub fn new(binding_manager: &'a BindingManager) -> Self {
-                Self { binding_manager }
-            }
-        }
-
-        impl<'a> Folder for Derefer<'a> {
-            fn fold_term(&mut self, t: Term) -> Term {
-                match t.value() {
-                    Value::Expression(_) => t,
-                    Value::List(_) => fold_term(self.binding_manager.deref(&t), self),
-                    Value::Variable(_) | Value::RestVariable(_) => {
-                        let derefed = self.binding_manager.deref(&t);
-                        fold_term(derefed, self)
-                    }
-                    _ => fold_term(t, self),
-                }
-            }
-        }
-
         Derefer::new(self).fold_term(term.clone())
     }
 
@@ -294,23 +329,24 @@ impl BindingManager {
             BindingManagerVariableState::Bound(val) => {
                 op!(And, term!(op!(Unify, term!(variable.clone()), val)))
             }
-            BindingManagerVariableState::Partial(expr) => expr,
+            BindingManagerVariableState::Partial(expr) => expr.clone(),
             BindingManagerVariableState::Cycle(c) => cycle_constraints(c),
         }
     }
 
     pub fn variable_state(&self, variable: &Symbol) -> VariableState {
-        self.variable_state_at_point(variable, self.bsp())
+        self.variable_state_at_point(variable, &self.bsp())
     }
 
-    pub fn variable_state_at_point(&self, variable: &Symbol, bsp: Bsp) -> VariableState {
+    pub fn variable_state_at_point(&self, variable: &Symbol, bsp: &Bsp) -> VariableState {
+        let index = bsp.bindings_index;
         let mut next = variable;
-        while let Some(value) = self.value(next, bsp) {
+        while let Some(value) = self.value(next, index) {
             match value.value() {
-                Value::Expression(_) => return VariableState::Partial(),
+                Value::Expression(_) => return VariableState::Partial,
                 Value::Variable(v) | Value::RestVariable(v) => {
                     if v == variable {
-                        return VariableState::Partial();
+                        return VariableState::Partial;
                     } else {
                         next = v;
                     }
@@ -332,16 +368,25 @@ impl BindingManager {
     /// Retrieve an opaque value representing the current state of `BindingManager`.
     /// Can be used to reset state with `backtrack`.
     pub fn bsp(&self) -> Bsp {
-        self.bindings.len()
+        let follower_bsps = self
+            .followers
+            .iter()
+            .map(|(id, f)| (*id, f.bsp()))
+            .collect::<HashMap<_, _>>();
+
+        Bsps {
+            bindings_index: self.bindings.len(),
+            followers: follower_bsps,
+        }
     }
 
     pub fn bindings(&self, include_temps: bool) -> Bindings {
-        self.bindings_after(include_temps, 0)
+        self.bindings_after(include_temps, &Bsp::default())
     }
 
-    pub fn bindings_after(&self, include_temps: bool, after: Bsp) -> Bindings {
+    pub fn bindings_after(&self, include_temps: bool, after: &Bsp) -> Bindings {
         let mut bindings = HashMap::new();
-        for Binding(var, value) in &self.bindings[after..] {
+        for Binding(var, value) in &self.bindings[after.bindings_index..] {
             if !include_temps && var.is_temporary_var() {
                 continue;
             }
@@ -353,7 +398,7 @@ impl BindingManager {
     pub fn variable_bindings(&self, variables: &HashSet<Symbol>) -> Bindings {
         let mut bindings = HashMap::new();
         for var in variables.iter() {
-            let value = self.value(var, self.bsp());
+            let value = self.value(var, self.bsp().bindings_index);
             if let Some(value) = value {
                 bindings.insert(var.clone(), self.deep_deref(value));
             }
@@ -370,23 +415,22 @@ impl BindingManager {
 
     pub fn add_follower(&mut self, follower: BindingManager) -> FollowerId {
         let follower_id = self.next_follower_id;
-        self.followers.insert(follower_id, (follower, self.bsp()));
+        self.followers.insert(follower_id, follower);
         self.next_follower_id += 1;
 
         follower_id
     }
 
     pub fn remove_follower(&mut self, follower_id: &FollowerId) -> Option<BindingManager> {
-        self.followers
-            .remove(follower_id)
-            .map(|(follower, _bsp)| follower)
+        self.followers.remove(follower_id)
     }
 }
 
 // Private impls.
 impl BindingManager {
     /// Bind two variables together.
-    fn bind_variables(&mut self, left: &Symbol, right: &Symbol) -> PolarResult<()> {
+    fn bind_variables(&mut self, left: &Symbol, right: &Symbol) -> PolarResult<Option<Goal>> {
+        let mut goal = None;
         match (self._variable_state(left), self._variable_state(right)) {
             (
                 BindingManagerVariableState::Bound(left_value),
@@ -466,36 +510,41 @@ impl BindingManager {
             }
             (
                 BindingManagerVariableState::Bound(left_value),
-                BindingManagerVariableState::Partial(_),
+                BindingManagerVariableState::Partial(p),
             ) => {
-                // Left is bound, right has constraints.
-                // TODO (dhatch): No unwrap.
-                self.add_constraint(&op!(Unify, left_value, term!(right.clone())).into_term())?;
+                let p = p.clone();
+                goal = Some(self.partial_bind(p, right, left_value)?);
             }
             (
-                BindingManagerVariableState::Partial(_),
+                BindingManagerVariableState::Partial(p),
                 BindingManagerVariableState::Bound(right_value),
             ) => {
-                self.add_constraint(&op!(Unify, term!(left.clone()), right_value).into_term())?;
+                let p = p.clone();
+                goal = Some(self.partial_bind(p, left, right_value)?);
             }
             (BindingManagerVariableState::Partial(_), _)
             | (_, BindingManagerVariableState::Partial(_)) => {
-                self.add_constraint(
-                    &op!(Unify, term!(left.clone()), term!(right.clone())).into_term(),
-                )?;
+                self.add_constraint(&op!(Unify, term!(left.clone()), term!(right.clone())).into())?;
             }
         }
 
-        Ok(())
+        Ok(goal)
     }
 
     fn add_binding(&mut self, var: &Symbol, val: Term) {
         self.bindings.push(Binding(var.clone(), val));
     }
 
+    fn lookup(&self, var: &Symbol) -> Option<Term> {
+        match self.variable_state(var) {
+            VariableState::Bound(val) => Some(val),
+            _ => None,
+        }
+    }
+
     /// Look up a variable in the bindings stack and return
     /// a reference to its value if it's bound.
-    fn value(&self, variable: &Symbol, bsp: Bsp) -> Option<&Term> {
+    fn value(&self, variable: &Symbol, bsp: usize) -> Option<&Term> {
         self.bindings[..bsp]
             .iter()
             .rev()
@@ -504,15 +553,20 @@ impl BindingManager {
     }
 
     fn _variable_state(&self, variable: &Symbol) -> BindingManagerVariableState {
-        self._variable_state_at_point(variable, self.bsp())
+        self._variable_state_at_point(variable, &self.bsp())
     }
 
     /// Check the state of `variable` at `bsp`.
-    fn _variable_state_at_point(&self, variable: &Symbol, bsp: Bsp) -> BindingManagerVariableState {
+    fn _variable_state_at_point(
+        &self,
+        variable: &Symbol,
+        bsp: &Bsp,
+    ) -> BindingManagerVariableState {
+        let index = bsp.bindings_index;
         let mut path = vec![variable];
-        while let Some(value) = self.value(path.last().unwrap(), bsp) {
+        while let Some(value) = self.value(path.last().unwrap(), index) {
             match value.value() {
-                Value::Expression(e) => return BindingManagerVariableState::Partial(e.clone()),
+                Value::Expression(e) => return BindingManagerVariableState::Partial(e),
                 Value::Variable(v) | Value::RestVariable(v) => {
                     if v == variable {
                         return BindingManagerVariableState::Cycle(
@@ -528,28 +582,12 @@ impl BindingManager {
         BindingManagerVariableState::Unbound
     }
 
-    #[allow(clippy::unnecessary_wraps)]
-    fn constrain(&mut self, o: &Operation) -> PolarResult<()> {
-        assert_eq!(o.operator, Operator::And, "bad constraint {}", o.to_polar());
-        for var in o.variables() {
-            match self._variable_state(&var) {
-                // A constraint should not contain a bound variable, it should have been removed in
-                // add_constraint by calling ground.
-                BindingManagerVariableState::Bound(_) => {
-                    panic!("Unexpected bound variable in constraint.")
-                }
-                _ => self.add_binding(&var, o.clone().into_term()),
-            }
-        }
-        Ok(())
-    }
-
-    fn do_followers<F>(&mut self, func: F) -> PolarResult<()>
+    fn do_followers<F>(&mut self, mut func: F) -> PolarResult<()>
     where
-        F: Fn(Bsp, &mut BindingManager) -> PolarResult<()>,
+        F: FnMut(FollowerId, &mut BindingManager) -> PolarResult<()>,
     {
-        for (_id, (follower, bsp)) in self.followers.iter_mut() {
-            func(*bsp, follower)?
+        for (id, follower) in self.followers.iter_mut() {
+            func(*id, follower)?
         }
 
         Ok(())
@@ -559,6 +597,7 @@ impl BindingManager {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::formatting::to_polar::ToPolarString;
 
     #[test]
     fn variable_state() {
@@ -620,7 +659,7 @@ mod test {
         bindings.add_binding(&x, term!(op!(And)));
         assert_eq!(
             bindings._variable_state(&x),
-            BindingManagerVariableState::Partial(op!(And))
+            BindingManagerVariableState::Partial(&op!(And))
         );
     }
 
@@ -742,10 +781,7 @@ mod test {
         let b2 = b1.remove_follower(&b2_id).unwrap();
 
         if let BindingManagerVariableState::Partial(p) = b1._variable_state(&sym!("x")) {
-            assert_eq!(
-                p.to_polar(),
-                "x = y and y = z and y = z and z = x and x > y"
-            );
+            assert_eq!(p.to_polar(), "x = y and y = z and z = x and x > y");
         } else {
             panic!("unexpected");
         }
@@ -758,7 +794,7 @@ mod test {
     }
 
     #[test]
-    fn deref() {
+    fn old_deref() {
         let mut bm = BindingManager::default();
         let value = term!(1);
         let x = sym!("x");
@@ -767,25 +803,25 @@ mod test {
         let term_y = term!(y.clone());
 
         // unbound var
-        assert_eq!(bm.deref(&term_x), term_x);
+        assert_eq!(bm.deep_deref(&term_x), term_x);
 
         // unbound var -> unbound var
         bm.bind(&x, term_y.clone()).unwrap();
-        assert_eq!(bm.deref(&term_x), term_x);
+        assert_eq!(bm.deep_deref(&term_x), term_x);
 
         // value
-        assert_eq!(bm.deref(&value), value.clone());
+        assert_eq!(bm.deep_deref(&value), value.clone());
 
         // unbound var -> value
         let mut bm = BindingManager::default();
         bm.bind(&x, value.clone()).unwrap();
-        assert_eq!(bm.deref(&term_x), value);
+        assert_eq!(bm.deep_deref(&term_x), value);
 
         // unbound var -> unbound var -> value
         let mut bm = BindingManager::default();
         bm.bind(&x, term_y).unwrap();
         bm.bind(&y, value.clone()).unwrap();
-        assert_eq!(bm.deref(&term_x), value);
+        assert_eq!(bm.deep_deref(&term_x), value);
     }
 
     #[test]
@@ -822,5 +858,32 @@ mod test {
         assert_eq!(bm.variable_state(&y), VariableState::Unbound);
     }
 
-    // TODO (dhatch): Test backtrack with followers.
+    #[test]
+    fn test_backtrack_followers() {
+        // Regular bindings
+        let mut b1 = BindingManager::new();
+        b1.bind(&sym!("x"), term!(sym!("y"))).unwrap();
+        b1.bind(&sym!("z"), term!(sym!("x"))).unwrap();
+
+        let b2 = BindingManager::new();
+        let b2_id = b1.add_follower(b2);
+
+        b1.add_constraint(&term!(op!(Gt, term!(sym!("x")), term!(1))))
+            .unwrap();
+
+        let bsp = b1.bsp();
+
+        b1.bind(&sym!("a"), term!(sym!("x"))).unwrap();
+        assert!(matches!(
+            b1.variable_state(&sym!("a")),
+            VariableState::Partial
+        ));
+
+        b1.backtrack(&bsp);
+        let b2 = b1.remove_follower(&b2_id).unwrap();
+        assert!(matches!(
+            b2.variable_state(&sym!("a")),
+            VariableState::Unbound
+        ));
+    }
 }

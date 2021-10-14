@@ -1,7 +1,8 @@
 .PHONY: test go-test rust-test rust-build python-build python-test python-flask-build \
 	python-flask-test python-django-test python-sqlalchemy-test ruby-test \
 	java-test docs-test fmt clippy lint wasm-build wasm-test js-test \
-	lint-ruby lint-js lint-go lint-java lint-rust fmt-java fmt-rust fmt-go fmt-js fmt-python
+	lint-ruby lint-js lint-go lint-java lint-rust fmt-java fmt-rust fmt-go fmt-js fmt-python \
+	clean clean-docs clean-rust clean-go clean-js clean-polar-wasm-api
 
 #! If you add another dependency to this you must also add it to the Test
 #! github action or it won't run in CI. All jobs run in parallel on CI and
@@ -39,7 +40,7 @@ python-django-test: python-build python-django-build
 	$(MAKE) -C languages/python/django-oso test
 	$(MAKE) -C languages/python/django-oso test22
 
-python-sqlalchemy-test: python-build python-sqlalchemy-build
+python-sqlalchemy-test: python-build
 	$(MAKE) -C languages/python/sqlalchemy-oso test
 
 ruby-test:
@@ -68,7 +69,8 @@ fmt.jar:
 
 fmt-java: fmt.jar
 	$(eval FILES := $(shell git ls-files '*.java'))
-	java -jar fmt.jar --replace $(FILES)
+	$(eval OPENS := $(shell echo "--add-opens jdk.compiler/com.sun.tools.javac."{api,tree,file,util,parser}"=ALL-UNNAMED"))
+	java $(OPENS) -jar fmt.jar --replace $(FILES)
 
 fmt-rust:
 	cargo fmt
@@ -115,3 +117,23 @@ wasm-test:
 js-test:
 	$(MAKE) -C languages/js parity
 	$(MAKE) -C languages/js test
+
+clean: clean-docs clean-rust clean-go clean-java clean-js clean-polar-wasm-api
+
+clean-docs:
+	$(MAKE) -C docs clean
+
+clean-rust:
+	cargo clean
+
+clean-go:
+	$(MAKE) -C languages/go clean
+
+clean-java:
+	$(MAKE) -C languages/java clean
+
+clean-js:
+	$(MAKE) -C languages/js clean
+
+clean-polar-wasm-api:
+	$(MAKE) -C polar-wasm-api clean

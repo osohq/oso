@@ -1,8 +1,0 @@
-content/*/reference/api/
-public/**/*
-resources/**/
-hugo_stats.json
-themes/oso-webpack/static/*
-
-# Generated spelling dictionaries
-*.dic

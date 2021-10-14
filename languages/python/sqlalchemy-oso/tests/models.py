@@ -13,7 +13,7 @@ class Category(ModelBase):
 
     name = Column(String, primary_key=True)
 
-    tags = relationship("Tag", secondary="category_tags")
+    tags = relationship("Tag", secondary="category_tags", back_populates="categories")
     users = relationship("User", secondary="category_users")
 
 
@@ -40,8 +40,10 @@ class Tag(ModelBase):
     created_by_id = Column(Integer, ForeignKey("users.id"))
     created_by = relationship("User", foreign_keys=[created_by_id])
 
-    users = relationship("User", secondary="user_tags")
-    categories = relationship("Category", secondary="category_tags")
+    users = relationship("User", secondary="user_tags", back_populates="tags")
+    categories = relationship(
+        "Category", secondary="category_tags", back_populates="tags"
+    )
 
     # If provided, posts in this tag always have the public access level.
     is_public = Column(Boolean, default=False, nullable=False)
@@ -102,4 +104,4 @@ class User(ModelBase):
     tag = relationship("Tag", foreign_keys=[tag_name])
 
     # Many tags
-    tags = relationship("Tag", secondary=user_tags)
+    tags = relationship("Tag", secondary=user_tags, back_populates="users")

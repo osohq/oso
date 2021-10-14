@@ -24,14 +24,29 @@ module Oso
         #
         # @return [::Oso::Polar::Error] if there's an FFI error.
         # @return [::Oso::Polar::FFIErrorNotFound] if there isn't one.
-        def self.get # rubocop:disable Metrics/MethodLength
+        def self.get(enrich_message) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
           error = Rust.get
           return ::Oso::Polar::FFIErrorNotFound if error.null?
 
           error = JSON.parse(error.to_s)
           msg = error['formatted']
           kind, body = error['kind'].first
-          subkind, details = body.first
+
+          # Not all errors have subkind and details.
+          # TODO (gj): This bug may exist in other libraries.
+          if body.is_a? Hash
+            subkind, details = body.first
+          else
+            subkind, details = nil
+          end
+
+          # Enrich error message and stack trace
+          msg = enrich_message.call(msg) if msg
+          if details
+            details['stack_trace'] = enrich_message.call(details['stack_trace']) if details['stack_trace']
+            details['msg'] = enrich_message.call(details['msg']) if details['msg']
+          end
+
           case kind
           when 'Parse'
             parse_error(subkind, msg: msg, details: details)
@@ -41,6 +56,8 @@ module Oso
             operational_error(subkind, msg: msg, details: details)
           when 'Parameter'
             api_error(subkind, msg: msg, details: details)
+          when 'Validation'
+            validation_error(msg, details: details)
           end
         end
 
@@ -120,6 +137,16 @@ module Oso
           else
             ::Oso::Polar::ApiError.new(msg, details: details)
           end
+        end
+
+        # Map FFI Validation errors into Ruby exceptions.
+        #
+        # @param msg [String]
+        # @param details [Hash<String, Object>]
+        # @return [::Oso::Polar::ValidationError] the object converted into the expected format.
+        private_class_method def self.validation_error(msg, details:)
+          # This is currently the only type of validation error.
+          ::Oso::Polar::ValidationError.new(msg, details: details)
         end
       end
     end

@@ -3,7 +3,7 @@
 module Oso
   module Polar
     # Base error type for Oso::Polar.
-    class Error < ::RuntimeError
+    class Error < ::Oso::Error
       attr_reader :stack_trace
 
       # @param message [String]
@@ -68,7 +68,7 @@ module Oso
       end
     end
     class DuplicateClassAliasError < PolarRuntimeError # rubocop:disable Style/Documentation
-      # @param as [String]
+      # @param name [String]
       # @param old [Class]
       # @param new [Class]
       def initialize(name:, old:, new:)
@@ -100,8 +100,10 @@ module Oso
     class ApiError < Error; end
     class ParameterError < ApiError; end
 
+    class ValidationError < Error; end
+
     UNEXPECTED_EXPRESSION_MESSAGE = <<~MSG
-      Recieved Expression from Polar VM. The Expression type is not yet supported in this language.
+      Received Expression from Polar VM. The Expression type is not yet supported in this language.
 
       This may mean you performed an operation in your policy over an unbound variable.
     MSG

@@ -1,6 +1,11 @@
 """Translate between Polar and the host language (Python)."""
 
+from dataclasses import dataclass
 from math import inf, isnan, nan
+import re
+import inspect
+from typing import Any, Dict, Optional, Callable, Union
+
 
 from .exceptions import (
     PolarRuntimeError,
@@ -16,26 +21,65 @@ from .predicate import Predicate
 from .expression import Expression, Pattern
 
 
+@dataclass
+class UserType:
+    name: str
+    cls: type
+    id: int
+    fields: Dict[str, Any]
+    build_query: Optional[Callable]
+    exec_query: Optional[Callable]
+    combine_query: Optional[Callable]
+
+
 class Host:
     """Maintain mappings and caches for Python classes & instances."""
 
-    def __init__(self, polar, classes=None, instances=None, get_field=None):
+    types: Dict[Union[str, type], UserType]
+
+    def __init__(
+        self,
+        polar,
+        types=None,
+        instances=None,
+        get_field=None,
+    ):
         assert polar, "no Polar handle"
         self.ffi_polar = polar  # a "weak" handle, which we do not free
-        self.classes = (classes or {}).copy()
+        # types maps class names (as string) and class objects to UserType.
+        self.types = (types or {}).copy()
         self.instances = (instances or {}).copy()
         self._accept_expression = False  # default, see set_accept_expression
+        self.build_query = None
+        self.exec_query = None
+        self.combine_query = None
 
-        def default_get_field(_obj, _field):
-            raise PolarRuntimeError("Cannot generically walk fields of a Python class")
+        self.get_field = get_field or self.types_get_field
 
-        self.get_field = get_field or default_get_field
+    # @Q: I'm not really sure what I'm returning here.
+    def types_get_field(self, obj, field) -> type:
+        if obj not in self.types:
+            raise PolarRuntimeError(
+                f"No type information for Python class {obj.__name__}"
+            )
+        rec = self.types[obj]
+
+        if field not in rec.fields:
+            raise PolarRuntimeError(f"No field {field} on {obj.__name__}")
+        field_type = rec.fields[field]
+
+        if field_type.kind == "one":
+            return self.types[field_type.other_type].cls
+        elif field_type.kind == "many":
+            return list
+        else:
+            raise PolarRuntimeError(f"Invalid kind {field_type.kind}")
 
     def copy(self):
         """Copy an existing cache."""
         return type(self)(
             self.ffi_polar,
-            classes=self.classes,
+            types=self.types,
             instances=self.instances,
             get_field=self.get_field,
         )
@@ -43,18 +87,47 @@ class Host:
     def get_class(self, name):
         """Fetch a Python class from the cache."""
         try:
-            return self.classes[name]
+            return self.types[name].cls
         except KeyError:
             raise UnregisteredClassError(name)
 
-    def cache_class(self, cls, name=None):
+    def distinct_user_types(self):
+        return map(
+            lambda k: self.types[k],
+            filter(lambda k: isinstance(k, str), self.types.keys()),
+        )
+
+    def cache_class(
+        self,
+        cls,
+        name=None,
+        fields=None,
+        build_query=None,
+        exec_query=None,
+        combine_query=None,
+    ):
         """Cache Python class by name."""
         name = cls.__name__ if name is None else name
-        if name in self.classes.keys():
+        if name in self.types.keys():
             raise DuplicateClassAliasError(name, self.get_class(name), cls)
 
-        self.classes[name] = cls
+        self.types[name] = self.types[cls] = UserType(
+            name=name,
+            cls=cls,
+            id=self.cache_instance(cls),
+            fields=fields or {},
+            build_query=build_query or self.build_query,
+            exec_query=exec_query or self.exec_query,
+            combine_query=combine_query or self.combine_query,
+        )
         return name
+
+    def register_mros(self):
+        """Register the MRO of each registered class to be used for rule type validation."""
+        # Get MRO of all registered classes
+        for rec in self.distinct_user_types():
+            mro = [self.types[c].id for c in inspect.getmro(rec.cls) if c in self.types]
+            self.ffi_polar.register_mro(rec.name, mro)
 
     def get_instance(self, id):
         """Look up Python instance by id."""
@@ -76,7 +149,7 @@ class Host:
         cls = self.get_class(name)
         try:
             instance = cls(*args, **kwargs)
-        except TypeError as e:
+        except Exception as e:
             raise PolarRuntimeError(f"Error constructing instance of {name}: {e}")
         return self.cache_instance(instance, id)
 
@@ -139,6 +212,25 @@ class Host:
                 f"External operation '{type(args[0])} {op} {type(args[1])}' failed."
             )
 
+    def enrich_message(self, message: str):
+        """
+        "Enrich" a message from the polar core, such as a log line, debug
+        message, or error trace.
+
+        Currently only used to enrich messages with instance reprs. This allows
+        us to avoid sending reprs eagerly when an instance is created in polar.
+        """
+
+        def replace_repr(match):
+            instance_id = int(match[1])
+            try:
+                instance = self.get_instance(instance_id)
+                return repr(instance)
+            except UnregisteredInstanceError:
+                return match[0]
+
+        return re.sub(r"\^\{id: ([0-9]+)\}", replace_repr, message, flags=re.M)
+
     def to_polar(self, v):
         """Convert a Python object to a Polar term."""
         if type(v) == bool:
@@ -190,10 +282,16 @@ class Host:
                     }
                 }
         else:
+            instance_id = None
+            import inspect
+
+            if inspect.isclass(v):
+                if v in self.types:
+                    instance_id = self.types[v].id
             val = {
                 "ExternalInstance": {
-                    "instance_id": self.cache_instance(v),
-                    "repr": repr(v),
+                    "instance_id": self.cache_instance(v, instance_id),
+                    "repr": None,
                 }
             }
         term = {"value": val}

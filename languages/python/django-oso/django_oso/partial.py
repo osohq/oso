@@ -64,6 +64,12 @@ class FilterBuilder:
         self.variables = {}
         self.parent = parent
 
+    def add_filter(self, filter):
+        if self.filter == TRUE_FILTER:
+            self.filter = filter
+        else:
+            self.filter &= filter
+
     def translate_path_to_field(self, path):
         if path[0] == self.name:
             path = "__".join(path[1:])
@@ -156,15 +162,15 @@ class FilterBuilder:
         if left_path and right_path:
             raise UnsupportedError(f"Unsupported partial expression: {expr}")
             # compare partials
-            # self.filter &= COMPARISONS[expr.operator](
+            # self.add_filter(COMPARISONS[expr.operator](
             #     left_field, self.translate_path_to_field(right_path)
-            # )
+            # ))
         else:
             # partial cmp grounded
             assert left_path
             if isinstance(right, Model):
                 right = right.pk
-            self.filter &= COMPARISONS[expr.operator](left_field, right)
+            self.add_filter(COMPARISONS[expr.operator](left_field, right))
 
     def in_expr(self, expr: Expression):
         assert expr.operator == "In"
@@ -177,7 +183,7 @@ class FilterBuilder:
                 # _this in _some_var.foo.bar
                 path = self.translate_path_to_field(right_path)
                 # path = "__".join(right_path[1:])
-                self.filter &= COMPARISONS["Unify"]("pk", path)
+                self.add_filter(COMPARISONS["Unify"]("pk", path))
             else:
                 # _this in _this
                 # _this in _some_var
@@ -222,14 +228,14 @@ class FilterBuilder:
                 raise UnsupportedError(f"Unsupported partial expression: {expr}")
         else:
             # <value> in <partial>
-            self.filter &= COMPARISONS["Unify"]("__".join(right_path[1:]), left)
+            self.add_filter(COMPARISONS["Unify"]("__".join(right_path[1:]), left))
 
     def not_expr(self, expr: Expression):
         assert expr.operator == "Not"
         assert expr.args[0].operator == "Isa"
         fb = FilterBuilder(self.model, parent=self.parent)
         fb.translate_expr(expr.args[0])
-        self.filter &= ~fb.finish()
+        self.add_filter(~fb.finish())
 
     def finish(self):
         """For every subquery, construct a filter to make sure the result set is non-empty"""
@@ -242,7 +248,7 @@ class FilterBuilder:
             name = f"{self.name}__exists"
             # https://docs.djangoproject.com/en/2.2/ref/models/expressions/#filtering-on-a-subquery-expression
             objects = objects.annotate(**{name: exists}).filter(**{name: True})
-        self.filter &= Q(pk__in=objects.values("pk"))
+        self.add_filter(Q(pk__in=objects.values("pk")))
         return self.filter
 
 

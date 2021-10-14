@@ -1,11 +1,25 @@
 import json
+from typing import Callable, List, Optional
+from dataclasses import dataclass
 
 from _polar_lib import ffi, lib
 
 from .errors import get_python_error
 
 
+@dataclass(frozen=True)
+class PolarSource:
+    src: str
+    filename: Optional[str] = None
+
+
 class Polar:
+    enrich_message: Callable
+    """
+    A method that can be called to enrich a debug, log, or error message from
+    the core.
+    """
+
     def __init__(self):
         self.ptr = lib.polar_new()
 
@@ -14,39 +28,53 @@ class Polar:
 
     def new_id(self):
         """Request a unique ID from the canonical external ID tracker."""
-        return check_result(lib.polar_get_external_id(self.ptr))
+        return self.check_result(lib.polar_get_external_id(self.ptr))
 
-    def load(self, string, filename=None):
-        """Load a Polar string, checking that all inline queries succeed."""
-        string = to_c_str(string)
-        filename = to_c_str(str(filename)) if filename else ffi.NULL
-        result = lib.polar_load(self.ptr, string, filename)
+    def build_filter_plan(self, types, partial_results, variable, class_tag):
+        """Get a filterplan for data filtering."""
+        # @TODO(Steve): Pass types.
+        typs = ffi_serialize(types)
+        prs = ffi_serialize(partial_results)
+        var = to_c_str(variable)
+        class_tag = to_c_str(class_tag)
+        plan = lib.polar_build_filter_plan(self.ptr, typs, prs, var, class_tag)
         process_messages(self.next_message)
-        check_result(result)
+        filter_plan_p = check_result(plan)
+        filter_plan_s = ffi.string(filter_plan_p).decode()
+        lib.string_free(filter_plan_p)
+        filter_plan = json.loads(filter_plan_s)
+        # @TODO(Steve): Decode Filter Plan to not just json?
+        return filter_plan
+
+    def load(self, sources: List[PolarSource]):
+        """Load Polar policies."""
+        result = lib.polar_load(self.ptr, ffi_serialize([s.__dict__ for s in sources]))
+        self.process_messages()
+        self.check_result(result)
 
     def clear_rules(self):
         """Clear all rules from the Polar KB"""
         result = lib.polar_clear_rules(self.ptr)
-        process_messages(self.next_message)
-        check_result(result)
+        self.process_messages()
+        self.check_result(result)
 
     def new_query_from_str(self, query_str):
         new_q_ptr = lib.polar_new_query(self.ptr, to_c_str(query_str), 0)
-        process_messages(self.next_message)
-        query = check_result(new_q_ptr)
+        self.process_messages()
+        query = self.check_result(new_q_ptr)
         return Query(query)
 
     def new_query_from_term(self, query_term):
         new_q_ptr = lib.polar_new_query_from_term(
             self.ptr, ffi_serialize(query_term), 0
         )
-        process_messages(self.next_message)
-        query = check_result(new_q_ptr)
+        self.process_messages()
+        query = self.check_result(new_q_ptr)
         return Query(query)
 
     def next_inline_query(self):
         q = lib.polar_next_inline_query(self.ptr, 0)
-        process_messages(self.next_message)
+        self.process_messages()
         if is_null(q):
             return None
         return Query(q)
@@ -55,14 +83,41 @@ class Polar:
         name = to_c_str(name)
         value = ffi_serialize(value)
         result = lib.polar_register_constant(self.ptr, name, value)
-        process_messages(self.next_message)
-        check_result(result)
+        self.process_messages()
+        self.check_result(result)
+
+    def register_mro(self, name, mro):
+        name = to_c_str(name)
+        mro = ffi_serialize(mro)
+        result = lib.polar_register_mro(self.ptr, name, mro)
+        self.process_messages()
+        self.check_result(result)
 
     def next_message(self):
         return lib.polar_next_polar_message(self.ptr)
 
+    def set_message_enricher(self, enrich_message):
+        self.enrich_message = enrich_message
+
+    def check_result(self, result):
+        return check_result(result, self.enrich_message)
+
+    def process_messages(self):
+        assert self.enrich_message, (
+            "No message enricher on this instance of FfiPolar. You must call "
+            "set_message_enricher before using process_messages."
+        )
+        for msg in process_messages(self.next_message):
+            print(self.enrich_message(msg))
+
 
 class Query:
+    enrich_message: Callable
+    """
+    A method that can be called to enrich a debug, log, or error message from
+    the core.
+    """
+
     def __init__(self, ptr):
         self.ptr = ptr
 
@@ -75,34 +130,34 @@ class Query:
             value = ffi.NULL
         else:
             value = ffi_serialize(value)
-        check_result(lib.polar_call_result(self.ptr, call_id, value))
+        self.check_result(lib.polar_call_result(self.ptr, call_id, value))
 
     def question_result(self, call_id, answer):
         answer = 1 if answer else 0
-        check_result(lib.polar_question_result(self.ptr, call_id, answer))
+        self.check_result(lib.polar_question_result(self.ptr, call_id, answer))
 
     def application_error(self, message):
         """Pass an error back to polar to get stack trace and other info."""
         message = to_c_str(message)
-        check_result(lib.polar_application_error(self.ptr, message))
+        self.check_result(lib.polar_application_error(self.ptr, message))
 
     def next_event(self):
         event = lib.polar_next_query_event(self.ptr)
-        process_messages(self.next_message)
-        event = check_result(event)
+        self.process_messages()
+        event = self.check_result(event)
         return QueryEvent(event)
 
     def debug_command(self, command):
         result = lib.polar_debug_command(self.ptr, ffi_serialize(command))
-        process_messages(self.next_message)
-        check_result(result)
+        self.process_messages()
+        self.check_result(result)
 
     def next_message(self):
         return lib.polar_next_query_message(self.ptr)
 
     def source(self):
         source = lib.polar_query_source_info(self.ptr)
-        source = check_result(source)
+        source = self.check_result(source)
         return Source(source)
 
     def bind(self, name, value):
@@ -110,8 +165,22 @@ class Query:
         value = ffi_serialize(value)
         result = lib.polar_bind(self.ptr, name, value)
         # TODO(gj): Do we need to process_messages here?
-        process_messages(self.next_message)
-        check_result(result)
+        self.process_messages()
+        self.check_result(result)
+
+    def set_message_enricher(self, enrich_message):
+        self.enrich_message = enrich_message
+
+    def check_result(self, result):
+        return check_result(result, self.enrich_message)
+
+    def process_messages(self):
+        assert self.enrich_message, (
+            "No message enricher on this instance of FfiQuery. You must call "
+            "set_message_enricher before using process_messages."
+        )
+        for msg in process_messages(self.next_message):
+            print(self.enrich_message(msg))
 
 
 class QueryEvent:
@@ -129,8 +198,8 @@ class Error:
     def __init__(self):
         self.ptr = lib.polar_get_error()
 
-    def get(self):
-        return get_python_error(ffi.string(self.ptr).decode())
+    def get(self, enrich_message=None):
+        return get_python_error(ffi.string(self.ptr).decode(), enrich_message)
 
     def __del__(self):
         lib.string_free(self.ptr)
@@ -147,9 +216,9 @@ class Source:
         lib.string_free(self.ptr)
 
 
-def check_result(result):
+def check_result(result, enrich_message=None):
     if result == 0 or is_null(result):
-        raise Error().get()
+        raise Error().get(enrich_message)
     return result
 
 
@@ -178,6 +247,6 @@ def process_messages(next_message_method):
         msg = message["msg"]
 
         if kind == "Print":
-            print(msg)
+            yield msg
         elif kind == "Warning":
-            print(f"[warning] {msg}")
+            yield f"[warning] {msg}"

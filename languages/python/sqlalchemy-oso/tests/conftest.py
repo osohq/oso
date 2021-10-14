@@ -98,14 +98,17 @@ def db_uri():
 
 @pytest.fixture
 def engine(db_uri):
-    engine = create_engine(db_uri)
+    try:  # SQLAlchemy 1.4
+        engine = create_engine(db_uri, enable_from_linting=False)
+    except TypeError:  # SQLAlchemy 1.3
+        engine = create_engine(db_uri)
     ModelBase.metadata.create_all(engine)
     return engine
 
 
 @pytest.fixture
 def session(engine):
-    return Session(bind=engine, enable_baked_queries=False)
+    return Session(bind=engine)
 
 
 @pytest.fixture

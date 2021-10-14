@@ -95,8 +95,7 @@ class DooDad(Widget):
 
 
 @dataclass
-@polar_class
-class Actor:
+class User:
     name: str = ""
     id: int = 0
     widget: Optional[Widget] = None
@@ -119,7 +118,7 @@ class Company:
     id: str = ""
     default_role: str = ""
 
-    def role(self, actor: Actor):
+    def role(self, actor: User):
         if actor.name == "president":
             return "admin"
         else:

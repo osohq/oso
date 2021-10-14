@@ -50,31 +50,31 @@ pub enum Token {
     String(String),
     Boolean(bool),
     Symbol(Symbol),
-    Colon, // :
-    Comma, // ,
-    LB,    // [
-    RB,    // ]
-    LP,    // (
-    RP,    // )
-    LCB,   // {
-    RCB,   // }
-    Dot,   // .
-    New,   // new
-    Bang,  // !
-    Mul,   // *
-    Div,   // /
-    Mod,   // mod
-    Rem,   // rem
-    Add,   // +
-    Sub,   // -
-    Eq,    // ==
-    Neq,   // !=
-    Leq,   // <=
-    Geq,   // >=
-    Lt,    // <
-    Gt,    // >
-    Unify, // =
-    Assign,
+    Colon,     // :
+    Comma,     // ,
+    LB,        // [
+    RB,        // ]
+    LP,        // (
+    RP,        // )
+    LCB,       // {
+    RCB,       // }
+    Dot,       // .
+    New,       // new
+    Bang,      // !
+    Mul,       // *
+    Div,       // /
+    Mod,       // mod
+    Rem,       // rem
+    Add,       // +
+    Sub,       // -
+    Eq,        // ==
+    Neq,       // !=
+    Leq,       // <=
+    Geq,       // >=
+    Lt,        // <
+    Gt,        // >
+    Unify,     // =
+    Assign,    // :=
     Pipe,      // |
     SemiColon, // ;
     Query,     // ?=
@@ -89,6 +89,7 @@ pub enum Token {
     Or,        // or
     Not,       // not
     Matches,   // matches
+    Type,      // type
 }
 
 impl ToString for Token {
@@ -138,6 +139,7 @@ impl ToString for Token {
             Token::Or => "or".to_owned(),           // or
             Token::Not => "not".to_owned(),         // not
             Token::Matches => "matches".to_owned(), // matches
+            Token::Type => "type".to_owned(),       // type
         }
     }
 }
@@ -213,45 +215,29 @@ impl<'input> Lexer<'input> {
             }
         }
 
-        if &self.buf == "true" {
-            Some(Ok((start, Token::Boolean(true), last + 1)))
-        } else if &self.buf == "false" {
-            Some(Ok((start, Token::Boolean(false), last + 1)))
-        } else if &self.buf == "inf" {
-            Some(Ok((start, Token::Float(f64::INFINITY), last + 1)))
-        } else if &self.buf == "nan" {
-            Some(Ok((start, Token::Float(f64::NAN), last + 1)))
-        } else if &self.buf == "new" {
-            Some(Ok((start, Token::New, last + 1)))
-        } else if &self.buf == "in" {
-            Some(Ok((start, Token::In, last + 1)))
-        } else if &self.buf == "cut" {
-            Some(Ok((start, Token::Cut, last + 1)))
-        } else if &self.buf == "debug" {
-            Some(Ok((start, Token::Debug, last + 1)))
-        } else if &self.buf == "print" {
-            Some(Ok((start, Token::Print, last + 1)))
-        } else if &self.buf == "isa" {
-            Some(Ok((start, Token::Isa, last + 1)))
-        } else if &self.buf == "forall" {
-            Some(Ok((start, Token::ForAll, last + 1)))
-        } else if &self.buf == "if" {
-            Some(Ok((start, Token::If, last + 1)))
-        } else if &self.buf == "and" {
-            Some(Ok((start, Token::And, last + 1)))
-        } else if &self.buf == "or" {
-            Some(Ok((start, Token::Or, last + 1)))
-        } else if &self.buf == "not" {
-            Some(Ok((start, Token::Not, last + 1)))
-        } else if &self.buf == "matches" {
-            Some(Ok((start, Token::Matches, last + 1)))
-        } else if &self.buf == "mod" {
-            Some(Ok((start, Token::Mod, last + 1)))
-        } else if &self.buf == "rem" {
-            Some(Ok((start, Token::Rem, last + 1)))
-        } else {
-            Some(Ok((start, Token::Symbol(Symbol::new(&self.buf)), last + 1)))
-        }
+        let token = match self.buf.as_ref() {
+            "true" => Token::Boolean(true),
+            "false" => Token::Boolean(false),
+            "inf" => Token::Float(f64::INFINITY),
+            "nan" => Token::Float(f64::NAN),
+            "new" => Token::New,
+            "in" => Token::In,
+            "cut" => Token::Cut,
+            "debug" => Token::Debug,
+            "print" => Token::Print,
+            "isa" => Token::Isa,
+            "forall" => Token::ForAll,
+            "if" => Token::If,
+            "and" => Token::And,
+            "or" => Token::Or,
+            "not" => Token::Not,
+            "matches" => Token::Matches,
+            "type" => Token::Type,
+            "mod" => Token::Mod,
+            "rem" => Token::Rem,
+            _ => Token::Symbol(Symbol::new(&self.buf)),
+        };
+        Some(Ok((start, token, last + 1)))
     }
 
     #[inline]
@@ -546,7 +532,7 @@ mod tests {
         let s = r#"
             "this is a \"sub\" string"
         "#;
-        let mut lexer = Lexer::new(&s);
+        let mut lexer = Lexer::new(s);
         let tok = lexer.next();
         assert!(
             matches!(tok, Some(Ok((_, Token::String(s), _))) if &s == r#"this is a "sub" string"#)
@@ -558,7 +544,7 @@ mod tests {
         let s = r#"
             "💯" 💯
         "#;
-        let mut lexer = Lexer::new(&s);
+        let mut lexer = Lexer::new(s);
         assert!(
             matches!(lexer.next(), Some(Ok((13, Token::String(hunnid), 19))) if hunnid == "💯")
         );
@@ -570,13 +556,13 @@ mod tests {
     #[test]
     fn test_symbol_with_trailing_question_mark() {
         let s = "foo?";
-        let mut lexer = Lexer::new(&s);
+        let mut lexer = Lexer::new(s);
         assert!(
             matches!(lexer.next(), Some(Ok((0, Token::Symbol(question), 4))) if question == Symbol::new("foo?"))
         );
 
         let s = "foo??";
-        let mut lexer = Lexer::new(&s);
+        let mut lexer = Lexer::new(s);
         lexer.next();
         assert!(matches!(
             lexer.next(),
@@ -591,7 +577,7 @@ mod tests {
     #[test]
     fn test_symbol_colons() {
         let s = "foo:bar";
-        let mut lexer = Lexer::new(&s);
+        let mut lexer = Lexer::new(s);
         assert!(
             matches!(lexer.next(), Some(Ok((0, Token::Symbol(x), 3))) if x == Symbol::new("foo"))
         );
@@ -602,14 +588,14 @@ mod tests {
         assert!(matches!(lexer.next(), None));
 
         let s = "foo::bar";
-        let mut lexer = Lexer::new(&s);
+        let mut lexer = Lexer::new(s);
         assert!(
             matches!(lexer.next(), Some(Ok((0, Token::Symbol(x), 8))) if x == Symbol::new("foo::bar"))
         );
         assert!(matches!(lexer.next(), None));
 
         let s = "foo:::bar";
-        let mut lexer = Lexer::new(&s);
+        let mut lexer = Lexer::new(s);
         assert!(matches!(
             lexer.next(),
             Some(Err(ParseError::InvalidTokenCharacter {
@@ -623,7 +609,7 @@ mod tests {
     #[test]
     fn test_symbol_question_marks() {
         let s = "foo??";
-        let mut lexer = Lexer::new(&s);
+        let mut lexer = Lexer::new(s);
         assert!(
             matches!(lexer.next(), Some(Ok((0, Token::Symbol(x), 4))) if x == Symbol::new("foo?"))
         );
@@ -642,7 +628,7 @@ mod tests {
     fn test_lexer() {
         let f = r#"hello "world" 12345 < + <= { ] =99 #comment
             more; in; Ruby::Namespace"#;
-        let mut lexer = Lexer::new(&f);
+        let mut lexer = Lexer::new(f);
         assert!(
             matches!(lexer.next(), Some(Ok((0, Token::Symbol(hello), 5))) if hello == Symbol::new("hello"))
         );
@@ -679,39 +665,39 @@ mod tests {
     #[allow(clippy::float_cmp)]
     fn test_numbers() {
         let f = "1+2";
-        let mut lexer = Lexer::new(&f);
+        let mut lexer = Lexer::new(f);
         assert!(matches!(lexer.next(), Some(Ok((0, Token::Integer(1), 1)))));
         assert!(matches!(lexer.next(), Some(Ok((1, Token::Add, 2)))));
         assert!(matches!(lexer.next(), Some(Ok((2, Token::Integer(2), 3)))));
 
         let f = "0123";
-        let mut lexer = Lexer::new(&f);
+        let mut lexer = Lexer::new(f);
         assert!(matches!(
             lexer.next(),
             Some(Ok((0, Token::Integer(123), 4)))
         ));
 
         let f = "1.ee1";
-        let mut lexer = Lexer::new(&f);
+        let mut lexer = Lexer::new(f);
         assert!(matches!(
             lexer.next(),
             Some(Err(ParseError::InvalidFloat { .. }))
         ));
 
         let f = "1.1";
-        let mut lexer = Lexer::new(&f);
+        let mut lexer = Lexer::new(f);
         assert!(matches!(lexer.next(), Some(Ok((_, Token::Float(f), _))) if f == 1.1));
 
         let f = "1e1";
-        let mut lexer = Lexer::new(&f);
+        let mut lexer = Lexer::new(f);
         assert!(matches!(lexer.next(), Some(Ok((_, Token::Float(f), _))) if f == 1e1));
 
         let f = "1e-1";
-        let mut lexer = Lexer::new(&f);
+        let mut lexer = Lexer::new(f);
         assert!(matches!(lexer.next(), Some(Ok((_, Token::Float(f), _))) if f == 1e-1));
 
         let f = "1.1e-1";
-        let mut lexer = Lexer::new(&f);
+        let mut lexer = Lexer::new(f);
         assert!(matches!(lexer.next(), Some(Ok((_, Token::Float(f), _))) if f == 1.1e-1));
     }
 }

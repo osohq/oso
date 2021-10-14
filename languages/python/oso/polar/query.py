@@ -7,6 +7,7 @@ from .exceptions import (
     InvalidConstructorError,
     PolarRuntimeError,
 )
+from .data_filtering import Relation, Filter
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 
@@ -25,6 +26,7 @@ class Query:
 
     def __init__(self, ffi_query, *, host=None, bindings=None):
         self.ffi_query = ffi_query
+        self.ffi_query.set_message_enricher(host.enrich_message)
         self.host = host
         self.calls = {}
         for (k, v) in (bindings or {}).items():
@@ -54,7 +56,6 @@ class Query:
                 "ExternalOp": self.handle_external_op,
                 "ExternalIsa": self.handle_external_isa,
                 "ExternalIsaWithPath": self.handle_external_isa_with_path,
-                "ExternalUnify": self.handle_external_unify,
                 "ExternalIsSubSpecializer": self.handle_external_is_subspecializer,
                 "ExternalIsSubclass": self.handle_external_is_subclass,
                 "NextExternal": self.handle_next_external,
@@ -94,7 +95,36 @@ class Query:
 
         # Lookup the attribute on the instance.
         try:
-            attr = getattr(instance, attribute)
+            # Check if it's a relationship
+            attr = None
+            cls = instance.__class__
+            if cls in self.host.types:
+                cls_rec = self.host.types[cls]
+                typ = cls_rec.fields
+                if attribute in typ:
+                    attr_typ = typ[attribute]
+                    if isinstance(attr_typ, Relation):
+                        rel = attr_typ
+                        # Use the fetcher for the other type to traverse the relationship
+                        build_query = self.host.types[rel.other_type].build_query
+                        exec_query = self.host.types[rel.other_type].exec_query
+                        assert build_query is not None
+                        assert exec_query is not None
+                        constraint = Filter(
+                            kind="Eq",
+                            field=rel.other_field,
+                            value=getattr(instance, rel.my_field),
+                        )
+                        constraints = [constraint]
+                        query = build_query(constraints)
+                        results = exec_query(query)
+                        if rel.kind == "one":
+                            assert len(results) == 1
+                            attr = results[0]
+                        elif rel.kind == "many":
+                            attr = results
+            if attr is None:
+                attr = getattr(instance, attribute)
         except AttributeError as e:
             self.ffi_query.application_error(str(e))
             self.ffi_query.call_result(call_id, None)
@@ -136,14 +166,10 @@ class Query:
             answer = self.host.isa_with_path(base_tag, path, class_tag)
             self.ffi_query.question_result(data["call_id"], answer)
         except AttributeError as e:
+            # TODO(gj): make sure we are printing but not failing on receipt of
+            # this error in core.
             self.ffi_query.application_error(str(e))
             self.ffi_query.question_result(data["call_id"], False)
-
-    def handle_external_unify(self, data):
-        left_instance_id = data["left_instance_id"]
-        right_instance_id = data["right_instance_id"]
-        answer = self.host.unify(left_instance_id, right_instance_id)
-        self.ffi_query.question_result(data["call_id"], answer)
 
     def handle_external_is_subspecializer(self, data):
         instance_id = data["instance_id"]
@@ -178,7 +204,7 @@ class Query:
 
     def handle_debug(self, data):
         if data["message"]:
-            print(data["message"])
+            print(self.host.enrich_message(data["message"]))
         try:
             command = input("debug> ").strip(";")
         except EOFError:

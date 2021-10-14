@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
+
 export class A {
   a() {
     return 'A';
@@ -8,11 +10,11 @@ export class A {
   }
 }
 
-export class Actor {
-  #name: string;
+export class BaseActor {
+  name: string;
 
   constructor(name: string) {
-    this.#name = name;
+    this.name = name;
   }
 
   widget(): Widget {
@@ -95,6 +97,32 @@ export class ConstructorArgs {
 
 export class ConstructorNoArgs {}
 
+export class ConstructorMapObjectArgs {
+  readonly one?: number;
+  readonly two: number;
+  readonly three?: number;
+  readonly four: number;
+
+  constructor(
+    oneMap: Map<'one', number>,
+    { two }: { two: number },
+    threeMap: Map<'three', number>,
+    { four }: { four: number }
+  ) {
+    this.one = oneMap.get('one');
+    this.two = two;
+    this.three = threeMap.get('three');
+    this.four = four;
+  }
+}
+
+export class ConstructorAnyArg {
+  readonly opts;
+  constructor(opts: unknown) {
+    this.opts = opts;
+  }
+}
+
 let counter = 0;
 
 export class Counter {
@@ -122,7 +150,7 @@ export class Foo {
     return 'c';
   }
 
-  d(x: any) {
+  d(x: unknown) {
     return x;
   }
 
@@ -174,7 +202,7 @@ export class X {
 }
 
 export class NonIterable {
-  constructor() {}
+  constructor() {} // eslint-disable-line @typescript-eslint/no-empty-function
 }
 
 export class BarIterator {

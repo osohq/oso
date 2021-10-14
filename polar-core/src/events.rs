@@ -80,13 +80,6 @@ pub enum QueryEvent {
         right_class_tag: Symbol,
     },
 
-    /// Unifies two external instances.
-    ExternalUnify {
-        call_id: u64,
-        left_instance_id: u64,
-        right_instance_id: u64,
-    },
-
     Result {
         bindings: Bindings,
         trace: Option<TraceResult>,
@@ -102,4 +95,17 @@ pub enum QueryEvent {
         call_id: u64,
         iterable: Term,
     },
+}
+
+// A struct for just Result Events. Used to pass data back into
+// the core for validation and data filtering.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ResultEvent {
+    pub bindings: Bindings,
+}
+
+impl ResultEvent {
+    pub fn new(bindings: Bindings) -> Self {
+        Self { bindings }
+    }
 }

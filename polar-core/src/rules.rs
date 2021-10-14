@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
 
+use crate::sources::SourceInfo;
+
 use super::terms::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -16,16 +18,133 @@ impl Parameter {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Rule {
     pub name: Symbol,
     pub params: Vec<Parameter>,
     pub body: Term,
+    #[serde(skip, default = "SourceInfo::ffi")]
+    pub source_info: SourceInfo,
+}
+
+impl PartialEq for Rule {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+            && self.params.len() == other.params.len()
+            && self.params == other.params
+            && self.body == other.body
+    }
 }
 
 impl Rule {
     pub fn is_ground(&self) -> bool {
         self.params.iter().all(|p| p.is_ground())
+    }
+
+    pub fn span(&self) -> Option<(usize, usize)> {
+        if let SourceInfo::Parser { left, right, .. } = self.source_info {
+            Some((left, right))
+        } else {
+            None
+        }
+    }
+
+    pub fn new_from_test(name: Symbol, params: Vec<Parameter>, body: Term) -> Self {
+        Self {
+            name,
+            params,
+            body,
+            source_info: SourceInfo::Test,
+        }
+    }
+
+    /// Creates a new term from the parser
+    pub fn new_from_parser(
+        src_id: u64,
+        left: usize,
+        right: usize,
+        name: Symbol,
+        params: Vec<Parameter>,
+        body: Term,
+    ) -> Self {
+        Self {
+            name,
+            params,
+            body,
+            source_info: SourceInfo::Parser {
+                src_id,
+                left,
+                right,
+            },
+        }
+    }
+}
+
+// TODO: should this be a Set of Rules? Do we currently check for duplicate rules?
+pub struct RuleTypes(HashMap<Symbol, Vec<Rule>>);
+
+impl Default for RuleTypes {
+    fn default() -> Self {
+        let mut rule_types = Self(HashMap::new());
+        rule_types.add_default_rule_types();
+        rule_types
+    }
+}
+
+impl RuleTypes {
+    fn add_default_rule_types(&mut self) {
+        // type has_permission(actor: Actor, permission: String, resource: Resource);
+        self.add(rule!("has_permission", ["actor"; instance!(sym!("Actor")), "_permission"; instance!(sym!("String")), "resource"; instance!(sym!("Resource"))]));
+        // type has_permission(actor: Actor, permission: String, resource: Actor);
+        self.add(rule!("has_permission", ["actor"; instance!(sym!("Actor")), "_permission"; instance!(sym!("String")), "resource"; instance!(sym!("Actor"))]));
+        // type has_role(actor: Actor, role: String, resource: Resource);
+        self.add(rule!("has_role", ["actor"; instance!(sym!("Actor")), "_role"; instance!(sym!("String")), "resource"; instance!(sym!("Resource"))]));
+        // type has_role(actor: Actor, role: String, resource: Actor);
+        self.add(rule!("has_role", ["actor"; instance!(sym!("Actor")), "_role"; instance!(sym!("String")), "resource"; instance!(sym!("Actor"))]));
+
+        // TODO: revisit this when working on extension guides. This rule currently lets users define any relation they would like, but we may want to restrict that a bit more.
+        // type has_relation(_subject: Resource, relation: String, _object: Resource);
+        self.add(rule!("has_relation", ["_subject"; instance!(sym!("Resource")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Resource"))]));
+        // type has_relation(_subject: Resource, relation: String, _object: Actor);
+        self.add(rule!("has_relation", ["_subject"; instance!(sym!("Resource")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Actor"))]));
+        // type has_relation(_subject: Actor, relation: String, _object: Actor);
+        self.add(rule!("has_relation", ["_subject"; instance!(sym!("Actor")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Actor"))]));
+        // type has_relation(_subject: Actor, relation: String, _object: Resource);
+        self.add(rule!("has_relation", ["_subject"; instance!(sym!("Actor")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Resource"))]));
+
+        // type allow(actor, action, resource);
+        self.add(rule!(
+            "allow",
+            [sym!("actor"), sym!("_action"), sym!("resource")]
+        ));
+        // type allow_field(actor, action, resource, field);
+        self.add(rule!(
+            "allow_field",
+            [
+                sym!("actor"),
+                sym!("action"),
+                sym!("resource"),
+                sym!("field")
+            ]
+        ));
+        // type allow_request(actor, request);"#;
+        self.add(rule!("allow_request", [sym!("actor"), sym!("request")]));
+    }
+
+    pub fn get(&self, name: &Symbol) -> Option<&Vec<Rule>> {
+        self.0.get(name)
+    }
+
+    pub fn add(&mut self, rule_type: Rule) {
+        let name = rule_type.name.clone();
+        // get rule types with this rule name
+        let rule_types = self.0.entry(name).or_insert_with(Vec::new);
+        rule_types.push(rule_type);
+    }
+
+    pub fn reset(&mut self) {
+        self.0.clear();
+        self.add_default_rule_types()
     }
 }
 
@@ -55,6 +174,13 @@ impl RuleIndex {
         } else {
             self.rules.insert(rule_id);
         }
+    }
+
+    pub fn remove_rule(&mut self, rule_id: u64) {
+        self.rules.remove(&rule_id);
+        self.index
+            .iter_mut()
+            .for_each(|(_, index)| index.remove_rule(rule_id));
     }
 
     #[allow(clippy::comparison_chain)]
@@ -97,7 +223,7 @@ impl RuleIndex {
 #[derive(Clone)]
 pub struct GenericRule {
     pub name: Symbol,
-    rules: HashMap<u64, Arc<Rule>>,
+    pub rules: HashMap<u64, Arc<Rule>>,
     index: RuleIndex,
     next_rule_id: u64,
 }
@@ -128,10 +254,15 @@ impl GenericRule {
         self.index.index_rule(rule_id, &rule.params[..], 0);
     }
 
+    pub fn remove_rule(&mut self, rule_id: u64) {
+        self.rules.remove(&rule_id);
+        self.index.remove_rule(rule_id);
+    }
+
     #[allow(clippy::ptr_arg)]
     pub fn get_applicable_rules(&self, args: &TermList) -> Rules {
         self.index
-            .get_applicable_rules(&args, 0)
+            .get_applicable_rules(args, 0)
             .iter()
             .map(|id| self.rules.get(id).expect("Rule missing"))
             .cloned()
@@ -155,14 +286,20 @@ mod tests {
     #[test]
     fn test_rule_index() {
         let polar = Polar::new();
-        polar.load_str(r#"f(1, 1, "x");"#).unwrap();
-        polar.load_str(r#"f(1, 1, "y");"#).unwrap();
-        polar.load_str(r#"f(1, x, "y") if x = 2;"#).unwrap();
-        polar.load_str(r#"f(1, 2, {b: "y"});"#).unwrap();
-        polar.load_str(r#"f(1, 3, {c: "z"});"#).unwrap();
+        polar
+            .load_str(
+                r#"
+            f(1, 1, "x");
+            f(1, 1, "y");
+            f(1, x, "y") if x = 2;
+            f(1, 2, {b: "y"});
+            f(1, 3, {c: "z"});
+        "#,
+            )
+            .unwrap();
 
         let kb = polar.kb.read().unwrap();
-        let generic_rule = kb.rules.get(&sym!("f")).unwrap();
+        let generic_rule = kb.get_generic_rule(&sym!("f")).unwrap();
         let index = &generic_rule.index;
         assert!(index.rules.is_empty());
 

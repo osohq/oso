@@ -1,0 +1,4 @@
+!.vscode
+client/out
+# TODO(gj): remove when we move server from TS -> Rust.
+server/out

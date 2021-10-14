@@ -7,6 +7,8 @@ module Oso
     module FFI
       # Wrapper class for Query FFI pointer + operations.
       class Query < ::FFI::AutoPointer
+        attr_accessor :enrich_message
+
         Rust = Module.new do
           extend ::FFI::Library
           ffi_lib FFI::LIB_PATH
@@ -19,6 +21,7 @@ module Oso
           attach_function :next_message, :polar_next_query_message, [FFI::Query], FFI::Message
           attach_function :source, :polar_query_source_info, [FFI::Query], FFI::Source
           attach_function :free, :query_free, [FFI::Query], :int32
+          attach_function :bind, :polar_bind, [FFI::Query, :string, :string], :int32
         end
         private_constant :Rust
 
@@ -27,7 +30,7 @@ module Oso
         def debug_command(cmd)
           res = Rust.debug_command(self, cmd)
           process_messages
-          raise FFI::Error.get if res.zero?
+          handle_error if res.zero?
         end
 
         # @param result [String]
@@ -35,7 +38,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def call_result(result, call_id:)
           res = Rust.call_result(self, call_id, result)
-          raise FFI::Error.get if res.zero?
+          handle_error if res.zero?
         end
 
         # @param result [Boolean]
@@ -44,15 +47,14 @@ module Oso
         def question_result(result, call_id:)
           result = result ? 1 : 0
           res = Rust.question_result(self, call_id, result)
-          raise FFI::Error.get if res.zero?
+          handle_error if res.zero?
         end
 
-        # @param result [Boolean]
-        # @param call_id [Integer]
+        # @param message [String]
         # @raise [FFI::Error] if the FFI call returns an error.
         def application_error(message)
           res = Rust.application_error(self, message)
-          raise FFI::Error.get if res.zero?
+          handle_error if res.zero?
         end
 
         # @return [::Oso::Polar::QueryEvent]
@@ -60,9 +62,14 @@ module Oso
         def next_event
           event = Rust.next_event(self)
           process_messages
-          raise FFI::Error.get if event.null?
+          handle_error if event.null?
 
           ::Oso::Polar::QueryEvent.new(JSON.parse(event.to_s))
+        end
+
+        def bind(name, value)
+          res = Rust.bind(self, name, JSON.dump(value))
+          handle_error if res.zero?
         end
 
         def next_message
@@ -74,7 +81,7 @@ module Oso
             message = next_message
             break if message.null?
 
-            message.process
+            message.process(enrich_message)
           end
         end
 
@@ -82,9 +89,13 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def source
           res = Rust.source(self)
-          raise FFI::Error.get if res.null?
+          handle_error if res.null?
 
           res.to_s
+        end
+
+        def handle_error
+          raise FFI::Error.get(enrich_message)
         end
       end
     end

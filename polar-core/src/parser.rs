@@ -15,13 +15,16 @@ lalrpop_mod!(
 
 use super::error::{self, PolarResult};
 use super::lexer::{self, Lexer};
+use super::resource_block::ResourceBlock;
 use super::rules::*;
 use super::terms::*;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Line {
     Rule(Rule),
+    RuleType(Rule),
     Query(Term),
+    ResourceBlock(ResourceBlock),
 }
 
 fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> error::ParseError {
@@ -63,7 +66,7 @@ pub fn parse_lines(src_id: u64, src: &str) -> PolarResult<Vec<Line>> {
 }
 
 pub fn parse_query(src_id: u64, src: &str) -> PolarResult<Term> {
-    polar::TermExpParser::new()
+    polar::TermParser::new()
         .parse(src_id, Lexer::new(src))
         .map_err(|e| to_parse_error(e).into())
 }
@@ -124,11 +127,7 @@ mod tests {
         let l = parse_term(r#"[foo, bar, baz]"#);
         assert_eq!(l, term!([sym!("foo"), sym!("bar"), sym!("baz")]));
 
-        let exp = parse_term(r#"foo(a, b(c), "d")"#);
-        assert_eq!(
-            exp,
-            term!(call!("foo", [sym!("a"), call!("b", [sym!("c")]), "d"]))
-        );
+        parse_rules(0, r#"bar(a, c) if foo(a, b(c), "d")"#).expect_err("parse error");
 
         let exp2 = parse_term(r#"foo.a(b)"#);
         assert_eq!(
@@ -136,31 +135,6 @@ mod tests {
             term!(op!(Dot, term!(sym!("foo")), term!(call!("a", [sym!("b")])))),
             "{}",
             exp2.to_polar()
-        );
-
-        let exp3 = parse_term(r#"foo.bar(a, b(c.d(e,[f,g])))"#);
-        assert_eq!(
-            exp3,
-            term!(op!(
-                Dot,
-                term!(sym!("foo")),
-                term!(call!(
-                    "bar",
-                    [
-                        sym!("a"),
-                        call!(
-                            "b",
-                            [op!(
-                                Dot,
-                                term!(sym!("c")),
-                                term!(call!("d", [sym!("e"), value!([sym!("f"), sym!("g")])]))
-                            )]
-                        )
-                    ]
-                ))
-            )),
-            "{}",
-            exp3.to_polar()
         );
         let rule = parse_rule(r#"f(x) if g(x);"#);
         assert_eq!(rule, rule!("f", [sym!("x")] => call!("g", [sym!("x")])));
@@ -231,15 +205,28 @@ mod tests {
     #[test]
     fn test_parse_line() {
         let kb = r#"f(x) if x = 1;"#;
-        let line = parse_lines(&kb);
+        let line = parse_lines(kb);
         assert_eq!(
             line[0],
             Line::Rule(rule!("f", [sym!("x")] => op!(Unify, term!(sym!("x")), term!(1))))
         );
         let f = r#"?= f(1);"#;
-        let line = parse_lines(&f);
+        let line = parse_lines(f);
 
         assert_eq!(line[0], Line::Query(term!(call!("f", [1]))));
+
+        let rule_type = r#"type f(x: String);"#;
+        let line = parse_lines(rule_type);
+        assert_eq!(
+            line[0],
+            Line::RuleType(rule!("f", ["x"; value!(instance!("String"))]))
+        );
+    }
+
+    #[test]
+    fn test_rule_type_error() {
+        let rule_type = r#"type f(x: String) if x = "bad";"#;
+        super::parse_lines(0, rule_type).expect_err("parse error");
     }
 
     #[test]
@@ -288,8 +275,9 @@ mod tests {
     #[test]
     fn test_parse_matches() {
         let term = parse_query("{} matches {}");
-        assert_eq!(term.to_polar(), r#"{} matches {}"#);
-        let _term = parse_query("{x: 1} matches {}");
+        assert_eq!(term.to_polar(), "{} matches {}");
+        let term = parse_query("{x: 1} matches {}");
+        assert_eq!(term.to_polar(), "{x: 1} matches {}");
     }
 
     #[test]
@@ -375,5 +363,33 @@ mod tests {
                 }
             ));
         }
+    }
+
+    #[test]
+    fn trailing_commas() {
+        let q = r#"{a: 1,}"#;
+        let dict = term!(btreemap! { sym!("a") => term!(1)});
+        assert_eq!(parse_term(q), dict);
+
+        let q = r#"[1, 2,]"#;
+        let list = term!([1, 2]);
+        assert_eq!(parse_term(q), list);
+
+        assert_eq!(
+            parse_query(r#"{a: 1,} = [1, 2,]"#),
+            term!(op!(Unify, dict, list))
+        );
+    }
+
+    #[test]
+    fn duplicate_keys() {
+        let q = r#"{a: 1, a: 2}"#;
+        assert!(matches!(
+            super::parse_query(0, q).expect_err("parse error"),
+            error::PolarError {
+                kind: error::ErrorKind::Parse(error::ParseError::DuplicateKey { .. }),
+                ..
+            }
+        ));
     }
 }

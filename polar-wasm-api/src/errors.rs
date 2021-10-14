@@ -2,16 +2,12 @@ use wasm_bindgen::JsValue;
 
 use polar_core::error::{
     ErrorKind, FormattedPolarError, OperationalError, ParameterError, ParseError, PolarError,
-    RuntimeError,
+    RuntimeError, ValidationError,
 };
 
 pub struct Error {
     pub kind: String,
     inner: FormattedPolarError,
-}
-
-pub fn serde_serialization_error(e: serde_json::Error) -> JsValue {
-    serialization_error(e.to_string())
 }
 
 pub fn serialization_error(msg: String) -> JsValue {
@@ -23,6 +19,7 @@ fn kind(err: &PolarError) -> String {
     use OperationalError::*;
     use ParseError::*;
     use RuntimeError::*;
+    use ValidationError::*;
     match err.kind {
         Parse(IntegerOverflow { .. }) => "ParseError::IntegerOverflow",
         Parse(InvalidTokenCharacter { .. }) => "ParseError::InvalidTokenCharacter",
@@ -33,6 +30,9 @@ fn kind(err: &PolarError) -> String {
         Parse(ReservedWord { .. }) => "ParseError::ReservedWord",
         Parse(InvalidFloat { .. }) => "ParseError::InvalidFloat",
         Parse(WrongValueType { .. }) => "ParseError::WrongValueType",
+        Parse(DuplicateKey { .. }) => "ParseError::DuplicateKey",
+        Parse(SingletonVariable { .. }) => "ParseError::SingletonVariable",
+        Parse(ResourceBlock { .. }) => "ParseError::ResourceBlock",
         Runtime(Application { .. }) => "RuntimeError::Application",
         Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
         Runtime(FileLoading { .. }) => "RuntimeError::FileLoading",
@@ -43,10 +43,13 @@ fn kind(err: &PolarError) -> String {
         Runtime(TypeError { .. }) => "RuntimeError::TypeError",
         Runtime(UnboundVariable { .. }) => "RuntimeError::UnboundVariable",
         Runtime(Unsupported { .. }) => "RuntimeError::Unsupported",
-        Operational(Unimplemented(..)) => "OperationalError::Unimplemented",
+        Operational(Unimplemented { .. }) => "OperationalError::Unimplemented",
         Operational(Unknown) => "OperationalError::Unknown",
-        Operational(InvalidState(..)) => "OperationalError::InvalidState",
+        Operational(InvalidState { .. }) => "OperationalError::InvalidState",
         Parameter(ParameterError(..)) => "ParameterError::ParameterError",
+        Validation(InvalidRule { .. }) => "ValidationError::InvalidRule",
+        Validation(InvalidRuleType { .. }) => "ValidationError::InvalidRuleType",
+        Validation(UndefinedRule { .. }) => "ValidationError::UndefinedRule",
     }
     .to_owned()
 }

@@ -67,10 +67,10 @@ jobs:
         run: make typecheck | grep '0 problems found in 0 of'
 
       ## Check Node.js
-      - name: Use Node.js 10.14.2
+      - name: Use Node.js 12
         uses: actions/setup-node@v1
         with:
-          node-version: 10.14.2
+          node-version: "12"
       - name: Check formatting of JS library
         working-directory: "languages/js"
         run: make fmtcheck
@@ -78,9 +78,9 @@ jobs:
         run: rustup target add wasm32-unknown-unknown
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      - name: Typecheck JS library
+      - name: Lint JS library
         working-directory: "languages/js"
-        run: make typecheck
+        run: make lint
 
       ## Check Java
       - name: Install Java
@@ -92,6 +92,12 @@ jobs:
         with:
           skipCommit: true
           args: "--dry-run --set-exit-if-changed"
+          files: languages/java/**/*.java
+
+      ## Check Go
+      - name: Check formatting of Go library
+        working-directory: "languages/go"
+        run: make lint
 
   build:
     runs-on: ubuntu-latest
@@ -103,7 +109,10 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+            ${{ runner.os }}-cargo-test-
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -115,7 +124,6 @@ jobs:
         run: cargo build -p polar-c-api
       - name: Build Polar WASM library
         run: cargo build -p polar-wasm-api
-
   # tests all core polar code and the rust language integration
   rust_test:
     runs-on: ubuntu-latest
@@ -128,7 +136,10 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+            ${{ runner.os }}-cargo-test-
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -150,7 +161,10 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+            ${{ runner.os }}-cargo-test-
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -184,7 +198,10 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+            ${{ runner.os }}-cargo-test-
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -212,7 +229,10 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+            ${{ runner.os }}-cargo-test-
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -223,7 +243,7 @@ jobs:
       - name: Install Java
         uses: actions/setup-java@v1
         with:
-          java-version: "11"
+          java-version: "10"
       - name: Test java
         run: make java-test
         env:
@@ -240,7 +260,10 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+            ${{ runner.os }}-cargo-test-
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -248,10 +271,10 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt, clippy
-      - name: Use Node.js 10.14.2
+      - name: Use Node.js 12
         uses: actions/setup-node@v1
         with:
-          node-version: 10.14.2
+          node-version: "12"
       - name: Add WebAssembly target
         run: rustup target add wasm32-unknown-unknown
       - name: Install wasm-pack
@@ -270,7 +293,10 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+            ${{ runner.os }}-cargo-test-
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -278,6 +304,10 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt, clippy
+      - name: Use Go 1.12
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.12"
       - name: Test go
         run: make go-test
 
@@ -292,7 +322,10 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+            ${{ runner.os }}-cargo-test-
 
       - name: Install Python 3.6
         uses: actions/setup-python@v1
@@ -302,7 +335,7 @@ jobs:
       - name: install aspell
         run: sudo apt-get install aspell
       - name: Check spelling
-        run: make -C new-docs spelling
+        run: make -C docs spelling
 
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
@@ -314,17 +347,16 @@ jobs:
       - name: Install Ruby + gems
         uses: ruby/setup-ruby@v1
         with:
-          bundler-cache: true
           ruby-version: 2.4
-          working-directory: "languages/ruby"
-      - name: Use Node.js 10.14.2
+          bundler-cache: true
+      - name: Use Node.js 12
         uses: actions/setup-node@v1
         with:
-          node-version: 10.14.2
+          node-version: "12"
       - name: Install Java
         uses: actions/setup-java@v1
         with:
-          java-version: "11"
+          java-version: "10"
       - name: Build python lib
         run: make python-build
       - name: Python test deps
@@ -337,4 +369,6 @@ jobs:
       - name: Install yard (for doc build)
         run: gem install yard
       - name: Doc test
-        run: make -C new-docs test
+        env:
+          MVN_FLAGS: "-q"
+        run: make -C docs test

@@ -1,0 +1,145 @@
+baseURL = "https://docs.osohq.com/"
+languageCode = "en-us"
+title = "Oso Documentation"
+theme = ["oso-tailwind", "oso-webpack"]
+uglyurls = true
+
+defaultContentLanguage = "python"
+
+# used for Twitter card etc
+[params]
+  description = "Explore our guides and reference articles for learning Oso and adding it to your application."
+  images = ["oso-2020-white-on-black-rounded.png"]
+  osoMarketingSiteURL = "https://www.osohq.com"
+
+[languages]
+  [languages.any]
+    weight = -1
+    contentDir = "content/any"
+    languageName = "Any"
+
+  [languages.node]
+    languageName = "Node.js"
+    contentDir = "content/node"
+    weight = 1
+    [languages.node.params]
+      icon = "node-js"
+
+  [languages.python]
+    languageName = "Python"
+    contentDir = "content/python"
+    weight = 2
+    [languages.python.params]
+      icon = "python"
+
+  [languages.go]
+    languageName = "Go"
+    contentDir = "content/go"
+    weight = 3
+    [languages.go.params]
+      icon = "go"
+
+  [languages.ruby]
+    languageName = "Ruby"
+    contentDir = "content/ruby"
+    weight = 4
+    [languages.ruby.params]
+      icon = "gem"
+
+  [languages.rust]
+    languageName = "Rust"
+    contentDir = "content/rust"
+    weight = 5
+    [languages.rust.params]
+      icon = "rust"
+
+  [languages.java]
+    languageName = "Java"
+    contentDir = "content/java"
+    weight = 6
+    [languages.java.params]
+      icon = "java"
+
+[module]
+  [[module.mounts]]
+    source = "content/any"
+    target = "content"
+    lang = "any"
+
+  [[module.mounts]]
+    source = "content/any"
+    target = "content"
+    lang = "java"
+  [[module.mounts]]
+    source = "content/java"
+    target = "content"
+    lang = "java"
+
+  [[module.mounts]]
+    source = "content/any"
+    target = "content"
+    lang = "node"
+  [[module.mounts]]
+    source = "content/node"
+    target = "content"
+    lang = "node"
+
+  [[module.mounts]]
+    source = "content/any"
+    target = "content"
+    lang = "python"
+  [[module.mounts]]
+    source = "content/python"
+    target = "content"
+    lang = "python"
+
+  [[module.mounts]]
+    source = "content/any"
+    target = "content"
+    lang = "ruby"
+  [[module.mounts]]
+    source = "content/ruby"
+    target = "content"
+    lang = "ruby"
+
+  [[module.mounts]]
+    source = "content/any"
+    target = "content"
+    lang = "rust"
+  [[module.mounts]]
+    source = "content/rust"
+    target = "content"
+    lang = "rust"
+
+  [[module.mounts]]
+    source = "content/any"
+    target = "content"
+    lang = "go"
+  [[module.mounts]]
+    source = "content/go"
+    target = "content"
+    lang = "go"
+
+[build]
+  writeStats = true
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.extensions]
+      strikethrough = true
+      table = true
+    [markup.goldmark.renderer]
+      unsafe = true
+
+[outputFormats]
+   [outputFormats.SearchIndex]
+     baseName = "search"
+     mediaType = "application/json"
+     isPlainText = true
+     notAlternative = true
+ [outputs]
+   home = ["HTML", "RSS", "SearchIndex"]
+
+[params.algolia]
+vars = ["title", "summary", "date", "publishdate", "expirydate", "permalink"]
+params = ["categories", "tags"]

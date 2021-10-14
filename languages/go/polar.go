@@ -79,24 +79,45 @@ func (p Polar) checkInlineQueries() error {
 	}
 }
 
-func (p Polar) loadFile(f string) error {
-	if filepath.Ext(f) != ".polar" {
-		return errors.NewPolarFileExtensionError(f)
+func (p Polar) loadFiles(filenames []string) error {
+	if len(filenames) == 0 {
+		return nil
 	}
 
-	data, err := ioutil.ReadFile(f)
-	if err != nil {
-		return err
+	sources := []Source{}
+
+	for _, filename := range filenames {
+		// NOTE(gj): Initializing an iteration-local variable so that when we
+		// construct a `Source` below we're passing a pointer to the filename as of
+		// *this* iteration instead of a pointer to the `filename` loop variable
+		// that's updated on each subsequent iteration.
+		localFilename := filename
+
+		if filepath.Ext(filename) != ".polar" {
+			return errors.NewPolarFileExtensionError(filename)
+		}
+
+		data, err := ioutil.ReadFile(filename)
+		if err != nil {
+			return err
+		}
+		sources = append(sources, Source{Src: string(data), Filename: &localFilename})
 	}
-	err = p.ffiPolar.Load(string(data), &f)
-	if err != nil {
-		return err
-	}
-	return p.checkInlineQueries()
+
+	return p.loadSources(sources)
 }
 
-func (p Polar) loadString(s string) error {
-	err := p.ffiPolar.Load(s, nil)
+func (p Polar) loadString(str string) error {
+	return p.loadSources([]Source{{Src: str, Filename: nil}})
+}
+
+// Register MROs, load Polar code, and check inline queries.
+func (p Polar) loadSources(sources []Source) error {
+	err := p.host.RegisterMros()
+	if err != nil {
+		return err
+	}
+	err = p.ffiPolar.Load(sources)
 	if err != nil {
 		return err
 	}
@@ -183,9 +204,11 @@ func (p Polar) repl(files ...string) error {
 }
 
 /*
-Register a class with Polar. Accepts the class, a constructor function (or nil), and a name (or nil)
+Register a Go type with Polar so that it can be referenced within Polar files.
+Accepts a concrete value of the Go type, a constructor function (or nil), and a
+name (or nil).
 */
-func (p Polar) registerClass(cls reflect.Type, ctor interface{}, name *string) error {
+func (p Polar) registerClass(cls interface{}, ctor interface{}, name *string) error {
 	// Get constructor
 	constructor := reflect.ValueOf(nil)
 	if ctor != nil {
@@ -195,19 +218,28 @@ func (p Polar) registerClass(cls reflect.Type, ctor interface{}, name *string) e
 		}
 	}
 
+	// get real type
+	var realType reflect.Type
+	switch c := cls.(type) {
+	case reflect.Type:
+		realType = c
+	default:
+		realType = reflect.TypeOf(cls)
+	}
+
 	// Get class name
 	var className string
 	if name == nil {
-		className = cls.Name()
+		className = realType.Name()
 	} else {
 		className = *name
 	}
 
-	err := p.host.CacheClass(cls, className, constructor)
+	err := p.host.CacheClass(realType, className, constructor)
 	if err != nil {
 		return err
 	}
-	newVal := reflect.New(cls)
+	newVal := reflect.New(realType)
 	return p.registerConstant(newVal.Interface(), className)
 }
 

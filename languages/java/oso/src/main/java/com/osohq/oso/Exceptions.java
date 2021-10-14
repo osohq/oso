@@ -5,6 +5,13 @@ import org.json.*;
 
 @SuppressWarnings("serial")
 public class Exceptions {
+  public static final String UNEXPECTED_EXPRESSION_MESSAGE =
+      "Received Expression from Polar VM. The Expression type is only supported when\n"
+          + "using data filtering features. Did you perform an "
+          + "operation over an unbound variable in your policy?\n\n"
+          + "To silence this error and receive an Expression result, pass\n"
+          + "acceptExpression as true to Oso.query.";
+
   public static OsoException getJavaError(String polarError) {
     String msg, kind, subkind;
     JSONObject jError, body;
@@ -33,6 +40,8 @@ public class Exceptions {
         return operationalError(subkind, msg, details);
       case "Parameter":
         return apiError(subkind, msg, details);
+      case "Validation":
+        return validationError(subkind, msg, details);
       default:
         return new OsoException(msg, details);
     }
@@ -92,6 +101,11 @@ public class Exceptions {
     }
   }
 
+  private static ValidationError validationError(
+      String kind, String msg, Map<String, Object> details) {
+    return new ValidationError(msg, details);
+  }
+
   public static class OsoException extends RuntimeException {
     private Map<String, Object> details;
 
@@ -106,6 +120,30 @@ public class Exceptions {
 
     public Map<String, Object> getDetails() {
       return details;
+    }
+  }
+
+  public static class AuthorizationException extends OsoException {
+    public AuthorizationException(String msg) {
+      super(msg);
+    }
+  }
+
+  public static class ForbiddenException extends AuthorizationException {
+    public ForbiddenException() {
+      super(
+          "Oso ForbiddenException -- The requested action was not allowed for the "
+              + "given resource. You should handle this error by returning a 403 error "
+              + "to the client.");
+    }
+  }
+
+  public static class NotFoundException extends AuthorizationException {
+    public NotFoundException() {
+      super(
+          "Oso NotFoundException -- The current user does not have permission to "
+              + "read the given resource. You should handle this error by returning a "
+              + "404 error to the client.");
     }
   }
 
@@ -353,6 +391,13 @@ public class Exceptions {
 
   public static class ParameterError extends ApiError {
     public ParameterError(String msg, Map<String, Object> details) {
+      super(msg, details);
+    }
+  }
+
+  /** Generic Polar Validation exception. */
+  public static class ValidationError extends OsoException {
+    public ValidationError(String msg, Map<String, Object> details) {
       super(msg, details);
     }
   }

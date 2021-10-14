@@ -136,6 +136,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# direnv
+.envrc
+
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -191,3 +194,7 @@ languages/python/oso/native/polar.lib
 languages/python/oso/native/polar.h
 
 polar-wasm-api/pkg/*
+
+# Algolia tool
+docs/searcher
+docs/search/vendor/*

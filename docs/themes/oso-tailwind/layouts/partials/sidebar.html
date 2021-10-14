@@ -1,0 +1,125 @@
+{{/* For small devices: show a menu button instead */}}
+<button id="sidebar-toggle"
+    class="block lg:hidden justify-between flex w-full px-3 py-3 border rounded border-grey-dark  appearance-none focus:outline-none">
+    <p>
+        Menu
+    </p>
+    <svg class="fill-current h-3 float-right" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+    </svg>
+</button>
+<div id="sidebar-content"
+    class="fixed z-40 inset-0 flex-none h-full bg-primary-dark bg-opacity-25 w-full lg:bg-white lg:static lg:h-auto lg:overflow-y-visible lg:pt-0 lg:w-72 hidden lg:block">
+    <aside id="nav-wrapper"
+        class="h-full overflow-y-auto  overscroll-y-contain scrolling-touch lg:h-auto lg:block lg:relative lg:sticky lg:bg-transparent overflow-hidden lg:top-20 bg-white w-3/4 lg:w-full">
+        <nav id="sidebar-inner"
+            class="overflow-y-auto overscroll-y-contain font-medium text-base sm:px-3 xl:px-5 lg:text-sm pb-10 pt-5 lg:pt-6 lg:pb-14 sticky?lg:h-(screen-20)">
+            <div
+                class="h-full overflow-y-auto scrolling-touch lg:h-auto lg:block lg:relative lg:sticky lg:bg-transparent overflow-hidden bg-white mr-1 lg:mr-0 sticky?lg:h-(screen-20)">
+                <div class="search-button-div">
+                    <button class="search-button" onclick="searchButtonClick(event)">
+                        <div class="search-inner-button">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="search-icon">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            <span class="search-text">Search</span>
+                        </div>
+                        <div class="command-k">Ctrl-K</div>
+                    </button>
+                </div>
+                {{ $currentNode := . }}
+                <ul>
+                    <li class="pl-2 font-bold text-black"><a href="">
+                        <a class="flex items-center px-3" href="{{ $.Site.BaseURL }}index.html">
+                            Home
+                        </a>
+                    </li>
+                    {{ template "tree-nav" dict "sect" (.GetPage "/introduction") "currentNode" $currentNode "level" 0}}
+                    {{ range .Site.Home.Sections.ByWeight }}
+                    {{ template "tree-nav" dict "sect" . "currentNode" $currentNode "level" 0 "alwaysShow" 0 }}
+                    {{ end }}
+                </ul>
+            </div>
+        </nav>
+    </aside>
+</div>
+
+<!-- templates -->
+{{ define "tree-nav" }}
+{{ $currentNode := .currentNode }}
+{{ $currentFileUniqueID := "" }}
+{{ $level := .level }}
+{{ $alwaysShow := .alwaysShow }}
+{{ with $currentNode.File }}{{ $currentFileUniqueID = .UniqueID }}{{ end }}
+{{ with $currentNode.File }}{{ $currentFileUniqueID = .UniqueID }}{{ end }}
+{{with .sect}}
+{{if .IsSection }}
+{{ $isCurrent := .InSection $currentNode }}
+<li data-nav-id="{{.RelPermalink}}" title="{{.Title}}" class="
+    pl-2
+    {{ if or (lt $level 2) ($currentNode.InSection .Parent) $isCurrent  }}
+    {{ else }}
+    hidden
+    {{ end }}
+    {{ if eq $level 0 }}font-bold py-2{{else}}font-normal{{end}}
+    {{ if $isCurrent}}active text-primary{{else}} text-black{{ end }}
+">
+    {{ if isset .Params "href" }}
+    <li data-nav-id="{{.Params.href}}" title="{{.Title}}" class="font-normal text-black pl-2">
+        <a class="font-bold flex items-center px-3 transition-colors duration-200 mb-2" href="{{ .Params.href }}">
+            {{or .Params.menuTitle .LinkTitle .Title}}
+        </a>
+    </li>
+    {{ else }}
+    <a class="flex items-center px-3 hover:text-gray-900 transition-colors duration-200 mb-2" href="{{.RelPermalink}}">
+        {{or .Params.menuTitle .LinkTitle .Title}}
+    </a>
+    {{ $numberOfPages := (add (len .Pages) (len .Sections)) }}
+    {{ if ne $numberOfPages 0 }}
+    {{ if or (not (isset .Params "no_nav")) (eq $alwaysShow 1)}}
+    <ul>
+        {{ $currentNode.Scratch.Set "pages" .Pages }}
+        {{ if .Sections}}
+        {{ $currentNode.Scratch.Set "pages" (.Pages | union .Sections) }}
+        {{end}}
+        {{ $pages := ($currentNode.Scratch.Get "pages").ByWeight }}
+        {{ if .Params.reverse }}
+        {{ $pages = $pages.Reverse }}
+        {{ end }}
+        {{ range $pages }}
+        {{ $templateParams := dict "sect" . "currentNode" $currentNode "active" $isCurrent "level" (add $level 1) }}
+        {{ template "tree-nav" $templateParams }}
+        {{ end }}
+    </ul>
+    {{ end }}
+    {{end}}
+    {{ end }}
+</li>
+{{ else if isset .Params "href" }}
+<li data-nav-id="{{.Params.href}}" title="{{.Title}}" class="font-normal text-black pl-2">
+    <a class=" flex items-center px-3 transition-colors duration-200 mb-2" href="{{ .Params.href }}">
+        {{or .Params.menuTitle .LinkTitle .Title}}
+    </a>
+</li>
+{{ else }}
+{{ $isCurrent := eq .File.UniqueID $currentFileUniqueID }}
+<li data-nav-id="{{.RelPermalink}}" title="{{.Title}}" class="{{if $isCurrent }}
+        active text-primary
+        {{ else}}
+        {{ if or (lt $level 2) ($currentNode.InSection .)  }}
+        {{ else }}
+        hidden
+        {{ end }}
+        {{end}}
+        {{ if eq $level 0 }} font-bold {{ else }} font-normal {{ end}}
+        text-black pl-2">
+    <a class=" flex items-center px-3 transition-colors duration-200 mb-2" href="{{ .RelPermalink}}">
+        {{or .Params.menuTitle .LinkTitle .Title}}
+    </a>
+</li>
+{{ end }}
+{{ end }}
+{{ end }}

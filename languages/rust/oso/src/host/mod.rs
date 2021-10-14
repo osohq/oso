@@ -13,6 +13,7 @@ mod value;
 
 pub use class::{Class, ClassBuilder, Instance};
 pub use from_polar::{FromPolar, FromPolarList};
+use polar_core::terms::{Operator, Symbol};
 pub use to_polar::{PolarIterator, ToPolar, ToPolarList};
 pub use value::PolarValue;
 
@@ -45,6 +46,8 @@ pub struct Host {
     /// This helps us go from a generic type `T` to the
     /// class name it is registered as
     class_names: HashMap<std::any::TypeId, String>,
+
+    pub accept_expression: bool,
 }
 
 impl Host {
@@ -53,6 +56,7 @@ impl Host {
             class_names: HashMap::new(),
             classes: HashMap::new(),
             instances: HashMap::new(),
+            accept_expression: false,
             polar,
         };
         let type_class = metaclass();
@@ -108,6 +112,17 @@ impl Host {
         }
     }
 
+    /// Register an MRO list for every registered class.
+    /// Since inheritance is not supported, all lists are empty.
+    pub fn register_mros(&self) -> crate::Result<()> {
+        for name in self.classes.keys() {
+            if name != "oso::host::Class" {
+                self.polar.register_mro(Symbol(name.clone()), vec![])?;
+            }
+        }
+        Ok(())
+    }
+
     pub fn get_instance(&self, id: u64) -> crate::Result<&class::Instance> {
         tracing::trace!("instances: {:?}", self.instances.keys().collect::<Vec<_>>());
         self.instances
@@ -153,14 +168,6 @@ impl Host {
         Ok(())
     }
 
-    pub fn unify(&self, left: u64, right: u64) -> crate::Result<bool> {
-        tracing::trace!("unify {:?}, {:?}", left, right);
-
-        let left = self.get_instance(left).unwrap();
-        let right = self.get_instance(right).unwrap();
-        left.equals(right, &self)
-    }
-
     pub fn isa(&self, value: PolarValue, class_tag: &str) -> crate::Result<bool> {
         let res = match value {
             PolarValue::Instance(instance) => {
@@ -183,15 +190,14 @@ impl Host {
         false
     }
 
-    pub fn operator(
-        &self,
-        _op: polar_core::terms::Operator,
-        _args: [class::Instance; 2],
-    ) -> crate::Result<bool> {
+    pub fn operator(&self, op: Operator, args: [class::Instance; 2]) -> crate::Result<bool> {
+        match op {
+            Operator::Eq => args[0].equals(&args[1], self),
+            _ => Err(OsoError::UnimplementedOperation {
+                operation: String::from("comparison operators"),
+            }),
+        }
         // Operators are not supported
         // TODO (dhatch): Implement.
-        Err(OsoError::UnimplementedOperation {
-            operation: String::from("comparison operators"),
-        })
     }
 }

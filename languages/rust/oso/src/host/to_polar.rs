@@ -1,9 +1,11 @@
+#![allow(clippy::wrong_self_convention)]
+
 //! Trait and implementations of `ToPolar` for converting from
 //! Rust types back to Polar types.
 
 use impl_trait_for_tuples::*;
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque};
 
 use super::DEFAULT_CLASSES;
 use crate::PolarValue;
@@ -30,7 +32,6 @@ use crate::PolarValue;
 /// `ToPolar` implementors must also be concrete, sized types without
 /// any borrows.
 pub trait ToPolar {
-    #[allow(clippy::wrong_self_convention)]
     fn to_polar(self) -> PolarValue;
 }
 
@@ -55,7 +56,6 @@ impl<C: crate::PolarClass + Send + Sync> ToPolar for C {
 }
 
 pub trait ToPolarResult {
-    #[allow(clippy::wrong_self_convention)]
     fn to_polar_result(self) -> crate::Result<PolarValue>;
 }
 
@@ -82,7 +82,6 @@ mod private {
 }
 
 pub trait ToPolarList: private::Sealed {
-    #[allow(clippy::wrong_self_convention)]
     fn to_polar_list(self) -> Vec<PolarValue>
     where
         Self: Sized;
@@ -166,6 +165,36 @@ impl<T: ToPolar> ToPolar for Vec<T> {
     }
 }
 
+impl<T: ToPolar> ToPolar for VecDeque<T> {
+    fn to_polar(self) -> PolarValue {
+        PolarValue::List(self.into_iter().map(|v| v.to_polar()).collect())
+    }
+}
+
+impl<T: ToPolar> ToPolar for LinkedList<T> {
+    fn to_polar(self) -> PolarValue {
+        PolarValue::List(self.into_iter().map(|v| v.to_polar()).collect())
+    }
+}
+
+impl<T: ToPolar> ToPolar for HashSet<T> {
+    fn to_polar(self) -> PolarValue {
+        PolarValue::List(self.into_iter().map(|v| v.to_polar()).collect())
+    }
+}
+
+impl<T: ToPolar> ToPolar for BTreeSet<T> {
+    fn to_polar(self) -> PolarValue {
+        PolarValue::List(self.into_iter().map(|v| v.to_polar()).collect())
+    }
+}
+
+impl<T: ToPolar> ToPolar for BinaryHeap<T> {
+    fn to_polar(self) -> PolarValue {
+        PolarValue::List(self.into_iter().map(|v| v.to_polar()).collect())
+    }
+}
+
 impl<'a, T: Clone + ToPolar> ToPolar for &'a [T] {
     fn to_polar(self) -> PolarValue {
         PolarValue::List(self.iter().cloned().map(|v| v.to_polar()).collect())
@@ -179,6 +208,22 @@ impl<T: ToPolar> ToPolar for HashMap<String, T> {
 }
 
 impl<T: ToPolar> ToPolar for HashMap<&str, T> {
+    fn to_polar(self) -> PolarValue {
+        PolarValue::Map(
+            self.into_iter()
+                .map(|(k, v)| (k.to_string(), v.to_polar()))
+                .collect(),
+        )
+    }
+}
+
+impl<T: ToPolar> ToPolar for BTreeMap<String, T> {
+    fn to_polar(self) -> PolarValue {
+        PolarValue::Map(self.into_iter().map(|(k, v)| (k, v.to_polar())).collect())
+    }
+}
+
+impl<T: ToPolar> ToPolar for BTreeMap<&str, T> {
     fn to_polar(self) -> PolarValue {
         PolarValue::Map(
             self.into_iter()

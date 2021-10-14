@@ -15,8 +15,18 @@ import (
 	"unsafe"
 
 	"github.com/osohq/go-oso/errors"
+	_ "github.com/osohq/go-oso/internal/ffi/native"
 	"github.com/osohq/go-oso/types"
 )
+
+/*
+Reads a c string from polar core to a go string and frees the c string.
+*/
+func readStr(cStr *C.char) string {
+	goStr := C.GoString(cStr)
+	C.string_free(cStr)
+	return goStr
+}
 
 func ffiSerialize(input interface{}) (*C.char, error) {
 	json, err := json.Marshal(input)
@@ -44,7 +54,7 @@ func (p *PolarFfi) delete() {
 
 func getError() error {
 	err := C.polar_get_error()
-	errStr := C.GoString(err)
+	errStr := readStr(err)
 	var polarError errors.FormattedPolarError
 	jsonErr := json.Unmarshal([]byte(errStr), &polarError)
 	if jsonErr != nil {
@@ -67,9 +77,10 @@ func processMessages(i ffiInterface) {
 		if msgPtr == nil {
 			return
 		}
-		message := C.GoString(msgPtr)
+		message := readStr(msgPtr)
 		var messageStruct types.Message
 		err := json.Unmarshal([]byte(message), &messageStruct)
+
 		if err != nil {
 			panic(err)
 		}
@@ -94,13 +105,13 @@ func (p PolarFfi) NewId() (uint64, error) {
 	return uint64(id), nil
 }
 
-func (p PolarFfi) Load(s string, filename *string) error {
-	cString := C.CString(s)
-	var cFilename *C.char
-	if filename != nil {
-		cFilename = C.CString(*filename)
+func (p PolarFfi) Load(sources []types.Source) error {
+	json, err := ffiSerialize(sources)
+	defer C.free(unsafe.Pointer(json))
+	if err != nil {
+		return err
 	}
-	result := C.polar_load(p.ptr, cString, cFilename)
+	result := C.polar_load(p.ptr, json)
 	processMessages(p)
 	if result == 0 {
 		return getError()
@@ -119,6 +130,7 @@ func (p PolarFfi) ClearRules() error {
 
 func (p PolarFfi) NewQueryFromStr(queryStr string) (*QueryFfi, error) {
 	cs := C.CString(queryStr)
+	defer C.free(unsafe.Pointer(cs))
 	result := C.polar_new_query(p.ptr, cs, 0)
 	processMessages(p)
 	if result == nil {
@@ -129,6 +141,7 @@ func (p PolarFfi) NewQueryFromStr(queryStr string) (*QueryFfi, error) {
 
 func (p PolarFfi) NewQueryFromTerm(queryTerm types.Term) (*QueryFfi, error) {
 	json, err := ffiSerialize(queryTerm)
+	defer C.free(unsafe.Pointer(json))
 	if err != nil {
 		return nil, err
 	}
@@ -152,12 +165,29 @@ func (p PolarFfi) NextInlineQuery() (*QueryFfi, error) {
 
 func (p PolarFfi) RegisterConstant(term types.Term, name string) error {
 	cName := C.CString(name)
+	defer C.free(unsafe.Pointer(cName))
 	cTerm, err := ffiSerialize(term)
+	defer C.free(unsafe.Pointer(cTerm))
 	if err != nil {
-		defer C.free(unsafe.Pointer(cName))
 		return err
 	}
 	result := C.polar_register_constant(p.ptr, cName, cTerm)
+	processMessages(p)
+	if result == 0 {
+		return getError()
+	}
+	return nil
+}
+
+func (p PolarFfi) RegisterMro(name string, mro []uint64) error {
+	cName := C.CString(name)
+	defer C.free(unsafe.Pointer(cName))
+	cMro, err := ffiSerialize(mro)
+	defer C.free(unsafe.Pointer(cMro))
+	if err != nil {
+		return err
+	}
+	result := C.polar_register_mro(p.ptr, cName, cMro)
 	processMessages(p)
 	if result == 0 {
 		return getError()
@@ -189,6 +219,7 @@ func (q QueryFfi) CallResult(callID uint64, term *types.Term) error {
 	var err error
 	if term != nil {
 		s, err = ffiSerialize(term)
+		defer C.free(unsafe.Pointer(s))
 		if err != nil {
 			return err
 		}
@@ -216,7 +247,9 @@ func (q QueryFfi) QuestionResult(callID uint64, answer bool) error {
 }
 
 func (q QueryFfi) ApplicationError(message string) error {
-	result := C.polar_application_error(q.ptr, C.CString(message))
+	cMessage := C.CString(message)
+	defer C.free(unsafe.Pointer(cMessage))
+	result := C.polar_application_error(q.ptr, cMessage)
 	if result == 0 {
 		return getError()
 	}
@@ -229,13 +262,14 @@ func (q QueryFfi) NextEvent() (*string, error) {
 	if event == nil {
 		return nil, getError()
 	}
-	goEvent := C.GoString(event)
+	goEvent := readStr(event)
 	return &goEvent, nil
 }
 
 func (q QueryFfi) DebugCommand(command *string) error {
 	term := types.Term{types.Value{types.ValueString(*command)}}
 	cStr, err := ffiSerialize(term)
+	defer C.free(unsafe.Pointer(cStr))
 	if err != nil {
 		return err
 	}
@@ -252,6 +286,6 @@ func (q QueryFfi) Source() (*string, error) {
 	if source == nil {
 		return nil, getError()
 	}
-	goSource := C.GoString(source)
+	goSource := readStr(source)
 	return &goSource, nil
 }

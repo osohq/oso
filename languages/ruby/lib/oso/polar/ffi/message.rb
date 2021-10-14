@@ -19,10 +19,11 @@ module Oso
           attach_function :free, :string_free, [Message], :int32
         end
 
-        def process
+        def process(enrich_message)
           message = JSON.parse(to_s)
           kind = message['kind']
           msg = message['msg']
+          msg = enrich_message.call(msg)
 
           case kind
           when 'Print'

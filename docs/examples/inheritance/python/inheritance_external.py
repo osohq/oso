@@ -2,7 +2,7 @@ import oso
 
 
 @oso.polar_class
-class Actor:
+class User:
     def __init__(self, role, treated):
         self.role = role
         self._treated = treated
@@ -11,7 +11,7 @@ class Actor:
         return patient in self._treated
 
 
-## START MARKER ##
+# start-patient-data
 @oso.polar_class
 class PatientData:
     def __init__(self, patient):
@@ -31,3 +31,4 @@ class Order(PatientData):
 @oso.polar_class
 class Test(PatientData):
     pass
+    # end-patient-data

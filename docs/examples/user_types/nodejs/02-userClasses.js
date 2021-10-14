@@ -13,17 +13,15 @@ oso.registerClass(Customer);
 
 // internal-start
 class InternalUser {
-  constructor(id) {
-    this.id = id;
-  }
+  // ...
 
   role() {
     return db.query('SELECT role FROM internal_roles WHERE id = ?', this.id);
   }
 }
+// internal-end
 
 oso.registerClass(InternalUser);
-// internal-end
 
 // account-start
 class AccountManager extends InternalUser {
@@ -36,6 +34,7 @@ class AccountManager extends InternalUser {
 }
 // account-end
 
+// generate-start
 function userFromId(id) {
   const userType = db.query('SELECT type FROM users WHERE id = ?', id);
   if (userType === 'internal') {
@@ -49,5 +48,6 @@ function userFromId(id) {
     return new Customer(id);
   }
 }
+// generate-end
 
 module.exports = { oso };

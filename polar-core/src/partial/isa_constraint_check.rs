@@ -1,8 +1,11 @@
 use crate::counter::Counter;
 use crate::error::{OperationalError, PolarResult};
 use crate::events::QueryEvent;
+
 use crate::runnable::Runnable;
-use crate::terms::{Operation, Operator, Pattern, Term, Value};
+use crate::terms::{Operation, Operator, Pattern, Symbol, Term, Value};
+
+use std::collections::HashSet;
 
 fn path(x: &Term) -> Vec<Term> {
     match x.value() {
@@ -21,16 +24,28 @@ pub struct IsaConstraintCheck {
     result: Option<bool>,
     alternative_check: Option<QueryEvent>,
     last_call_id: u64,
+    proposed_names: HashSet<Symbol>,
+}
+
+enum Check {
+    None,
+    One(QueryEvent),
+    Two(QueryEvent, QueryEvent),
 }
 
 impl IsaConstraintCheck {
-    pub fn new(existing: Vec<Operation>, proposed: Operation) -> Self {
+    pub fn new(
+        existing: Vec<Operation>,
+        proposed: Operation,
+        proposed_names: HashSet<Symbol>,
+    ) -> Self {
         Self {
             existing,
             proposed,
             result: None,
             alternative_check: None,
             last_call_id: 0,
+            proposed_names,
         }
     }
 
@@ -40,23 +55,17 @@ impl IsaConstraintCheck {
     /// constraints for the same type, there's no external check required, and we return `None` to
     /// indicate compatibility.
     ///
-    /// Otherwise, we return a pair of `QueryEvent::ExternalIsSubclass`es to check whether the type
+    /// Otherwise, we return a collection of `QueryEvent`s to check whether the type
     /// constraints are compatible. The constraints are compatible if either of their types is a
     /// subclass of the other's.
     ///
     /// Returns:
-    /// - `None` if compatible.
-    /// - A pair of `QueryEvent::ExternalIsSubclass` checks if compatibility cannot be determined
-    /// locally.
-    fn check_constraint(
-        &mut self,
-        mut constraint: Operation,
-        counter: &Counter,
-    ) -> (Option<QueryEvent>, Option<QueryEvent>) {
+    /// Zero, one or two query events.
+    fn check_constraint(&mut self, constraint: Operation, counter: &Counter) -> Check {
         // TODO(gj): check non-`Isa` constraints, e.g., `(Unify, partial, 1)` against `(Isa,
         // partial, Integer)`.
         if constraint.operator != Operator::Isa {
-            return (None, None);
+            return Check::None;
         }
 
         let constraint_path = path(&constraint.args[0]);
@@ -65,74 +74,98 @@ impl IsaConstraintCheck {
         // Not comparable b/c one of the matches statements has a LHS that isn't a variable or dot
         // op.
         if constraint_path.is_empty() || proposed_path.is_empty() {
-            return (None, None);
+            return Check::None;
         }
 
-        // a.b.c vs. d
-        if constraint_path
+        let just_vars = constraint_path.len() == 1
+            && proposed_path.len() == 1
+            && matches!(&constraint.args[0].value().as_symbol(), Ok(Symbol(_)))
+            && matches!(&self.proposed.args[0].value().as_symbol(), Ok(Symbol(_)));
+
+        // FIXME(gw): this logic is hard to follow!
+        if just_vars {
+            let sym = constraint.args[0].value().as_symbol().unwrap();
+            if !self.proposed_names.contains(sym) {
+                return Check::None;
+            }
+        } else if constraint_path
+            // a.b.c vs. d
             .iter()
             .zip(proposed_path.iter())
             .any(|(a, b)| a != b)
+        // FIXME(gw): is this right? what if the first elements are aliases?
         {
-            return (None, None);
+            return Check::None;
         }
 
-        let proposed = self.proposed.args.pop().unwrap();
-        let existing = constraint.args.pop().unwrap();
+        let existing = constraint.args.last().unwrap();
 
-        // x matches A{} vs. x matches B{}
         if constraint_path == proposed_path {
-            match (proposed.value(), existing.value()) {
-                (
-                    Value::Pattern(Pattern::Instance(proposed)),
-                    Value::Pattern(Pattern::Instance(existing)),
-                ) if proposed.tag != existing.tag => {
-                    let call_id = counter.next();
-                    self.last_call_id = call_id;
-
-                    (
-                        Some(QueryEvent::ExternalIsSubclass {
-                            call_id,
-                            left_class_tag: proposed.tag.clone(),
-                            right_class_tag: existing.tag.clone(),
-                        }),
-                        Some(QueryEvent::ExternalIsSubclass {
-                            call_id,
-                            left_class_tag: existing.tag.clone(),
-                            right_class_tag: proposed.tag.clone(),
-                        }),
-                    )
-                }
-                _ => (None, None),
-            }
+            // x matches A{} vs. x matches B{}
+            self.subclass_compare(existing, counter)
         } else if constraint_path.len() < proposed_path.len() {
-            // Proposed path is a superset of existing path. Take the existing tag, the additional
-            // path segments from the proposed path, and the proposed tag.
-            //
-            // E.g., given `a.b matches B{}` and `a.b.c.d matches D{}`, we want to assemble an
-            // `ExternalIsaWithPath` of `B`, [c, d], and `D`.
-            match (proposed.value(), existing.value()) {
-                (
-                    Value::Pattern(Pattern::Instance(proposed)),
-                    Value::Pattern(Pattern::Instance(existing)),
-                ) => {
-                    let call_id = counter.next();
-                    self.last_call_id = call_id;
-                    (
-                        Some(QueryEvent::ExternalIsaWithPath {
-                            call_id,
-                            base_tag: existing.tag.clone(),
-                            path: proposed_path[constraint_path.len()..].to_vec(),
-                            class_tag: proposed.tag.clone(),
-                        }),
-                        None,
-                    )
-                }
-                _ => (None, None),
-            }
+            // Proposed path is a superset of existing path.
+            self.path_compare(proposed_path, constraint_path, existing, counter)
+        } else if just_vars {
+            self.subclass_compare(existing, counter)
         } else {
             // Comparing existing `x.a.b matches B{}` vs. `proposed x.a matches A{}`.
-            (None, None)
+            Check::None
+        }
+    }
+
+    fn subclass_compare(&mut self, existing: &Term, counter: &Counter) -> Check {
+        let proposed = self.proposed.args.last().unwrap();
+        match (proposed.value(), existing.value()) {
+            (
+                Value::Pattern(Pattern::Instance(proposed)),
+                Value::Pattern(Pattern::Instance(existing)),
+            ) if proposed.tag != existing.tag => {
+                let call_id = counter.next();
+                self.last_call_id = call_id;
+
+                Check::Two(
+                    QueryEvent::ExternalIsSubclass {
+                        call_id,
+                        left_class_tag: proposed.tag.clone(),
+                        right_class_tag: existing.tag.clone(),
+                    },
+                    QueryEvent::ExternalIsSubclass {
+                        call_id,
+                        left_class_tag: existing.tag.clone(),
+                        right_class_tag: proposed.tag.clone(),
+                    },
+                )
+            }
+            _ => Check::None,
+        }
+    }
+
+    fn path_compare(
+        &mut self,
+        proposed_path: Vec<Term>,
+        constraint_path: Vec<Term>,
+        existing: &Term,
+        counter: &Counter,
+    ) -> Check {
+        // given `a.b matches B{}` and `a.b.c.d matches D{}`, we want to assemble an
+        // `ExternalIsaWithPath` of `B`, [c, d], and `D`.
+        let proposed = self.proposed.args.last().unwrap();
+        match (proposed.value(), existing.value()) {
+            (
+                Value::Pattern(Pattern::Instance(proposed)),
+                Value::Pattern(Pattern::Instance(existing)),
+            ) => {
+                let call_id = counter.next();
+                self.last_call_id = call_id;
+                Check::One(QueryEvent::ExternalIsaWithPath {
+                    call_id,
+                    base_tag: existing.tag.clone(),
+                    path: proposed_path[constraint_path.len()..].to_vec(),
+                    class_tag: proposed.tag.clone(),
+                })
+            }
+            _ => Check::None,
         }
     }
 }
@@ -145,33 +178,38 @@ impl Runnable for IsaConstraintCheck {
                 self.alternative_check = None;
             } else if self.alternative_check.is_none() {
                 // If both checks fail, we fail.
+                //
                 return Ok(QueryEvent::Done { result: false });
             }
         }
 
+        // If there's an alternative waiting to be checked, check it.
+        if let Some(alternative) = self.alternative_check.take() {
+            return Ok(alternative);
+        }
+
         let counter = counter.expect("IsaConstraintCheck requires a Counter");
         loop {
-            // If there's an alternative waiting to be checked, check it.
-            if let Some(alternative) = self.alternative_check.take() {
-                return Ok(alternative);
-            } else if let Some(constraint) = self.existing.pop() {
-                let (maybe_primary, maybe_alternative) =
-                    self.check_constraint(constraint, &counter);
-                if let Some(alternative) = maybe_alternative {
-                    self.alternative_check = Some(alternative);
-                }
-                if let Some(primary) = maybe_primary {
-                    return Ok(primary);
-                }
-            } else {
-                return Ok(QueryEvent::Done { result: true });
+            match self.existing.pop() {
+                None => return Ok(QueryEvent::Done { result: true }),
+                Some(constraint) => match self.check_constraint(constraint, counter) {
+                    Check::None => (),
+                    Check::One(a) => return Ok(a),
+                    Check::Two(a, b) => {
+                        self.alternative_check = Some(b);
+                        return Ok(a);
+                    }
+                },
             }
         }
     }
 
     fn external_question_result(&mut self, call_id: u64, answer: bool) -> PolarResult<()> {
         if call_id != self.last_call_id {
-            return Err(OperationalError::InvalidState(String::from("Unexpected call id")).into());
+            return Err(OperationalError::InvalidState {
+                msg: String::from("Unexpected call id"),
+            }
+            .into());
         }
 
         self.result = Some(answer);

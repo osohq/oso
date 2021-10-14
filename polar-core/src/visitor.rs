@@ -34,6 +34,9 @@ pub trait Visitor: Sized {
     fn visit_operator(&mut self, _o: &Operator) {}
 
     // Compounds. If you override these, you must walk the children manually.
+    fn visit_generic_rule(&mut self, rule: &GenericRule) {
+        walk_generic_rule(self, rule);
+    }
     fn visit_rule(&mut self, r: &Rule) {
         walk_rule(self, r)
     }
@@ -86,6 +89,12 @@ macro_rules! walk_fields {
     };
 }
 
+pub fn walk_generic_rule<V: Visitor>(visitor: &mut V, rule: &GenericRule) {
+    for rule in rule.rules.values() {
+        visitor.visit_rule(rule);
+    }
+}
+
 pub fn walk_rule<V: Visitor>(visitor: &mut V, rule: &Rule) {
     visitor.visit_symbol(&rule.name);
     walk_elements!(visitor, visit_param, &rule.params);
@@ -128,8 +137,8 @@ pub fn walk_dictionary<V: Visitor>(visitor: &mut V, dict: &Dictionary) {
 
 pub fn walk_pattern<V: Visitor>(visitor: &mut V, pattern: &Pattern) {
     match pattern {
-        Pattern::Dictionary(dict) => visitor.visit_dictionary(&dict),
-        Pattern::Instance(instance) => visitor.visit_instance_literal(&instance),
+        Pattern::Dictionary(dict) => visitor.visit_dictionary(dict),
+        Pattern::Instance(instance) => visitor.visit_instance_literal(instance),
     }
 }
 

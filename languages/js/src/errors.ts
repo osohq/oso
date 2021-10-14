@@ -1,12 +1,36 @@
 import { repr } from './helpers';
+import type { Class } from './types';
 
-/** Base error type. */
-export class PolarError extends Error {
-  constructor(msg: string) {
-    super(msg);
-    Object.setPrototypeOf(this, PolarError.prototype);
+/** Base class for all Oso errors. */
+export class OsoError extends Error {
+  constructor(message?: string) {
+    // If we ever switch to supporting ES5, we'll have to make sure that
+    // OsoError prototypes are properly getting set.
+    // See: https://stackoverflow.com/questions/41102060/typescript-extending-error-class/48342359#48342359
+    super(message);
   }
 }
+
+export class AuthorizationError extends OsoError {}
+
+export class NotFoundError extends AuthorizationError {
+  constructor() {
+    super(
+      'Oso NotFoundError -- The current user does not have permission to read the given resource. You should handle this error by returning a 404 error to the client.'
+    );
+  }
+}
+
+export class ForbiddenError extends AuthorizationError {
+  constructor() {
+    super(
+      'Oso ForbiddenError -- The requested action was not allowed for the given resource. You should handle this error by returning a 403 error to the client.'
+    );
+  }
+}
+
+/** Base error type. */
+export class PolarError extends OsoError {}
 
 export class DuplicateClassAliasError extends PolarError {
   constructor({
@@ -15,13 +39,12 @@ export class DuplicateClassAliasError extends PolarError {
     existing,
   }: {
     name: string;
-    cls: object;
-    existing: object;
+    cls: Class;
+    existing: Class;
   }) {
     super(
-      `Attempted to alias ${cls} as '${name}', but ${existing} already has that alias.`
+      `Attempted to alias ${cls.name} as '${name}', but ${existing.name} already has that alias.`
     );
-    Object.setPrototypeOf(this, DuplicateClassAliasError.prototype);
   }
 }
 
@@ -30,84 +53,79 @@ export class DuplicateInstanceRegistrationError extends PolarError {
     super(
       `Attempted to register instance ${id}, but an instance with that ID already exists.`
     );
-    Object.setPrototypeOf(this, DuplicateInstanceRegistrationError.prototype);
   }
 }
 
 export class InlineQueryFailedError extends PolarError {
   constructor(source: string) {
     super(`Inline query failed: ${source}`);
-    Object.setPrototypeOf(this, InlineQueryFailedError.prototype);
+  }
+}
+
+export class InvalidAttributeError extends PolarError {
+  constructor(instance: unknown, field: string) {
+    super(`${field} not found on ${repr(instance)}.`);
   }
 }
 
 export class InvalidCallError extends PolarError {
-  constructor(instance: any, field: string) {
+  constructor(instance: unknown, field: string) {
     super(`${repr(instance)}.${field} is not a function`);
-    Object.setPrototypeOf(this, InvalidCallError.prototype);
   }
 }
 
 export class InvalidIteratorError extends PolarError {
-  constructor(term: any) {
-    super(`${term} is not iterable`);
-    Object.setPrototypeOf(this, InvalidIteratorError.prototype);
+  constructor(term: unknown) {
+    super(`${repr(term)} is not iterable`);
   }
 }
 
 export class InvalidConstructorError extends PolarError {
-  constructor(ctor: any) {
+  constructor(ctor: unknown) {
     super(`${repr(ctor)} is not a constructor`);
-    Object.setPrototypeOf(this, InvalidConstructorError.prototype);
   }
 }
 
 export class InvalidQueryEventError extends PolarError {
   constructor(event: string) {
     super(`Invalid query event: ${event}`);
-    Object.setPrototypeOf(this, InvalidQueryEventError.prototype);
   }
 }
 
 export class KwargsError extends PolarError {
   constructor() {
     super('JavaScript does not support keyword arguments');
-    Object.setPrototypeOf(this, KwargsError.prototype);
   }
 }
 
 export class PolarFileExtensionError extends PolarError {
   constructor(file: string) {
     super(`Polar files must have .polar extension. Offending file: ${file}`);
-    Object.setPrototypeOf(this, PolarFileExtensionError.prototype);
   }
 }
 
 export class PolarFileNotFoundError extends PolarError {
   constructor(file: string) {
     super(`Could not find file: ${file}`);
-    Object.setPrototypeOf(this, PolarFileNotFoundError.prototype);
   }
 }
 
 export class UnregisteredClassError extends PolarError {
   constructor(name: string) {
     super(`Unregistered class: ${name}.`);
-    Object.setPrototypeOf(this, UnregisteredClassError.prototype);
   }
 }
 
 export class UnregisteredInstanceError extends PolarError {
   constructor(id: number) {
     super(`Unregistered instance: ${id}.`);
-    Object.setPrototypeOf(this, UnregisteredInstanceError.prototype);
   }
 }
 
-export class UnexpectedPolarTypeError extends PolarError {
-  constructor() {
-    // Doesn't have a tag because it doesn't seem we get this from the wasm API.
-    super('Unexpected polar type.');
-    Object.setPrototypeOf(this, UnexpectedPolarTypeError.prototype);
+export class DataFilteringConfigurationError extends PolarError {
+  constructor(fn: 'buildQuery' | 'execQuery' | 'combineQuery') {
+    super(
+      `Missing '${fn}' implementation. Did you forget to call \`Oso.setDataFilteringQueryDefaults()\`?`
+    );
   }
 }

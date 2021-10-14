@@ -11,6 +11,7 @@ end
 RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   let(:test_file) { File.join(__dir__, 'test_file.polar') }
   let(:test_file_gx) { File.join(__dir__, 'test_file_gx.polar') }
+  let(:other_test_file) { File.join(__dir__, 'other/test_file.polar') }
 
   # test_anything_works
   it 'works' do
@@ -29,7 +30,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       end)
       subject.register_class(Widget)
 
-      stub_const('Actor', Class.new do
+      stub_const('User', Class.new do
         def initialize(name)
           @name = name
         end
@@ -42,7 +43,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
           [Widget.new(2), Widget.new(3)].to_enum
         end
       end)
-      subject.register_class(Actor)
+      subject.register_class(User)
     end
 
     it 'converts Polar values into Ruby values' do
@@ -50,28 +51,22 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       expect(qvar(subject, 'f(x)', 'x', one: true)).to eq({ 'x' => [1, 'two', true], 'y' => { 'z' => false } })
     end
 
-    it 'converts predicates in both directions' do
-      subject.load_str('f(x) if x = pred(1, 2);')
-      expect(qvar(subject, 'f(x)', 'x')).to eq([Oso::Polar::Predicate.new('pred', args: [1, 2])])
-      expect(subject.query_rule('f', Oso::Polar::Predicate.new('pred', args: [1, 2])).to_a).to eq([{}])
-    end
-
     ## NOTE This is not an integration test - it uses the private API (host should be private).
     it 'converts Ruby instances in both directions' do
-      actor = Actor.new('sam')
+      actor = User.new('sam')
       expect(subject.host.to_ruby(subject.host.to_polar(actor))).to eq(actor)
     end
 
     it 'returns Ruby instances from external calls' do
-      actor = Actor.new('sam')
+      actor = User.new('sam')
       widget = Widget.new(1)
-      subject.load_str('allow(actor, resource) if actor.widget.id = resource.id;')
-      expect(subject.query_rule('allow', actor, widget).to_a.length).to eq 1
+      subject.load_str('allow(actor, _action, resource) if actor.widget.id = resource.id;')
+      expect(subject.query_rule('allow', actor, 'read', widget).to_a.length).to eq 1
     end
 
     it 'handles enumerator external call results' do
-      actor = Actor.new('sam')
-      subject.load_str('widgets(actor, x) if widget in actor.widgets and print(widget) and x = widget.id;')
+      actor = User.new('sam')
+      subject.load_str('widgets(actor, x) if widget in actor.widgets and x = widget.id;')
       result = subject.query_rule('widgets', actor, Oso::Polar::Variable.new('x')).to_a
       expect(result).to eq([{ 'x' => 2 }, { 'x' => 3 }])
     end
@@ -135,7 +130,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     # TODO: (dhatch) This test isn't really needed any more since the error is handled
     # in the core. We should test this once in the core.
     it 'errors if file is already loaded' do
-      expect { 2.times { subject.load_file(test_file) } }.to raise_error do |e|
+      expect { subject.load_files([test_file, test_file]) }.to raise_error do |e|
         expect(e).to be_an Oso::Polar::FileLoadingError
         expect(e.message).to eq("Problem loading file: File #{test_file} has already been loaded.")
       end
@@ -143,8 +138,15 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
     # test_load_multiple_files
     it 'can load multiple files' do
-      subject.load_file(test_file)
-      subject.load_file(test_file_gx)
+      subject.load_files([test_file, test_file_gx])
+      expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
+      expect(qvar(subject, 'g(x)', 'x')).to eq([1, 2, 3])
+    end
+
+    # test_load_multiple_files_same_name_different_path
+    it 'can load multiple files with the same name but different paths' do
+      subject.load_files([test_file, other_test_file])
+      puts test_file, other_test_file
       expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
       expect(qvar(subject, 'g(x)', 'x')).to eq([1, 2, 3])
     end
@@ -307,6 +309,8 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       subject.register_class(Foo)
       subject.load_str 'f(x) if x.this_is_nil = nil;'
       expect(subject.query_rule('f', Foo.new).to_a).to eq([{}])
+
+      subject.clear_rules
 
       subject.load_str 'g(x) if x.this_is_nil.bad_call = 1;'
       expect { subject.query_rule('g', Foo.new).to_a }.to raise_error Oso::Polar::PolarRuntimeError
@@ -482,12 +486,23 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
                      def my_method(one, two, three:, four:)
                        [one, two, three, four]
                      end
+
+                     def self.tv
+                       Thread.current['foo']
+                     end
                    end)
         subject.register_class(TestClass)
       end
 
       it 'accepts positional and keyword args' do
         expect(qvar(subject, 'x = (new TestClass()).my_method(1, 2, four: 4, three: 3)', 'x')).to eq([[1, 2, 3, 4]])
+      end
+
+      it 'has access to the thread context' do
+        Thread.current['foo'] = 'bar'
+        # you need to use load string here or it might not
+        # run on a fiber
+        subject.load_str('?= TestClass.tv = "bar";')
       end
     end
 
@@ -526,6 +541,11 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         POLAR
         expect(query(subject, 'yup()')).to eq([{}])
         expect(query(subject, 'nope()')).to eq([])
+      end
+
+      it 'can unify instances with native types' do
+        expect(query(subject, 'new String("foo") = "foo"')).to eq([{}])
+        expect(query(subject, 'new List() = []')).to eq([{}])
       end
 
       it 'can specialize on dict fields' do
@@ -660,18 +680,18 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
   context 'querying for a predicate' do
     before do
-      stub_const('Actor', Class.new do
+      stub_const('User', Class.new do
         def groups
           %w[engineering social admin]
         end
       end)
-      subject.register_class(Actor)
+      subject.register_class(User)
     end
 
     # test_predicate_return_list
     it 'can return a list' do
-      subject.load_str('allow(actor: Actor, "join", "party") if "social" in actor.groups;')
-      expect(subject.query_rule('allow', Actor.new, 'join', 'party').to_a).to eq([{}])
+      subject.load_str('allow(actor: User, "join", "party") if "social" in actor.groups;')
+      expect(subject.query_rule('allow', User.new, 'join', 'party').to_a).to eq([{}])
     end
 
     # test_variables_as_arguments
@@ -719,7 +739,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
   context 'unbound variable' do
     # test_returns_unbound_variable
     it 'returns unbound properly' do
-      subject.load_str 'rule(x, y) if y = 1;'
+      subject.load_str 'rule(_, y) if y = 1;'
 
       results = query(subject, 'rule(x, y)')
       first = results[0]
@@ -750,12 +770,8 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     expect(query(subject, 'neg_inf < inf')).to eq([{}])
   end
 
-  it 'fails gracefully on ExternalOp events' do
-    stub_const('Foo', Class.new)
-    subject.register_class(Foo)
-    expect { query(subject, 'new Foo() == new Foo()') }.to raise_error do |e|
-      expect(e).to be_an Oso::Polar::UnimplementedOperationError
-    end
+  it 'handles ExternalOp events' do
+    expect(query(subject, 'new String("foo") == new String("foo")')).to eq [{}]
   end
 
   it 'fails when receiving an expression type' do
@@ -795,6 +811,187 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     it 'works over custom iterators' do
       expect(qvar(subject, 'x in new Bar([1, 2, 3])', 'x')).to eq([1, 2, 3])
       expect(qvar(subject, 'x = new Bar([1, 2, 3]).sum()', 'x', one: true)).to eq(6)
+    end
+  end
+
+  context 'Code reloading' do # rubocop:disable Metrics/BlockLength
+    before do
+      # Register a class and then simulate it changing due to a code reload
+      stub_const('Foo', Class.new do
+        def version
+          1
+        end
+
+        def self.class_version
+          1
+        end
+      end)
+      subject.register_class(Foo)
+      stub_const('Foo', Class.new do
+        def version
+          2
+        end
+
+        def self.class_version
+          2
+        end
+      end)
+    end
+
+    it 'uses the up-to-date version of the class to make new instances' do
+      expect(query(subject, 'x = new Foo() and x.version = 2').length).to eq(1)
+      expect(query(subject, 'x = new Foo() and x.version = 1').length).to eq(0)
+    end
+
+    it 'uses the up-to-date version of the class during isa checks' do
+      subject.load_str('is_foo(_: Foo);')
+      expect(subject.query_rule('is_foo', Foo.new).to_a).to eq([{}])
+    end
+
+    it 'uses the up-to-date version of the class for lookups' do
+      expect(query(subject, 'Foo.class_version = 2')).to eq([{}])
+    end
+
+    it 'retrieves user-supplied names for reloaded classes' do
+      stub_const('Bar', Class.new do
+        def version
+          1
+        end
+      end)
+      subject.register_class(Bar, name: 'Baz')
+      stub_const('Bar', Class.new do
+        def version
+          2
+        end
+      end)
+
+      expect(subject.get_class_name(Bar)).to be 'Baz'
+    end
+
+    it 'can lookup attributes on anonymous classes' do
+      subject.register_class(Class.new do
+        def self.test
+          1
+        end
+      end, name: 'AnonymousClass')
+      expect(query(subject, 'AnonymousClass.test = 1')).to eq([{}])
+    end
+
+    it 'can match against anonymous classes' do
+      anon_class = Class.new do
+        def self.test
+          1
+        end
+      end
+      subject.register_class(anon_class, name: 'AnonymousClass')
+      expect(query(subject, 'new AnonymousClass() matches AnonymousClass')).to eq([{}])
+    end
+  end
+
+  # test_roles_integration
+  context 'Oso roles' do # rubocop:disable Metrics/BlockLength
+    require_relative './roles_helpers'
+    let(:roles_file) { File.join(__dir__, 'roles_policy.polar') }
+    it 'works' do # rubocop:disable Metrics/BlockLength
+      osohq = RolesHelpers::Org.new('osohq')
+      apple = RolesHelpers::Org.new('apple')
+      oso = RolesHelpers::Repo.new('oso', osohq)
+      ios = RolesHelpers::Repo.new('ios', apple)
+      bug = RolesHelpers::Issue.new('bug', oso)
+      laggy = RolesHelpers::Issue.new('laggy', ios)
+
+      osohq_owner = RolesHelpers::Role.new('owner', osohq)
+      osohq_member = RolesHelpers::Role.new('member', osohq)
+
+      leina = RolesHelpers::User.new('leina', [osohq_owner])
+      steve = RolesHelpers::User.new('steve', [osohq_member])
+
+      subject.register_class(RolesHelpers::Org, name: 'Org')
+      subject.register_class(RolesHelpers::Repo, name: 'Repo')
+      subject.register_class(RolesHelpers::Issue, name: 'Issue')
+      subject.register_class(RolesHelpers::User, name: 'User')
+      subject.load_file(roles_file)
+
+      expect(subject.query_rule('allow', leina, 'invite', osohq).to_a).not_to be_empty
+
+      expect(subject.query_rule('allow', leina, 'create_repo', osohq).to_a).not_to be_empty
+      expect(subject.query_rule('allow', leina, 'push', oso).to_a).not_to be_empty
+      expect(subject.query_rule('allow', leina, 'pull', oso).to_a).not_to be_empty
+      expect(subject.query_rule('allow', leina, 'edit', bug).to_a).not_to be_empty
+
+      expect(subject.query_rule('allow', steve, 'invite', osohq).to_a).to be_empty
+      expect(subject.query_rule('allow', steve, 'create_repo', osohq).to_a).not_to be_empty
+      expect(subject.query_rule('allow', steve, 'push', oso).to_a).to be_empty
+      expect(subject.query_rule('allow', steve, 'pull', oso).to_a).not_to be_empty
+      expect(subject.query_rule('allow', steve, 'edit', bug).to_a).to be_empty
+
+      expect(subject.query_rule('allow', leina, 'edit', laggy).to_a).to be_empty
+      expect(subject.query_rule('allow', steve, 'edit', laggy).to_a).to be_empty
+
+      gabe = RolesHelpers::User.new('gabe', [])
+      expect(subject.query_rule('allow', gabe, 'edit', bug).to_a).to be_empty
+      gabe = RolesHelpers::User.new('gabe', [osohq_member])
+      expect(subject.query_rule('allow', gabe, 'edit', bug).to_a).to be_empty
+      gabe = RolesHelpers::User.new('gabe', [osohq_owner])
+      expect(subject.query_rule('allow', gabe, 'edit', bug).to_a).not_to be_empty
+    end
+  end
+
+  # test rule types
+  context 'Rule types' do # rubocop:disable Metrics/BlockLength
+    it 'subclass checks succeed' do # rubocop:disable Metrics/BlockLength
+      stub_const('Foo', Class.new)
+      stub_const('Bar', Class.new(Foo))
+      stub_const('Baz', Class.new(Bar))
+      stub_const('Bad', Class.new)
+
+      subject.register_class(Baz, name: 'Baz')
+      subject.register_class(Bar, name: 'Bar')
+      subject.register_class(Foo, name: 'Foo')
+      subject.register_class(Bad, name: 'Bad')
+
+      p = <<~POLAR
+        type f(_x: Integer);
+        f(1);
+
+        type f(_x: Foo);
+        type f(_x: Foo, _y: Bar);
+        f(_x: Bar);
+        f(_x: Baz);
+      POLAR
+
+      subject.load_str(p)
+
+      subject.clear_rules
+
+      # Should raise error
+      expect { subject.load_str("#{p}f(_x: Bad);") }.to raise_error Oso::Polar::ValidationError
+
+      subject.clear_rules
+
+      # Test with fields
+      p = <<~POLAR
+        type f(_x: Foo{id: 1});
+        f(_x: Bar{id: 1});
+        f(_x: Baz{id: 1});
+      POLAR
+
+      subject.load_str(p)
+
+      subject.clear_rules
+
+      # Should raise error
+      expect { subject.load_str("#{p}f(_x: Baz);") }.to raise_error Oso::Polar::ValidationError
+
+      subject.clear_rules
+
+      # Test invalid rule type
+      p = <<~POLAR
+        type f(x: Foo, x.baz);
+      POLAR
+
+      # Should raise error
+      expect { subject.load_str(p) }.to raise_error Oso::Polar::ValidationError
     end
   end
 end

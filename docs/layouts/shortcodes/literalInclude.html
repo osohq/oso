@@ -1,0 +1,323 @@
+{{/*
+  Options
+
+  - dynPath: specify this if you need to set a path to a different file for
+      each language. The value should be a key that will be looked up
+      dynamically in every language's data/data.md file. That value of that key
+      in each language's data/data.md file should be the relative path to the
+      file starting from the root of the docs directory, e.g.,
+      "examples/foo/bar.js". You should only specify one of dynPath and path;
+      not both.
+  - path: specify this if every language can use the same file, e.g., if they
+      all share the same Polar code. It should be the relative path to the file
+      starting from the root of the docs directory. E.g.,
+      "examples/foo/bar.polar". You should only specify one of dynPath and
+      path; not both.
+  - fallback: specify this if you're using a dynPath but not every language has
+      a file to include. This is useful when we haven't created example apps in
+      all languages and we're just using inline snippets for one of the
+      languages. The value should be a key that will be looked up dynamically
+      in every language's data/data.md file. That value of that key in each
+      language's data/data.md file should be a literal code snippet (without
+      code fence backticks). Every language's data/data.md file should only
+      contain the dynPath key *or* the fallback key, but not both.
+  - syntax: haven't had to use this yet and might remove. It's just a way to
+      manually override the file extension-based syntax detection.
+  - from: this should be a string that identifies a unique line in the file by
+      substring match. E.g., "user-class-start". The snippet will start after
+      that line.
+  - to: this should be a string that identifies a unique line in the file by
+      substring match. E.g., "user-class-end". The snippet will end before that line.
+  - hlFrom: similarly to $from, this should be a string that identifies a unique
+      line in the file. This will be used as the starting point for highlighting.
+      It must be within the bounds of the code being displayed. and it will be
+      stripped from the output.
+  - hlTo: similarly to $to, this should be a string that identifies a unique line
+      in the file. It will be used as the ending point for highlighting. It must
+      be withing the bounds of the code being displayed, and it will be stripped
+      from the output.
+  - lines: specify this if you want to display noncontiguous segments of a
+      file. E.g., `lines="2,5-7,10-15"`. Segments should be comma-separated and
+      can be either a single line number or a range of lines (represented as a
+      pair of numbers separated by a hyphen). In the resulting code snippet,
+      segments will be separated by an ellipsis to indicate elided code.
+  - gitHub: specify GitHub link to generate a link to example. E.g
+    ``https://github.com/osohq/gitclub/``
+  - ellipsis: override the default marker for elided code ("...").
+  - hl_lines: specify lines of Polar code that you want to highlight. *This is
+    only for Polar code -- for all other code use the hlOpts property that
+    leverages Hugo's highlighting instead.*
+*/}}
+
+{{ $dynPath := $.Params.dynPath }}
+{{ $path := $.Params.path }}
+{{ $content := $.Params.fallback }}
+{{ $syntax := "" }}
+{{ $syntaxoverride := $.Params.syntax }}
+{{ $id := "" }}
+{{ $file := "" }}
+{{ $hlFrom := $.Params.hlFrom | default "" }}
+{{ $hlTo := $.Params.hlTo | default "" }}
+{{ $hlOpts := "" }}
+{{ $lines := $.Params.lines }}
+{{ $loc := slice }}
+{{ $gitHub := $.Params.gitHub }}
+{{ $gitHubRef := "" }}
+{{ $pathTrim := "" }}
+{{ $firstLine := 0 }}
+{{ $lastLine := 0 }}
+{{ $linenos := $.Params.linenos | default false }}
+{{ $tabGroup := $.Params.tabGroup }}
+{{ $ellipsis := $.Params.ellipsis | default "..." }}
+{{ $hl_lines := $.Params.hl_lines | default "" }}
+
+{{/* Turn "1,3-5,11-17" into a slice of maps consisting of a single key-value
+     pair where the key is the starting line and the value is the length of the
+     segment. */}}
+{{ with $lines }}
+  {{ with replace . " " "" }}
+    {{ with split . "," }}
+      {{ range . }}
+        {{ $nums := split . "-" }}
+        {{ if (eq (len $nums) 1) }}
+          {{ $start := index $nums 0 }}
+          {{ $loc = $loc | append (dict $start 1) }}
+        {{ else }}
+          {{ $start := index $nums 0 }}
+          {{ $count := (add 1 (sub (int (index $nums 1)) (int (index $nums 0)))) }}
+          {{ $loc = $loc | append (dict $start $count) }}
+        {{ end }}
+      {{ end }}
+    {{ end }}
+  {{ end }}
+{{ end }}
+
+{{ if $path }}
+  {{ if $dynPath }}
+    {{ errorf "[%v] Cannot specify 'path' and 'dynPath'.\n\t%v" $.Page.Language.LanguageName $.Position }}
+  {{ else if $content }}
+    {{ errorf "[%v] Specifying 'fallback' not allowed when 'path' is present.\n\t%v" $.Page.Language.LanguageName $.Position }}
+  {{ end }}
+{{ else if $dynPath }}
+  {{ with $.Page.Resources.GetMatch "data/data.md" }}
+    {{ with (index .Params $dynPath) }}
+      {{ $path = . }}
+    {{ else }}
+      {{ if $content }}
+      {{ else }}
+        {{ errorf "[%v] Missing entry '%v' in data/data.md file with no 'fallback' specified.\n\t%v" $.Page.Language.LanguageName $dynPath $.Position }}
+      {{ end }}
+    {{ end }}
+  {{ else }}
+    {{ if (eq $.Page.Language.Lang "any") }}
+      {{ if $.Params.any }}
+        {{ errorf "[%v] Missing data/data.md file.\n\t%v" $.Page.Language.LanguageName $.Position }}
+      {{ else if (and (not (isset $.Params "any")) (ne $.Parent nil)) }}
+        {{ if in $.Parent.Params "any" }}
+          {{ if $.Parent.Params.any }}
+            {{ errorf "[%v] Missing data/data.md file.\n\t%v" $.Page.Language.LanguageName $.Position }}
+          {{ end }}
+        {{ end }}
+      {{ end }}
+    {{ else }}
+      {{ errorf "[%v] Missing data/data.md file.\n\t%v" $.Page.Language.LanguageName $.Position }}
+    {{ end }}
+  {{ end }}
+{{ end }}
+
+{{ if $path }}
+{{ else if $content }}
+  {{ with $.Page.Resources.GetMatch "data/data.md" }}
+    {{ with (index .Params $content) }}
+      {{ $content = . }}
+    {{ else }}
+      {{ errorf "[%v] Missing fallback entry '%v' in data/data.md file.\n\t%v" $.Page.Language.LanguageName $content $.Position }}
+    {{ end }}
+  {{ else }}
+    {{ if (eq $.Page.Language.Lang "any") }}
+      {{ if $.Params.any }}
+        {{ errorf "[%v] Missing data/data.md file.\n\t%v" $.Page.Language.LanguageName $.Position }}
+      {{ else if (and (not (isset $.Params "any")) (ne $.Parent nil)) }}
+        {{ if in $.Parent.Params "any" }}
+          {{ if $.Parent.Params.any }}
+            {{ errorf "[%v] Missing data/data.md file.\n\t%v" $.Page.Language.LanguageName $.Position }}
+          {{ end }}
+        {{ end }}
+      {{ end }}
+    {{ else }}
+      {{ errorf "[%v] Missing data/data.md file.\n\t%v" $.Page.Language.LanguageName $.Position }}
+    {{ end }}
+  {{ end }}
+{{ else }}
+  {{ if (eq $.Page.Language.Lang "any") }}
+    {{ if $.Params.any }}
+      {{ errorf "[%v] What u doin' here w/ no 'fallback'?\n\t%v" $.Page.Language.LanguageName $.Position }}
+    {{ else if (and (not (isset $.Params "any")) (ne $.Parent nil)) }}
+      {{ if in $.Parent.Params "any" }}
+        {{ if $.Parent.Params.any }}
+          {{ errorf "[%v] What u doin' here w/ no 'fallback'?\n\t%v" $.Page.Language.LanguageName $.Position }}
+        {{ end }}
+      {{ end }}
+    {{ end }}
+  {{ else }}
+    {{ errorf "[%v] What u doin' here w/ no 'fallback'?\n\t%v" $.Page.Language.LanguageName $.Position }}
+  {{ end }}
+{{ end }}
+
+{{ if $path }}
+  {{ $file = (index (split $path "/" | last 1) 0) }}
+  {{ $id = printf "%s-%s" $file .Ordinal }}
+
+  {{ $syntax = (index (split $file "." | last 1) 0) }}
+
+  {{ $from := $.Params.from }}
+  {{ $to := $.Params.to }}
+  {{ $length := 0 }}
+  {{ $content = readFile $path }}
+
+  {{ with $content }}
+    {{ with split . "\n" }}
+      {{ $contentLines := . }}
+      {{/* Default the snippet length to the file length. */}}
+      {{ $length = len . }}
+
+      {{/* Find snippet boundaries if valid values were provided for 'from' and/or 'to'. */}}
+      {{ range $index, $line := . }}
+        {{ if in $line $from }}
+          {{/* This check ensures that we are not accidentally on the $hlFrom line,
+               such as if $from is a substring of $hLFrom */}}
+          {{ if not (and $hlFrom (in $line $hlFrom)) }}
+            {{ $firstLine = add $index 1 }}
+          {{ end }}
+        {{ else if in $line $to }}
+          {{/* Similarly to above, check if we are on a substring of $hlTo */}}
+          {{ if not (and $hlTo (in $line $hlTo)) }}
+            {{ $length = sub $index $firstLine }}
+          {{ end }}
+        {{ end }}
+      {{ end }}
+
+      {{ $lastLine = add $firstLine $length }}
+
+      {{/* Trim snippet to boundaries. */}}
+      {{ with first $length (after $firstLine $contentLines) }}
+        {{/* If 'lines' were provided, drop any lines that aren't specified and
+             fill gaps between line groups with ellipses. */}}
+        {{ if $loc }}
+          {{ $bounded := . }}
+          {{ $temp := slice }}
+          {{ $last := (sub (len $loc) 1) }}
+          {{ range $index, $segment := $loc }}
+            {{ range $start, $count := $segment }}
+              {{ with first $count (after (sub (int $start) 1) $bounded) }}
+                {{ $temp = $temp | append . }}
+                {{ if ne $index $last }}
+                  {{ $temp = $temp | append "" $ellipsis "" }}
+                {{ end }}
+              {{ end }}
+            {{ end }}
+          {{ end }}
+          {{ $contentLines = $temp }}
+        {{ else }}
+          {{ $contentLines = . }}
+        {{ end }}
+      {{ end }}
+
+      {{ if and $hlFrom $hlTo }}
+        {{/* calculate hl_lines */}}
+        {{ $hlStart := slice }}
+        {{ $hlEnd := slice }}
+        {{ range $index, $line := $contentLines }}
+          {{ if in $line $hlFrom }}
+            {{ $hlStart = $hlStart | append (add $index 1) }}
+            {{ $contentLines = (first $index $contentLines) | append (after (add $index 1) $contentLines) }}
+          {{ else if in $line $hlTo }}
+            {{ $hlEnd = $hlEnd | append $index }}
+            {{ $contentLines = (first $index $contentLines) | append (after (add $index 1) $contentLines) }}
+          {{ end }}
+        {{ end }}
+        {{ if and $hlStart $hlEnd }}
+          {{ $hlPairs := slice }}
+          {{ range $index, $startLine := $hlStart }}
+            {{ $endLine := index $hlEnd $index }}
+            {{ $hlPairs = $hlPairs | append (printf "%d-%d" $startLine $endLine) }}
+          {{ end }}
+          {{ $hlOpts = printf "hl_lines=%s" (delimit $hlPairs " ") }}
+        {{ else }}
+          {{ $hlOpts = "" }}
+        {{ end }}
+      {{ end }}
+
+      {{/* Strip any remaining lines containing the 'docs:' magic string. */}}
+      {{ $withoutDocsTags := slice }}
+      {{ range $index, $line := $contentLines }}
+        {{ if not (in $line "docs:") }}
+          {{ $withoutDocsTags = $withoutDocsTags | append $line }}
+        {{ end }}
+      {{ end }}
+      {{ $contentLines = $withoutDocsTags }}
+
+      {{ $content = delimit $contentLines "\n" }}
+    {{ end }}
+  {{ end }}
+{{ else }}
+  {{/* If we aren't loading a file, hash the content for a unique ID. */}}
+  {{ $id = md5 $content }}
+{{ end }}
+
+{{ if (not $syntax) }}
+  {{ $syntax = $.Page.Language.Lang }}
+{{ end }}
+
+{{ with $syntaxoverride }}
+  {{ $syntax = $syntaxoverride }}
+{{ end }}
+
+{{ $gFirstLine := 0 }}
+{{ $gLastLine := 0 }}
+{{ if $loc }}
+    {{ $firstLoc := (index $loc 0) }}
+    {{ $lastLoc := (index $loc (sub (len $loc) 1)) }}
+    {{ range $start, $count := $firstLoc }}
+        {{ $gFirstLine = (int $start) }}
+    {{ end }}
+    {{ range $start, $count := $lastLoc }}
+        {{ $gLastLine = (add (int $start) (int $count)) }}
+    {{ end }}
+{{ else }}
+    {{ $gFirstLine = (add $firstLine 1) }}
+    {{ $gLastLine = $lastLine }}
+{{ end }}
+
+{{ $pathTrim := "" }}
+{{ with $gitHub }}
+    {{ $pathTrim = ( split $path "/" | after 2 | path.Join) }}
+    {{ $gitHubRef = (printf "%s/blob/main/%s#L%d-L%d" $gitHub $pathTrim $gFirstLine $gLastLine) }}
+{{ end }}
+
+<div class="code" id="{{ $file | urlize}}" data-hl_lines="{{ $hl_lines }}" {{ if $tabGroup }}data-tabgroup="{{ $tabGroup }}"{{ end }}>
+  <div class="filename rounded-t-md bg-gray-200 text-gray-700 text-sm py-2 flex">
+    {{- with $syntax -}}
+      <span class="px-2{{ if eq . "go" }} flex w-10{{end}}">
+        {{- partialCached "fontawesome.html" . . -}}
+      </span>
+    {{- end -}}
+    {{ if $gitHub }}
+        {{ $pathTrim }}
+    {{ else }}
+        {{ $file }}
+    {{ end }}
+    {{ with $gitHubRef }}
+        <a class="float-right mr-2" href="{{ $gitHubRef }}"><button class="btn-outline">Browse on GitHub</button></a>
+    {{ end }}
+  </div>
+  {{ $syntax  = $syntax | default "plaintext" }}
+  {{ if $linenos }}
+      {{ if $hlOpts }}
+          {{ $hlOpts = (printf "linenos=table,linenostart=%d,%s" $gFirstLine $hlOpts) }}
+      {{ else }}
+          {{ $hlOpts = (printf "linenos=table,linenostart=%d" $gFirstLine) }}
+      {{ end }}
+  {{ end }}
+  {{- highlight $content $syntax $hlOpts -}}
+</div>

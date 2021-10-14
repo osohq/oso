@@ -6,12 +6,16 @@ on:
         description: "docs s3 path (docs.oso.dev or docs-preview.oso.dev)"
       oso_version:
         description: "oso release to build docs for"
+        default: "0.21.0" # oso_version
       flask_oso_version:
         description: "flask oso release to build docs for"
+        default: "0.21.0" # flask_oso_version
       django_oso_version:
         description: "django oso release to build docs for"
+        default: "0.21.0" # django_oso_version
       sqlalchemy_oso_version:
         description: "sqlalchemy oso release to build docs for"
+        default: "0.21.0" # sqlalchemy_oso_version
 jobs:
   publish:
     name: Publish docs
@@ -21,6 +25,7 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
       AWS_REGION: "us-east-1"
       PUBLISH_DOCS: 1
+      ALGOLIA_ADMIN_API_KEY: ${{ secrets.ALGOLIA_ADMIN_API_KEY }}
     steps:
       - uses: actions/checkout@v2
 
@@ -40,7 +45,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v1
         with:
-          node-version: '12.x'
+          node-version: '12'
 
       # Uncomment this when we want WASM on the docs site again
       # - name: Install Rust stable toolchain
@@ -85,31 +90,30 @@ jobs:
         run: pip install sqlalchemy_oso[flask]==${{ github.event.inputs.sqlalchemy_oso_version }} -f sqlalchemy-oso-python
 
 
-      ### Build old docs
-      - name: Build docs
-        run: SPHINXOPTS="-W" make -C docs build
-
-      ### Build new docs
+      ### Build docs
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v2
         with:
           hugo-version: '0.79.1'
-      - name: Build Hugo docs
+      - name: Build Hugo docs (docs-preview.oso.dev)
         if: github.event.inputs.url == 'docs-preview.oso.dev'
         run: |
-          make build
-          HUGO_ENV=production hugo -b "https://docs-preview.oso.dev/"
-        working-directory: new-docs
-      - name: Build Hugo docs
+          make ci-preview-docs
+        working-directory: docs
+      - name: Build Hugo docs (docs.oso.dev)
         if: github.event.inputs.url == 'docs.oso.dev'
         run: |
-          make build-prod
-          HUGO_ENV=production hugo -b "https://docs.osohq.com/"
-        working-directory: new-docs
+          make ci-prod-docs
+        working-directory: docs
+      - name: Install s3deploy
+        run: |
+          wget https://github.com/bep/s3deploy/releases/download/v2.4.0/s3deploy_2.4.0_Linux-64bit.deb
+          sudo dpkg -i s3deploy_2.4.0_Linux-64bit.deb
 
       ### Push to S3 + invalidate cache
-      - name: s3 publish
-        run: aws s3 sync --delete new-docs/public/ s3://${{ github.event.inputs.url }}
+      - name: deploy
+        run: s3deploy -bucket ${{ github.event.inputs.url }}  -path v/main -source public -region us-east-1
+        working-directory: docs
       - name: cloudfront invalidate docs preview
         run: aws cloudfront create-invalidation --distribution-id E2KU2V8C9KJNU7 --paths "/*"
         if: github.event.inputs.url == 'docs-preview.oso.dev'

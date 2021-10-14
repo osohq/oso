@@ -1,28 +1,28 @@
-[submodule "docs/examples/quickstart/oso-java-quickstart"]
-	path = docs/examples/quickstart/oso-java-quickstart
+[submodule "docs/examples/quickstart/go"]
+	path = docs/examples/quickstart/go
+	url = https://github.com/osohq/oso-go-quickstart.git
+	branch = main
+[submodule "docs/examples/quickstart/java"]
+	path = docs/examples/quickstart/java
 	url = https://github.com/osohq/oso-java-quickstart.git
-        branch = main
-[submodule "docs/examples/quickstart/oso-nodejs-quickstart"]
-	path = docs/examples/quickstart/oso-nodejs-quickstart
+	branch = main
+[submodule "docs/examples/quickstart/nodejs"]
+	path = docs/examples/quickstart/nodejs
 	url = https://github.com/osohq/oso-nodejs-quickstart.git
-        branch = main
-[submodule "docs/examples/quickstart/oso-python-quickstart"]
-	path = docs/examples/quickstart/oso-python-quickstart
+	branch = main
+[submodule "docs/examples/quickstart/python"]
+	path = docs/examples/quickstart/python
 	url = https://github.com/osohq/oso-python-quickstart.git
-        branch = main
-[submodule "docs/examples/quickstart/oso-ruby-quickstart"]
-	path = docs/examples/quickstart/oso-ruby-quickstart
+	branch = main
+[submodule "docs/examples/quickstart/ruby"]
+	path = docs/examples/quickstart/ruby
 	url = https://github.com/osohq/oso-ruby-quickstart.git
-        branch = main
-[submodule "docs/examples/quickstart/oso-rust-quickstart"]
-	path = docs/examples/quickstart/oso-rust-quickstart
+	branch = main
+[submodule "docs/examples/quickstart/rust"]
+	path = docs/examples/quickstart/rust
 	url = https://github.com/osohq/oso-rust-quickstart.git
-        branch = main
-[submodule "docs/examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide"]
-	path = docs/examples/roles/sqlalchemy/oso-sqlalchemy-roles-guide
-	url = https://github.com/osohq/oso-sqlalchemy-roles-guide
-  branch = main
-[submodule "new-docs/examples/roles/sqlalchemy/basic"]
-	path = new-docs/examples/roles/sqlalchemy/basic
-	url = https://github.com/osohq/oso-sqlalchemy-roles-guide.git
-	branch = basic_roles_complete
+	branch = main
+[submodule "docs/examples/gitclub"]
+	path = docs/examples/gitclub
+	url = https://github.com/osohq/gitclub.git
+	branch = main

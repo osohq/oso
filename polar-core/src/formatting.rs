@@ -143,8 +143,8 @@ fn precedence(o: &Operator) -> i32 {
         Operator::Unify => 4,
         Operator::Assign => 4,
         Operator::Not => 3,
-        Operator::Or => 2,
-        Operator::And => 1,
+        Operator::And => 2,
+        Operator::Or => 1,
     }
 }
 
@@ -154,7 +154,7 @@ fn has_lower_pred(op: Operator, t: &Term) -> bool {
     match t.value() {
         Value::Expression(Operation {
             operator: other, ..
-        }) => precedence(&op) > precedence(&other),
+        }) => precedence(&op) > precedence(other),
         _ => false,
     }
 }
@@ -327,7 +327,7 @@ pub mod display {
                             "{}({}) if {};",
                             self.name.to_polar(),
                             format_params(&self.params, ", "),
-                            format_args(Operator::And, &args, ",\n  "),
+                            format_args(Operator::And, args, ",\n  "),
                         )
                     }
                 }
@@ -348,6 +348,7 @@ pub mod display {
 
 pub mod to_polar {
     use crate::formatting::{format_args, format_params, to_polar_parens};
+    use crate::resource_block::{BlockType, ResourceBlock, ShorthandRule};
     use crate::rules::*;
     use crate::terms::*;
 
@@ -374,6 +375,9 @@ pub mod to_polar {
             if let Some(ref repr) = self.repr {
                 repr.clone()
             } else {
+                // Print out external instances like ^{id: 123}
+                // NOTE: this format is used by host libraries to enrich output
+                // messages with native representations of the instances.
                 format!("^{{id: {}}}", self.instance_id)
             }
         }
@@ -560,7 +564,7 @@ pub mod to_polar {
                             "{}({}) if {};",
                             self.name.to_polar(),
                             format_params(&self.params, ", "),
-                            format_args(Operator::And, &args, " and "),
+                            format_args(Operator::And, args, " and "),
                         )
                     }
                 }
@@ -611,6 +615,58 @@ pub mod to_polar {
                 Value::RestVariable(s) => format!("*{}", s.to_polar()),
                 Value::Expression(e) => e.to_polar(),
             }
+        }
+    }
+
+    impl ToPolarString for ShorthandRule {
+        fn to_polar(&self) -> String {
+            let Self {
+                head,
+                body: (implier, relation),
+            } = self;
+            if let Some(relation) = relation {
+                format!(
+                    "{} if {} on {};",
+                    head.to_polar(),
+                    implier.to_polar(),
+                    relation.to_polar()
+                )
+            } else {
+                format!("{} if {};", head.to_polar(), implier.to_polar())
+            }
+        }
+    }
+
+    impl ToPolarString for BlockType {
+        fn to_polar(&self) -> String {
+            match self {
+                Self::Actor => "actor".to_owned(),
+                Self::Resource => "resource".to_owned(),
+            }
+        }
+    }
+
+    impl ToPolarString for ResourceBlock {
+        fn to_polar(&self) -> String {
+            let mut s = format!(
+                "{} {} {{\n",
+                self.block_type.to_polar(),
+                self.resource.to_polar()
+            );
+            if let Some(ref roles) = self.roles {
+                s += &format!("  roles = {};\n", roles.to_polar());
+            }
+            if let Some(ref permissions) = self.permissions {
+                s += &format!("  permissions = {};\n", permissions.to_polar());
+            }
+            if let Some(ref relations) = self.relations {
+                s += &format!("  relations = {};\n", relations.to_polar());
+            }
+            for rule in &self.shorthand_rules {
+                s += &format!("  {}\n", rule.to_polar());
+            }
+            s += "}";
+            s
         }
     }
 }

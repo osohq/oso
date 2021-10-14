@@ -1,7 +1,8 @@
-require "oso"
+require 'oso'
 
 OSO ||= Oso.new
 
+# context-start
 class Env
   def self.var(variable)
     ENV[variable]
@@ -9,3 +10,4 @@ class Env
 end
 
 OSO.register_class(Env)
+# context-end

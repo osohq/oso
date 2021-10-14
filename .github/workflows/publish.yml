@@ -117,10 +117,10 @@ jobs:
         run: |
           mkdir -p oso-js-node-${{ github.event.inputs.version }}
           tar -xzf oso-js-node-${{ github.event.inputs.version }}.tgz -C oso-js-node-${{ github.event.inputs.version }} --strip-components=1
-      - name: Use Node.js 10.14.2
+      - name: Use Node.js 12
         uses: actions/setup-node@v1
         with:
-          node-version: 10.14.2
+          node-version: "12"
       - name: Set up .npmrc
         working-directory: "oso-js-node-${{ github.event.inputs.version }}"
         run: echo '//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}' > .npmrc

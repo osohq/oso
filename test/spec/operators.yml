@@ -6,6 +6,10 @@ cases:
   - query: ImplementsEq.New(1) = ImplementsEq.New(1)
   - query: ImplementsEq.New(1) == ImplementsEq.New(1)
   - query: not ImplementsEq.New(1) = ImplementsEq.New(2)
+  - query: new Least() = new Least()
+  - query: new Least() == new Least()
+  - query: not new NaNLike() == new NaNLike()
+  - query: new NaNLike() != new NaNLike()
 
   # lt/gt
   - query: Comparable.New(1) < Comparable.New(2)
@@ -18,3 +22,8 @@ cases:
   - query: Comparable.New(2) >= Comparable.New(1)
   - query: Comparable.New(1) >= Comparable.New(1)
   - query: Comparable.New(1) <= Comparable.New(1)
+  - query: new Least() < "anything"
+  - query: "everything" > new Least()
+  - query: not new Least() < new Least()
+  - query: not new NaNLike() <= new Comparable.New(0)
+  - query: not new NaNLike() >= new Comparable.New(0)

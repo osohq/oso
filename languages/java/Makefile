@@ -1,4 +1,4 @@
-.PHONY: rust test package repl lint fmt
+.PHONY: rust test package repl lint fmt clean
 
 rust:
 	$(MAKE) -C ../.. rust-build
@@ -25,3 +25,6 @@ lint: fmt
 
 fmt:
 	$(MAKE) -C ../.. fmt-java
+
+clean:
+	cd oso && mvn clean

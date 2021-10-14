@@ -17,6 +17,22 @@ type TypeErasedMethod<R> =
     Arc<dyn Fn(&Instance, Vec<PolarValue>, &mut Host) -> crate::Result<R> + Send + Sync>;
 
 #[derive(Clone)]
+pub struct RegisterHook(Arc<dyn Fn(&mut crate::Oso) -> crate::Result<()> + Send + Sync + 'static>);
+
+impl RegisterHook {
+    pub fn new<F>(f: F) -> Self
+    where
+        F: Fn(&mut crate::Oso) -> crate::Result<()> + Send + Sync + 'static,
+    {
+        RegisterHook(Arc::new(f))
+    }
+
+    pub fn call(&self, oso: &mut crate::Oso) -> crate::Result<()> {
+        (self.0)(oso)
+    }
+}
+
+#[derive(Clone)]
 pub struct Constructor(TypeErasedFunction<Instance>);
 
 impl Constructor {
@@ -50,7 +66,7 @@ impl AttributeGetter {
     {
         Self(Arc::new(move |receiver, host: &mut Host| {
             let receiver = receiver
-                .downcast(Some(&host))
+                .downcast(Some(host))
                 .map_err(|e| e.invariant().into());
             receiver.map(&f).and_then(|v| v.to_polar_result())
         }))
@@ -75,7 +91,7 @@ impl InstanceMethod {
         Self(Arc::new(
             move |receiver: &Instance, args: Vec<PolarValue>, host: &mut Host| {
                 let receiver = receiver
-                    .downcast(Some(&host))
+                    .downcast(Some(host))
                     .map_err(|e| e.invariant().into());
 
                 let args = Args::from_polar_list(&args);
@@ -99,7 +115,7 @@ impl InstanceMethod {
         Self(Arc::new(
             move |receiver: &Instance, args: Vec<PolarValue>, host: &mut Host| {
                 let receiver = receiver
-                    .downcast(Some(&host))
+                    .downcast(Some(host))
                     .map_err(|e| e.invariant().into());
 
                 let args = Args::from_polar_list(&args);
@@ -126,7 +142,7 @@ impl InstanceMethod {
         Self(Arc::new(
             move |receiver: &Instance, args: Vec<PolarValue>, host: &mut Host| {
                 receiver
-                    .downcast::<Class>(Some(&host))
+                    .downcast::<Class>(Some(host))
                     .map_err(|e| e.invariant().into())
                     .and_then(|class| {
                         tracing::trace!(class = %class.name, method=%name, "class_method");

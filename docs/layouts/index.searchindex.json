@@ -1,0 +1,8 @@
+{{- $.Scratch.Add "index" slice -}}
+{{- $section := $.Site.GetPage "section" .Section }}
+{{- range .Site.AllPages -}}
+      {{- if or (and (.IsDescendant $section) (and (not .Draft) (not .Params.private))) $section.IsHome -}}
+      {{- $.Scratch.Add "index" (dict "objectID" .UniqueID "date" .Date.UTC.Unix "description" .Description  "kind" .Kind "lang" .Lang "lastmod" .Lastmod.UTC.Unix "permalink" .Permalink "summary" .Summary "title" .Title "section" .Section "content" (.Plain | htmlUnescape) )}}
+                  {{- end -}}
+      {{- end -}}
+{{- $.Scratch.Get "index" | jsonify -}}

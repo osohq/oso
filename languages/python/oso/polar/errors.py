@@ -18,14 +18,17 @@ from polar.exceptions import (
     UnsupportedError,
     ParameterError,
     PolarApiError,
+    ValidationError,
 )
 
 
-def get_python_error(err_str):
+def get_python_error(err_str, enrich_message=None):
     """Fetch a Polar error and map it into a Python exception."""
     err = json.loads(err_str)
 
     message = err["formatted"]
+    if enrich_message:
+        message = enrich_message(message)
     kind, body = next(iter(err["kind"].items()))
 
     try:
@@ -36,6 +39,12 @@ def get_python_error(err_str):
         subkind = None
         details = None
 
+    if details and enrich_message:
+        if details.get("stack_trace"):
+            details["stack_trace"] = enrich_message(details["stack_trace"])
+        if "msg" in details:
+            details["msg"] = enrich_message(details["msg"])
+
     if kind == "Parse":
         return _parse_error(subkind, message, details)
     elif kind == "Runtime":
@@ -43,7 +52,10 @@ def get_python_error(err_str):
     elif kind == "Operational":
         return _operational_error(subkind, message, details)
     elif kind == "Parameter":
+        # TODO(gj): this is wrong -- method has arity 3.
         return _api_error(message, details)
+    elif kind == "Validation":
+        return _validation_error(message, details)
 
 
 def _parse_error(subkind, message, details):
@@ -77,9 +89,12 @@ def _operational_error(subkind, message, details):
         return OperationalError(message, details)
 
 
+def _validation_error(message, details):
+    return ValidationError(message, details)
+
+
 def _api_error(subkind, message, details):
     if subkind == "Parameter":
         return ParameterError(message, details)
     else:
         return PolarApiError(message, details)
-    pass

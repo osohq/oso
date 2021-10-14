@@ -35,6 +35,10 @@ func newQuery(ffiQuery ffi.QueryFfi, host host.Host) Query {
 	}
 }
 
+func (q *Query) Cleanup() {
+	q.ffiQuery.Delete()
+}
+
 func (q *Query) resultsChannel() (<-chan map[string]interface{}, <-chan error) {
 	results := make(chan map[string]interface{}, 1)
 	errors := make(chan error, 1)
@@ -94,7 +98,7 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 
 		switch ev := event.QueryEventVariant.(type) {
 		case QueryEventDone:
-			defer q.ffiQuery.Delete()
+			defer q.Cleanup()
 			return nil, nil
 		case QueryEventDebug:
 			err = q.handleDebug(ev)
@@ -118,16 +122,16 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 			err = q.handleExternalIsSubSpecializer(ev)
 		case QueryEventExternalIsSubclass:
 			err = q.handleExternalIsSubclass(ev)
-		case QueryEventExternalUnify:
-			err = q.handleExternalUnify(ev)
 		case QueryEventExternalOp:
 			err = q.handleExternalOp(ev)
 		case QueryEventNextExternal:
 			err = q.handleNextExternal(ev)
 		default:
+			defer q.Cleanup()
 			return nil, fmt.Errorf("unexpected query event: %v", ev)
 		}
 		if err != nil {
+			defer q.Cleanup()
 			return nil, err
 		}
 	}
@@ -135,7 +139,6 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 }
 
 func (q Query) handleMakeExternal(event types.QueryEventMakeExternal) error {
-	fmt.Printf("%v", event)
 	id := uint64(event.InstanceId)
 	call, _ := event.Constructor.Value.ValueVariant.(ValueCall)
 	if call.Kwargs != nil {
@@ -154,7 +157,12 @@ func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 
 	// if we provided Args, it should be callable
 	if event.Args != nil {
-		method := reflect.ValueOf(instance).MethodByName(string(event.Attribute))
+		// Check for the method on a pointer to the value, not the value itself.
+		typ := reflect.TypeOf(instance)
+		iv := reflect.New(typ)
+		iv.Elem().Set(reflect.ValueOf(instance))
+		method := iv.MethodByName(string(event.Attribute))
+
 		if !method.IsValid() {
 			q.ffiQuery.ApplicationError((errors.NewMissingAttributeError(instance, string(event.Attribute))).Error())
 			q.ffiQuery.CallResult(event.CallId, nil)
@@ -224,14 +232,6 @@ func (q Query) handleExternalIsSubclass(event types.QueryEventExternalIsSubclass
 	return q.ffiQuery.QuestionResult(event.CallId, res)
 }
 
-func (q Query) handleExternalUnify(event types.QueryEventExternalUnify) error {
-	res, err := q.host.Unify(event.LeftInstanceId, event.RightInstanceId)
-	if err != nil {
-		return err
-	}
-	return q.ffiQuery.QuestionResult(event.CallId, res)
-}
-
 func (q Query) handleExternalOp(event types.QueryEventExternalOp) error {
 	if len(event.Args) != 2 {
 		return fmt.Errorf("Unexpected number of arguments for operation: %v", len(event.Args))
@@ -244,27 +244,115 @@ func (q Query) handleExternalOp(event types.QueryEventExternalOp) error {
 	if err != nil {
 		return err
 	}
-	var answer bool
-	leftCmp := left.(interfaces.Comparer)
-	rightCmp := right.(interfaces.Comparer)
-	// @TODO: Where are the implementations for these for builtin stuff (numbers mainly)
-	switch event.Operator.OperatorVariant.(type) {
-	case OperatorLt:
-		answer = leftCmp.Lt(rightCmp)
-	case OperatorLeq:
-		answer = leftCmp.Lt(rightCmp) || leftCmp.Equal(rightCmp)
-	case OperatorGt:
-		answer = rightCmp.Lt(leftCmp)
-	case OperatorGeq:
-		answer = !leftCmp.Lt(rightCmp)
-	case OperatorEq:
-		answer = leftCmp.Equal(rightCmp)
-	case OperatorNeq:
-		answer = !leftCmp.Equal(rightCmp)
-	default:
-		return fmt.Errorf("Unsupported operation: %v", event.Operator.OperatorVariant)
+
+	leftCmp, leftOk := left.(interfaces.Comparer)
+	rightCmp, rightOk := right.(interfaces.Comparer)
+	op := event.Operator.OperatorVariant
+
+	// this logic is kind of weird!
+	// the reason why we need so many different comparison
+	// routines is that interfaces.Comparer only has methods
+	// to test for == and <, and x > y = !(x < y || x == y)
+	// is only true if x and y are actually ordered -- which
+	// we can't assume. for that reason different subsets of
+	// the 6 usual comparison operators are available in each
+	// case where x or y implements or doesn't implement
+	// interfaces.Comparer.
+
+	if leftOk {
+		if rightOk {
+			return q.handleCmpLR(event, leftCmp, op, rightCmp)
+		}
+		return q.handleCmpL(event, leftCmp, op, right)
 	}
-	return q.ffiQuery.QuestionResult(event.CallId, answer)
+	if rightOk {
+		return q.handleCmpR(event, left, op, rightCmp)
+	}
+	return q.handleCmp(event, left, op, right)
+}
+
+func (q Query) answer(ev types.QueryEventExternalOp, b bool) error {
+	return q.ffiQuery.QuestionResult(ev.CallId, b)
+}
+
+func (q Query) handleCmpL(
+	ev types.QueryEventExternalOp,
+	l interfaces.Comparer,
+	op OperatorVariant,
+	r interface{}) error {
+
+	switch op.(type) {
+	case OperatorLt:
+		return q.answer(ev, l.Lt(r))
+	case OperatorLeq:
+		return q.answer(ev, l.Lt(r) || l.Equal(r))
+	case OperatorEq:
+		return q.answer(ev, l.Equal(r))
+	case OperatorNeq:
+		return q.answer(ev, !l.Equal(r))
+	default:
+		return fmt.Errorf("Unsupported operation: %v", op)
+	}
+}
+
+func (q Query) handleCmpR(
+	ev types.QueryEventExternalOp,
+	l interface{},
+	op OperatorVariant,
+	r interfaces.Comparer) error {
+
+	switch op.(type) {
+	case OperatorGt:
+		return q.answer(ev, r.Lt(l))
+	case OperatorGeq:
+		return q.answer(ev, r.Lt(l) || r.Equal(l))
+	case OperatorEq:
+		return q.answer(ev, r.Equal(l))
+	case OperatorNeq:
+		return q.answer(ev, !r.Equal(l))
+	default:
+		return fmt.Errorf("Unsupported operation: %v", op)
+	}
+}
+
+func (q Query) handleCmpLR(
+	ev types.QueryEventExternalOp,
+	l interfaces.Comparer,
+	op OperatorVariant,
+	r interfaces.Comparer) error {
+
+	switch op.(type) {
+	case OperatorLt:
+		return q.answer(ev, l.Lt(r))
+	case OperatorLeq:
+		return q.answer(ev, l.Lt(r) || l.Equal(r))
+	case OperatorGt:
+		return q.answer(ev, r.Lt(l))
+	case OperatorGeq:
+		return q.answer(ev, r.Lt(l) || r.Equal(l))
+	case OperatorEq:
+		return q.answer(ev, l.Equal(r))
+	case OperatorNeq:
+		return q.answer(ev, !l.Equal(r))
+	default:
+		return fmt.Errorf("Unsupported operation: %v", op)
+	}
+}
+
+func (q Query) handleCmp(
+	ev types.QueryEventExternalOp,
+	l interface{},
+	op OperatorVariant,
+	r interface{}) error {
+
+	switch op.(type) {
+	case OperatorEq:
+		return q.answer(ev, reflect.DeepEqual(l, r))
+	case OperatorNeq:
+		return q.answer(ev, !reflect.DeepEqual(l, r))
+	default:
+		return fmt.Errorf("Unsupported operation: %v", op)
+	}
 }
 
 func (q Query) handleNextExternal(event types.QueryEventNextExternal) error {
@@ -293,8 +381,6 @@ func (q Query) handleNextExternal(event types.QueryEventNextExternal) error {
 }
 
 func (q Query) handleDebug(event types.QueryEventDebug) error {
-	fmt.Printf("%v\n", event.Message)
-
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("debug> ")
 	text, _ := reader.ReadString('\n')

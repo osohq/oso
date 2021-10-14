@@ -1,0 +1,11 @@
+<aside class="flex flex-col justify-between overflow-y-auto sticky sticky?lg:h-(screen-20) pt-10 pb-6 top-20">
+    <div class="toc sticky pin hidden h-64 lg:h-auto overflow-x-hidden overflow-y-auto lg:block mt-0 bg-white shadow lg:shadow-none lg:bg-transparent z-20"
+        id="menu-content">
+        {{ if not (or .Params.hideContents (lt .WordCount 400)) }}
+        <h3 class="font-bold pb-4">Page Contents</h3>
+        {{ .TableOfContents }}
+        {{ end }}
+
+        {{- partial "update-subscribe.html" . -}}
+    </div>
+</aside>

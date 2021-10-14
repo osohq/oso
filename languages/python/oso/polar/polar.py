@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import os
 from pathlib import Path
 import sys
-from typing import Dict
+from typing import Dict, List, Union
 
 try:
     # importing readline on compatible platforms
@@ -21,7 +21,7 @@ from .exceptions import (
     PolarFileNotFoundError,
     InvalidQueryTypeError,
 )
-from .ffi import Polar as FfiPolar
+from .ffi import Polar as FfiPolar, PolarSource as Source
 from .host import Host
 from .query import Query
 from .predicate import Predicate
@@ -64,6 +64,7 @@ class Polar:
     def __init__(self, classes=CLASSES):
         self.ffi_polar = FfiPolar()
         self.host = Host(self.ffi_polar)
+        self.ffi_polar.set_message_enricher(self.host.enrich_message)
 
         # Register global constants.
         self.register_constant(None, name="nil")
@@ -86,27 +87,57 @@ class Polar:
         del self.host
         del self.ffi_polar
 
-    def load_file(self, policy_file):
-        """Load Polar policy from a ".polar" file."""
-        policy_file = Path(policy_file)
-        extension = policy_file.suffix
-        fname = str(policy_file)
-        if not extension == ".polar":
-            raise PolarFileExtensionError(fname)
+    def load_files(self, filenames: List[Union[Path, str]] = []):
+        """Load Polar policy from ".polar" files."""
+        if not filenames:
+            return
 
-        try:
-            with open(fname, "rb") as f:
-                file_data = f.read()
-        except FileNotFoundError:
-            raise PolarFileNotFoundError(fname)
+        sources: List[Source] = []
 
-        self.load_str(file_data.decode("utf-8"), policy_file)
+        for filename in filenames:
+            path = Path(filename)
+            extension = path.suffix
+            filename = str(path)
+            if not extension == ".polar":
+                raise PolarFileExtensionError(filename)
 
-    def load_str(self, string, filename=None):
+            try:
+                with open(filename, "rb") as f:
+                    src = f.read().decode("utf-8")
+                    sources.append(Source(src, filename))
+            except FileNotFoundError:
+                raise PolarFileNotFoundError(filename)
+
+        self._load_sources(sources)
+
+    def load_file(self, filename: Union[Path, str]):
+        """Load Polar policy from a ".polar" file.
+
+        `Oso.load_file` has been deprecated in favor of `Oso.load_files` as of
+        the 0.20 release. Please see changelog for migration instructions:
+        https://docs.osohq.com/project/changelogs/2021-09-15.html
+        """
+        print(
+            "`Oso.load_file` has been deprecated in favor of `Oso.load_files` as of the 0.20 release.\n\n"
+            + "Please see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html",
+            file=sys.stderr,
+        )
+        self.load_files([filename])
+
+    def load_str(self, string: str):
         """Load a Polar string, checking that all inline queries succeed."""
-        self.ffi_polar.load(string, filename)
+        # NOTE: not ideal that the MRO gets updated each time load_str is
+        # called, but since we are planning to move to only calling load once
+        # with the include feature, I think it's okay for now.
+        self._load_sources([Source(string)])
 
-        # check inline queries
+    # Register MROs, load Polar code, and check inline queries.
+    def _load_sources(self, sources: List[Source]):
+        self.host.register_mros()
+        self.ffi_polar.load(sources)
+        self.check_inline_queries()
+
+    def check_inline_queries(self):
         while True:
             query = self.ffi_polar.next_inline_query()
             if query is None:  # Load is done
@@ -151,10 +182,23 @@ class Polar:
         """
         return self.query(Predicate(name=name, args=args), **kwargs)
 
+    def query_rule_once(self, name, *args, **kwargs):
+        """Check a rule with name ``name`` and arguments ``args``.
+
+        :param name: The name of the predicate to query.
+        :param args: Arguments for the predicate.
+
+        :return: True if the query has any results, False otherwise.
+        """
+        try:
+            next(self.query(Predicate(name=name, args=args), **kwargs))
+            return True
+        except StopIteration:
+            return False
+
     def repl(self, files=[]):
         """Start an interactive REPL session."""
-        for f in files:
-            self.load_file(f)
+        self.load_files(files)
 
         while True:
             try:
@@ -186,9 +230,42 @@ class Polar:
             if not result:
                 print(False)
 
-    def register_class(self, cls, *, name=None):
-        """Register `cls` as a class accessible by Polar."""
-        cls_name = self.host.cache_class(cls, name)
+    def register_class(
+        self,
+        cls,
+        *,
+        name=None,
+        types=None,
+        build_query=None,
+        exec_query=None,
+        combine_query=None
+    ):
+        """
+        Register `cls` as a class accessible by Polar.
+
+        :param name:
+            Optionally specify the name for the class inside of Polar. Defaults
+            to `cls.__name__`
+        :param types:
+            Optional dict mapping field names to types or Relation objects for
+            data filtering.
+        :param build_query:
+            Optional function to generate a query for resources of type `cls`
+            from a list of Filters.
+        :param exec_query:
+            Optional function to execute a query produced by `build_query`.
+        :param combine_query:
+            Optional function to merge two queries produced by `build_query`.
+        """
+        # TODO: let's add example usage here or at least a proper docstring for the arguments
+        cls_name = self.host.cache_class(
+            cls,
+            name=name,
+            fields=types,
+            build_query=build_query,
+            exec_query=exec_query,
+            combine_query=combine_query,
+        )
         self.register_constant(cls, cls_name)
 
     def register_constant(self, value, name):

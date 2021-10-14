@@ -2,6 +2,9 @@ use js_sys::{Error, Map, Object, Reflect};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_test::*;
 
+use polar_core::sources::Source;
+use polar_core::terms::*;
+
 fn is_done_event(event: Object) -> bool {
     let event_kind: JsValue = "Done".into();
     Reflect::get(&event, &event_kind).is_ok()
@@ -10,14 +13,24 @@ fn is_done_event(event: Object) -> bool {
 #[wasm_bindgen_test]
 fn load_file_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let res = polar.wasm_load("x() if 1 == 1;\n", Some("foo.polar".to_owned()));
+    let source = Source {
+        src: "x() if 1 == 1;\n".to_owned(),
+        filename: Some("foo.polar".to_owned()),
+    };
+    let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
+    let res = polar.wasm_load(sources);
     assert!(matches!(res, Ok(())));
 }
 
 #[wasm_bindgen_test]
 fn load_file_errors() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let err = polar.wasm_load(";", None).unwrap_err();
+    let source = Source {
+        src: ";".to_owned(),
+        filename: None,
+    };
+    let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
+    let err = polar.wasm_load(sources).unwrap_err();
     let err: Error = err.dyn_into().unwrap();
     assert_eq!(err.name(), "ParseError::UnrecognizedToken");
     assert_eq!(
@@ -29,7 +42,12 @@ fn load_file_errors() {
 #[wasm_bindgen_test]
 fn next_inline_query_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let res = polar.wasm_load("?= 1 = 1;", None);
+    let source = Source {
+        src: "?= 1 = 1;".to_owned(),
+        filename: None,
+    };
+    let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
+    let res = polar.wasm_load(sources);
     assert!(matches!(res, Ok(())));
 
     let mut query = polar.wasm_next_inline_query().unwrap();
@@ -49,7 +67,12 @@ fn next_inline_query_succeeds() {
 #[wasm_bindgen_test]
 fn next_inline_query_errors() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let res = polar.wasm_load("?= 1 = 2;", None);
+    let source = Source {
+        src: "?= 1 = 2;".to_owned(),
+        filename: None,
+    };
+    let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
+    let res = polar.wasm_load(sources);
     assert!(matches!(res, Ok(())));
     let mut query = polar.wasm_next_inline_query().unwrap();
 
@@ -64,21 +87,14 @@ fn register_constant_succeeds() {
     let mut polar = polar_wasm_api::Polar::wasm_new();
     let res = polar.wasm_register_constant(
         "mathematics",
-        r#"{"value":{"ExternalInstance":{"instance_id":1,"literal":null,"repr":null}}}"#,
+        serde_wasm_bindgen::to_value(&Value::ExternalInstance(ExternalInstance {
+            instance_id: 1,
+            constructor: None,
+            repr: None,
+        }))
+        .unwrap(),
     );
     assert!(matches!(res, Ok(())));
-}
-
-#[wasm_bindgen_test]
-fn register_constant_errors() {
-    let mut polar = polar_wasm_api::Polar::wasm_new();
-    let err = polar.wasm_register_constant("mathematics", "").unwrap_err();
-    let err: Error = err.dyn_into().unwrap();
-    assert_eq!(err.name(), "RuntimeError::Serialization");
-    assert_eq!(
-        err.message(),
-        "Serialization error: EOF while parsing a value at line 1 column 0"
-    );
 }
 
 #[wasm_bindgen_test]
@@ -93,16 +109,21 @@ fn new_query_from_str_succeeds() {
 #[wasm_bindgen_test]
 fn new_query_from_str_errors() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let mut query = polar.wasm_new_query_from_str("x").unwrap();
+    let mut query = polar.wasm_new_query_from_str("[]").unwrap();
     let err: Error = query.wasm_next_event().unwrap_err().dyn_into().unwrap();
     assert_eq!(err.name(), "RuntimeError::TypeError");
-    assert_eq!(err.message(), "trace (most recent evaluation last):\n  in query at line 1, column 1\n    x\nType error: can't query for: x at line 1, column 1");
+    assert_eq!(err.message(), "trace (most recent evaluation last):\n  in query at line 1, column 1\n    []\nType error: [] isn\'t something that is true or false so can\'t be a condition at line 1, column 1");
 }
 
 #[wasm_bindgen_test]
 fn new_query_from_term_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let term = r#"{"value":{"Call":{"name":"x","args":[]}}}"#;
+    let term = Value::Call(Call {
+        name: Symbol("x".into()),
+        args: vec![],
+        kwargs: None,
+    });
+    let term = serde_wasm_bindgen::to_value(&term).unwrap();
     let mut query = polar.wasm_new_query_from_term(term).unwrap();
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
     assert!(is_done_event(event));
@@ -111,7 +132,7 @@ fn new_query_from_term_succeeds() {
 #[wasm_bindgen_test]
 fn new_query_from_term_errors() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let res = polar.wasm_new_query_from_term("");
+    let res = polar.wasm_new_query_from_term("".into());
     if let Err(err) = res {
         let err: Error = err.dyn_into().unwrap();
         assert_eq!(err.name(), "RuntimeError::Serialization");

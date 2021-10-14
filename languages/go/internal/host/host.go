@@ -8,7 +8,6 @@ import (
 	"reflect"
 
 	"github.com/osohq/go-oso/errors"
-	"github.com/osohq/go-oso/interfaces"
 	"github.com/osohq/go-oso/internal/ffi"
 	"github.com/osohq/go-oso/types"
 	. "github.com/osohq/go-oso/types"
@@ -75,6 +74,18 @@ func (h Host) CacheClass(cls reflect.Type, name string, constructor reflect.Valu
 	h.classes[name] = cls
 	if constructor.IsValid() {
 		h.constructors[name] = constructor
+	}
+	return nil
+}
+
+func (h Host) RegisterMros() error {
+	// Go does not support inheritance, so all MROs are empty
+	var err error
+	for name, _ := range h.classes {
+		err = h.ffiPolar.RegisterMro(name, []uint64{})
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -180,23 +191,6 @@ func (h Host) cacheInstance(instance interface{}, id *uint64) (*uint64, error) {
 	return &instanceID, nil
 }
 
-func (h Host) Unify(leftID uint64, rightID uint64) (bool, error) {
-	left, err1 := h.getInstance(leftID)
-	right, err2 := h.getInstance(rightID)
-	if err1 != nil {
-		return false, err1
-	}
-	if err2 != nil {
-		return false, err2
-	}
-	if leftEq, ok := left.Interface().(interfaces.Comparer); ok {
-		if rightEq, ok := right.Interface().(interfaces.Comparer); ok {
-			return leftEq.Equal(rightEq), nil
-		}
-	}
-	return reflect.DeepEqual(left, right), nil
-}
-
 func (h Host) Isa(value types.Term, classTag string) (bool, error) {
 	instance, err := h.ToGo(value)
 	if err != nil {
@@ -289,7 +283,7 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 	// check composite types
 	rt := reflect.ValueOf(v)
 	// deref pointer
-	if rt.Kind() == reflect.Ptr {
+	if rt.Kind() == reflect.Ptr || rt.Kind() == reflect.Interface {
 		rtDeref := rt.Elem()
 		if rt.IsNil() {
 			// TODO: Is `nil` a reflect.Ptr?
@@ -316,6 +310,10 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 		fields := make(map[types.Symbol]types.Term)
 		iter := rt.MapRange()
 		for iter.Next() {
+			// TODO(gj): error on maps w/o string keys since we're just gonna
+			// stringify 'em here and something will blow up way later (probably in
+			// query.go where we call
+			// `reflect.ValueOf(instance).FieldByName(string(event.Attribute)`).
 			k := iter.Key().String()
 			v := iter.Value().Interface()
 			converted, err := h.ToPolar(v)
@@ -331,7 +329,7 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		repr := fmt.Sprintf("%v", v)
+		repr := fmt.Sprintf("%T%+v", v, v)
 		inner := ValueExternalInstance{
 			InstanceId:  *instanceID,
 			Constructor: nil,
@@ -391,7 +389,7 @@ func (h Host) ToGo(v types.Term) (interface{}, error) {
 		return inner, nil
 	case ValueExpression:
 		return nil, fmt.Errorf(
-			"Recieved Expression from Polar VM. The Expression type is not yet supported in this language.\n" +
+			"Received Expression from Polar VM. The Expression type is not yet supported in this language.\n" +
 				"This may mean you performed an operation in your policy over an unbound variable.")
 	}
 

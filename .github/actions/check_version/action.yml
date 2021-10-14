@@ -35,7 +35,3 @@ runs:
         grep "^version = \"$oso_version\"$" polar-c-api/Cargo.toml
         grep "^version = \"$oso_version\"$" polar-wasm-api/Cargo.toml
       shell: bash
-    - name: Check docs release matches
-      run: grep "release = \"$oso_version\"" conf.py
-      shell: bash
-      working-directory: docs

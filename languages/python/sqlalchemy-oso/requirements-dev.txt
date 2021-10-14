@@ -1,0 +1,5 @@
+black==21.5b0
+flake8==3.9.2
+mypy==0.812
+sqlalchemy-stubs==0.4
+tox==3.23.1

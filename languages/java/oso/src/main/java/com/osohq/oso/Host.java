@@ -1,7 +1,11 @@
 package com.osohq.oso;
 
 import java.lang.reflect.Constructor;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
@@ -11,11 +15,17 @@ import org.json.JSONObject;
 public class Host implements Cloneable {
   private Ffi.Polar ffiPolar;
   private Map<String, Class<?>> classes;
+  private Map<Class<?>, Long> classIds;
   private Map<Long, Object> instances;
 
+  // Set to true to accept an expression from the core in toJava.
+  protected boolean acceptExpression;
+
   public Host(Ffi.Polar polarPtr) {
+    acceptExpression = false;
     ffiPolar = polarPtr;
     classes = new HashMap<String, Class<?>>();
+    classIds = new HashMap<Class<?>, Long>();
     instances = new HashMap<Long, Object>();
   }
 
@@ -23,8 +33,14 @@ public class Host implements Cloneable {
   public Host clone() {
     Host host = new Host(ffiPolar);
     host.classes.putAll(classes);
+    host.classIds.putAll(classIds);
     host.instances.putAll(instances);
+    host.acceptExpression = acceptExpression;
     return host;
+  }
+
+  protected void setAcceptExpression(boolean acceptExpression) {
+    this.acceptExpression = acceptExpression;
   }
 
   /** Get a registered Java class. */
@@ -48,7 +64,26 @@ public class Host implements Cloneable {
           name, classes.get(name).getName(), cls.getName());
     }
     classes.put(name, cls);
+    classIds.put(cls, cacheInstance(cls, null));
     return name;
+  }
+
+  /**
+   * Register a list of base classes (MRO list) for all registered classes. The list is in method
+   * resolution order (MRO), meaning the superclasses are ordered from most to least specific.
+   */
+  public void registerMros() {
+
+    for (Map.Entry<String, Class<?>> cls : classes.entrySet()) {
+      Class<?> scls = cls.getValue().getSuperclass();
+      List<Long> mro = new ArrayList<Long>();
+      while (scls != null) {
+        Long id = classIds.get(scls);
+        if (id != null) mro.add(id);
+        scls = scls.getSuperclass();
+      }
+      ffiPolar.registerMro(cls.getKey(), mro.toString());
+    }
   }
 
   /** Get a cached Java instance. */
@@ -145,15 +180,22 @@ public class Host implements Cloneable {
     return cls.isInstance(toJava(instance));
   }
 
-  /** Check if two instances unify. */
-  public boolean unify(long leftId, long rightId) throws Exceptions.UnregisteredInstanceError {
-    Object left = getInstance(leftId);
-    Object right = getInstance(rightId);
-    if (left == null) {
-      return right == null;
-    } else {
-      return left.equals(right);
+  /** Return true if left is a subclass (or the same class) as right. */
+  public boolean isSubclass(String leftTag, String rightTag) {
+    Class<?> leftClass, rightClass;
+    leftClass = getClass(leftTag);
+    rightClass = getClass(rightTag);
+
+    return rightClass.isAssignableFrom(leftClass);
+  }
+
+  public boolean operator(String op, List<Object> args) throws Exceptions.OsoException {
+    Object left = args.get(0), right = args.get(1);
+    if (op.equals("Eq")) {
+      if (left == null) return left == right;
+      else return left.equals(right);
     }
+    throw new Exceptions.UnimplementedOperation(op);
   }
 
   /** Convert Java Objects to Polar (JSON) terms. */
@@ -182,7 +224,21 @@ public class Host implements Cloneable {
     } else if (value != null && value instanceof List) {
       jVal.put("List", javaListToPolar((List<Object>) value));
     } else if (value != null && value instanceof Map) {
-      Map<String, JSONObject> jMap = javaMaptoPolar((Map<Object, Object>) value);
+      Map<Object, Object> valueMap = (Map<Object, Object>) value;
+      HashMap<String, Object> stringMap = new HashMap<String, Object>();
+
+      // Polar only supports dictionaries with string keys. Convert a map to a map of
+      // string keys.
+      for (Object objectKey : valueMap.keySet()) {
+        if (!(objectKey instanceof String)) {
+          throw new Exceptions.UnexpectedPolarTypeError(
+              "Cannot convert map with non-string keys to Polar");
+        }
+        String key = (String) objectKey;
+        stringMap.put(key, valueMap.get(objectKey));
+      }
+
+      Map<String, JSONObject> jMap = javaMaptoPolar(stringMap);
       jVal.put("Dictionary", new JSONObject().put("fields", jMap));
     } else if (value != null && value instanceof Predicate) {
       Predicate pred = (Predicate) value;
@@ -191,9 +247,39 @@ public class Host implements Cloneable {
           "Call", new JSONObject(Map.of("name", pred.name, "args", javaListToPolar(pred.args))));
     } else if (value != null && value instanceof Variable) {
       jVal.put("Variable", value);
+    } else if (value != null && value instanceof Expression) {
+      Expression expression = (Expression) value;
+      JSONObject expressionJSON = new JSONObject();
+      expressionJSON.put("operator", expression.getOperator().toString());
+      expressionJSON.put("args", javaListToPolar(expression.getArgs()));
+      jVal.put("Expression", expressionJSON);
+    } else if (value != null && value instanceof Pattern) {
+      Pattern pattern = (Pattern) value;
+      if (pattern.getTag() == null) {
+        jVal.put("Pattern", toPolarTerm(pattern.getFields()));
+      } else {
+        JSONObject fieldsJSON = new JSONObject();
+        fieldsJSON.put("fields", javaMaptoPolar(pattern.getFields()));
+
+        JSONObject instanceJSON = new JSONObject();
+        instanceJSON.put("tag", pattern.getTag());
+        instanceJSON.put("fields", fieldsJSON);
+
+        JSONObject patternJSON = new JSONObject();
+        patternJSON.put("Instance", instanceJSON);
+
+        jVal.put("Pattern", patternJSON);
+      }
     } else {
       JSONObject attrs = new JSONObject();
-      attrs.put("instance_id", cacheInstance(value, null));
+      Long instanceId = null;
+
+      // if the object is a Class, then it will already have an instance ID
+      if (value instanceof Class) {
+        instanceId = classIds.get(value);
+      }
+
+      attrs.put("instance_id", cacheInstance(value, instanceId));
       attrs.put("repr", value == null ? "null" : value.toString());
       jVal.put("ExternalInstance", attrs);
     }
@@ -240,12 +326,12 @@ public class Host implements Cloneable {
   }
 
   /** Convert a Java Map to a JSONified Polar dictionary. */
-  private Map<String, JSONObject> javaMaptoPolar(Map<Object, Object> map)
+  private Map<String, JSONObject> javaMaptoPolar(Map<String, Object> map)
       throws Exceptions.OsoException {
     HashMap<String, JSONObject> polarDict = new HashMap<String, JSONObject>();
-    for (Object key : map.keySet()) {
+    for (String key : map.keySet()) {
       JSONObject val = toPolarTerm(map.get(key));
-      polarDict.put(key.toString(), val);
+      polarDict.put(key, val);
     }
     return polarDict;
   }
@@ -294,16 +380,29 @@ public class Host implements Cloneable {
         return new Predicate(value.getJSONObject(tag).getString("name"), args);
       case "Variable":
         return new Variable(value.getString(tag));
-      default:
-        if (tag.equals("Expression")) {
-          throw new Exceptions.UnexpectedPolarTypeError(
-              "Recieved Expression from Polar VM. The Expression type is not yet supported in this"
-                  + " language.\n"
-                  + "This may mean you performed an operation in your policy over an unbound"
-                  + " variable.");
-        } else {
-          throw new Exceptions.UnexpectedPolarTypeError(tag);
+      case "Expression":
+        if (!this.acceptExpression) {
+          throw new Exceptions.UnexpectedPolarTypeError(Exceptions.UNEXPECTED_EXPRESSION_MESSAGE);
         }
+        return new Expression(
+            value.getJSONObject(tag).getEnum(Operator.class, "operator"),
+            polarListToJava(value.getJSONObject(tag).getJSONArray("args")));
+      case "Pattern":
+        JSONObject pattern = value.getJSONObject("Pattern");
+        String patternTag = pattern.keys().next();
+        JSONObject patternValue = pattern.getJSONObject(patternTag);
+        switch (patternTag) {
+          case "Instance":
+            return new Pattern(
+                patternValue.getString("tag"),
+                polarDictToJava(patternValue.getJSONObject("fields").getJSONObject("fields")));
+          case "Dictionary":
+            return new Pattern(null, polarDictToJava(patternValue));
+          default:
+            throw new Exceptions.UnexpectedPolarTypeError("Pattern: " + patternTag);
+        }
+      default:
+        throw new Exceptions.UnexpectedPolarTypeError(tag);
     }
   }
 

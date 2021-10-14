@@ -12,10 +12,10 @@ FILES = [
 RSpec.describe do
   before do
     @patient = "Bob"
-    @med_staff = Actor.new(role: "medical_staff", treated: [@patient])
-    @med_staff_bad_patient = Actor.new(role: "medical_staff", treated: ["Not Bob"])
+    @med_staff = User.new(role: "medical_staff", treated: [@patient])
+    @med_staff_bad_patient = User.new(role: "medical_staff", treated: ["Not Bob"])
 
-    @reg_staff = Actor.new(role: "reg_staff", treated: [@patient])
+    @reg_staff = User.new(role: "reg_staff", treated: [@patient])
 
     @order = Order.new(patient: @patient)
     @lab = Lab.new(patient: @patient)

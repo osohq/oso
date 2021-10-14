@@ -2,8 +2,9 @@
 //! Trait and implementations of `FromPolar` for converting from
 //! Polar types back to Rust types.
 
-use std::collections::hash_map::HashMap;
+use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque};
 use std::convert::TryFrom;
+use std::hash::Hash;
 
 use impl_trait_for_tuples::*;
 
@@ -121,10 +122,95 @@ impl<T: FromPolar> FromPolar for HashMap<String, T> {
     }
 }
 
+impl<T: FromPolar> FromPolar for BTreeMap<String, T> {
+    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+        if let PolarValue::Map(map) = val {
+            let mut result = BTreeMap::new();
+            for (k, v) in map {
+                let val = T::from_polar(v)?;
+                result.insert(k, val);
+            }
+            Ok(result)
+        } else {
+            Err(TypeError::expected("Map").user())
+        }
+    }
+}
+
 impl<T: FromPolar> FromPolar for Vec<T> {
     fn from_polar(val: PolarValue) -> crate::Result<Self> {
         if let PolarValue::List(l) = val {
             let mut result = vec![];
+            for v in l {
+                result.push(T::from_polar(v)?);
+            }
+            Ok(result)
+        } else {
+            Err(TypeError::expected("List").user())
+        }
+    }
+}
+
+impl<T: FromPolar> FromPolar for LinkedList<T> {
+    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+        if let PolarValue::List(l) = val {
+            let mut result = LinkedList::new();
+            for v in l {
+                result.push_back(T::from_polar(v)?);
+            }
+            Ok(result)
+        } else {
+            Err(TypeError::expected("List").user())
+        }
+    }
+}
+
+impl<T: FromPolar> FromPolar for VecDeque<T> {
+    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+        if let PolarValue::List(l) = val {
+            let mut result = VecDeque::new();
+            for v in l {
+                result.push_back(T::from_polar(v)?);
+            }
+            Ok(result)
+        } else {
+            Err(TypeError::expected("List").user())
+        }
+    }
+}
+
+impl<T: Eq + Hash + FromPolar> FromPolar for HashSet<T> {
+    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+        if let PolarValue::List(l) = val {
+            let mut result = HashSet::new();
+            for v in l {
+                result.insert(T::from_polar(v)?);
+            }
+            Ok(result)
+        } else {
+            Err(TypeError::expected("List").user())
+        }
+    }
+}
+
+impl<T: Eq + Ord + FromPolar> FromPolar for BTreeSet<T> {
+    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+        if let PolarValue::List(l) = val {
+            let mut result = BTreeSet::new();
+            for v in l {
+                result.insert(T::from_polar(v)?);
+            }
+            Ok(result)
+        } else {
+            Err(TypeError::expected("List").user())
+        }
+    }
+}
+
+impl<T: Ord + FromPolar> FromPolar for BinaryHeap<T> {
+    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+        if let PolarValue::List(l) = val {
+            let mut result = BinaryHeap::new();
             for v in l {
                 result.push(T::from_polar(v)?);
             }

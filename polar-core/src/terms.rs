@@ -1,13 +1,16 @@
-use super::sources::SourceInfo;
-pub use super::{error, formatting::ToPolarString};
-use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeMap, HashSet};
+use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use serde::{Deserialize, Serialize};
+
 pub use super::numerics::Numeric;
-use super::visitor::{walk_term, Visitor};
+use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
+use super::sources::SourceInfo;
+use super::visitor::{walk_operation, walk_term, Visitor};
+pub use super::{error, formatting::ToPolarString};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {
@@ -193,6 +196,26 @@ impl Value {
         }
     }
 
+    pub fn as_list(&self) -> Result<&TermList, error::RuntimeError> {
+        match self {
+            Value::List(l) => Ok(l),
+            _ => Err(error::RuntimeError::TypeError {
+                msg: format!("Expected list, got: {}", self.to_polar()),
+                stack_trace: None, // @TODO
+            }),
+        }
+    }
+
+    pub fn as_dict(&self) -> Result<&Dictionary, error::RuntimeError> {
+        match self {
+            Value::Dictionary(d) => Ok(d),
+            _ => Err(error::RuntimeError::TypeError {
+                msg: format!("Expected dictionary, got: {}", self.to_polar()),
+                stack_trace: None, // @TODO
+            }),
+        }
+    }
+
     pub fn is_ground(&self) -> bool {
         match self {
             Value::Call(_)
@@ -207,6 +230,12 @@ impl Value {
                 args.iter().all(|t| t.is_ground())
             }
         }
+    }
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
     }
 }
 
@@ -236,6 +265,84 @@ impl Hash for Term {
         H: Hasher,
     {
         self.value().hash(state)
+    }
+}
+
+impl<A> From<A> for Term
+where
+    A: Into<Value>,
+{
+    fn from(other: A) -> Self {
+        Self::new_temporary(other.into())
+    }
+}
+
+impl From<Symbol> for Value {
+    fn from(other: Symbol) -> Self {
+        Self::Variable(other)
+    }
+}
+
+impl From<bool> for Value {
+    fn from(other: bool) -> Self {
+        Self::Boolean(other)
+    }
+}
+
+impl From<Operation> for Value {
+    fn from(other: Operation) -> Self {
+        Self::Expression(other)
+    }
+}
+
+impl From<TermList> for Value {
+    fn from(other: TermList) -> Self {
+        Self::List(other)
+    }
+}
+
+impl From<String> for Value {
+    fn from(other: String) -> Self {
+        Self::String(other)
+    }
+}
+
+impl From<ExternalInstance> for Value {
+    fn from(other: ExternalInstance) -> Self {
+        Self::ExternalInstance(other)
+    }
+}
+
+impl From<Pattern> for Value {
+    fn from(other: Pattern) -> Self {
+        Self::Pattern(other)
+    }
+}
+
+impl From<InstanceLiteral> for Pattern {
+    fn from(lit: InstanceLiteral) -> Self {
+        Pattern::Instance(lit)
+    }
+}
+
+impl From<Dictionary> for Pattern {
+    fn from(dict: Dictionary) -> Self {
+        Pattern::Dictionary(dict)
+    }
+}
+
+impl<N> From<N> for Value
+where
+    N: Into<Numeric>,
+{
+    fn from(other: N) -> Self {
+        Self::Number(other.into())
+    }
+}
+
+impl From<Call> for Value {
+    fn from(other: Call) -> Self {
+        Self::Call(other)
     }
 }
 
@@ -344,6 +451,40 @@ impl Term {
         walk_term(&mut VariableVisitor::new(vars), self);
     }
 
+    /// Does the given variable occur in this term?
+    /// Should be much faster than accumulating the set and checking.
+    pub fn contains_variable(&self, var: &Symbol) -> bool {
+        struct VariableChecker<'var> {
+            var: &'var Symbol,
+            occurs: bool,
+        }
+
+        impl<'var> VariableChecker<'var> {
+            fn new(var: &'var Symbol) -> Self {
+                Self { var, occurs: false }
+            }
+        }
+
+        impl<'var> Visitor for VariableChecker<'var> {
+            fn visit_variable(&mut self, v: &Symbol) {
+                if !self.occurs && *v == *self.var {
+                    self.occurs = true;
+                }
+            }
+
+            fn visit_operation(&mut self, o: &Operation) {
+                // Don't bother checking sub-operations once we've found an occurrence.
+                if !self.occurs {
+                    walk_operation(self, o);
+                }
+            }
+        }
+
+        let mut visitor = VariableChecker::new(var);
+        walk_term(&mut visitor, self);
+        visitor.occurs
+    }
+
     pub fn hash_value(&self) -> u64 {
         let mut hasher = DefaultHasher::new();
         self.hash(&mut hasher);
@@ -356,6 +497,14 @@ impl Term {
         } else {
             None
         }
+    }
+
+    pub fn is_actor_union(&self) -> bool {
+        matches!(self.value(), Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) | Value::Variable(tag) if tag.0 == ACTOR_UNION_NAME)
+    }
+
+    pub fn is_resource_union(&self) -> bool {
+        matches!(self.value(), Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) | Value::Variable(tag) if tag.0 == RESOURCE_UNION_NAME)
     }
 }
 

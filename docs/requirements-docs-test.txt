@@ -1,5 +1,0 @@
-# needed for API docs
--e ../languages/python/oso
--e ../languages/python/django-oso
--e ../languages/python/flask-oso
--e ../languages/python/sqlalchemy-oso[flask]

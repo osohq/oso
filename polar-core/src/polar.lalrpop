@@ -1,17 +1,15 @@
-// @NOTE(steve): This was pretty easy to get running but the error messages you get when things don't parse aren't as
-// good as what we want to expose to polar users. Either we do a lot of mapping or we replace this with a hand rolled
-// parser later.
-
 use std::str::FromStr;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::BTreeMap;
+use std::iter::FromIterator;
 
 use crate::lexer::{self, Token};
-use crate::parser::Line;
+use crate::parser::{Line, ResourceBlock};
 use crate::error;
 use crate::terms::*;
 use crate::rules::*;
 use crate::terms::*;
 use crate::numerics::*;
+use crate::resource_block;
 use super::ValueOrLogical;
 
 use lalrpop_util::ParseError;
@@ -66,8 +64,25 @@ extern {
         "or" => lexer::Token::Or,           // or
         "not" => lexer::Token::Not,         // not
         "matches" => lexer::Token::Matches, // matches
+        "type" => lexer::Token::Type,       // type
     }
 }
+
+ResWord: String = {
+  "type" => "type".to_owned(),
+  "cut" => "cut".to_owned(),
+  "debug" => "debug".to_owned(),
+  "print" => "print".to_owned(),
+  "in" => "in".to_owned(),
+  "forall" => "forall".to_owned(),
+  "if" => "if".to_owned(),
+  "and" => "and".to_owned(),
+  "or" => "or".to_owned(),
+  "not" => "not".to_owned(),
+  "new" => "new".to_owned(),
+  "matches" => "matches".to_owned(),
+}
+
 
 
 // ****** Values ******* //
@@ -129,6 +144,30 @@ Call: Value = {
     }
 };
 
+DotCall: Value = {
+  <Call>,
+  // No args.
+  <w:ResWord> "("  ")" => {
+      let args = vec![];
+      let kwargs = None;
+      let name = Symbol(w);
+      Value::Call(Call{name, args, kwargs})
+  },
+  // Positional args only.
+  <w:ResWord> "(" <mut args:(<ValExp> ",")*> <arg:ValExp> ")" => {
+      args.push(arg);
+      let kwargs = None;
+      let name = Symbol(w);
+      Value::Call(Call{name, args, kwargs})
+  },
+  // Positional args + kwargs.
+  <w:ResWord> "(" <mut args:(<ValExp> ",")*> <fields:(<Fields<ValExp>>)>")" => {
+      let kwargs = Some(fields);
+      let name = Symbol(w);
+      Value::Call(Call{name, args, kwargs})
+  },
+}
+
 New: Value = {
     "new" <call:Spanned<Call>> => {
         let args = vec![call];
@@ -137,15 +176,26 @@ New: Value = {
     },
 };
 
+Field<T>: (Symbol, Term) = {
+    <name:Name> ":" <value:T> => (name, value),
+    <w:ResWord> ":" <value:T> => (Symbol(w), value),
+}
+
 Fields<T>: BTreeMap<Symbol, Term> = {
-    <name:Name> ":" <value:T> => {
+    <field:Field<T>> => {
         let mut fields = BTreeMap::new();
-        fields.insert(name, value);
+        fields.insert(field.0, field.1);
         fields
     },
-    <name:Name> ":" <value:T> "," <mut fields:Fields<T>> => {
-        fields.insert(name, value);
-        fields
+    <loc:@L> <mut fields:Fields<T>> "," <tail:Field<T>?> =>? match tail {
+        None => Ok(fields),
+        Some((name, value)) => {
+            let existing = fields.insert(name.clone(), value);
+            if existing.is_some() {
+                return Err(ParseError::User { error: error::ParseError::DuplicateKey { loc, key: name.0 } })
+            }
+            Ok(fields)
+        }
     }
 };
 
@@ -230,7 +280,7 @@ RewrittenOperation: Value = {
 // other than a string.
 
 // Any term expression
-pub TermExp: Term = {
+TermExp: Term = {
     <t:Exp1<"Term">> => match t {
         ValueOrLogical::Value(t) | ValueOrLogical::Logical(t) | ValueOrLogical::Either(t) => {
             t
@@ -247,6 +297,17 @@ ValExp: Term = {
 LogExp: Term = {
     <ExpectLogical<Exp1<"Term">>>
 }
+
+// `ValueOrLogic` is used to do some simple parse-time
+// checks for correctly formed expressions. For example,
+// `x in y` is a logical expression, so it does
+// not make sense to compare the result with a value.
+// `x in y > 0` fails to parse because `A > B` expects
+// A and B to be values, but `x in y` is a logical term.
+
+// In Prolog, logicals would be a callable - things that can be called and fail or success
+// Values are not callable. Together, values and logicals are terms.
+
 
 IsValue<T>: ValueOrLogical = {
     <Spanned<T>> => ValueOrLogical::Value(<>)
@@ -290,7 +351,8 @@ Exp10<T>: ValueOrLogical = {
 }
 
 CallTerm: Value = {
-    <Call>,
+    <DotCall>,
+    <w:ResWord> => Value::String(w),
     <s:"Symbol"> => Value::String(s.0),
     // These provide ways to get keys that aren't
     // expressable as `foo.bar`
@@ -353,6 +415,7 @@ Op7: Operator = {
     "mod" => Operator::Mod,
     "rem" => Operator::Rem,
 }
+
 MulExp<T>: Value = {
     <exp7:ExpectValue<Exp7<T>>> <operator:Op7> <exp8:ExpectValue<Exp8<T>>> => {
         let args = vec![exp7, exp8];
@@ -443,33 +506,9 @@ Exp3<T>: ValueOrLogical = {
 }
 
 
-Or = {"or"};
-OrExp<T>: Value = {
-    <head:ExpectLogical<Exp3<T>>> Or <mut tail:ExpectLogical<Exp2<T>>> => {
-        let args = match &mut tail.value() {
-            Value::Expression(Operation{operator: Operator::Or, args: tail_args}) => {
-                let mut args = vec![head];
-                args.append(&mut tail_args.clone());
-                args
-            }
-            _ => {
-                vec![head, tail]
-            }
-        };
-        let op = Operation{operator: Operator::Or, args};
-        Value::Expression(op)
-    },
-}
-
-Exp2<T>: ValueOrLogical = {
-    <IsLogical<OrExp<T>>>,
-    <Exp3<T>>,
-}
-
-
 And = {"and"};
 AndExp<T>: Value = {
-    <head:ExpectLogical<Exp2<T>>> And <mut tail:ExpectLogical<Exp1<T>>> => {
+    <head:ExpectLogical<Exp3<T>>> And <mut tail:ExpectLogical<Exp2<T>>> => {
         let args = match &mut tail.value() {
             Value::Expression(Operation{operator: Operator::And, args: tail_args}) => {
                 let mut args = vec![head];
@@ -485,16 +524,46 @@ AndExp<T>: Value = {
     },
 }
 
-Exp1<T>: ValueOrLogical = {
+Exp2<T>: ValueOrLogical = {
     <IsLogical<AndExp<T>>>,
+    <Exp3<T>>,
+}
+
+
+Or = {"or"};
+OrExp<T>: Value = {
+    <head:ExpectLogical<Exp2<T>>> Or <mut tail:ExpectLogical<Exp1<T>>> => {
+        let args = match &mut tail.value() {
+            Value::Expression(Operation{operator: Operator::Or, args: tail_args}) => {
+                let mut args = vec![head];
+                args.append(&mut tail_args.clone());
+                args
+            }
+            _ => {
+                vec![head, tail]
+            }
+        };
+        let op = Operation{operator: Operator::Or, args};
+        Value::Expression(op)
+    },
+}
+
+Exp1<T>: ValueOrLogical = {
+    <IsLogical<OrExp<T>>>,
     <Exp2<T>>,
 }
 
+
 ListTerms<T>: Vec<Term> = {
     <ExpectValue<Exp6<T>>> => vec![<>],
-    <mut list:ListTerms<T>> "," <tail:ExpectValue<Exp6<T>>> => {
-        list.push(tail);
-        list
+    <mut list:ListTerms<T>> "," <tail:ExpectValue<Exp6<T>>?> => {
+        match tail {
+            None => list,
+            Some(tail) => {
+                list.push(tail);
+                list
+            }
+        }
     },
 }
 
@@ -508,8 +577,7 @@ List<T>: Value = {
     }
 }
 
-
-pub Pattern: Value = {
+Pattern: Value = {
     <Number>,
     <PolarString>,
     <Boolean>,
@@ -519,12 +587,11 @@ pub Pattern: Value = {
     <List<"Pattern">>,
 };
 
-
-pub Value: ValueOrLogical = {
+Value: ValueOrLogical = {
     <IsLogical<BuiltinOperation>>,
     <IsAny<Boolean>>,
     <IsAny<Variable>>,
-    <IsAny<Call>>,
+    <IsLogical<Call>>,
     <IsValue<New>>,
     <IsValue<List<"Term">>>,
     <IsValue<Number>>,
@@ -592,14 +659,14 @@ RuleHead: (Symbol, Vec<Parameter>) = {
 
 Define = {"if"};
 
-pub Rule: Rule = {
-    <head:RuleHead> <start:@L> <end:@R> ";" => {
+Rule: Rule = {
+    <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";" => {
         let (name, params) = head;
         let op = Operation{operator: Operator::And, args: vec![]};
         let body = Term::new_from_parser(src_id, start, end, Value::Expression(op));
-        Rule{name, params, body}
+        Rule::new_from_parser(src_id, start_head, start, name, params, body)
     },
-    <head:RuleHead> Define <body:TermExp> ";" => {
+    <start_head:@L> <head:RuleHead> <end_head:@R> Define <body:TermExp> ";" => {
         let (name, params) = head;
         let body = match body.value() {
             Value::Expression(Operation{operator: Operator::And, ..}) => {
@@ -610,16 +677,67 @@ pub Rule: Rule = {
                 body.clone_with_value(Value::Expression(op))
             }
         };
-        Rule{name, params, body}
+        Rule::new_from_parser(src_id, start_head, end_head, name, params, body)
     }
 }
 
+RuleType: Rule = {
+    "type" <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";" => {
+        let (name, params) = head;
+        let op = Operation{operator: Operator::And, args: vec![]};
+        let body = Term::new_from_parser(src_id, start, end, Value::Expression(op));
+        Rule::new_from_parser(src_id, start_head, start, name, params, body)
+    }
+}
 
-pub Rules: Vec<Rule> = <Rule*>;
+pub(crate) Rules: Vec<Rule> = <Rule*>;
+
+// TODO(gj): combine this with ListTerms/List?
+StringListTerms: Vec<Term> = {
+    <Spanned<PolarString>> => vec![<>],
+    <mut list:StringListTerms> "," <tail:Spanned<PolarString>?> => {
+        if let Some(tail) = tail {
+            list.push(tail);
+        }
+        list
+    },
+}
+StringList: Value = {
+    "[" "]" => Value::List(vec![]),
+    "[" <StringListTerms> "]" => Value::List(<>),
+}
+RelationsDict: Value = <Object<Spanned<Variable>>> => Value::Dictionary(<>);
+Declaration: resource_block::Production = {
+    <start:@L> <keyword:Name> "=" <value:StringList> <end:@R> ";" =>? {
+        let term = Term::new_from_parser(src_id, start, end, value);
+        return resource_block::validate_parsed_declaration((keyword, term));
+    },
+    <start:@L> <keyword:Name> "=" <value:RelationsDict> <end:@R> ";" =>? {
+        let term = Term::new_from_parser(src_id, start, end, value);
+        return resource_block::validate_parsed_declaration((keyword, term));
+    },
+}
+
+OnRelation: Term = <Spanned<Variable>> <Spanned<PolarString>> =>? resource_block::validate_relation_keyword((<>));
+ShorthandRuleBody: (Term, Option<Term>) = <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => (<>);
+ShorthandRule: resource_block::Production = <head:Spanned<PolarString>> Define <body:ShorthandRuleBody> => resource_block::Production::ShorthandRule(<>);
+
+ResourceBlockProduction: resource_block::Production = {
+    <Declaration> => <>,
+    <ShorthandRule> => <>,
+};
+
+ResourceBlockProductions: Vec<resource_block::Production> = <ResourceBlockProduction*>;
 
 Line: Line = {
     <Rule> => Line::Rule(<>),
+    <RuleType> => Line::RuleType(<>),
     "?=" <TermExp> ";" => Line::Query(<>),
+
+    <start:@L> <keyword:Spanned<Variable>?> <resource:Variable> "{" <productions:ResourceBlockProductions> "}" <end:@R> =>? {
+        let resource = Term::new_from_parser(src_id, start, end, resource);
+        resource_block::turn_productions_into_resource_block(keyword, resource, productions).map(|ns| Line::ResourceBlock(ns))
+    }
 }
 
 pub Lines: Vec<Line> = <Line*>;

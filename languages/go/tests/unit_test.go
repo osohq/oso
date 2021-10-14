@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	oso "github.com/osohq/go-oso"
+	"github.com/osohq/go-oso/internal/ffi"
+	"github.com/osohq/go-oso/internal/host"
 	. "github.com/osohq/go-oso/types"
 )
 
@@ -19,27 +21,58 @@ func TestNewOso(t *testing.T) {
 	}
 }
 
-func TestLoadFile(t *testing.T) {
+func TestLoadFiles(t *testing.T) {
 	var o oso.Oso
 	var err error
 	if o, err = oso.NewOso(); err != nil {
 		t.Fatalf("Failed to set up Oso: %v", err)
 	}
 
-	if err = o.LoadFile("test.polar"); err != nil {
-		t.Error(err.Error())
-	}
-
-	if err = o.LoadFile("test.polar"); err == nil {
+	if err = o.LoadFiles([]string{"test.polar", "test.polar"}); err == nil {
 		t.Error("Failed to error on loading duplicate file")
 	}
 
-	if err = o.LoadFile("test.txt"); err == nil {
+	if err = o.LoadFiles([]string{"test.txt"}); err == nil {
 		t.Error("Failed to error on loading non-polar file (.txt)")
 	}
 
-	if err = o.LoadFile("fake.polar"); err == nil {
+	if err = o.LoadFiles([]string{"fake.polar"}); err == nil {
 		t.Error("Failed to error on loading non-existent file")
+	}
+}
+
+// test_load_multiple_files_same_name_different_path
+func TestLoadMultipleFilesSameNameDifferentPath(t *testing.T) {
+	var o oso.Oso
+	var err error
+	if o, err = oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
+
+	if err = o.LoadFiles([]string{"other/test.polar", "test.polar"}); err != nil {
+		t.Error(err.Error())
+	}
+
+	expected := []map[string]interface{}{{"x": int64(1)}, {"x": int64(2)}, {"x": int64(3)}}
+
+	for _, query := range []string{"f(x)", "g(x)"} {
+		if testQuery, err := o.NewQueryFromStr(query); err != nil {
+			t.Error(err.Error())
+		} else {
+			if results, err := testQuery.GetAllResults(); err != nil {
+				t.Error(err.Error())
+			} else {
+				if len(results) != 3 {
+					t.Errorf("Expected 3 results; received: %v", len(results))
+				} else {
+					for i, e := range expected {
+						if !reflect.DeepEqual(results[i], e) {
+							t.Errorf("Expected: %v, got: %v", e, results[i])
+						}
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -57,7 +90,27 @@ func TestLoadString(t *testing.T) {
 }
 
 func TestClearRules(t *testing.T) {
+	var o oso.Oso
+	var err error
+	if o, err = oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
 
+	o.LoadString("f(1);")
+	o.ClearRules()
+	results, errors := o.QueryStr("f(x)")
+
+	if err = <-errors; err != nil {
+		t.Error(err.Error())
+	} else {
+		var got []map[string]interface{}
+		for elem := range results {
+			got = append(got, elem)
+		}
+		if len(got) > 0 {
+			t.Errorf("Received too many results: %v", got)
+		}
+	}
 }
 
 func TestQueryStr(t *testing.T) {
@@ -84,6 +137,8 @@ func TestQueryStr(t *testing.T) {
 			t.Errorf("Expected: %v, got: %v", expected, got[0])
 		}
 	}
+
+	o.ClearRules()
 
 	o.LoadString("g(x) if x.Fake();")
 	results, errors = o.QueryStr("g(1)")
@@ -118,12 +173,16 @@ func TestQueryRule(t *testing.T) {
 		}
 	}
 
+	o.ClearRules()
+
 	o.LoadString("g(x) if x.Fake();")
 	results, errors = o.QueryRule("g", 1)
 
 	if err = <-errors; err == nil {
 		t.Error("Expected Polar runtime error, got none")
 	}
+
+	o.ClearRules()
 
 	o.LoadString("h(x) if x = 1; h(x) if x.Fake();")
 	results, errors = o.QueryRule("h", 1)
@@ -164,6 +223,18 @@ func TestIsAllowed(t *testing.T) {
 		t.Error("IsAllowed returned true, expected false")
 	}
 
+}
+
+type User struct {
+	Name string
+}
+
+type Widget struct {
+	Id int
+}
+
+type Company struct {
+	Id int
 }
 
 type Foo struct {
@@ -225,5 +296,150 @@ func TestExpressionError(t *testing.T) {
 
 	if !strings.Contains(msg, "unbound") {
 		t.Error("Does not contain unbound in error message.")
+	}
+}
+
+func TestRuleTypes(t *testing.T) {
+	var o oso.Oso
+	var err error
+	var msg string
+
+	if o, err = oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
+
+	if err = o.RegisterClass(reflect.TypeOf(User{}), nil); err != nil {
+		t.Fatalf("Register class failed: %v", err)
+	}
+	if err = o.RegisterClass(reflect.TypeOf(Widget{}), nil); err != nil {
+		t.Fatalf("Register class failed: %v", err)
+	}
+
+	policy := "type is_actor(_actor: Actor); is_actor(_actor: Actor);"
+
+	if err = o.LoadString(policy); err != nil {
+		t.Fatalf("Load string failed: %v", err)
+	}
+	if err = o.ClearRules(); err != nil {
+		t.Fatalf("Clear rules failed: %v", err)
+	}
+
+	policy = "type is_actor(_actor: Actor); is_actor(_actor: Widget);"
+
+	if err = o.LoadString(policy); err == nil {
+		t.Fatalf("Failed to raise validation error.")
+	} else if msg = err.Error(); !strings.Contains(msg, "Invalid rule") {
+		t.Fatalf("Incorrect error message: %v", msg)
+	}
+}
+
+func TestZeroValueRepr(t *testing.T) {
+	ffiPolar := ffi.NewPolarFfi()
+	host := host.NewHost(ffiPolar)
+	polarValue, err := host.ToPolar(Foo{})
+	if err != nil {
+		t.Fatalf("host.ToPolar failed: %v", err)
+	}
+	switch variant := polarValue.ValueVariant.(type) {
+	case ValueExternalInstance:
+		expected := "oso_test.Foo{Name: Num:0}"
+		if *variant.Repr != expected {
+			t.Errorf("repr didn't match!\n\tExpected: %v\n\tReceived: %#v", expected, *variant.Repr)
+		}
+	default:
+		t.Fatalf("Expected ValueExternalInstance; received: %v", variant)
+	}
+
+	polarValue, err = host.ToPolar(Foo{Name: "Zooey", Num: 42})
+	if err != nil {
+		t.Fatalf("host.ToPolar failed: %v", err)
+	}
+	switch variant := polarValue.ValueVariant.(type) {
+	case ValueExternalInstance:
+		expected := "oso_test.Foo{Name:Zooey Num:42}"
+		if *variant.Repr != expected {
+			t.Errorf("repr didn't match!\n\tExpected: %v\n\tReceived: %#v", expected, *variant.Repr)
+		}
+	default:
+		t.Fatalf("Expected ValueExternalInstance; received: %v", variant)
+	}
+}
+
+type Typ struct {
+	x int
+}
+
+func (t Typ) Method() int {
+	return t.x + 1
+}
+
+func (t *Typ) PtrMethod() bool {
+	return t.x == 1
+}
+
+func TestPointerMethods(t *testing.T) {
+	var o oso.Oso
+	var err error
+
+	if o, err = oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
+
+	if err = o.RegisterClass(reflect.TypeOf(Typ{}), nil); err != nil {
+		t.Fatalf("Register class failed: %v", err)
+	}
+
+	typ := Typ{x: 1}
+	if typ.Method() != 2 {
+		t.Errorf("Bad Method")
+	}
+	if !typ.PtrMethod() {
+		t.Errorf("Bad Method")
+	}
+
+	o.LoadString("rule1(x: Typ, y) if y = x.Method(); rule2(x: Typ, y) if y = x.PtrMethod();")
+
+	test := func(rule string, typ interface{}, y_val interface{}) {
+		results, errors := o.QueryRule(rule, typ, ValueVariable("y"))
+		if err = <-errors; err != nil {
+			t.Error(err.Error())
+		} else {
+			var got []map[string]interface{}
+			expected := map[string]interface{}{"y": y_val}
+			for elem := range results {
+				got = append(got, elem)
+			}
+			if len(got) > 1 {
+				t.Errorf("Received too many results: %v", got)
+			} else if !reflect.DeepEqual(got[0], expected) {
+				t.Errorf("Expected: %v, got: %v", expected, got[0])
+			}
+		}
+	}
+
+	test("rule1", typ, int64(2))
+	test("rule2", typ, true)
+}
+
+func TestFailingALot(t *testing.T) {
+	var o oso.Oso
+	var err error
+	if o, err = oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
+
+	o.LoadString("f(x) if x.Foo();")
+
+	// Do it 100 times, hoping for bad stuff to happen.
+	for i := 0; i < 100; i++ {
+		_, errors := o.QueryStr("f(1)")
+
+		if err = <-errors; err != nil {
+			if !strings.Contains(err.Error(), "'1' object has no attribute 'Foo'") {
+				t.Error("Expected Polar runtime error, got none")
+			}
+		} else {
+			t.Fatal("oops")
+		}
 	}
 }

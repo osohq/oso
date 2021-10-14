@@ -12,9 +12,14 @@ try:
 except IOError:
     long_description = ""
 
+# Hack around tox, don't count oso as a dependency when running under tox.
 install_requires = ""
 with open("requirements.txt") as fp:
-    install_requires += fp.read()
+    for line in fp.readlines():
+        if "CIBUILDWHEEL" not in os.environ and line.startswith("oso"):
+            continue
+        install_requires += line
+        install_requires += "\n"
 
 
 def read(rel_path):
@@ -66,7 +71,7 @@ setup(
     #
     # If using Python 2.6 or earlier, then these have to be included in
     # MANIFEST.in as well.
-    # package_data={"polar": ["policies/*.polar", "policies/*.pol"]},  # Optional
+    package_data={"sqlalchemy_oso": ["py.typed"]},  # Optional
     # Although 'package_data' is the preferred approach, in some case you may
     # need to place data files outside of your packages. See:
     # http://docs.python.org/3.4/distutils/setupscript.html#installing-additional-files

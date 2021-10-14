@@ -1,0 +1,19 @@
+{{ define "main" }}
+{{- partial "sidebar.html" . -}}
+<div class="md:w-4/5 lg:w-3/5 lg:mx-0 mx-auto pt-12">
+    <div class="w-full md:mt-6 lg:mt-0 lg:mx-10 text-black">
+        <div class="prose max-w-none min-w-0 flex-auto px-4 sm:px-6 xl:px-8 pb-24 lg:pb-16">
+            {{ .Content }}
+        </div>
+        <div class="flex justify-center my-4 mb-20">
+            <a class="button btn btn-blue text-xl mr-6" href={{ ref . "getting-started/quickstart" }}>
+                Try Oso
+            </a>
+            <a class="button btn btn-blue text-xl" href={{ ref . "getting-started/application" }}>
+                Add to Your App
+            </a>
+        </div>
+    </div>
+</div>
+{{- partial "search.html" . -}}
+{{- end -}}

@@ -94,7 +94,11 @@ def authorize_model(request, model, *, actor=None, action=None) -> Q:
         if filter is None:
             filter = Q()
 
-        next_filter = partial_to_query_filter(resource_partial, model)
+        if isinstance(resource_partial, model):
+            next_filter = Q(pk=resource_partial.pk)
+        else:
+            next_filter = partial_to_query_filter(resource_partial, model)
+
         if next_filter == TRUE_FILTER:
             return TRUE_FILTER
 

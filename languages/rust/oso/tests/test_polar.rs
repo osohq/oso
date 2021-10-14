@@ -17,6 +17,11 @@ fn test_file_path() -> PathBuf {
     path.join(Path::new("tests/test_file.polar"))
 }
 
+fn test_file_other_path() -> PathBuf {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"));
+    path.join(Path::new("tests/other/test_file.polar"))
+}
+
 fn test_file_gx_path() -> PathBuf {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"));
     path.join(Path::new("tests/test_file_gx.polar"))
@@ -44,12 +49,12 @@ impl Widget {
 }
 
 #[derive(PolarClass, Debug, Clone, PartialEq)]
-struct Actor {
+struct User {
     #[polar(attribute)]
     name: String,
 }
 
-impl Actor {
+impl User {
     pub fn new(name: String) -> Self {
         Self { name }
     }
@@ -64,9 +69,9 @@ impl Actor {
     }
 
     fn polar_class() -> Class {
-        Actor::get_polar_class_builder()
-            .name("Actor")
-            .add_method("widget", Actor::widget)
+        User::get_polar_class_builder()
+            .name("User")
+            .add_method("widget", User::widget)
             .build()
     }
 }
@@ -74,7 +79,7 @@ impl Actor {
 fn test_oso() -> OsoTest {
     let mut test = OsoTest::new();
     test.oso.register_class(Widget::polar_class()).unwrap();
-    test.oso.register_class(Actor::polar_class()).unwrap();
+    test.oso.register_class(User::polar_class()).unwrap();
 
     test
 }
@@ -82,7 +87,7 @@ fn test_oso() -> OsoTest {
 #[test]
 fn test_anything_works() -> oso::Result<()> {
     common::setup();
-    let oso = Oso::new();
+    let mut oso = Oso::new();
     oso.load_str("f(1);")?;
 
     let mut query = oso.query("f(x)")?;
@@ -119,7 +124,7 @@ fn test_data_conversions_polar_values() -> oso::Result<()> {
             String::from_polar(x_vec.get(1).unwrap().to_owned())?,
             String::from("two")
         );
-        assert_eq!(bool::from_polar(x_vec.get(2).unwrap().to_owned())?, true);
+        assert!(bool::from_polar(x_vec.get(2).unwrap().to_owned())?);
     } else {
         panic!("x not list.");
     }
@@ -153,11 +158,14 @@ fn test_data_conversions_externals() -> oso::Result<()> {
     common::setup();
     let mut oso = test_oso();
 
-    let actor = Actor::new(String::from("sam"));
+    let actor = User::new(String::from("sam"));
     let widget = Widget::new(1);
 
-    oso.load_str("allow(actor, resource) if actor.widget().id = resource.id;");
-    let query_results = oso.oso.query_rule("allow", (actor, widget))?.count();
+    oso.load_str("allow(actor, _action, resource) if actor.widget().id = resource.id;");
+    let query_results = oso
+        .oso
+        .query_rule("allow", (actor, "read", widget))?
+        .count();
 
     assert_eq!(query_results, 1);
 
@@ -180,7 +188,7 @@ fn test_data_conversions_no_leak() {
 #[test]
 fn test_load_file_error_contains_filename() {
     common::setup();
-    let oso = test_oso();
+    let mut oso = test_oso();
 
     let mut tempfile = tempfile::Builder::new()
         .suffix(".polar")
@@ -191,7 +199,7 @@ fn test_load_file_error_contains_filename() {
     writeln!(file, ";").unwrap();
     file.sync_all().unwrap();
 
-    let err = oso.oso.load_file(tempfile.path()).unwrap_err();
+    let err = oso.oso.load_files(vec![tempfile.path()]).unwrap_err();
     if let OsoError::Polar(err) = err {
         assert_eq!(
             err.to_string(),
@@ -209,9 +217,9 @@ fn test_load_file_error_contains_filename() {
 fn test_load_file_extension_check() {
     common::setup();
 
-    let oso = test_oso();
+    let mut oso = test_oso();
 
-    let err = oso.oso.load_file("not_polar_file.txt").unwrap_err();
+    let err = oso.oso.load_files(vec!["not_polar_file.txt"]).unwrap_err();
     assert!(
         matches!(err, OsoError::IncorrectFileType { filename } if filename == "not_polar_file.txt")
     );
@@ -221,9 +229,9 @@ fn test_load_file_extension_check() {
 fn test_load_file_nonexistent_file() {
     common::setup();
 
-    let oso = test_oso();
+    let mut oso = test_oso();
 
-    let err = oso.oso.load_file("not_a_file.polar").unwrap_err();
+    let err = oso.oso.load_files(vec!["not_a_file.polar"]).unwrap_err();
     assert!(matches!(err, OsoError::Io(_)));
 }
 
@@ -231,11 +239,10 @@ fn test_load_file_nonexistent_file() {
 fn test_already_loaded_file_error() -> oso::Result<()> {
     common::setup();
 
-    let oso = test_oso();
+    let mut oso = test_oso();
     let path = test_file_path();
 
-    oso.oso.load_file(&path)?;
-    let err = oso.oso.load_file(&path).unwrap_err();
+    let err = oso.oso.load_files(vec![&path, &path]).unwrap_err();
 
     assert!(
         matches!(&err,
@@ -260,8 +267,23 @@ fn test_load_multiple_files() -> oso::Result<()> {
     let path = test_file_path();
     let path_gx = test_file_gx_path();
 
-    oso.oso.load_file(path)?;
-    oso.oso.load_file(path_gx)?;
+    oso.oso.load_files(vec![path, path_gx])?;
+
+    assert_eq!(oso.qvar::<i64>("f(x)", "x"), vec![1, 2, 3]);
+    assert_eq!(oso.qvar::<i64>("g(x)", "x"), vec![1, 2, 3]);
+
+    Ok(())
+}
+
+#[test]
+fn test_load_multiple_files_same_name_different_path() -> oso::Result<()> {
+    common::setup();
+
+    let mut oso = test_oso();
+    let path = test_file_path();
+    let other_path = test_file_other_path();
+
+    oso.oso.load_files(vec![path, other_path])?;
 
     assert_eq!(oso.qvar::<i64>("f(x)", "x"), vec![1, 2, 3]);
     assert_eq!(oso.qvar::<i64>("g(x)", "x"), vec![1, 2, 3]);
@@ -274,7 +296,7 @@ fn test_clear_rules() -> oso::Result<()> {
     common::setup();
 
     let mut oso = test_oso();
-    oso.oso.load_file(test_file_path())?;
+    oso.oso.load_files(vec![test_file_path()])?;
     assert_eq!(oso.qvar::<i64>("f(x)", "x"), vec![1, 2, 3]);
 
     #[derive(PolarClass, Default, Debug, Clone)]
@@ -291,7 +313,7 @@ fn test_clear_rules() -> oso::Result<()> {
 
     oso.oso.register_class(foo_class)?;
 
-    oso.oso.clear_rules();
+    assert!(matches!(oso.oso.clear_rules(), Ok(())));
 
     oso.qnull("f(x)");
     assert_eq!(oso.query("x = new Foo()").len(), 1);
@@ -308,13 +330,10 @@ fn test_basic_queries() {
     let results = oso.query("f(1)");
 
     assert_eq!(results.len(), 1);
-    assert_eq!(
-        results
-            .get(0)
-            .map(|r| r.keys().next().is_none())
-            .unwrap_or_default(),
-        true
-    );
+    assert!(results
+        .get(0)
+        .map(|r| r.keys().next().is_none())
+        .unwrap_or_default());
 }
 
 // TODO unit test
@@ -564,6 +583,7 @@ fn test_animals() -> oso::Result<()> {
     oso.qeval("yup()");
     oso.qnull("nope()");
 
+    oso.clear_rules();
     oso.load_str(
         r#"
       what_is(_: {genus: "canis"}, r) if r = "canine";
@@ -585,6 +605,7 @@ fn test_animals() -> oso::Result<()> {
         vec!["canine".to_owned()]
     );
 
+    oso.clear_rules();
     oso.load_str(
         r#"
           what_is_class(_: Animal{}, r) if r = "animal";
@@ -638,6 +659,7 @@ fn test_animals() -> oso::Result<()> {
         vec!["animal".to_owned()]
     );
 
+    oso.clear_rules();
     oso.load_str(
         r#"
       what_is_mix(_: Animal{}, r) if r = "animal_class";
@@ -727,9 +749,9 @@ fn test_predicate_return_list() {
     common::setup();
 
     #[derive(PolarClass, Debug, Clone)]
-    struct Actor;
+    struct User;
 
-    impl Actor {
+    impl User {
         pub fn new() -> Self {
             Self
         }
@@ -743,18 +765,18 @@ fn test_predicate_return_list() {
         }
     }
 
-    let actor_class = Actor::get_polar_class_builder()
-        .name("ActorTwo")
-        .add_method("groups", Actor::groups)
+    let actor_class = User::get_polar_class_builder()
+        .name("UserTwo")
+        .add_method("groups", User::groups)
         .build();
 
     let mut oso = test_oso();
-    oso.load_str(r#"allow(actor: ActorTwo, "join", "party") if "social" in actor.groups();"#);
+    oso.load_str(r#"allow(actor: UserTwo, "join", "party") if "social" in actor.groups();"#);
     oso.oso.register_class(actor_class).unwrap();
 
     let mut query = oso
         .oso
-        .query_rule("allow", (Actor::new(), "join", "party"))
+        .query_rule("allow", (User::new(), "join", "party"))
         .unwrap();
 
     let result = query.next().unwrap().unwrap();
@@ -767,9 +789,9 @@ fn test_predicate_return_list() {
 fn test_variables_as_arguments() -> oso::Result<()> {
     common::setup();
 
-    let oso = test_oso();
+    let mut oso = test_oso();
 
-    oso.oso.load_file(test_file_path())?;
+    oso.oso.load_files(vec![test_file_path()])?;
 
     let query = oso
         .oso
@@ -800,7 +822,7 @@ fn test_returns_unbound_variable() -> oso::Result<()> {
     common::setup();
 
     let mut oso = test_oso();
-    oso.load_str("rule(x, y) if y = 1;");
+    oso.load_str("rule(_, y) if y = 1;");
 
     let first = oso.query("rule(x, y)").pop().unwrap();
 
@@ -922,4 +944,31 @@ fn test_expression_error() {
 
     let err = oso.query_err("f(x)");
     assert!(err.contains("unbound"));
+}
+
+#[test]
+fn test_rule_types() {
+    common::setup();
+    let mut oso = test_oso();
+    let mut policy = r#"type is_actor(_actor: User);
+                        is_actor(_actor: User);"#
+        .to_owned();
+    oso.load_str(&policy);
+    oso.clear_rules();
+
+    policy += "is_actor(_actor: Widget);";
+    let err = oso
+        .oso
+        .load_str(&policy)
+        .expect_err("Expected validation error");
+
+    assert!(matches!(
+        &err,
+        OsoError::Polar(polar_error::PolarError {
+            kind: polar_error::ErrorKind::Validation(
+                polar_error::ValidationError::InvalidRule { .. }
+            ),
+            ..
+        })
+    ));
 }

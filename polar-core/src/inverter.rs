@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::bindings::{BindingManager, Bsp, FollowerId, VariableState};
 use crate::counter::Counter;
-use crate::error::PolarResult;
+use crate::error::{PolarError, PolarResult};
 use crate::events::QueryEvent;
 use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
@@ -111,7 +111,7 @@ fn invert_partials(bindings: BindingManager) -> Bindings {
     simplified
         .into_iter()
         .map(|(k, v)| match v.value() {
-            Value::Expression(e) => (k, e.invert().into_term()),
+            Value::Expression(e) => (k, e.invert().into()),
             _ => (
                 k.clone(),
                 term!(op!(And, term!(op!(Neq, term!(k), v.clone())))),
@@ -130,8 +130,7 @@ fn reduce_constraints(bindings: Vec<Bindings>) -> Bindings {
                 .for_each(|(var, value)| match acc.entry(var.clone()) {
                     Entry::Occupied(mut o) => match (o.get().value(), value.value()) {
                         (Value::Expression(x), Value::Expression(y)) => {
-                            let mut x = x.clone();
-                            x.merge_constraints(y.clone());
+                            let x = x.clone().merge_constraints(y.clone());
                             o.insert(value.clone_with_value(value!(x)));
                         }
                         (existing, new) => panic!(
@@ -175,7 +174,7 @@ fn filter_inverted_constraints(
         .into_iter()
         .filter(|(k, _)| {
             !(matches!(
-                vm.variable_state_at_point(k, bsp),
+                vm.variable_state_at_point(k, &bsp),
                 VariableState::Unbound | VariableState::Bound(_)
             ))
         })
@@ -208,8 +207,10 @@ impl Runnable for Inverter {
                         // out to the parent VM.
                         let constraints =
                             results_to_constraints(self.results.drain(..).collect::<Vec<_>>());
-                        let constraints =
-                            filter_inverted_constraints(constraints, &self.vm, self.bsp);
+                        let mut bsp = Bsp::default();
+                        // Use mem swap to avoid cloning bsps.
+                        std::mem::swap(&mut self.bsp, &mut bsp);
+                        let constraints = filter_inverted_constraints(constraints, &self.vm, bsp);
 
                         if !constraints.is_empty() {
                             // Return inverted constraints to parent VM.
@@ -249,5 +250,9 @@ impl Runnable for Inverter {
 
     fn clone_runnable(&self) -> Box<dyn Runnable> {
         Box::new(self.clone())
+    }
+
+    fn handle_error(&mut self, error: PolarError) -> PolarResult<QueryEvent> {
+        self.vm.handle_error(error)
     }
 }

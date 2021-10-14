@@ -75,7 +75,7 @@ impl PolarValue {
             Value::Expression(_) => {
                 return Err(crate::OsoError::Custom {
                     message: r#"
-Recieved Expression from Polar VM. The Expression type is not yet supported in this language.
+Received Expression from Polar VM. The Expression type is not yet supported in this language.
 
 This may mean you performed an operation in your policy over an unbound variable.
                         "#

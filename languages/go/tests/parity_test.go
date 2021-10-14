@@ -174,11 +174,42 @@ func (u ImplementsEq) String() string {
 	return fmt.Sprintf("ImplementsEq { %v }", u.Val)
 }
 
-func (left ImplementsEq) Equal(right interfaces.Comparer) bool {
+func (left ImplementsEq) Equal(right interface{}) bool {
 	return left.Val == right.(ImplementsEq).Val
 }
-func (left ImplementsEq) Lt(right interfaces.Comparer) bool {
+
+func (left ImplementsEq) Lt(right interface{}) bool {
 	panic("unsupported")
+}
+
+type Least struct{}
+
+func (e Least) Equal(x interface{}) bool {
+	_, l := x.(Least)
+	return l
+}
+
+func (e Least) Lt(x interface{}) bool {
+	_, l := x.(Least)
+	return !l
+}
+
+func NewLeast() Least {
+	return Least{}
+}
+
+type NaNLike struct{}
+
+func (n NaNLike) Equal(x interface{}) bool {
+	return false
+}
+
+func (n NaNLike) Lt(x interface{}) bool {
+	return false
+}
+
+func NewNaNLike() NaNLike {
+	return NaNLike{}
 }
 
 type Comparable struct {
@@ -193,14 +224,14 @@ func (u Comparable) String() string {
 	return fmt.Sprintf("Comparable { %v }", u.Val)
 }
 
-func (a Comparable) Equal(b interfaces.Comparer) bool {
+func (a Comparable) Equal(b interface{}) bool {
 	if other, ok := b.(Comparable); ok {
 		return a.Val == other.Val
 	}
 	panic(fmt.Sprintf("cannot compare Comparable with %v", b))
 }
 
-func (a Comparable) Lt(b interfaces.Comparer) bool {
+func (a Comparable) Lt(b interface{}) bool {
 	if other, ok := b.(Comparable); ok {
 		return a.Val < other.Val
 	}
@@ -219,6 +250,8 @@ var CLASSES = map[string]reflect.Type{
 	"Animal":          reflect.TypeOf(Animal{}),
 	"ImplementsEq":    reflect.TypeOf(ImplementsEq{}),
 	"Comparable":      reflect.TypeOf(Comparable{}),
+	"Least":           reflect.TypeOf(Least{}),
+	"NaNLike":         reflect.TypeOf(NaNLike{}),
 }
 
 func setStructFields(instance reflect.Value, args []interface{}) error {
@@ -333,11 +366,9 @@ func (left Result) Equal(right interface{}) bool {
 	switch val := left.inner.(type) {
 	case map[string]Result:
 		if repr, ok := val["repr"]; ok {
-			// fmt.Printf("%v", right)
 			return repr.inner.(string) == fmt.Sprintf("%v", right)
 		}
 	}
-	fmt.Printf("%v == %v: %v", left.inner, right, cmp.Equal(left.inner, right))
 	return cmp.Equal(left.inner, right)
 }
 
@@ -391,10 +422,12 @@ func String(s string) *string {
 	return &s
 }
 
-func (tc TestCase) setupTest(o oso.Oso, t *testing.T) error {
+func (tc TestCase) setupTest(o oso.Oso, t *testing.T) (error, []string) {
 	var CONSTRUCTORS = map[string]interface{}{
 		"UnitClass":    NewUnitClass,
 		"ValueFactory": NewValueFactory,
+		"Least":        NewLeast,
+		"NaNLike":      NewNaNLike,
 	}
 	for k, v := range CLASSES {
 		c := CONSTRUCTORS[k]
@@ -411,6 +444,8 @@ func (tc TestCase) setupTest(o oso.Oso, t *testing.T) error {
 		policies_folder = "../../../test/policies/"
 	}
 
+	policies := []string{}
+
 	err := filepath.Walk(policies_folder, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -420,17 +455,14 @@ func (tc TestCase) setupTest(o oso.Oso, t *testing.T) error {
 		}
 
 		if contains(tc.Policies, strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))) {
-			err = o.LoadFile(path)
-			if err != nil {
-				return err
-			}
+			policies = append(policies, path)
 		}
 		return nil
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return nil
+	return nil, policies
 }
 
 func (tc TestCase) RunTest(t *testing.T) {
@@ -449,7 +481,7 @@ func (tc TestCase) RunTest(t *testing.T) {
 			if o, err = oso.NewOso(); err != nil {
 				t.Fatalf("Failed to setup Oso: %s", err.Error())
 			}
-			err = tc.setupTest(o, t)
+			err, policies := tc.setupTest(o, t)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -475,9 +507,21 @@ func (tc TestCase) RunTest(t *testing.T) {
 				}
 			}
 
-			if c.Load != nil {
-				queryErr = o.LoadString(*c.Load)
+			policyContents := []string{}
+
+			for _, policy := range policies {
+				data, err := ioutil.ReadFile(policy)
+				if err != nil {
+					t.Fatal(err)
+				}
+				policyContents = append(policyContents, string(data))
 			}
+
+			if c.Load != nil {
+				policyContents = append(policyContents, *c.Load)
+			}
+
+			queryErr = o.LoadString(strings.Join(policyContents, "\n"))
 
 			var results []map[string]interface{}
 			if queryErr == nil {

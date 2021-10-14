@@ -1,0 +1,72 @@
+<!-- This example requires Tailwind CSS v2.0+ -->
+<nav id="language-selector" class="relative">
+    <button type="button" id="language-selector-toggle"
+        class="max-w-7xl mx-auto px-4 sm:px-6 py-2 bg-primary rounded-md
+               text-white inline-flex items-center text-base font-medium
+               hover:text-yellow hover:font-bold tooltip">
+        <span class="tooltip-text" aria-hidden="true">
+          Pick a language
+        </span>
+        {{ if eq .Site.Language.Lang "any" }}
+        Pick Language
+        {{ else }}
+        <span class="w-6 mr-2 align-middle">
+            {{ partialCached "fontawesome.html" .Site.Language.Params.icon .Site.Language.Lang }}
+        </span>
+        {{ end }}
+        <div class="h-4 w-4 ml-4">
+            {{ partialCached "fontawesome.html" "chevron-down" "chevron-down" }}
+        </div>
+    </button>
+    <div id="language-selector-content"
+        class="hidden absolute z-50 -ml-4 mt-3 transform px-2 w-screen max-w-md sm:px-0 lg:ml-0 lg:left-1/2 lg:-translate-x-1/2">
+        <div class="rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 overflow-hidden">
+            <div class="relative grid gap-6 bg-white px-3 py-6 sm:gap-8 sm:p-8">
+                {{ $basePage := . }}
+                {{ if .IsHome }}
+                {{ $basePage = .Site.GetPage "getting-started " }}
+                {{ end }}
+                {{ range $lang := (where .Site.Languages "Lang" "!= " "any") }}
+                {{ $url := "" }}
+                {{ if eq $lang.Lang $.Site.Language.Lang }}
+                <div class="-m-3 p-3 flex items-start rounded-lg bg-primary text-white">
+                    <span class="h-6 w-6 mr-2">
+                        {{ partialCached "fontawesome.html" $lang.Params.icon $lang.Lang }}
+                    </span>
+                    {{ $lang.LanguageName }}
+                </div>
+                {{ else }}
+                {{ $inList := gt (len (where $basePage.Translations ".Lang" $lang.Lang)) 0 }}
+                {{ if not $inList }}
+                {{ range where $basePage.CurrentSection.Translations ".Lang" $lang.Lang }}
+                <a href="{{ .RelPermalink }}" class="-m-3 p-3 flex items-start rounded-lg hover:bg-gray-50">
+                    <span class="w-6 h-6 mr-2">
+                        {{ partialCached "fontawesome.html" $lang.Params.icon $lang.Lang }}
+                    </span>
+                    {{ $lang.LanguageName }}
+                </a>
+                {{ end }}
+                {{ else }}
+                {{ range where $basePage.Translations ".Lang" $lang.Lang }}
+                <a href="{{ .RelPermalink }}" class="-m-3 p-3 flex items-start rounded-lg hover:bg-gray-50">
+                    <span class="w-6 h-6 mr-2">
+                        {{ partialCached "fontawesome.html" $lang.Params.icon $lang.Lang }}
+                    </span>
+                    {{ $lang.LanguageName }}
+                </a>
+                {{ end }}
+                {{ end }}
+                {{ end }}
+                {{ end }}
+            </div>
+            <div class="px-5 py-5 bg-gray-50 space-y-6 sm:flex sm:space-y-0 sm:space-x-10 sm:px-8">
+                <div class="flow-root">
+                    <a href="https://github.com/osohq/oso/issues"
+                        class="-m-3 p-3 flex items-center rounded-md text-base font-medium text-gray-900 hover:bg-gray-100">
+                        <span class="ml-3">Not listed here? Open an issue</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>

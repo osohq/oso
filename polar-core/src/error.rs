@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use std::fmt;
+use std::{fmt, ops};
 
 use crate::sources::*;
 use crate::terms::*;
@@ -33,6 +33,7 @@ pub enum ErrorKind {
     Runtime(RuntimeError),
     Operational(OperationalError),
     Parameter(ParameterError),
+    Validation(ValidationError),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,7 +54,10 @@ impl PolarError {
                 | ParseError::UnrecognizedToken { loc, .. }
                 | ParseError::ExtraToken { loc, .. }
                 | ParseError::WrongValueType { loc, .. }
-                | ParseError::ReservedWord { loc, .. } => {
+                | ParseError::ReservedWord { loc, .. }
+                | ParseError::DuplicateKey { loc, .. }
+                | ParseError::SingletonVariable { loc, .. }
+                | ParseError::ResourceBlock { loc, .. } => {
                     let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
                     self.context.replace(ErrorContext {
                         source: source.clone(),
@@ -73,7 +77,38 @@ impl PolarError {
             }
             _ => {}
         }
+
+        // Augment ResourceBlock errors with relevant snippets of parsed Polar policy.
+        if let ErrorKind::Parse(ParseError::ResourceBlock {
+            ref mut msg,
+            ref ranges,
+            ..
+        }) = self.kind
+        {
+            if let Some(source) = source {
+                match ranges.len() {
+                    // If one range is provided, print it with no label.
+                    1 => {
+                        let first = &source.src[ranges[0].clone()];
+                        msg.push_str(&format!("\t{}\n", first));
+                    }
+                    // If two ranges are provided, label them `First` and `Second`.
+                    2 => {
+                        let first = &source.src[ranges[0].clone()];
+                        msg.push_str(&format!("\tFirst:\n\t\t{}\n", first));
+                        let second = &source.src[ranges[1].clone()];
+                        msg.push_str(&format!("\tSecond:\n\t\t{}\n", second));
+                    }
+                    _ => (),
+                }
+            }
+        }
+
         self
+    }
+
+    pub fn unimplemented(msg: String) -> Self {
+        OperationalError::Unimplemented { msg }.into()
     }
 }
 
@@ -113,7 +148,22 @@ impl From<ParameterError> for PolarError {
     }
 }
 
+impl From<ValidationError> for PolarError {
+    fn from(err: ValidationError) -> Self {
+        Self {
+            kind: ErrorKind::Validation(err),
+            context: None,
+        }
+    }
+}
+
 pub type PolarResult<T> = std::result::Result<T, PolarError>;
+
+impl<T> From<PolarError> for PolarResult<T> {
+    fn from(err: PolarError) -> Self {
+        Err(err)
+    }
+}
 
 impl std::error::Error for PolarError {}
 
@@ -124,6 +174,7 @@ impl fmt::Display for PolarError {
             ErrorKind::Runtime(e) => write!(f, "{}", e)?,
             ErrorKind::Operational(e) => write!(f, "{}", e)?,
             ErrorKind::Parameter(e) => write!(f, "{}", e)?,
+            ErrorKind::Validation(e) => write!(f, "{}", e)?,
         }
         if let Some(ref context) = self.context {
             write!(f, "{}", context)?;
@@ -170,6 +221,21 @@ pub enum ParseError {
         loc: usize,
         term: Term,
         expected: String,
+    },
+    DuplicateKey {
+        loc: usize,
+        key: String,
+    },
+    SingletonVariable {
+        loc: usize,
+        name: String,
+    },
+    ResourceBlock {
+        loc: usize,
+        msg: String,
+        /// Set of source ranges to augment the error message with relevant snippets of the parsed
+        /// Polar policy.
+        ranges: Vec<ops::Range<usize>>,
     },
 }
 
@@ -222,6 +288,19 @@ impl fmt::Display for ParseError {
             ),
             Self::WrongValueType { term, expected, .. } => {
                 write!(f, "Wrong value type: {}. Expected a {}", term, expected)
+            }
+            Self::DuplicateKey { key, .. } => {
+                write!(f, "Duplicate key: {}", key)
+            }
+            Self::SingletonVariable { name, .. } => {
+                write!(
+                    f,
+                    "Singleton variable {} is unused or undefined; try renaming to _{} or _",
+                    name, name
+                )
+            }
+            Self::ResourceBlock { msg, .. } => {
+                write!(f, "{}", msg)
             }
         }
     }
@@ -306,18 +385,22 @@ impl fmt::Display for RuntimeError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OperationalError {
-    Unimplemented(String),
+    Unimplemented {
+        msg: String,
+    },
     Unknown,
 
     /// An invariant has been broken internally.
-    InvalidState(String),
+    InvalidState {
+        msg: String,
+    },
 }
 
 impl fmt::Display for OperationalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Unimplemented(s) => write!(f, "{} is not yet implemented", s),
-            Self::InvalidState(s) => write!(f, "Invalid state: {}", s),
+            Self::Unimplemented { msg } => write!(f, "{} is not yet implemented", msg),
+            Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
             Self::Unknown => write!(
                 f,
                 "We hit an unexpected error.\n\
@@ -334,5 +417,29 @@ pub struct ParameterError(pub String);
 impl fmt::Display for ParameterError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Invalid parameter used in FFI function: {}", self.0)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ValidationError {
+    InvalidRule { rule: String, msg: String },
+    InvalidRuleType { rule_type: String, msg: String },
+    UndefinedRule { rule_name: String },
+    // TODO(lm|gj): add ResourceBlock and SingletonVariable.
+}
+
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::InvalidRule { rule, msg } => {
+                write!(f, "Invalid rule: {} {}", rule, msg)
+            }
+            Self::InvalidRuleType { rule_type, msg } => {
+                write!(f, "Invalid rule type: {} {}", rule_type, msg)
+            }
+            Self::UndefinedRule { rule_name } => {
+                write!(f, r#"Call to undefined rule "{}""#, rule_name)
+            }
+        }
     }
 }

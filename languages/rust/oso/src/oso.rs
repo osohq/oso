@@ -1,15 +1,16 @@
 //! Communicate with the Polar virtual machine: load rules, make queries, etc/
-
+use polar_core::sources::Source;
 use polar_core::terms::{Call, Symbol, Term, Value};
 
+use std::collections::HashSet;
 use std::fs::File;
+use std::hash::Hash;
 use std::io::Read;
 use std::sync::Arc;
 
 use crate::host::Host;
 use crate::query::Query;
-use crate::OsoError;
-use crate::{ToPolar, ToPolarList};
+use crate::{FromPolar, OsoError, PolarValue, ToPolar, ToPolarList};
 
 /// Oso is the main struct you interact with. It is an instance of the Oso authorization library
 /// and contains the polar language knowledge base and query engine.
@@ -25,13 +26,33 @@ impl Default for Oso {
     }
 }
 
+/// Represents an `action` used in an `allow` rule.
+/// When the action is bound to a concrete value (e.g. a string)
+/// this returns an `Action::Typed(action)`.
+/// If _any_ actions are allowed, then the `Action::Any` variant is returned.
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+pub enum Action<T = String> {
+    Any,
+    Typed(T),
+}
+
+impl<T: FromPolar> FromPolar for Action<T> {
+    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+        if matches!(val, PolarValue::Variable(_)) {
+            Ok(Action::Any)
+        } else {
+            T::from_polar(val).map(Action::Typed)
+        }
+    }
+}
+
 impl Oso {
     /// Create a new instance of Oso. Each instance is separate and can have different rules and classes loaded into it.
     pub fn new() -> Self {
         let inner = Arc::new(polar_core::polar::Polar::new());
         let host = Host::new(inner.clone());
 
-        let mut oso = Self { host, inner };
+        let mut oso = Self { inner, host };
 
         for class in crate::builtins::classes() {
             oso.register_class(class)
@@ -62,10 +83,57 @@ impl Oso {
         }
     }
 
+    /// Get the actions actor is allowed to take on resource.
+    /// Returns a [std::collections::HashSet] of actions, typed according the return value.
+    /// # Examples
+    /// ```ignore
+    /// oso.load_str(r#"allow(actor: Actor{name: "sally"}, action, resource: Widget{id: 1}) if
+    ///               action in ["CREATE", "READ"];"#);
+    ///
+    /// // get a HashSet of oso::Actions
+    /// let actions: HashSet<Action> = oso.get_allowed_actions(actor, resource)?;
+    ///
+    /// // or Strings
+    /// let actions: HashSet<String> = oso.get_allowed_actions(actor, resource)?;
+    /// ```
+    pub fn get_allowed_actions<Actor, Resource, T>(
+        &self,
+        actor: Actor,
+        resource: Resource,
+    ) -> crate::Result<HashSet<T>>
+    where
+        Actor: ToPolar,
+        Resource: ToPolar,
+        T: FromPolar + Eq + Hash,
+    {
+        let mut query = self
+            .query_rule(
+                "allow",
+                (actor, PolarValue::Variable("action".to_owned()), resource),
+            )
+            .unwrap();
+
+        let mut set = HashSet::new();
+        loop {
+            match query.next() {
+                Some(Ok(result)) => {
+                    if let Some(action) = result.get("action") {
+                        set.insert(T::from_polar(action)?);
+                    }
+                }
+                Some(Err(e)) => return Err(e),
+                None => break,
+            };
+        }
+
+        Ok(set)
+    }
+
     /// Clear out all files and rules that have been loaded.
-    pub fn clear_rules(&self) {
+    pub fn clear_rules(&mut self) -> crate::Result<()> {
         self.inner.clear_rules();
         check_messages!(self.inner);
+        Ok(())
     }
 
     fn check_inline_queries(&self) -> crate::Result<()> {
@@ -82,20 +150,49 @@ impl Oso {
         Ok(())
     }
 
-    /// Load a file containing polar rules. All polar files must end in `.polar`
-    pub fn load_file<P: AsRef<std::path::Path>>(&self, file: P) -> crate::Result<()> {
-        let file = file.as_ref();
-        if !file.extension().map(|ext| ext == "polar").unwrap_or(false) {
-            return Err(crate::OsoError::IncorrectFileType {
-                filename: file.to_string_lossy().into_owned(),
+    // Register MROs, load Polar code, and check inline queries.
+    fn load_sources(&mut self, sources: Vec<Source>) -> crate::Result<()> {
+        self.host.register_mros()?;
+        self.inner.load(sources)?;
+        self.check_inline_queries()
+    }
+
+    /// Load a file containing Polar rules. All Polar files must end in `.polar`.
+    #[deprecated(
+        since = "0.20.1",
+        note = "`Oso::load_file` has been deprecated in favor of `Oso::load_files` as of the 0.20 release.\n\nPlease see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html"
+    )]
+    pub fn load_file<P: AsRef<std::path::Path>>(&mut self, filename: P) -> crate::Result<()> {
+        self.load_files(vec![filename])
+    }
+
+    /// Load files containing Polar rules. All Polar files must end in `.polar`.
+    pub fn load_files<P: AsRef<std::path::Path>>(
+        &mut self,
+        filenames: Vec<P>,
+    ) -> crate::Result<()> {
+        if filenames.is_empty() {
+            return Ok(());
+        }
+
+        let mut sources = Vec::with_capacity(filenames.len());
+
+        for file in filenames {
+            let file = file.as_ref();
+            let filename = file.to_string_lossy().into_owned();
+            if !file.extension().map_or(false, |ext| ext == "polar") {
+                return Err(crate::OsoError::IncorrectFileType { filename });
+            }
+            let mut f = File::open(&file)?;
+            let mut src = String::new();
+            f.read_to_string(&mut src)?;
+            sources.push(Source {
+                src,
+                filename: Some(filename),
             });
         }
-        let mut f = File::open(&file)?;
-        let mut policy = String::new();
-        f.read_to_string(&mut policy)?;
-        self.inner
-            .load(&policy, Some(file.to_string_lossy().into_owned()))?;
-        self.check_inline_queries()
+
+        self.load_sources(sources)
     }
 
     /// Load a string of polar source directly.
@@ -103,9 +200,12 @@ impl Oso {
     /// ```ignore
     /// oso.load_str("allow(a, b, c) if true;");
     /// ```
-    pub fn load_str(&self, s: &str) -> crate::Result<()> {
-        self.inner.load(s, None)?;
-        self.check_inline_queries()
+    pub fn load_str(&mut self, src: &str) -> crate::Result<()> {
+        // TODO(gj): emit... some sort of warning?
+        self.load_sources(vec![Source {
+            src: src.to_owned(),
+            filename: None,
+        }])
     }
 
     /// Query the knowledge base. This can be an allow query or any other polar expression.
@@ -151,6 +251,10 @@ impl Oso {
     pub fn register_class(&mut self, class: crate::host::Class) -> crate::Result<()> {
         let name = class.name.clone();
         let class_name = self.host.cache_class(class.clone(), name)?;
+
+        for hook in &class.register_hooks {
+            hook.call(self)?;
+        }
         self.register_constant(class, &class_name)
     }
 
@@ -164,7 +268,7 @@ impl Oso {
         self.inner.register_constant(
             Symbol(name.to_string()),
             value.to_polar().to_term(&mut self.host),
-        );
+        )?;
         Ok(())
     }
 }

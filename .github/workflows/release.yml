@@ -39,6 +39,7 @@ jobs:
   linux_libs:
     name: Build release libraries on Linux
     runs-on: ubuntu-latest
+    needs: [version]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
@@ -59,7 +60,7 @@ jobs:
       - name: Build release musl library
         run: |
           rustup target add x86_64-unknown-linux-musl
-          cargo build --target x86_64-unknown-linux-musl --release
+          RUSTFLAGS="-C target-feature=-crt-static" cargo build --target x86_64-unknown-linux-musl --release
       - name: Rename static lib
         run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
       - name: Rename static lib
@@ -68,6 +69,10 @@ jobs:
         with:
           name: oso_library
           path: target/release/libpolar.so
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_library
+          path: polar-c-api/polar.h
       - uses: actions/upload-artifact@v2
         with:
           name: oso_static_library
@@ -130,6 +135,7 @@ jobs:
   windows_libs:
     name: Build release libraries on Windows
     runs-on: windows-latest
+    needs: [version]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
@@ -437,6 +443,7 @@ jobs:
   build_js:
     name: Build js.
     runs-on: ubuntu-latest
+    needs: [version]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
@@ -447,10 +454,10 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Use Node.js 10.14.2
+      - name: Use Node.js 12
         uses: actions/setup-node@v1
         with:
-          node-version: 10.14.2
+          node-version: "12"
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -475,12 +482,13 @@ jobs:
           path: languages/js/*
 
   validate_go:
-    name: Test go on ${{ matrix.os }}
+    name: Test go ${{ matrix.go-version }} on ${{ matrix.os }}
     needs: [build_go]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        go-version: ["1.12", "1.13", "1.14", "1.15", "1.16", "1.17"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -489,19 +497,29 @@ jobs:
       - name: Set up go
         uses: actions/setup-go@v2
         with:
-          go-version: "1.15"
+          go-version: ${{ matrix.go-version }}
       - name: Download go package from package run
         uses: actions/download-artifact@v1
         with:
           name: go
       - name: "test"
+        if: runner.os == 'Windows' || runner.os == 'Linux' || matrix.go-version != '1.17'
         run: |
           go build
           go test -v ./tests/
         working-directory: go
       - name: "test musl"
+        # TODO(gj): the dependency fetching step in the
+        # tetafro/golang-gcc:1.12-alpine image seems to require Git (unlike Go
+        # versions 1.13 -> 1.17), and the image doesn't contain Git. We could
+        # create our own image that extends tetafro/golang-gcc:1.12-alpine and
+        # contains Git, but for now I'm skipping it.
+        if: runner.os == 'Linux' && matrix.go-version != '1.12'
+        run: docker run --rm -v `pwd`:/oso tetafro/golang-gcc:${{ matrix.go-version }}-alpine /bin/sh -c 'cd /oso && go test -v ./tests/'
+        working-directory: go
+      - name: "test buster"
         if: runner.os == 'Linux'
-        run: docker run --rm -v `pwd`:/oso tetafro/golang-gcc:1.15-alpine /bin/sh -c 'cd /oso && go build && go test -v ./tests/'
+        run: docker run --rm -v `pwd`:/oso golang:${{ matrix.go-version }}-buster /bin/sh -c 'cd /oso && go test -v ./tests/'
         working-directory: go
 
   validate_python_linux:
@@ -588,7 +606,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8, 3.9]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -677,7 +695,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        node-version: [10, 11, 12, 13, 14]
+        node-version: ["12", "14", "16"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -691,21 +709,21 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: oso_js_node
-      - name: Run tests
-        # Timeout fix: https://stackoverflow.com/a/51508426
-        run: |
-          yarn install --prod  --network-timeout 100000
-          node dist/test/parity.js
+      - name: Install production dependencies
+        run: yarn install --production
+        working-directory: oso_js_node
+      - name: Run parity tests
+        run: node dist/test/parity.js
         working-directory: oso_js_node
 
   test_quickstarts:
     name: Test Quickstarts
     runs-on: ubuntu-latest
+    needs: [version]
     steps:
       - uses: actions/checkout@v2
       - name: Initialize submodules
-        working-directory: docs/examples/quickstart
-        run: git submodule update --init -- oso-java-quickstart oso-nodejs-quickstart oso-python-quickstart oso-ruby-quickstart oso-rust-quickstart
+        run: make -C docs/examples update-submodules
       - name: Check that submodules are all up-to-date
         run: |
           git submodule foreach git remote update
@@ -721,16 +739,16 @@ jobs:
         uses: actions/setup-python@v1
         with:
           python-version: 3.6
-      - name: Use Ruby 2.4.0
+      - name: Use Ruby 2.4
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-          ruby-version: "2.4.0"
-          working-directory: "docs/examples/quickstart/oso-ruby-quickstart"
-      - name: Use Node.js 10.0.0
+          ruby-version: "2.4"
+          working-directory: "docs/examples/quickstart/ruby"
+      - name: Use Node.js 12
         uses: actions/setup-node@v1
         with:
-          node-version: "10.0.0"
+          node-version: "12"
       - name: Use Java 10
         uses: actions/setup-java@v1
         with:
@@ -741,8 +759,12 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      - name: Use Go 1.12
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.12"
       - name: Run quickstart tests
-        run: make -C docs test-quickstarts
+        run: make -C docs test-quickstarts-release
 
   release:
     name: Create release
@@ -891,6 +913,7 @@ jobs:
           asset_path: ./go-oso.zip
           asset_name: go-oso-${{ steps.version.outputs.oso_version }}.zip
           asset_content_type: application/zip
+  # TODO(gj): update this to post to Quill or a private channel on community Slack.
   alert-failure:
     name: Alert on failure
     if: ${{ !success() }}
