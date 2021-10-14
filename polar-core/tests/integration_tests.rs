@@ -2219,6 +2219,8 @@ fn test_dict_dot_grounding() -> TestResult {
 
         moo(a, b) if a = b.x and a.z = b.z;
         roo(a: {z}, _: {x: a, z});
+
+        boo(a: {b, c}, b: {a, c}, c: {a, b});
     "#,
     )?;
 
@@ -2236,6 +2238,9 @@ fn test_dict_dot_grounding() -> TestResult {
 
     qnull(&mut p, "a = {z: 0} and moo(a, {x: a, z: 1})");
     qnull(&mut p, "a = {z: 0} and roo(a, {x: a, z: 1})");
+
+    // FIXME stack overflow :(
+    // qeval(&mut p, "a = {b, c} and b = {a, c} and c = {a, b} and boo(a, b, c)");
     Ok(())
 }
 
