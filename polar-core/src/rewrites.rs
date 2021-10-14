@@ -54,30 +54,31 @@ impl<'kb> Rewriter<'kb> {
 
     /// Return true if the expression should be rewritten.
     fn needs_rewrite(&self, o: &Operation) -> bool {
+        use Operator::*;
         match o.operator {
-            Operator::Add
-            | Operator::Dot
-            | Operator::Div
-            | Operator::Mul
-            | Operator::Sub
-            | Operator::Mod
-            | Operator::Rem
-                if o.args.len() == 2 =>
-            {
-                true
-            }
-            Operator::New if o.args.len() == 1 => true,
+            Add | Dot | Div | Mul | Sub | Mod | Rem if o.args.len() == 2 => true,
+            New if o.args.len() == 1 => true,
             _ => false,
         }
     }
 
     fn temp_name(&mut self, op: &Operation) -> Symbol {
-        if op.operator == Operator::Dot {
-            if let (Ok(y), Ok(s)) = (
-                &op.args[0].value().as_symbol(),
-                &op.args[1].value().as_string(),
-            ) {
-                return Symbol(format!("_{}_dot_{}", y.0, s));
+        use Operator::Dot;
+        if op.operator == Dot {
+            if let Ok(s) = op.args[1].value().as_string() {
+                match &op.args[0].value() {
+                    Value::Variable(y) | Value::RestVariable(y) => {
+                        return Symbol(format!("_{}_dot_{}", y.0, s))
+                    }
+                    Value::Expression(Operation {
+                        operator: Dot,
+                        args,
+                    }) if args.len() == 3 => {
+                        let y = args[2].value().as_symbol().unwrap();
+                        return Symbol(format!("_{}_dot_{}", y.0, s));
+                    }
+                    _ => (),
+                }
             }
         }
         self.kb.gensym(temp_name(&op.operator))
@@ -85,10 +86,11 @@ impl<'kb> Rewriter<'kb> {
 }
 
 fn temp_name(o: &Operator) -> &'static str {
+    use Operator::*;
     match o {
-        Operator::Add | Operator::Div | Operator::Mul | Operator::Sub => "op",
-        Operator::Dot => "value",
-        Operator::New => "instance",
+        Add | Div | Mul | Sub => "op",
+        Dot => "value",
+        New => "instance",
         _ => "temp",
     }
 }
@@ -145,7 +147,7 @@ impl<'kb> Folder for Rewriter<'kb> {
             Value::Expression(o) if self.needs_rewrite(o) => {
                 // Rewrite sub-expressions, then push a temp onto the args.
                 let mut new = fold_operation(o.clone(), self);
-                let temp = Value::Variable(self.temp_name(o));
+                let temp = Value::Variable(self.temp_name(&new));
                 new.args.push(term!(temp.clone()));
 
                 // Push the rewritten expression into the top stack frame.
@@ -305,7 +307,7 @@ mod tests {
         let rule = rewrite_rule(rule, &mut kb);
         assert_eq!(
             rule.to_polar(),
-            "f(_value_1) if a.b = _a_dot_b and _a_dot_b.c = _value_1;"
+            "f(__a_dot_b_dot_c) if a.b = _a_dot_b and _a_dot_b.c = __a_dot_b_dot_c;"
         );
     }
 
@@ -348,7 +350,7 @@ mod tests {
         assert_eq!(query.to_polar(), "f(a.b().c)");
         assert_eq!(
             rewrite_term(query, &mut kb).to_polar(),
-            "a.b() = _value_1 and _value_1.c = _value_2 and f(_value_2)"
+            "a.b() = _value_1 and _value_1.c = __value_1_dot_c and f(__value_1_dot_c)"
         );
 
         let term = parse_query("a.b = 1");
@@ -360,7 +362,7 @@ mod tests {
         assert_eq!(term.to_polar(), "{x: 1}.x = 1");
         assert_eq!(
             rewrite_term(term, &mut kb).to_polar(),
-            "{x: 1}.x = _value_3 and _value_3 = 1"
+            "{x: 1}.x = _value_2 and _value_2 = 1"
         );
     }
 

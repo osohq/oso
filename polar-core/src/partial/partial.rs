@@ -1488,7 +1488,7 @@ mod test {
                 And,
                 term!(op!(
                     Neq,
-                    var!("__y_7"),
+                    var!("__y_6"),
                     term!(op!(Dot, var!("_this"), str!("foo")))
                 ))
             ))
@@ -1502,7 +1502,7 @@ mod test {
                 And,
                 term!(op!(
                     Neq,
-                    var!("__y_15"),
+                    var!("__y_14"),
                     term!(op!(
                         Dot,
                         term!(op!(Dot, var!("_this"), str!("foo"))),
