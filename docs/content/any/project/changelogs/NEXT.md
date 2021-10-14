@@ -81,7 +81,7 @@ ValidationError: Call to undefined rule "is_admin" at line 1, column 37
 ```
 
 To resolve these validation errors you can either update the policy to include a
-definition for your missing rule, or remove the offending call entirely.
+definition for the missing rule or remove the offending call entirely.
 #### New features
 
 ##### Feature 1
