@@ -321,11 +321,12 @@ try:
                 execute_state.statement = execute_state.statement.options(where)
             else:
                 filter = authorize_model(oso, user, action, session, entity)
-                log(f"Policy did not return filter for entity {entity}")
                 if filter is not None:
                     log(f"Applying filter {filter} to entity {entity}")
                     where = with_loader_criteria(entity, filter, include_aliases=True)
                     execute_state.statement = execute_state.statement.options(where)
+                else:
+                    log(f"Policy did not return filter for entity {entity}")
 
 
 except ImportError:

@@ -12,6 +12,7 @@ from sqlalchemy.orm import (
     selectinload,
     subqueryload,
     contains_eager,
+    with_loader_criteria,
     Load,
     relationship)
 
@@ -133,6 +134,49 @@ def test_subquery_joined():
     )
 
     assert all_entities_in_statement(query_for_c) == {A, B, A1}
+
+# Filter on B not applied as expected
+def test_with_loader_criteria_subquery():
+    subquery = select(A, B).join(B).subquery(name='sub')
+    subquery_aliased = sqlalchemy.orm.aliased(A, alias=subquery, flat=True, adapt_on_names=True)
+    query_for_c = select(subquery_aliased, A1).outerjoin(A1).options(
+        contains_eager(subquery_aliased.bs, alias=subquery),
+        with_loader_criteria(B, B.id == 1, include_aliases=True),
+    )
+
+    print(str(query_for_c))
+    assert ' b.id =' in str(query_for_c)
+
+# Throws
+def test_with_loader_criteria_simple_subquery_alias():
+    subquery = select(A).subquery(name='sub')
+    subquery_aliased = sqlalchemy.orm.aliased(A, alias=subquery, flat=True, adapt_on_names=True)
+    query_for_c = select(subquery_aliased).options(
+        with_loader_criteria(A, A.id == 1, include_aliases=True),
+    )
+
+    assert ' a.id = ' in str(query_for_c)
+
+# Works
+def test_with_loader_criteria_simple_alias():
+    aliased = sqlalchemy.orm.aliased(A)
+    query_for_c = select(aliased).options(
+        with_loader_criteria(A, A.id == 1, include_aliases=True),
+    )
+
+    print(str(query_for_c))
+    assert str(query_for_c) == 0
+
+# Works
+def test_with_loader_criteria_simple_subquery_no_alias():
+    subquery = select(A).subquery(name='sub')
+    query_for_c = select(subquery).options(
+        with_loader_criteria(A, A.id == 1, include_aliases=True),
+    )
+
+    print(str(query_for_c))
+    assert str(query_for_c) == 0
+
 
 # TODO test subquery, selectin. These are okay I believe because the
 # compiles of the select in & subquery trigger separate with orm execute
