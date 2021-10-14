@@ -28,6 +28,9 @@ draft: true
 - Fixed a bug which led to `var matches Type` failing when `var` was unbound.
 - Fixed a bug where dot lookups on the same variable could be bound to more than
   one value.
+- Polar dictionary patterns and literals now support a shorthand syntax similar
+  to JavaScript and Rust: `{ value: value }` can now be written more concisely
+  as `{ value }`.
 
 ### Node.js
 
