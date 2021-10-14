@@ -83,7 +83,8 @@ jobs:
 
   macos_libs:
     name: Build release libraries on MacOS
-    runs-on: macos-latest
+    runs-on: macos-11
+    needs: [version]
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust stable toolchain
@@ -94,12 +95,26 @@ jobs:
           override: true
       - name: Build release library
         run: cargo build --release
+      - name: Build release arm library
+        run: |
+          rustup target add aarch64-apple-darwin
+          SDKROOT=$(xcrun -sdk macosx11.0 --show-sdk-path) \
+            MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx11.0 --show-sdk-platform-version) \
+            cargo build --target aarch64-apple-darwin --release
       - name: Rename static lib
         run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
+      - name: Rename static lib
+        run: mv target/aarch64-apple-darwin/release/libpolar.a target/aarch64-apple-darwin/release/libpolar-macOS-arm.a
+      - name: Rename dynamic lib
+        run: mv target/aarch64-apple-darwin/release/libpolar.dylib target/aarch64-apple-darwin/release/libpolar-arm.dylib
       - uses: actions/upload-artifact@v2
         with:
           name: oso_library
           path: target/release/libpolar.dylib
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_library
+          path: target/aarch64-apple-darwin/release/libpolar-arm.dylib
       - uses: actions/upload-artifact@v2
         with:
           name: oso_static_library
@@ -107,8 +122,12 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: oso_static_library
+          path: target/aarch64-apple-darwin/release/libpolar-macOS-arm.a
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_static_library
           path: polar-c-api/polar.h
-
+  
   windows_libs:
     name: Build release libraries on Windows
     runs-on: windows-latest
