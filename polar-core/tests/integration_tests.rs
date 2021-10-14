@@ -1700,14 +1700,38 @@ fn test_partial_grounding() -> TestResult {
 #[test]
 fn test_dict_destructuring() -> TestResult {
     let mut p = Polar::new();
-    p.load_str("foo(x, _: {x});")?;
-    qeval(&mut p, "foo(1, {x: 1})");
-    qnull(&mut p, "foo(2, {x: 1})");
-    qnull(&mut p, "foo(1, {x: 2})");
-    qeval(&mut p, "foo(2, {x: 2, y: 3})");
+    p.load_str(
+        r#"
+        foo(x, _: {x});
+        goo(x, y) if y matches {x};
+        moo(x, {x});
+        boo(x: {y:z}, y: {z:x}, z: {x:y});
+        roo(a, {a, b: a});
+        too(a, _: {a, b: a});
+   "#,
+    )?;
+    for s in &["foo", "goo"] {
+        qeval(&mut p, &format!("{}(1, {{x: 1}})", s));
+        qnull(&mut p, &format!("{}(2, {{x: 1}})", s));
+        qnull(&mut p, &format!("{}(1, {{x: 2}})", s));
+        qeval(&mut p, &format!("{}(2, {{x: 2, y: 3}})", s));
+    }
+
+    qeval(&mut p, "moo(1, {x: 1})");
+    qnull(&mut p, "moo(2, {x: 1})");
+    qnull(&mut p, "moo(1, {x: 2})");
+    qnull(&mut p, "moo(2, {x: 2, y: 3})");
+
+    qeval(&mut p, "x={y:z} and z={x:y} and boo(x, y, z)");
+
+    qeval(&mut p, "roo(1, {a: 1, b: 1})");
+    qeval(&mut p, "too(1, {a: 1, b: 1})");
+    qnull(&mut p, "roo(1, {a: 1, b: 1, c: 2})");
+    qeval(&mut p, "too(1, {a: 1, b: 1, c: 2})");
     Ok(())
 }
 
+#[test]
 #[test]
 fn test_rest_vars() -> TestResult {
     let mut p = Polar::new();
