@@ -32,6 +32,7 @@
     {{- if eq $.Site.BaseURL "https://docs.osohq.com/"}}
     <meta id="search-index" name="search-index" content="prod_OSODOCS" />
     {{ else }}
+    <meta name="robots" content="noindex">
     <meta id="search-index" name="search-index" content="preview_OSODOCS" />    
     {{ end }}
 
