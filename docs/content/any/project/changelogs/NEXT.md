@@ -76,7 +76,7 @@ allow(actor, action, resource) if is_admin(actor)
 
 will produce the following error:
 
-```
+```console
 ValidationError: Call to undefined rule "is_admin" at line 1, column 37
 ```
 
