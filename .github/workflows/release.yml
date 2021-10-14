@@ -131,7 +131,7 @@ jobs:
         with:
           name: oso_static_library
           path: polar-c-api/polar.h
-  
+
   windows_libs:
     name: Build release libraries on Windows
     runs-on: windows-latest
