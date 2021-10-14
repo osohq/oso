@@ -16,6 +16,7 @@
             class="overflow-y-auto overscroll-y-contain font-medium text-base sm:px-3 xl:px-5 lg:text-sm pb-10 pt-5 lg:pt-6 lg:pb-14 sticky?lg:h-(screen-20)">
             <div
                 class="h-full overflow-y-auto scrolling-touch lg:h-auto lg:block lg:relative lg:sticky lg:bg-transparent overflow-hidden bg-white mr-1 lg:mr-0 sticky?lg:h-(screen-20)">
+                {{- if in $.Site.BaseURL (slice "https://docs.osohq.com/" "https://docs-preview.oso.dev/main/") }}
                 <div class="search-button-div">
                     <button class="search-button" onclick="searchButtonClick(event)">
                         <div class="search-inner-button">
@@ -30,6 +31,7 @@
                         <div class="command-k">Ctrl-K</div>
                     </button>
                 </div>
+                {{- end -}}
                 {{ $currentNode := . }}
                 <ul>
                     <li class="pl-2 font-bold text-black"><a href="">
