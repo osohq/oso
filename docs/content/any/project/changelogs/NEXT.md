@@ -26,6 +26,8 @@ draft: true
 - Oso will now issue a warning if there are resource blocks in your policy but
   no calls to `has_permission` in any rules.
 - Fixed a bug which led to `var matches Type` failing when `var` was unbound.
+- Oso will now raise an error if your policy contains references to rules which
+  not defined
 
 ### Node.js
 
