@@ -977,7 +977,6 @@ impl PolarVirtualMachine {
         );
 
         match (left.value(), right.value()) {
-            (_, Value::Dictionary(_)) => unreachable!("parsed as pattern"),
             (Value::Expression(_), _) | (_, Value::Expression(_)) => {
                 unreachable!("encountered bare expression")
             }
