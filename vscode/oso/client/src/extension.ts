@@ -2,7 +2,10 @@ import { join } from 'path';
 
 import {
   ExtensionContext,
+  languages,
   RelativePattern,
+  TextDocument,
+  Uri,
   window,
   workspace,
   WorkspaceFolder,
@@ -18,14 +21,14 @@ import {
 // https://code.visualstudio.com/api/language-extensions/embedded-languages
 
 // TODO(gj): do we need to maintain state for all (potentially dirty) Polar
-// files in the current workspace?
+// docs in the current workspace?
 
 // TODO(gj): maybe just punt on non-workspace use cases entirely for now? At
 // least until progress is made on
 // https://github.com/Microsoft/vscode/issues/15178 so we have a less hacky way
 // to list all open editors (instead of just the currently visible ones).
 
-// TODO(gj): what about when a workspace is open and you open a new file/editor
+// TODO(gj): what about when a workspace is open and you open a new doc/editor
 // (via command-N) that may or may not ultimately be saved in a folder that
 // exists in the current workspace?
 //
@@ -38,7 +41,7 @@ const outputChannel = window.createOutputChannel(extensionName);
 
 // One client per workspace folder.
 //
-// TODO(gj): handle 'Untitled' files like this example?
+// TODO(gj): handle 'Untitled' docs like this example?
 // https://github.com/microsoft/vscode-extension-samples/blob/355d5851a8e87301cf814a3d20f3918cb162ff73/lsp-multi-server-sample/client/src/extension.ts#L62-L79
 const clients: Map<string, LanguageClient> = new Map();
 
@@ -70,8 +73,8 @@ function polarFilesInWorkspaceFolderPattern(folder: WorkspaceFolder) {
   return new RelativePattern(folder, '**/*.polar');
 }
 
-// Trigger an 'open' event for every Polar file in `folder` as a somewhat hacky
-// means of transmitting the initial file system state to the server.
+// Trigger a `didOpen` event for every Polar file in `folder` as a somewhat
+// hacky means of transmitting the initial file system state to the server.
 // Alternatives: we could (A) do a file system walk on the server or (B)
 // `workspace.findFiles()` in the client and then send the list of files to the
 // server for it to load. However, by doing it this way, we delegate the
@@ -84,8 +87,39 @@ function polarFilesInWorkspaceFolderPattern(folder: WorkspaceFolder) {
 // - https://github.com/microsoft/vscode/issues/33046
 async function openPolarFilesInWorkspaceFolder(folder: WorkspaceFolder) {
   const pattern = polarFilesInWorkspaceFolderPattern(folder);
-  const files = await workspace.findFiles(pattern);
-  return Promise.all(files.map(f => workspace.openTextDocument(f)));
+  const uris = await workspace.findFiles(pattern);
+  return Promise.all(uris.map(reloadDocument));
+}
+
+// Trigger a [`didOpen`][didOpen] event for `uri`.
+//
+// The server uses `didOpen` events to maintain its internal view of Polar
+// documents in the current workspace folder.
+//
+// [didOpen]: https://code.visualstudio.com/api/references/vscode-api#workspace.onDidOpenTextDocument
+async function reloadDocument(uri: Uri) {
+  const uriMatch = (d: TextDocument) => d.uri.toString() === uri.toString();
+  let doc = workspace.textDocuments.find(uriMatch);
+
+  if (doc) {
+    // If `doc` is already open, cycle its `languageId` from `polar` ->
+    // `plaintext` -> `polar` to trigger a `didOpen` event. This is the event
+    // the server listens to in order to update the state of all Polar
+    // documents it's aware of.
+    //
+    // The [`setTextDocumentLanguage`][setTextDocumentLanguage] API triggers a
+    // `didOpen` event but seems to only fire when the document's `languageId`
+    // actually changes. Calling `setTextDocumentLanguage(doc, 'polar')`
+    // doesn't trigger the event if `doc`'s `languageId` is already `'polar'`.
+    //
+    // [setTextDocumentLanguage]: https://code.visualstudio.com/api/references/vscode-api#languages.setTextDocumentLanguage
+    doc = await languages.setTextDocumentLanguage(doc, 'plaintext');
+    await languages.setTextDocumentLanguage(doc, 'polar');
+  } else {
+    // If `doc` wasn't already open, open it, which will trigger the `didOpen`
+    // event without the above `setTextDocumentLanguage` shenanigans.
+    await workspace.openTextDocument(uri);
+  }
 }
 
 async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
@@ -109,7 +143,6 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   context.subscriptions.push(deleteWatcher);
   context.subscriptions.push(createChangeWatcher);
 
-  // TODO(gj): remove debugOpts when we move server from TS -> Rust.
   const debugOpts = {
     execArgv: ['--nolazy', `--inspect=${6011 + clients.size}`],
   };
@@ -120,7 +153,9 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   const clientOpts: LanguageClientOptions = {
     // TODO(gj): seems like I should be able to use a RelativePattern here, but
     // the TS type for DocumentFilter.pattern doesn't seem to like that.
-    documentSelector: [{ pattern: `${folder.uri.fsPath}/**/*.polar` }],
+    documentSelector: [
+      { language: 'polar', pattern: `${folder.uri.fsPath}/**/*.polar` },
+    ],
     synchronize: { fileEvents: deleteWatcher },
     diagnosticCollectionName: extensionName,
     workspaceFolder: folder,
@@ -131,18 +166,14 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   // Start client and mark it for cleanup when the extension is deactivated.
   context.subscriptions.push(client.start());
 
-  // When a Polar file in `folder` (even files not currently open in VSCode) is
-  // created or changed, trigger a `workspace.onDidOpenTextDocument` event that
-  // the language server is listening for.
-  context.subscriptions.push(
-    createChangeWatcher.onDidCreate(file => workspace.openTextDocument(file))
-  );
-  context.subscriptions.push(
-    createChangeWatcher.onDidChange(file => workspace.openTextDocument(file))
-  );
+  // When a Polar document in `folder` (even documents not currently open in
+  // VSCode) is created or changed, trigger a `workspace.onDidOpenTextDocument`
+  // event that the language server is listening for.
+  context.subscriptions.push(createChangeWatcher.onDidCreate(reloadDocument));
+  context.subscriptions.push(createChangeWatcher.onDidChange(reloadDocument));
 
-  // Trigger a `workspace.onDidOpenTextDocument` event for every Polar file in
-  // `folder` (even files not currently open in VSCode).
+  // Transmit the initial file system state for `folder` (including files not
+  // currently open in VSCode) to the server.
   await openPolarFilesInWorkspaceFolder(folder);
 
   clients.set(folder.uri.toString(), client);
@@ -181,10 +212,6 @@ export async function activate(context: ExtensionContext): Promise<void> {
   // `polar` syntax. Maybe think about linking all open editors together once
   // progress is made on https://github.com/Microsoft/vscode/issues/15178, but
   // at present I think it'd be too hacky for too little benefit.
-
-  // TODO(gj): need to track files separately per workspace folder; currently
-  // tracking all files across the entire workspace. Use case is opening
-  // osohq/gitclub in one workspace folder and osohq/oso in another.
 
   // TODO(gj): what happens when someone opens the osohq/oso folder and there
   // are a ton of different Polar files in different subfolders that should
