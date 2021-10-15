@@ -212,6 +212,7 @@ jobs:
       - name: Full diff
         run: diff --recursive base head > diff-full.txt
         if: ${{ steps.diff.outcome == 'failure' }}
+        continue-on-error: true
       - name: Upload diff artifact
         uses: actions/upload-artifact@v2
         with:
