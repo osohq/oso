@@ -408,7 +408,7 @@ impl KnowledgeBase {
                     Value::Variable(parameter),
                     None,
                 ) => RuleParamMatch::False(format!(
-                    "Parameter `{parameter}` should have a {tag} type constraint.
+                    "Parameter `{parameter}` expects a {tag} type constraint.
 
 \t{parameter}: {tag}",
                     parameter = parameter,
