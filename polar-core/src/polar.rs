@@ -154,19 +154,17 @@ const MULTIPLE_LOAD_ERROR_MSG: &str =
 
 impl Polar {
     pub fn new() -> Self {
-        let mut polar = Self {
-            kb: Arc::new(RwLock::new(KnowledgeBase::new())),
-            messages: MessageQueue::new(),
-            ignore_no_allow_warning: false,
-        };
         // TODO(@gkaemmer): pulling this from an environment variable is a hack
         // and should not be used for similar cases. See set_ignore_no_allow_warning.
         // Ideally, we'd have a single "configuration" entrypoint for both the Polar
         // and Query types, so that we don't have to keep adding environment
         // variables for new configuration use-cases.
-        let ignore_no_allow = std::env::var("POLAR_IGNORE_NO_ALLOW_WARNING_HACK").is_ok();
-        polar.set_ignore_no_allow_warning(ignore_no_allow);
-        polar
+        let ignore_no_allow_warning = std::env::var("POLAR_IGNORE_NO_ALLOW_WARNING_HACK").is_ok();
+        Self {
+            kb: Arc::new(RwLock::new(KnowledgeBase::new())),
+            messages: MessageQueue::new(),
+            ignore_no_allow_warning,
+        }
     }
 
     /// Load `Source`s into the KB.
@@ -363,6 +361,7 @@ impl Polar {
     // TODO(@gkaemmer): this is a hack and should not be used for similar cases.
     // Ideally, we'd have a single "configuration" entrypoint for both the Polar
     // and Query types.
+    #[cfg(target_arch = "wasm32")]
     pub fn set_ignore_no_allow_warning(&mut self, ignore: bool) {
         self.ignore_no_allow_warning = ignore;
     }
