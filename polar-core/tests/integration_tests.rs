@@ -2410,3 +2410,32 @@ fn test_default_rule_types() -> TestResult {
     assert!(p.next_message().is_none());
     Ok(())
 }
+
+#[test]
+fn test_suggested_rule_specializer() -> TestResult {
+    let p = Polar::new();
+    p.register_constant(sym!("Repository"), term!(true))?;
+    p.register_constant(sym!("User"), term!(true))?;
+
+    let policy = r#"
+actor User {}
+resource Repository {
+	permissions = ["read"];
+	roles = ["contributor"];
+
+    "read" if "contributor";
+}
+
+has_role(actor: User, role_name, repository: Repository) if
+    role in actor.roles and
+    role_name = role.name and
+    repository = role.repository;
+"#;
+
+    let err = p.load_str(policy).expect_err("Expected validation error");
+    assert!(matches!(&err.kind, ErrorKind::Validation(_)));
+    assert!(format!("{}", err)
+        .contains("Perhaps you meant to add an actor block to the top of your policy, like this:"));
+
+    Ok(())
+}
