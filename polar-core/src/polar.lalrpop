@@ -138,7 +138,7 @@ Call: Value = {
         Value::Call(Call{name, args, kwargs})
     },
     // Positional args + kwargs.
-    <name:Name> "(" <mut args:(<ValExp> ",")*> <fields:(<Fields<ValExp>>)>")" => {
+    <name:Name> "(" <mut args:(<ValExp> ",")*> <fields:(<Kwargs<ValExp>>)>")" => {
         let kwargs = Some(fields);
         Value::Call(Call{name, args, kwargs})
     }
@@ -161,7 +161,7 @@ DotCall: Value = {
       Value::Call(Call{name, args, kwargs})
   },
   // Positional args + kwargs.
-  <w:ResWord> "(" <mut args:(<ValExp> ",")*> <fields:(<Fields<ValExp>>)>")" => {
+  <w:ResWord> "(" <mut args:(<ValExp> ",")*> <fields:(<Kwargs<ValExp>>)>")" => {
       let kwargs = Some(fields);
       let name = Symbol(w);
       Value::Call(Call{name, args, kwargs})
@@ -179,6 +179,7 @@ New: Value = {
 Field<T>: (Symbol, Term) = {
     <name:Name> ":" <value:T> => (name, value),
     <w:ResWord> ":" <value:T> => (Symbol(w), value),
+    <name:Spanned<Variable>> => (name.value().as_symbol().unwrap().clone(), name),
 }
 
 Fields<T>: BTreeMap<Symbol, Term> = {
@@ -188,6 +189,29 @@ Fields<T>: BTreeMap<Symbol, Term> = {
         fields
     },
     <loc:@L> <mut fields:Fields<T>> "," <tail:Field<T>?> =>? match tail {
+        None => Ok(fields),
+        Some((name, value)) => {
+            let existing = fields.insert(name.clone(), value);
+            if existing.is_some() {
+                return Err(ParseError::User { error: error::ParseError::DuplicateKey { loc, key: name.0 } })
+            }
+            Ok(fields)
+        }
+    }
+};
+
+Kwarg<T>: (Symbol, Term) = {
+    <name:Name> ":" <value:T> => (name, value),
+    <w:ResWord> ":" <value:T> => (Symbol(w), value),
+}
+
+Kwargs<T>: BTreeMap<Symbol, Term> = {
+    <field:Kwarg<T>> => {
+        let mut fields = BTreeMap::new();
+        fields.insert(field.0, field.1);
+        fields
+    },
+    <loc:@L> <mut fields:Kwargs<T>> "," <tail:Kwarg<T>?> =>? match tail {
         None => Ok(fields),
         Some((name, value)) => {
             let existing = fields.insert(name.clone(), value);
