@@ -2453,7 +2453,7 @@ has_role(actor: User, role_name, repository: Repository) if
     let err = p.load_str(policy).expect_err("Expected validation error");
     assert!(matches!(&err.kind, ErrorKind::Validation(_)));
     assert!(format!("{}", err).contains(
-        "Failed to match because: Parameter `role_name` should have a String type constraint."
+        "Failed to match because: Parameter `role_name` expects a String type constraint."
     ));
 
     Ok(())
