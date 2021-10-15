@@ -49,6 +49,7 @@ fn kind(err: &PolarError) -> String {
         Parameter(ParameterError(..)) => "ParameterError::ParameterError",
         Validation(InvalidRule { .. }) => "ValidationError::InvalidRule",
         Validation(InvalidRuleType { .. }) => "ValidationError::InvalidRuleType",
+        Validation(UndefinedRule { .. }) => "ValidationError::UndefinedRule",
     }
     .to_owned()
 }

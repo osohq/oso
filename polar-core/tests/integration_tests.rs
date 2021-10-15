@@ -749,7 +749,8 @@ fn test_two_rule_bodies_not_nested() -> TestResult {
     let mut p = Polar::new();
     p.load_str(
         r#"f(x) if a(x);
-           f(1);"#,
+           f(1);
+           a(_x) if false;"#,
     )?;
     qvar(&mut p, "f(x)", "x", values![1]);
     Ok(())
@@ -761,7 +762,8 @@ fn test_two_rule_bodies_nested() -> TestResult {
     p.load_str(
         r#"f(x) if a(x);
            f(1);
-           a(x) if g(x);"#,
+           a(x) if g(x);
+           g(_x) if false;"#,
     )?;
     qvar(&mut p, "f(x)", "x", values![1]);
     Ok(())

@@ -247,7 +247,7 @@ predicate; if we wanted to know who Artemis’s mother was, we could
 query for:
 
 ```
->> mother("Atemis", mother)
+>> mother("Artemis", mother)
 mother = "Leto"
 True
 ```
