@@ -54,7 +54,8 @@ export class Polar {
 
   constructor(opts: Options = {}) {
     this.#ffiPolar = new FfiPolar();
-    // This is a hack to make the POLAR_IGNORE env variable accessible in wasm.
+    // This is a hack to make the POLAR_IGNORE_NO_ALLOW_WARNING_HACK env
+    // variable accessible in wasm.
     this.#ffiPolar.setIgnoreNoAllowWarning(
       !!process?.env?.POLAR_IGNORE_NO_ALLOW_WARNING_HACK
     );
