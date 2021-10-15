@@ -424,6 +424,7 @@ impl fmt::Display for ParameterError {
 pub enum ValidationError {
     InvalidRule { rule: String, msg: String },
     InvalidRuleType { rule_type: String, msg: String },
+    UndefinedRule { rule_name: String },
     // TODO(lm|gj): add ResourceBlock and SingletonVariable.
 }
 
@@ -435,6 +436,9 @@ impl fmt::Display for ValidationError {
             }
             Self::InvalidRuleType { rule_type, msg } => {
                 write!(f, "Invalid rule type: {} {}", rule_type, msg)
+            }
+            Self::UndefinedRule { rule_name } => {
+                write!(f, r#"Call to undefined rule "{}""#, rule_name)
             }
         }
     }

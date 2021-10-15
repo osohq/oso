@@ -20,3 +20,10 @@ allow(actor: User, "frob", resource: Company) if
 
 allow(actor: User, "list", Company) if
    actor.name = "auditor";
+
+# stubs to avoid undefined rule validations
+allowRole(_role, _action, _resource) if
+    false;
+
+actorInRole(_actor, _role, _resource) if
+    false;
