@@ -14,7 +14,6 @@ use super::validations::{
 };
 use super::vm::*;
 
-use std::collections::HashSet;
 use std::sync::{Arc, RwLock};
 
 pub struct Query {
@@ -141,7 +140,7 @@ impl Iterator for Query {
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
     messages: MessageQueue,
-    ignore_warnings: HashSet<String>,
+    ignore_no_allow_warning: bool,
 }
 
 impl Default for Polar {
@@ -155,18 +154,18 @@ const MULTIPLE_LOAD_ERROR_MSG: &str =
 
 impl Polar {
     pub fn new() -> Self {
-        // TODO(@gkaemmer): pulling this from an environment variable is a hack
-        // and should not be used for similar cases. See set_ignore_warnings.
-        // Ideally, we'd have a single "configuration" entrypoint for both the Polar
-        // and Query types, so that we don't have to keep adding environment
-        // variables for new configuration use-cases.
         let mut polar = Self {
             kb: Arc::new(RwLock::new(KnowledgeBase::new())),
             messages: MessageQueue::new(),
-            ignore_warnings: HashSet::new(),
+            ignore_no_allow_warning: false,
         };
-        let ignore_warnings = std::env::var("POLAR_IGNORE").ok();
-        polar.set_ignore_warnings(ignore_warnings);
+        // TODO(@gkaemmer): pulling this from an environment variable is a hack
+        // and should not be used for similar cases. See set_ignore_no_allow_warning.
+        // Ideally, we'd have a single "configuration" entrypoint for both the Polar
+        // and Query types, so that we don't have to keep adding environment
+        // variables for new configuration use-cases.
+        let ignore_no_allow = std::env::var("POLAR_IGNORE_NO_ALLOW_WARNING_HACK").is_ok();
+        polar.set_ignore_no_allow_warning(ignore_no_allow);
         polar
     }
 
@@ -262,8 +261,7 @@ impl Polar {
 
         // Perform validation checks against the whole policy
         let mut warnings = vec![];
-        let ignore_no_allow = self.ignore_warnings.contains("no_allow");
-        if !ignore_no_allow {
+        if !self.ignore_no_allow_warning {
             warnings.append(&mut check_no_allow_rule(&kb));
         }
 
@@ -365,10 +363,8 @@ impl Polar {
     // TODO(@gkaemmer): this is a hack and should not be used for similar cases.
     // Ideally, we'd have a single "configuration" entrypoint for both the Polar
     // and Query types.
-    pub fn set_ignore_warnings(&mut self, ignore_warnings: Option<String>) {
-        if let Some(ignore_list) = ignore_warnings {
-            self.ignore_warnings = ignore_list.split(",").map(|s| s.to_string()).collect();
-        }
+    pub fn set_ignore_no_allow_warning(&mut self, ignore: bool) {
+        self.ignore_no_allow_warning = ignore;
     }
 }
 

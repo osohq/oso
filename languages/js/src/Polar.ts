@@ -55,7 +55,9 @@ export class Polar {
   constructor(opts: Options = {}) {
     this.#ffiPolar = new FfiPolar();
     // This is a hack to make the POLAR_IGNORE env variable accessible in wasm.
-    this.#ffiPolar.setIgnoreWarnings(process.env.POLAR_IGNORE);
+    this.#ffiPolar.setIgnoreNoAllowWarning(
+      !!process?.env?.POLAR_IGNORE_NO_ALLOW_WARNING_HACK
+    );
     const equalityFn = opts.equalityFn || defaultEqualityFn;
     this.#host = new Host(this.#ffiPolar, equalityFn);
 
