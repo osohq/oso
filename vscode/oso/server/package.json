@@ -1,21 +1,20 @@
 {
-	"name": "lsp-sample-server",
-	"description": "Example implementation of a language server in node.",
-	"version": "1.0.0",
-	"author": "Microsoft Corporation",
-	"license": "MIT",
+	"version": "0.1.2",
+	"name": "polar-lsp-server",
+	"author": "Oso Security, Inc.",
+	"publisher": "osohq",
+	"description": "VSCode LSP server for Polar.",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/osohq/oso"
+	},
+	"license": "Apache-2.0",
 	"engines": {
 		"node": "*"
 	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/Microsoft/vscode-extension-samples"
-	},
 	"dependencies": {
-		"vscode-languageserver": "^7.0.0",
-		"vscode-languageserver-textdocument": "^1.0.1"
+		"vscode-languageserver": "^7.0.0"
 	},
-	"scripts": {},
 	"devDependencies": {
 		"@types/node": "^16.10.3"
 	}
