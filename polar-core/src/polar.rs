@@ -159,7 +159,7 @@ impl Polar {
         // Ideally, we'd have a single "configuration" entrypoint for both the Polar
         // and Query types, so that we don't have to keep adding environment
         // variables for new configuration use-cases.
-        let ignore_no_allow_warning = std::env::var("POLAR_IGNORE_NO_ALLOW_WARNING_HACK").is_ok();
+        let ignore_no_allow_warning = std::env::var("POLAR_IGNORE_NO_ALLOW_WARNING").is_ok();
         Self {
             kb: Arc::new(RwLock::new(KnowledgeBase::new())),
             messages: MessageQueue::new(),

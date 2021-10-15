@@ -31,7 +31,7 @@
     "fix": "gts fix",
     "fmt": "prettier --write 'src/**/*.[jt]s' 'test/**/*.[jt]s'",
     "fmtcheck": "prettier --check 'src/**/*.[jt]s' 'test/**/*.[jt]s'",
-    "test": "POLAR_IGNORE_NO_ALLOW_WARNING_HACK=1 jest",
+    "test": "POLAR_IGNORE_NO_ALLOW_WARNING=1 jest",
     "docs-build": "typedoc --options typedoc.js",
     "docs-watch": "chokidar 'src/**/*.ts' -c 'yarn docs-build'",
     "docs-serve": "live-server docs",
