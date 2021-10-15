@@ -1,9 +1,9 @@
 {
 	"version": "0.1.2",
-	"name": "polar-analyzer-client",
+	"name": "polar-lsp-client",
 	"author": "Oso Security, Inc.",
 	"publisher": "osohq",
-	"description": "VSCode language server client for polar-analyzer.",
+	"description": "VSCode LSP client for Polar.",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/osohq/oso"

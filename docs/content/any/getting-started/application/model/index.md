@@ -199,11 +199,4 @@ allow(actor, action, resource) if
 
 ### What's Next
 
-{{% 1on1 %}}
-
-For help deciding what type of authorization model to use, chat with our
-team.
-
-{{% /1on1 %}}
-
 Now that we've setup our policy, let's see how we can enforce it!
