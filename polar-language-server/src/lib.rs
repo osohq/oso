@@ -152,9 +152,9 @@ impl PolarLanguageServer {
         assert_eq!(content_changes.len(), 1);
         assert!(content_changes[0].range.is_none());
 
-        self.documents.entry(uri).and_modify(|previous| {
-            previous.version = version;
-            previous.text = content_changes[0].text.clone();
+        self.documents.entry(uri).and_modify(|doc| {
+            doc.version = version;
+            doc.text = content_changes[0].text.clone();
         });
         self.send_diagnostics_for_documents();
     }
