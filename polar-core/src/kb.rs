@@ -401,7 +401,7 @@ impl KnowledgeBase {
                     Value::Variable(_),
                     Some(Value::Pattern(rule_spec)),
                 ) => self.check_pattern_param(index, rule_spec, rule_type_spec)?,
-                // RuleType has specializer but rule doesn't
+                // RuleType has an instance pattern specializer but rule has no specializer
                 (
                     Value::Variable(_),
                     Some(Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. }))),
