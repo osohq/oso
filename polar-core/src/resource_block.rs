@@ -506,9 +506,6 @@ fn shorthand_rule_body_to_rule_body(
 
     // If there's a relation, e.g., `if <implier> on <relation>`...
     if let Some(relation) = relation {
-        // TODO(gj): what if the relation is with the same type? E.g.,
-        // `Dir { relations = { parent: Dir }; }`. This might cause Polar to loop.
-
         // ...then we need to link the rewritten `<implier>` and `<relation>` rules via a shared
         // variable. To be clever, we'll name the variable according to the type of the relation,
         // e.g., if the declared relation is `parent: Org` we'll name the variable `org`.
