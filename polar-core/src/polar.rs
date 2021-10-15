@@ -140,6 +140,7 @@ impl Iterator for Query {
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
     messages: MessageQueue,
+    ignore_warnings: Option<String>,
 }
 
 impl Default for Polar {
@@ -153,9 +154,16 @@ const MULTIPLE_LOAD_ERROR_MSG: &str =
 
 impl Polar {
     pub fn new() -> Self {
+        // TODO(@gkaemmer): pulling this from an environment variable is a hack
+        // and should not be used for similar cases. See set_ignore_warnings.
+        // Ideally, we'd have a single "configuration" entrypoint for both the Polar
+        // and Query types, so that we don't have to keep adding environment
+        // variables for new configuration use-cases.
+        let ignore_warnings = std::env::var("POLAR_IGNORE").ok();
         Self {
             kb: Arc::new(RwLock::new(KnowledgeBase::new())),
             messages: MessageQueue::new(),
+            ignore_warnings,
         }
     }
 
@@ -251,7 +259,13 @@ impl Polar {
 
         // Perform validation checks against the whole policy
         let mut warnings = vec![];
-        warnings.append(&mut check_no_allow_rule(&kb));
+        let ignore_no_allow = self
+            .ignore_warnings
+            .iter()
+            .any(|ignore| ignore.contains("no_allow"));
+        if !ignore_no_allow {
+            warnings.append(&mut check_no_allow_rule(&kb));
+        }
 
         // Check for has_permission calls alongside resource block definitions
         warnings.append(&mut check_resource_blocks_missing_has_permission(&kb));
@@ -346,6 +360,14 @@ impl Polar {
         class_tag: &str,
     ) -> PolarResult<FilterPlan> {
         build_filter_plan(types, partial_results, variable, class_tag)
+    }
+
+    // TODO(@gkaemmer): this is a hack and should not be used for similar cases.
+    // Ideally, we'd have a single "configuration" entrypoint for both the Polar
+    // and Query types.
+    #[cfg(target_arch = "wasm32")]
+    pub fn set_ignore_warnings(&mut self, ignore_warnings: Option<String>) {
+        self.ignore_warnings = ignore_warnings;
     }
 }
 
