@@ -777,6 +777,33 @@ mod tests {
     }
 
     #[test]
+    fn test_resource_block_rewrite_shorthand_rules_with_recursive_relation() {
+        let resource = term!(sym!("Dir"));
+        let permissions = term!(["read"]);
+        let relations = term!(btreemap! { sym!("parent") => resource.clone() });
+        let declarations = index_declarations(None, Some(permissions), Some(relations), &resource);
+
+        let mut blocks = ResourceBlocks::new();
+        blocks.add(
+            BlockType::Resource,
+            resource.clone(),
+            declarations.unwrap(),
+            vec![],
+        );
+
+        let shorthand_rule = ShorthandRule {
+            head: term!("read"),
+            body: (term!("read"), Some(term!("parent"))),
+        };
+        let rewritten_role_role = shorthand_rule.as_rule(&resource, &blocks).unwrap();
+
+        assert_eq!(
+            rewritten_role_role.to_polar(),
+            format!("has_permission(actor: {}{{}}, \"read\", dir: Dir{{}}) if has_relation(related_dir, \"parent\", dir) and has_permission(actor, \"read\", related_dir);", ACTOR_UNION_NAME),
+        );
+    }
+
+    #[test]
     fn test_resource_block_local_rewrite_shorthand_rules() {
         let resource = term!(sym!("Org"));
         let roles = term!(["owner", "member"]);
