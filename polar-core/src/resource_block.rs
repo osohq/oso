@@ -469,16 +469,22 @@ fn index_declarations(
     Ok(declarations)
 }
 
-fn resource_name_as_var(resource_name: &Term, suffix: Option<&str>) -> Value {
+fn resource_name_as_var(resource_name: &Term, related: bool) -> Value {
     let name = &resource_name.value().as_symbol().expect("sym").0;
     let mut lowercased = name.to_lowercase();
 
-    // Add optional suffix
-    if let Some(s) = suffix {
-        lowercased += s;
-    // If no suffix is specified, add "_resource" suffix to ensure the variable name doesn't clash with other created variable names
-    } else {
-        lowercased += "_resource";
+    // If the resource's name is already lowercase, append "_instance" to distinguish the variable
+    // name from the resource's name. In most cases, the resource name will not be lowercase (e.g.,
+    // `Organization` or `RepositorySettings`).
+    if &lowercased == name {
+        lowercased += "_instance";
+    }
+
+    // If the `related` flag is specified, prepend "related_" to distinguish the variable name for
+    // the *related* resource from the variable name for the relatee resource. Without this logic,
+    // resources in a recursive relationship will have the same variable name.
+    if related {
+        lowercased.insert_str(0, "related_");
     }
 
     value!(sym!(lowercased))
@@ -493,7 +499,7 @@ fn shorthand_rule_body_to_rule_body(
 ) -> PolarResult<Term> {
     // Create a variable derived from the current block's resource name. E.g., if we're in the
     // `Repo` resource block, the variable name will be `repo`.
-    let resource_var = implier.clone_with_value(resource_name_as_var(resource_name, None));
+    let resource_var = implier.clone_with_value(resource_name_as_var(resource_name, false));
 
     // The actor variable will always be named `actor`.
     let actor_var = implier.clone_with_value(value!(sym!("actor")));
@@ -508,7 +514,7 @@ fn shorthand_rule_body_to_rule_body(
         // e.g., if the declared relation is `parent: Org` we'll name the variable `org`.
         let relation_type = blocks.get_relation_type_in_resource_block(relation, resource_name)?;
         let relation_type_var =
-            relation.clone_with_value(resource_name_as_var(relation_type, Some("_related")));
+            relation.clone_with_value(resource_name_as_var(relation_type, true));
 
         // For the rewritten `<relation>` call, the rule name will always be `has_relation` and the
         // arguments, in order, will be: the shared variable we just created above, the
@@ -570,7 +576,7 @@ fn shorthand_rule_head_to_params(head: &Term, resource: &Term) -> Vec<Parameter>
             specializer: None,
         },
         Parameter {
-            parameter: head.clone_with_value(resource_name_as_var(resource, None)),
+            parameter: head.clone_with_value(resource_name_as_var(resource, false)),
             specializer: Some(
                 resource.clone_with_value(value!(pattern!(instance!(resource_name)))),
             ),
@@ -769,7 +775,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
-            format!("has_role(actor: {}{{}}, \"reader\", repo_resource: repo{{}}) if has_relation(org_related, \"parent\", repo_resource) and has_role(actor, \"member\", org_related);", ACTOR_UNION_NAME),
+            format!("has_role(actor: {}{{}}, \"reader\", repo_instance: repo{{}}) if has_relation(related_org_instance, \"parent\", repo_instance) and has_role(actor, \"member\", related_org_instance);", ACTOR_UNION_NAME),
         );
     }
 
@@ -790,7 +796,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
-            format!("has_role(actor: {}{{}}, \"member\", org_resource: Org{{}}) if has_role(actor, \"owner\", org_resource);", ACTOR_UNION_NAME),
+            format!("has_role(actor: {}{{}}, \"member\", org: Org{{}}) if has_role(actor, \"owner\", org);", ACTOR_UNION_NAME),
         );
 
         let shorthand_rule = ShorthandRule {
@@ -802,7 +808,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_permission_role.to_polar(),
-            format!("has_permission(actor: {}{{}}, \"invite\", org_resource: Org{{}}) if has_role(actor, \"owner\", org_resource);", ACTOR_UNION_NAME),
+            format!("has_permission(actor: {}{{}}, \"invite\", org: Org{{}}) if has_role(actor, \"owner\", org);", ACTOR_UNION_NAME),
         );
 
         let shorthand_rule = ShorthandRule {
@@ -814,7 +820,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_permission_permission.to_polar(),
-            format!("has_permission(actor: {}{{}}, \"create_repo\", org_resource: Org{{}}) if has_permission(actor, \"invite\", org_resource);", ACTOR_UNION_NAME),
+            format!("has_permission(actor: {}{{}}, \"create_repo\", org: Org{{}}) if has_permission(actor, \"invite\", org);", ACTOR_UNION_NAME),
         );
     }
 
@@ -850,7 +856,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
-            format!("has_role(actor: {}{{}}, \"reader\", repo_resource: Repo{{}}) if has_relation(org_related, \"parent\", repo_resource) and has_role(actor, \"member\", org_related);", ACTOR_UNION_NAME),
+            format!("has_role(actor: {}{{}}, \"reader\", repo: Repo{{}}) if has_relation(related_org, \"parent\", repo) and has_role(actor, \"member\", related_org);", ACTOR_UNION_NAME),
         );
     }
 
