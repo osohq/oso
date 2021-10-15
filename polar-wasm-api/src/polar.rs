@@ -97,4 +97,12 @@ impl Polar {
                 serde_wasm_bindgen::to_value(&plan).map_err(|e| serialization_error(e.to_string()))
             })
     }
+
+    // TODO(@gkaemmer): this is a hack and should not be used for similar cases.
+    // Ideally, we'd have a single "configuration" entrypoint for both the Polar
+    // and Query types.
+    #[wasm_bindgen(js_class = Polar, js_name = setIgnoreNoAllowWarning)]
+    pub fn wasm_set_ignore_no_allow_warning(&mut self, ignore_no_allow_warning: bool) {
+        self.0.set_ignore_no_allow_warning(ignore_no_allow_warning);
+    }
 }
