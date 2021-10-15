@@ -977,6 +977,7 @@ impl PolarVirtualMachine {
         );
 
         match (left.value(), right.value()) {
+            (_, Value::Dictionary(_)) => todo!("make this case unreachable"),
             (Value::Expression(_), _) | (_, Value::Expression(_)) => {
                 unreachable!("encountered bare expression")
             }
