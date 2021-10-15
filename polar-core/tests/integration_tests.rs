@@ -1700,6 +1700,51 @@ fn test_partial_grounding() -> TestResult {
 }
 
 #[test]
+fn test_dict_destructuring() -> TestResult {
+    let mut p = Polar::new();
+    p.load_str(
+        r#"
+        foo(x, _: {x});
+        goo(x, y) if y matches {x};
+        moo(x, {x});
+        roo(a, {a, b: a});
+        too(a, _: {a, b: a});
+   "#,
+    )?;
+    for s in &["foo", "goo"] {
+        qeval(&mut p, &format!("{}(1, {{x: 1}})", s));
+        qnull(&mut p, &format!("{}(2, {{x: 1}})", s));
+        qnull(&mut p, &format!("{}(1, {{x: 2}})", s));
+        qeval(&mut p, &format!("{}(2, {{x: 2, y: 3}})", s));
+    }
+
+    qeval(&mut p, "moo(1, {x: 1})");
+    qnull(&mut p, "moo(2, {x: 1})");
+    qnull(&mut p, "moo(1, {x: 2})");
+    qnull(&mut p, "moo(2, {x: 2, y: 3})");
+
+    qeval(&mut p, "roo(1, {a: 1, b: 1})");
+    qeval(&mut p, "too(1, {a: 1, b: 1})");
+    qnull(&mut p, "roo(1, {a: 1, b: 1, c: 2})");
+    qeval(&mut p, "too(1, {a: 1, b: 1, c: 2})");
+    Ok(())
+}
+
+#[ignore]
+#[test]
+fn test_dict_destructuring_broken() -> TestResult {
+    let mut p = Polar::new();
+    p.load_str(
+        r#"
+        too(a, _: {a, b: a});
+   "#,
+    )?;
+    // currently hits an unimplemented code path in vm.rs
+    qeval(&mut p, "a={a} and too(a, {a, b: a})");
+    Ok(())
+}
+
+#[test]
 fn test_rest_vars() -> TestResult {
     let mut p = Polar::new();
     qvar(&mut p, "[1,2,3] = [*rest]", "rest", vec![value!([1, 2, 3])]);
