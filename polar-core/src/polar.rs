@@ -361,7 +361,6 @@ impl Polar {
     // TODO(@gkaemmer): this is a hack and should not be used for similar cases.
     // Ideally, we'd have a single "configuration" entrypoint for both the Polar
     // and Query types.
-    #[cfg(target_arch = "wasm32")]
     pub fn set_ignore_no_allow_warning(&mut self, ignore: bool) {
         self.ignore_no_allow_warning = ignore;
     }
