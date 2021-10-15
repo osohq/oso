@@ -14,6 +14,7 @@ use super::validations::{
 };
 use super::vm::*;
 
+use std::collections::HashSet;
 use std::sync::{Arc, RwLock};
 
 pub struct Query {
@@ -140,7 +141,7 @@ impl Iterator for Query {
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
     messages: MessageQueue,
-    ignore_warnings: Option<String>,
+    ignore_warnings: HashSet<String>,
 }
 
 impl Default for Polar {
@@ -159,12 +160,14 @@ impl Polar {
         // Ideally, we'd have a single "configuration" entrypoint for both the Polar
         // and Query types, so that we don't have to keep adding environment
         // variables for new configuration use-cases.
-        let ignore_warnings = std::env::var("POLAR_IGNORE").ok();
-        Self {
+        let mut polar = Self {
             kb: Arc::new(RwLock::new(KnowledgeBase::new())),
             messages: MessageQueue::new(),
-            ignore_warnings,
-        }
+            ignore_warnings: HashSet::new(),
+        };
+        let ignore_warnings = std::env::var("POLAR_IGNORE").ok();
+        polar.set_ignore_warnings(ignore_warnings);
+        polar
     }
 
     /// Load `Source`s into the KB.
@@ -259,10 +262,7 @@ impl Polar {
 
         // Perform validation checks against the whole policy
         let mut warnings = vec![];
-        let ignore_no_allow = self
-            .ignore_warnings
-            .iter()
-            .any(|ignore| ignore.contains("no_allow"));
+        let ignore_no_allow = self.ignore_warnings.contains("no_allow");
         if !ignore_no_allow {
             warnings.append(&mut check_no_allow_rule(&kb));
         }
@@ -365,9 +365,10 @@ impl Polar {
     // TODO(@gkaemmer): this is a hack and should not be used for similar cases.
     // Ideally, we'd have a single "configuration" entrypoint for both the Polar
     // and Query types.
-    #[cfg(target_arch = "wasm32")]
     pub fn set_ignore_warnings(&mut self, ignore_warnings: Option<String>) {
-        self.ignore_warnings = ignore_warnings;
+        if let Some(ignore_list) = ignore_warnings {
+            self.ignore_warnings = ignore_list.split(",").map(|s| s.to_string()).collect();
+        }
     }
 }
 
