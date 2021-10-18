@@ -451,6 +451,25 @@ def test_param_field(oso):
         oso.check_authz(log.data, log.id, Log, [log])
 
 
+def test_nested_dot_unify_order(oso):
+    oso.load_str(
+        """
+        allow(bar: Bar, "get", foo: Foo) if
+            foo.bar.is_cool = false and
+            foo.bar = bar and
+            foo.is_fooey = true;
+        allow(bar: Bar, "put", foo: Foo) if
+            foo.bar = bar and
+            foo.bar.is_cool = false and
+            foo.is_fooey = true;
+    """
+    )
+    for bar in bars:
+        expected = [foo for foo in bar.foos() if foo.is_fooey and not bar.is_cool]
+        oso.check_authz(bar, "get", Foo, expected)
+        oso.check_authz(bar, "put", Foo, expected)
+
+
 @pytest.mark.xfail(reason="a bug")
 def test_in_intersection(oso):
     # gwen can read any foo with a sibling foo with a number in common

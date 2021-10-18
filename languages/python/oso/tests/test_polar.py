@@ -34,6 +34,26 @@ def test_helpers(polar, query, qvar):
     assert qvar("f(x)", "x") == [1, 2, 3]
 
 
+def test_nested_dot_unify_order(polar, query):
+    polar.load_str(
+        """
+        allow(user, "get", post) if
+            post.created_by.banned = false and
+            user = post.created_by and
+            post.access_level = "private";
+
+        allow(user, "put", post) if
+            user = post.created_by and
+            post.created_by.banned = false and
+            post.access_level = "private";
+    """
+    )
+
+    pre = 'user = { banned: false } and post = { created_by: user, access_level: "private" }'
+    assert query(pre + ' and allow(user, "get", post)')
+    assert query(pre + ' and allow(user, "put", post)')
+
+
 def test_type_subspecializers(polar, query):
     polar.load_str(
         """
