@@ -30,7 +30,12 @@ draft: true
   to JavaScript and Rust: `{ value: value }` can now be written more concisely
   as `{ value }`.
 
-### Node.js
+### Python
+
+#### Breaking changes
+
+- The `types` field to `register_class` that takes the types of the fields is now called `fields`.
+
 
 #### Other bugs & improvements
 
