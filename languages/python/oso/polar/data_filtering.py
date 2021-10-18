@@ -203,5 +203,4 @@ def builtin_filter_plan_resolver(polar, filter_plan):
 
 
 def filter_data(polar, filter_plan, filter_plan_resolver=builtin_filter_plan_resolver):
-    print("filter plan", filter_plan)
     return filter_plan_resolver(polar, filter_plan)
