@@ -70,6 +70,8 @@ Filters have a `kind`, a `field` and a `value`. Their meaning depends on the
 - `Neq` means that the field must not be equal to the value.
 - `In` means that the field must be equal to one of the values in value.
 Value will be a list.
+- `Nin` means that the field must not be equal to one of the values in value.
+Value will be a list.
 - `Contains` means that the field must contain the value. This only applies
 if the field is a list.
 
