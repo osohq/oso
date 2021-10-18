@@ -146,8 +146,23 @@ class FilterBuilder:
             self.translate_expr(arg)
 
     def compare_expr(self, expr: Expression):
+        def translate_instance_dot(expr):
+            """Do dot lookups on external instances bound in partials."""
+            if isinstance(expr, Expression):
+                op = expr.operator
+                args = expr.args
+                if op == "Dot" and len(args) == 2 and type(args[1]) is str:
+                    if not isinstance(args[0], Variable) and not isinstance(
+                        args[0], Expression
+                    ):
+                        return getattr(args[0], args[1])
+            return expr
+
         assert expr.operator in COMPARISONS
-        (left, right) = expr.args
+        (left, right) = [translate_instance_dot(a) for a in expr.args]
+        if left == right:
+            return
+
         left_path = dot_path(left)
         right_path = dot_path(right)
 

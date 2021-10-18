@@ -155,8 +155,8 @@ def test_authorize_scalar_attribute_condition(post_fixtures, load_additional_str
         """
         # Object equals another object
         allow(actor: test_app2::User, "read", post: test_app2::Post) if
-            post.created_by = actor and
             post.created_by.is_banned = false and
+            post.created_by = actor and
             post.access_level = "private";
 
         allow(_actor: test_app2::User, "read", post: test_app2::Post) if

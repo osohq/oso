@@ -11,7 +11,6 @@ def reset():
     reset_oso()
 
 
-@pytest.mark.xfail(reason="a bug in partial_to_query_filter")
 @pytest.mark.django_db
 def test_another_one(load_additional_str):
     load_additional_str(
