@@ -1181,10 +1181,10 @@ impl PolarVirtualMachine {
                         // dot op as the LHS of the matches.
                         if c.operator != Operator::Unify {
                             None
-                        } else if matches!(c.args[0].value().as_symbol(), Ok(s) if names.contains(&s)) &&
+                        } else if matches!(c.args[0].value().as_symbol(), Ok(s) if names.contains(s)) &&
                             matches!(c.args[1].value().as_expression(), Ok(o) if o.operator == Operator::Dot) {
                             Some(c.args[1].clone())
-                        } else if matches!(c.args[1].value().as_symbol(), Ok(s) if names.contains(&s)) &&
+                        } else if matches!(c.args[1].value().as_symbol(), Ok(s) if names.contains(s)) &&
                             matches!(c.args[0].value().as_expression(), Ok(o) if o.operator == Operator::Dot) {
                             Some(c.args[0].clone())
                         } else {
