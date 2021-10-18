@@ -12,9 +12,10 @@ def reset():
 
 
 @pytest.mark.django_db
-def test_another_one(load_additional_str):
+def test_nested_dot_access_order(load_additional_str):
     load_additional_str(
         """
+        # These should be the same
         allow(actor: test_app2::User, "get", post: test_app2::Post) if
             post.created_by.is_banned = false and
             post.created_by = actor;
