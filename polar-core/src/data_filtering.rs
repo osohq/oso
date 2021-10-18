@@ -808,19 +808,25 @@ impl<'a> ResultSetBuilder<'a> {
         } else {
             err_invalid(format!(
                 "Unsupported field access: {}.{} = {}",
-                self.var_name(id).unwrap_or_else(|| Symbol(format!("{}", id))),
+                self.var_name(id)
+                    .unwrap_or_else(|| Symbol(format!("{}", id))),
                 field,
-                self.var_name(child).unwrap_or_else(|| Symbol(format!("{}", child))),
+                self.var_name(child)
+                    .unwrap_or_else(|| Symbol(format!("{}", child))),
             ))
         }
     }
 
     fn var_name(&self, id: Id) -> Option<VarName> {
-        self.vars.variables.get(&id).map(|noms| {
-            noms.iter().find(|n| !n.is_temporary_var())
-                .unwrap_or_else(|| noms.iter().next().unwrap())
-
-        }).map(|x| x.clone())
+        self.vars
+            .variables
+            .get(&id)
+            .map(|noms| {
+                noms.iter()
+                    .find(|n| !n.is_temporary_var())
+                    .unwrap_or_else(|| noms.iter().next().unwrap())
+            })
+            .map(|x| x.clone())
     }
 
     fn constrain_fields(&mut self, id: Id, var_type: &str) -> PolarResult<&mut Self> {
