@@ -1,5 +1,5 @@
 import { Host } from './Host';
-import { isPolarTerm } from './types';
+import { obj, isPolarTerm } from './types';
 import type { CombineQueryFn } from './types';
 import { isObj, isString } from './helpers';
 import { UnregisteredClassError } from './errors';
@@ -79,13 +79,15 @@ class Ref {
   }
 }
 
-export type FilterKind = 'Eq' | 'Neq' | 'In' | 'Contains';
+export type FilterKind = 'Eq' | 'Neq' | 'In' | 'Contains' | 'Nin';
+
+export type FilterField = string | undefined | FilterField[];
 
 /** Represents a condition that must hold on a resource. */
 export interface Filter {
   kind: FilterKind;
   value: unknown; // Ref | Field | Term
-  field?: string;
+  field: FilterField;
 }
 
 export type SerializedFields = {
@@ -94,7 +96,7 @@ export type SerializedFields = {
 
 async function parseFilter(host: Host, filter: Filter): Promise<Filter> {
   const { kind, field } = filter;
-  if (!['Eq', 'Neq', 'In', 'Contains'].includes(kind)) throw new Error();
+  if (!['Eq', 'Neq', 'In', 'Contains', 'Nin'].includes(kind)) throw new Error();
   if (field !== undefined && !isString(field)) throw new Error();
 
   let { value } = filter;
@@ -116,25 +118,50 @@ async function parseFilter(host: Host, filter: Filter): Promise<Filter> {
   return { kind, value, field };
 }
 
-function groundFilter(results: Map<number, unknown[]>, filter: Filter): Filter {
-  const ref = filter.value;
-  if (!(ref instanceof Ref)) return filter;
+type SetResults = Map<number, unknown[]>;
 
-  const { field, resultId } = ref;
-  let value = results.get(resultId);
+function partition<A>(coll: A[], pred: (a: A) => boolean): A[][] {
+  const yes: A[] = [],
+    no: A[] = [];
+  for (const a of coll) (pred(a) ? yes : no).push(a);
+  return [yes, no];
+}
 
-  if (field !== undefined) {
-    value = value?.map(v => {
-      // NOTE(gj): if `v` can't be indexed by `field`, it'll blow up at
-      // runtime. This indicates something is wrong either with the data
-      // filtering configuration, the user's ORM, etc.
-      //
-      // ref: https://github.com/osohq/oso/pull/1227#discussion_r715813796
-      return (v as any)[field]; // eslint-disable-line
-    });
+function groupBy<A, B>(coll: A[], fn: (a: A) => B): Map<B, A[]> {
+  const map: Map<B, A[]> = new Map();
+  for (const a of coll) {
+    const key = fn(a);
+    const maybe = map.get(key);
+    if (maybe) maybe.push(a);
+    else map.set(key, [a]);
   }
+  return map;
+}
 
-  return { ...filter, value };
+function getattr(x: obj, attr: string | undefined): unknown {
+  return attr ? x[attr] : x;
+}
+
+function groundFilters(results: SetResults, filters: Filter[]): Filter[] {
+  const [refs, rest] = partition(filters, f => f.value instanceof Ref);
+  const [yrefs, nrefs] = partition(
+    refs,
+    f => f.kind === 'In' || f.kind === 'Eq'
+  );
+
+  for (const { refs, kind } of [
+    { refs: yrefs, kind: 'In' },
+    { refs: nrefs, kind: 'Nin' },
+  ])
+    for (const [rid, fils] of groupBy(refs, f => (f.value as Ref).resultId))
+      rest.push({
+        kind: kind as FilterKind,
+        field: fils.map(f => f.field),
+        value: results // eslint-disable-line @typescript-eslint/no-non-null-assertion
+          .get(rid)!
+          .map(r => fils.map(f => getattr(r as obj, (f.value as Ref).field))),
+      });
+  return rest;
 }
 
 export async function filterData<T>(
@@ -149,12 +176,11 @@ export async function filterData<T>(
       const req = rs.requests.get(i);
       if (req === undefined) throw new Error();
 
-      const filters = await Promise.all(
-        req.constraints.map(async constraint => {
-          const con = await parseFilter(host, constraint);
-          // Substitute in results from previous requests.
-          return groundFilter(setResults, con);
-        })
+      const filters = groundFilters(
+        setResults,
+        await Promise.all(
+          req.constraints.map(async f => await parseFilter(host, f))
+        )
       );
 
       // NOTE(gj|gw): The class_tag on the request comes from serializeTypes(),
