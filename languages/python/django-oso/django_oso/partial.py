@@ -160,7 +160,7 @@ class FilterBuilder:
 
         assert expr.operator in COMPARISONS
         (left, right) = [translate_instance_dot(a) for a in expr.args]
-        if left == right and expr.operator in ['Unify', 'Eq']:
+        if left == right and expr.operator in ["Unify", "Eq"]:
             return
 
         left_path = dot_path(left)
