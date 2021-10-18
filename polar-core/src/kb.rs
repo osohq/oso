@@ -414,6 +414,14 @@ impl KnowledgeBase {
                     parameter = parameter,
                     tag = tag
                 )),
+                // RuleType has specializer but rule doesn't
+                (Value::Variable(_), Some(rule_type_spec), Value::Variable(_), None) => {
+                    RuleParamMatch::False(format!(
+                        "Invalid rule parameter {}. Rule type expected {}",
+                        index,
+                        rule_type_spec.to_polar()
+                    ))
+                }
                 // Rule has value or value specializer, rule type has pattern specializer
                 (
                     Value::Variable(_),
