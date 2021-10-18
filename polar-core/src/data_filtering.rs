@@ -1025,7 +1025,7 @@ fn index_of<A>(v: &[A], x: &A) -> Option<usize>
 where
     A: PartialEq<A>,
 {
-    v.iter().enumerate().find_map(|(i, y)| (y == x).then(|| i))
+    v.iter().position(|y| y == x)
 }
 
 fn hash_map_set_add<A, B>(mut map: HashMap<A, HashSet<B>>, a: A, b: B) -> HashMap<A, HashSet<B>>
