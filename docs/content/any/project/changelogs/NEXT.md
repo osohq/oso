@@ -29,6 +29,8 @@ draft: true
 - Polar dictionary patterns and literals now support a shorthand syntax similar
   to JavaScript and Rust: `{ value: value }` can now be written more concisely
   as `{ value }`.
+- Fixed a bug which caused type constraint checking to incorrectly succeed,
+  resulting in incorrect filters, or infinite loops.
 
 ### Node.js
 
