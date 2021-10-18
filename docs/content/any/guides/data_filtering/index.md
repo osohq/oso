@@ -93,12 +93,12 @@ You can define functions that apply to all types with
 `{{% exampleGet "setDataFilteringQueryDefaults" %}}`. Or you can pass type
 specific ones when you register a class.
 
-### Types
+### Fields
 
 The other thing you have to provide to use data filtering is type information
 for registered classes. This lets Oso know what the types of an object's fields
 are. Oso needs this information to handle specializers and other things in the
-policy when we don't have a concrete resource. The types are a 
+policy when we don't have a concrete resource. The fields are a 
 {{% exampleGet "map" %}} from field name to type.
 
 ## Example

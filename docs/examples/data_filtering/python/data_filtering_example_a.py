@@ -92,7 +92,7 @@ oso = Oso()
 
 oso.register_class(
     Repository,
-    types={
+    fields={
         "id": str,
     },
     build_query=build_query,
@@ -100,7 +100,7 @@ oso.register_class(
     combine_query=combine_query,
 )
 
-oso.register_class(User, types={"id": str, "repo_roles": list})
+oso.register_class(User, fields={"id": str, "repo_roles": list})
 # docs: end-a2
 
 with open("../policy_a.polar") as f:
