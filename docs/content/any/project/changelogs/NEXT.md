@@ -31,6 +31,8 @@ draft: true
 - Polar dictionary patterns and literals now support a shorthand syntax similar
   to JavaScript and Rust: `{ value: value }` can now be written more concisely
   as `{ value }`.
+- Oso will now propose a suggested fix if you define a rule without sufficient
+  parameter type specialization.
 
 ### Node.js
 
