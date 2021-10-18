@@ -825,8 +825,8 @@ impl<'a> ResultSetBuilder<'a> {
                 noms.iter()
                     .find(|n| !n.is_temporary_var())
                     .unwrap_or_else(|| noms.iter().next().unwrap())
+                    .clone()
             })
-            .map(|x| x.clone())
     }
 
     fn constrain_fields(&mut self, id: Id, var_type: &str) -> PolarResult<&mut Self> {
