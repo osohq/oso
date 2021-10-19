@@ -2109,6 +2109,7 @@ impl PolarVirtualMachine {
         if rule.params.len() != args.len() {
             self.filter_rules(applicable_rules, unfiltered_rules, args) // wrong arity, filter out
         } else if rule.is_ground() {
+            // The prefilter already checks applicability for ground rules.
             applicable_rules.push(rule);
             self.filter_rules(applicable_rules, unfiltered_rules, args)
         } else {
