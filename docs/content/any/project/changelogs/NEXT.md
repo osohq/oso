@@ -26,10 +26,24 @@ draft: true
 - Oso will now issue a warning if there are resource blocks in your policy but
   no calls to `has_permission` in any rules.
 - Fixed a bug which led to `var matches Type` failing when `var` was unbound.
+- Polar dictionary patterns and literals now support a shorthand syntax similar
+  to JavaScript and Rust: `{ value: value }` can now be written more concisely
+  as `{ value }`.
+- Oso will now propose a suggested fix if you define a rule without sufficient
+  parameter type specialization.
+- Fixed a bug that caused type constraint checking to incorrectly succeed,
+  resulting in incorrect filters or infinite loops.
 
-### Node.js
+### Python
+
+#### Breaking changes
+
+- The `types` field to `register_class` that takes the types of the fields is now called `fields`.
+
 
 #### Other bugs & improvements
+
+- The Python library for macOS now supports M1/ARM processors.
 
 - Fixed a bug preventing dictionaries created in Polar from making the round-trip
   to JS and back.

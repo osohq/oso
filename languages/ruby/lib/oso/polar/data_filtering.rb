@@ -4,6 +4,7 @@ module Oso
   module Polar
     # Data filtering interface for Ruby
     module DataFiltering
+      GETATTR = ->(x, attr) { attr.nil? ? x : x.send(attr) }
       # Represents a set of filter sequences that should allow the host
       # to obtain the records satisfying a query.
       class FilterPlan
@@ -29,7 +30,7 @@ module Oso
           result_sets.each_with_object([]) do |rs, qb|
             rs.resolve_order.each_with_object({}) do |i, set_results|
               req = rs.requests[i]
-              cs = req.constraints.each { |c| c.ground set_results }
+              cs = req.ground(set_results)
               typ = @polar.host.types[req.class_tag]
               q = typ.build_query[cs]
               if i != rs.result_id
@@ -68,12 +69,31 @@ module Oso
           attr_reader :constraints, :class_tag
 
           def self.parse(polar, parsed_json)
+            @polar = polar
             constraints = parsed_json['constraints'].map do |con|
               Filter.parse polar, con
             end
             class_tag = parsed_json['class_tag']
 
             new(constraints: constraints, class_tag: class_tag)
+          end
+
+          def ground(results) # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity, Metrics/AbcSize, Metrics/PerceivedComplexity
+            xrefs, rest = constraints.partition do |c|
+              c.value.is_a?(Ref) and !c.value.result_id.nil?
+            end
+
+            yrefs, nrefs = xrefs.partition { |r| %w[In Eq].include? r.kind }
+            [[yrefs, 'In'], [nrefs, 'Nin']].each do |refs, kind|
+              next unless refs.any?
+
+              refs.group_by { |f| f.value.result_id }.each do |rid, fils|
+                value = results[rid].map { |r| fils.map { |f| GETATTR[r, f.value.field] } }
+                field = fils.map(&:field)
+                rest.push(Filter.new(kind: kind, value: value, field: field))
+              end
+            end
+            rest
           end
 
           def initialize(constraints:, class_tag:)
@@ -127,6 +147,7 @@ module Oso
           'Eq' => ->(a, b) { a == b },
           'In' => ->(a, b) { b.include? a },
           'Neq' => ->(a, b) { a != b },
+          'Nin' => ->(a, b) { !b.include?(a) },
           'Contains' => ->(a, b) { a.include? b }
         }.freeze
 
@@ -138,8 +159,6 @@ module Oso
           @kind = kind
           @field = field
           @value = value
-          @check = CHECKS[kind]
-          raise "Unknown constraint kind `#{kind}`" if @check.nil?
         end
 
         def ground(results)
@@ -150,10 +169,16 @@ module Oso
           @value = value.map { |v| v.send ref.field } unless ref.field.nil?
         end
 
-        def check(item)
+        def check(item) # rubocop:disable Metrics/AbcSize
           val = value.is_a?(Field) ? item.send(value.field) : value
-          item = field.nil? ? item : item.send(field)
-          @check[item, val]
+          item = if field.nil?
+                   item
+                 elsif field.is_a? Array
+                   field.map { |f| GETATTR[item, f] }
+                 else
+                   item.send field
+                 end
+          CHECKS[@kind][item, val]
         end
 
         def self.parse(polar, constraint) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength

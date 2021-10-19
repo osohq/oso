@@ -7,7 +7,6 @@ use super::terms::*;
 use super::visitor::{walk_call, walk_rule, walk_term, Visitor};
 
 use std::collections::{hash_map::Entry, HashMap, HashSet};
-use std::iter::FromIterator;
 
 fn common_misspellings(t: &str) -> Option<String> {
     let misspelled_type = match t {
@@ -325,7 +324,7 @@ impl<'kb> Visitor for UndefinedRuleVisitor<'kb> {
 }
 
 pub fn check_undefined_rule_calls(kb: &KnowledgeBase) -> Vec<PolarError> {
-    let mut visitor = UndefinedRuleVisitor::new(kb, HashSet::from_iter(kb.get_rules().keys()));
+    let mut visitor = UndefinedRuleVisitor::new(kb, kb.get_rules().keys().collect());
     for rule in kb.get_rules().values() {
         visitor.visit_generic_rule(rule);
     }

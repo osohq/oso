@@ -6,13 +6,6 @@ from pathlib import Path
 import sys
 from typing import Dict, List, Union
 
-try:
-    # importing readline on compatible platforms
-    # changes how `input` works for the REPL
-    import readline  # noqa: F401
-except ImportError:
-    pass
-
 from .exceptions import (
     PolarRuntimeError,
     InlineQueryFailedError,
@@ -25,35 +18,6 @@ from .ffi import Polar as FfiPolar, PolarSource as Source
 from .host import Host
 from .query import Query
 from .predicate import Predicate
-
-
-# https://github.com/django/django/blob/3e753d3de33469493b1f0947a2e0152c4000ed40/django/core/management/color.py
-def supports_color():
-    supported_platform = sys.platform != "win32" or "ANSICON" in os.environ
-    is_a_tty = hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
-    return supported_platform and is_a_tty
-
-
-RESET = ""
-FG_BLUE = ""
-FG_RED = ""
-
-
-if supports_color():
-    # \001 and \002 signal these should be ignored by readline. Explanation of
-    # the issue: https://stackoverflow.com/a/9468954/390293. Issue has been
-    # observed in the Python REPL on Linux by @samscott89 and @plotnick, but
-    # not on macOS or Windows (with readline installed) or in the Ruby or
-    # Node.js REPLs, both of which also use readline.
-    RESET = "\001\x1b[0m\002"
-    FG_BLUE = "\001\x1b[34m\002"
-    FG_RED = "\001\x1b[31m\002"
-
-
-def print_error(error):
-    print(FG_RED + type(error).__name__ + RESET)
-    print(error)
-
 
 CLASSES: Dict[str, type] = {}
 
@@ -198,6 +162,37 @@ class Polar:
 
     def repl(self, files=[]):
         """Start an interactive REPL session."""
+        try:
+            # importing readline on compatible platforms
+            # changes how `input` works for the REPL
+            import readline  # noqa: F401
+        except ImportError:
+            pass
+
+        # https://github.com/django/django/blob/3e753d3de33469493b1f0947a2e0152c4000ed40/django/core/management/color.py
+        def supports_color():
+            supported_platform = sys.platform != "win32" or "ANSICON" in os.environ
+            is_a_tty = hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
+            return supported_platform and is_a_tty
+
+        RESET = ""
+        FG_BLUE = ""
+        FG_RED = ""
+
+        if supports_color():
+            # \001 and \002 signal these should be ignored by readline. Explanation of
+            # the issue: https://stackoverflow.com/a/9468954/390293. Issue has been
+            # observed in the Python REPL on Linux by @samscott89 and @plotnick, but
+            # not on macOS or Windows (with readline installed) or in the Ruby or
+            # Node.js REPLs, both of which also use readline.
+            RESET = "\001\x1b[0m\002"
+            FG_BLUE = "\001\x1b[34m\002"
+            FG_RED = "\001\x1b[31m\002"
+
+        def print_error(error):
+            print(FG_RED + type(error).__name__ + RESET)
+            print(error)
+
         self.load_files(files)
 
         while True:
@@ -235,7 +230,7 @@ class Polar:
         cls,
         *,
         name=None,
-        types=None,
+        fields=None,
         build_query=None,
         exec_query=None,
         combine_query=None
@@ -246,7 +241,7 @@ class Polar:
         :param name:
             Optionally specify the name for the class inside of Polar. Defaults
             to `cls.__name__`
-        :param types:
+        :param fields:
             Optional dict mapping field names to types or Relation objects for
             data filtering.
         :param build_query:
@@ -261,7 +256,7 @@ class Polar:
         cls_name = self.host.cache_class(
             cls,
             name=name,
-            fields=types,
+            fields=fields,
             build_query=build_query,
             exec_query=exec_query,
             combine_query=combine_query,

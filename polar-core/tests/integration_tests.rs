@@ -1700,6 +1700,51 @@ fn test_partial_grounding() -> TestResult {
 }
 
 #[test]
+fn test_dict_destructuring() -> TestResult {
+    let mut p = Polar::new();
+    p.load_str(
+        r#"
+        foo(x, _: {x});
+        goo(x, y) if y matches {x};
+        moo(x, {x});
+        roo(a, {a, b: a});
+        too(a, _: {a, b: a});
+   "#,
+    )?;
+    for s in &["foo", "goo"] {
+        qeval(&mut p, &format!("{}(1, {{x: 1}})", s));
+        qnull(&mut p, &format!("{}(2, {{x: 1}})", s));
+        qnull(&mut p, &format!("{}(1, {{x: 2}})", s));
+        qeval(&mut p, &format!("{}(2, {{x: 2, y: 3}})", s));
+    }
+
+    qeval(&mut p, "moo(1, {x: 1})");
+    qnull(&mut p, "moo(2, {x: 1})");
+    qnull(&mut p, "moo(1, {x: 2})");
+    qnull(&mut p, "moo(2, {x: 2, y: 3})");
+
+    qeval(&mut p, "roo(1, {a: 1, b: 1})");
+    qeval(&mut p, "too(1, {a: 1, b: 1})");
+    qnull(&mut p, "roo(1, {a: 1, b: 1, c: 2})");
+    qeval(&mut p, "too(1, {a: 1, b: 1, c: 2})");
+    Ok(())
+}
+
+#[ignore]
+#[test]
+fn test_dict_destructuring_broken() -> TestResult {
+    let mut p = Polar::new();
+    p.load_str(
+        r#"
+        too(a, _: {a, b: a});
+   "#,
+    )?;
+    // currently hits an unimplemented code path in vm.rs
+    qeval(&mut p, "a={a} and too(a, {a, b: a})");
+    Ok(())
+}
+
+#[test]
 fn test_rest_vars() -> TestResult {
     let mut p = Polar::new();
     qvar(&mut p, "[1,2,3] = [*rest]", "rest", vec![value!([1, 2, 3])]);
@@ -2408,5 +2453,53 @@ fn test_default_rule_types() -> TestResult {
     )?;
     // Make sure there are no warnings
     assert!(p.next_message().is_none());
+    Ok(())
+}
+
+#[test]
+fn test_suggested_rule_specializer() -> TestResult {
+    let p = Polar::new();
+
+    let repo_instance = ExternalInstance {
+        instance_id: 1,
+        constructor: None,
+        repr: None,
+    };
+    let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
+    let repo_name = sym!("Repository");
+    p.register_constant(repo_name.clone(), repo_term)?;
+    p.register_mro(repo_name, vec![repo_instance.instance_id])?;
+
+    let user_instance = ExternalInstance {
+        instance_id: 2,
+        constructor: None,
+        repr: None,
+    };
+    let user_term = term!(Value::ExternalInstance(user_instance.clone()));
+    let user_name = sym!("User");
+    p.register_constant(user_name.clone(), user_term)?;
+    p.register_mro(user_name, vec![user_instance.instance_id])?;
+
+    let policy = r#"
+actor User {}
+resource Repository {
+	permissions = ["read"];
+	roles = ["contributor"];
+
+    "read" if "contributor";
+}
+
+has_role(actor: User, role_name, repository: Repository) if
+    role in actor.roles and
+    role_name = role.name and
+    repository = role.repository;
+"#;
+
+    let err = p.load_str(policy).expect_err("Expected validation error");
+    assert!(matches!(&err.kind, ErrorKind::Validation(_)));
+    assert!(format!("{}", err).contains(
+        "Failed to match because: Parameter `role_name` expects a String type constraint."
+    ));
+
     Ok(())
 }

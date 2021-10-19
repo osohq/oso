@@ -1,6 +1,6 @@
 import { Oso } from './Oso';
 import { Field, Relation } from './dataFiltering';
-import type { Filter } from './dataFiltering';
+import type { Filter, FilterKind, FilterField } from './dataFiltering';
 import 'reflect-metadata';
 import {
   OneToMany,
@@ -15,6 +15,22 @@ import {
   DeepPartial,
 } from 'typeorm';
 import { Class, obj } from './types';
+
+class TestOso extends Oso {
+  async checkAuthz(
+    actor: unknown,
+    action: string | number,
+    resource: Class,
+    expected: unknown[]
+  ) {
+    for (const x of expected)
+      expect(await this.isAllowed(actor, action, x)).toBe(true);
+    const actual = await this.authorizedResources(actor, action, resource);
+
+    expect(actual).toHaveLength(expected.length);
+    expect(actual).toEqual(expect.arrayContaining(expected));
+  }
+}
 
 @Entity()
 class Bar {
@@ -175,22 +191,24 @@ async function fixtures() {
   const repoRoles = connection.getRepository(RepoRole);
   const orgRoles = connection.getRepository(OrgRole);
 
-  async function mkBar(id: string, cool: boolean, stillCool: boolean) {
-    const bar = new Bar();
-    bar.id = id;
-    bar.isCool = cool;
-    bar.isStillCool = stillCool;
-    await bars.save(bar);
-    return bar;
+  async function mkBar(id: string, isCool: boolean, isStillCool: boolean) {
+    return await bars.findOneOrFail(
+      await bars.save({
+        id,
+        isCool,
+        isStillCool,
+      })
+    );
   }
 
-  async function mkFoo(id: string, barId: string, fooey: boolean) {
-    const foo = new Foo();
-    foo.id = id;
-    foo.barId = barId;
-    foo.isFooey = fooey;
-    await foos.save(foo);
-    return foo;
+  async function mkFoo(id: string, barId: string, isFooey: boolean) {
+    return await foos.findOneOrFail(
+      await foos.save({
+        id,
+        barId,
+        isFooey,
+      })
+    );
   }
 
   async function mkNum(number: number, fooId: string) {
@@ -203,33 +221,55 @@ async function fixtures() {
 
   const helloBar = await mkBar('hello', true, true);
   const byeBar = await mkBar('goodbye', true, false);
+  const hersheyBar = await mkBar('hershey', false, false);
 
-  const aFoo = await mkFoo('one', 'hello', false);
+  const somethingFoo = await mkFoo('something', 'hello', false);
   const anotherFoo = await mkFoo('another', 'hello', true);
-  const thirdFoo = await mkFoo('next', 'goodbye', true);
+  const thirdFoo = await mkFoo('third', 'hello', true);
+  const fourthFoo = await mkFoo('fourth', 'goodbye', true);
 
   const aLog = await logs.findOneOrFail(
-    await logs.save({ id: 'a', fooId: 'one', data: 'hello' })
+    await logs.save({ id: 'a', fooId: 'fourth', data: 'goodbye' })
   );
   const anotherLog = await logs.findOneOrFail(
     await logs.save({ id: 'b', fooId: 'another', data: 'world' })
   );
   const thirdLog = await logs.findOneOrFail(
-    await logs.save({ id: 'c', fooId: 'next', data: 'steve' })
+    await logs.save({ id: 'c', fooId: 'third', data: 'steve' })
   );
 
-  for (const i of [0, 1, 2]) await mkNum(i, 'one');
-  for (const i of [0, 1]) await mkNum(i, 'another');
-  for (const i of [0]) await mkNum(i, 'next');
+  const allNums: Num[] = [];
 
-  const oso = new Oso();
+  for (const i of [0, 1, 2]) allNums.push(await mkNum(i, 'something'));
+  for (const i of [0, 1]) allNums.push(await mkNum(i, 'another'));
+  for (const i of [0]) allNums.push(await mkNum(i, 'third'));
+
+  const oso = new TestOso();
+
+  function zip<A, B>(as: A[], bs: B[]): (A | B)[][] {
+    const out = [];
+    for (let i = 0; i < as.length; i++) out.push([as[i], bs[i]]);
+    return out;
+  }
+
+  const toRhs = (
+    value: unknown,
+    kind: FilterKind,
+    name: string,
+    param: obj
+  ) => {
+    if (value instanceof Field) return `${name}.${value.field}`;
+    const sym = gensym();
+    const rhs = kind === 'In' ? `(:...${sym})` : `:${sym}`;
+    param[sym] = value;
+    return rhs;
+  };
 
   const fromRepo = <T>(repo: Repository<T>, name: string) => {
     const constrain = (
       query: SelectQueryBuilder<T>,
       { field, kind, value }: Filter
     ) => {
-      const sym = gensym(field);
       const param: obj = {};
 
       if (field === undefined) {
@@ -238,30 +278,38 @@ async function fixtures() {
           kind === 'In' ? (value as obj[]).map(x => x.id) : (value as obj).id; // eslint-disable-line @typescript-eslint/no-explicit-any
       }
 
-      let rhs: string;
-      if (value instanceof Field) {
-        rhs = `${name}.${value.field}`;
-      } else {
-        rhs = kind === 'In' ? `(:...${sym})` : `:${sym}`;
-        param[sym] = value;
-      }
-
+      const sqlOps = {
+        Eq: '=',
+        Neq: '<>',
+        In: 'IN',
+        Nin: 'NOT IN',
+        Contains: '???',
+      };
+      const rhs = toRhs(value, kind, name, param);
       let clause: string;
-      switch (kind) {
-        case 'Eq': {
-          clause = `${name}.${field} = ${rhs}`;
-          break;
-        }
-        case 'Neq': {
-          clause = `${name}.${field} <> ${rhs}`;
-          break;
-        }
-        case 'In': {
-          clause = `${name}.${field} IN ${rhs}`;
-          break;
-        }
-        default:
-          throw new Error(`Unknown constraint kind: ${kind}`);
+
+      if (field instanceof Array) {
+        field = field.map((f: FilterField) => {
+          const fld: string = typeof f === 'string' ? f : 'id';
+          return `${name}.${fld}`;
+        });
+        kind = kind === 'In' ? 'Eq' : 'Neq';
+        const co: string = sqlOps[kind],
+          conds: string[] = (value as unknown[][]).map((view: unknown[]) => {
+            const z: string[] = zip(field as FilterField[], view).map(
+              ([l, r]) =>
+                `(${l as string} ${co} ${toRhs(r, kind, name, param)})`
+            );
+            return z.reduce((l: string, r: string) => `(${l} AND ${r})`);
+          });
+        clause = conds.reduce(
+          (l: string, r: string) => `(${l} OR ${r})`,
+          '1=0'
+        );
+      } else {
+        const lhs = `${name}.${field}`;
+        const op = sqlOps[kind];
+        clause = `${lhs} ${op} ${rhs}`;
       }
 
       return query.andWhere(clause, param);
@@ -446,31 +494,31 @@ async function fixtures() {
   await repoRoles.save({ name: 'writer', repo: ios, user: steve });
   await repoRoles.save({ name: 'reader', repo: app, user: gwen });
 
-  const checkAuthz = async (
-    actor: unknown,
-    action: string,
-    resource: Class,
-    expected: unknown[]
-  ) => {
-    for (const x of expected)
-      expect(await oso.isAllowed(actor, action, x)).toBe(true);
-    const actual = await oso.authorizedResources(actor, action, resource);
-
-    expect(actual).toHaveLength(expected.length);
-    expect(actual).toEqual(expect.arrayContaining(expected));
-  };
-
+  const allFoos = [somethingFoo, anotherFoo, thirdFoo, fourthFoo];
+  const allBars = [helloBar, byeBar, hersheyBar];
+  const allLogs = [aLog, anotherLog, thirdLog];
   return {
     oso,
-    aFoo,
+    somethingFoo,
     anotherFoo,
     thirdFoo,
+    fourthFoo,
+    foos: allFoos,
+    nums: allNums,
     aLog,
     anotherLog,
     thirdLog,
+    logs: allLogs,
     helloBar,
     byeBar,
-    checkAuthz,
+    hersheyBar,
+    bars: allBars,
+    fooBar: (foo: Foo) => allBars.filter((bar: Bar) => bar.id === foo.barId)[0],
+    barFoos: (bar: Bar) => allFoos.filter((foo: Foo) => foo.barId === bar.id),
+    logFoo: (log: Log) => allFoos.filter((foo: Foo) => foo.id === log.fooId)[0],
+    fooLogs: (foo: Foo) => allLogs.filter((log: Log) => log.fooId === foo.id),
+    fooNums: (foo: Foo) => allNums.filter(num => num.fooId === foo.id),
+    numFoo: (num: Num) => allFoos.filter(foo => foo.id === num.fooId)[0],
     lag,
     bug,
     apple,
@@ -486,9 +534,178 @@ async function fixtures() {
   };
 }
 
-describe('Data filtering using typeorm/sqlite', () => {
-  test('specializers', async () => {
-    const { oso, checkAuthz, aFoo, aLog } = await fixtures();
+describe('Data filtering parity tests', () => {
+  test('test_model', async () => {
+    const { oso, somethingFoo, anotherFoo } = await fixtures();
+    await oso.loadStr('allow(_, _, _: Foo{id: "something"});');
+    await oso.checkAuthz('gwen', 'get', Foo, [somethingFoo]);
+    oso.clearRules();
+    await oso.loadStr(`
+      allow(_, _, _: Foo{id: "something"});
+      allow(_, _, _: Foo{id: "another"});
+    `);
+    await oso.checkAuthz('gwen', 'get', Foo, [somethingFoo, anotherFoo]);
+  });
+
+  test('test_authorize_scalar_attribute_eq', async () => {
+    const { oso, bars, foos } = await fixtures();
+    await oso.loadStr(`
+      allow(_: Bar, "read", _: Foo{isFooey: true});
+      allow(bar: Bar, "read", _: Foo{bar: bar});
+    `);
+    for (const bar of bars) {
+      const expected = foos.filter(foo => foo.isFooey || foo.barId === bar.id);
+      await oso.checkAuthz(bar, 'read', Foo, expected);
+    }
+  });
+
+  test('test_authorize_scalar_attribute_condition', async () => {
+    const { oso, bars, foos, fooBar } = await fixtures();
+    await oso.loadStr(`
+      allow(bar: Bar{isCool: true}, "read", _: Foo{bar: bar});
+      allow(_: Bar, "read", _: Foo{bar: b, isFooey: true}) if b.isCool;
+      allow(_: Bar{isStillCool: true}, "read", foo: Foo) if
+        foo.bar.isCool = false;
+    `);
+    for (const bar of bars) {
+      const expected = foos.filter(foo => {
+        // typeORM fails to perform the basic functions of an ORM :|
+        const myBar = fooBar(foo);
+        return (
+          (myBar.isCool && myBar.id === bar.id) ||
+          (myBar.isCool && foo.isFooey) ||
+          (!myBar.isCool && bar.isStillCool)
+        );
+      });
+      await oso.checkAuthz(bar, 'read', Foo, expected);
+    }
+  });
+
+  //  test('test_in_multiple_attribute_relationship', async () => {
+  //  });
+
+  test('test_nested_relationship_many_single', async () => {
+    const { oso, logs, fooBar, logFoo } = await fixtures();
+    await oso.loadStr(`
+      allow(log: Log, "read", bar: Bar) if log.foo in bar.foos;
+    `);
+    for (const log of logs)
+      await oso.checkAuthz(log, 'read', Bar, [fooBar(logFoo(log))]);
+  });
+
+  test('test_nested_relationships_many_many', async () => {
+    const { oso, logs, fooBar, logFoo } = await fixtures();
+    await oso.loadStr(`
+      allow(log: Log, "read", bar: Bar) if
+        foo in bar.foos and log in foo.logs;
+    `);
+    for (const log of logs)
+      await oso.checkAuthz(log, 'read', Bar, [fooBar(logFoo(log))]);
+  });
+
+  test('test_nested_relationship_many_many_constrained', async () => {
+    const { oso, logs, bars, barFoos } = await fixtures();
+    await oso.loadStr(`
+      allow(log: Log{data: "steve"}, "read", bar: Bar) if
+        foo in bar.foos and log in foo.logs;
+    `);
+    for (const log of logs) {
+      const expected = bars.filter(bar => {
+        if (log.data !== 'steve') return false;
+        for (const foo of barFoos(bar)) if (foo.id === log.fooId) return true;
+        return false;
+      });
+      await oso.checkAuthz(log, 'read', Bar, expected);
+    }
+  });
+
+  test('test_partial_in_collection', async () => {
+    const { oso, bars, barFoos } = await fixtures();
+    await oso.loadStr(`
+      allow(bar, "read", foo: Foo) if foo in bar.foos;
+    `);
+    for (const bar of bars) {
+      await oso.checkAuthz(bar, 'read', Foo, barFoos(bar));
+    }
+  });
+
+  test('test_partial_isa_with_path', async () => {
+    const { oso, byeBar, barFoos } = await fixtures();
+    await oso.loadStr(`
+      allow(_, _, foo: Foo) if check(foo.bar);
+      check(bar: Bar) if bar.id = "goodbye";
+      check(foo: Foo) if foo.bar.id = "hello";
+    `);
+    await oso.checkAuthz('gwen', 'read', Foo, barFoos(byeBar));
+  });
+
+  test('test_no_relationships', async () => {
+    const { oso, foos } = await fixtures();
+    await oso.loadStr(`
+      allow(_, _, foo: Foo) if foo.isFooey;
+    `);
+    const expected = foos.filter((foo: Foo) => foo.isFooey);
+    await oso.checkAuthz('gwen', 'get', Foo, expected);
+  });
+
+  test('test_neq', async () => {
+    const { oso, bars, foos } = await fixtures();
+    await oso.loadStr(`
+      allow(_, action, foo: Foo) if foo.bar.id != action;
+    `);
+    for (const bar of bars) {
+      const expected = foos.filter(foo => foo.barId !== bar.id);
+      await oso.checkAuthz('gwen', bar.id, Foo, expected);
+    }
+  });
+
+  test('test_relationship', async () => {
+    const { oso, foos, fooBar } = await fixtures();
+    await oso.loadStr(`
+      allow(_, "get", foo: Foo) if
+        foo.bar = bar and
+          bar.isCool and
+          foo.isFooey;
+    `);
+
+    const expected = foos.filter(
+      (foo: Foo) => fooBar(foo).isCool && foo.isFooey
+    );
+    await oso.checkAuthz('steve', 'get', Foo, expected);
+  });
+
+  test('test_duplex_relationship', async () => {
+    const { oso, foos } = await fixtures();
+    await oso.loadStr(`
+      allow(_, _, foo: Foo) if foo in foo.bar.foos;
+    `);
+    await oso.checkAuthz('gwen', 'get', Foo, foos);
+  });
+
+  test('test_scalar_in_list', async () => {
+    const { oso, foos } = await fixtures();
+    await oso.loadStr(`
+      allow(_, _, _: Foo{bar: bar}) if bar.isCool in [true, false];
+    `);
+    await oso.checkAuthz('gwen', 'get', Foo, foos);
+  });
+
+  test('test_var_in_vars', async () => {
+    const { oso, foos, fooLogs } = await fixtures();
+    await oso.loadStr(`
+      allow(_, _, foo: Foo) if
+        log in foo.logs and
+        log.data = "goodbye";
+    `);
+    const expected = foos.filter((foo: Foo) => {
+      for (const log of fooLogs(foo)) if (log.data === 'goodbye') return true;
+      return false;
+    });
+    await oso.checkAuthz('gwen', 'get', Foo, expected);
+  });
+
+  test('test_specializers', async () => {
+    const { oso, logs, logFoo } = await fixtures();
     await oso.loadStr(`
       allow(foo: Foo,             "NoneNone", log) if foo = log.foo;
       allow(foo,                  "NoneCls",  log: Log) if foo = log.foo;
@@ -507,13 +724,178 @@ describe('Data filtering using typeorm/sqlite', () => {
       allow(foo: Foo{logs: logs}, "PtnDict",  log: {foo: foo}) if log in logs;
       allow(foo: Foo{logs: logs}, "PtnPtn",   log: Log{foo: foo}) if log in logs;
     `);
-
     const parts = ['None', 'Cls', 'Dict', 'Ptn'];
-    for (const p1 of parts)
-      for (const p2 of parts) await checkAuthz(aFoo, p1 + p2, Log, [aLog]);
+    for (const a of parts)
+      for (const b of parts)
+        for (const log of logs)
+          await oso.checkAuthz(logFoo(log), a + b, Log, [log]);
   });
+
+  test('test_empty_constraints_in', async () => {
+    const { oso, foos, fooLogs } = await fixtures();
+    await oso.loadStr(`
+      allow(_, "read", foo: Foo) if _ in foo.logs;
+    `);
+    const expected = foos.filter((foo: Foo) => fooLogs(foo).length);
+    //    console.log(expected);
+    await oso.checkAuthz('gwen', 'read', Foo, expected);
+    // not sure why this one is failing ...
+  });
+
+  test('test_in_with_constraints_but_no_matching_object', async () => {
+    const { oso } = await fixtures();
+    await oso.loadStr(`
+      allow(_, "read", foo: Foo) if
+        log in foo.logs and
+        log.data = "nope";
+    `);
+    await oso.checkAuthz('gwen', 'read', Foo, []);
+  });
+
+  test('test_unify_ins', async () => {
+    const { oso, bars, foos } = await fixtures();
+    await oso.loadStr(`
+      allow(_, _, _: Bar{foos: foos}) if
+        foo in foos and
+        goo in foos and
+        foo = goo;
+    `);
+    const expected = bars.filter((bar: Bar) => {
+      for (const foo of foos) if (foo.barId === bar.id) return true;
+      return false;
+    });
+
+    await oso.checkAuthz('gwen', 'read', Bar, expected);
+  });
+
+  test('test_unify_ins_field_eq', async () => {
+    const { oso, bars, barFoos } = await fixtures();
+    await oso.loadStr(`
+      allow(_, _, _: Bar{foos:foos}) if
+        foo in foos and
+        goo in foos and
+        foo.id = goo.id;
+    `);
+    const expected = bars.filter(bar => barFoos(bar).length);
+    await oso.checkAuthz('gwen', 'get', Bar, expected);
+  });
+
+  test('test_var_in_value', async () => {
+    const { oso, aLog, anotherLog } = await fixtures();
+    await oso.loadStr(`
+      allow(_, _, log: Log) if log.data in ["goodbye", "world"];
+    `);
+
+    await oso.checkAuthz('gwen', 'get', Log, [aLog, anotherLog]);
+  });
+
+  test('test_field_eq', async () => {
+    const { oso, bars } = await fixtures();
+    await oso.loadStr(`
+      allow(_, _, _: Bar{isCool: cool, isStillCool: cool});
+    `);
+    const expected = bars.filter(bar => bar.isCool === bar.isStillCool);
+    await oso.checkAuthz('gwen', 'get', Bar, expected);
+  });
+
+  test('test_field_neq', async () => {
+    const { oso, bars } = await fixtures();
+    await oso.loadStr(`
+      allow(_, _, bar: Bar) if bar.isCool != bar.isStillCool;
+    `);
+    const expected = bars.filter(bar => bar.isCool !== bar.isStillCool);
+    await oso.checkAuthz('gwen', 'get', Bar, expected);
+  });
+
+  test('test_const_in_coll', async () => {
+    const magic = 1,
+      { oso, foos, fooNums } = await fixtures();
+    oso.registerConstant(magic, 'magic');
+    await oso.loadStr(`
+      allow(_, _, foo: Foo) if n in foo.numbers and n.number = magic;
+    `);
+
+    const expected = foos.filter(
+      foo => fooNums(foo).filter(num => num.number === 1).length
+    );
+    await oso.checkAuthz('gwen', 'get', Foo, expected);
+  });
+
+  test('test_redundant_in_on_same_field', async () => {
+    const { oso, foos, fooNums } = await fixtures();
+    await oso.loadStr(`
+      allow(_, _, _: Foo{numbers:ns}) if
+        m in ns and n in ns and
+        n.number = 2 and m.number = 1;
+    `);
+
+    const expected = foos.filter((foo: Foo) =>
+      fooNums(foo).some((num: Num) => [1, 2].every(n => n === num.number))
+    );
+
+    await oso.checkAuthz('gwen', 'get', Foo, expected);
+  });
+
+  test('test_ground_object_in_collection', async () => {
+    const { oso, foos, fooNums } = await fixtures();
+    await oso.loadStr(`
+      allow(_, _, _: Foo{numbers:ns}) if
+        n in ns and m in ns and
+        n.number = 1 and m.number = 2;
+    `);
+
+    const expected = foos.filter((foo: Foo) =>
+      fooNums(foo).some((num: Num) => [1, 2].every(n => n === num.number))
+    );
+
+    await oso.checkAuthz('gwen', 'get', Foo, expected);
+  });
+
+  test('test_param_field', async () => {
+    const { oso, logs } = await fixtures();
+    await oso.loadStr(`
+      allow(data, id, _: Log{data: data, id: id});
+    `);
+    for (const log of logs) await oso.checkAuthz(log.data, log.id, Log, [log]);
+  });
+
+  test('test_field_cmp_rel_field', async () => {
+    const { oso, foos, fooBar } = await fixtures();
+    await oso.loadStr(`
+      allow(_, _, foo: Foo) if foo.bar.isCool = foo.isFooey;
+    `);
+
+    const expected = foos.filter(foo => fooBar(foo).isCool === foo.isFooey);
+    await oso.checkAuthz('gwen', 'get', Foo, expected);
+  });
+
+  test('test_field_cmp_rel_rel_field', async () => {
+    const { oso, logs, logFoo, fooBar } = await fixtures();
+    await oso.loadStr(`
+      allow(_, _, log: Log) if log.data = log.foo.bar.id;
+    `);
+    const expected = logs.filter(log => fooBar(logFoo(log)).id === log.data);
+    await oso.checkAuthz('gwen', 'get', Log, expected);
+  });
+
+  // FIXME failing tests ????
+
+  test('test_parent_child_cases', async () => {
+    const { oso, logs, logFoo } = await fixtures();
+    await oso.loadStr(`
+      allow(_: Log{foo: foo},   0, foo: Foo);
+      allow(log: Log,           1, _: Foo{logs: logs}) if log in logs;
+      allow(log: Log{foo: foo}, 2, foo: Foo{logs: logs}) if log in logs;
+    `);
+    for (const i of [0, 1, 2])
+      for (const log of logs) await oso.checkAuthz(log, i, Foo, [logFoo(log)]);
+  });
+});
+
+describe('Data filtering using typeorm/sqlite', () => {
   test('relations and operators', async () => {
-    const { oso, checkAuthz, aFoo, anotherFoo, thirdFoo } = await fixtures();
+    const { oso, somethingFoo, anotherFoo, thirdFoo, fourthFoo } =
+      await fixtures();
 
     await oso.loadStr(`
       allow("steve", "get", resource: Foo) if
@@ -526,12 +908,21 @@ describe('Data filtering using typeorm/sqlite', () => {
         rec in foo.numbers and
         rec.number = num;`);
 
-    await checkAuthz('steve', 'get', Foo, [anotherFoo, thirdFoo]);
-    await checkAuthz('steve', 'patch', Foo, [aFoo, anotherFoo, thirdFoo]);
+    await oso.checkAuthz('steve', 'get', Foo, [
+      anotherFoo,
+      thirdFoo,
+      fourthFoo,
+    ]);
+    await oso.checkAuthz('steve', 'patch', Foo, [
+      somethingFoo,
+      anotherFoo,
+      thirdFoo,
+      fourthFoo,
+    ]);
 
-    await checkAuthz(0, 'count', Foo, [aFoo, anotherFoo, thirdFoo]);
-    await checkAuthz(1, 'count', Foo, [aFoo, anotherFoo]);
-    await checkAuthz(2, 'count', Foo, [aFoo]);
+    await oso.checkAuthz(0, 'count', Foo, [somethingFoo, anotherFoo, thirdFoo]);
+    await oso.checkAuthz(1, 'count', Foo, [somethingFoo, anotherFoo]);
+    await oso.checkAuthz(2, 'count', Foo, [somethingFoo]);
   });
 
   test('an empty result', async () => {
@@ -541,15 +932,15 @@ describe('Data filtering using typeorm/sqlite', () => {
   });
 
   test('not equals', async () => {
-    const { oso, checkAuthz, byeBar } = await fixtures();
+    const { oso, byeBar } = await fixtures();
     await oso.loadStr(`
       allow("gwen", "get", bar: Bar) if
         bar.isCool != bar.isStillCool;`);
-    await checkAuthz('gwen', 'get', Bar, [byeBar]);
+    await oso.checkAuthz('gwen', 'get', Bar, [byeBar]);
   });
 
   test('returning, modifying and executing a query', async () => {
-    const { oso, aFoo, anotherFoo } = await fixtures();
+    const { oso, somethingFoo, anotherFoo } = await fixtures();
     await oso.loadStr(`
       allow("gwen", "put", foo: Foo) if
         rec in foo.numbers and
@@ -561,15 +952,16 @@ describe('Data filtering using typeorm/sqlite', () => {
 
     let result = await query.getMany();
     expect(result).toHaveLength(2);
-    expect(result).toEqual(expect.arrayContaining([aFoo, anotherFoo]));
+    expect(result).toEqual(expect.arrayContaining([somethingFoo, anotherFoo]));
 
-    result = await query.andWhere("id = 'one'").getMany();
+    result = await query.andWhere("id = 'something'").getMany();
     expect(result).toHaveLength(1);
-    expect(result).toEqual(expect.arrayContaining([aFoo]));
+    expect(result).toEqual(expect.arrayContaining([somethingFoo]));
   });
 
   test('a roles policy', async () => {
-    const { oso, checkAuthz, aFoo, anotherFoo, helloBar } = await fixtures();
+    const { oso, somethingFoo, anotherFoo, thirdFoo, helloBar } =
+      await fixtures();
     await oso.loadStr(`
       allow(actor, action, resource) if
         has_permission(actor, action, resource);
@@ -599,12 +991,16 @@ describe('Data filtering using typeorm/sqlite', () => {
       has_relation(bar: Bar, "parent", foo: Foo) if
         bar = foo.bar;
       `);
-    await checkAuthz('steve', 'get', Bar, [helloBar]);
-    await checkAuthz('steve', 'read', Foo, [aFoo, anotherFoo]);
+    await oso.checkAuthz('steve', 'get', Bar, [helloBar]);
+    await oso.checkAuthz('steve', 'read', Foo, [
+      somethingFoo,
+      anotherFoo,
+      thirdFoo,
+    ]);
   });
 
   test('a gitclub-like policy', async () => {
-    const { oso, checkAuthz, gwen, lag, steve, gabe, leina, pol, app, ios } =
+    const { oso, gwen, lag, steve, gabe, leina, pol, app, ios } =
       await fixtures();
     await oso.loadStr(`
 actor User {}
@@ -695,12 +1091,12 @@ has_relation(repo: Repo, "parent", _: Issue{repo: repo});
 
     `);
 
-    await checkAuthz(steve, 'create_issues', Repo, [ios]);
-    await checkAuthz(steve, 'read', Issue, [lag]);
-    await checkAuthz(gwen, 'read', Repo, [app]);
-    await checkAuthz(gwen, 'read', Issue, []);
-    await checkAuthz(gwen, 'create_issues', Repo, []);
-    await checkAuthz(leina, 'create_issues', Repo, [pol]);
-    await checkAuthz(gabe, 'create_issues', Repo, []);
+    await oso.checkAuthz(steve, 'create_issues', Repo, [ios]);
+    await oso.checkAuthz(steve, 'read', Issue, [lag]);
+    await oso.checkAuthz(gwen, 'read', Repo, [app]);
+    await oso.checkAuthz(gwen, 'read', Issue, []);
+    await oso.checkAuthz(gwen, 'create_issues', Repo, []);
+    await oso.checkAuthz(leina, 'create_issues', Repo, [pol]);
+    await oso.checkAuthz(gabe, 'create_issues', Repo, []);
   });
 });
