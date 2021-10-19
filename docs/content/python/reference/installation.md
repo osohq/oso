@@ -20,9 +20,9 @@ $ pip install oso=={{< version >}}
 
 - Python version 3.6 or greater
 - Supported platforms:
-  - Linux, (x64)
-  - macOS, (x64 and M1)
-  - Windows, (x64)
+  - Linux (x64)
+  - macOS (x64 and M1)
+  - Windows (x64)
 
 {{% minicallout %}}
   **Note**: The standard Python package is known to work on glibc-based
