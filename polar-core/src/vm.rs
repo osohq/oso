@@ -2027,8 +2027,8 @@ impl PolarVirtualMachine {
     }
 
     /// "Unify" two lists element-wise, respecting rest-variables.
-    /// Used by both `unify` and `isa`; hence the third argument,
-    /// a closure that builds sub-goals.
+    /// Used by both `unify` and `isa`; hence the first, a goal
+    /// constructor.
     fn unify_lists<'a, G>(
         &mut self,
         goal: G,
@@ -2041,6 +2041,7 @@ impl PolarVirtualMachine {
         self.join_lists(goal, vec![], l.iter(), r.iter())
     }
 
+    /// Zip two lists into a list of goals, respecting rest variables.
     fn join_lists<'a, G, I>(
         &mut self,
         goal: G,
@@ -2058,15 +2059,21 @@ impl PolarVirtualMachine {
         let rest = |y: &Symbol| term!(Variable(y.clone()));
 
         match (l.next(), r.next()) {
+            // both are empty, append the collected goals
             (None, None) => self.append_goals(goals),
+            // one list is shorter. is there a rest variable in the other one?
             (Some(v), None) | (None, Some(v)) => match v.value() {
+                // if so, bind it to the empty list.
                 RestVariable(y) => {
                     goals.push(goal(term!(Variable(y.clone())), term!(vec![])));
                     self.append_goals(goals)
                 }
+                // otherwise fail.
                 _ => self.backtrack(),
             },
+            // got an item off of each list.
             (Some(l0), Some(r0)) => match (l0.value(), r0.value()) {
+                // are there rest variables? then we can return.
                 (RestVariable(_), RestVariable(_)) => {
                     goals.push(goal(l0.clone(), r0.clone()));
                     self.append_goals(goals)
@@ -2079,6 +2086,7 @@ impl PolarVirtualMachine {
                     goals.push(goal(cons(l0, l), rest(rr)));
                     self.append_goals(goals)
                 }
+                // otherwise just push a normal goal.
                 _ => {
                     goals.push(goal(l0.clone(), r0.clone()));
                     self.join_lists(goal, goals, l, r)
@@ -2132,53 +2140,6 @@ impl PolarVirtualMachine {
         }
     }
 
-    fn call_rules(&mut self, rules: Rules, args: &[Term]) -> PolarResult<&mut Self> {
-        use Goal::*;
-        // We're done; the rules are sorted.
-        // Make alternatives for calling them.
-        self.polar_log_mute = false;
-        self.log_with(
-            || {
-                let mut rule_strs = "APPLICABLE_RULES:".to_owned();
-                for rule in rules.iter() {
-                    rule_strs.push_str(&format!("\n  {}", rule.to_polar()));
-                }
-                rule_strs
-            },
-            &[],
-        );
-
-        let alternatives = rules
-            .iter()
-            .map(|rule| {
-                let Rule { body, params, .. } = self.rename_rule_vars(rule);
-                let mut goals = vec![
-                    TraceRule(Rc::new(Trace {
-                        node: Node::Rule(rule.clone()),
-                        children: vec![],
-                    })),
-                    TraceStackPush,
-                ];
-
-                // Unify the arguments with the formal parameters.
-                for (arg, param) in args.iter().zip(params.iter()) {
-                    goals.push(Unify(arg.clone(), param.parameter.clone()));
-                    if let Some(specializer) = &param.specializer {
-                        goals.push(Isa(param.parameter.clone(), specializer.clone()));
-                    }
-                }
-
-                // Query for the body clauses.
-                goals.push(Query(body));
-                goals.push(TraceStackPop);
-                goals
-            })
-            .collect::<Vec<_>>(); // call the closures so self isn't borrowed
-
-        // Choose the first alternative, and push a choice for the rest.
-        self.choose(alternatives)
-    }
-
     /// Sort a list of rules with respect to a list of arguments
     /// using an explicit-state insertion sort.
     ///
@@ -2230,13 +2191,59 @@ impl PolarVirtualMachine {
         }
     }
 
+    fn call_rules(&mut self, rules: Rules, args: &[Term]) -> PolarResult<&mut Self> {
+        use Goal::*;
+        // We're done; the rules are sorted.
+        // Make alternatives for calling them.
+        self.polar_log_mute = false;
+        self.log_with(
+            || {
+                let mut rule_strs = "APPLICABLE_RULES:".to_owned();
+                for rule in rules.iter() {
+                    rule_strs.push_str(&format!("\n  {}", rule.to_polar()));
+                }
+                rule_strs
+            },
+            &[],
+        );
+
+        let alternatives = rules
+            .iter()
+            .map(|rule| {
+                let Rule { body, params, .. } = self.rename_rule_vars(rule);
+                let mut goals = vec![
+                    TraceRule(Rc::new(Trace {
+                        node: Node::Rule(rule.clone()),
+                        children: vec![],
+                    })),
+                    TraceStackPush,
+                ];
+
+                // Unify the arguments with the formal parameters.
+                for (arg, param) in args.iter().zip(params.iter()) {
+                    goals.push(Unify(arg.clone(), param.parameter.clone()));
+                    if let Some(specializer) = &param.specializer {
+                        goals.push(Isa(param.parameter.clone(), specializer.clone()));
+                    }
+                }
+
+                // Query for the body clauses.
+                goals.push(Query(body));
+                goals.push(TraceStackPop);
+                goals
+            })
+            .collect::<Vec<_>>(); // call the closures so self isn't borrowed
+
+        // Choose the first alternative, and push a choice for the rest.
+        self.choose(alternatives)
+    }
+
     /// Succeed if `left` is more specific than `right` with respect to `args`.
-    #[allow(clippy::ptr_arg)]
     fn is_more_specific(
         &mut self,
         left: &Rule,
         right: &Rule,
-        args: &TermList,
+        args: &[Term]
     ) -> PolarResult<&mut Self> {
         let zipped = left.params.iter().zip(right.params.iter()).zip(args.iter());
         for ((left_param, right_param), arg) in zipped {
