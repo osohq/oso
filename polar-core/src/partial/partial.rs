@@ -1046,7 +1046,14 @@ mod test {
 
                h(y: A{foo: 1}) if i(y.b);
                i(y: C) if y.c > 0;
-               i(y: B{bar: 2}) if y.b > 0;"#,
+               i(y: B{bar: 2}) if y.b > 0;
+
+               # the rebinding here sometimes trips up the simplifier
+               # PR: https://github.com/osohq/oso/pull/1289
+               a(x: A) if y = x.b and b(y);
+               b(b: B) if b.z = 1;
+               b(c: C) if c.z = 2;
+               "#,
         )?;
 
         let next_binding = |q: &mut Query| loop {
@@ -1096,6 +1103,14 @@ mod test {
             next_binding(&mut q),
             "y",
             "_this matches A{} and _this.foo = 1 and _this.b matches B{} and _this.b.bar = 2 and _this.b.b > 0"
+        );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("a", [sym!("x")])), false);
+        assert_partial_expression!(
+            next_binding(&mut q),
+            "x",
+            "_this matches A{} and _this.b matches B{} and 1 = _this.b.z"
         );
         assert_query_done!(q);
         Ok(())
