@@ -45,8 +45,7 @@ class BaseActor:
     name: str
     roles: Dict[Resource, str]
 
-    def __init__(self, name):
-        self.name = name
+    def __init__(self):
         self.roles = {}
 
     def assign_role(self, *, resource: Resource, name: str):
@@ -165,64 +164,3 @@ def test_resource_blocks(polar, is_allowed):
     assert is_allowed(dave, "push", oso_repo)
     assert not is_allowed(leina, "delete", stephie_issue)
     assert is_allowed(dave, "delete", stephie_issue)
-
-
-class RecursiveType:
-    parent: "RecursiveType"
-    user: "User"
-
-    def __init__(self, parent, user):
-        self.parent = parent
-        self.user = user
-
-
-def test_recursive_relations(polar, is_allowed):
-    [polar.register_class(c) for c in [User, RecursiveType]]
-    p = """
-    allow(actor, action, resource) if
-        has_permission(actor, action, resource);
-
-    actor User {}
-
-    resource RecursiveType {
-        permissions=["read"];
-        roles=["member", "admin"];
-        relations={parent: RecursiveType};
-
-        "read" if "member";
-        "read" if "read" on "parent";
-        "read" if "member" on "parent";
-    }
-    has_role(actor: User, role_name: String, resource: RecursiveType) if
-        actor.name == role_name and
-        resource.user == actor;
-
-    has_relation(parent: RecursiveType, "parent", child: RecursiveType) if
-        parent = child.parent;
-
-    """
-    polar.load_str(p)
-
-    member = User(name="member")
-    guest = User(name="guest")
-
-    # Test 1 level of nesting
-    parent = RecursiveType(parent=None, user=member)
-    child = RecursiveType(parent=parent, user=guest)
-
-    assert is_allowed(member, "read", child)
-
-    # Test 2 levels of nesting
-    grandparent = parent
-    parent = RecursiveType(parent=grandparent, user=guest)
-    child = RecursiveType(parent=parent, user=guest)
-
-    assert is_allowed(member, "read", child)
-
-    # Test 3 levels of nesting
-    great_grandparent = grandparent
-    grandparent = RecursiveType(parent=great_grandparent, user=guest)
-    parent = RecursiveType(parent=grandparent, user=guest)
-    child = RecursiveType(parent=parent, user=guest)
-
-    assert is_allowed(member, "read", child)
