@@ -14,7 +14,7 @@ polar-core = { path = "../polar-core", version = "=0.21.0" }
 serde_json = "1.0.61"
 
 [build_dependencies]
-cbindgen = "0.15.0"
+cbindgen = { version = "0.20.0", default-features = false }
 
 [features]
 default = []
