@@ -41,6 +41,8 @@ draft: true
 
 #### Other bugs & improvements
 
+- The python library for MacOS now supports M1/ARM processors.
+
 - Fixed a bug preventing dictionaries created in Polar from making the round-trip
   to JS and back.
 
