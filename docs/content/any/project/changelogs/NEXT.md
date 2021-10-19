@@ -31,6 +31,8 @@ draft: true
   as `{ value }`.
 - Oso will now propose a suggested fix if you define a rule without sufficient
   parameter type specialization.
+- Fixed a bug that caused type constraint checking to incorrectly succeed,
+  resulting in incorrect filters or infinite loops.
 
 ### Python
 
