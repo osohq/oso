@@ -1102,14 +1102,15 @@ impl PolarVirtualMachine {
                     .constraints()
                     .into_iter()
                     .find_map(|c| {
-                        // If the simplified partial includes a `var = dot_op` constraint, use the
-                        // dot op as the LHS of the matches.
+                        // If the simplified partial includes a `var = dot_op` constraint where the
+                        // receiver of the dot operation is either `var` or an alias thereof, use
+                        // the dot op as the LHS of the matches.
                         if c.operator != Operator::Unify {
                             None
-                        } else if &c.args[0] == left &&
+                        } else if matches!(c.args[0].value().as_symbol(), Ok(s) if names.contains(s)) &&
                             matches!(c.args[1].value().as_expression(), Ok(o) if o.operator == Operator::Dot) {
                             Some(c.args[1].clone())
-                        } else if &c.args[1] == left &&
+                        } else if matches!(c.args[1].value().as_symbol(), Ok(s) if names.contains(s)) &&
                             matches!(c.args[0].value().as_expression(), Ok(o) if o.operator == Operator::Dot) {
                             Some(c.args[0].clone())
                         } else {
