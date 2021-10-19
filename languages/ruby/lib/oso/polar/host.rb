@@ -67,12 +67,20 @@ module Oso
       public
 
       attr_writer :accept_expression
+      attr_accessor :build_query, :combine_query, :exec_query
+
+      DEFAULT_COMBINE_QUERY = proc { raise 'implement combine_query to use data filtering' }
+      DEFAULT_BUILD_QUERY = proc { raise 'implement build_query to use data filtering' }
+      DEFAULT_EXEC_QUERY = proc { raise 'implement exec_query to use data filtering' }
 
       def initialize(ffi_polar)
         @ffi_polar = ffi_polar
         @types = {}
         @instances = {}
         @accept_expression = false
+        @combine_query = DEFAULT_COMBINE_QUERY
+        @build_query = DEFAULT_BUILD_QUERY
+        @exec_query = DEFAULT_EXEC_QUERY
       end
 
       def initialize_copy(other)
@@ -107,9 +115,9 @@ module Oso
           klass: PolarClass.new(cls),
           id: cache_instance(cls),
           fields: fields || {},
-          combine_query: combine_query,
-          exec_query: exec_query,
-          build_query: build_query
+          combine_query: combine_query || self.combine_query,
+          exec_query: exec_query || self.exec_query,
+          build_query: build_query || self.build_query
         )
         name
       end
