@@ -218,5 +218,15 @@ module Oso
 
       host.types[get_class_name resource_cls].exec_query[q]
     end
+
+    # Register default values for data filtering query functions.
+    # These can be overridden by passing specific implementations to
+    # `register_class` or by defining `build_query`, `exec_query` and
+    # `combine_query` methods on the class object.
+    def set_data_filtering_query_defaults(build_query: nil, exec_query: nil, combine_query: nil)
+      host.build_query = build_query if build_query
+      host.exec_query = exec_query if exec_query
+      host.combine_query = combine_query if combine_query
+    end
   end
 end

@@ -264,7 +264,14 @@ class Polar:
         self.register_constant(cls, cls_name)
 
     def register_constant(self, value, name):
-        """Register `value` as a Polar constant variable called `name`."""
+        """
+        Register `value` as a Polar constant variable called `name`.
+
+        :param value:
+            The value to register as a constant.
+        :param name:
+            The name under which the constant will be visible in Polar.
+        """
         self.ffi_polar.register_constant(self.host.to_polar(value), name)
 
     def get_class(self, name):
