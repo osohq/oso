@@ -31,10 +31,19 @@ draft: true
   as `{ value }`.
 - Oso will now propose a suggested fix if you define a rule without sufficient
   parameter type specialization.
+- Fixed a bug that caused type constraint checking to incorrectly succeed,
+  resulting in incorrect filters or infinite loops.
 
-### Node.js
+### Python
+
+#### Breaking changes
+
+- The `types` field to `register_class` that takes the types of the fields is now called `fields`.
+
 
 #### Other bugs & improvements
+
+- The Python library for macOS now supports M1/ARM processors.
 
 - Fixed a bug preventing dictionaries created in Polar from making the round-trip
   to JS and back.
