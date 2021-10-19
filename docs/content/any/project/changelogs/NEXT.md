@@ -32,7 +32,12 @@ draft: true
 - Oso will now propose a suggested fix if you define a rule without sufficient
   parameter type specialization.
 
-### Node.js
+### Python
+
+#### Breaking changes
+
+- The `types` field to `register_class` that takes the types of the fields is now called `fields`.
+
 
 #### Other bugs & improvements
 
