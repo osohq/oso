@@ -155,7 +155,7 @@ We’ll start by making an `authorized_sessionmaker()`:
 >>> AuthorizedSession = authorized_sessionmaker(bind=engine,
 ...                                             get_oso=lambda: oso,
 ...                                             get_user=lambda: user,
-...                                             get_action=lambda: "read")
+...                                             get_checked_permissions=lambda: { Post: "read" })
 >>> session = AuthorizedSession()
 ```
 
@@ -182,7 +182,7 @@ new authorized session with user set to `manager`:
 >>> AuthorizedSession = authorized_sessionmaker(bind=engine,
 ...                                             get_oso=lambda: oso,
 ...                                             get_user=lambda: manager,
-...                                             get_action=lambda: "read")
+...                                             get_checked_permissions=lambda: { Post: "read" })
 >>> manager_session = AuthorizedSession()
 ```
 
