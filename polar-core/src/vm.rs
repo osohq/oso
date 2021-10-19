@@ -2241,6 +2241,7 @@ impl PolarVirtualMachine {
         let zipped = left.params.iter().zip(right.params.iter()).zip(args.iter());
         for ((left_param, right_param), arg) in zipped {
             match (&left_param.specializer, &right_param.specializer) {
+                // If neither has a specializer, neither is more specific, so we continue to the next argument.
                 (None, None) => continue,
                 // If the left rule has no specializer and the right does, it is NOT more specific,
                 // so we Backtrack (fail)
@@ -2248,20 +2249,18 @@ impl PolarVirtualMachine {
                 // If the left rule has a specializer and the right does not, the left IS more specific,
                 // so we return
                 (Some(_), None) => return Ok(self),
-                // If neither has a specializer, neither is more specific, so we continue to the next argument.
 
                 // If both specs are unions, they have the same specificity regardless of whether
                 // they're the same or different unions.
-                (Some(l), Some(r)) if l == r || l.is_union() && r.is_union() => continue,
                 // TODO(gj): when we have unions beyond `Actor` and `Resource`, we'll need to be
                 // smarter about this check since UnionA is more specific than UnionB if UnionA is
                 // a member of UnionB.
-                // If left is a union and right is not, left cannot be more specific, so we
-                // backtrack.
+                (Some(l), Some(r)) if l.is_union() && r.is_union() => continue,
+                // If left is a union and right is not, left cannot be more specific, so we backtrack.
                 (Some(l), Some(_)) if l.is_union() => break,
                 // If right is a union and left is not, left IS more specific, so we return.
                 (Some(_), Some(r)) if r.is_union() => return Ok(self),
-
+                (Some(l), Some(r)) if l == r => continue,
                 (Some(left_spec), Some(right_spec)) => {
                     // If you find two non-equal specializers, that comparison determines the relative
                     // specificity of the two rules completely. As soon as you have two specializers
@@ -2414,11 +2413,11 @@ impl PolarVirtualMachine {
     }
 
     /// VM main loop entry point.
-    fn run_query(&mut self) -> PolarResult<QueryEvent> {
+    fn run_to_query_event(&mut self) -> PolarResult<QueryEvent> {
         if !self.goals.is_empty() {
             self.goal_loop()
         } else if !self.choices.is_empty() {
-            self.backtrack()?.run_query()
+            self.backtrack()?.goal_loop()
         } else {
             self.query_event_done(true)
         }
@@ -2438,11 +2437,11 @@ impl PolarVirtualMachine {
                 }
             }
         }
-        self.query_result()
+        self.finish_goal_loop()
     }
 
     /// VM results output
-    fn query_result(&mut self) -> PolarResult<QueryEvent> {
+    fn finish_goal_loop(&mut self) -> PolarResult<QueryEvent> {
         if self.log {
             self.print("⇒ result");
             if self.tracing {
@@ -2491,7 +2490,7 @@ impl Runnable for PolarVirtualMachine {
             let query_start_time = Some(js_sys::Date::now());
             self.query_start_time = query_start_time;
         }
-        self.run_query()
+        self.run_to_query_event()
     }
 
     fn handle_error(&mut self, error: PolarError) -> PolarResult<QueryEvent> {
