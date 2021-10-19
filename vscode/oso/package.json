@@ -22,7 +22,7 @@
   "engines": {
     "vscode": "^1.52.0"
   },
-  "main": "./client/out/extension",
+  "main": "./client/out/src/extension",
   "activationEvents": [
     "*"
   ],
@@ -71,10 +71,11 @@
     "watch": "tsc --build --watch",
     "clean": "gts clean",
     "lint": "gts lint -- . --max-warnings 0",
-    "fmt": "prettier --write 'client/src/**/*.ts'",
-    "fmtcheck": "prettier --check 'client/src/**/*.ts'",
+    "fmt": "prettier --write 'client/**/*.ts' 'server/**/*.ts'",
+    "fmtcheck": "prettier --check 'client/**/*.ts' 'server/**/*.ts'",
     "fix": "gts fix",
-    "postinstall": "cd client && yarn install && cd ../server && yarn install && cd .."
+    "postinstall": "cd client && yarn install && cd ../server && yarn install && cd ..",
+    "test": "yarn compile && node ./client/out/test/runTest.js"
   },
   "devDependencies": {
     "gts": "^3.1.0",
