@@ -882,6 +882,12 @@ mod tests {
             invalid_policy,
             "Duplicate declaration of 'Org' resource block.",
         );
+        let invalid_policy = "actor Org{}resource Org{}";
+        expect_error(
+            &p,
+            invalid_policy,
+            "Duplicate declaration of 'Org' resource block.",
+        );
     }
 
     #[test]
