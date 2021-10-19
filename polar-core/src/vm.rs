@@ -401,8 +401,8 @@ impl PolarVirtualMachine {
         self.query_event_none()
     }
 
-    /// Try to achieve one goal. Return `Some(QueryEvent)` if an external
-    /// result is needed to achieve it, or `None` if it can run internally.
+    /// Try to achieve one goal. Return `QueryEvent::None` if it can run internally,
+    /// or a different query event if an external call is needed.
     fn do_goal(&mut self, goal: Rc<Goal>) -> PolarResult<QueryEvent> {
         if self.log {
             self.print(&format!("{}", goal));
@@ -438,7 +438,7 @@ impl PolarVirtualMachine {
                 call_id,
                 instance,
                 field,
-            } => self.lookup_external(*call_id, instance, field),
+            } => self.query_event_external_call(*call_id, instance, field),
             IsaExternal { instance, literal } => self.query_event_isa_external(instance, literal),
             MakeExternal {
                 constructor,
@@ -513,19 +513,18 @@ impl PolarVirtualMachine {
         }
     }
 
+    fn check_id_is_unbound(&mut self, call_id: u64) {
+        let state = self.variable_state(self.get_call_sym(call_id));
+        assert_eq!(state, VariableState::Unbound);
+    }
+
     /// Push a goal onto the goal stack.
     pub fn push_goal(&mut self, goal: Goal) -> PolarResult<&mut Self> {
         match goal {
-            _ if self.goals.len() >= self.stack_limit =>
-                Err(error::RuntimeError::StackOverflow {
-                    msg: format!("Goal stack overflow! MAX_GOALS = {}", self.stack_limit),
-                }
-                .into()),
-            Goal::LookupExternal { call_id, .. } | Goal::NextExternal { call_id, .. }
-                if !matches!(
-                        self.variable_state(self.get_call_sym(call_id)),
-                        VariableState::Unbound) =>
-                panic!( "The call_id result variables for LookupExternal and NextExternal goals must be unbound."),
+            _ if self.goals.len() >= self.stack_limit => Err(error::RuntimeError::StackOverflow {
+                msg: format!("Goal stack overflow! MAX_GOALS = {}", self.stack_limit),
+            }
+            .into()),
             _ => {
                 self.goals.push(Rc::new(goal));
                 Ok(self)
@@ -1213,12 +1212,13 @@ impl PolarVirtualMachine {
     /// Return an external call event to look up a field's value
     /// in an external instance. Push a `Goal::LookupExternal` as
     /// an alternative on the last choice point to poll for results.
-    pub fn lookup_external(
+    pub fn query_event_external_call(
         &mut self,
         call_id: u64,
         instance: &Term,
         field: &Term,
     ) -> PolarResult<QueryEvent> {
+        self.check_id_is_unbound(call_id);
         let (field_name, args, kwargs): (
             Symbol,
             Option<Vec<Term>>,
@@ -1295,6 +1295,7 @@ impl PolarVirtualMachine {
         call_id: u64,
         iterable: &Term,
     ) -> PolarResult<QueryEvent> {
+        self.check_id_is_unbound(call_id);
         // add another choice point for the next result
         self.push_choice(vec![vec![Goal::NextExternal {
             call_id,
@@ -1791,11 +1792,9 @@ impl PolarVirtualMachine {
                         },
                     )
                 } else {
-                    //                    let sym = var!(format!("__{}_dot_{}", v, field.value().as_string().unwrap()));
                     // Translate `.(object, field, value)` → `value = .(object, field)`.
                     let dot2 = term!(op!(Dot, object.clone(), field.clone()));
                     let term = term!(op!(Unify, value.clone(), dot2));
-                    //      let term = term!(op!(And, term, term!(op!(Unify, sym, value.clone()))));
                     self.add_constraint(&term)
                 }
             }
@@ -2243,7 +2242,7 @@ impl PolarVirtualMachine {
         &mut self,
         left: &Rule,
         right: &Rule,
-        args: &[Term]
+        args: &[Term],
     ) -> PolarResult<&mut Self> {
         let zipped = left.params.iter().zip(right.params.iter()).zip(args.iter());
         for ((left_param, right_param), arg) in zipped {
