@@ -180,10 +180,6 @@ impl Value {
         }
     }
 
-    pub fn expr(&self) -> Result<&Operation, RuntimeError> {
-        self.as_expression()
-    }
-
     pub fn as_call(&self) -> Result<&Call, error::RuntimeError> {
         match self {
             Value::Call(pred) => Ok(pred),
@@ -423,10 +419,6 @@ impl Term {
 
     /// Get a reference to the underlying data of this term
     pub fn value(&self) -> &Value {
-        &self.value
-    }
-
-    pub fn val(&self) -> &Value {
         &self.value
     }
 

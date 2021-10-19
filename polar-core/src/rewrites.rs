@@ -197,9 +197,11 @@ impl<'kb> Folder for Rewriter<'kb> {
                             .as_expression()
                             .map(|e| e.operator)
                             .map_or(false, |o| o == Unify);
-                        let only_dots = rewrites
-                            .iter()
-                            .all(|rw| rw.val().expr().map_or(false, |o| o.operator == Dot));
+                        let only_dots = rewrites.iter().all(|rw| {
+                            rw.value()
+                                .as_expression()
+                                .map_or(false, |o| o.operator == Dot)
+                        });
                         if is_unify && only_dots {
                             for rewrite in rewrites {
                                 arg.replace_value(binary(And, arg.clone(), rewrite));
