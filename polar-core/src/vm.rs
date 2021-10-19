@@ -928,6 +928,8 @@ impl PolarVirtualMachine {
             &[left, right],
         );
 
+        self.check_timeout()?;
+
         match (left.value(), right.value()) {
             (_, Value::Dictionary(_)) => todo!("make this case unreachable"),
             (Value::Expression(_), _) | (_, Value::Expression(_)) => {
@@ -1063,6 +1065,7 @@ impl PolarVirtualMachine {
 
     fn isa_expr(&mut self, left: &Term, right: &Term) -> PolarResult<&mut Self> {
         use crate::partial::{simplify_partial, IsaConstraintCheck};
+        self.check_timeout()?;
         match right.value() {
             Value::Pattern(Pattern::Dictionary(fields)) => {
                 // Produce a constraint like left.field = value
@@ -1890,6 +1893,7 @@ impl PolarVirtualMachine {
     ///  - Recursive unification => more `Unify` goals are pushed onto the stack
     ///  - Failure => backtrack
     fn unify(&mut self, left: &Term, right: &Term) -> PolarResult<&mut Self> {
+        self.check_timeout()?;
         match (left.value(), right.value()) {
             (Value::Expression(op), other) | (other, Value::Expression(op)) => {
                 match op {
