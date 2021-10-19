@@ -421,7 +421,7 @@ func TestPointerMethods(t *testing.T) {
 	test("rule2", typ, true)
 }
 
-func TestFailingALot(t *testing.T) {
+/* func TestFailingALot(t *testing.T) {
 	var o oso.Oso
 	var err error
 	if o, err = oso.NewOso(); err != nil {
@@ -442,4 +442,4 @@ func TestFailingALot(t *testing.T) {
 			t.Fatal("oops")
 		}
 	}
-}
+} */
