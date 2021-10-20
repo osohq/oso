@@ -12,6 +12,9 @@ ifeq ($(origin PUBLISH_DOCS), undefined)
 endif
 	touch $@
 
+clean:
+	find ./ -name ".make.*" -exec rm -rf {} \;
+
 lint: lint-oso lint-django-oso lint-flask-oso lint-sqlalchemy-oso typecheck
 
 lint-oso: lint-requirements
@@ -58,4 +61,4 @@ fmt-requirements: .make.fmt-requirements.installed
 
 .PHONY: docs docs-requirements typecheck \
 	fmt-requirements fmt fmt-oso fmt-django-oso fmt-flask-oso fmt-sqlalchemy-oso \
-	lint-requirements lint lint-oso lint-django-oso lint-flask-oso lint-sqlalchemy-oso
+	lint-requirements lint lint-oso lint-django-oso lint-flask-oso lint-sqlalchemy-oso clean

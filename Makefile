@@ -118,7 +118,7 @@ js-test:
 	$(MAKE) -C languages/js parity
 	$(MAKE) -C languages/js test
 
-clean: clean-docs clean-rust clean-go clean-java clean-js clean-polar-wasm-api
+clean: clean-docs clean-rust clean-go clean-java clean-js clean-polar-wasm-api clean-python
 
 clean-docs:
 	$(MAKE) -C docs clean
@@ -137,3 +137,6 @@ clean-js:
 
 clean-polar-wasm-api:
 	$(MAKE) -C polar-wasm-api clean
+
+clean-python:
+	$(MAKE) -C languages/python clean
