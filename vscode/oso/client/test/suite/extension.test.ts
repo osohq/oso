@@ -20,34 +20,22 @@ function check([uri, diagnostics]: [Uri, Diagnostic[]], expected: string) {
   );
 }
 
-// Spin until workspace is fully loaded. There might be a race condition
-// where we call `languages.getDiagnostics()` before the extension has loaded
-// all of the Polar files and emitted a diagnostic for each.
-async function waitForWorkspaceToLoad() {
+// Helper that waits for `n` diagnostics to appear and then returns them.
+async function getDiagnostics(n: number): Promise<[Uri, Diagnostic[]][]> {
+  let diagnostics: [Uri, Diagnostic[]][] = [];
   for (;;) {
-    const uris = await workspace.findFiles('*');
-    switch (uris.length) {
-      case 0:
-      case 1:
-      case 2:
-        console.log(
-          'uris =>',
-          uris.map(u => [...u.toString().split('/')].pop())
-        );
-        continue;
-      case 3:
-        return;
-      default:
-        throw new Error();
-    }
+    diagnostics = languages.getDiagnostics();
+    if (diagnostics.length === n) break;
+    if (diagnostics.length > n) throw new Error('too many diagnostics');
+    await new Promise(r => setTimeout(r, 0));
   }
+  return diagnostics;
 }
 
 suite('Diagnostics', () => {
   test('We receive a diagnostic for each Polar file in the workspace', async () => {
-    await waitForWorkspaceToLoad();
-    const diagnostics = languages.getDiagnostics();
-    assert.strictEqual(diagnostics.length, 2);
+    const polarFileCount = (await workspace.findFiles('*.polar')).length;
+    const diagnostics = await getDiagnostics(polarFileCount);
     check(diagnostics[0], 'apple.polar');
     check(diagnostics[1], 'banana.polar');
   });
