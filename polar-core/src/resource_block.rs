@@ -325,7 +325,7 @@ impl ResourceBlocks {
         if let Some(declaration) = maybe_declaration {
             Ok(declaration)
         } else {
-            let msg = format!("Undeclared term {} referenced in rule in the '{}' resource block. Did you mean to declare it as a role, permission, or relation?", declaration.to_polar(), resource_name);
+            let msg = format!("Undeclared term {} referenced in rule in '{}' resource block. Did you mean to declare it as a role, permission, or relation?", declaration.to_polar(), resource_name);
             Err(ValidationError::ResourceBlock {
                 msg,
                 term: declaration.clone(),
