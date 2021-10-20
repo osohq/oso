@@ -9,7 +9,7 @@ function check([uri, diagnostics]: [Uri, Diagnostic[]], expected: string) {
   assert.strictEqual(filename, expected);
 
   assert.strictEqual(diagnostics.length, 1);
-  assert.strictEqual(diagnostics[0].message, filename);
+  assert.strictEqual(diagnostics[0].message.trim(), filename);
   assert(
     diagnostics[0].range.isEqual(
       new Range(new Position(0, 0), new Position(0, filename.length))
