@@ -46,7 +46,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
-        if: runner.os != "macOS"
+        if: runner.os != 'macOS'
         with:
           path: |
             ~/.cargo/registry
