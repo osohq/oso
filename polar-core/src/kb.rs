@@ -7,7 +7,7 @@ use crate::validations::check_undefined_rule_calls;
 pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::resource_block::ResourceBlocks;
-use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
+use super::resource_block::{Declaration, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::*;
 use super::terms::*;
@@ -722,6 +722,28 @@ impl KnowledgeBase {
         // Add the rewritten rules to the KB.
         for rule in rules {
             self.add_rule(rule);
+        }
+
+        Ok(())
+    }
+
+    pub fn create_resource_specific_rule_types(&mut self) -> PolarResult<()> {
+        let mut relations = HashSet::new();
+
+        // Iterate through resource block definitions and constuct tuples of related objects
+        for (resource, declarations) in &self.resource_blocks.declarations {
+            for (_term, declaration) in declarations {
+                if let Declaration::Relation(subject) = declaration {
+                    let subject = subject.value().as_symbol()?;
+                    let object = resource.value().as_symbol()?;
+                    let _inserted = relations.insert((subject.clone(), object.clone()));
+                }
+            }
+        }
+
+        // Construct `has_relation` rules from the unique set of observed relationships
+        for (subject, object) in relations.into_iter() {
+            self.add_rule(rule!("has_relation", ["_subject"; instance!(subject), "_relation"; instance!(sym!("String")), "_object"; instance!(object)]));
         }
 
         Ok(())

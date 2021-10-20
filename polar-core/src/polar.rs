@@ -250,6 +250,13 @@ impl Polar {
             return Err(e);
         }
 
+        // Generate appropriate rule_type definitions derived from our resourec
+        // blocks
+        if let Err(e) = kb.create_resource_specific_rule_types() {
+            kb.clear_rules();
+            return Err(e);
+        }
+
         // check rules are valid against rule types
         if let Err(e) = kb.validate_rules() {
             // If rule type validation fails, clear the KB.

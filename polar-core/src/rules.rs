@@ -97,21 +97,6 @@ impl RuleTypes {
         self.add(rule!("has_permission", ["actor"; instance!(sym!("Actor")), "_permission"; instance!(sym!("String")), "resource"; instance!(sym!("Resource"))]));
         // type has_permission(actor: Actor, permission: String, resource: Actor);
         self.add(rule!("has_permission", ["actor"; instance!(sym!("Actor")), "_permission"; instance!(sym!("String")), "resource"; instance!(sym!("Actor"))]));
-        // type has_role(actor: Actor, role: String, resource: Resource);
-        self.add(rule!("has_role", ["actor"; instance!(sym!("Actor")), "_role"; instance!(sym!("String")), "resource"; instance!(sym!("Resource"))]));
-        // type has_role(actor: Actor, role: String, resource: Actor);
-        self.add(rule!("has_role", ["actor"; instance!(sym!("Actor")), "_role"; instance!(sym!("String")), "resource"; instance!(sym!("Actor"))]));
-
-        // TODO: revisit this when working on extension guides. This rule currently lets users define any relation they would like, but we may want to restrict that a bit more.
-        // type has_relation(_subject: Resource, relation: String, _object: Resource);
-        self.add(rule!("has_relation", ["_subject"; instance!(sym!("Resource")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Resource"))]));
-        // type has_relation(_subject: Resource, relation: String, _object: Actor);
-        self.add(rule!("has_relation", ["_subject"; instance!(sym!("Resource")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Actor"))]));
-        // type has_relation(_subject: Actor, relation: String, _object: Actor);
-        self.add(rule!("has_relation", ["_subject"; instance!(sym!("Actor")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Actor"))]));
-        // type has_relation(_subject: Actor, relation: String, _object: Resource);
-        self.add(rule!("has_relation", ["_subject"; instance!(sym!("Actor")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Resource"))]));
-
         // type allow(actor, action, resource);
         self.add(rule!(
             "allow",

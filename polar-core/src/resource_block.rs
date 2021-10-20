@@ -265,7 +265,7 @@ pub struct ResourceBlock {
 #[derive(Clone, Default)]
 pub struct ResourceBlocks {
     /// Map from resource (`Symbol`) to the declarations in that resource's block.
-    declarations: HashMap<Term, Declarations>,
+    pub declarations: HashMap<Term, Declarations>,
     /// Map from resource (`Symbol`) to the shorthand rules declared in that resource's block.
     pub shorthand_rules: HashMap<Term, Vec<ShorthandRule>>,
     /// Set of all resource block types declared as actors. Internally treated like a union type
