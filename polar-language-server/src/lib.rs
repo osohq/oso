@@ -9,6 +9,7 @@ use lsp_types::{
     DidOpenTextDocumentParams, FileChangeType, FileEvent, Position, PublishDiagnosticsParams,
     Range, TextDocumentItem, Url, VersionedTextDocumentIdentifier,
 };
+use polar_core::{polar::Polar, sources::Source};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -20,6 +21,7 @@ extern "C" {
 #[wasm_bindgen]
 pub struct PolarLanguageServer {
     documents: HashMap<Url, TextDocumentItem>,
+    polar: Polar,
     send_diagnostics_callback: js_sys::Function,
 }
 
@@ -65,6 +67,7 @@ impl PolarLanguageServer {
 
         Self {
             documents: HashMap::new(),
+            polar: Polar::default(),
             send_diagnostics_callback: send_diagnostics_callback.clone(),
         }
     }
@@ -111,6 +114,22 @@ impl PolarLanguageServer {
 
 /// Helper methods.
 impl PolarLanguageServer {
+    fn add_document(&mut self, doc: TextDocumentItem) {
+        self.documents.insert(doc.uri.clone(), doc);
+    }
+
+    fn update_document(&mut self, uri: Url, version: i32, text: String) {
+        self.documents.entry(uri).and_modify(|doc| {
+            doc.version = version;
+            doc.text = text;
+        });
+    }
+
+    fn remove_document(&mut self, uri: &Url) {
+        let deleted = self.documents.remove(uri).unwrap();
+        self.clear_diagnostics_for_document(deleted);
+    }
+
     fn send_diagnostics(&self, params: PublishDiagnosticsParams) {
         let this = &JsValue::null();
         let params = &serde_wasm_bindgen::to_value(&params).unwrap();
@@ -133,14 +152,37 @@ impl PolarLanguageServer {
             }
         }
     }
+
+    // TODO(gj): clear all diagnostics when calling this function? Otherwise what if there are a
+    // bunch of diagnostics but then we introduce an unrecoverable ParseError (e.g., missing
+    // semicolon) and until we fix the new ParseError all of the old errors will remain regardless
+    // of whether we fix them or not... maybe?
+    fn reload_kb(&self) {
+        self.polar.clear_rules();
+        let sources = self
+            .documents
+            .iter()
+            .map(|(uri, doc)| Source {
+                filename: Some(uri.to_string()),
+                src: doc.text.clone(),
+            })
+            .collect();
+        if let Err(e) = self.polar.load(sources) {
+            log(&format!("[WASM] Polar::load error\n\t{}", e));
+        } else {
+            log("[WASM] Polar::load no errors");
+        }
+
+        // TODO(gj): temporary until we turn errors/warnings from Polar::load into diagnostics.
+        self.send_diagnostics_for_documents();
+    }
 }
 
 /// Individual LSP notification handlers.
 impl PolarLanguageServer {
     fn on_did_open_text_document(&mut self, params: DidOpenTextDocumentParams) {
-        let DidOpenTextDocumentParams { text_document: doc } = params;
-        self.documents.insert(doc.uri.clone(), doc);
-        self.send_diagnostics_for_documents();
+        self.add_document(params.text_document);
+        self.reload_kb();
     }
 
     fn on_did_change_text_document(&mut self, params: DidChangeTextDocumentParams) {
@@ -150,21 +192,18 @@ impl PolarLanguageServer {
         } = params;
 
         assert_eq!(content_changes.len(), 1);
+        // Ensure we receive full -- not incremental -- updates.
         assert!(content_changes[0].range.is_none());
 
-        self.documents.entry(uri).and_modify(|doc| {
-            doc.version = version;
-            doc.text = content_changes[0].text.clone();
-        });
-        self.send_diagnostics_for_documents();
+        self.update_document(uri, version, content_changes[0].text.clone());
+        self.reload_kb();
     }
 
     fn on_did_change_watched_files(&mut self, params: DidChangeWatchedFilesParams) {
         for FileEvent { uri, typ } in params.changes {
             assert_eq!(typ, FileChangeType::Deleted); // We only watch for `Deleted` events.
-            let deleted = self.documents.remove(&uri).unwrap();
-            self.clear_diagnostics_for_document(deleted);
+            self.remove_document(&uri);
         }
-        self.send_diagnostics_for_documents();
+        self.reload_kb();
     }
 }

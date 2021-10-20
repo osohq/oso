@@ -865,6 +865,7 @@ dependencies = [
  "console_error_panic_hook",
  "js-sys",
  "lsp-types",
+ "polar-core",
  "serde-wasm-bindgen",
  "wasm-bindgen",
 ]
