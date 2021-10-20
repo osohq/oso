@@ -860,7 +860,7 @@ dependencies = [
 
 [[package]]
 name = "polar-language-server"
-version = "0.21.0"
+version = "0.22.0"
 dependencies = [
  "console_error_panic_hook",
  "js-sys",
