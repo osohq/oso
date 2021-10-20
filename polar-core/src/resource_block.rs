@@ -308,10 +308,6 @@ impl ResourceBlocks {
         };
     }
 
-    fn exists(&self, resource: &Term) -> bool {
-        self.declarations.contains_key(resource)
-    }
-
     /// Look up `declaration` in `resource` block.
     ///
     /// Invariant: `resource` _must_ exist.
@@ -612,24 +608,6 @@ fn shorthand_rule_head_to_params(head: &Term, resource: &Term) -> Vec<Parameter>
     ]
 }
 
-// TODO(gj): better error message, e.g.:
-//               duplicate resource block declared: resource Org { ... } defined on line XX of file YY
-//                                                  previously defined on line AA of file BB
-fn check_for_duplicate_resource_blocks(
-    blocks: &ResourceBlocks,
-    resource: &Term,
-) -> PolarResult<()> {
-    if blocks.exists(resource) {
-        let msg = format!("Duplicate declaration of '{}' resource block.", resource);
-        return Err(ValidationError::ResourceBlock {
-            msg,
-            term: resource.clone(),
-        }
-        .into());
-    }
-    Ok(())
-}
-
 fn check_that_shorthand_rule_heads_are_declared_locally(
     shorthand_rules: &[ShorthandRule],
     declarations: &Declarations,
@@ -659,8 +637,6 @@ impl ResourceBlock {
         let mut errors = vec![];
         // Check that resource block's resource has been registered as a class.
         errors.extend(kb.get_registered_class(&self.resource).err());
-        errors
-            .extend(check_for_duplicate_resource_blocks(&kb.resource_blocks, &self.resource).err());
 
         let ResourceBlock {
             block_type,
@@ -872,22 +848,147 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_block_duplicates() {
+    fn test_resource_block_declarations_spread_over_multiple_resource_blocks() {
         let p = Polar::new();
-        let invalid_policy = "resource Org{}resource Org{}";
-        p.register_constant(sym!("Org"), term!("unimportant"))
+        p.register_constant(sym!("Repo"), term!("unimportant"))
             .unwrap();
+
+        // Roles in shorthand rules must be declared in the same block as the rule.
+        let invalid_policy = r#"
+            resource Repo {
+              roles = ["reader"];
+            }
+
+            resource Repo {
+              permissions = ["read"];
+
+              "read" if "reader";
+            }
+        "#;
         expect_error(
             &p,
             invalid_policy,
-            "Duplicate declaration of 'Org' resource block.",
+            r#"Undeclared term "reader" referenced in rule in 'Repo' resource block. Did you mean to declare it as a role, permission, or relation?"#,
         );
-        let invalid_policy = "actor Org{}resource Org{}";
+
+        // Permissions in shorthand rules must be declared in the same block as the rule.
+        let invalid_policy = r#"
+            resource Repo {
+              permissions = ["read"];
+            }
+
+            resource Repo {
+              roles = ["reader"];
+
+              "read" if "reader";
+            }
+        "#;
         expect_error(
             &p,
             invalid_policy,
-            "Duplicate declaration of 'Org' resource block.",
+            r#"Undeclared term "read" referenced in rule in 'Repo' resource block. Did you mean to declare it as a role, permission, or relation?"#,
         );
+
+        // Relations in shorthand rules must be declared in the same block as the rule.
+        let invalid_policy = r#"
+            resource Repo {
+              relations = { parent: Repo };
+            }
+
+            resource Repo {
+              roles = ["reader"];
+              permissions = ["read"];
+
+              "read" if "reader" on "parent";
+            }
+        "#;
+        expect_error(
+            &p,
+            invalid_policy,
+            r#"Undeclared term "parent" referenced in rule in 'Repo' resource block. Did you mean to declare it as a role, permission, or relation?"#,
+        );
+
+        // Multiple blocks can declare distinct roles/permissions/relations.
+        let valid_policy = r#"
+            resource Repo {
+              relations = { readable_parent: Repo };
+              roles = ["reader"];
+              permissions = ["read"];
+
+              "read" if "reader";
+              "read" if "read" on "readable_parent";
+            }
+
+            resource Repo {
+              relations = { writable_parent: Repo };
+              roles = ["writer"];
+              permissions = ["write"];
+
+              "write" if "writer";
+              "write" if "write" on "writable_parent";
+            }
+
+            has_role(_: Actor, _: String, _: Resource);
+            has_relation(_: Resource, _: String, _: Resource);
+        "#;
+        p.load_str(valid_policy).unwrap();
+        let blocks = &p.kb.read().unwrap().resource_blocks;
+        let declarations = blocks.declarations.get(&term!(sym!("Repo"))).unwrap();
+        assert_eq!(declarations.len(), 6);
+        let shorthand_rules = blocks.shorthand_rules.get(&term!(sym!("Repo"))).unwrap();
+        assert_eq!(shorthand_rules.len(), 4);
+
+        p.clear_rules();
+
+        // Duplicate declarations are fine if they're used in multiple blocks.
+        let valid_policy = r#"
+            resource Repo {
+              relations = { readable_parent: Repo, writable_parent: Repo };
+              roles = ["reader", "writer"];
+              permissions = ["read", "write"];
+
+              "read" if "reader";
+              "write" if "writer";
+
+              "read" if "read" on "readable_parent";
+              "write" if "write" on "writable_parent";
+            }
+
+            resource Repo {
+              relations = { readable_parent: Repo, writable_parent: Repo };
+              roles = ["reader", "writer"];
+              permissions = ["read", "write"];
+
+              "reader" if "writer";
+
+              "read" if "reader" on "readable_parent";
+              "write" if "writer" on "writable_parent";
+            }
+
+            has_relation(_: Resource, _: String, _: Resource);
+        "#;
+        p.load_str(valid_policy).unwrap();
+        let blocks = &p.kb.read().unwrap().resource_blocks;
+        let declarations = blocks.declarations.get(&term!(sym!("Repo"))).unwrap();
+        assert_eq!(declarations.len(), 6);
+        let shorthand_rules = blocks.shorthand_rules.get(&term!(sym!("Repo"))).unwrap();
+        assert_eq!(shorthand_rules.len(), 7);
+
+        // There's no reason to declare an identical rule in two different blocks.
+        let invalid_policy = r#"
+            resource Repo {
+              roles = ["reader", "writer"];
+
+              "reader" if "writer";
+            }
+
+            resource Repo {
+              roles = ["reader", "writer"];
+
+              "reader" if "writer";
+            }
+        "#;
+        expect_error(&p, invalid_policy, "todo!");
     }
 
     #[test]
