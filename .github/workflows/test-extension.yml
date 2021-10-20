@@ -34,6 +34,9 @@ jobs:
         run: rustup target add wasm32-unknown-unknown
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Build extension
+        working-directory: "vscode/oso"
+        run: make build
       - name: Lint JS library
         working-directory: "vscode/oso"
         run: make lint
@@ -63,10 +66,14 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: "12"
-      # https://github.com/microsoft/vscode-docs/blob/ad7206ed4184f5807871ecab8bd235a712208067/api/working-with-extensions/continuous-integration.md#github-actions
+      - name: Add WebAssembly target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - name: Build extension
         working-directory: "vscode/oso"
         run: make build
+      # https://github.com/microsoft/vscode-docs/blob/ad7206ed4184f5807871ecab8bd235a712208067/api/working-with-extensions/continuous-integration.md#github-actions
       - run: xvfb-run -a make test
         working-directory: "vscode/oso"
         if: runner.os == 'Linux'
