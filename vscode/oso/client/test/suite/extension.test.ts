@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 
-import { Diagnostic, languages, Position, Range, Uri } from 'vscode';
+import { beforeEach } from 'mocha';
+import { Diagnostic, languages, Position, Range, Uri, workspace } from 'vscode';
 
 // TODO(gj): This is temporary and will be replaced when we have real
 // diagnostics.
@@ -18,6 +19,29 @@ function check([uri, diagnostics]: [Uri, Diagnostic[]], expected: string) {
 }
 
 suite('Diagnostics', () => {
+  // Spin until workspace is fully loaded. There might be a race condition
+  // where we call `languages.getDiagnostics()` before the extension has loaded
+  // all of the Polar files and emitted a diagnostic for each.
+  beforeEach(async () => {
+    for (;;) {
+      const uris = await workspace.findFiles('*');
+      switch (uris.length) {
+        case 0:
+        case 1:
+        case 2:
+          console.log(
+            'uris =>',
+            uris.map(u => [...u.toString().split('/')].pop())
+          );
+          continue;
+        case 3:
+          return;
+        default:
+          throw new Error();
+      }
+    }
+  });
+
   test('We receive a diagnostic for each Polar file in the workspace', () => {
     const diagnostics = languages.getDiagnostics();
     assert.strictEqual(diagnostics.length, 2);
