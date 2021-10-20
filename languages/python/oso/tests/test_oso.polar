@@ -1,7 +1,3 @@
-allow(actor, action, resource) if
-    allowRole(role, action, resource) and
-    actorInRole(actor, role, resource);
-
 allow(_: {sub: sub}, action, resource) if
     allow(new test_oso::User(name: sub), action, resource);
 
@@ -36,10 +32,3 @@ allow_field(actor, "read", resource: test_oso::Widget, field) if
 # Anybody can read public fields
 allow_field(_: test_oso::User, "read", _: test_oso::Widget, field) if
     field in ["name", "purpose"];
-
-# stubs to avoid undefined rule validations
-allowRole(_role, _action, _resource) if
-    false;
-
-actorInRole(_actor, _role, _resource) if
-    false;
