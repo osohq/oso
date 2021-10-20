@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - gj/test-vscode-extension-ci
   pull_request:
     types: [opened, synchronize, reopened]
 
