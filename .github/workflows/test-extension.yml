@@ -77,6 +77,6 @@ jobs:
       - run: xvfb-run -a make test
         working-directory: "vscode/oso"
         if: runner.os == 'Linux'
-      - run: make test test
+      - run: make test
         working-directory: "vscode/oso"
         if: runner.os != 'Linux'
