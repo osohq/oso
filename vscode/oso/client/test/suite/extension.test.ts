@@ -12,7 +12,10 @@ function check([uri, diagnostics]: [Uri, Diagnostic[]], expected: string) {
   assert.strictEqual(diagnostics[0].message.trim(), filename);
   assert(
     diagnostics[0].range.isEqual(
-      new Range(new Position(0, 0), new Position(0, filename.length))
+      new Range(
+        new Position(0, 0),
+        new Position(0, diagnostics[0].message.length)
+      )
     )
   );
 }
