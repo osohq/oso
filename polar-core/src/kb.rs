@@ -7,7 +7,7 @@ use crate::validations::check_undefined_rule_calls;
 pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::resource_block::ResourceBlocks;
-use super::resource_block::{Declaration, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
+use super::resource_block::{Declaration, ShorthandRule, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::*;
 use super::terms::*;
@@ -728,23 +728,46 @@ impl KnowledgeBase {
     }
 
     pub fn create_resource_specific_rule_types(&mut self) -> PolarResult<()> {
-        let mut relations = HashSet::new();
+        let mut unique_relations = HashSet::new();
 
-        // Iterate through resource block definitions and constuct tuples of related objects
-        for (resource, declarations) in &self.resource_blocks.declarations {
-            for (_term, declaration) in declarations {
-                if let Declaration::Relation(subject) = declaration {
-                    let subject = subject.value().as_symbol()?;
-                    let object = resource.value().as_symbol()?;
-                    let _inserted = relations.insert((subject.clone(), object.clone()));
+        // Iterate through resource blocks and construct tuples describing the
+        // unique relationships traversed in shorthand rules.
+        for (object, shorthand_rules) in &self.resource_blocks.shorthand_rules {
+            for shorthand_rule in shorthand_rules {
+                if let ShorthandRule {
+                    head: _,
+                    body: (_, Some(relation)),
+                } = shorthand_rule
+                {
+                    if let Some(Declaration::Relation(subject)) = self
+                        .resource_blocks
+                        .declarations
+                        .get(object)
+                        .unwrap()
+                        .get(relation)
+                    {
+                        unique_relations.insert((
+                            subject.value().as_symbol()?.clone(),
+                            relation.value().as_string()?,
+                            object.value().as_symbol()?.clone(),
+                        ));
+                    } else {
+                        panic!("shorthand rule defined for non-existance resource block");
+                    }
                 }
             }
         }
 
-        // Construct `has_relation` rules from the unique set of observed relationships
-        for (subject, object) in relations.into_iter() {
-            self.add_rule(rule!("has_relation", ["_subject"; instance!(subject), "_relation"; instance!(sym!("String")), "_object"; instance!(object)]));
+        let rule_types: Vec<Rule> = unique_relations.into_iter()
+        .map(|(subject, relation_name, object)| {
+            rule!("has_relation", ["_subject"; instance!(subject), value!(relation_name), "_object"; instance!(object)])
+        }).collect();
+
+        for rule_type in rule_types {
+            self.add_rule_type(rule_type);
         }
+
+        // TODO: @patrickod define `has_role` rules for all unique Resource types
 
         Ok(())
     }

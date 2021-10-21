@@ -250,8 +250,8 @@ impl Polar {
             return Err(e);
         }
 
-        // Generate appropriate rule_type definitions derived from our resourec
-        // blocks
+        // Generate appropriate rule_type definitions using the types contained
+        // in policy resource blocks
         if let Err(e) = kb.create_resource_specific_rule_types() {
             kb.clear_rules();
             return Err(e);
