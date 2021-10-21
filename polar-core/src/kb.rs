@@ -762,7 +762,7 @@ impl KnowledgeBase {
         let mut unique_resource_types = HashSet::new();
 
         unique_relations.into_iter().for_each(|(subject, relation_name, object)| {
-            unique_resource_types.insert(object.clone());
+            unique_resource_types.insert(subject.clone());
             rule_types.push(rule!("has_relation", ["_subject"; instance!(subject), value!(relation_name), "_object"; instance!(object)]))
         });
 
