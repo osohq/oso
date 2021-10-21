@@ -12,20 +12,25 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     Select = D::ArelSelect
     Field = D::Proj
     Value = D::Value
+    persons = Src[Person]
+    signs = Src[Sign]
+    person_name = Field[persons, :name]
+    person_sign_name = Field[persons, :sign_name]
+    sign_name = Field[signs, :name]
     context 'astrology' do
       it 'field value no join' do
         # person.name = 'eden'
         select = Select[
-          Src[Person],
-          Field[Src[Person], :name],
+          persons,
+          person_name,
           Value['eden']
         ]
         expect(select.to_query.to_a).to eq [eden]
 
         # person.name != 'eden'
         result = Select[
-          Src[Person],
-          Field[Src[Person], :name],
+          persons,
+          person_name,
           Value['eden'],
           kind: :neq
         ].to_a
@@ -36,15 +41,15 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       it 'field value one join' do
         # person.sign.name = 'cancer'
         result = Select[
-          Join[Src[Person], :sign_name, Src[Sign], :name],
-          Field[Src[Sign], :name],
+          Join[persons, person_sign_name, sign_name, signs],
+          sign_name,
           Value['cancer']
         ].to_a
         expect(result).to eq [eden]
         # person.sign.name != 'cancer'
         result = Select[
-          Join[Src[Person], :sign_name, Src[Sign], :name],
-          Field[Src[Sign], :name],
+          Join[persons, person_sign_name, sign_name, signs],
+          sign_name,
           Value['cancer'],
           kind: :neq
         ].to_a
@@ -55,17 +60,17 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       it 'field field one join' do
         # person.name = person.sign.name
         result = Select[ # * from
-          Join[Src[Person], :sign_name, Src[Sign], :name], # where
-          Field[Src[Person], :name], # =
-          Field[Src[Sign], :name]
+          Join[persons, person_sign_name, sign_name, signs],
+          person_name,
+          sign_name,
         ].to_a
         expect(result).to eq [leo]
 
         # person.name != person.sign.name
         result = Select[ # * from
-          Join[Src[Person], :sign_name, Src[Sign], :name], # where
-          Field[Src[Person], :name], # !=
-          Field[Src[Sign], :name],
+          Join[persons, person_sign_name, sign_name, signs],
+          person_name,
+          sign_name,
           kind: :neq
         ].to_a
         expect(result.length).to be 11

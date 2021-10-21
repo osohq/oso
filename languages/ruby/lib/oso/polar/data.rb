@@ -7,15 +7,15 @@ module Oso
 
       # Data filtering configuration now consists of:
       #
-      # - Subclass the abstract query classes and implement `to_query` for each one
-      # - Register the class implementations with the host.
+      # 1. Subclass the abstract query classes and implement `to_query` for each one.
+      # 2. Register the subclass implementations with the host.
+      # 3. Tell us about relations so we can construct joins in the core.
       #
       # `build_filter_plan` (or w/e we end up calling it) will then parse the
-      # query into filter objects. A filter object can be turned into a query using
-      # `to_query` or an array using `to_a`
+      # query into filter objects. `to_query` turns a filter into a query. Steps 1
+      # and 2 above replace the `build_query` etc. callbacks users had to provide
+      # before.
 
-      # We parse filter plans into instances of subclasses of these classes.
-      #
       # Abstract superclass
       class DataFilter
         def to_a
@@ -59,11 +59,11 @@ module Oso
       class Join < DataFilter
         attr_reader :left, :right, :rcol, :lcol, :kind
         # left: filter
-        # lcol: symbol | string
-        # rcol: symbol | string
+        # lcol: proj
+        # rcol: proj
         # right: filter
         # kind : { :inner, :outer }
-        def initialize(left, lcol, right, rcol, kind: :inner)
+        def initialize(left, lcol, rcol, right, kind: :inner)
           @left = left
           @lcol = lcol
           @rcol = rcol
@@ -80,10 +80,6 @@ module Oso
         def initialize(source, field)
           @source = source
           @field = field
-        end
-
-        def to_query
-          source.to_query
         end
       end
 
@@ -117,14 +113,9 @@ module Oso
       # explicitly in the core.
       module ArelColumnizer
         private
-        # If it's a string, don't mess with it, it's already exact.
         # If it's a symbol it's relative to the table, so generate the name.
-        def columnize(tbl, col)
-          case col
-          when String then col
-          when Symbol then "#{tbl.table_name}.#{col}"
-          else raise TypeError, col
-          end
+        def columnize(proj)
+          "#{proj.source.to_query.table_name}.#{proj.field}"
         end
       end
 
@@ -134,9 +125,9 @@ module Oso
 
         def to_query
           query = source.to_query
-          left = "#{columnize(lhs.to_query, lhs.field)} #{OPS[kind]}"
+          left = "#{columnize(lhs)} #{OPS[kind]}"
           case rhs
-          when Proj then query.where("#{left} #{columnize(rhs.to_query, rhs.field)}")
+          when Proj then query.where("#{left} #{columnize(rhs)}")
           when Value then query.where("#{left} ?", rhs.value)
           else raise TypeError, rhs
           end
@@ -150,7 +141,7 @@ module Oso
           rhs = right.to_query
           lhs.joins(
             "INNER JOIN #{rhs.table_name} ON " +
-            "#{columnize(lhs, lcol)} = #{columnize(rhs, rcol)}"
+            "#{columnize(lcol)} = #{columnize(rcol)}"
           )
         end
       end
