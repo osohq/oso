@@ -758,16 +758,21 @@ impl KnowledgeBase {
             }
         }
 
-        let rule_types: Vec<Rule> = unique_relations.into_iter()
-        .map(|(subject, relation_name, object)| {
-            rule!("has_relation", ["_subject"; instance!(subject), value!(relation_name), "_object"; instance!(object)])
-        }).collect();
+        let mut rule_types: Vec<Rule> = Vec::new();
+        let mut unique_resource_types = HashSet::new();
 
-        for rule_type in rule_types {
-            self.add_rule_type(rule_type);
+        unique_relations.into_iter().for_each(|(subject, relation_name, object)| {
+            unique_resource_types.insert(object.clone());
+            rule_types.push(rule!("has_relation", ["_subject"; instance!(subject), value!(relation_name), "_object"; instance!(object)]))
+        });
+
+        for resource_type in unique_resource_types.into_iter() {
+            rule_types.push(rule!("has_role", ["actor"; instance!(sym!("Actor")), "_role"; instance!(sym!("String")), "resource"; instance!(resource_type)]));
         }
 
-        // TODO: @patrickod define `has_role` rules for all unique Resource types
+        for rule_type in rule_types {
+            self.add_rule_type(rule_type.clone());
+        }
 
         Ok(())
     }
