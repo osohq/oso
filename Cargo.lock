@@ -868,6 +868,7 @@ dependencies = [
  "polar-core",
  "serde-wasm-bindgen",
  "wasm-bindgen",
+ "wasm-bindgen-test",
 ]
 
 [[package]]

@@ -16,16 +16,23 @@ async function getDiagnostics(n: number): Promise<[Uri, Diagnostic[]][]> {
 
 suite('Diagnostics', () => {
   test('We receive a diagnostic for each Polar file in the workspace', async () => {
-    const polarFiles = await workspace.findFiles('*.polar');
-    const diagnostics = await getDiagnostics(polarFiles.length);
-    for (const [uri, [diagnostic]] of diagnostics) {
-      const { line, character } = diagnostic.range.start;
-      assert.strictEqual(
-        diagnostic.message,
-        `hit the end of the file unexpectedly. Did you forget a semi-colon at line ${
-          line + 1
-        }, column ${character + 1} in file ${uri.toString()}`
-      );
-    }
+    const files = (await workspace.findFiles('*.polar'))
+      .map(f => f.toString())
+      .sort();
+    const diagnostics = (await getDiagnostics(files.length)).sort();
+
+    let [uri, [diagnostic]] = diagnostics[0];
+    assert.strictEqual(uri.toString(), files[0]);
+    assert.strictEqual(diagnostic, undefined);
+
+    [uri, [diagnostic]] = diagnostics[1];
+    assert.strictEqual(uri.toString(), files[1]);
+    const { line, character } = diagnostic.range.start;
+    assert.strictEqual(
+      diagnostic.message,
+      `hit the end of the file unexpectedly. Did you forget a semi-colon at line ${
+        line + 1
+      }, column ${character + 1} in file ${uri.toString()}`
+    );
   });
 });
