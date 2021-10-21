@@ -17,6 +17,7 @@ module Oso
       # before.
 
       # Abstract superclass
+      # not really needed, methods are just conveniences for demo purposes
       class DataFilter
         def to_a
           to_query.to_a
@@ -62,7 +63,7 @@ module Oso
         # lcol: proj
         # rcol: proj
         # right: filter
-        # kind : { :inner, :outer }
+        # kind : { :inner, :outer } ( currently ignored )
         def initialize(left, lcol, rcol, right, kind: :inner)
           @left = left
           @lcol = lcol
@@ -101,7 +102,27 @@ module Oso
       # for types that come from different data sources)
       #
       # The other configuration we need from the user is relational information, for
-      # constructing joins
+      # constructing joins. We could separate the data filtering API better from the
+      # rest of the host library by moving that out of register_class and into a new
+      # method that also handles filter subclass registration, for example:
+      #
+      #   oso.configure_data_filtering(
+      #     source: ArelSource,
+      #     select: ArelSelect,
+      #     join: ArelJoin,
+      #     relations: {
+      #       Issue => { repo: [Repo, :repo_id, :id] },
+      #       Org => { repos: [Repo, :id, :org_id] },
+      #       Repo => {
+      #         org: [Org, :org_id, :id],
+      #         issues: [Issues, :id, :repo_id]
+      #       },
+      #     }
+      #   )
+      #
+      # Eventually we could even have per-model filter subclasses to handle different
+      # data sources.
+      
       class ArelSource < Source
         def to_query
           @model.all
@@ -113,7 +134,6 @@ module Oso
       # explicitly in the core.
       module ArelColumnizer
         private
-        # If it's a symbol it's relative to the table, so generate the name.
         def columnize(proj)
           "#{proj.source.to_query.table_name}.#{proj.field}"
         end
@@ -139,13 +159,9 @@ module Oso
         def to_query
           lhs = left.to_query
           rhs = right.to_query
-          lhs.joins(
-            "INNER JOIN #{rhs.table_name} ON " +
-            "#{columnize(lcol)} = #{columnize(rcol)}"
-          )
+          lhs.joins "INNER JOIN #{rhs.table_name} ON #{columnize(lcol)} = #{columnize(rcol)}"
         end
       end
-      # ... & that's all you have to write in the host.
     end
   end
 end
