@@ -1,4 +1,7 @@
-use polar_core::{polar, terms::Symbol};
+use polar_core::{
+    polar,
+    terms::{Symbol, Value},
+};
 use wasm_bindgen::prelude::*;
 
 use crate::errors::{serialization_error, Error};
@@ -28,9 +31,9 @@ impl Query {
 
     #[wasm_bindgen(js_class = Query, js_name = callResult)]
     pub fn wasm_call_result(&mut self, call_id: f64, value: JsValue) -> JsResult<()> {
-        let term = serde_wasm_bindgen::from_value(value)?;
+        let value: Option<Value> = serde_wasm_bindgen::from_value(value)?;
         self.0
-            .call_result(call_id as u64, term)
+            .call_result(call_id as u64, value.map(Into::into))
             .map_err(Error::from)
             .map_err(Error::into)
     }
@@ -72,9 +75,9 @@ impl Query {
 
     #[wasm_bindgen(js_class = Query, js_name = bind)]
     pub fn wasm_bind(&mut self, name: &str, value: JsValue) -> JsResult<()> {
-        let term = serde_wasm_bindgen::from_value(value)?;
+        let value: Value = serde_wasm_bindgen::from_value(value)?;
         self.0
-            .bind(Symbol::new(name), term)
+            .bind(Symbol::new(name), value.into())
             .map_err(Error::from)
             .map_err(Error::into)
     }

@@ -135,10 +135,10 @@ fn new_query_from_term_errors() {
     let res = polar.wasm_new_query_from_term("".into());
     if let Err(err) = res {
         let err: Error = err.dyn_into().unwrap();
-        assert_eq!(err.name(), "RuntimeError::Serialization");
+        assert_eq!(err.name(), "Error");
         assert_eq!(
             err.message(),
-            "Serialization error: EOF while parsing a value at line 1 column 0"
+            "unknown variant ``, expected one of `Number`, `String`, `Boolean`, `ExternalInstance`, `Dictionary`, `Pattern`, `Call`, `List`, `Variable`, `RestVariable`, `Expression`",
         );
     } else {
         panic!();
