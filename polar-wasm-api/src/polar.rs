@@ -1,8 +1,4 @@
-use polar_core::{
-    polar,
-    sources::Source,
-    terms::{Symbol, Value},
-};
+use polar_core::{polar, sources::Source, terms::Symbol};
 use wasm_bindgen::prelude::*;
 
 use crate::errors::{serialization_error, Error};
@@ -35,10 +31,10 @@ impl Polar {
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = registerConstant)]
-    pub fn wasm_register_constant(&mut self, name: &str, value: JsValue) -> JsResult<()> {
-        let value: Value = serde_wasm_bindgen::from_value(value)?;
+    pub fn wasm_register_constant(&mut self, name: &str, term: JsValue) -> JsResult<()> {
+        let term = serde_wasm_bindgen::from_value(term)?;
         self.0
-            .register_constant(Symbol::new(name), value.into())
+            .register_constant(Symbol::new(name), term)
             .map_err(Error::from)?;
         Ok(())
     }
@@ -58,9 +54,9 @@ impl Polar {
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = newQueryFromTerm)]
-    pub fn wasm_new_query_from_term(&self, value: JsValue) -> JsResult<Query> {
-        let value: Value = serde_wasm_bindgen::from_value(value)?;
-        Ok(Query::from(self.0.new_query_from_term(value.into(), false)))
+    pub fn wasm_new_query_from_term(&self, term: JsValue) -> JsResult<Query> {
+        let term = serde_wasm_bindgen::from_value(term)?;
+        Ok(Query::from(self.0.new_query_from_term(term, false)))
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = newId)]

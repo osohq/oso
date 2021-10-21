@@ -87,11 +87,11 @@ fn register_constant_succeeds() {
     let mut polar = polar_wasm_api::Polar::wasm_new();
     let res = polar.wasm_register_constant(
         "mathematics",
-        serde_wasm_bindgen::to_value(&Value::ExternalInstance(ExternalInstance {
+        serde_wasm_bindgen::to_value(&Term::from(Value::ExternalInstance(ExternalInstance {
             instance_id: 1,
             constructor: None,
             repr: None,
-        }))
+        })))
         .unwrap(),
     );
     assert!(matches!(res, Ok(())));
@@ -118,11 +118,11 @@ fn new_query_from_str_errors() {
 #[wasm_bindgen_test]
 fn new_query_from_term_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let term = Value::Call(Call {
+    let term = Term::from(Value::Call(Call {
         name: Symbol("x".into()),
         args: vec![],
         kwargs: None,
-    });
+    }));
     let term = serde_wasm_bindgen::to_value(&term).unwrap();
     let mut query = polar.wasm_new_query_from_term(term).unwrap();
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
@@ -138,7 +138,7 @@ fn new_query_from_term_errors() {
         assert_eq!(err.name(), "Error");
         assert_eq!(
             err.message(),
-            "unknown variant ``, expected one of `Number`, `String`, `Boolean`, `ExternalInstance`, `Dictionary`, `Pattern`, `Call`, `List`, `Variable`, `RestVariable`, `Expression`",
+            "invalid type: string \"\", expected struct Term",
         );
     } else {
         panic!();
