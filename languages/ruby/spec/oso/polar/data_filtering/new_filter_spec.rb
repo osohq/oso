@@ -13,16 +13,16 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     Field = D::Proj
     Value = D::Value
     context 'astrology' do
-      it 'can select a record from a table based on a field/value equality' do
+      it 'field value no join' do
+        # person.name = 'eden'
         select = Select[
           Src[Person],
           Field[Src[Person], :name],
           Value['eden']
         ]
         expect(select.to_query.to_a).to eq [eden]
-      end
 
-      it 'can select a record from a table based on field/value inequality' do
+        # person.name != 'eden'
         result = Select[
           Src[Person],
           Field[Src[Person], :name],
@@ -33,16 +33,15 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         expect(result).not_to include eden
       end
 
-      it 'can select a record based on field/value equality in a joined table' do
+      it 'field value one join' do
+        # person.sign.name = 'cancer'
         result = Select[
           Join[Src[Person], :sign_name, Src[Sign], :name],
           Field[Src[Sign], :name],
           Value['cancer']
         ].to_a
         expect(result).to eq [eden]
-      end
-
-      it 'can select a record based on field/value inequality in a joined table' do
+        # person.sign.name != 'cancer'
         result = Select[
           Join[Src[Person], :sign_name, Src[Sign], :name],
           Field[Src[Sign], :name],
@@ -53,16 +52,16 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         expect(result).not_to include eden
       end
 
-      it 'can select a record based on field/field equality in two different tables' do
+      it 'field field one join' do
+        # person.name = person.sign.name
         result = Select[ # * from
           Join[Src[Person], :sign_name, Src[Sign], :name], # where
           Field[Src[Person], :name], # =
           Field[Src[Sign], :name]
         ].to_a
         expect(result).to eq [leo]
-      end
 
-      it 'can select a record based on field/field inequality in two different tables' do
+        # person.name != person.sign.name
         result = Select[ # * from
           Join[Src[Person], :sign_name, Src[Sign], :name], # where
           Field[Src[Person], :name], # !=
