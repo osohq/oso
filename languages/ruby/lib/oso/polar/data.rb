@@ -112,24 +112,39 @@ module Oso
         end
       end
 
+      # Hack to generate unambiguous column names.
+      # Ideally we could alias every join and generate all column names
+      # explicitly in the core.
+      module ArelColumnizer
+        private
+        # If it's a string, don't mess with it, it's already exact.
+        # If it's a symbol it's relative to the table, so generate the name.
+        def columnize(tbl, col)
+          case col
+          when String then col
+          when Symbol then "#{tbl.table_name}.#{col}"
+          else raise TypeError, col
+          end
+        end
+      end
+
       class ArelSelect < Select
+        include ArelColumnizer
         OPS = {eq: '=', in: 'IN', nin: 'NOT IN', neq: '!='}
 
         def to_query
           query = source.to_query
-          left = "#{lhs.to_query.table_name}.#{lhs.field} #{OPS[kind]}"
+          left = "#{columnize(lhs.to_query, lhs.field)} #{OPS[kind]}"
           case rhs
-          when Proj
-            query.where("#{left} #{rhs.to_query.table_name}.#{rhs.field}")
-          when Value
-            query.where("#{left} ?", rhs.value)
-          else
-            raise TypeError, rhs
+          when Proj then query.where("#{left} #{columnize(rhs.to_query, rhs.field)}")
+          when Value then query.where("#{left} ?", rhs.value)
+          else raise TypeError, rhs
           end
         end
       end
 
       class ArelJoin < Join
+        include ArelColumnizer
         def to_query
           lhs = left.to_query
           rhs = right.to_query
@@ -138,27 +153,8 @@ module Oso
             "#{columnize(lhs, lcol)} = #{columnize(rhs, rcol)}"
           )
         end
-
-        private
-        # Kind of a hack to generate unambiguous column names. If it's a
-        # string, don't mess with it, it's already exact.
-        # If it's a symbol it's relative to the table, so generate the name
-        # from the table & column.
-        # We may just be able to alias every join and generate all
-        # the column names explicitly in the core.
-        def columnize(tbl, col)
-          case col
-          when String
-            col
-          when Symbol
-            "#{tbl.table_name}.#{col}"
-          else
-            raise TypeError, col
-          end
-        end
-
-        # ... & that's all you have to write in the host.
       end
+      # ... & that's all you have to write in the host.
     end
   end
 end
