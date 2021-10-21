@@ -130,40 +130,10 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
          %w[avery sagittarius]].each do |name, sign|
           Person.create(name: name, sign_name: sign)
         end
-
-        subject.register_class(
-          Sign,
-          fields: {
-            name: String,
-            element: String,
-            ruler: String,
-            people: Relation.new(
-              kind: 'many',
-              other_type: 'Person',
-              my_field: 'name',
-              other_field: 'sign_name'
-            )
-          }
-        )
-
-        subject.register_class(
-          Person,
-          fields: {
-            name: String,
-            sign_name: String,
-            sign: Relation.new(
-              kind: 'one',
-              other_type: 'Sign',
-              my_field: 'sign_name',
-              other_field: 'name'
-            )
-          }
-        )
       end
 
       let(:eden) { Person.find 'eden' }
       let(:leo) { Person.find 'leo' }
-
     end
   end
 end
