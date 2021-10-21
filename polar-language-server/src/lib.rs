@@ -9,7 +9,7 @@ use lsp_types::{
     DidOpenTextDocumentParams, FileChangeType, FileEvent, Position, PublishDiagnosticsParams,
     Range, TextDocumentItem, Url, VersionedTextDocumentIdentifier,
 };
-use polar_core::{polar::Polar, sources::Source};
+use polar_core::{error::PolarError, polar::Polar, sources::Source};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -25,37 +25,13 @@ pub struct PolarLanguageServer {
     send_diagnostics_callback: js_sys::Function,
 }
 
-// Temporary helper until we get real errors/warnings from `polar-core` to turn into Diagnostics.
-fn diagnostics_for_document(document: &TextDocumentItem) -> Option<PublishDiagnosticsParams> {
-    let first_line = document.text.split('\n').next().unwrap();
-    if first_line.is_empty() {
-        return None;
+fn range_from_polar_error(e: &PolarError) -> Range {
+    let line = e.context.as_ref().map_or(0, |c| c.row) as u32;
+    let character = e.context.as_ref().map_or(0, |c| c.column) as u32;
+    Range {
+        start: Position { line, character },
+        end: Position { line, character },
     }
-    let diagnostic = Diagnostic {
-        range: Range {
-            start: Position {
-                line: 0,
-                character: 0,
-            },
-            end: Position {
-                line: 0,
-                character: first_line.len() as u32,
-            },
-        },
-        severity: Some(DiagnosticSeverity::Error),
-        code: None,
-        code_description: None,
-        source: Some("polar-language-server".to_owned()),
-        message: first_line.to_owned(),
-        related_information: None,
-        tags: None,
-        data: None,
-    };
-    Some(PublishDiagnosticsParams {
-        uri: document.uri.clone(),
-        version: Some(document.version),
-        diagnostics: vec![diagnostic],
-    })
 }
 
 /// Public API exposed via WASM.
@@ -127,7 +103,7 @@ impl PolarLanguageServer {
 
     fn remove_document(&mut self, uri: &Url) {
         let deleted = self.documents.remove(uri).unwrap();
-        self.clear_diagnostics_for_document(deleted);
+        self.clear_diagnostics_for_document(&deleted);
     }
 
     fn send_diagnostics(&self, params: PublishDiagnosticsParams) {
@@ -136,7 +112,7 @@ impl PolarLanguageServer {
         self.send_diagnostics_callback.call1(this, params).unwrap();
     }
 
-    fn clear_diagnostics_for_document(&self, document: TextDocumentItem) {
+    fn clear_diagnostics_for_document(&self, document: &TextDocumentItem) {
         let params = PublishDiagnosticsParams {
             uri: document.uri.clone(),
             version: Some(document.version),
@@ -145,19 +121,40 @@ impl PolarLanguageServer {
         self.send_diagnostics(params);
     }
 
-    fn send_diagnostics_for_documents(&self) {
+    fn clear_diagnostics_for_documents(&self) {
         for document in self.documents.values() {
-            if let Some(params) = diagnostics_for_document(document) {
-                self.send_diagnostics(params);
-            }
+            self.clear_diagnostics_for_document(document);
         }
     }
 
-    // TODO(gj): clear all diagnostics when calling this function? Otherwise what if there are a
-    // bunch of diagnostics but then we introduce an unrecoverable ParseError (e.g., missing
-    // semicolon) and until we fix the new ParseError all of the old errors will remain regardless
-    // of whether we fix them or not... maybe?
+    fn polar_error_to_diagnostic(&self, e: &PolarError) -> Option<PublishDiagnosticsParams> {
+        e.context
+            .as_ref()
+            .and_then(|c| c.source.filename.as_ref())
+            .and_then(|uri| Url::parse(uri).ok())
+            .map(|uri| {
+                let diagnostic = Diagnostic {
+                    range: range_from_polar_error(e),
+                    severity: Some(DiagnosticSeverity::Error),
+                    code: None,
+                    code_description: None,
+                    source: Some("polar-language-server".to_owned()),
+                    message: e.to_string(),
+                    related_information: None,
+                    tags: None,
+                    data: None,
+                };
+                let document = self.documents.get(&uri).unwrap();
+                PublishDiagnosticsParams {
+                    uri: document.uri.clone(),
+                    version: Some(document.version),
+                    diagnostics: vec![diagnostic],
+                }
+            })
+    }
+
     fn reload_kb(&self) {
+        self.clear_diagnostics_for_documents();
         self.polar.clear_rules();
         let sources = self
             .documents
@@ -167,14 +164,12 @@ impl PolarLanguageServer {
                 src: doc.text.clone(),
             })
             .collect();
-        if let Err(e) = self.polar.load(sources) {
-            log(&format!("[WASM] Polar::load error\n\t{}", e));
+        let maybe_err = self.polar.load(sources).err();
+        if let Some(params) = maybe_err.and_then(|e| self.polar_error_to_diagnostic(&e)) {
+            self.send_diagnostics(params);
         } else {
             log("[WASM] Polar::load no errors");
         }
-
-        // TODO(gj): temporary until we turn errors/warnings from Polar::load into diagnostics.
-        self.send_diagnostics_for_documents();
     }
 }
 
