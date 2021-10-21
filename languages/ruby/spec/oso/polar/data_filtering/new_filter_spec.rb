@@ -17,62 +17,37 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     person_name = Field[persons, :name]
     person_sign_name = Field[persons, :sign_name]
     sign_name = Field[signs, :name]
+    persons_signs = Join[persons, person_sign_name, sign_name, signs]
+
     context 'astrology' do
       it 'field value no join' do
         # person.name = 'eden'
-        select = Select[
-          persons,
-          person_name,
-          Value['eden']
-        ]
-        expect(select.to_query.to_a).to eq [eden]
+        result = Select[persons, person_name, Value['eden']].to_a
+        expect(result).to eq [eden]
 
         # person.name != 'eden'
-        result = Select[
-          persons,
-          person_name,
-          Value['eden'],
-          kind: :neq
-        ].to_a
+        result = Select[persons, person_name, Value['eden'], kind: :neq].to_a
         expect(result.length).to be 11
         expect(result).not_to include eden
       end
 
       it 'field value one join' do
         # person.sign.name = 'cancer'
-        result = Select[
-          Join[persons, person_sign_name, sign_name, signs],
-          sign_name,
-          Value['cancer']
-        ].to_a
+        result = Select[persons_signs, sign_name, Value['cancer']].to_a
         expect(result).to eq [eden]
         # person.sign.name != 'cancer'
-        result = Select[
-          Join[persons, person_sign_name, sign_name, signs],
-          sign_name,
-          Value['cancer'],
-          kind: :neq
-        ].to_a
+        result = Select[persons_signs, sign_name, Value['cancer'], kind: :neq].to_a
         expect(result.length).to be 11
         expect(result).not_to include eden
       end
 
       it 'field field one join' do
         # person.name = person.sign.name
-        result = Select[ # * from
-          Join[persons, person_sign_name, sign_name, signs],
-          person_name,
-          sign_name,
-        ].to_a
+        result = Select[persons_signs, person_name, sign_name].to_a
         expect(result).to eq [leo]
 
         # person.name != person.sign.name
-        result = Select[ # * from
-          Join[persons, person_sign_name, sign_name, signs],
-          person_name,
-          sign_name,
-          kind: :neq
-        ].to_a
+        result = Select[persons_signs, person_name, sign_name, kind: :neq].to_a
         expect(result.length).to be 11
         expect(result).not_to include leo
       end
@@ -89,7 +64,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           );
         SQL
 
-        db.execute <<-SQL
+        db.execute <<~SQL
           create table people (
             name varchar(32) not null primary key,
             sign_name varchar(16) not null

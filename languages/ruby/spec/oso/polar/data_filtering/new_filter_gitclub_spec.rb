@@ -16,6 +16,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     Select = D::ArelSelect
     Field = D::Proj
     Value = D::Value
+
     repos = Src[Repo]
     users = Src[User]
     issues = Src[Issue]
@@ -25,110 +26,69 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     repo_name = Field[repos, :name]
     repo_org_name = Field[repos, :org_name]
     issue_repo_name = Field[issues, :repo_name]
+    repos_orgs = Join[repos, repo_org_name, org_name, orgs]
+    issues_repos = Join[issues, issue_repo_name, repo_name, repos]
+    issues_repos_orgs = Join[issues_repos, repo_org_name, org_name, orgs]
+
     context 'gitclub' do
       it 'field value no join' do
         # user.name = 'steve'
-        result = Select[ users, user_name, Value['steve'] ].to_a
+        result = Select[users, user_name, Value['steve']].to_a
         expect(result).to eq [steve]
 
         # user.name != 'steve'
-        result = Select[ users, user_name, Value['steve'], kind: :neq ].to_a
+        result = Select[users, user_name, Value['steve'], kind: :neq].to_a
         expect(result).to contain_exactly(*[leina, gabe, graham])
       end
 
       it 'field field no join' do
         # repo.name = repo.org_name
-        result = Select[
-          repos,
-          repo_name,
-          repo_org_name
-        ].to_a
+        result = Select[repos, repo_name, repo_org_name].to_a
         expect(result).to eq [oso]
 
         # repo.name != repo.org_name
-        result = Select[
-          repos,
-          repo_name,
-          repo_org_name,
-          kind: :neq
-        ].to_a
+        result = Select[repos, repo_name, repo_org_name, kind: :neq].to_a
         expect(result).to contain_exactly(*[demo, ios])
       end
 
       it 'field value one join' do
         # repo.org.name = 'oso'
-        result = Select[
-          Join[repos, repo_org_name, org_name, orgs],
-          org_name,
-          Value['oso']
-        ].to_a
+        result = Select[repos_orgs, org_name, Value['oso']].to_a
         expect(result).to contain_exactly(*[oso, demo])
 
         # repo.org.name != 'oso'
-        result = Select[
-          Join[repos, repo_org_name, org_name, orgs],
-          org_name,
-          Value['oso'],
-          kind: :neq
-        ].to_a
+        result = Select[repos_orgs, org_name, Value['oso'], kind: :neq].to_a
         expect(result).to contain_exactly(*[ios])
       end
 
       it 'field field one join' do
         # repo.name = repo.org.name
-        result = Select[
-          Join[repos, repo_org_name, org_name, orgs],
-          repo_name,
-          org_name,
-        ].to_a
+        result = Select[repos_orgs, repo_name, org_name].to_a
         expect(result).to contain_exactly(*[oso]) # osoroboroso
 
         # repo.name != repo.org.name
-        result = Select[
-          Join[repos, repo_org_name, org_name, orgs],
-          repo_name,
-          org_name,
-          kind: :neq
-        ].to_a
+        result = Select[repos_orgs, repo_name, org_name, kind: :neq].to_a
         expect(result).to contain_exactly(*[demo, ios]) # aneponymous
       end
 
       it 'field value two joins' do
         # issue.repo.org.name = 'apple'
-        select = Select[
-          Join[Join[issues, issue_repo_name, repo_name, repos], repo_org_name, org_name, orgs],
-          org_name,
-          Value['apple']
-        ]
-        expect(select.to_a).to eq [laggy]
+        result = Select[issues_repos_orgs, org_name, Value['apple']].to_a
+        expect(result).to eq [laggy]
 
         # issue.repo.org.name != 'apple'
-        select = Select[
-          Join[Join[issues, issue_repo_name, repo_name, repos], repo_org_name, org_name, orgs],
-          org_name,
-          Value['apple'],
-          kind: :neq
-        ]
-        expect(select.to_a).to contain_exactly(*[bug, endings])
+        result = Select[issues_repos_orgs, org_name, Value['apple'], kind: :neq].to_a
+        expect(result).to contain_exactly(*[bug, endings])
       end
 
       it 'field field two joins' do
         # issue.repo.name = issue.repo.org.name
-        select = Select[
-          Join[Join[issues, issue_repo_name, repo_name, repos], repo_org_name, org_name, orgs],
-          repo_name,
-          org_name,
-        ]
-        expect(select.to_a).to eq [bug]
+        result = Select[issues_repos_orgs, repo_name, org_name].to_a
+        expect(result).to eq [bug]
 
         # issue.repo.name != issue.repo.org.name
-        select = Select[
-          Join[Join[issues, issue_repo_name, repo_name, repos], repo_org_name, org_name, orgs],
-          repo_name,
-          org_name,
-          kind: :neq
-        ]
-        expect(select.to_a).to contain_exactly(*[laggy, endings])
+        result = Select[issues_repos_orgs, repo_name, org_name, kind: :neq].to_a
+        expect(result).to contain_exactly(*[laggy, endings])
       end
 
       DB_FILE = 'gitclub_test.db'
