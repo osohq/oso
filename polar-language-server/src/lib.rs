@@ -106,7 +106,12 @@ impl PolarLanguageServer {
     fn send_diagnostics(&self, params: PublishDiagnosticsParams) {
         let this = &JsValue::null();
         let params = &serde_wasm_bindgen::to_value(&params).unwrap();
-        self.send_diagnostics_callback.call1(this, params).unwrap();
+        if let Err(e) = self.send_diagnostics_callback.call1(this, params) {
+            log(&format!(
+                "[pls] send_diagnostics params:\n\t{:?}\n\tJS error: {:?}",
+                params, e
+            ));
+        }
     }
 
     fn empty_diagnostics_for_all_documents(&self) -> HashMap<Url, PublishDiagnosticsParams> {
@@ -117,25 +122,47 @@ impl PolarLanguageServer {
     }
 
     fn polar_error_to_diagnostic(&self, e: &PolarError) -> Option<PublishDiagnosticsParams> {
-        e.context
-            .as_ref()
-            .and_then(|c| c.source.filename.as_ref())
-            .and_then(|uri| Url::parse(uri).ok())
-            .map(|uri| {
-                let diagnostic = Diagnostic {
-                    range: range_from_polar_error(e),
-                    severity: Some(DiagnosticSeverity::Error),
-                    source: Some("polar-language-server".to_owned()),
-                    message: e.to_string(),
-                    ..Default::default()
-                };
-                let document = self.documents.get(&uri).unwrap();
-                PublishDiagnosticsParams {
-                    uri: document.uri.clone(),
-                    version: Some(document.version),
-                    diagnostics: vec![diagnostic],
+        if let Some(context) = e.context.as_ref() {
+            if let Some(filename) = context.source.filename.as_ref() {
+                match Url::parse(filename) {
+                    Ok(uri) => {
+                        if let Some(document) = self.documents.get(&uri) {
+                            let diagnostic = Diagnostic {
+                                range: range_from_polar_error(e),
+                                severity: Some(DiagnosticSeverity::Error),
+                                source: Some("polar-language-server".to_owned()),
+                                message: e.to_string(),
+                                ..Default::default()
+                            };
+                            return Some(PublishDiagnosticsParams {
+                                uri: document.uri.clone(),
+                                version: Some(document.version),
+                                diagnostics: vec![diagnostic],
+                            });
+                        } else {
+                            let tracked_docs = self.documents.keys().map(ToString::to_string);
+                            let tracked_docs = tracked_docs.collect::<Vec<_>>().join(", ");
+                            log(&format!(
+                                "[pls] untracked document: {}\n\tTracked documents: {}\n\tError: {}",
+                                uri, tracked_docs, e
+                            ));
+                        }
+                    }
+                    Err(err) => log(&format!(
+                        "[pls] Url::parse error: {}\n\tFilename: {}\n\tError: {}",
+                        err, filename, e
+                    )),
                 }
-            })
+            } else {
+                log(&format!(
+                    "[pls] source missing filename:\n\t{:?}\n\tError: {}",
+                    context.source, e
+                ));
+            }
+        } else {
+            log(&format!("[pls] missing error context:\n\t{:?}", e));
+        }
+        None
     }
 
     /// Reloads tracked documents into the `KnowledgeBase`, translates errors from `Polar::load`
