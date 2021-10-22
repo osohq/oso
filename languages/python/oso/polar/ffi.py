@@ -124,6 +124,16 @@ class Query:
     def __del__(self):
         lib.query_free(self.ptr)
 
+    def begin_span(self, msg, text):
+        """Start a span"""
+        msg = to_c_str(msg)
+        text = to_c_str(text)
+        return self.check_result(lib.polar_host_span_begin(msg, text))
+
+    def end_span(self, span):
+        """End a span"""
+        return self.check_result(lib.polar_host_span_end(span))
+
     def call_result(self, call_id, value):
         """Make an external call and propagate FFI errors."""
         if value is None:

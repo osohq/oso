@@ -1,3 +1,4 @@
+use polar_core::polar::HostSpan;
 pub use polar_core::polar::{Polar, Query};
 use polar_core::{error, terms};
 
@@ -46,6 +47,24 @@ macro_rules! ffi_try {
             set_error(error::OperationalError::Unknown.into()) as _
         }
     };
+}
+
+#[no_mangle]
+pub extern "C" fn polar_host_span_begin(msg: *const c_char, text: *const c_char) -> *mut HostSpan {
+    ffi_try!({
+        let msg = unsafe { ffi_string!(msg) };
+        let text = unsafe { ffi_string!(text) };
+        box_ptr!(HostSpan::new(&msg, &text))
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn polar_host_span_end(span: *mut HostSpan) -> i32 {
+    ffi_try!({
+        let span = unsafe { ffi_ref!(span) };
+        std::mem::drop(unsafe { Box::from_raw(span) });
+        POLAR_SUCCESS
+    })
 }
 
 thread_local! {

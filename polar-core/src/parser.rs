@@ -60,12 +60,16 @@ pub fn parse_term(src: &str) -> PolarResult<Term> {
 }
 
 pub fn parse_lines(src_id: u64, src: &str) -> PolarResult<Vec<Line>> {
+    let span = tracy_client::span!("parse lines");
+    span.emit_color(0xa7d950);
     polar::LinesParser::new()
         .parse(src_id, Lexer::new(src))
         .map_err(|e| to_parse_error(e).into())
 }
 
 pub fn parse_query(src_id: u64, src: &str) -> PolarResult<Term> {
+    let span = tracy_client::span!("parse query");
+    span.emit_color(0xa7d950);
     polar::TermParser::new()
         .parse(src_id, Lexer::new(src))
         .map_err(|e| to_parse_error(e).into())

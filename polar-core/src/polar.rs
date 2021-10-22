@@ -14,13 +14,34 @@ use super::validations::{
 };
 use super::vm::*;
 
+use ::tracy_client;
+use ::tracy_client::{Frame, ProfiledAllocator, Span};
+use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+
+#[global_allocator]
+static GLOBAL: ProfiledAllocator<std::alloc::System> =
+    ProfiledAllocator::new(std::alloc::System, 100);
+
+pub struct HostSpan {
+    span: Span,
+}
+
+impl HostSpan {
+    pub fn new(msg: &str, text: &str) -> Self {
+        let span = tracy_client::span!(msg);
+        span.emit_text(&text);
+        span.emit_color(0x4e4cc7);
+        Self { span }
+    }
+}
 
 pub struct Query {
     runnable_stack: Vec<(Box<dyn Runnable>, u64)>, // Tuple of Runnable + call_id.
     vm: PolarVirtualMachine,
     term: Term,
     done: bool,
+    _frame: Frame,
 }
 
 impl Query {
@@ -30,6 +51,7 @@ impl Query {
             vm,
             term,
             done: false,
+            _frame: tracy_client::start_noncontinuous_frame!("query"),
         }
     }
 
@@ -314,6 +336,9 @@ impl Polar {
     }
 
     pub fn new_query_from_term(&self, mut term: Term, trace: bool) -> Query {
+        let span = tracy_client::span!("new query");
+        span.emit_color(0x63b04f);
+        span.emit_text(&format!("{}", term));
         {
             let mut kb = self.kb.write().unwrap();
             term = rewrite_term(term, &mut kb);

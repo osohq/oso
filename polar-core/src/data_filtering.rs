@@ -331,6 +331,8 @@ impl FilterPlan {
         var: &str,
         class_tag: &str,
     ) -> PolarResult<FilterPlan> {
+        let span = tracy_client::span!("build filter plan");
+        span.emit_color(0xbd46b7);
         // @NOTE(steve): Just reading an env var here sucks (see all the stuff we had to do
         // to get POLAR_LOG to work in all libs, wasm etc...) but that's what I'm doing today.
         // At some point surface this info better.
@@ -341,28 +343,33 @@ impl FilterPlan {
             eprintln!("\n==Bindings==")
         }
 
-        let result_sets = partial_results
-            .into_iter()
-            .enumerate()
-            // if the result doesn't include a binding for this variable,
-            // or if the binding isn't an expression, then just ignore it.
-            .filter_map(|(i, result)| {
-                result.bindings.get(&Symbol::new(var)).map(|term| {
-                    match term.value().as_expression() {
-                        Ok(exp) if exp.operator == Operator::And => {
-                            let vars = Vars::from_op(exp)?;
-                            if explain {
-                                eprintln!("  {}: {}", i, term.to_polar());
-                                vars.explain()
-                            }
+        let result_sets = {
+            let span = tracy_client::span!("gather result sets");
+            span.emit_color(0xbd46b7);
+            let result_sets = partial_results
+                .into_iter()
+                .enumerate()
+                // if the result doesn't include a binding for this variable,
+                // or if the binding isn't an expression, then just ignore it.
+                .filter_map(|(i, result)| {
+                    result.bindings.get(&Symbol::new(var)).map(|term| {
+                        match term.value().as_expression() {
+                            Ok(exp) if exp.operator == Operator::And => {
+                                let vars = Vars::from_op(exp)?;
+                                if explain {
+                                    eprintln!("  {}: {}", i, term.to_polar());
+                                    vars.explain()
+                                }
 
-                            ResultSet::build(&types, &vars, class_tag)
+                                ResultSet::build(&types, &vars, class_tag)
+                            }
+                            _ => Ok(ResultSet::immediate(term.clone(), class_tag)),
                         }
-                        _ => Ok(ResultSet::immediate(term.clone(), class_tag)),
-                    }
+                    })
                 })
-            })
-            .collect::<PolarResult<Vec<ResultSet>>>()?;
+                .collect::<PolarResult<Vec<ResultSet>>>()?;
+            result_sets
+        };
 
         Ok(FilterPlan { result_sets }.optimize(explain))
     }
@@ -463,6 +470,8 @@ impl ResultSet {
     }
 
     fn build(types: &Types, vars: &Vars, this_type: &str) -> PolarResult<Self> {
+        let span = tracy_client::span!("build result set");
+        span.emit_color(0xbd46b7);
         let result_set = ResultSet {
             requests: HashMap::new(),
             resolve_order: vec![],
@@ -555,6 +564,8 @@ impl<'a> ResultSetBuilder<'a> {
     }
 
     fn constrain_var(&mut self, id: Id, var_type: &str) -> PolarResult<&mut Self> {
+        let span = tracy_client::span!("constrain var");
+        span.emit_color(0xbd46b7);
         if self.seen.insert(id) {
             // add a fetch request
             self.result_set.requests.insert(
