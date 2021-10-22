@@ -283,6 +283,7 @@ mod tests {
 
     use super::*;
 
+    #[track_caller]
     fn new_pls() -> PolarLanguageServer {
         let noop = js_sys::Function::new_with_args("_params", "");
         let pls = PolarLanguageServer::new(&noop);
@@ -290,22 +291,27 @@ mod tests {
         pls
     }
 
+    #[track_caller]
     fn polar_uri(name: &str) -> Url {
         Url::parse(&format!("file:///{}.polar", name)).unwrap()
     }
 
+    #[track_caller]
     fn polar_doc(name: &str, contents: String) -> TextDocumentItem {
         TextDocumentItem::new(polar_uri(name), "polar".to_owned(), 0, contents)
     }
 
+    #[track_caller]
     fn doc_with_no_errors(name: &str) -> TextDocumentItem {
         polar_doc(name, format!("{}();", name))
     }
 
+    #[track_caller]
     fn doc_with_missing_semicolon(name: &str) -> TextDocumentItem {
         polar_doc(name, format!("{}()", name))
     }
 
+    #[track_caller]
     fn assert_missing_semicolon_error(params: &PublishDiagnosticsParams, doc: &TextDocumentItem) {
         assert_eq!(params.uri, doc.uri);
         assert_eq!(params.version.unwrap(), doc.version);
@@ -315,6 +321,7 @@ mod tests {
         assert_eq!(diagnostic.message, expected_message);
     }
 
+    #[track_caller]
     fn assert_no_errors(params: &PublishDiagnosticsParams, doc: &TextDocumentItem) {
         assert_eq!(params.uri, doc.uri);
         assert_eq!(params.version.unwrap(), doc.version);
