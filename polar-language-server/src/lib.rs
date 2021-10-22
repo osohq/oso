@@ -33,6 +33,30 @@ fn range_from_polar_error(PolarError { context: c, .. }: &PolarError) -> Range {
     }
 }
 
+fn uri_from_polar_error_context(e: &PolarError) -> Option<Url> {
+    if let Some(context) = e.context.as_ref() {
+        if let Some(filename) = context.source.filename.as_ref() {
+            match Url::parse(filename) {
+                Ok(uri) => return Some(uri),
+                Err(err) => {
+                    log(&format!(
+                        "[pls] Url::parse error: {}\n\tFilename: {}\n\tError: {}",
+                        err, filename, e
+                    ));
+                }
+            }
+        } else {
+            log(&format!(
+                "[pls] source missing filename:\n\t{:?}\n\tError: {}",
+                context.source, e
+            ));
+        }
+    } else {
+        log(&format!("[pls] missing error context:\n\t{:?}", e));
+    }
+    None
+}
+
 /// Public API exposed via WASM.
 #[wasm_bindgen]
 impl PolarLanguageServer {
@@ -121,48 +145,37 @@ impl PolarLanguageServer {
             .collect()
     }
 
-    fn polar_error_to_diagnostic(&self, e: &PolarError) -> Option<PublishDiagnosticsParams> {
-        if let Some(context) = e.context.as_ref() {
-            if let Some(filename) = context.source.filename.as_ref() {
-                match Url::parse(filename) {
-                    Ok(uri) => {
-                        if let Some(document) = self.documents.get(&uri) {
-                            let diagnostic = Diagnostic {
-                                range: range_from_polar_error(e),
-                                severity: Some(DiagnosticSeverity::Error),
-                                source: Some("polar-language-server".to_owned()),
-                                message: e.to_string(),
-                                ..Default::default()
-                            };
-                            return Some(PublishDiagnosticsParams {
-                                uri: document.uri.clone(),
-                                version: Some(document.version),
-                                diagnostics: vec![diagnostic],
-                            });
-                        } else {
-                            let tracked_docs = self.documents.keys().map(ToString::to_string);
-                            let tracked_docs = tracked_docs.collect::<Vec<_>>().join(", ");
-                            log(&format!(
-                                "[pls] untracked document: {}\n\tTracked documents: {}\n\tError: {}",
-                                uri, tracked_docs, e
-                            ));
-                        }
-                    }
-                    Err(err) => log(&format!(
-                        "[pls] Url::parse error: {}\n\tFilename: {}\n\tError: {}",
-                        err, filename, e
-                    )),
-                }
+    fn document_from_polar_error_context(&self, e: &PolarError) -> Option<&TextDocumentItem> {
+        uri_from_polar_error_context(e).and_then(|uri| {
+            if let Some(document) = self.documents.get(&uri) {
+                Some(document)
             } else {
+                let tracked_docs = self.documents.keys().map(ToString::to_string);
+                let tracked_docs = tracked_docs.collect::<Vec<_>>().join(", ");
                 log(&format!(
-                    "[pls] source missing filename:\n\t{:?}\n\tError: {}",
-                    context.source, e
+                    "[pls] untracked document: {}\n\tTracked documents: {}\n\tError: {}",
+                    uri, tracked_docs, e
                 ));
+                None
             }
-        } else {
-            log(&format!("[pls] missing error context:\n\t{:?}", e));
-        }
-        None
+        })
+    }
+
+    fn diagnostic_from_polar_error(&self, e: &PolarError) -> Option<PublishDiagnosticsParams> {
+        self.document_from_polar_error_context(e).map(|d| {
+            let diagnostic = Diagnostic {
+                range: range_from_polar_error(e),
+                severity: Some(DiagnosticSeverity::Error),
+                source: Some("polar-language-server".to_owned()),
+                message: e.to_string(),
+                ..Default::default()
+            };
+            PublishDiagnosticsParams {
+                uri: d.uri.clone(),
+                version: Some(d.version),
+                diagnostics: vec![diagnostic],
+            }
+        })
     }
 
     /// Reloads tracked documents into the `KnowledgeBase`, translates errors from `Polar::load`
@@ -183,7 +196,7 @@ impl PolarLanguageServer {
             .collect();
         let mut diagnostics = self.empty_diagnostics_for_all_documents();
         if let Err(e) = self.polar.load(sources) {
-            if let Some(d) = self.polar_error_to_diagnostic(&e) {
+            if let Some(d) = self.diagnostic_from_polar_error(&e) {
                 assert!(diagnostics.insert(d.uri.clone(), d).is_some());
             }
         }
