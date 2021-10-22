@@ -1,0 +1,85 @@
+name: Test VSCode Extension
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  ci:
+    name: Fmt / Lint / Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-check-${{ hashFiles('**/Cargo.lock') }}
+
+      # NOTE(gj): Rust formatting & Clippy check happens in test.yml.
+
+      - name: Use Node.js 12
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12"
+      - name: Check formatting of JS library
+        working-directory: "vscode/oso"
+        run: make fmtcheck
+      - name: Add WebAssembly target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Run polar-language-server tests
+        working-directory: "polar-language-server"
+        run: make test
+      - name: Build extension
+        working-directory: "vscode/oso"
+        run: make build
+      - name: Lint JS library
+        working-directory: "vscode/oso"
+        run: make lint
+
+  e2e:
+    name: End-to-end Electron tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        if: runner.os != 'macOS'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-check-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Use Node.js 12
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12"
+      - name: Add WebAssembly target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Build extension
+        working-directory: "vscode/oso"
+        run: make build
+      # https://github.com/microsoft/vscode-docs/blob/ad7206ed4184f5807871ecab8bd235a712208067/api/working-with-extensions/continuous-integration.md#github-actions
+      - run: xvfb-run -a make test
+        working-directory: "vscode/oso"
+        if: runner.os == 'Linux'
+      - run: make test
+        working-directory: "vscode/oso"
+        if: runner.os != 'Linux'

@@ -401,6 +401,19 @@ impl KnowledgeBase {
                     Value::Variable(_),
                     Some(Value::Pattern(rule_spec)),
                 ) => self.check_pattern_param(index, rule_spec, rule_type_spec)?,
+                // RuleType has an instance pattern specializer but rule has no specializer
+                (
+                    Value::Variable(_),
+                    Some(Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. }))),
+                    Value::Variable(parameter),
+                    None,
+                ) => RuleParamMatch::False(format!(
+                    "Parameter `{parameter}` expects a {tag} type constraint.
+
+\t{parameter}: {tag}",
+                    parameter = parameter,
+                    tag = tag
+                )),
                 // RuleType has specializer but rule doesn't
                 (Value::Variable(_), Some(rule_type_spec), Value::Variable(_), None) => {
                     RuleParamMatch::False(format!(
@@ -692,9 +705,9 @@ impl KnowledgeBase {
         }
 
         let mut rules = vec![];
-        for (resource_block, shorthand_rules) in &self.resource_blocks.shorthand_rules {
+        for (resource_name, shorthand_rules) in &self.resource_blocks.shorthand_rules {
             for shorthand_rule in shorthand_rules {
-                match shorthand_rule.as_rule(resource_block, &self.resource_blocks) {
+                match shorthand_rule.as_rule(resource_name, &self.resource_blocks) {
                     Ok(rule) => rules.push(rule),
                     Err(error) => errors.push(error),
                 }

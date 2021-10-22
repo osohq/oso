@@ -61,7 +61,7 @@ def get_repositories(filters):
 oso.register_class(models.User)
 oso.register_class(
     Repository,
-    types={
+    fields={
 		# Tell Oso the types of fields you will use in your policy.
 		"is_public": bool
 	},
