@@ -97,9 +97,10 @@ impl PolarLanguageServer {
         });
     }
 
-    fn remove_document(&mut self, uri: &Url) -> PublishDiagnosticsParams {
-        let deleted = self.documents.remove(uri).unwrap();
-        empty_diagnostics_for_document(&deleted)
+    fn remove_document(&mut self, uri: &Url) -> Option<PublishDiagnosticsParams> {
+        self.documents
+            .remove(uri)
+            .map(|d| empty_diagnostics_for_document(&d))
     }
 
     fn send_diagnostics(&self, params: PublishDiagnosticsParams) {
@@ -191,8 +192,11 @@ impl PolarLanguageServer {
     fn on_did_change_watched_files(&mut self, params: DidChangeWatchedFilesParams) {
         for FileEvent { uri, typ } in params.changes {
             assert_eq!(typ, FileChangeType::Deleted); // We only watch for `Deleted` events.
-            let params = self.remove_document(&uri);
-            self.send_diagnostics(params);
+            if let Some(params) = self.remove_document(&uri) {
+                self.send_diagnostics(params);
+            } else {
+                log(&format!("[pls] cannot remove untracked document {}", uri));
+            }
         }
         for (_, diagnostic) in self.reload_kb() {
             self.send_diagnostics(diagnostic);
