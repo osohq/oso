@@ -14,7 +14,7 @@ draft: true
 
 #### Other bugs & improvements
 
-- Fixed a bug that caused the go library to crash using go 1.17 on macOS.
+- Fixed a bug that caused the Go library to crash when using Go 1.17 on macOS.
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
