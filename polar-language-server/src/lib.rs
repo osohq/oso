@@ -25,9 +25,8 @@ pub struct PolarLanguageServer {
     send_diagnostics_callback: js_sys::Function,
 }
 
-fn range_from_polar_error(e: &PolarError) -> Range {
-    let line = e.context.as_ref().map_or(0, |c| c.row) as u32;
-    let character = e.context.as_ref().map_or(0, |c| c.column) as u32;
+fn range_from_polar_error(PolarError { context: c, .. }: &PolarError) -> Range {
+    let (line, character) = c.as_ref().map_or((0, 0), |c| (c.row as _, c.column as _));
     Range {
         start: Position { line, character },
         end: Position { line, character },
