@@ -2,7 +2,7 @@
 name = "polar-language-server"
 version = "0.21.0"
 authors = ["Oso Security, Inc. <support@osohq.com>"]
-edition = "2018"
+edition = "2021"
 
 [lib]
 crate-type = ["cdylib"]
