@@ -9,7 +9,12 @@ use lsp_types::{
     DidOpenTextDocumentParams, FileChangeType, FileEvent, Position, PublishDiagnosticsParams,
     Range, TextDocumentItem, Url, VersionedTextDocumentIdentifier,
 };
-use polar_core::{error::PolarError, polar::Polar, sources::Source};
+use polar_core::{
+    error::{PolarError, PolarResult},
+    polar::Polar,
+    sources::Source,
+};
+use serde_wasm_bindgen::{from_value, to_value};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -31,6 +36,8 @@ pub struct PolarLanguageServer {
     polar: Polar,
     send_diagnostics_callback: js_sys::Function,
 }
+
+type Diagnostics = HashMap<Url, PublishDiagnosticsParams>;
 
 #[must_use]
 fn range_from_polar_error_context(PolarError { context: c, .. }: &PolarError) -> Range {
@@ -89,13 +96,15 @@ impl PolarLanguageServer {
     pub fn on_notification(&mut self, method: &str, params: JsValue) {
         match method {
             DidOpenTextDocument::METHOD => {
-                self.on_did_open_text_document(serde_wasm_bindgen::from_value(params).unwrap())
+                let DidOpenTextDocumentParams { text_document } = from_value(params).unwrap();
+                let diagnostics = self.on_did_open_text_document(text_document);
+                diagnostics.values().for_each(|d| self.send_diagnostics(d));
             }
             DidChangeTextDocument::METHOD => {
-                self.on_did_change_text_document(serde_wasm_bindgen::from_value(params).unwrap())
+                self.on_did_change_text_document(from_value(params).unwrap())
             }
             DidChangeWatchedFiles::METHOD => {
-                self.on_did_change_watched_files(serde_wasm_bindgen::from_value(params).unwrap())
+                self.on_did_change_watched_files(from_value(params).unwrap())
             }
             // We don't care when a document is saved -- we already have the updated state thanks
             // to `DidChangeTextDocument`.
@@ -137,9 +146,9 @@ impl PolarLanguageServer {
         self.documents.remove(uri)
     }
 
-    fn send_diagnostics(&self, params: PublishDiagnosticsParams) {
+    fn send_diagnostics(&self, params: &PublishDiagnosticsParams) {
         let this = &JsValue::null();
-        let params = &serde_wasm_bindgen::to_value(&params).unwrap();
+        let params = &to_value(params).unwrap();
         if let Err(e) = self.send_diagnostics_callback.call1(this, params) {
             log(&format!(
                 "send_diagnostics params:\n\t{:?}\n\tJS error: {:?}",
@@ -149,7 +158,7 @@ impl PolarLanguageServer {
     }
 
     #[must_use]
-    fn empty_diagnostics_for_all_documents(&self) -> HashMap<Url, PublishDiagnosticsParams> {
+    fn empty_diagnostics_for_all_documents(&self) -> Diagnostics {
         self.documents
             .values()
             .map(|d| (d.uri.clone(), empty_diagnostics_for_document(d)))
@@ -191,6 +200,22 @@ impl PolarLanguageServer {
         })
     }
 
+    /// Turn tracked documents into a set of Polar `Source` structs for `Polar::load`.
+    #[must_use]
+    fn documents_to_polar_sources(&self) -> Vec<Source> {
+        self.documents
+            .values()
+            .map(|doc| Source {
+                filename: Some(doc.uri.to_string()),
+                src: doc.text.clone(),
+            })
+            .collect()
+    }
+
+    fn load_documents(&self) -> PolarResult<()> {
+        self.polar.load(self.documents_to_polar_sources())
+    }
+
     /// Reloads tracked documents into the `KnowledgeBase`, translates errors from `Polar::load`
     /// into diagnostics, and returns a set of diagnostics for publishing.
     ///
@@ -198,19 +223,14 @@ impl PolarLanguageServer {
     /// time from the core, but we republish 'empty' diagnostics for all other documents in order
     /// to purge stale diagnostics.
     #[must_use]
-    fn reload_kb(&self) -> HashMap<Url, PublishDiagnosticsParams> {
+    fn reload_kb(&self) -> Diagnostics {
         self.polar.clear_rules();
-        let sources = self
-            .documents
-            .iter()
-            .map(|(uri, doc)| Source {
-                filename: Some(uri.to_string()),
-                src: doc.text.clone(),
-            })
-            .collect();
         let mut diagnostics = self.empty_diagnostics_for_all_documents();
-        if let Err(e) = self.polar.load(sources) {
+        if let Err(e) = self.load_documents() {
             if let Some(d) = self.diagnostic_from_polar_error(&e) {
+                // NOTE(gj): this assertion should never fail b/c we should only get Polar errors
+                // for documents we load into the KB and this `diagnostics` map contains an (empty)
+                // entry for every document we load into the KB.
                 assert!(diagnostics.insert(d.uri.clone(), d).is_some());
             }
         }
@@ -220,11 +240,10 @@ impl PolarLanguageServer {
 
 /// Individual LSP notification handlers.
 impl PolarLanguageServer {
-    fn on_did_open_text_document(&mut self, params: DidOpenTextDocumentParams) {
-        self.add_document(params.text_document);
-        for (_, diagnostic) in self.reload_kb() {
-            self.send_diagnostics(diagnostic);
-        }
+    #[must_use]
+    fn on_did_open_text_document(&mut self, doc: TextDocumentItem) -> Diagnostics {
+        self.add_document(doc);
+        self.reload_kb()
     }
 
     fn on_did_change_text_document(&mut self, params: DidChangeTextDocumentParams) {
@@ -239,7 +258,7 @@ impl PolarLanguageServer {
 
         self.update_document(uri, version, content_changes[0].text.clone());
         for (_, diagnostic) in self.reload_kb() {
-            self.send_diagnostics(diagnostic);
+            self.send_diagnostics(&diagnostic);
         }
     }
 
@@ -247,13 +266,13 @@ impl PolarLanguageServer {
         for FileEvent { uri, typ } in params.changes {
             assert_eq!(typ, FileChangeType::Deleted); // We only watch for `Deleted` events.
             if let Some(removed) = self.remove_document(&uri) {
-                self.send_diagnostics(empty_diagnostics_for_document(&removed));
+                self.send_diagnostics(&empty_diagnostics_for_document(&removed));
             } else {
                 log(&format!("cannot remove untracked document {}", uri));
             }
         }
         for (_, diagnostic) in self.reload_kb() {
-            self.send_diagnostics(diagnostic);
+            self.send_diagnostics(&diagnostic);
         }
     }
 }
@@ -266,90 +285,103 @@ mod tests {
 
     fn new_pls() -> PolarLanguageServer {
         let noop = js_sys::Function::new_with_args("_params", "");
-        PolarLanguageServer::new(&noop)
+        let pls = PolarLanguageServer::new(&noop);
+        assert!(pls.reload_kb().is_empty());
+        pls
     }
 
-    fn doc_with_no_errors1() -> TextDocumentItem {
-        let apple = Url::parse("file:///apple.polar").unwrap();
-        TextDocumentItem::new(apple, "polar".to_owned(), 0, "apple();".to_owned())
+    fn polar_uri(name: &str) -> Url {
+        Url::parse(&format!("file:///{}.polar", name)).unwrap()
     }
 
-    fn doc_with_error1() -> TextDocumentItem {
-        let apple = Url::parse("file:///apple.polar").unwrap();
-        TextDocumentItem::new(apple, "polar".to_owned(), 0, "apple".to_owned())
+    fn polar_doc(name: &str, contents: String) -> TextDocumentItem {
+        TextDocumentItem::new(polar_uri(name), "polar".to_owned(), 0, contents)
     }
 
-    fn doc_with_error2() -> TextDocumentItem {
-        let apple = Url::parse("file:///banana.polar").unwrap();
-        TextDocumentItem::new(apple, "polar".to_owned(), 0, "banana".to_owned())
+    fn doc_with_no_errors(name: &str) -> TextDocumentItem {
+        polar_doc(name, format!("{}();", name))
     }
 
-    fn assert_missing_semicolon_error(params: PublishDiagnosticsParams, doc: TextDocumentItem) {
+    fn doc_with_missing_semicolon(name: &str) -> TextDocumentItem {
+        polar_doc(name, format!("{}()", name))
+    }
+
+    fn assert_missing_semicolon_error(params: &PublishDiagnosticsParams, doc: &TextDocumentItem) {
         assert_eq!(params.uri, doc.uri);
         assert_eq!(params.version.unwrap(), doc.version);
-        assert_eq!(params.diagnostics.len(), 1, "{:?}", params.diagnostics);
-        let diagnostic = params.diagnostics.into_iter().next().unwrap();
+        assert_eq!(params.diagnostics.len(), 1, "{}", doc.uri.to_string());
+        let diagnostic = params.diagnostics.get(0).unwrap();
         let expected_message = format!("hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column {column} in file {uri}", column=doc.text.len() + 1, uri=doc.uri);
         assert_eq!(diagnostic.message, expected_message);
     }
 
-    fn assert_no_errors(params: PublishDiagnosticsParams, doc: TextDocumentItem) {
+    fn assert_no_errors(params: &PublishDiagnosticsParams, doc: &TextDocumentItem) {
         assert_eq!(params.uri, doc.uri);
         assert_eq!(params.version.unwrap(), doc.version);
-        assert_eq!(params.diagnostics.len(), 0);
+        assert!(params.diagnostics.is_empty());
     }
 
     #[wasm_bindgen_test]
-    fn test_one_document_no_errors() {
+    fn test_on_did_open_text_document() {
         let mut pls = new_pls();
-        let doc = doc_with_no_errors1();
-        pls.add_document(doc.clone());
-        let params = pls.reload_kb();
-        assert_eq!(params.len(), 1);
-        let params = params.into_values().next().unwrap();
-        assert_no_errors(params, doc);
-    }
 
-    #[wasm_bindgen_test]
-    fn test_one_document_one_error() {
-        let mut pls = new_pls();
-        let doc = doc_with_error1();
-        pls.add_document(doc.clone());
-        let params = pls.reload_kb();
-        assert_eq!(params.len(), 1);
-        let params = params.into_values().next().unwrap();
-        assert_missing_semicolon_error(params, doc);
-    }
+        // Load a single doc w/ no errors.
+        let apple = doc_with_no_errors("apple");
+        let diagnostics = pls.on_did_open_text_document(apple.clone());
+        assert_eq!(diagnostics.len(), 1);
+        let apple_diagnostics = diagnostics.get(&apple.uri).unwrap();
+        assert_no_errors(apple_diagnostics, &apple);
 
-    #[wasm_bindgen_test]
-    fn test_two_documents_one_error() {
-        let mut pls = new_pls();
-        let valid = doc_with_no_errors1();
-        let invalid = doc_with_error2();
-        pls.add_document(valid.clone());
-        pls.add_document(invalid.clone());
-        let params = pls.reload_kb();
-        assert_eq!(params.len(), 2);
-        let mut params = params.into_values();
+        // Load a second doc w/ no errors.
+        let banana = doc_with_no_errors("banana");
+        let diagnostics = pls.on_did_open_text_document(banana.clone());
+        assert_eq!(diagnostics.len(), 2);
+        let apple_diagnostics = diagnostics.get(&apple.uri).unwrap();
+        let banana_diagnostics = diagnostics.get(&banana.uri).unwrap();
+        assert_no_errors(apple_diagnostics, &apple);
+        assert_no_errors(banana_diagnostics, &banana);
+
+        // Load a third doc w/ errors.
+        let canteloupe = doc_with_missing_semicolon("canteloupe");
+        let diagnostics = pls.on_did_open_text_document(canteloupe.clone());
+        assert_eq!(diagnostics.len(), 3);
+        let apple_diagnostics = diagnostics.get(&apple.uri).unwrap();
+        let banana_diagnostics = diagnostics.get(&banana.uri).unwrap();
+        let canteloupe_diagnostics = diagnostics.get(&canteloupe.uri).unwrap();
+        assert_no_errors(apple_diagnostics, &apple);
+        assert_no_errors(banana_diagnostics, &banana);
+        assert_missing_semicolon_error(canteloupe_diagnostics, &canteloupe);
+
+        // Load a fourth doc w/ errors.
+        let date = doc_with_missing_semicolon("date");
+        let diagnostics = pls.on_did_open_text_document(date.clone());
+        assert_eq!(diagnostics.len(), 4);
+        let apple_diagnostics = diagnostics.get(&apple.uri).unwrap();
+        let banana_diagnostics = diagnostics.get(&banana.uri).unwrap();
+        let canteloupe_diagnostics = diagnostics.get(&canteloupe.uri).unwrap();
+        let date_diagnostics = diagnostics.get(&date.uri).unwrap();
+        assert_no_errors(apple_diagnostics, &apple);
+        assert_no_errors(banana_diagnostics, &banana);
         // NOTE(gj): we currently surface at most one error per `Polar::load` call, so even if two
         // documents have semicolon errors we'll only publish a single diagnostic.
-        assert_missing_semicolon_error(params.next().unwrap(), invalid);
-        assert_no_errors(params.next().unwrap(), valid);
-    }
+        assert_no_errors(canteloupe_diagnostics, &canteloupe);
+        assert_missing_semicolon_error(date_diagnostics, &date);
 
-    #[wasm_bindgen_test]
-    fn test_two_documents_two_errors() {
-        let mut pls = new_pls();
-        let invalid1 = doc_with_error1();
-        let invalid2 = doc_with_error2();
-        pls.add_document(invalid1.clone());
-        pls.add_document(invalid2.clone());
-        let params = pls.reload_kb();
-        assert_eq!(params.len(), 2);
-        let mut params = params.into_values();
+        // Load a fifth doc w/ no errors.
+        let elderberry = doc_with_no_errors("elderberry");
+        let diagnostics = pls.on_did_open_text_document(elderberry.clone());
+        assert_eq!(diagnostics.len(), 5);
+        let apple_diagnostics = diagnostics.get(&apple.uri).unwrap();
+        let banana_diagnostics = diagnostics.get(&banana.uri).unwrap();
+        let canteloupe_diagnostics = diagnostics.get(&canteloupe.uri).unwrap();
+        let date_diagnostics = diagnostics.get(&date.uri).unwrap();
+        let elderberry_diagnostics = diagnostics.get(&elderberry.uri).unwrap();
+        assert_no_errors(apple_diagnostics, &apple);
+        assert_no_errors(banana_diagnostics, &banana);
         // NOTE(gj): we currently surface at most one error per `Polar::load` call, so even if two
         // documents have semicolon errors we'll only publish a single diagnostic.
-        assert_missing_semicolon_error(params.next().unwrap(), invalid1);
-        assert_no_errors(params.next().unwrap(), invalid2);
+        assert_no_errors(canteloupe_diagnostics, &canteloupe);
+        assert_missing_semicolon_error(date_diagnostics, &date);
+        assert_no_errors(elderberry_diagnostics, &elderberry);
     }
 }
