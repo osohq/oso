@@ -2414,14 +2414,6 @@ fn test_default_rule_types() -> TestResult {
         .expect_err("Expected validation error");
     assert!(matches!(e.kind, ErrorKind::Validation(_)));
     let e = p
-        .load_str(r#"has_role("leina", "eater", "food");"#)
-        .expect_err("Expected validation error");
-    assert!(matches!(e.kind, ErrorKind::Validation(_)));
-    let e = p
-        .load_str(r#"has_relation("leina", "eater", "food");"#)
-        .expect_err("Expected validation error");
-    assert!(matches!(e.kind, ErrorKind::Validation(_)));
-    let e = p
         .load_str(r#"allow("leina", "food");"#)
         .expect_err("Expected validation error");
     assert!(matches!(e.kind, ErrorKind::Validation(_)));
