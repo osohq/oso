@@ -31,8 +31,8 @@ impl Polar {
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = registerConstant)]
-    pub fn wasm_register_constant(&mut self, name: &str, value: JsValue) -> JsResult<()> {
-        let term = serde_wasm_bindgen::from_value(value)?;
+    pub fn wasm_register_constant(&mut self, name: &str, term: JsValue) -> JsResult<()> {
+        let term = serde_wasm_bindgen::from_value(term)?;
         self.0
             .register_constant(Symbol::new(name), term)
             .map_err(Error::from)?;
@@ -54,8 +54,8 @@ impl Polar {
     }
 
     #[wasm_bindgen(js_class = Polar, js_name = newQueryFromTerm)]
-    pub fn wasm_new_query_from_term(&self, value: JsValue) -> JsResult<Query> {
-        let term = serde_wasm_bindgen::from_value(value)?;
+    pub fn wasm_new_query_from_term(&self, term: JsValue) -> JsResult<Query> {
+        let term = serde_wasm_bindgen::from_value(term)?;
         Ok(Query::from(self.0.new_query_from_term(term, false)))
     }
 
