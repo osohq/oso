@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
+    rc::Rc,
 };
 
 use crate::{
@@ -22,6 +23,165 @@ type Map<A, B> = HashMap<A, B>;
 type Set<A> = HashSet<A>;
 pub type Types = Map<TypeName, Map<FieldName, Type>>;
 pub type PartialResults = Vec<ResultEvent>;
+
+#[derive(PartialEq, Debug, Serialize)]
+pub struct Proj(Rc<DataFilter>, String);
+#[derive(PartialEq, Debug, Serialize)]
+pub enum Datum { Field(Proj), Imm(Value), }
+#[derive(PartialEq, Debug, Serialize)]
+pub enum SelOp { Eq, Neq, In, Nin, }
+
+#[derive(PartialEq, Debug, Serialize)]
+pub enum DataFilter {
+    Source(String),
+    Select {
+        source: Rc<DataFilter>,
+        lhs: Proj,
+        rhs: Datum,
+        kind: SelOp,
+    },
+    Join {
+        left: Rc<DataFilter>,
+        lcol: Proj,
+        rcol: Proj,
+        right: Rc<DataFilter>,
+    }
+}
+
+#[derive(Default, Debug)]
+struct QueryInfo {
+    entities: Map<Vec<String>, Rc<DataFilter>>,
+    constraints: Vec<(Datum, SelOp, Datum)>,
+}
+
+impl DataFilter {
+    fn build(
+        types: Types,
+        partials: PartialResults,
+        var: &str,
+        class: &str,
+    ) -> PolarResult<Rc<Self>> {
+        partials
+            .iter()
+            .find_map(|result| {
+                result.bindings.get(&Symbol::new(var)).and_then(|term| {
+                    match term.value().as_expression() {
+                        Ok(exp) if exp.operator == Operator::And =>
+                            Some(Self::from_expr(term)),
+                        _ => None
+                    }
+                })
+            })
+            .unwrap_or_else(|| {
+                err_invalid(format!("DataFilter::build({:?}, {:?}, {}, {})", types, partials, var, class))
+            })
+    }
+
+    fn from_pattern(t: &Term) -> PolarResult<Self> {
+        match t.value() {
+            Value::Pattern(Pattern::Instance(InstanceLiteral { tag, fields }))
+                if fields.is_empty() => Ok(Self::Source(tag.0.clone())),
+            _ => err_unimplemented(format!("DataFilter::from_pattern({})", t.to_polar())),
+
+        }
+    }
+
+    fn from_expr(t: &Term) -> PolarResult<Rc<Self>> {
+        let invalid = || err_invalid(format!("DataFilter::from_expr({})", t.to_polar()));
+        use DataFilter::*;
+        match t.value() {
+            Value::Expression(Operation { operator: Operator::And, args }) => {
+                let args: PolarResult<Vec<_>> = args.iter().map(|t| t.value().as_expression().map(|x|x.clone()).map_err(|e| e.into())).collect();
+                let QueryInfo { mut constraints, .. } = QueryInfo::new(args?)?;
+                match constraints.pop() {
+                    Some((Datum::Field(lhs), kind, rhs)) => {
+                        let source = lhs.0.clone();
+                        constraints.into_iter().fold(
+                            Ok(Rc::new(Select { kind, lhs, rhs, source })),
+                            |source, (lhs, kind, rhs)| match lhs {
+                                Datum::Field(lhs) => Ok(Rc::new(Select { kind, lhs, rhs, source: source?.clone() })),
+                                _ => invalid(),
+                            })
+                    }
+                    _ => invalid(),
+                }
+            },
+            _ => invalid(),
+        }
+    }
+
+}
+
+
+impl QueryInfo {
+    fn path_disasm(t: &Term) -> PolarResult<Vec<String>> {
+        use Operator::*;
+        match t.value() {
+            Value::Expression(Operation { operator: Dot, args }) if args.len() == 2 && args[1].value().as_string().is_ok() => {
+                let mut p = Self::path_disasm(&args[0])?;
+                p.push(args[1].value().as_string().unwrap().to_string());
+                Ok(p)
+            }
+            Value::Variable(Symbol(s)) => Ok(vec![s.clone()]),
+            _ => err_unimplemented(format!("QueryInfo::path_disasm({})", t.to_polar())),
+        }
+    }
+    fn datum(&mut self, t: &Term) -> PolarResult<Datum> {
+        use {Datum::*, Operator::*};
+        match t.value() {
+            Value::Number(_) | Value::String(_) => 
+                Ok(Imm(t.value().clone())),
+            Value::Expression(Operation { operator: Dot, args }) if args.len() == 2 && args[1].value().as_string().is_ok() =>
+                Ok(Field(Proj(self.source(&args[0])?, args[1].value().as_string()?.to_string()))),
+            _ => err_unimplemented(format!("datum({})", t.to_polar())),
+        }
+    }
+
+    fn source(&mut self, t: &Term) -> PolarResult<Rc<DataFilter>> {
+        match self.entities.get(&Self::path_disasm(t)?) {
+            Some(src) => Ok(src.clone()),
+            _ => err_invalid(format!("{:?}.source({})", self, t.to_polar())),
+        }
+    }
+
+    fn new(parts: Vec<Operation>) -> PolarResult<Self> {
+        use Operator::*;
+        let (isas, othas): (Vec<_>, Vec<_>) = parts.into_iter().partition(|x| {
+            matches!(x, Operation { operator: Isa, args } if args.len() == 2)
+        });
+        let entities = isas.into_iter().map(|Operation { args, .. }| {
+            Ok((Self::path_disasm(&args[0])?, Rc::new(DataFilter::from_pattern(&args[1])?)))
+        }).collect::<PolarResult<HashMap<_, _>>>()?;
+        othas.into_iter().fold(Ok(Self { entities, ..Default::default() }), |this, opn| {
+            this?.constrain(&opn)
+        })
+    }
+
+    fn binary_op(mut self, args: &[Term], op: SelOp) -> PolarResult<Self> {
+        let (l, r) = (self.datum(&args[0])?, self.datum(&args[1])?);
+        self.constraints.push((l, op, r));
+        Ok(self)
+    }
+
+    fn constrain(self, part: &Operation) -> PolarResult<Self> {
+        use Operator::*;
+        match part.operator {
+            And => part.args.iter().fold(Ok(self), |this, c| {
+                this?.constrain(c.value().as_expression().unwrap())
+            }),
+            Isa if part.args.len() == 2 => {
+                Ok(self)
+            }
+            Eq | Unify | Assign if part.args.len() == 2 => {
+                self.binary_op(&part.args, SelOp::Eq)
+            }
+            Neq if part.args.len() == 2 => {
+                self.binary_op(&part.args, SelOp::Neq)
+            }
+            _ => err_unimplemented(format!("constrain({})", part.to_polar())),
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Type {
@@ -1062,13 +1222,12 @@ mod test {
         b.is_empty()
     }
 
-    #[test]
-    fn test_dot_plan() -> TestResult {
+    fn test_input_0() -> Term {
         let ins0: Term = ExternalInstance::from(0).into();
         let ins1: Term = ExternalInstance::from(1).into();
         let pat_a = term!(pattern!(instance!("A")));
         let pat_b = term!(pattern!(instance!("B")));
-        let partial = term!(op!(
+        term!(op!(
             And,
             term!(op!(Isa, var!("_this"), pat_a)),
             term!(op!(Isa, ins0.clone(), pat_b.clone())),
@@ -1083,8 +1242,60 @@ mod test {
                 term!(op!(Dot, var!("_this"), str!("field"))),
                 ins1
             ))
-        ));
+        ))
+    }
 
+    fn test_input_1() -> Term {
+        let pat_a = term!(pattern!(instance!("A")));
+        term!(op!(And,
+            term!(op!(Isa,   var!("_this"), pat_a)),
+            term!(op!(Unify, term!(op!(Dot, var!("_this"), str!("attr"))),
+                             term!(0.29))),
+            term!(op!(Neq,   term!(op!(Dot, var!("_this"), str!("attr"))),
+                             term!(op!(Dot, var!("_this"), str!("attr_x")))))))
+    }
+    fn test_input_2() -> Term {
+        let pat_a = term!(pattern!(instance!("A")));
+        let pat_b = term!(pattern!(instance!("B")));
+        term!(op!(And,
+            term!(op!(Isa,   var!("_this"), pat_a)),
+            term!(op!(Isa,   term!(op!(Dot, var!("_this"), str!("attr"))), pat_b)),
+            term!(op!(Unify, term!(op!(Dot, term!(op!(Dot, var!("_this"), str!("attr"))), str!("x"))),
+                             term!(op!(Dot, var!("_this"), str!("attr_x")))))))
+    }
+
+    #[test]
+    fn test_data_filter() -> TestResult {
+        let input = test_input_1();
+        let r1 = DataFilter::from_expr(&input)?;
+        let r2 = DataFilter::build(
+             hashmap! {
+                "A".to_owned() => hashmap! {
+                    "field".to_owned() => Type::Base {
+                        class_tag: "B".to_owned()
+                    }
+                },
+                "B".to_owned() => hashmap! {
+                    "field".to_owned() => Type::Base {
+                        class_tag: "A".to_owned()
+                    }
+                }
+            },
+            vec![ResultEvent::from(hashmap! { sym!("resource") => input })],
+            "resource",
+            "something")?;
+        assert_eq!(r1, r2);
+        let input = test_input_2();
+        let r1 = DataFilter::from_expr(&input)?;
+        eprintln!("{:?}", r1);
+        assert!(false);
+        Ok(())
+    }
+
+
+    #[test]
+    fn test_dot_plan() -> TestResult {
+        let partial = test_input_0();
         let bindings = ResultEvent::from(hashmap! {
             sym!("resource") => partial
         });
@@ -1157,4 +1368,5 @@ mod test {
             _ => panic!("unexpected"),
         }
     }
+
 }
