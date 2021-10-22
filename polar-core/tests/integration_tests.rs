@@ -1578,6 +1578,7 @@ fn test_unknown_specializer_warning() -> TestResult {
     Ok(())
 }
 
+#[ignore]
 #[test]
 fn test_missing_actor_hint() -> TestResult {
     let p = Polar::new();
