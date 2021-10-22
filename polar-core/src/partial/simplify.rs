@@ -132,6 +132,8 @@ pub fn simplify_partial(
 }
 
 pub fn simplify_bindings(bindings: Bindings) -> Option<Bindings> {
+	let span = tracy_client::span!("simplify bindings");
+    span.emit_color(0x7d309c);
     simplify_bindings_opt(bindings, true)
         .expect("unexpected error thrown by the simplifier when simplifying all bindings")
 }
