@@ -855,6 +855,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
+ "tracy-client",
  "wasm-bindgen",
 ]
 
@@ -1495,6 +1496,24 @@ dependencies = [
  "sharded-slab",
  "thread_local",
  "tracing-core",
+]
+
+[[package]]
+name = "tracy-client"
+version = "0.12.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a49133e2b4f358ddf7aff5288e0120eeb90d1a5200033fbc2ac4735347fc2b9c"
+dependencies = [
+ "tracy-client-sys",
+]
+
+[[package]]
+name = "tracy-client-sys"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6226e4e77f0d46ce7ebb0a4b1daa82790035248b75bbf605b932a1d7b3b22b6d"
+dependencies = [
+ "cc",
 ]
 
 [[package]]
