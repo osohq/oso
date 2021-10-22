@@ -71,12 +71,7 @@ impl PolarLanguageServer {
             DidCloseTextDocument::METHOD => (),
             // Nothing to do when we receive the `Initialized` notification.
             Initialized::METHOD => (),
-            _ => {
-                log(&format!(
-                    "[WASM] on_notification\n\t{} => {:?}",
-                    method, params
-                ));
-            }
+            _ => log(&format!("[pls] on_notification {} {:?}", method, params)),
         }
     }
 }
