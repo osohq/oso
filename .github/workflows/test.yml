@@ -279,6 +279,8 @@ jobs:
         run: rustup target add wasm32-unknown-unknown
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Test polar-wasm-api
+        run: make wasm-test
       - name: Test js
         run: make js-test
 

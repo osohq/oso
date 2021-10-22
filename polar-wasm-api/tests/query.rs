@@ -9,11 +9,11 @@ use polar_core::terms::*;
 #[allow(clippy::float_cmp)]
 fn call_result_succeeds() {
     let mut polar = polar_wasm_api::Polar::wasm_new();
-    let term = Value::ExternalInstance(ExternalInstance {
+    let term = Term::from(Value::ExternalInstance(ExternalInstance {
         instance_id: 1,
         constructor: None,
         repr: None,
-    });
+    }));
     let term = serde_wasm_bindgen::to_value(&term).unwrap();
     polar.wasm_register_constant("y", term).unwrap();
     let source = Source {
@@ -31,7 +31,7 @@ fn call_result_succeeds() {
     let call_id = Reflect::get(&event_data, &event_field).unwrap();
     assert_eq!(call_id, 3.0);
 
-    let call_result = serde_wasm_bindgen::to_value(&Value::Boolean(true)).unwrap();
+    let call_result = serde_wasm_bindgen::to_value(&Term::from(Value::Boolean(true))).unwrap();
     query.wasm_call_result(3.0, call_result).unwrap();
 
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
@@ -52,11 +52,11 @@ fn call_result_succeeds() {
 #[allow(clippy::float_cmp)]
 fn app_error_succeeds() {
     let mut polar = polar_wasm_api::Polar::wasm_new();
-    let term = Value::ExternalInstance(ExternalInstance {
+    let term = Term::from(Value::ExternalInstance(ExternalInstance {
         instance_id: 1,
         constructor: None,
         repr: None,
-    });
+    }));
     let term = serde_wasm_bindgen::to_value(&term).unwrap();
     polar.wasm_register_constant("y", term).unwrap();
     let source = Source {
