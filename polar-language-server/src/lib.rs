@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use lsp_types::{
     notification::{
@@ -32,12 +32,12 @@ fn log(s: &str) {
 
 #[wasm_bindgen]
 pub struct PolarLanguageServer {
-    documents: HashMap<Url, TextDocumentItem>,
+    documents: BTreeMap<Url, TextDocumentItem>,
     polar: Polar,
     send_diagnostics_callback: js_sys::Function,
 }
 
-type Diagnostics = HashMap<Url, PublishDiagnosticsParams>;
+type Diagnostics = BTreeMap<Url, PublishDiagnosticsParams>;
 
 #[must_use]
 fn range_from_polar_error_context(PolarError { context: c, .. }: &PolarError) -> Range {
@@ -82,7 +82,7 @@ impl PolarLanguageServer {
         console_error_panic_hook::set_once();
 
         Self {
-            documents: HashMap::new(),
+            documents: BTreeMap::new(),
             polar: Polar::default(),
             send_diagnostics_callback: send_diagnostics_callback.clone(),
         }
@@ -318,7 +318,7 @@ mod tests {
     fn assert_no_errors(params: &PublishDiagnosticsParams, doc: &TextDocumentItem) {
         assert_eq!(params.uri, doc.uri);
         assert_eq!(params.version.unwrap(), doc.version);
-        assert!(params.diagnostics.is_empty());
+        assert!(params.diagnostics.is_empty(), "{:?}", params.diagnostics);
     }
 
     #[wasm_bindgen_test]
@@ -362,10 +362,10 @@ mod tests {
         let date_diagnostics = diagnostics.get(&date.uri).unwrap();
         assert_no_errors(apple_diagnostics, &apple);
         assert_no_errors(banana_diagnostics, &banana);
+        assert_missing_semicolon_error(canteloupe_diagnostics, &canteloupe);
         // NOTE(gj): we currently surface at most one error per `Polar::load` call, so even if two
         // documents have semicolon errors we'll only publish a single diagnostic.
-        assert_no_errors(canteloupe_diagnostics, &canteloupe);
-        assert_missing_semicolon_error(date_diagnostics, &date);
+        assert_no_errors(date_diagnostics, &date);
 
         // Load a fifth doc w/ no errors.
         let elderberry = doc_with_no_errors("elderberry");
@@ -378,10 +378,10 @@ mod tests {
         let elderberry_diagnostics = diagnostics.get(&elderberry.uri).unwrap();
         assert_no_errors(apple_diagnostics, &apple);
         assert_no_errors(banana_diagnostics, &banana);
+        assert_missing_semicolon_error(canteloupe_diagnostics, &canteloupe);
         // NOTE(gj): we currently surface at most one error per `Polar::load` call, so even if two
         // documents have semicolon errors we'll only publish a single diagnostic.
-        assert_no_errors(canteloupe_diagnostics, &canteloupe);
-        assert_missing_semicolon_error(date_diagnostics, &date);
+        assert_no_errors(date_diagnostics, &date);
         assert_no_errors(elderberry_diagnostics, &elderberry);
     }
 }
