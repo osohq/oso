@@ -25,7 +25,7 @@ pub struct PolarLanguageServer {
     send_diagnostics_callback: js_sys::Function,
 }
 
-fn range_from_polar_error(PolarError { context: c, .. }: &PolarError) -> Range {
+fn range_from_polar_error_context(PolarError { context: c, .. }: &PolarError) -> Range {
     let (line, character) = c.as_ref().map_or((0, 0), |c| (c.row as _, c.column as _));
     Range {
         start: Position { line, character },
@@ -164,7 +164,7 @@ impl PolarLanguageServer {
     fn diagnostic_from_polar_error(&self, e: &PolarError) -> Option<PublishDiagnosticsParams> {
         self.document_from_polar_error_context(e).map(|d| {
             let diagnostic = Diagnostic {
-                range: range_from_polar_error(e),
+                range: range_from_polar_error_context(e),
                 severity: Some(DiagnosticSeverity::Error),
                 source: Some("polar-language-server".to_owned()),
                 message: e.to_string(),
