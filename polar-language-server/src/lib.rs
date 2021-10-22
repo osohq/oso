@@ -129,13 +129,9 @@ impl PolarLanguageServer {
                 let diagnostic = Diagnostic {
                     range: range_from_polar_error(e),
                     severity: Some(DiagnosticSeverity::Error),
-                    code: None,
-                    code_description: None,
                     source: Some("polar-language-server".to_owned()),
                     message: e.to_string(),
-                    related_information: None,
-                    tags: None,
-                    data: None,
+                    ..Default::default()
                 };
                 let document = self.documents.get(&uri).unwrap();
                 PublishDiagnosticsParams {
