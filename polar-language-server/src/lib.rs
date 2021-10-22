@@ -14,8 +14,15 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 extern "C" {
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
+    #[wasm_bindgen(js_namespace = console, js_name = log)]
+    fn console_log(s: &str);
+}
+
+fn log(s: &str) {
+    #[allow(unused_unsafe)]
+    unsafe {
+        console_log(&("[pls] ".to_owned() + s))
+    }
 }
 
 #[wasm_bindgen]
@@ -40,19 +47,19 @@ fn uri_from_polar_error_context(e: &PolarError) -> Option<Url> {
                 Ok(uri) => return Some(uri),
                 Err(err) => {
                     log(&format!(
-                        "[pls] Url::parse error: {}\n\tFilename: {}\n\tError: {}",
+                        "Url::parse error: {}\n\tFilename: {}\n\tError: {}",
                         err, filename, e
                     ));
                 }
             }
         } else {
             log(&format!(
-                "[pls] source missing filename:\n\t{:?}\n\tError: {}",
+                "source missing filename:\n\t{:?}\n\tError: {}",
                 context.source, e
             ));
         }
     } else {
-        log(&format!("[pls] missing error context:\n\t{:?}", e));
+        log(&format!("missing error context:\n\t{:?}", e));
     }
     None
 }
@@ -95,7 +102,7 @@ impl PolarLanguageServer {
             DidCloseTextDocument::METHOD => (),
             // Nothing to do when we receive the `Initialized` notification.
             Initialized::METHOD => (),
-            _ => log(&format!("[pls] on_notification {} {:?}", method, params)),
+            _ => log(&format!("on_notification {} {:?}", method, params)),
         }
     }
 }
@@ -130,7 +137,7 @@ impl PolarLanguageServer {
         let params = &serde_wasm_bindgen::to_value(&params).unwrap();
         if let Err(e) = self.send_diagnostics_callback.call1(this, params) {
             log(&format!(
-                "[pls] send_diagnostics params:\n\t{:?}\n\tJS error: {:?}",
+                "send_diagnostics params:\n\t{:?}\n\tJS error: {:?}",
                 params, e
             ));
         }
@@ -151,7 +158,7 @@ impl PolarLanguageServer {
                 let tracked_docs = self.documents.keys().map(ToString::to_string);
                 let tracked_docs = tracked_docs.collect::<Vec<_>>().join(", ");
                 log(&format!(
-                    "[pls] untracked document: {}\n\tTracked documents: {}\n\tError: {}",
+                    "untracked document: {}\n\tTracked documents: {}\n\tError: {}",
                     uri, tracked_docs, e
                 ));
                 None
@@ -233,7 +240,7 @@ impl PolarLanguageServer {
             if let Some(removed) = self.remove_document(&uri) {
                 self.send_diagnostics(empty_diagnostics_for_document(&removed));
             } else {
-                log(&format!("[pls] cannot remove untracked document {}", uri));
+                log(&format!("cannot remove untracked document {}", uri));
             }
         }
         for (_, diagnostic) in self.reload_kb() {
