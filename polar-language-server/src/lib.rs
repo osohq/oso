@@ -164,7 +164,7 @@ impl PolarLanguageServer {
             })
             .collect();
         let mut diagnostics = self.empty_diagnostics_for_all_documents();
-        if let Some(e) = self.polar.load(sources).err() {
+        if let Err(e) = self.polar.load(sources) {
             if let Some(d) = self.polar_error_to_diagnostic(&e) {
                 assert!(diagnostics.insert(d.uri.clone(), d).is_some());
             }
