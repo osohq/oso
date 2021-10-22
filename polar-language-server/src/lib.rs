@@ -32,6 +32,7 @@ pub struct PolarLanguageServer {
     send_diagnostics_callback: js_sys::Function,
 }
 
+#[must_use]
 fn range_from_polar_error_context(PolarError { context: c, .. }: &PolarError) -> Range {
     let (line, character) = c.as_ref().map_or((0, 0), |c| (c.row as _, c.column as _));
     Range {
@@ -40,6 +41,7 @@ fn range_from_polar_error_context(PolarError { context: c, .. }: &PolarError) ->
     }
 }
 
+#[must_use]
 fn uri_from_polar_error_context(e: &PolarError) -> Option<Url> {
     if let Some(context) = e.context.as_ref() {
         if let Some(filename) = context.source.filename.as_ref() {
@@ -67,6 +69,7 @@ fn uri_from_polar_error_context(e: &PolarError) -> Option<Url> {
 /// Public API exposed via WASM.
 #[wasm_bindgen]
 impl PolarLanguageServer {
+    #[must_use]
     #[wasm_bindgen(constructor)]
     pub fn new(send_diagnostics_callback: &js_sys::Function) -> Self {
         console_error_panic_hook::set_once();
@@ -107,6 +110,7 @@ impl PolarLanguageServer {
     }
 }
 
+#[must_use]
 fn empty_diagnostics_for_document(document: &TextDocumentItem) -> PublishDiagnosticsParams {
     PublishDiagnosticsParams {
         uri: document.uri.clone(),
@@ -128,6 +132,7 @@ impl PolarLanguageServer {
         });
     }
 
+    #[must_use]
     fn remove_document(&mut self, uri: &Url) -> Option<TextDocumentItem> {
         self.documents.remove(uri)
     }
@@ -143,6 +148,7 @@ impl PolarLanguageServer {
         }
     }
 
+    #[must_use]
     fn empty_diagnostics_for_all_documents(&self) -> HashMap<Url, PublishDiagnosticsParams> {
         self.documents
             .values()
@@ -150,6 +156,7 @@ impl PolarLanguageServer {
             .collect()
     }
 
+    #[must_use]
     fn document_from_polar_error_context(&self, e: &PolarError) -> Option<&TextDocumentItem> {
         uri_from_polar_error_context(e).and_then(|uri| {
             if let Some(document) = self.documents.get(&uri) {
@@ -166,6 +173,7 @@ impl PolarLanguageServer {
         })
     }
 
+    #[must_use]
     fn diagnostic_from_polar_error(&self, e: &PolarError) -> Option<PublishDiagnosticsParams> {
         self.document_from_polar_error_context(e).map(|d| {
             let diagnostic = Diagnostic {
@@ -189,6 +197,7 @@ impl PolarLanguageServer {
     /// NOTE(gj): we currently only receive a single error (pertaining to a single document) at a
     /// time from the core, but we republish 'empty' diagnostics for all other documents in order
     /// to purge stale diagnostics.
+    #[must_use]
     fn reload_kb(&self) -> HashMap<Url, PublishDiagnosticsParams> {
         self.polar.clear_rules();
         let sources = self
