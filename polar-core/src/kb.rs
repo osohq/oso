@@ -192,8 +192,12 @@ impl KnowledgeBase {
         rule_type_instance: &InstanceLiteral,
         index: usize,
     ) -> PolarResult<RuleParamMatch> {
+        // TODO @patrickod remove this hacky comparison edge-case by making Actor and Resource "real" classes
+        if (rule_instance.tag.0 == RESOURCE_UNION_NAME) || (rule_instance.tag.0 == ACTOR_UNION_NAME)
+        {
+            Ok(RuleParamMatch::True)
         // Get the unique ID of the prototype instance pattern class.
-        if let Some(Value::ExternalInstance(ExternalInstance { instance_id, .. })) = self
+        } else if let Some(Value::ExternalInstance(ExternalInstance { instance_id, .. })) = self
             .constants
             .get(&rule_type_instance.tag)
             .map(|t| t.value())
@@ -729,45 +733,79 @@ impl KnowledgeBase {
 
     pub fn create_resource_specific_rule_types(&mut self) -> PolarResult<()> {
         let mut unique_relations = HashSet::new();
+        let mut rule_types: Vec<Rule> = Vec::new();
+        let mut unique_resource_types = HashSet::new();
 
         // Iterate through resource blocks and construct tuples describing the
         // unique relationships traversed in shorthand rules.
         for (object, shorthand_rules) in &self.resource_blocks.shorthand_rules {
             for shorthand_rule in shorthand_rules {
-                if let ShorthandRule {
-                    head: _,
-                    body: (_, Some(relation)),
-                } = shorthand_rule
-                {
-                    if let Some(Declaration::Relation(subject)) = self
-                        .resource_blocks
-                        .declarations
-                        .get(object)
-                        .unwrap()
-                        .get(relation)
-                    {
-                        unique_relations.insert((
-                            subject.value().as_symbol()?.clone(),
-                            relation.value().as_string()?,
-                            object.value().as_symbol()?.clone(),
-                        ));
-                    } else {
-                        panic!("shorthand rule defined for non-existance resource block");
+                match shorthand_rule {
+                    ShorthandRule {
+                        head: _,
+                        body: (implier, Some(relation)),
+                    } => {
+                        if let Some(Declaration::Relation(subject)) = self
+                            .resource_blocks
+                            .declarations
+                            .get(object)
+                            .unwrap()
+                            .get(relation)
+                        {
+                            unique_relations.insert((
+                                subject.value().as_symbol()?.clone(),
+                                relation.value().as_string()?,
+                                object.value().as_symbol()?.clone(),
+                            ));
+
+                            if let Some(Declaration::Relation(related_subject)) = self
+                                .resource_blocks
+                                .declarations
+                                .get(subject)
+                                .unwrap()
+                                .get(implier)
+                            {
+                                unique_relations.insert((
+                                    related_subject.value().as_symbol()?.clone(),
+                                    implier.value().as_string()?,
+                                    subject.value().as_symbol()?.clone(),
+                                ));
+                            }
+                        }
+                    }
+                    ShorthandRule {
+                        head: _,
+                        body: (implier, None),
+                    } => {
+                        if let Some(Declaration::Relation(subject)) = self
+                            .resource_blocks
+                            .declarations
+                            .get(object)
+                            .unwrap()
+                            .get(implier)
+                        {
+                            unique_relations.insert((
+                                subject.value().as_symbol()?.clone(),
+                                implier.value().as_string()?,
+                                object.value().as_symbol()?.clone(),
+                            ));
+                        }
                     }
                 }
             }
         }
-
-        let mut rule_types: Vec<Rule> = Vec::new();
-        let mut unique_resource_types = HashSet::new();
 
         unique_relations.into_iter().for_each(|(subject, relation_name, object)| {
             unique_resource_types.insert(subject.clone());
             rule_types.push(rule!("has_relation", ["_subject"; instance!(subject), value!(relation_name), "_object"; instance!(object)]))
         });
 
-        for resource_type in unique_resource_types.into_iter() {
-            rule_types.push(rule!("has_role", ["actor"; instance!(sym!("Actor")), "_role"; instance!(sym!("String")), "resource"; instance!(resource_type)]));
+        for (object, declarations) in &self.resource_blocks.declarations {
+            for declaration in declarations.values() {
+                if let Declaration::Role = declaration {
+                    rule_types.push(rule!("has_role", ["actor"; instance!(sym!("Actor")), "_role"; instance!(sym!("String")), "resource"; instance!(object.value().as_symbol().unwrap().clone())]));
+                }
+            }
         }
 
         for rule_type in rule_types {
