@@ -65,14 +65,43 @@ session.commit()
 # docs: begin-a2
 # build_query takes a list of filters and returns a query
 def build_query(filters):
+    handlers = {
+        'Eq': lambda a, b: a == b,
+        'Neq': lambda a, b: a != b,
+        'In': lambda a, b: a.in_(b),
+        'Nin': lambda a, b: not_(a.in_(b)),
+    }
+
     query = session.query(Repository)
+
     for filter in filters:
-        assert filter.kind in ["Eq", "In"]
-        field = getattr(Repository, filter.field)
-        if filter.kind == "Eq":
-            query = query.filter(field == filter.value)
-        elif filter.kind == "In":
-            query = query.filter(field.in_(filter.value))
+        assert filter.kind in ["Eq", "In", "Neq", "Nin"]
+
+        # are we directly comparing the base object?
+        if filter.field is None:
+            field = cls.id
+            if fil.kind != 'Nin':
+                value = fil.value.id
+            else:
+                value = [value.id for value in fil.value]
+
+        # do we have simultaneous field conditions?
+        elif isinstance(filter.field, list):
+            field = [cls.id if fld is None else getattr(cls, fld)]
+            value = filter.value
+        else:
+            field = getattr(Repository, filter.field)
+            value = filter.value
+
+        if not isinstance(field, list):
+            cond = handlers[filter.kind](field, value)
+        else:
+            combine = handlers['Eq' if filter.kind == 'In' else 'Neq']
+            conds = [and_(*[co(*fv) for fv in zip(field, val)]) for val in value]
+            cond = or_(*conds) if conds else false()
+
+        query = query.filter(cond)
+
     return query
 
 

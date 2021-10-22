@@ -52,12 +52,24 @@ class OrgRole {
 
 // docs: begin-b2
 const constrain = (query, filter) => {
-  switch (filter.kind) {
-    case "Eq": query[filter.field] = filter.value; break;
-    case "Neq": query[filter.field] = Not(filter.value); break;
-    case "In": query[filter.field] = In(filter.value); break;
-    default:
-      throw new Error(`Unknown filter kind: ${filter.kind}`);
+  if (filter.field === undefined)
+    filter.field = 'id';
+
+  if (filter.field instanceof Array) {
+    for (const i in filter.field) {
+      const val = filter.value[i];
+      const fld = filter.field[i];
+      query[fld] = filter.kind === 'In' ? val : Not(val);
+    }
+  } else {
+    switch (filter.kind) {
+      case "Eq": query[filter.field] = filter.value; break;
+      case "Neq": query[filter.field] = Not(filter.value); break;
+      case "In": query[filter.field] = In(filter.value); break;
+      case "Nin": query[filter.field] = Not(In(filter.value)); break;
+      default:
+        throw new Error(`Unknown filter kind: ${filter.kind}`);
+    }
   }
 
   return query;
@@ -133,7 +145,7 @@ createConnection({
   // docs: end-b2
 
   // docs: begin-b3
-  oso.loadFiles(["policy_b.polar"]);
+  oso.loadFiles(["../policy_b.polar"]);
   const orgs = connection.getRepository(Organization),
     users = connection.getRepository(User),
     repos = connection.getRepository(Repository),

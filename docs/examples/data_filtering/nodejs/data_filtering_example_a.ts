@@ -42,12 +42,24 @@ class RepoRole {
 // docs: begin-a2
 // This function applies a filter to an existing query.
 const constrain = (query, filter) => {
-  switch (filter.kind) {
-    case "Eq": query[filter.field] = filter.value; break;
-    case "Neq": query[filter.field] = Not(filter.value); break;
-    case "In": query[filter.field] = In(filter.value); break;
-    default:
-      throw new Error(`Unknown filter kind: ${filter.kind}`);
+  if (filter.field === undefined)
+    filter.field = 'id';
+
+  if (filter.field instanceof Array) {
+    for (const i in filter.field) {
+      const val = filter.value[i];
+      const fld = filter.field[i];
+      query[fld] = filter.kind === 'In' ? val : Not(val);
+    }
+  } else {
+    switch (filter.kind) {
+      case "Eq": query[filter.field] = filter.value; break;
+      case "Neq": query[filter.field] = Not(filter.value); break;
+      case "In": query[filter.field] = In(filter.value); break;
+      case "Nin": query[filter.field] = Not(In(filter.value)); break;
+      default:
+        throw new Error(`Unknown filter kind: ${filter.kind}`);
+    }
   }
 
   return query;
@@ -106,7 +118,7 @@ createConnection({
   // docs: end-a2
 
   // docs: begin-a3
-  oso.loadFiles(["policy_a.polar"]);
+  oso.loadFiles(["../policy_a.polar"]);
   const users = connection.getRepository(User),
     repos = connection.getRepository(Repository),
     roles = connection.getRepository(RepoRole);
