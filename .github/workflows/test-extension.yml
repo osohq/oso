@@ -29,8 +29,13 @@ jobs:
       - name: Check formatting of JS library
         working-directory: "vscode/oso"
         run: make fmtcheck
-      - name: Add WebAssembly target
-        run: rustup target add wasm32-unknown-unknown
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          target: wasm32-unknown-unknown
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - name: Build extension
@@ -61,12 +66,11 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+          target: wasm32-unknown-unknown
       - name: Use Node.js 12
         uses: actions/setup-node@v1
         with:
           node-version: "12"
-      - name: Add WebAssembly target
-        run: rustup target add wasm32-unknown-unknown
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - name: Build extension
