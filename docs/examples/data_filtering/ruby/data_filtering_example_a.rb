@@ -108,7 +108,15 @@ module QueryConfig
       # Create a query from an array of filters
       def self.build_query(filters)
         filters.reduce(all) do |query, filter|
-          @filter_handlers[filter.kind][query, filter]
+          if filter.field.is_a? Array
+            handler = @filter_handlers[filter.kind == 'In' ? 'Eq' : 'Neq']
+            conditions = filter.value.map do |v|
+              filter.field.zip(v).reduce(query) { |q, f| handler[q, f] }
+            end
+            conds.any? ? conds.reduce(:or) : none
+          else
+            @filter_handlers[filter.kind][query, filter]
+          end
         end
       end
 
