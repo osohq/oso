@@ -10,6 +10,12 @@ draft: true
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
+### Go
+
+#### Other bugs & improvements
+
+- Fixed a bug that caused the go library to crash using go 1.17 on macOS.
+
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
 #### Breaking changes
