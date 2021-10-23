@@ -272,14 +272,16 @@ impl PolarLanguageServer {
         let mut diagnostics = Diagnostics::new();
         for FileEvent { uri, typ } in changes {
             assert_eq!(typ, FileChangeType::Deleted); // We only watch for `Deleted` events.
+            let mut msg = format!("deleting doc: {}", uri);
             if let Some(removed) = self.remove_document(&uri) {
                 let empty_diagnostics = empty_diagnostics_for_document(&removed);
-                if diagnostics.insert(uri.clone(), empty_diagnostics).is_some() {
-                    log(&format!("duplicate watched file event for {}", uri));
+                if diagnostics.insert(uri, empty_diagnostics).is_some() {
+                    msg += "\n\tduplicate watched file event";
                 }
             } else {
-                log(&format!("cannot remove untracked doc: {}", uri));
+                msg += "\n\tcannot remove untracked doc";
             }
+            log(&msg);
         }
         diagnostics.append(&mut self.reload_kb());
         diagnostics
