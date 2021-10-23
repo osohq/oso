@@ -23,12 +23,16 @@ extern "C" {
     fn console_log(s: &str);
 }
 
+#[cfg(not(test))]
 fn log(s: &str) {
     #[allow(unused_unsafe)]
     unsafe {
         console_log(&("[pls] ".to_owned() + s))
     }
 }
+
+#[cfg(test)]
+fn log(_: &str) {}
 
 #[wasm_bindgen]
 pub struct PolarLanguageServer {
