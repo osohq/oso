@@ -114,7 +114,9 @@ impl PolarLanguageServer {
                 diagnostics.values().for_each(|d| self.send_diagnostics(d));
             }
             DidChangeWatchedFiles::METHOD => {
-                self.on_did_change_watched_files(from_value(params).unwrap())
+                let DidChangeWatchedFilesParams { changes } = from_value(params).unwrap();
+                let diagnostics = self.on_did_change_watched_files(changes);
+                diagnostics.values().for_each(|d| self.send_diagnostics(d));
             }
             // We don't care when a document is saved -- we already have the updated state thanks
             // to `DidChangeTextDocument`.
@@ -178,7 +180,7 @@ impl PolarLanguageServer {
                 let tracked_docs = self.documents.keys().map(ToString::to_string);
                 let tracked_docs = tracked_docs.collect::<Vec<_>>().join(", ");
                 log(&format!(
-                    "untracked document: {}\n\tTracked documents: {}\n\tError: {}",
+                    "untracked doc: {}\n\tTracked: {}\n\tError: {}",
                     uri, tracked_docs, e
                 ));
                 None
@@ -247,7 +249,7 @@ impl PolarLanguageServer {
     #[must_use]
     fn on_did_open_text_document(&mut self, doc: TextDocumentItem) -> Diagnostics {
         if let Some(TextDocumentItem { uri, .. }) = self.upsert_document(doc) {
-            log(&format!("reopened tracked document {}", uri));
+            log(&format!("reopened tracked doc: {}", uri));
         }
         self.reload_kb()
     }
@@ -256,23 +258,27 @@ impl PolarLanguageServer {
     fn on_did_change_text_document(&mut self, doc: TextDocumentItem) -> Diagnostics {
         let uri = doc.uri.clone();
         if self.upsert_document(doc).is_none() {
-            log(&format!("updated untracked document {}", uri));
+            log(&format!("updated untracked doc: {}", uri));
         }
         self.reload_kb()
     }
 
-    fn on_did_change_watched_files(&mut self, params: DidChangeWatchedFilesParams) {
-        for FileEvent { uri, typ } in params.changes {
+    #[must_use]
+    fn on_did_change_watched_files(&mut self, changes: Vec<FileEvent>) -> Diagnostics {
+        let mut diagnostics = Diagnostics::new();
+        for FileEvent { uri, typ } in changes {
             assert_eq!(typ, FileChangeType::Deleted); // We only watch for `Deleted` events.
             if let Some(removed) = self.remove_document(&uri) {
-                self.send_diagnostics(&empty_diagnostics_for_document(&removed));
+                let empty_diagnostics = empty_diagnostics_for_document(&removed);
+                if diagnostics.insert(uri.clone(), empty_diagnostics).is_some() {
+                    log(&format!("duplicate watched file event for {}", uri));
+                }
             } else {
-                log(&format!("cannot remove untracked document {}", uri));
+                log(&format!("cannot remove untracked doc: {}", uri));
             }
         }
-        for (_, diagnostic) in self.reload_kb() {
-            self.send_diagnostics(&diagnostic);
-        }
+        diagnostics.append(&mut self.reload_kb());
+        diagnostics
     }
 }
 
@@ -449,5 +455,138 @@ mod tests {
         let banana1_diagnostics = diagnostics5.get(&banana1.uri).unwrap();
         assert_no_errors(apple3_diagnostics, &apple3);
         assert_no_errors(banana1_diagnostics, &banana1);
+    }
+
+    #[wasm_bindgen_test]
+    fn test_on_did_change_watched_files() {
+        let mut pls = new_pls();
+
+        // Empty event has no effect.
+        let diagnostics0 = pls.on_did_change_watched_files(vec![]);
+        assert!(diagnostics0.is_empty());
+        assert!(pls.documents.is_empty());
+
+        // Deleting untracked doc has no effect.
+        let events1 = vec![FileEvent::new(polar_uri("apple"), FileChangeType::Deleted)];
+        let diagnostics1 = pls.on_did_change_watched_files(events1);
+        assert!(diagnostics1.is_empty());
+        assert!(pls.documents.is_empty());
+
+        // Deleting tracked doc w/o error.
+        let apple2 = doc_with_no_errors("apple");
+        assert!(pls.upsert_document(apple2.clone()).is_none());
+        let events2 = vec![FileEvent::new(apple2.uri.clone(), FileChangeType::Deleted)];
+        let diagnostics2 = pls.on_did_change_watched_files(events2);
+        assert_eq!(diagnostics2.len(), 1);
+        let apple2_diagnostics = diagnostics2.get(&apple2.uri).unwrap();
+        assert_no_errors(apple2_diagnostics, &apple2);
+        assert!(pls.documents.is_empty());
+
+        // Deleting tracked doc w/ error.
+        let apple3 = doc_with_missing_semicolon("apple");
+        assert!(pls.upsert_document(apple3.clone()).is_none());
+        let events3 = vec![FileEvent::new(apple3.uri.clone(), FileChangeType::Deleted)];
+        let diagnostics3 = pls.on_did_change_watched_files(events3);
+        assert_eq!(diagnostics3.len(), 1);
+        let apple3_diagnostics = diagnostics3.get(&apple3.uri).unwrap();
+        assert_no_errors(apple3_diagnostics, &apple3);
+        assert!(pls.documents.is_empty());
+
+        // Deleting tracked doc w/o error; doc w/o error remains.
+        let apple4 = doc_with_no_errors("apple");
+        let banana4 = doc_with_no_errors("banana");
+        assert!(pls.upsert_document(apple4.clone()).is_none());
+        assert!(pls.upsert_document(banana4.clone()).is_none());
+        let events4 = vec![FileEvent::new(apple4.uri.clone(), FileChangeType::Deleted)];
+        let diagnostics4 = pls.on_did_change_watched_files(events4);
+        assert_eq!(diagnostics4.len(), 2);
+        let apple4_diagnostics = diagnostics4.get(&apple4.uri).unwrap();
+        let banana4_diagnostics = diagnostics4.get(&banana4.uri).unwrap();
+        assert_no_errors(apple4_diagnostics, &apple4);
+        assert_no_errors(banana4_diagnostics, &banana4);
+        assert!(pls.remove_document(&banana4.uri).is_some());
+        assert!(pls.documents.is_empty());
+
+        // Deleting tracked doc w/ error; doc w/o error remains.
+        let apple5 = doc_with_missing_semicolon("apple");
+        let banana5 = doc_with_no_errors("banana");
+        assert!(pls.upsert_document(apple5.clone()).is_none());
+        assert!(pls.upsert_document(banana5.clone()).is_none());
+        let events5 = vec![FileEvent::new(apple5.uri.clone(), FileChangeType::Deleted)];
+        let diagnostics5 = pls.on_did_change_watched_files(events5);
+        assert_eq!(diagnostics5.len(), 2);
+        let apple5_diagnostics = diagnostics5.get(&apple5.uri).unwrap();
+        let banana5_diagnostics = diagnostics5.get(&banana5.uri).unwrap();
+        assert_no_errors(apple5_diagnostics, &apple5);
+        assert_no_errors(banana5_diagnostics, &banana5);
+        assert!(pls.remove_document(&banana5.uri).is_some());
+        assert!(pls.documents.is_empty());
+
+        // Deleting tracked doc w/o error; doc w/ error remains.
+        let apple6 = doc_with_no_errors("apple");
+        let banana6 = doc_with_missing_semicolon("banana");
+        assert!(pls.upsert_document(apple6.clone()).is_none());
+        assert!(pls.upsert_document(banana6.clone()).is_none());
+        let events6 = vec![FileEvent::new(apple6.uri.clone(), FileChangeType::Deleted)];
+        let diagnostics6 = pls.on_did_change_watched_files(events6);
+        assert_eq!(diagnostics6.len(), 2);
+        let apple6_diagnostics = diagnostics6.get(&apple6.uri).unwrap();
+        let banana6_diagnostics = diagnostics6.get(&banana6.uri).unwrap();
+        assert_no_errors(apple6_diagnostics, &apple6);
+        assert_missing_semicolon_error(banana6_diagnostics, &banana6);
+        assert!(pls.remove_document(&banana6.uri).is_some());
+        assert!(pls.documents.is_empty());
+
+        // Deleting tracked doc w/ error; doc w/ error remains.
+        let apple7 = doc_with_missing_semicolon("apple");
+        let banana7 = doc_with_missing_semicolon("banana");
+        assert!(pls.upsert_document(apple7.clone()).is_none());
+        assert!(pls.upsert_document(banana7.clone()).is_none());
+        let events7 = vec![FileEvent::new(apple7.uri.clone(), FileChangeType::Deleted)];
+        let diagnostics7 = pls.on_did_change_watched_files(events7);
+        assert_eq!(diagnostics7.len(), 2);
+        let apple7_diagnostics = diagnostics7.get(&apple7.uri).unwrap();
+        let banana7_diagnostics = diagnostics7.get(&banana7.uri).unwrap();
+        assert_no_errors(apple7_diagnostics, &apple7);
+        assert_missing_semicolon_error(banana7_diagnostics, &banana7);
+        assert!(pls.remove_document(&banana7.uri).is_some());
+        assert!(pls.documents.is_empty());
+
+        // Deleting multiple docs at once.
+        let apple8 = doc_with_missing_semicolon("apple");
+        let banana8 = doc_with_missing_semicolon("banana");
+        let canteloupe8 = doc_with_missing_semicolon("canteloupe");
+        let date8 = doc_with_no_errors("date");
+        let elderberry8 = doc_with_no_errors("elderberry");
+        let fig8 = doc_with_no_errors("fig");
+        assert!(pls.upsert_document(apple8.clone()).is_none());
+        assert!(pls.upsert_document(banana8.clone()).is_none());
+        assert!(pls.upsert_document(canteloupe8.clone()).is_none());
+        assert!(pls.upsert_document(date8.clone()).is_none());
+        assert!(pls.upsert_document(elderberry8.clone()).is_none());
+        assert!(pls.upsert_document(fig8.clone()).is_none());
+        let events8 = vec![
+            FileEvent::new(apple8.uri.clone(), FileChangeType::Deleted),
+            FileEvent::new(banana8.uri.clone(), FileChangeType::Deleted),
+            FileEvent::new(date8.uri.clone(), FileChangeType::Deleted),
+            FileEvent::new(elderberry8.uri.clone(), FileChangeType::Deleted),
+        ];
+        let diagnostics8 = pls.on_did_change_watched_files(events8);
+        assert_eq!(diagnostics8.len(), 6);
+        let apple8_diagnostics = diagnostics8.get(&apple8.uri).unwrap();
+        let banana8_diagnostics = diagnostics8.get(&banana8.uri).unwrap();
+        let canteloupe8_diagnostics = diagnostics8.get(&canteloupe8.uri).unwrap();
+        let date8_diagnostics = diagnostics8.get(&date8.uri).unwrap();
+        let elderberry8_diagnostics = diagnostics8.get(&elderberry8.uri).unwrap();
+        let fig8_diagnostics = diagnostics8.get(&fig8.uri).unwrap();
+        assert_no_errors(apple8_diagnostics, &apple8);
+        assert_no_errors(banana8_diagnostics, &banana8);
+        assert_missing_semicolon_error(canteloupe8_diagnostics, &canteloupe8);
+        assert_no_errors(date8_diagnostics, &date8);
+        assert_no_errors(elderberry8_diagnostics, &elderberry8);
+        assert_no_errors(fig8_diagnostics, &fig8);
+        assert!(pls.remove_document(&canteloupe8.uri).is_some());
+        assert!(pls.remove_document(&fig8.uri).is_some());
+        assert!(pls.documents.is_empty());
     }
 }
