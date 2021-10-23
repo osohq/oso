@@ -34,9 +34,11 @@ fn log(s: &str) {
 #[cfg(test)]
 fn log(_: &str) {}
 
+type Documents = BTreeMap<Url, TextDocumentItem>;
+
 #[wasm_bindgen]
 pub struct PolarLanguageServer {
-    documents: BTreeMap<Url, TextDocumentItem>,
+    documents: Documents,
     polar: Polar,
     send_diagnostics_callback: js_sys::Function,
 }
@@ -270,19 +272,41 @@ impl PolarLanguageServer {
     #[must_use]
     fn on_did_change_watched_files(&mut self, changes: Vec<FileEvent>) -> Diagnostics {
         let mut diagnostics = Diagnostics::new();
+
         for FileEvent { uri, typ } in changes {
             assert_eq!(typ, FileChangeType::Deleted); // We only watch for `Deleted` events.
-            let mut msg = format!("deleting doc: {}", uri);
+            let mut msg = format!("deleting URI: {}", uri);
+
             if let Some(removed) = self.remove_document(&uri) {
                 let empty_diagnostics = empty_diagnostics_for_document(&removed);
                 if diagnostics.insert(uri, empty_diagnostics).is_some() {
                     msg += "\n\tduplicate watched file event";
                 }
             } else {
-                msg += "\n\tcannot remove untracked doc";
+                msg += "\n\tchecking if URI is dir";
+                let docs = self.documents.clone().into_iter();
+                let (removed, retained): (Documents, Documents) = docs.partition(|(doc_uri, _)| {
+                    let maybe_segments = uri.path_segments().zip(doc_uri.path_segments());
+                    // If all path segments match between dir & doc, dir contains doc and doc
+                    // should be removed.
+                    maybe_segments.map_or(false, |(a, b)| a.zip(b).all(|(x, y)| x == y))
+                });
+                if removed.is_empty() {
+                    msg += "\n\tcannot remove untracked doc";
+                } else {
+                    for (uri, doc) in removed {
+                        msg += &format!("\n\t\tremoving dir member: {}", uri);
+                        let empty_diagnostics = empty_diagnostics_for_document(&doc);
+                        if diagnostics.insert(uri, empty_diagnostics).is_some() {
+                            msg += "\n\t\tduplicate watched file event";
+                        }
+                    }
+                    self.documents = retained;
+                }
             }
             log(&msg);
         }
+
         diagnostics.append(&mut self.reload_kb());
         diagnostics
     }
@@ -303,23 +327,25 @@ mod tests {
     }
 
     #[track_caller]
-    fn polar_uri(name: &str) -> Url {
-        Url::parse(&format!("file:///{}.polar", name)).unwrap()
+    fn polar_uri(path: &str) -> Url {
+        Url::parse(&format!("file:///{}.polar", path)).unwrap()
     }
 
     #[track_caller]
-    fn polar_doc(name: &str, contents: String) -> TextDocumentItem {
-        TextDocumentItem::new(polar_uri(name), "polar".to_owned(), 0, contents)
+    fn polar_doc(path: &str, contents: String) -> TextDocumentItem {
+        TextDocumentItem::new(polar_uri(path), "polar".to_owned(), 0, contents)
     }
 
     #[track_caller]
-    fn doc_with_no_errors(name: &str) -> TextDocumentItem {
-        polar_doc(name, format!("{}();", name))
+    fn doc_with_no_errors(path: &str) -> TextDocumentItem {
+        let file_name = path.split('/').last().unwrap();
+        polar_doc(path, format!("{}();", file_name))
     }
 
     #[track_caller]
-    fn doc_with_missing_semicolon(name: &str) -> TextDocumentItem {
-        polar_doc(name, format!("{}()", name))
+    fn doc_with_missing_semicolon(path: &str) -> TextDocumentItem {
+        let file_name = path.split('/').last().unwrap();
+        polar_doc(path, format!("{}()", file_name))
     }
 
     #[track_caller]
@@ -593,6 +619,87 @@ mod tests {
         assert_no_errors(fig8_diagnostics, &fig8);
         assert!(pls.remove_document(&canteloupe8.uri).is_some());
         assert!(pls.remove_document(&fig8.uri).is_some());
+        assert!(pls.documents.is_empty());
+
+        // Deleting directories containing Polar files.
+        let apple9 = doc_with_missing_semicolon("apple");
+        let banana9 = doc_with_no_errors("a/b/banana");
+        let calabash9 = doc_with_no_errors("a/b/c/ca/calabash");
+        let canteloupe9 = doc_with_no_errors("a/b/c/ca/canteloupe");
+        let cherry9 = doc_with_no_errors("a/b/c/ch/cherry");
+        let date9 = doc_with_no_errors("a/b/c/d/date");
+        let grape9 = doc_with_no_errors("a/b/c/d/e/f/g/grape");
+        let grapefruit9 = doc_with_no_errors("a/b/c/d/e/f/g/grapefruit");
+        assert!(pls.upsert_document(apple9.clone()).is_none());
+        assert!(pls.upsert_document(banana9.clone()).is_none());
+        assert!(pls.upsert_document(calabash9.clone()).is_none());
+        assert!(pls.upsert_document(canteloupe9.clone()).is_none());
+        assert!(pls.upsert_document(cherry9.clone()).is_none());
+        assert!(pls.upsert_document(date9.clone()).is_none());
+        assert!(pls.upsert_document(grape9.clone()).is_none());
+        assert!(pls.upsert_document(grapefruit9.clone()).is_none());
+
+        // Deleting a deeply nested directory.
+        let d_dir = Url::parse(date9.uri.as_str().strip_suffix("/date.polar").unwrap()).unwrap();
+        let events9a = vec![FileEvent::new(d_dir, FileChangeType::Deleted)];
+        assert_eq!(pls.documents.len(), 8);
+        let diagnostics9a = pls.on_did_change_watched_files(events9a);
+        assert_eq!(diagnostics9a.len(), 8);
+        let apple9_diagnostics = diagnostics9a.get(&apple9.uri).unwrap();
+        let banana9_diagnostics = diagnostics9a.get(&banana9.uri).unwrap();
+        let calabash9_diagnostics = diagnostics9a.get(&calabash9.uri).unwrap();
+        let canteloupe9_diagnostics = diagnostics9a.get(&canteloupe9.uri).unwrap();
+        let cherry9_diagnostics = diagnostics9a.get(&cherry9.uri).unwrap();
+        let date9_diagnostics = diagnostics9a.get(&date9.uri).unwrap();
+        let grape9_diagnostics = diagnostics9a.get(&grape9.uri).unwrap();
+        let grapefruit9_diagnostics = diagnostics9a.get(&grapefruit9.uri).unwrap();
+        assert_missing_semicolon_error(apple9_diagnostics, &apple9);
+        assert_no_errors(banana9_diagnostics, &banana9);
+        assert_no_errors(calabash9_diagnostics, &calabash9);
+        assert_no_errors(canteloupe9_diagnostics, &canteloupe9);
+        assert_no_errors(cherry9_diagnostics, &cherry9);
+        assert_no_errors(date9_diagnostics, &date9);
+        assert_no_errors(grape9_diagnostics, &grape9);
+        assert_no_errors(grapefruit9_diagnostics, &grapefruit9);
+        assert_eq!(pls.documents.len(), 5);
+
+        // Deleting multiple directories at once.
+        let ca_dir = calabash9.uri.as_str().strip_suffix("/calabash.polar");
+        let ca_dir = Url::parse(ca_dir.unwrap()).unwrap();
+        let ch_dir = cherry9.uri.as_str().strip_suffix("/cherry.polar");
+        let ch_dir = Url::parse(ch_dir.unwrap()).unwrap();
+        let events9b = vec![
+            FileEvent::new(ca_dir, FileChangeType::Deleted),
+            FileEvent::new(ch_dir, FileChangeType::Deleted),
+        ];
+        assert_eq!(pls.documents.len(), 5);
+        let diagnostics9b = pls.on_did_change_watched_files(events9b);
+        assert_eq!(diagnostics9b.len(), 5);
+        let apple9_diagnostics = diagnostics9b.get(&apple9.uri).unwrap();
+        let banana9_diagnostics = diagnostics9b.get(&banana9.uri).unwrap();
+        let calabash9_diagnostics = diagnostics9b.get(&calabash9.uri).unwrap();
+        let canteloupe9_diagnostics = diagnostics9b.get(&canteloupe9.uri).unwrap();
+        let cherry9_diagnostics = diagnostics9b.get(&cherry9.uri).unwrap();
+        assert_missing_semicolon_error(apple9_diagnostics, &apple9);
+        assert_no_errors(banana9_diagnostics, &banana9);
+        assert_no_errors(calabash9_diagnostics, &calabash9);
+        assert_no_errors(canteloupe9_diagnostics, &canteloupe9);
+        assert_no_errors(cherry9_diagnostics, &cherry9);
+        assert_eq!(pls.documents.len(), 2);
+
+        // Deleting a top-level directory.
+        let a_dir = banana9.uri.as_str().strip_suffix("/b/banana.polar");
+        let a_dir = Url::parse(a_dir.unwrap()).unwrap();
+        let events9c = vec![FileEvent::new(a_dir, FileChangeType::Deleted)];
+        assert_eq!(pls.documents.len(), 2);
+        let diagnostics9c = pls.on_did_change_watched_files(events9c);
+        assert_eq!(diagnostics9c.len(), 2);
+        let apple9_diagnostics = diagnostics9c.get(&apple9.uri).unwrap();
+        let banana9_diagnostics = diagnostics9c.get(&banana9.uri).unwrap();
+        assert_missing_semicolon_error(apple9_diagnostics, &apple9);
+        assert_no_errors(banana9_diagnostics, &banana9);
+        assert_eq!(pls.documents.len(), 1);
+        assert!(pls.remove_document(&apple9.uri).is_some());
         assert!(pls.documents.is_empty());
     }
 }
