@@ -25,6 +25,8 @@ jobs:
           toolchain: stable
           override: true
       - name: Run benchmark
+        env:
+          POLAR_IGNORE_NO_ALLOW_WARNING: 1
         run: cargo bench -q -- --output-format bencher | tee output.txt
       - name: Upload benchmark result artifact
         uses: actions/upload-artifact@v2
