@@ -2957,11 +2957,11 @@ mod tests {
             assert!(matches!($vm.run(None).unwrap(), QueryEvent::Result{bindings, ..} if bindings == $result));
             assert_query_events!($vm, [$($tail)*]);
         };
-        ($vm:ident, [$( $pattern:pat )|+ $( if $guard: expr )?]) => {
+        ($vm:ident, [$( $pattern:pat_param )|+ $( if $guard: expr )?]) => {
             assert!(matches!($vm.run(None).unwrap(), $($pattern)|+ $(if $guard)?));
             assert_query_events!($vm, []);
         };
-        ($vm:ident, [$( $pattern:pat )|+ $( if $guard: expr )?, $($tail:tt)*]) => {
+        ($vm:ident, [$( $pattern:pat_param )|+ $( if $guard: expr )?, $($tail:tt)*]) => {
             assert!(matches!($vm.run(None).unwrap(), $($pattern)|+ $(if $guard)?));
             assert_query_events!($vm, [$($tail)*]);
         };
