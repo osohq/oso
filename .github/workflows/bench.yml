@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - gj/2021-followups
 
 jobs:
   benchmark:
