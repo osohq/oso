@@ -349,6 +349,23 @@ mod tests {
     }
 
     #[track_caller]
+    fn add_doc_with_no_errors(pls: &mut PolarLanguageServer, path: &str) -> TextDocumentItem {
+        let doc = doc_with_no_errors(path);
+        assert!(pls.upsert_document(doc.clone()).is_none());
+        doc
+    }
+
+    #[track_caller]
+    fn add_doc_with_missing_semicolon(
+        pls: &mut PolarLanguageServer,
+        path: &str,
+    ) -> TextDocumentItem {
+        let doc = doc_with_missing_semicolon(path);
+        assert!(pls.upsert_document(doc.clone()).is_none());
+        doc
+    }
+
+    #[track_caller]
     fn update_text(doc: TextDocumentItem, text: &str) -> TextDocumentItem {
         TextDocumentItem::new(doc.uri, doc.language_id, doc.version + 1, text.into())
     }
@@ -483,8 +500,7 @@ mod tests {
         assert!(pls.documents.is_empty());
 
         // Deleting tracked doc w/o error.
-        let apple2 = doc_with_no_errors("apple");
-        assert!(pls.upsert_document(apple2.clone()).is_none());
+        let apple2 = add_doc_with_no_errors(&mut pls, "apple");
         let events2 = vec![FileEvent::new(apple2.uri.clone(), FileChangeType::Deleted)];
         let diagnostics2 = pls.on_did_change_watched_files(events2);
         assert_eq!(diagnostics2.len(), 1);
@@ -492,8 +508,7 @@ mod tests {
         assert!(pls.documents.is_empty());
 
         // Deleting tracked doc w/ error.
-        let apple3 = doc_with_missing_semicolon("apple");
-        assert!(pls.upsert_document(apple3.clone()).is_none());
+        let apple3 = add_doc_with_missing_semicolon(&mut pls, "apple");
         let events3 = vec![FileEvent::new(apple3.uri.clone(), FileChangeType::Deleted)];
         let diagnostics3 = pls.on_did_change_watched_files(events3);
         assert_eq!(diagnostics3.len(), 1);
@@ -501,10 +516,8 @@ mod tests {
         assert!(pls.documents.is_empty());
 
         // Deleting tracked doc w/o error; doc w/o error remains.
-        let apple4 = doc_with_no_errors("apple");
-        let banana4 = doc_with_no_errors("banana");
-        assert!(pls.upsert_document(apple4.clone()).is_none());
-        assert!(pls.upsert_document(banana4.clone()).is_none());
+        let apple4 = add_doc_with_no_errors(&mut pls, "apple");
+        let banana4 = add_doc_with_no_errors(&mut pls, "banana");
         let events4 = vec![FileEvent::new(apple4.uri.clone(), FileChangeType::Deleted)];
         let diagnostics4 = pls.on_did_change_watched_files(events4);
         assert_eq!(diagnostics4.len(), 2);
@@ -514,10 +527,8 @@ mod tests {
         assert!(pls.documents.is_empty());
 
         // Deleting tracked doc w/ error; doc w/o error remains.
-        let apple5 = doc_with_missing_semicolon("apple");
-        let banana5 = doc_with_no_errors("banana");
-        assert!(pls.upsert_document(apple5.clone()).is_none());
-        assert!(pls.upsert_document(banana5.clone()).is_none());
+        let apple5 = add_doc_with_missing_semicolon(&mut pls, "apple");
+        let banana5 = add_doc_with_no_errors(&mut pls, "banana");
         let events5 = vec![FileEvent::new(apple5.uri.clone(), FileChangeType::Deleted)];
         let diagnostics5 = pls.on_did_change_watched_files(events5);
         assert_eq!(diagnostics5.len(), 2);
@@ -527,10 +538,8 @@ mod tests {
         assert!(pls.documents.is_empty());
 
         // Deleting tracked doc w/o error; doc w/ error remains.
-        let apple6 = doc_with_no_errors("apple");
-        let banana6 = doc_with_missing_semicolon("banana");
-        assert!(pls.upsert_document(apple6.clone()).is_none());
-        assert!(pls.upsert_document(banana6.clone()).is_none());
+        let apple6 = add_doc_with_no_errors(&mut pls, "apple");
+        let banana6 = add_doc_with_missing_semicolon(&mut pls, "banana");
         let events6 = vec![FileEvent::new(apple6.uri.clone(), FileChangeType::Deleted)];
         let diagnostics6 = pls.on_did_change_watched_files(events6);
         assert_eq!(diagnostics6.len(), 2);
@@ -540,10 +549,8 @@ mod tests {
         assert!(pls.documents.is_empty());
 
         // Deleting tracked doc w/ error; doc w/ error remains.
-        let apple7 = doc_with_missing_semicolon("apple");
-        let banana7 = doc_with_missing_semicolon("banana");
-        assert!(pls.upsert_document(apple7.clone()).is_none());
-        assert!(pls.upsert_document(banana7.clone()).is_none());
+        let apple7 = add_doc_with_missing_semicolon(&mut pls, "apple");
+        let banana7 = add_doc_with_missing_semicolon(&mut pls, "banana");
         let events7 = vec![FileEvent::new(apple7.uri.clone(), FileChangeType::Deleted)];
         let diagnostics7 = pls.on_did_change_watched_files(events7);
         assert_eq!(diagnostics7.len(), 2);
@@ -553,18 +560,12 @@ mod tests {
         assert!(pls.documents.is_empty());
 
         // Deleting multiple docs at once.
-        let apple8 = doc_with_missing_semicolon("apple");
-        let banana8 = doc_with_missing_semicolon("banana");
-        let canteloupe8 = doc_with_missing_semicolon("canteloupe");
-        let date8 = doc_with_no_errors("date");
-        let elderberry8 = doc_with_no_errors("elderberry");
-        let fig8 = doc_with_no_errors("fig");
-        assert!(pls.upsert_document(apple8.clone()).is_none());
-        assert!(pls.upsert_document(banana8.clone()).is_none());
-        assert!(pls.upsert_document(canteloupe8.clone()).is_none());
-        assert!(pls.upsert_document(date8.clone()).is_none());
-        assert!(pls.upsert_document(elderberry8.clone()).is_none());
-        assert!(pls.upsert_document(fig8.clone()).is_none());
+        let apple8 = add_doc_with_missing_semicolon(&mut pls, "apple");
+        let banana8 = add_doc_with_missing_semicolon(&mut pls, "banana");
+        let canteloupe8 = add_doc_with_missing_semicolon(&mut pls, "canteloupe");
+        let date8 = add_doc_with_no_errors(&mut pls, "date");
+        let elderberry8 = add_doc_with_no_errors(&mut pls, "elderberry");
+        let fig8 = add_doc_with_no_errors(&mut pls, "fig");
         let events8 = vec![
             FileEvent::new(apple8.uri.clone(), FileChangeType::Deleted),
             FileEvent::new(banana8.uri.clone(), FileChangeType::Deleted),
@@ -584,22 +585,14 @@ mod tests {
         assert!(pls.documents.is_empty());
 
         // Deleting directories containing Polar files.
-        let apple9 = doc_with_missing_semicolon("apple");
-        let banana9 = doc_with_no_errors("a/b/banana");
-        let calabash9 = doc_with_no_errors("a/b/c/ca/calabash");
-        let canteloupe9 = doc_with_no_errors("a/b/c/ca/canteloupe");
-        let cherry9 = doc_with_no_errors("a/b/c/ch/cherry");
-        let date9 = doc_with_no_errors("a/b/c/d/date");
-        let grape9 = doc_with_no_errors("a/b/c/d/e/f/g/grape");
-        let grapefruit9 = doc_with_no_errors("a/b/c/d/e/f/g/grapefruit");
-        assert!(pls.upsert_document(apple9.clone()).is_none());
-        assert!(pls.upsert_document(banana9.clone()).is_none());
-        assert!(pls.upsert_document(calabash9.clone()).is_none());
-        assert!(pls.upsert_document(canteloupe9.clone()).is_none());
-        assert!(pls.upsert_document(cherry9.clone()).is_none());
-        assert!(pls.upsert_document(date9.clone()).is_none());
-        assert!(pls.upsert_document(grape9.clone()).is_none());
-        assert!(pls.upsert_document(grapefruit9.clone()).is_none());
+        let apple9 = add_doc_with_missing_semicolon(&mut pls, "apple");
+        let banana9 = add_doc_with_no_errors(&mut pls, "a/b/banana");
+        let calabash9 = add_doc_with_no_errors(&mut pls, "a/b/c/ca/calabash");
+        let canteloupe9 = add_doc_with_no_errors(&mut pls, "a/b/c/ca/canteloupe");
+        let cherry9 = add_doc_with_no_errors(&mut pls, "a/b/c/ch/cherry");
+        let date9 = add_doc_with_no_errors(&mut pls, "a/b/c/d/date");
+        let grape9 = add_doc_with_no_errors(&mut pls, "a/b/c/d/e/f/g/grape");
+        let grapefruit9 = add_doc_with_no_errors(&mut pls, "a/b/c/d/e/f/g/grapefruit");
 
         // Deleting a deeply nested directory.
         let d_dir = Url::parse(date9.uri.as_str().strip_suffix("/date.polar").unwrap()).unwrap();
