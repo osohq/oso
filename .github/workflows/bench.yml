@@ -17,6 +17,12 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
       - name: Run benchmark
         run: cargo bench -q -- --output-format bencher | tee output.txt
       - name: Upload benchmark result artifact
