@@ -101,7 +101,17 @@ impl PolarLanguageServer {
                 diagnostics.values().for_each(|d| self.send_diagnostics(d));
             }
             DidChangeTextDocument::METHOD => {
-                self.on_did_change_text_document(from_value(params).unwrap())
+                let params: DidChangeTextDocumentParams = from_value(params).unwrap();
+
+                // Ensure we receive full -- not incremental -- updates.
+                assert_eq!(params.content_changes.len(), 1);
+                let change = params.content_changes.into_iter().next().unwrap();
+                assert!(change.range.is_none());
+
+                let VersionedTextDocumentIdentifier { uri, version } = params.text_document;
+                let updated_doc = TextDocumentItem::new(uri, "polar".into(), version, change.text);
+                let diagnostics = self.on_did_change_text_document(updated_doc);
+                diagnostics.values().for_each(|d| self.send_diagnostics(d));
             }
             DidChangeWatchedFiles::METHOD => {
                 self.on_did_change_watched_files(from_value(params).unwrap())
@@ -130,15 +140,9 @@ fn empty_diagnostics_for_document(document: &TextDocumentItem) -> PublishDiagnos
 
 /// Helper methods.
 impl PolarLanguageServer {
-    fn add_document(&mut self, doc: TextDocumentItem) {
-        self.documents.insert(doc.uri.clone(), doc);
-    }
-
-    fn update_document(&mut self, uri: Url, version: i32, text: String) {
-        self.documents.entry(uri).and_modify(|doc| {
-            doc.version = version;
-            doc.text = text;
-        });
+    #[must_use]
+    fn upsert_document(&mut self, doc: TextDocumentItem) -> Option<TextDocumentItem> {
+        self.documents.insert(doc.uri.clone(), doc)
     }
 
     #[must_use]
@@ -242,24 +246,19 @@ impl PolarLanguageServer {
 impl PolarLanguageServer {
     #[must_use]
     fn on_did_open_text_document(&mut self, doc: TextDocumentItem) -> Diagnostics {
-        self.add_document(doc);
+        if let Some(TextDocumentItem { uri, .. }) = self.upsert_document(doc) {
+            log(&format!("reopened tracked document {}", uri));
+        }
         self.reload_kb()
     }
 
-    fn on_did_change_text_document(&mut self, params: DidChangeTextDocumentParams) {
-        let DidChangeTextDocumentParams {
-            text_document: VersionedTextDocumentIdentifier { uri, version },
-            content_changes,
-        } = params;
-
-        assert_eq!(content_changes.len(), 1);
-        // Ensure we receive full -- not incremental -- updates.
-        assert!(content_changes[0].range.is_none());
-
-        self.update_document(uri, version, content_changes[0].text.clone());
-        for (_, diagnostic) in self.reload_kb() {
-            self.send_diagnostics(&diagnostic);
+    #[must_use]
+    fn on_did_change_text_document(&mut self, doc: TextDocumentItem) -> Diagnostics {
+        let uri = doc.uri.clone();
+        if self.upsert_document(doc).is_none() {
+            log(&format!("updated untracked document {}", uri));
         }
+        self.reload_kb()
     }
 
     fn on_did_change_watched_files(&mut self, params: DidChangeWatchedFilesParams) {
@@ -309,6 +308,11 @@ mod tests {
     #[track_caller]
     fn doc_with_missing_semicolon(name: &str) -> TextDocumentItem {
         polar_doc(name, format!("{}()", name))
+    }
+
+    #[track_caller]
+    fn update_text(doc: TextDocumentItem, text: &str) -> TextDocumentItem {
+        TextDocumentItem::new(doc.uri, doc.language_id, doc.version + 1, text.into())
     }
 
     #[track_caller]
@@ -390,5 +394,60 @@ mod tests {
         // documents have semicolon errors we'll only publish a single diagnostic.
         assert_no_errors(date_diagnostics, &date);
         assert_no_errors(elderberry_diagnostics, &elderberry);
+    }
+
+    #[wasm_bindgen_test]
+    fn test_on_did_change_text_document() {
+        let mut pls = new_pls();
+
+        // 'Change' untracked doc w/ no errors.
+        let apple0 = doc_with_no_errors("apple");
+        let diagnostics0 = pls.on_did_change_text_document(apple0.clone());
+        assert_eq!(diagnostics0.len(), 1);
+        let apple0_diagnostics = diagnostics0.get(&apple0.uri).unwrap();
+        assert_no_errors(apple0_diagnostics, &apple0);
+
+        // Change tracked doc w/o introducing an error.
+        let apple1 = update_text(apple0, "pie();");
+        let diagnostics1 = pls.on_did_change_text_document(apple1.clone());
+        assert_eq!(diagnostics1.len(), 1);
+        let apple1_diagnostics = diagnostics1.get(&apple1.uri).unwrap();
+        assert_no_errors(apple1_diagnostics, &apple1);
+
+        // Change tracked doc, introducing an error.
+        let apple2 = update_text(apple1, "pie()");
+        let diagnostics2 = pls.on_did_change_text_document(apple2.clone());
+        assert_eq!(diagnostics2.len(), 1);
+        let apple2_diagnostics = diagnostics2.get(&apple2.uri).unwrap();
+        assert_missing_semicolon_error(apple2_diagnostics, &apple2);
+
+        // 'Change' untracked doc, introducing a second error.
+        let banana0 = doc_with_missing_semicolon("banana");
+        let diagnostics3 = pls.on_did_change_text_document(banana0.clone());
+        assert_eq!(diagnostics3.len(), 2);
+        let apple2_diagnostics = diagnostics3.get(&apple2.uri).unwrap();
+        let banana0_diagnostics = diagnostics3.get(&banana0.uri).unwrap();
+        assert_missing_semicolon_error(apple2_diagnostics, &apple2);
+        // NOTE(gj): we currently surface at most one error per `Polar::load` call, so even if two
+        // documents have semicolon errors we'll only publish a single diagnostic.
+        assert_no_errors(banana0_diagnostics, &banana0);
+
+        // Change tracked doc, fixing an error.
+        let apple3 = update_text(apple2, "pie();");
+        let diagnostics4 = pls.on_did_change_text_document(apple3.clone());
+        assert_eq!(diagnostics4.len(), 2);
+        let apple3_diagnostics = diagnostics4.get(&apple3.uri).unwrap();
+        let banana0_diagnostics = diagnostics4.get(&banana0.uri).unwrap();
+        assert_no_errors(apple3_diagnostics, &apple3);
+        assert_missing_semicolon_error(banana0_diagnostics, &banana0);
+
+        // Change tracked doc, fixing the last error.
+        let banana1 = update_text(banana0, "split();");
+        let diagnostics5 = pls.on_did_change_text_document(banana1.clone());
+        assert_eq!(diagnostics5.len(), 2);
+        let apple3_diagnostics = diagnostics5.get(&apple3.uri).unwrap();
+        let banana1_diagnostics = diagnostics5.get(&banana1.uri).unwrap();
+        assert_no_errors(apple3_diagnostics, &apple3);
+        assert_no_errors(banana1_diagnostics, &banana1);
     }
 }
