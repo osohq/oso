@@ -354,7 +354,8 @@ mod tests {
     }
 
     #[track_caller]
-    fn assert_missing_semicolon_error(params: &PublishDiagnosticsParams, doc: &TextDocumentItem) {
+    fn assert_missing_semicolon_error(diagnostics: &Diagnostics, doc: &TextDocumentItem) {
+        let params = diagnostics.get(&doc.uri).unwrap();
         assert_eq!(params.uri, doc.uri);
         assert_eq!(params.version.unwrap(), doc.version);
         assert_eq!(params.diagnostics.len(), 1, "{}", doc.uri.to_string());
@@ -364,7 +365,8 @@ mod tests {
     }
 
     #[track_caller]
-    fn assert_no_errors(params: &PublishDiagnosticsParams, doc: &TextDocumentItem) {
+    fn assert_no_errors(diagnostics: &Diagnostics, doc: &TextDocumentItem) {
+        let params = diagnostics.get(&doc.uri).unwrap();
         assert_eq!(params.uri, doc.uri);
         assert_eq!(params.version.unwrap(), doc.version);
         assert!(params.diagnostics.is_empty(), "{:?}", params.diagnostics);
@@ -378,60 +380,45 @@ mod tests {
         let apple = doc_with_no_errors("apple");
         let diagnostics = pls.on_did_open_text_document(apple.clone());
         assert_eq!(diagnostics.len(), 1);
-        let apple_diagnostics = diagnostics.get(&apple.uri).unwrap();
-        assert_no_errors(apple_diagnostics, &apple);
+        assert_no_errors(&diagnostics, &apple);
 
         // Load a second doc w/ no errors.
         let banana = doc_with_no_errors("banana");
         let diagnostics = pls.on_did_open_text_document(banana.clone());
         assert_eq!(diagnostics.len(), 2);
-        let apple_diagnostics = diagnostics.get(&apple.uri).unwrap();
-        let banana_diagnostics = diagnostics.get(&banana.uri).unwrap();
-        assert_no_errors(apple_diagnostics, &apple);
-        assert_no_errors(banana_diagnostics, &banana);
+        assert_no_errors(&diagnostics, &apple);
+        assert_no_errors(&diagnostics, &banana);
 
         // Load a third doc w/ errors.
         let canteloupe = doc_with_missing_semicolon("canteloupe");
         let diagnostics = pls.on_did_open_text_document(canteloupe.clone());
         assert_eq!(diagnostics.len(), 3);
-        let apple_diagnostics = diagnostics.get(&apple.uri).unwrap();
-        let banana_diagnostics = diagnostics.get(&banana.uri).unwrap();
-        let canteloupe_diagnostics = diagnostics.get(&canteloupe.uri).unwrap();
-        assert_no_errors(apple_diagnostics, &apple);
-        assert_no_errors(banana_diagnostics, &banana);
-        assert_missing_semicolon_error(canteloupe_diagnostics, &canteloupe);
+        assert_no_errors(&diagnostics, &apple);
+        assert_no_errors(&diagnostics, &banana);
+        assert_missing_semicolon_error(&diagnostics, &canteloupe);
 
         // Load a fourth doc w/ errors.
         let date = doc_with_missing_semicolon("date");
         let diagnostics = pls.on_did_open_text_document(date.clone());
         assert_eq!(diagnostics.len(), 4);
-        let apple_diagnostics = diagnostics.get(&apple.uri).unwrap();
-        let banana_diagnostics = diagnostics.get(&banana.uri).unwrap();
-        let canteloupe_diagnostics = diagnostics.get(&canteloupe.uri).unwrap();
-        let date_diagnostics = diagnostics.get(&date.uri).unwrap();
-        assert_no_errors(apple_diagnostics, &apple);
-        assert_no_errors(banana_diagnostics, &banana);
-        assert_missing_semicolon_error(canteloupe_diagnostics, &canteloupe);
+        assert_no_errors(&diagnostics, &apple);
+        assert_no_errors(&diagnostics, &banana);
+        assert_missing_semicolon_error(&diagnostics, &canteloupe);
         // NOTE(gj): we currently surface at most one error per `Polar::load` call, so even if two
         // documents have semicolon errors we'll only publish a single diagnostic.
-        assert_no_errors(date_diagnostics, &date);
+        assert_no_errors(&diagnostics, &date);
 
         // Load a fifth doc w/ no errors.
         let elderberry = doc_with_no_errors("elderberry");
         let diagnostics = pls.on_did_open_text_document(elderberry.clone());
         assert_eq!(diagnostics.len(), 5);
-        let apple_diagnostics = diagnostics.get(&apple.uri).unwrap();
-        let banana_diagnostics = diagnostics.get(&banana.uri).unwrap();
-        let canteloupe_diagnostics = diagnostics.get(&canteloupe.uri).unwrap();
-        let date_diagnostics = diagnostics.get(&date.uri).unwrap();
-        let elderberry_diagnostics = diagnostics.get(&elderberry.uri).unwrap();
-        assert_no_errors(apple_diagnostics, &apple);
-        assert_no_errors(banana_diagnostics, &banana);
-        assert_missing_semicolon_error(canteloupe_diagnostics, &canteloupe);
+        assert_no_errors(&diagnostics, &apple);
+        assert_no_errors(&diagnostics, &banana);
+        assert_missing_semicolon_error(&diagnostics, &canteloupe);
         // NOTE(gj): we currently surface at most one error per `Polar::load` call, so even if two
         // documents have semicolon errors we'll only publish a single diagnostic.
-        assert_no_errors(date_diagnostics, &date);
-        assert_no_errors(elderberry_diagnostics, &elderberry);
+        assert_no_errors(&diagnostics, &date);
+        assert_no_errors(&diagnostics, &elderberry);
     }
 
     #[wasm_bindgen_test]
@@ -442,51 +429,42 @@ mod tests {
         let apple0 = doc_with_no_errors("apple");
         let diagnostics0 = pls.on_did_change_text_document(apple0.clone());
         assert_eq!(diagnostics0.len(), 1);
-        let apple0_diagnostics = diagnostics0.get(&apple0.uri).unwrap();
-        assert_no_errors(apple0_diagnostics, &apple0);
+        assert_no_errors(&diagnostics0, &apple0);
 
         // Change tracked doc w/o introducing an error.
         let apple1 = update_text(apple0, "pie();");
         let diagnostics1 = pls.on_did_change_text_document(apple1.clone());
         assert_eq!(diagnostics1.len(), 1);
-        let apple1_diagnostics = diagnostics1.get(&apple1.uri).unwrap();
-        assert_no_errors(apple1_diagnostics, &apple1);
+        assert_no_errors(&diagnostics1, &apple1);
 
         // Change tracked doc, introducing an error.
         let apple2 = update_text(apple1, "pie()");
         let diagnostics2 = pls.on_did_change_text_document(apple2.clone());
         assert_eq!(diagnostics2.len(), 1);
-        let apple2_diagnostics = diagnostics2.get(&apple2.uri).unwrap();
-        assert_missing_semicolon_error(apple2_diagnostics, &apple2);
+        assert_missing_semicolon_error(&diagnostics2, &apple2);
 
         // 'Change' untracked doc, introducing a second error.
         let banana0 = doc_with_missing_semicolon("banana");
         let diagnostics3 = pls.on_did_change_text_document(banana0.clone());
         assert_eq!(diagnostics3.len(), 2);
-        let apple2_diagnostics = diagnostics3.get(&apple2.uri).unwrap();
-        let banana0_diagnostics = diagnostics3.get(&banana0.uri).unwrap();
-        assert_missing_semicolon_error(apple2_diagnostics, &apple2);
+        assert_missing_semicolon_error(&diagnostics3, &apple2);
         // NOTE(gj): we currently surface at most one error per `Polar::load` call, so even if two
         // documents have semicolon errors we'll only publish a single diagnostic.
-        assert_no_errors(banana0_diagnostics, &banana0);
+        assert_no_errors(&diagnostics3, &banana0);
 
         // Change tracked doc, fixing an error.
         let apple3 = update_text(apple2, "pie();");
         let diagnostics4 = pls.on_did_change_text_document(apple3.clone());
         assert_eq!(diagnostics4.len(), 2);
-        let apple3_diagnostics = diagnostics4.get(&apple3.uri).unwrap();
-        let banana0_diagnostics = diagnostics4.get(&banana0.uri).unwrap();
-        assert_no_errors(apple3_diagnostics, &apple3);
-        assert_missing_semicolon_error(banana0_diagnostics, &banana0);
+        assert_no_errors(&diagnostics4, &apple3);
+        assert_missing_semicolon_error(&diagnostics4, &banana0);
 
         // Change tracked doc, fixing the last error.
         let banana1 = update_text(banana0, "split();");
         let diagnostics5 = pls.on_did_change_text_document(banana1.clone());
         assert_eq!(diagnostics5.len(), 2);
-        let apple3_diagnostics = diagnostics5.get(&apple3.uri).unwrap();
-        let banana1_diagnostics = diagnostics5.get(&banana1.uri).unwrap();
-        assert_no_errors(apple3_diagnostics, &apple3);
-        assert_no_errors(banana1_diagnostics, &banana1);
+        assert_no_errors(&diagnostics5, &apple3);
+        assert_no_errors(&diagnostics5, &banana1);
     }
 
     #[wasm_bindgen_test]
@@ -510,8 +488,7 @@ mod tests {
         let events2 = vec![FileEvent::new(apple2.uri.clone(), FileChangeType::Deleted)];
         let diagnostics2 = pls.on_did_change_watched_files(events2);
         assert_eq!(diagnostics2.len(), 1);
-        let apple2_diagnostics = diagnostics2.get(&apple2.uri).unwrap();
-        assert_no_errors(apple2_diagnostics, &apple2);
+        assert_no_errors(&diagnostics2, &apple2);
         assert!(pls.documents.is_empty());
 
         // Deleting tracked doc w/ error.
@@ -520,8 +497,7 @@ mod tests {
         let events3 = vec![FileEvent::new(apple3.uri.clone(), FileChangeType::Deleted)];
         let diagnostics3 = pls.on_did_change_watched_files(events3);
         assert_eq!(diagnostics3.len(), 1);
-        let apple3_diagnostics = diagnostics3.get(&apple3.uri).unwrap();
-        assert_no_errors(apple3_diagnostics, &apple3);
+        assert_no_errors(&diagnostics3, &apple3);
         assert!(pls.documents.is_empty());
 
         // Deleting tracked doc w/o error; doc w/o error remains.
@@ -532,10 +508,8 @@ mod tests {
         let events4 = vec![FileEvent::new(apple4.uri.clone(), FileChangeType::Deleted)];
         let diagnostics4 = pls.on_did_change_watched_files(events4);
         assert_eq!(diagnostics4.len(), 2);
-        let apple4_diagnostics = diagnostics4.get(&apple4.uri).unwrap();
-        let banana4_diagnostics = diagnostics4.get(&banana4.uri).unwrap();
-        assert_no_errors(apple4_diagnostics, &apple4);
-        assert_no_errors(banana4_diagnostics, &banana4);
+        assert_no_errors(&diagnostics4, &apple4);
+        assert_no_errors(&diagnostics4, &banana4);
         assert!(pls.remove_document(&banana4.uri).is_some());
         assert!(pls.documents.is_empty());
 
@@ -547,10 +521,8 @@ mod tests {
         let events5 = vec![FileEvent::new(apple5.uri.clone(), FileChangeType::Deleted)];
         let diagnostics5 = pls.on_did_change_watched_files(events5);
         assert_eq!(diagnostics5.len(), 2);
-        let apple5_diagnostics = diagnostics5.get(&apple5.uri).unwrap();
-        let banana5_diagnostics = diagnostics5.get(&banana5.uri).unwrap();
-        assert_no_errors(apple5_diagnostics, &apple5);
-        assert_no_errors(banana5_diagnostics, &banana5);
+        assert_no_errors(&diagnostics5, &apple5);
+        assert_no_errors(&diagnostics5, &banana5);
         assert!(pls.remove_document(&banana5.uri).is_some());
         assert!(pls.documents.is_empty());
 
@@ -562,10 +534,8 @@ mod tests {
         let events6 = vec![FileEvent::new(apple6.uri.clone(), FileChangeType::Deleted)];
         let diagnostics6 = pls.on_did_change_watched_files(events6);
         assert_eq!(diagnostics6.len(), 2);
-        let apple6_diagnostics = diagnostics6.get(&apple6.uri).unwrap();
-        let banana6_diagnostics = diagnostics6.get(&banana6.uri).unwrap();
-        assert_no_errors(apple6_diagnostics, &apple6);
-        assert_missing_semicolon_error(banana6_diagnostics, &banana6);
+        assert_no_errors(&diagnostics6, &apple6);
+        assert_missing_semicolon_error(&diagnostics6, &banana6);
         assert!(pls.remove_document(&banana6.uri).is_some());
         assert!(pls.documents.is_empty());
 
@@ -577,10 +547,8 @@ mod tests {
         let events7 = vec![FileEvent::new(apple7.uri.clone(), FileChangeType::Deleted)];
         let diagnostics7 = pls.on_did_change_watched_files(events7);
         assert_eq!(diagnostics7.len(), 2);
-        let apple7_diagnostics = diagnostics7.get(&apple7.uri).unwrap();
-        let banana7_diagnostics = diagnostics7.get(&banana7.uri).unwrap();
-        assert_no_errors(apple7_diagnostics, &apple7);
-        assert_missing_semicolon_error(banana7_diagnostics, &banana7);
+        assert_no_errors(&diagnostics7, &apple7);
+        assert_missing_semicolon_error(&diagnostics7, &banana7);
         assert!(pls.remove_document(&banana7.uri).is_some());
         assert!(pls.documents.is_empty());
 
@@ -605,18 +573,12 @@ mod tests {
         ];
         let diagnostics8 = pls.on_did_change_watched_files(events8);
         assert_eq!(diagnostics8.len(), 6);
-        let apple8_diagnostics = diagnostics8.get(&apple8.uri).unwrap();
-        let banana8_diagnostics = diagnostics8.get(&banana8.uri).unwrap();
-        let canteloupe8_diagnostics = diagnostics8.get(&canteloupe8.uri).unwrap();
-        let date8_diagnostics = diagnostics8.get(&date8.uri).unwrap();
-        let elderberry8_diagnostics = diagnostics8.get(&elderberry8.uri).unwrap();
-        let fig8_diagnostics = diagnostics8.get(&fig8.uri).unwrap();
-        assert_no_errors(apple8_diagnostics, &apple8);
-        assert_no_errors(banana8_diagnostics, &banana8);
-        assert_missing_semicolon_error(canteloupe8_diagnostics, &canteloupe8);
-        assert_no_errors(date8_diagnostics, &date8);
-        assert_no_errors(elderberry8_diagnostics, &elderberry8);
-        assert_no_errors(fig8_diagnostics, &fig8);
+        assert_no_errors(&diagnostics8, &apple8);
+        assert_no_errors(&diagnostics8, &banana8);
+        assert_missing_semicolon_error(&diagnostics8, &canteloupe8);
+        assert_no_errors(&diagnostics8, &date8);
+        assert_no_errors(&diagnostics8, &elderberry8);
+        assert_no_errors(&diagnostics8, &fig8);
         assert!(pls.remove_document(&canteloupe8.uri).is_some());
         assert!(pls.remove_document(&fig8.uri).is_some());
         assert!(pls.documents.is_empty());
@@ -645,22 +607,14 @@ mod tests {
         assert_eq!(pls.documents.len(), 8);
         let diagnostics9a = pls.on_did_change_watched_files(events9a);
         assert_eq!(diagnostics9a.len(), 8);
-        let apple9_diagnostics = diagnostics9a.get(&apple9.uri).unwrap();
-        let banana9_diagnostics = diagnostics9a.get(&banana9.uri).unwrap();
-        let calabash9_diagnostics = diagnostics9a.get(&calabash9.uri).unwrap();
-        let canteloupe9_diagnostics = diagnostics9a.get(&canteloupe9.uri).unwrap();
-        let cherry9_diagnostics = diagnostics9a.get(&cherry9.uri).unwrap();
-        let date9_diagnostics = diagnostics9a.get(&date9.uri).unwrap();
-        let grape9_diagnostics = diagnostics9a.get(&grape9.uri).unwrap();
-        let grapefruit9_diagnostics = diagnostics9a.get(&grapefruit9.uri).unwrap();
-        assert_missing_semicolon_error(apple9_diagnostics, &apple9);
-        assert_no_errors(banana9_diagnostics, &banana9);
-        assert_no_errors(calabash9_diagnostics, &calabash9);
-        assert_no_errors(canteloupe9_diagnostics, &canteloupe9);
-        assert_no_errors(cherry9_diagnostics, &cherry9);
-        assert_no_errors(date9_diagnostics, &date9);
-        assert_no_errors(grape9_diagnostics, &grape9);
-        assert_no_errors(grapefruit9_diagnostics, &grapefruit9);
+        assert_missing_semicolon_error(&diagnostics9a, &apple9);
+        assert_no_errors(&diagnostics9a, &banana9);
+        assert_no_errors(&diagnostics9a, &calabash9);
+        assert_no_errors(&diagnostics9a, &canteloupe9);
+        assert_no_errors(&diagnostics9a, &cherry9);
+        assert_no_errors(&diagnostics9a, &date9);
+        assert_no_errors(&diagnostics9a, &grape9);
+        assert_no_errors(&diagnostics9a, &grapefruit9);
         assert_eq!(pls.documents.len(), 5);
 
         // Deleting multiple directories at once.
@@ -675,16 +629,11 @@ mod tests {
         assert_eq!(pls.documents.len(), 5);
         let diagnostics9b = pls.on_did_change_watched_files(events9b);
         assert_eq!(diagnostics9b.len(), 5);
-        let apple9_diagnostics = diagnostics9b.get(&apple9.uri).unwrap();
-        let banana9_diagnostics = diagnostics9b.get(&banana9.uri).unwrap();
-        let calabash9_diagnostics = diagnostics9b.get(&calabash9.uri).unwrap();
-        let canteloupe9_diagnostics = diagnostics9b.get(&canteloupe9.uri).unwrap();
-        let cherry9_diagnostics = diagnostics9b.get(&cherry9.uri).unwrap();
-        assert_missing_semicolon_error(apple9_diagnostics, &apple9);
-        assert_no_errors(banana9_diagnostics, &banana9);
-        assert_no_errors(calabash9_diagnostics, &calabash9);
-        assert_no_errors(canteloupe9_diagnostics, &canteloupe9);
-        assert_no_errors(cherry9_diagnostics, &cherry9);
+        assert_missing_semicolon_error(&diagnostics9b, &apple9);
+        assert_no_errors(&diagnostics9b, &banana9);
+        assert_no_errors(&diagnostics9b, &calabash9);
+        assert_no_errors(&diagnostics9b, &canteloupe9);
+        assert_no_errors(&diagnostics9b, &cherry9);
         assert_eq!(pls.documents.len(), 2);
 
         // Deleting a top-level directory.
@@ -694,10 +643,8 @@ mod tests {
         assert_eq!(pls.documents.len(), 2);
         let diagnostics9c = pls.on_did_change_watched_files(events9c);
         assert_eq!(diagnostics9c.len(), 2);
-        let apple9_diagnostics = diagnostics9c.get(&apple9.uri).unwrap();
-        let banana9_diagnostics = diagnostics9c.get(&banana9.uri).unwrap();
-        assert_missing_semicolon_error(apple9_diagnostics, &apple9);
-        assert_no_errors(banana9_diagnostics, &banana9);
+        assert_missing_semicolon_error(&diagnostics9c, &apple9);
+        assert_no_errors(&diagnostics9c, &banana9);
         assert_eq!(pls.documents.len(), 1);
         assert!(pls.remove_document(&apple9.uri).is_some());
         assert!(pls.documents.is_empty());
