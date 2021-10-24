@@ -138,12 +138,11 @@ impl PolarLanguageServer {
 }
 
 #[must_use]
-fn empty_diagnostics_for_document(document: &TextDocumentItem) -> PublishDiagnosticsParams {
-    PublishDiagnosticsParams {
-        uri: document.uri.clone(),
-        version: Some(document.version),
-        diagnostics: vec![],
-    }
+fn empty_diagnostics_for_doc(
+    (uri, doc): (&Url, &TextDocumentItem),
+) -> (Url, PublishDiagnosticsParams) {
+    let params = PublishDiagnosticsParams::new(uri.clone(), vec![], Some(doc.version));
+    (uri.clone(), params)
 }
 
 /// Helper methods.
@@ -156,6 +155,20 @@ impl PolarLanguageServer {
     #[must_use]
     fn remove_document(&mut self, uri: &Url) -> Option<TextDocumentItem> {
         self.documents.remove(uri)
+    }
+
+    /// Remove tracked docs inside `dir`.
+    #[must_use]
+    fn remove_documents_in_dir(&mut self, dir: &Url) -> Diagnostics {
+        let (in_dir, not_in_dir): (Documents, Documents) =
+            self.documents.clone().into_iter().partition(|(uri, _)| {
+                let maybe_segments = dir.path_segments().zip(uri.path_segments());
+                // If all path segments match b/w dir & uri, uri is in dir and should be removed.
+                maybe_segments.map_or(false, |(l, r)| l.zip(r).all(|(l, r)| l == r))
+            });
+        // Replace tracked docs w/ docs that aren't in the removed dir.
+        self.documents = not_in_dir;
+        in_dir.iter().map(empty_diagnostics_for_doc).collect()
     }
 
     fn send_diagnostics(&self, params: &PublishDiagnosticsParams) {
@@ -172,8 +185,8 @@ impl PolarLanguageServer {
     #[must_use]
     fn empty_diagnostics_for_all_documents(&self) -> Diagnostics {
         self.documents
-            .values()
-            .map(|d| (d.uri.clone(), empty_diagnostics_for_document(d)))
+            .iter()
+            .map(empty_diagnostics_for_doc)
             .collect()
     }
 
@@ -278,30 +291,22 @@ impl PolarLanguageServer {
             let mut msg = format!("deleting URI: {}", uri);
 
             if let Some(removed) = self.remove_document(&uri) {
-                let empty_diagnostics = empty_diagnostics_for_document(&removed);
+                let (_, empty_diagnostics) = empty_diagnostics_for_doc((&uri, &removed));
                 if diagnostics.insert(uri, empty_diagnostics).is_some() {
                     msg += "\n\tduplicate watched file event";
                 }
             } else {
                 msg += "\n\tchecking if URI is dir";
-                let docs = self.documents.clone().into_iter();
-                let (removed, retained): (Documents, Documents) = docs.partition(|(doc_uri, _)| {
-                    let maybe_segments = uri.path_segments().zip(doc_uri.path_segments());
-                    // If all path segments match between dir & doc, dir contains doc and doc
-                    // should be removed.
-                    maybe_segments.map_or(false, |(a, b)| a.zip(b).all(|(x, y)| x == y))
-                });
+                let removed = self.remove_documents_in_dir(&uri);
                 if removed.is_empty() {
                     msg += "\n\tcannot remove untracked doc";
                 } else {
-                    for (uri, doc) in removed {
+                    for (uri, params) in removed {
                         msg += &format!("\n\t\tremoving dir member: {}", uri);
-                        let empty_diagnostics = empty_diagnostics_for_document(&doc);
-                        if diagnostics.insert(uri, empty_diagnostics).is_some() {
+                        if diagnostics.insert(uri, params).is_some() {
                             msg += "\n\t\tduplicate watched file event";
                         }
                     }
-                    self.documents = retained;
                 }
             }
             log(&msg);
