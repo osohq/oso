@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::collections::BTreeMap;
 
 use crate::lexer::{self, Token};
-use crate::parser::{Line, ResourceBlock};
+use crate::parser::Line;
 use crate::error;
 use crate::terms::*;
 use crate::rules::*;
@@ -729,20 +729,14 @@ StringList: Value = {
     "[" "]" => Value::List(vec![]),
     "[" <StringListTerms> "]" => Value::List(<>),
 }
-RelationsDict: Value = <Object<Spanned<Variable>>> => Value::Dictionary(<>);
-Declaration: resource_block::Production = {
-    <start:@L> <keyword:Name> "=" <value:StringList> <end:@R> ";" =>? {
-        let term = Term::new_from_parser(src_id, start, end, value);
-        return resource_block::validate_parsed_declaration((keyword, term));
-    },
-    <start:@L> <keyword:Name> "=" <value:RelationsDict> <end:@R> ";" =>? {
-        let term = Term::new_from_parser(src_id, start, end, value);
-        return resource_block::validate_parsed_declaration((keyword, term));
-    },
-}
+DeclarationValue: Value = {
+    <StringList> => <>,
+    <Object<Spanned<Variable>>> => Value::Dictionary(<>),
+};
+Declaration: resource_block::Production = <Spanned<Variable>> "=" <Spanned<DeclarationValue>> ";" => resource_block::Production::Declaration((<>));
 
-OnRelation: Term = <Spanned<Variable>> <Spanned<PolarString>> =>? resource_block::validate_relation_keyword((<>));
-ShorthandRuleBody: (Term, Option<Term>) = <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => (<>);
+OnRelation: (Term, Term) = <Spanned<Variable>> <Spanned<PolarString>> => (<>);
+ShorthandRuleBody: (Term, Option<(Term, Term)>) = <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => (<>);
 ShorthandRule: resource_block::Production = <head:Spanned<PolarString>> Define <body:ShorthandRuleBody> => resource_block::Production::ShorthandRule(<>);
 
 ResourceBlockProduction: resource_block::Production = {
@@ -757,9 +751,9 @@ Line: Line = {
     <RuleType> => Line::RuleType(<>),
     "?=" <TermExp> ";" => Line::Query(<>),
 
-    <start:@L> <keyword:Spanned<Variable>?> <resource:Variable> "{" <productions:ResourceBlockProductions> "}" <end:@R> =>? {
+    <start:@L> <keyword:Spanned<Variable>?> <resource:Variable> "{" <productions:ResourceBlockProductions> "}" <end:@R> => {
         let resource = Term::new_from_parser(src_id, start, end, resource);
-        resource_block::turn_productions_into_resource_block(keyword, resource, productions).map(|ns| Line::ResourceBlock(ns))
+        Line::ResourceBlock { keyword, resource, productions }
     }
 }
 

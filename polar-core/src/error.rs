@@ -57,8 +57,7 @@ impl PolarError {
                 | ParseError::WrongValueType { loc, .. }
                 | ParseError::ReservedWord { loc, .. }
                 | ParseError::DuplicateKey { loc, .. }
-                | ParseError::SingletonVariable { loc, .. }
-                | ParseError::ResourceBlock { loc, .. } => {
+                | ParseError::SingletonVariable { loc, .. } => {
                     let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
                     self.context.replace(ErrorContext {
                         source: source.clone(),
@@ -86,13 +85,21 @@ impl PolarError {
         }
 
         // Augment ResourceBlock errors with relevant snippets of parsed Polar policy.
-        if let ErrorKind::Parse(ParseError::ResourceBlock {
+        if let ErrorKind::Validation(ValidationError::ResourceBlock {
             ref mut msg,
             ref ranges,
-            ..
+            ref loc,
         }) = self.kind
         {
             if let Some(source) = source {
+                let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
+                self.context.replace(ErrorContext {
+                    source: source.clone(),
+                    row,
+                    column,
+                    include_location: false,
+                });
+
                 match ranges.len() {
                     // If one range is provided, print it with no label.
                     1 => {
@@ -237,13 +244,6 @@ pub enum ParseError {
         loc: usize,
         name: String,
     },
-    ResourceBlock {
-        loc: usize,
-        msg: String,
-        /// Set of source ranges to augment the error message with relevant snippets of the parsed
-        /// Polar policy.
-        ranges: Vec<ops::Range<usize>>,
-    },
 }
 
 impl fmt::Display for ErrorContext {
@@ -311,9 +311,6 @@ impl fmt::Display for ParseError {
                     "Singleton variable {} is unused or undefined; try renaming to _{} or _",
                     name, name
                 )
-            }
-            Self::ResourceBlock { msg, .. } => {
-                write!(f, "{}", msg)
             }
         }
     }
@@ -461,10 +458,25 @@ impl fmt::Display for ParameterError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationError {
-    InvalidRule { rule: String, msg: String },
-    InvalidRuleType { rule_type: String, msg: String },
-    UndefinedRule { rule_name: String },
-    // TODO(lm|gj): add ResourceBlock and SingletonVariable.
+    InvalidRule {
+        rule: String,
+        msg: String,
+    },
+    InvalidRuleType {
+        rule_type: String,
+        msg: String,
+    },
+    UndefinedRule {
+        rule_name: String,
+    },
+    ResourceBlock {
+        loc: usize,
+        msg: String,
+        /// Set of source ranges to augment the error message with relevant snippets of the parsed
+        /// Polar policy.
+        ranges: Vec<ops::Range<usize>>,
+    },
+    // TODO(lm|gj): add SingletonVariable.
 }
 
 impl fmt::Display for ValidationError {
@@ -478,6 +490,9 @@ impl fmt::Display for ValidationError {
             }
             Self::UndefinedRule { rule_name } => {
                 write!(f, r#"Call to undefined rule "{}""#, rule_name)
+            }
+            Self::ResourceBlock { msg, .. } => {
+                write!(f, "{}", msg)
             }
         }
     }

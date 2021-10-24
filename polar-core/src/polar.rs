@@ -5,6 +5,7 @@ use super::events::*;
 use super::kb::*;
 use super::messages::*;
 use super::parser;
+use super::resource_block::resource_block_from_productions;
 use super::rewrites::*;
 use super::runnable::Runnable;
 use super::sources::*;
@@ -216,9 +217,14 @@ impl Polar {
                             kb.add_rule_type(rule_type);
                         }
                     }
-                    parser::Line::ResourceBlock(block) => {
-                        diagnostics.append(&mut block.add_to_kb(kb))
-                    }
+                    parser::Line::ResourceBlock {
+                        keyword,
+                        resource,
+                        productions,
+                    } => match resource_block_from_productions(keyword, resource, productions) {
+                        Ok(block) => diagnostics.append(&mut block.add_to_kb(kb)),
+                        Err(mut ds) => diagnostics.append(&mut ds),
+                    },
                 }
             }
             Ok(diagnostics)
