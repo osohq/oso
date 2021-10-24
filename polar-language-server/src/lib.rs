@@ -79,6 +79,14 @@ fn uri_from_polar_error_context(e: &PolarError) -> Option<Url> {
     None
 }
 
+#[must_use]
+fn empty_diagnostics_for_doc(
+    (uri, doc): (&Url, &TextDocumentItem),
+) -> (Url, PublishDiagnosticsParams) {
+    let params = PublishDiagnosticsParams::new(uri.clone(), vec![], Some(doc.version));
+    (uri.clone(), params)
+}
+
 /// Public API exposed via WASM.
 #[wasm_bindgen]
 impl PolarLanguageServer {
@@ -137,12 +145,58 @@ impl PolarLanguageServer {
     }
 }
 
-#[must_use]
-fn empty_diagnostics_for_doc(
-    (uri, doc): (&Url, &TextDocumentItem),
-) -> (Url, PublishDiagnosticsParams) {
-    let params = PublishDiagnosticsParams::new(uri.clone(), vec![], Some(doc.version));
-    (uri.clone(), params)
+/// Individual LSP notification handlers.
+impl PolarLanguageServer {
+    #[must_use]
+    fn on_did_open_text_document(&mut self, doc: TextDocumentItem) -> Diagnostics {
+        if let Some(TextDocumentItem { uri, .. }) = self.upsert_document(doc) {
+            log(&format!("reopened tracked doc: {}", uri));
+        }
+        self.reload_kb()
+    }
+
+    #[must_use]
+    fn on_did_change_text_document(&mut self, doc: TextDocumentItem) -> Diagnostics {
+        let uri = doc.uri.clone();
+        if self.upsert_document(doc).is_none() {
+            log(&format!("updated untracked doc: {}", uri));
+        }
+        self.reload_kb()
+    }
+
+    #[must_use]
+    fn on_did_change_watched_files(&mut self, changes: Vec<FileEvent>) -> Diagnostics {
+        let mut diagnostics = Diagnostics::new();
+
+        for FileEvent { uri, typ } in changes {
+            assert_eq!(typ, FileChangeType::Deleted); // We only watch for `Deleted` events.
+            let mut msg = format!("deleting URI: {}", uri);
+
+            if let Some(removed) = self.remove_document(&uri) {
+                let (_, empty_diagnostics) = empty_diagnostics_for_doc((&uri, &removed));
+                if diagnostics.insert(uri, empty_diagnostics).is_some() {
+                    msg += "\n\tduplicate watched file event";
+                }
+            } else {
+                msg += "\n\tchecking if URI is dir";
+                let removed = self.remove_documents_in_dir(&uri);
+                if removed.is_empty() {
+                    msg += "\n\tcannot remove untracked doc";
+                } else {
+                    for (uri, params) in removed {
+                        msg += &format!("\n\t\tremoving dir member: {}", uri);
+                        if diagnostics.insert(uri, params).is_some() {
+                            msg += "\n\t\tduplicate watched file event";
+                        }
+                    }
+                }
+            }
+            log(&msg);
+        }
+
+        diagnostics.append(&mut self.reload_kb());
+        diagnostics
+    }
 }
 
 /// Helper methods.
@@ -259,60 +313,6 @@ impl PolarLanguageServer {
                 assert!(diagnostics.insert(d.uri.clone(), d).is_some());
             }
         }
-        diagnostics
-    }
-}
-
-/// Individual LSP notification handlers.
-impl PolarLanguageServer {
-    #[must_use]
-    fn on_did_open_text_document(&mut self, doc: TextDocumentItem) -> Diagnostics {
-        if let Some(TextDocumentItem { uri, .. }) = self.upsert_document(doc) {
-            log(&format!("reopened tracked doc: {}", uri));
-        }
-        self.reload_kb()
-    }
-
-    #[must_use]
-    fn on_did_change_text_document(&mut self, doc: TextDocumentItem) -> Diagnostics {
-        let uri = doc.uri.clone();
-        if self.upsert_document(doc).is_none() {
-            log(&format!("updated untracked doc: {}", uri));
-        }
-        self.reload_kb()
-    }
-
-    #[must_use]
-    fn on_did_change_watched_files(&mut self, changes: Vec<FileEvent>) -> Diagnostics {
-        let mut diagnostics = Diagnostics::new();
-
-        for FileEvent { uri, typ } in changes {
-            assert_eq!(typ, FileChangeType::Deleted); // We only watch for `Deleted` events.
-            let mut msg = format!("deleting URI: {}", uri);
-
-            if let Some(removed) = self.remove_document(&uri) {
-                let (_, empty_diagnostics) = empty_diagnostics_for_doc((&uri, &removed));
-                if diagnostics.insert(uri, empty_diagnostics).is_some() {
-                    msg += "\n\tduplicate watched file event";
-                }
-            } else {
-                msg += "\n\tchecking if URI is dir";
-                let removed = self.remove_documents_in_dir(&uri);
-                if removed.is_empty() {
-                    msg += "\n\tcannot remove untracked doc";
-                } else {
-                    for (uri, params) in removed {
-                        msg += &format!("\n\t\tremoving dir member: {}", uri);
-                        if diagnostics.insert(uri, params).is_some() {
-                            msg += "\n\t\tduplicate watched file event";
-                        }
-                    }
-                }
-            }
-            log(&msg);
-        }
-
-        diagnostics.append(&mut self.reload_kb());
         diagnostics
     }
 }
