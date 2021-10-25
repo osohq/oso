@@ -552,10 +552,11 @@ jobs:
   validate_python_macos:
     name: Test python ${{ matrix.python-version }} on MacOS
     needs: [build_macos_wheels]
-    runs-on: macos-11
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
+        os: [macos-11, macos-latest]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -570,6 +571,8 @@ jobs:
         with:
           name: wheel
       - name: "test"
+        # There are no 3.6 python builds for macos-11
+        if: matrix.os != 'macos-11' || matrix.python-version != '3.6')
         run: |
           pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
           python test.py
