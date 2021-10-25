@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, str::Split};
 
 use lsp_types::{
     notification::{
@@ -233,9 +233,12 @@ impl PolarLanguageServer {
     fn remove_documents_in_dir(&mut self, dir: &Url) -> Diagnostics {
         let (in_dir, not_in_dir): (Documents, Documents) =
             self.documents.clone().into_iter().partition(|(uri, _)| {
+                // Zip pair of `Option<Split<char>>`s into `Option<(Split<char>, Split<char>)>`.
                 let maybe_segments = dir.path_segments().zip(uri.path_segments());
+                // Compare paths (`Split<char>`) by zipping them together and comparing pairwise.
+                let compare_paths = |(l, r): (Split<_>, Split<_>)| l.zip(r).all(|(l, r)| l == r);
                 // If all path segments match b/w dir & uri, uri is in dir and should be removed.
-                maybe_segments.map_or(false, |(l, r)| l.zip(r).all(|(l, r)| l == r))
+                maybe_segments.map_or(false, compare_paths)
             });
         // Replace tracked docs w/ docs that aren't in the removed dir.
         self.documents = not_in_dir;
