@@ -842,6 +842,8 @@ impl KnowledgeBase {
 mod tests {
     use super::*;
     use crate::error::*;
+    use crate::resource_block::{index_declarations, BlockType, ResourceBlocks};
+    use crate::terms::{InstanceLiteral, Pattern};
 
     #[test]
     /// Test validation implemented in `check_file()`.
@@ -1427,5 +1429,99 @@ mod tests {
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!("Orange")), value!(1)]));
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!("Fruit"))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Fruit"))]));
+    }
+
+    #[test]
+    fn test_create_resource_specific_rule_types() -> Result<(), PolarError> {
+        let repo_resource = term!(sym!("repo"));
+        let repo_roles = term!(["reader"]);
+        let repo_relations = term!(btreemap! { sym!("parent") => term!(sym!("org")) });
+        let repo_declarations =
+            index_declarations(Some(repo_roles), None, Some(repo_relations), &repo_resource);
+
+        let org_resource = term!(sym!("org"));
+        let org_roles = term!(["member"]);
+        let org_declarations = index_declarations(Some(org_roles), None, None, &org_resource);
+
+        let mut blocks = ResourceBlocks::new();
+        blocks.add(
+            BlockType::Resource,
+            org_resource,
+            org_declarations.unwrap(),
+            vec![],
+        );
+        let shorthand_rule = ShorthandRule {
+            head: term!("reader"),
+            body: (term!("member"), Some(term!("parent"))),
+        };
+        blocks.add(
+            BlockType::Resource,
+            repo_resource,
+            repo_declarations.unwrap(),
+            vec![shorthand_rule],
+        );
+
+        let mut kb = KnowledgeBase {
+            constants: HashMap::new(),
+            mro: HashMap::new(),
+            loaded_files: Default::default(),
+            loaded_content: Default::default(),
+            rules: HashMap::new(),
+            rule_types: RuleTypes::default(),
+            sources: Sources::default(),
+            id_counter: Counter::default(),
+            gensym_counter: Counter::default(),
+            inline_queries: vec![],
+            resource_blocks: blocks,
+        };
+
+        kb.create_resource_specific_rule_types()?;
+
+        let has_role_rule_types = kb.rule_types.get(&sym!("has_role")).unwrap();
+        let has_relation_rule_types = kb.rule_types.get(&sym!("has_relation")).unwrap();
+
+        // two resources with roles, one with relations
+        assert_eq!(has_role_rule_types.len(), 2);
+        assert_eq!(has_relation_rule_types.len(), 1);
+
+        // has_role rule types for both `org` and `repo`
+        assert!(has_role_rule_types.into_iter().any(|rule_type| {
+            let resource_param = rule_type.params[2].clone();
+            let resource_specializer = resource_param.specializer.unwrap();
+            let instance = resource_specializer.value().as_pattern().unwrap();
+            if let Pattern::Instance(InstanceLiteral { tag, fields: _ }) = instance {
+                tag == &sym!("org")
+            } else {
+                false
+            }
+        }));
+        assert!(has_role_rule_types.into_iter().any(|rule_type| {
+            let resource_param = rule_type.params[2].clone();
+            let resource_specializer = resource_param.specializer.unwrap();
+            let instance = resource_specializer.value().as_pattern().unwrap();
+            if let Pattern::Instance(InstanceLiteral { tag, fields: _ }) = instance {
+                tag == &sym!("repo")
+            } else {
+                false
+            }
+        }));
+
+        // has_relation rule type for `repo`
+        let has_relation = has_relation_rule_types.into_iter().next().unwrap();
+        let resource_param = has_relation.params[2].clone();
+        let resource_specializer = resource_param.specializer.unwrap();
+        let instance = resource_specializer.value().as_pattern().unwrap();
+
+        let relation_param = has_relation.params[1].clone();
+        let relation = relation_param.parameter.value().as_string().unwrap();
+        assert_eq!(relation, "parent".to_string());
+
+        if let Pattern::Instance(InstanceLiteral { tag, fields: _ }) = instance {
+            assert_eq!(tag, &sym!("repo"));
+        } else {
+            panic!("Missing has_relation resource parameter specialization");
+        }
+
+        Ok(())
     }
 }
