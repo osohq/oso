@@ -1068,8 +1068,6 @@ mod tests {
 
     #[test]
     fn test_resource_block_parsing_permutations() {
-        use std::iter::FromIterator;
-
         // Policy pieces
         let roles = r#"roles = ["writer", "reader"];"#;
         let permissions = r#"permissions = ["push", "pull"];"#;
