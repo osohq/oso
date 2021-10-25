@@ -196,7 +196,9 @@ impl PolarLanguageServer {
                 msg += "\n\tchecking if URI is dir";
                 let removed = self.remove_documents_in_dir(&uri);
                 if removed.is_empty() {
-                    msg += "\n\tcannot remove untracked doc";
+                    if uri.as_str().ends_with(".polar") {
+                        msg += "\n\tcannot remove untracked doc";
+                    }
                 } else {
                     for (uri, params) in removed {
                         msg += &format!("\n\t\tremoving dir member: {}", uri);
