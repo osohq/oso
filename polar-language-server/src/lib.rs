@@ -45,7 +45,6 @@ pub struct PolarLanguageServer {
     send_diagnostics_callback: js_sys::Function,
 }
 
-#[must_use]
 fn range_from_polar_error_context(PolarError { context: c, .. }: &PolarError) -> Range {
     let (line, character) = c.as_ref().map_or((0, 0), |c| (c.row as _, c.column as _));
     Range {
@@ -54,7 +53,6 @@ fn range_from_polar_error_context(PolarError { context: c, .. }: &PolarError) ->
     }
 }
 
-#[must_use]
 fn uri_from_polar_error_context(e: &PolarError) -> Option<Url> {
     if let Some(context) = e.context.as_ref() {
         if let Some(filename) = context.source.filename.as_ref() {
@@ -79,7 +77,6 @@ fn uri_from_polar_error_context(e: &PolarError) -> Option<Url> {
     None
 }
 
-#[must_use]
 fn empty_diagnostics_for_doc(
     (uri, doc): (&Url, &TextDocumentItem),
 ) -> (Url, PublishDiagnosticsParams) {
@@ -90,7 +87,6 @@ fn empty_diagnostics_for_doc(
 /// Public API exposed via WASM.
 #[wasm_bindgen]
 impl PolarLanguageServer {
-    #[must_use]
     #[wasm_bindgen(constructor)]
     pub fn new(send_diagnostics_callback: &js_sys::Function) -> Self {
         console_error_panic_hook::set_once();
@@ -163,7 +159,6 @@ impl PolarLanguageServer {
 
 /// Individual LSP notification handlers.
 impl PolarLanguageServer {
-    #[must_use]
     fn on_did_open_text_document(&mut self, doc: TextDocumentItem) -> Diagnostics {
         if let Some(TextDocumentItem { uri, .. }) = self.upsert_document(doc) {
             log(&format!("reopened tracked doc: {}", uri));
@@ -171,7 +166,6 @@ impl PolarLanguageServer {
         self.reload_kb()
     }
 
-    #[must_use]
     fn on_did_change_text_document(&mut self, doc: TextDocumentItem) -> Diagnostics {
         let uri = doc.uri.clone();
         if self.upsert_document(doc).is_none() {
@@ -180,7 +174,6 @@ impl PolarLanguageServer {
         self.reload_kb()
     }
 
-    #[must_use]
     fn on_did_delete_files(&mut self, uris: Vec<Url>) -> Diagnostics {
         let mut diagnostics = Diagnostics::new();
 
@@ -218,18 +211,15 @@ impl PolarLanguageServer {
 
 /// Helper methods.
 impl PolarLanguageServer {
-    #[must_use]
     fn upsert_document(&mut self, doc: TextDocumentItem) -> Option<TextDocumentItem> {
         self.documents.insert(doc.uri.clone(), doc)
     }
 
-    #[must_use]
     fn remove_document(&mut self, uri: &Url) -> Option<TextDocumentItem> {
         self.documents.remove(uri)
     }
 
     /// Remove tracked docs inside `dir`.
-    #[must_use]
     fn remove_documents_in_dir(&mut self, dir: &Url) -> Diagnostics {
         let (in_dir, not_in_dir): (Documents, Documents) =
             self.documents.clone().into_iter().partition(|(uri, _)| {
@@ -258,7 +248,6 @@ impl PolarLanguageServer {
         }
     }
 
-    #[must_use]
     fn empty_diagnostics_for_all_documents(&self) -> Diagnostics {
         self.documents
             .iter()
@@ -266,7 +255,6 @@ impl PolarLanguageServer {
             .collect()
     }
 
-    #[must_use]
     fn document_from_polar_error_context(&self, e: &PolarError) -> Option<&TextDocumentItem> {
         uri_from_polar_error_context(e).and_then(|uri| {
             if let Some(document) = self.documents.get(&uri) {
@@ -283,7 +271,6 @@ impl PolarLanguageServer {
         })
     }
 
-    #[must_use]
     fn diagnostic_from_polar_error(&self, e: &PolarError) -> Option<PublishDiagnosticsParams> {
         self.document_from_polar_error_context(e).map(|d| {
             let diagnostic = Diagnostic {
@@ -302,7 +289,6 @@ impl PolarLanguageServer {
     }
 
     /// Turn tracked documents into a set of Polar `Source` structs for `Polar::load`.
-    #[must_use]
     fn documents_to_polar_sources(&self) -> Vec<Source> {
         self.documents
             .values()
@@ -323,7 +309,6 @@ impl PolarLanguageServer {
     /// NOTE(gj): we currently only receive a single error (pertaining to a single document) at a
     /// time from the core, but we republish 'empty' diagnostics for all other documents in order
     /// to purge stale diagnostics.
-    #[must_use]
     fn reload_kb(&self) -> Diagnostics {
         self.polar.clear_rules();
         let mut diagnostics = self.empty_diagnostics_for_all_documents();
