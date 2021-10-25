@@ -952,7 +952,8 @@ jobs:
     needs:
       [
         validate_python_linux,
-        validate_python_macos,
+        validate_python_macos_old,
+        validate_python_macos_11,
         validate_python_windows,
         validate_python_musl,
         validate_ruby,
