@@ -7,7 +7,8 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  check:
+  ci:
+    name: Fmt / Lint / Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -21,7 +22,6 @@ jobs:
 
       # NOTE(gj): Rust formatting & Clippy check happens in test.yml.
 
-      # Check 
       - name: Use Node.js 12
         uses: actions/setup-node@v1
         with:
@@ -29,10 +29,18 @@ jobs:
       - name: Check formatting of JS library
         working-directory: "vscode/oso"
         run: make fmtcheck
-      - name: Add WebAssembly target
-        run: rustup target add wasm32-unknown-unknown
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          target: wasm32-unknown-unknown
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Run polar-language-server tests
+        working-directory: "polar-language-server"
+        run: make test
       - name: Build extension
         working-directory: "vscode/oso"
         run: make build
@@ -40,7 +48,8 @@ jobs:
         working-directory: "vscode/oso"
         run: make lint
 
-  test:
+  e2e:
+    name: End-to-end Electron tests
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -61,12 +70,11 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+          target: wasm32-unknown-unknown
       - name: Use Node.js 12
         uses: actions/setup-node@v1
         with:
           node-version: "12"
-      - name: Add WebAssembly target
-        run: rustup target add wasm32-unknown-unknown
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - name: Build extension
