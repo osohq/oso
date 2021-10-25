@@ -1485,7 +1485,7 @@ mod tests {
         assert_eq!(has_relation_rule_types.len(), 1);
 
         // has_role rule types for both `org` and `repo`
-        assert!(has_role_rule_types.into_iter().any(|rule_type| {
+        assert!(has_role_rule_types.iter().any(|rule_type| {
             let resource_param = rule_type.params[2].clone();
             let resource_specializer = resource_param.specializer.unwrap();
             let instance = resource_specializer.value().as_pattern().unwrap();
@@ -1495,7 +1495,7 @@ mod tests {
                 false
             }
         }));
-        assert!(has_role_rule_types.into_iter().any(|rule_type| {
+        assert!(has_role_rule_types.iter().any(|rule_type| {
             let resource_param = rule_type.params[2].clone();
             let resource_specializer = resource_param.specializer.unwrap();
             let instance = resource_specializer.value().as_pattern().unwrap();
@@ -1507,7 +1507,7 @@ mod tests {
         }));
 
         // has_relation rule type for `repo`
-        let has_relation = has_relation_rule_types.into_iter().next().unwrap();
+        let has_relation = has_relation_rule_types.iter().next().unwrap();
         let resource_param = has_relation.params[2].clone();
         let resource_specializer = resource_param.specializer.unwrap();
         let instance = resource_specializer.value().as_pattern().unwrap();
