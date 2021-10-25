@@ -125,25 +125,16 @@ async function reloadDocument(uri: Uri) {
 async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   const server = context.asAbsolutePath(join('server', 'out', 'server.js'));
 
-  // Watch `FileChangeType.Deleted` events for all files and directories in the
-  // current workspace, including those not open in any editor in the
-  // workspace.
+  // Watch `FileChangeType.Deleted` events for Polar files in the current
+  // workspace, including those not open in any editor in the workspace.
   //
   // NOTE(gj): Due to a current limitation in VSCode, when a parent directory
   // is deleted, VSCode's file watcher does not emit events for matching files
   // nested inside that parent. For more information, see this GitHub issue:
   // https://github.com/microsoft/vscode/issues/60813. If that behavior is
-  // fixed in the future, we should be able to go back to a single watcher for
-  // files matching '**/*.polar'.
-  //
-  // NOTE(gj): watching _every_ file might be an issue if the user deletes a
-  // ton of irrelevant files at once (e.g., `rm -rf build_directory/`). There
-  // doesn't seem to be a good option for this right now, but VSCode is
-  // migrating to a new watcher that may ameliorate some of these issues:
-  // https://github.com/microsoft/vscode/issues/132483. FWIW, the current
-  // watcher seems to respect the `files.watcherExclude` config property, which
-  // by default "excludes `node_modules` and some folders under `.git`":
-  // https://github.com/microsoft/vscode-docs/blob/04cec7670671ae852ef020991fb8441ee0bb2796/docs/setup/linux.md?plain=1#L239
+  // fixed in the future, we should be able to remove the
+  // `workspace.fileOperations.didDelete` handler on the server and go back to
+  // a single watcher for files matching '**/*.polar'.
   const deleteWatcher = workspace.createFileSystemWatcher(
     polarFilesInWorkspaceFolderPattern(folder),
     true,
