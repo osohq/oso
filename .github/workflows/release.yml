@@ -551,14 +551,13 @@ jobs:
           python test.py
         working-directory: test
 
-  validate_python_macos:
+  validate_python_macos_old:
     name: Test python ${{ matrix.python-version }} on MacOS
     needs: [build_macos_wheels]
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
-        os: [macos-11, macos-latest]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -573,8 +572,33 @@ jobs:
         with:
           name: wheel
       - name: "test"
-        # There are no 3.6 python builds for macos-11
-        if: matrix.os != 'macos-11' || matrix.python-version != '3.6'
+        run: |
+          pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
+          python test.py
+        working-directory: test
+
+  validate_python_macos_11:
+    name: Test python ${{ matrix.python-version }} on MacOS
+    needs: [build_macos_wheels]
+    runs-on: macos-11
+    strategy:
+      matrix:
+        # There is no python 3.6 for macos-11
+        python-version: [3.7, 3.8, 3.9]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set version env
+        id: version
+        run: echo "::set-output name=oso_version::$(cat VERSION)"
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Download oso python wheels from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: wheel
+      - name: "test"
         run: |
           pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
           python test.py
