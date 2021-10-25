@@ -2502,3 +2502,63 @@ has_role(actor: User, role_name, repository: Repository) if
 
     Ok(())
 }
+
+#[test]
+fn test_dot_transparency() -> TestResult {
+    let mut p = Polar::new();
+    p.load_str("foo(x, y) if z.c in x.a and z.c = y.b;")?;
+    qnull(&mut p, "foo({a: [1]}, {b: 2})");
+    qnull(&mut p, "z.a=1 and z.a=2");
+    qnull(&mut p, "z.a.b=1 and z.a.b=3");
+    qeval(
+        &mut p,
+        "a.z = a.b.c.d and a.b.c.d = a.b.x.y.z and a.b.x.y.z = 1 and a.z = 1",
+    );
+    qnull(
+        &mut p,
+        "a.z = a.b.c.d and a.b.c.d = a.b.x.y.z and a.b.x.y.z = 1 and a.z = 2",
+    );
+    qeval(
+        &mut p,
+        "a.z = q.z and a.b.c.d = q.z and q = a.b.x.y and a.b.c.d = 1 and q.z  = 1 and a.z = 1",
+    );
+    qnull(
+        &mut p,
+        "a.z = q.z and a.b.c.d = q.z and q = a.b.x.y and a.b.c.d = 1 and q.z  = 1 and a.z = 2",
+    );
+    Ok(())
+}
+
+#[test]
+fn test_dict_dot_grounding() -> TestResult {
+    let mut p = Polar::new();
+    p.load_str(
+        r#"
+        foo(a, b) if b.x = a and a.z = 0 and b.z = 0;
+        foo(a, b) if b.x = a and a.z = 1 and b.z = 1;
+
+        goo(a, b) if b.x.z = 0 and b.x = a and b.z = 0;
+        goo(a, b) if b.x.z = 1 and b.x = a and b.z = 1;
+
+        moo(a, b) if a = b.x and a.z = b.z;
+
+        boo(a: {b, c}, b: {a, c}, c: {a, b});
+    "#,
+    )?;
+
+    qeval(&mut p, "foo({z: 0}, b)");
+    qeval(&mut p, "goo({z: 0}, b)");
+
+    qeval(&mut p, "foo({z: 1}, b)");
+    qeval(&mut p, "goo({z: 1}, b)");
+
+    qnull(&mut p, "foo({z: 2}, b)");
+    qnull(&mut p, "goo({z: 2}, b)");
+
+    qeval(&mut p, "a = {z: 1} and moo(a, {x: a, z: 1})");
+    qnull(&mut p, "a = {z: 0} and moo(a, {x: a, z: 1})");
+
+    // FIXME stack overflow :(
+    // qeval(&mut p, "a = {b, c} and b = {a, c} and c = {a, b} and boo(a, b, c)");
+    Ok(())
+}
