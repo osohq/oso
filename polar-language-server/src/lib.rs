@@ -2,12 +2,13 @@ use std::collections::BTreeMap;
 
 use lsp_types::{
     notification::{
-        DidChangeTextDocument, DidChangeWatchedFiles, DidCloseTextDocument, DidOpenTextDocument,
-        DidSaveTextDocument, Initialized, Notification,
+        DidChangeTextDocument, DidChangeWatchedFiles, DidCloseTextDocument, DidDeleteFiles,
+        DidOpenTextDocument, DidSaveTextDocument, Initialized, Notification,
     },
-    Diagnostic, DiagnosticSeverity, DidChangeTextDocumentParams, DidChangeWatchedFilesParams,
-    DidOpenTextDocumentParams, FileChangeType, FileEvent, Position, PublishDiagnosticsParams,
-    Range, TextDocumentItem, Url, VersionedTextDocumentIdentifier,
+    DeleteFilesParams, Diagnostic, DiagnosticSeverity, DidChangeTextDocumentParams,
+    DidChangeWatchedFilesParams, DidOpenTextDocumentParams, FileChangeType, FileDelete, FileEvent,
+    Position, PublishDiagnosticsParams, Range, TextDocumentItem, Url,
+    VersionedTextDocumentIdentifier,
 };
 use polar_core::{
     error::{PolarError, PolarResult},
@@ -131,6 +132,18 @@ impl PolarLanguageServer {
                 let diagnostics = self.on_did_change_watched_files(changes);
                 diagnostics.values().for_each(|d| self.send_diagnostics(d));
             }
+            DidDeleteFiles::METHOD => {
+                let DeleteFilesParams { files } = from_value(params).unwrap();
+                let mut uris = vec![];
+                for FileDelete { uri } in files {
+                    match Url::parse(&uri) {
+                        Ok(uri) => uris.push(uri),
+                        Err(e) => log(&format!("Failed to parse URI: {}", e)),
+                    }
+                }
+                let diagnostics = self.on_did_delete_files(uris);
+                diagnostics.values().for_each(|d| self.send_diagnostics(d));
+            }
             // We don't care when a document is saved -- we already have the updated state thanks
             // to `DidChangeTextDocument`.
             DidSaveTextDocument::METHOD => (),
@@ -165,10 +178,19 @@ impl PolarLanguageServer {
 
     #[must_use]
     fn on_did_change_watched_files(&mut self, changes: Vec<FileEvent>) -> Diagnostics {
-        let mut diagnostics = Diagnostics::new();
-
+        let mut uris = vec![];
         for FileEvent { uri, typ } in changes {
             assert_eq!(typ, FileChangeType::Deleted); // We only watch for `Deleted` events.
+            uris.push(uri);
+        }
+        self.on_did_delete_files(uris)
+    }
+
+    #[must_use]
+    fn on_did_delete_files(&mut self, uris: Vec<Url>) -> Diagnostics {
+        let mut diagnostics = Diagnostics::new();
+
+        for uri in uris {
             let mut msg = format!("deleting URI: {}", uri);
 
             if let Some(removed) = self.remove_document(&uri) {
@@ -625,6 +647,150 @@ mod tests {
         let events9c = vec![FileEvent::new(a_dir, FileChangeType::Deleted)];
         assert_eq!(pls.documents.len(), 2);
         let diagnostics9c = pls.on_did_change_watched_files(events9c);
+        assert_eq!(diagnostics9c.len(), 2);
+        assert_missing_semicolon_error(&diagnostics9c, vec![&a9]);
+        assert_no_errors(&diagnostics9c, vec![&b9]);
+        assert_eq!(pls.documents.len(), 1);
+        assert!(pls.remove_document(&a9.uri).is_some());
+        assert!(pls.documents.is_empty());
+    }
+
+    #[wasm_bindgen_test]
+    fn test_on_did_delete_files() {
+        let mut pls = new_pls();
+
+        // Empty event has no effect.
+        let diagnostics0 = pls.on_did_delete_files(vec![]);
+        assert!(diagnostics0.is_empty());
+        assert!(pls.documents.is_empty());
+
+        // Deleting untracked doc has no effect.
+        let events1 = vec![polar_uri("apple")];
+        let diagnostics1 = pls.on_did_delete_files(events1);
+        assert!(diagnostics1.is_empty());
+        assert!(pls.documents.is_empty());
+
+        // Deleting tracked doc w/o error.
+        let a2 = add_doc_with_no_errors(&mut pls, "apple");
+        let events2 = vec![a2.uri.clone()];
+        let diagnostics2 = pls.on_did_delete_files(events2);
+        assert_eq!(diagnostics2.len(), 1);
+        assert_no_errors(&diagnostics2, vec![&a2]);
+        assert!(pls.documents.is_empty());
+
+        // Deleting tracked doc w/ error.
+        let a3 = add_doc_with_missing_semicolon(&mut pls, "apple");
+        let events3 = vec![a3.uri.clone()];
+        let diagnostics3 = pls.on_did_delete_files(events3);
+        assert_eq!(diagnostics3.len(), 1);
+        assert_no_errors(&diagnostics3, vec![&a3]);
+        assert!(pls.documents.is_empty());
+
+        // Deleting tracked doc w/o error; doc w/o error remains.
+        let a4 = add_doc_with_no_errors(&mut pls, "apple");
+        let b4 = add_doc_with_no_errors(&mut pls, "banana");
+        let events4 = vec![a4.uri.clone()];
+        let diagnostics4 = pls.on_did_delete_files(events4);
+        assert_eq!(diagnostics4.len(), 2);
+        assert_no_errors(&diagnostics4, vec![&a4, &b4]);
+        assert!(pls.remove_document(&b4.uri).is_some());
+        assert!(pls.documents.is_empty());
+
+        // Deleting tracked doc w/ error; doc w/o error remains.
+        let a5 = add_doc_with_missing_semicolon(&mut pls, "apple");
+        let b5 = add_doc_with_no_errors(&mut pls, "banana");
+        let events5 = vec![a5.uri.clone()];
+        let diagnostics5 = pls.on_did_delete_files(events5);
+        assert_eq!(diagnostics5.len(), 2);
+        assert_no_errors(&diagnostics5, vec![&a5, &b5]);
+        assert!(pls.remove_document(&b5.uri).is_some());
+        assert!(pls.documents.is_empty());
+
+        // Deleting tracked doc w/o error; doc w/ error remains.
+        let a6 = add_doc_with_no_errors(&mut pls, "apple");
+        let b6 = add_doc_with_missing_semicolon(&mut pls, "banana");
+        let events6 = vec![a6.uri.clone()];
+        let diagnostics6 = pls.on_did_delete_files(events6);
+        assert_eq!(diagnostics6.len(), 2);
+        assert_no_errors(&diagnostics6, vec![&a6]);
+        assert_missing_semicolon_error(&diagnostics6, vec![&b6]);
+        assert!(pls.remove_document(&b6.uri).is_some());
+        assert!(pls.documents.is_empty());
+
+        // Deleting tracked doc w/ error; doc w/ error remains.
+        let a7 = add_doc_with_missing_semicolon(&mut pls, "apple");
+        let b7 = add_doc_with_missing_semicolon(&mut pls, "banana");
+        let events7 = vec![a7.uri.clone()];
+        let diagnostics7 = pls.on_did_delete_files(events7);
+        assert_eq!(diagnostics7.len(), 2);
+        assert_no_errors(&diagnostics7, vec![&a7]);
+        assert_missing_semicolon_error(&diagnostics7, vec![&b7]);
+        assert!(pls.remove_document(&b7.uri).is_some());
+        assert!(pls.documents.is_empty());
+
+        // Deleting multiple docs at once.
+        let a8 = add_doc_with_missing_semicolon(&mut pls, "apple");
+        let b8 = add_doc_with_missing_semicolon(&mut pls, "banana");
+        let c8 = add_doc_with_missing_semicolon(&mut pls, "canteloupe");
+        let d8 = add_doc_with_no_errors(&mut pls, "date");
+        let e8 = add_doc_with_no_errors(&mut pls, "elderberry");
+        let f8 = add_doc_with_no_errors(&mut pls, "fig");
+        let events8 = vec![
+            a8.uri.clone(),
+            b8.uri.clone(),
+            d8.uri.clone(),
+            e8.uri.clone(),
+        ];
+        let diagnostics8 = pls.on_did_delete_files(events8);
+        assert_eq!(diagnostics8.len(), 6);
+        assert_no_errors(&diagnostics8, vec![&a8, &b8, &d8, &e8, &f8]);
+        assert_missing_semicolon_error(&diagnostics8, vec![&c8]);
+        assert!(pls.remove_document(&c8.uri).is_some());
+        assert!(pls.remove_document(&f8.uri).is_some());
+        assert!(pls.documents.is_empty());
+
+        // Deleting directories containing Polar files.
+        let a9 = add_doc_with_missing_semicolon(&mut pls, "apple");
+        let b9 = add_doc_with_no_errors(&mut pls, "a/b/banana");
+        let ca9a = add_doc_with_no_errors(&mut pls, "a/b/c/ca/calabash");
+        let ca9b = add_doc_with_no_errors(&mut pls, "a/b/c/ca/canteloupe");
+        let ch9 = add_doc_with_no_errors(&mut pls, "a/b/c/ch/cherry");
+        let d9 = add_doc_with_no_errors(&mut pls, "a/b/c/d/date");
+        let g9a = add_doc_with_no_errors(&mut pls, "a/b/c/d/e/f/g/grape");
+        let g9b = add_doc_with_no_errors(&mut pls, "a/b/c/d/e/f/g/grapefruit");
+
+        // Deleting a deeply nested directory.
+        let d_dir = Url::parse(d9.uri.as_str().strip_suffix("/date.polar").unwrap()).unwrap();
+        let events9a = vec![d_dir];
+        assert_eq!(pls.documents.len(), 8);
+        let diagnostics9a = pls.on_did_delete_files(events9a);
+        assert_eq!(diagnostics9a.len(), 8);
+        assert_missing_semicolon_error(&diagnostics9a, vec![&a9]);
+        assert_no_errors(
+            &diagnostics9a,
+            vec![&b9, &ca9a, &ca9b, &ch9, &d9, &g9a, &g9b],
+        );
+        assert_eq!(pls.documents.len(), 5);
+
+        // Deleting multiple directories at once.
+        let ca_dir = ca9a.uri.as_str().strip_suffix("/calabash.polar");
+        let ca_dir = Url::parse(ca_dir.unwrap()).unwrap();
+        let ch_dir = ch9.uri.as_str().strip_suffix("/cherry.polar");
+        let ch_dir = Url::parse(ch_dir.unwrap()).unwrap();
+        let events9b = vec![ca_dir, ch_dir];
+        assert_eq!(pls.documents.len(), 5);
+        let diagnostics9b = pls.on_did_delete_files(events9b);
+        assert_eq!(diagnostics9b.len(), 5);
+        assert_missing_semicolon_error(&diagnostics9b, vec![&a9]);
+        assert_no_errors(&diagnostics9b, vec![&b9, &ca9a, &ca9b, &ch9]);
+        assert_eq!(pls.documents.len(), 2);
+
+        // Deleting a top-level directory.
+        let a_dir = b9.uri.as_str().strip_suffix("/b/banana.polar");
+        let a_dir = Url::parse(a_dir.unwrap()).unwrap();
+        let events9c = vec![a_dir];
+        assert_eq!(pls.documents.len(), 2);
+        let diagnostics9c = pls.on_did_delete_files(events9c);
         assert_eq!(diagnostics9c.len(), 2);
         assert_missing_semicolon_error(&diagnostics9c, vec![&a9]);
         assert_no_errors(&diagnostics9c, vec![&b9]);

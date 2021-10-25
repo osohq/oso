@@ -36,7 +36,7 @@ import {
 // https://github.com/Microsoft/vscode/issues/15178 so we have a less hacky way
 // to list all open editors (instead of just the currently visible ones).
 
-const extensionName = 'polar-analyzer';
+const extensionName = 'Polar Language Server';
 const outputChannel = window.createOutputChannel(extensionName);
 
 // One client per workspace folder.
@@ -145,7 +145,7 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   // by default "excludes `node_modules` and some folders under `.git`":
   // https://github.com/microsoft/vscode-docs/blob/04cec7670671ae852ef020991fb8441ee0bb2796/docs/setup/linux.md?plain=1#L239
   const deleteWatcher = workspace.createFileSystemWatcher(
-    new RelativePattern(folder, '**'),
+    polarFilesInWorkspaceFolderPattern(folder),
     true,
     true
   );
