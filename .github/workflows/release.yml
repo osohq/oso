@@ -333,6 +333,8 @@ jobs:
 
   build_macos_wheels:
     name: Build wheels on MacOS
+    # This does not run on macos-11 yet because of a python bug. The bug is
+    # fixed on master so should be fixed soon.
     runs-on: macos-latest
     needs: [version, macos_libs]
     env:
@@ -572,7 +574,7 @@ jobs:
           name: wheel
       - name: "test"
         # There are no 3.6 python builds for macos-11
-        if: matrix.os != 'macos-11' || matrix.python-version != '3.6')
+        if: matrix.os != 'macos-11' || matrix.python-version != '3.6'
         run: |
           pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
           python test.py
