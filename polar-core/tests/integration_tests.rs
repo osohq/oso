@@ -6,7 +6,6 @@ use permute::permute;
 
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
-use std::iter::FromIterator;
 
 use polar_core::{
     error::*,

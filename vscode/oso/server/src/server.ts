@@ -9,19 +9,11 @@ import { PolarLanguageServer } from '../out/polar_language_server';
 // Create LSP connection
 const connection = createConnection(ProposedFeatures.all);
 
-const pls = new PolarLanguageServer((params: PublishDiagnosticsParams) =>
-  connection.sendDiagnostics(params)
-);
+const sendDiagnosticsCallback = (params: PublishDiagnosticsParams) =>
+  connection.sendDiagnostics(params);
+const pls = new PolarLanguageServer(sendDiagnosticsCallback);
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-connection.onRequest((method, params, _token) => {
-  console.log('[TS onRequest]:', method, params);
-  pls.onRequest(method, params);
-});
-
-connection.onNotification((method, params) =>
-  pls.onNotification(method, params)
-);
+connection.onNotification((...args) => pls.onNotification(...args));
 
 connection.onInitialize(() => {
   return {
