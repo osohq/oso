@@ -71,6 +71,31 @@ pub fn invert_operation(Operation { operator, args }: Operation) -> Operation {
     }
 }
 
+fn reduce_term(t: Term) -> Term {
+    use Operator::Dot;
+    match t.value().as_expression() {
+        Ok(Operation {
+            operator: Dot,
+            args,
+        }) if args.len() == 2
+            && args[1].value().as_string().is_ok()
+            && args[0].value().as_dict().is_ok() =>
+        {
+            match args[0]
+                .value()
+                .as_dict()
+                .unwrap()
+                .fields
+                .get(&Symbol(args[1].value().as_string().unwrap().to_string()))
+            {
+                Some(t) => reduce_term(t.clone()),
+                _ => t,
+            }
+        }
+        _ => t,
+    }
+}
+
 impl Operation {
     /// Construct & return a set of symbols that occur in this operation.
     pub fn variables(&self) -> Vec<Symbol> {
@@ -129,6 +154,7 @@ impl Operation {
                         let l = self.fold_term(o.args[0].clone());
                         let r = self.fold_term(o.args[1].clone());
                         if l.is_ground() && r.is_ground() {
+                            let (l, r) = (reduce_term(l), reduce_term(r));
                             let consistent = if neq { l != r } else { l == r };
                             if self.invert {
                                 if consistent {
