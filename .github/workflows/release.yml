@@ -333,8 +333,9 @@ jobs:
 
   build_macos_wheels:
     name: Build wheels on MacOS
-    # This does not run on macos-11 yet because of a python bug. The bug is
-    # fixed on master so should be fixed soon.
+    # Build on latest so we can still build a 3.6 wheel.
+    # May have to drop once github actions switches to macos-11 by default
+    # because 3.6 isn't supported on 11.
     runs-on: macos-latest
     needs: [version, macos_libs]
     env:
