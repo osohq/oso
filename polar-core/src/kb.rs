@@ -740,6 +740,10 @@ impl KnowledgeBase {
         // unique relationships traversed in shorthand rules.
         for (object, shorthand_rules) in &self.resource_blocks.shorthand_rules {
             for shorthand_rule in shorthand_rules {
+                // We create rule types from shorthand rules in the following scenarios:
+                // 1. when the the third "relation" term points to a related Resource
+                // 2. when the second "implier" term points to a related Resource
+                // 3. when the second "implier" term ponits to a related Actor
                 match shorthand_rule {
                     ShorthandRule {
                         head: _,
