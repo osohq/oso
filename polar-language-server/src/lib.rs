@@ -112,7 +112,7 @@ impl PolarLanguageServer {
             DidOpenTextDocument::METHOD => {
                 let DidOpenTextDocumentParams { text_document } = from_value(params).unwrap();
                 let diagnostics = self.on_did_open_text_document(text_document);
-                diagnostics.values().for_each(|d| self.send_diagnostics(d));
+                self.send_diagnostics(diagnostics);
             }
             DidChangeTextDocument::METHOD => {
                 let params: DidChangeTextDocumentParams = from_value(params).unwrap();
@@ -125,7 +125,7 @@ impl PolarLanguageServer {
                 let VersionedTextDocumentIdentifier { uri, version } = params.text_document;
                 let updated_doc = TextDocumentItem::new(uri, "polar".into(), version, change.text);
                 let diagnostics = self.on_did_change_text_document(updated_doc);
-                diagnostics.values().for_each(|d| self.send_diagnostics(d));
+                self.send_diagnostics(diagnostics);
             }
             DidChangeWatchedFiles::METHOD => {
                 let DidChangeWatchedFilesParams { changes } = from_value(params).unwrap();
@@ -134,7 +134,7 @@ impl PolarLanguageServer {
                     uri
                 });
                 let diagnostics = self.on_did_delete_files(uris.collect());
-                diagnostics.values().for_each(|d| self.send_diagnostics(d));
+                self.send_diagnostics(diagnostics);
             }
             DidDeleteFiles::METHOD => {
                 let DeleteFilesParams { files } = from_value(params).unwrap();
@@ -146,7 +146,7 @@ impl PolarLanguageServer {
                     }
                 }
                 let diagnostics = self.on_did_delete_files(uris);
-                diagnostics.values().for_each(|d| self.send_diagnostics(d));
+                self.send_diagnostics(diagnostics);
             }
             // We don't care when a document is saved -- we already have the updated state thanks
             // to `DidChangeTextDocument`.
@@ -240,14 +240,16 @@ impl PolarLanguageServer {
         in_dir.iter().map(empty_diagnostics_for_doc).collect()
     }
 
-    fn send_diagnostics(&self, params: &PublishDiagnosticsParams) {
+    fn send_diagnostics(&self, diagnostics: Diagnostics) {
         let this = &JsValue::null();
-        let params = &to_value(params).unwrap();
-        if let Err(e) = self.send_diagnostics_callback.call1(this, params) {
-            log(&format!(
-                "send_diagnostics params:\n\t{:?}\n\tJS error: {:?}",
-                params, e
-            ));
+        for params in diagnostics.into_values() {
+            let params = &to_value(&params).unwrap();
+            if let Err(e) = self.send_diagnostics_callback.call1(this, params) {
+                log(&format!(
+                    "send_diagnostics params:\n\t{:?}\n\tJS error: {:?}",
+                    params, e
+                ));
+            }
         }
     }
 
