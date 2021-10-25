@@ -35,6 +35,7 @@ fn log(s: &str) {
 fn log(_: &str) {}
 
 type Documents = BTreeMap<Url, TextDocumentItem>;
+type Diagnostics = BTreeMap<Url, PublishDiagnosticsParams>;
 
 #[wasm_bindgen]
 pub struct PolarLanguageServer {
@@ -42,8 +43,6 @@ pub struct PolarLanguageServer {
     polar: Polar,
     send_diagnostics_callback: js_sys::Function,
 }
-
-type Diagnostics = BTreeMap<Url, PublishDiagnosticsParams>;
 
 #[must_use]
 fn range_from_polar_error_context(PolarError { context: c, .. }: &PolarError) -> Range {
