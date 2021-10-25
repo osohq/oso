@@ -333,7 +333,7 @@ jobs:
 
   build_macos_wheels:
     name: Build wheels on MacOS
-    runs-on: macos-11
+    runs-on: macos-latest
     needs: [version, macos_libs]
     env:
       # Skip Python 2.7 and Python 3.5
