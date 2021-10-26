@@ -36,7 +36,7 @@ import {
 // https://github.com/Microsoft/vscode/issues/15178 so we have a less hacky way
 // to list all open editors (instead of just the currently visible ones).
 
-const extensionName = 'polar-analyzer';
+const extensionName = 'Polar Language Server';
 const outputChannel = window.createOutputChannel(extensionName);
 
 // One client per workspace folder.
@@ -125,15 +125,26 @@ async function reloadDocument(uri: Uri) {
 async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   const server = context.asAbsolutePath(join('server', 'out', 'server.js'));
 
-  const pattern = polarFilesInWorkspaceFolderPattern(folder);
-  // Watch `FileChangeType.Deleted` events for files in the current workspace,
-  // including those not open in any editor in the workspace.
-  const deleteWatcher = workspace.createFileSystemWatcher(pattern, true, true);
+  // Watch `FileChangeType.Deleted` events for Polar files in the current
+  // workspace, including those not open in any editor in the workspace.
+  //
+  // NOTE(gj): Due to a current limitation in VSCode, when a parent directory
+  // is deleted, VSCode's file watcher does not emit events for matching files
+  // nested inside that parent. For more information, see this GitHub issue:
+  // https://github.com/microsoft/vscode/issues/60813. If that behavior is
+  // fixed in the future, we should be able to remove the
+  // `workspace.fileOperations.didDelete` handler on the server and go back to
+  // a single watcher for files matching '**/*.polar'.
+  const deleteWatcher = workspace.createFileSystemWatcher(
+    polarFilesInWorkspaceFolderPattern(folder),
+    true,
+    true
+  );
   // Watch `FileChangeType.Created` and `FileChangeType.Changed` events for
   // files in the current workspace, including those not open in any editor in
   // the workspace.
   const createChangeWatcher = workspace.createFileSystemWatcher(
-    pattern,
+    polarFilesInWorkspaceFolderPattern(folder),
     false,
     false,
     true
