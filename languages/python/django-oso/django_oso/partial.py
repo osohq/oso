@@ -154,13 +154,18 @@ class FilterBuilder:
                 op = expr.operator
                 args = expr.args
                 # Is it a dot lookup on a model? If so, do the lookup.
-                if op == "Dot" and len(args) == 2 and isinstance(args[0], Model) and isinstance(args[1], str):
+                if (
+                    op == "Dot"
+                    and len(args) == 2
+                    and isinstance(args[0], Model)
+                    and isinstance(args[1], str)
+                ):
                     return getattr(args[0], args[1])
             # Otherwise leave it unchanged.
             return expr
 
         (left, right) = [translate_instance_dot(a) for a in expr.args]
-        if left == right and expr.operator in ['Unify', 'Eq']:
+        if left == right and expr.operator in ["Unify", "Eq"]:
             return
 
         left_path = dot_path(left)
