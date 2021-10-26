@@ -241,6 +241,9 @@ pub enum ParseError {
 
 impl fmt::Display for ErrorContext {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "found in:")?;
+        write!(f, "{}", self.source.src.split('\n').nth(self.row).unwrap())?;
+        write!(f, "\n{}^", " ".repeat(self.column))?;
         write!(f, " at line {}, column {}", self.row + 1, self.column + 1)?;
         if let Some(ref filename) = self.source.filename {
             write!(f, " in file {}", filename)?;
@@ -341,6 +344,10 @@ pub enum RuntimeError {
     IncompatibleBindings {
         msg: String,
     },
+    UnhandledPartial {
+        var: Symbol,
+        term: Term,
+    },
 }
 
 impl RuntimeError {
@@ -378,6 +385,27 @@ impl fmt::Display for RuntimeError {
             Self::FileLoading { msg } => write!(f, "Problem loading file: {}", msg),
             Self::IncompatibleBindings { msg } => {
                 write!(f, "Attempted binding was incompatible: {}", msg)
+            }
+            Self::UnhandledPartial { var, term } => {
+                write!(
+                    f,
+                    "Found an unhandled partial in the query result: {}
+
+This can happen when there is a variable used inside a rule
+which is not related to any of the query inputs.
+
+For example: f(_x) if y.a = 1 and y.b = 2;
+
+In this example, the variable `y` is constrained by `a = 1 and b = 2`,
+but we cannot resolve these constraints without further information.
+
+The unhandled partial is for variable {}.
+The expression is: {}
+",
+                    var,
+                    var,
+                    term.to_polar(),
+                )
             }
         }
     }

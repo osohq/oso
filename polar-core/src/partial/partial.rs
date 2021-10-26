@@ -1636,8 +1636,6 @@ mod test {
             r#"f(x) if _y in x.values;
                g(x, y) if y in x.values;
                h(x) if y in x.values and (y.bar = 1 and y.baz = 2 or y.bar = 3);
-               i() if x in y and y in x;
-               j() if x in [] and x in [];
                k(x) if x > 1 and x in [2, 3];
                l(x) if _y in x;
                m(x) if 1 in y and y = x;"#,
@@ -1667,20 +1665,13 @@ mod test {
         );
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("i")), false);
-        assert!(next_binding(&mut q)?.is_empty());
-        assert_query_done!(q);
-
-        let mut q = p.new_query_from_term(term!(call!("j")), false);
-        assert_query_done!(q);
-
         let mut q = p.new_query_from_term(term!(call!("k", [sym!("x")])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(2));
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(3));
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("l", [sym!("x")])), false);
-        assert_partial_expressions!(next_binding(&mut q)?, "x" => "__y_39 in _this");
+        assert_partial_expressions!(next_binding(&mut q)?, "x" => "__y_36 in _this");
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("m", [sym!("x")])), false);
@@ -2229,6 +2220,63 @@ mod test {
             }
         }
 
+        Ok(())
+    }
+
+    // Tests that if a policy constructs any partials that aren't tied to
+    // the result variables, that we will get an error
+    #[test]
+    fn test_for_unhandled_partial() -> TestResult {
+        let p = Polar::new();
+        p.load_str(
+            r#"
+            # All of these should error
+            f(x) if y = y and y > 0 and x = 1;
+            g() if x = x and y = y and x in y;
+            h() if x = x and x > 0;
+            i() if x.a = 1 and x.b = 2;
+            j() if x.a = 1 and x.a = 2;
+
+            # Cases that look similar but work
+            a(x) if y.foo = x and y.bar = 1;
+            b() if _x_dot_a = 1 and _x_dot_b = 2;
+        "#,
+        )?;
+
+        // all the failing cases
+        let query_terms = vec![
+            term!(call!("f", [sym!("x")])),
+            term!(call!("g", [])),
+            term!(call!("h", [])),
+            term!(call!("i", [])),
+            term!(call!("j", [])),
+        ];
+        for query in query_terms {
+            let mut q = p.new_query_from_term(query.clone(), false);
+            let res = q.next_event();
+            assert!(
+                matches!(
+                    res,
+                    Err(PolarError {
+                        kind: ErrorKind::Runtime(RuntimeError::UnhandledPartial { .. }),
+                        ..
+                    })
+                ),
+                "unexpected result: {:#?} for {}",
+                res,
+                query.to_polar()
+            );
+        }
+
+        // successful cases
+        let mut q = p.new_query_from_term(term!(call!("a", [sym!("x")])), false);
+        // well, this is semi-successful!
+        assert_partial_expressions!(
+            next_binding(&mut q)?,
+            "x" => "_this = _y_26.foo and 1 = _y_26.bar"
+        );
+
+        assert_query_done!(q);
         Ok(())
     }
 }

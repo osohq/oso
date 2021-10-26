@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 use crate::bindings::Bindings;
-use crate::error::{OperationalError, PolarResult};
+use crate::error::{PolarResult, RuntimeError};
 use crate::folder::{fold_term, Folder};
 use crate::formatting::ToPolarString;
 use crate::terms::*;
@@ -196,8 +196,9 @@ pub fn simplify_bindings_opt(bindings: Bindings, all: bool) -> PolarResult<Optio
             simplified_bindings.insert(var.clone(), simplified);
         } else if let Value::Expression(e) = value.value() {
             if e.variables().iter().all(|v| v.is_temporary_var()) {
-                return Err(OperationalError::InvalidState {
-                    msg: "an unsimplified binding exists in the results".to_string(),
+                return Err(RuntimeError::UnhandledPartial {
+                    term: value.clone(),
+                    var: var.clone(),
                 }
                 .into());
             }

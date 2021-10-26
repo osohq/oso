@@ -1101,7 +1101,8 @@ def test_unbound_dot_lookups(polar, is_allowed):
     class User:
         roles: List[Role]
 
-    repo = Repo(id=2, org_id=2)
+    repo1 = Repo(id=1, org_id=1)
+    repo2 = Repo(id=2, org_id=2)
     user = User([Role(org_id=1)])
 
     for cls in [Repo, Org, Role, User]:
@@ -1118,4 +1119,8 @@ def test_unbound_dot_lookups(polar, is_allowed):
     """
     )
 
-    assert not is_allowed(user, "read", repo)
+    with pytest.raises(exceptions.PolarRuntimeError):
+        assert is_allowed(user, "read", repo1)
+
+    with pytest.raises(exceptions.PolarRuntimeError):
+        assert not is_allowed(user, "read", repo2)

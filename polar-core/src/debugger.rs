@@ -316,24 +316,7 @@ impl Debugger {
                     let vars: Vec<Binding> = parts[1..]
                         .iter()
                         .map(|name| {
-                            // *** variable name mapping ***
-                            // if the requested variable is bound, then we return that binding.
-                            // otherwise, we look for the matching bound temp variable with the
-                            // highest numeric component in its name, and return that binding
-                            // if we find it. otherwise, show that the variable is unbound.
-                            let var = Symbol::new(name);
-                            let bindings = simplify_bindings(vm.bindings(true)).unwrap();
-                            bindings.get(&var).cloned().map_or_else(|| {
-                                let prefix = KnowledgeBase::temp_prefix(name);
-                                bindings.keys()
-                                    .filter_map(|k| k.0.strip_prefix(&prefix).and_then(|i|
-                                        i.parse::<i64>().map_or(None, |i| Some((k, i)))))
-                                    .max_by(|a, b| a.1.cmp(&b.1))
-                                    .map_or_else(
-                                        || Binding(sym!(name), Term::from(sym!("<unbound>"))),
-                                        |b| Binding(sym!(format!("{}@{}", name, b.0.0).as_str()), bindings.get(b.0).unwrap().clone()))
-                            },
-                            |val| Binding(var, val))
+                            get_binding_for_var(name, vm)
                         })
                         .collect();
                     return Some(show(&vars));
@@ -375,4 +358,36 @@ impl Debugger {
         }
         None
     }
+}
+
+/// *** variable name mapping ***
+/// if the requested variable is bound, then we return that binding.
+/// otherwise, we look for the matching bound temp variable with the
+/// highest numeric component in its name, and return that binding
+/// if we find it. otherwise, show that the variable is unbound.
+pub fn get_binding_for_var(name: &str, vm: &PolarVirtualMachine) -> Binding {
+    let var = Symbol::new(name);
+    let bindings = simplify_bindings(vm.bindings(true)).unwrap();
+    bindings.get(&var).cloned().map_or_else(
+        || {
+            let prefix = KnowledgeBase::temp_prefix(name);
+            bindings
+                .keys()
+                .filter_map(|k| {
+                    k.0.strip_prefix(&prefix)
+                        .and_then(|i| i.parse::<i64>().map_or(None, |i| Some((k, i))))
+                })
+                .max_by(|a, b| a.1.cmp(&b.1))
+                .map_or_else(
+                    || Binding(sym!(name), Term::from(sym!("<unbound>"))),
+                    |b| {
+                        Binding(
+                            sym!(format!("{}@{}", name, b.0 .0).as_str()),
+                            bindings.get(b.0).unwrap().clone(),
+                        )
+                    },
+                )
+        },
+        |val| Binding(var, val),
+    )
 }
