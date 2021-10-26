@@ -780,7 +780,7 @@ impl KnowledgeBase {
                 if let Declaration::Relation(subject) = declaration {
                     unique_relations.insert((
                         subject.value().as_symbol()?.clone(),
-                        name.value().as_string()?.clone(),
+                        name.value().as_string()?,
                         object.value().as_symbol()?.clone(),
                         false,
                     ));
