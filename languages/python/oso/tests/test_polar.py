@@ -15,6 +15,7 @@ from polar import (
 from polar.partial import TypeConstraint
 from polar.errors import ValidationError
 from dataclasses import dataclass
+from typing import List
 
 import pytest
 
@@ -1078,3 +1079,43 @@ def test_rule_types_with_subclass_check(polar):
     """
     with pytest.raises(ValidationError):
         polar.load_str(p)
+
+
+def test_unbound_dot_lookups(polar, is_allowed):
+    """Port of GK's JS dot lookup test to Python"""
+
+    @dataclass
+    class Repo:
+        id: int
+        org_id: int
+
+    @dataclass
+    class Org:
+        id: int
+
+    @dataclass
+    class Role:
+        org_id: int
+
+    @dataclass
+    class User:
+        roles: List[Role]
+
+    repo = Repo(id=2, org_id=2)
+    user = User([Role(org_id=1)])
+
+    for cls in [Repo, Org, Role, User]:
+        polar.register_class(cls)
+
+    polar.load_str(
+        """
+        user_in_role(user: User, "reader", org: Org) if
+            role in user.roles and
+            role.org_id = org.id;
+        allow(user: User, "read", repo: Repo) if
+            user_in_role(user, "reader", org) and
+            repo.org_id = org.id;
+    """
+    )
+
+    assert not is_allowed(user, "read", repo)

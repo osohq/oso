@@ -322,7 +322,7 @@ impl Debugger {
                             // highest numeric component in its name, and return that binding
                             // if we find it. otherwise, show that the variable is unbound.
                             let var = Symbol::new(name);
-                            let bindings = simplify_bindings(vm.bindings(true), true).unwrap();
+                            let bindings = simplify_bindings(vm.bindings(true)).unwrap();
                             bindings.get(&var).cloned().map_or_else(|| {
                                 let prefix = KnowledgeBase::temp_prefix(name);
                                 bindings.keys()

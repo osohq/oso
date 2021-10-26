@@ -1636,8 +1636,8 @@ mod test {
             r#"f(x) if _y in x.values;
                g(x, y) if y in x.values;
                h(x) if y in x.values and (y.bar = 1 and y.baz = 2 or y.bar = 3);
-               i() if _x in _y;
-               j() if _x in [];
+               i() if x in y and y in x;
+               j() if x in [] and x in [];
                k(x) if x > 1 and x in [2, 3];
                l(x) if _y in x;
                m(x) if 1 in y and y = x;"#,

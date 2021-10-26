@@ -23,7 +23,7 @@ use crate::kb::*;
 use crate::lexer::loc_to_pos;
 use crate::messages::*;
 use crate::numerics::*;
-use crate::partial::{simplify_bindings, simplify_partial, sub_this, IsaConstraintCheck};
+use crate::partial::{simplify_bindings_opt, simplify_partial, sub_this, IsaConstraintCheck};
 use crate::rewrites::Renamer;
 use crate::rules::*;
 use crate::runnable::Runnable;
@@ -2794,7 +2794,7 @@ impl Runnable for PolarVirtualMachine {
 
         let mut bindings = self.bindings(true);
         if !self.inverting {
-            if let Some(bs) = simplify_bindings(bindings, false) {
+            if let Some(bs) = simplify_bindings_opt(bindings, false)? {
                 bindings = bs;
             } else {
                 return Ok(QueryEvent::None);
