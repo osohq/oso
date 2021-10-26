@@ -150,19 +150,21 @@ pub fn simplify_partial(
     mut term: Term,
     output_vars: HashSet<Symbol>,
     track_performance: bool,
-) -> (Term, Option<PerfCounters>) {
+) -> Option<(Term, Option<PerfCounters>)> {
     //    term = normalize_vars(term);
     let mut simplifier = Simplifier::new(output_vars, track_performance);
     simplify_debug!("*** simplify partial {:?}", var);
-    simplifier.simplify_partial(&mut term);
+    simplifier.simplify_partial(&mut term)?;
     term = simplify_trivial_constraint(var.clone(), term);
     simplify_debug!("simplify partial done {:?}, {:?}", var, term.to_polar());
 
-    if matches!(term.value(), Value::Expression(e) if e.operator != Operator::And) {
-        (op!(And, term).into(), simplifier.perf_counters())
-    } else {
-        (term, simplifier.perf_counters())
-    }
+    Some(
+        if matches!(term.value(), Value::Expression(e) if e.operator != Operator::And) {
+            (op!(And, term).into(), simplifier.perf_counters())
+        } else {
+            (term, simplifier.perf_counters())
+        },
+    )
 }
 
 fn bindings2partial(bindings: Bindings) -> Operation {
@@ -197,7 +199,6 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
         }
     }
 
-    let mut unsatisfiable = false;
     let mut simplify_var = |bindings: &Bindings, var: &Symbol, value: &Term| match value.value() {
         Value::Expression(o) => {
             assert_eq!(o.operator, Operator::And);
@@ -213,16 +214,15 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
                     .collect::<HashSet<_>>()
             };
 
-            let (simplified, p) = simplify_partial(var, value.clone(), output_vars, TRACK_PERF);
+            let (simplified, p) = simplify_partial(var, value.clone(), output_vars, TRACK_PERF)?;
             if let Some(p) = p {
                 perf.merge(p);
             }
 
             match simplified.value().as_expression() {
-                Ok(o) if o == &FALSE => unsatisfiable = true,
-                _ => (),
+                Ok(o) if o == &FALSE => None,
+                _ => Some(simplified),
             }
-            simplified
         }
         Value::Variable(v) | Value::RestVariable(v)
             if v.is_temporary_var()
@@ -232,9 +232,9 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
                     Value::Variable(_) | Value::RestVariable(_)
                 ) =>
         {
-            bindings[v].clone()
+            Some(bindings[v].clone())
         }
-        _ => value.clone(),
+        _ => Some(value.clone()),
     };
 
     simplify_debug!("simplify bindings {}", if all { "all" } else { "not all" });
@@ -242,23 +242,19 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
     let mut simplified_bindings = HashMap::new();
     for (var, value) in &bindings {
         if !var.is_temporary_var() || all {
-            let simplified = simplify_var(&bindings, var, value);
+            let simplified = simplify_var(&bindings, var, value)?;
             simplified_bindings.insert(var.clone(), simplified);
         }
     }
 
-    if unsatisfiable {
-        None
-    } else {
-        if_debug! {
-            eprintln!("after simplified");
-            for (k, v) in simplified_bindings.iter() {
-                eprintln!("{:?} {:?}", k, v.to_polar());
-            }
+    if_debug! {
+        eprintln!("after simplified");
+        for (k, v) in simplified_bindings.iter() {
+            eprintln!("{:?} {:?}", k, v.to_polar());
         }
-
-        check_consistency(simplified_bindings)
     }
+
+    check_consistency(simplified_bindings)
 }
 
 /// FIXME(gw) this is a hack because we don't do a good enough job of maintaining
@@ -810,7 +806,7 @@ mod test {
         ));
         let mut vs: HashSet<Symbol> = HashSet::new();
         vs.insert(sym!("x"));
-        let (x, _) = simplify_partial(&sym!("x"), op, vs, false);
+        let (x, _) = simplify_partial(&sym!("x"), op, vs, false).unwrap();
         assert_eq!(
             x,
             term!(op!(

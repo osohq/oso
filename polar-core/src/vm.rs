@@ -1167,7 +1167,10 @@ impl PolarVirtualMachine {
                 let output = names.clone();
 
                 let partial = partial.into();
-                let (simplified, _) = simplify_partial(var, partial, output, false);
+                let simplified = match simplify_partial(var, partial, output, false) {
+                    Some((simplified, _)) => simplified,
+                    _ => return self.push_goal(Goal::Backtrack),
+                };
 
                 let simplified = simplified.value().as_expression()?;
 
