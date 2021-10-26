@@ -571,8 +571,7 @@ mod test {
         assert_eq!(next[&sym!("x")], term!(sym!("x")));
         assert_eq!(
             next[&sym!("y")],
-            // TODO(gj): do something with the x <-> _x_5 cycle?
-            term!(btreemap! { sym!("x") => term!(sym!("_x0_5")) })
+            term!(btreemap! { sym!("x") => var!("_x0_5") })
         );
         assert_query_done!(q);
 
@@ -774,20 +773,9 @@ mod test {
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
-        // TODO(gj): Inconsistent dot op unifications.
-        assert_partial_expression!(
-            next_binding(&mut q).unwrap(),
-            "x",
-            "_this matches Post{} and _this.id = 1 and _this.id = 2"
-        );
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("h", [sym!("x")])), false);
-        assert_partial_expression!(
-            next_binding(&mut q).unwrap(),
-            "x",
-            "_this matches Post{} and _this.id = 1 and _this.id = 2"
-        );
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("i", [sym!("x")])), false);
@@ -795,11 +783,6 @@ mod test {
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("j", [sym!("x")])), false);
-        assert_partial_expression!(
-            next_binding(&mut q).unwrap(),
-            "x",
-            "_this matches Post{} and _this.id = 1 and _this.id = 2 and _this.bar = 2"
-        );
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("k", [sym!("x")])), false);
@@ -807,27 +790,12 @@ mod test {
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("l", [sym!("x")])), false);
-        assert_partial_expression!(
-            next_binding(&mut q).unwrap(),
-            "x",
-            "_this matches Post{} and _this.id = 1 and _this.bar = 3 and _this.id = 2 and 1 = _this.y"
-        );
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("m", [sym!("x")])), false);
-        assert_partial_expression!(
-            next_binding(&mut q).unwrap(),
-            "x",
-            "_this.id = 1 and _this.bar = 1 and _this.id = 2"
-        );
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("n", [sym!("x")])), false);
-        assert_partial_expression!(
-            next_binding(&mut q).unwrap(),
-            "x",
-            "_this.id = 1 and _this.id = 2 and _this.bar = 2"
-        );
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("o", [sym!("x")])), false);
@@ -835,19 +803,9 @@ mod test {
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("p", [sym!("x")])), false);
-        assert_partial_expression!(
-            next_binding(&mut q).unwrap(),
-            "x",
-            "_this.id = 1 and _this.id = 2"
-        );
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("q", [sym!("x")])), false);
-        assert_partial_expression!(
-            next_binding(&mut q).unwrap(),
-            "x",
-            "_this.id = 1 and _this matches Post{} and _this.id = 2"
-        );
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("r", [sym!("x")])), false);
@@ -1015,11 +973,7 @@ mod test {
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
-        assert_partial_expression!(
-            next_binding(&mut q)?,
-            "x",
-            "0 = _this.y and _this.z > 1"
-        );
+        assert_partial_expression!(next_binding(&mut q)?, "x", "0 = _this.y and _this.z > 1");
         assert_query_done!(q);
         Ok(())
     }
@@ -1652,7 +1606,7 @@ mod test {
         );
         assert_query_done!(q);
         /*
-        */
+         */
 
         Ok(())
     }

@@ -23,7 +23,6 @@ use crate::kb::*;
 use crate::lexer::loc_to_pos;
 use crate::messages::*;
 use crate::numerics::*;
-use crate::partial::{simplify_bindings, simplify_partial, sub_this, IsaConstraintCheck};
 use crate::rewrites::Renamer;
 use crate::rules::*;
 use crate::runnable::Runnable;
@@ -1155,6 +1154,7 @@ impl PolarVirtualMachine {
                 }
             }
             Value::Pattern(Pattern::Instance(InstanceLiteral { fields, tag })) => {
+                use crate::partial::{simplify_partial, IsaConstraintCheck};
                 // TODO(gj): assert that a simplified expression contains at most 1 unification
                 // involving a particular variable.
                 // TODO(gj): Ensure `op!(And) matches X{}` doesn't die after these changes.
@@ -2793,12 +2793,15 @@ impl Runnable for PolarVirtualMachine {
         };
 
         let mut bindings = self.bindings(true);
+
+        // FIXME(gw) this is a last-minute consistency check
+        if simplify_bindings(bindings.clone(), true).is_none() {
+            return Ok(QueryEvent::None);
+        }
+        use crate::partial::{simplify_bindings, sub_this};
         if !self.inverting {
-            if let Some(bs) = simplify_bindings(bindings, false) {
-                bindings = bs;
-            } else {
-                return Ok(QueryEvent::None);
-            }
+            // if it worked with `all = true` it'll work here.
+            bindings = simplify_bindings(bindings, false).unwrap();
 
             bindings = bindings
                 .clone()

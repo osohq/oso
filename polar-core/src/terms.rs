@@ -221,9 +221,9 @@ impl Value {
             Value::Call(_)
             | Value::ExternalInstance(_)
             | Value::Variable(_)
+            | Value::Pattern(_)
             | Value::RestVariable(_) => false,
             Value::Number(_) | Value::String(_) | Value::Boolean(_) => true,
-            Value::Pattern(_) => panic!("unexpected value type"),
             Value::Dictionary(Dictionary { fields }) => fields.values().all(|t| t.is_ground()),
             Value::List(terms) => terms.iter().all(|t| t.is_ground()),
             Value::Expression(Operation { operator: _, args }) => {

@@ -1,12 +1,16 @@
-use std::collections::{HashMap, HashSet};
-use std::fmt;
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+    rc::Rc,
+};
 
 use crate::bindings::Bindings;
-use crate::folder::{fold_term, Folder};
 use crate::formatting::ToPolarString;
 use crate::terms::*;
+use crate::visitor::*;
 
 use super::partial::{invert_operation, FALSE, TRUE};
+use crate::data_filtering::partition_equivs;
 
 /// Set to `true` to debug performance in simplifier by turning on
 /// performance counters.
@@ -36,45 +40,77 @@ enum MaybeDrop {
     Check(Symbol, Term),
 }
 
-struct VariableSubber {
-    this_var: Symbol,
-}
-
-impl VariableSubber {
-    pub fn new(this_var: Symbol) -> Self {
-        Self { this_var }
+type VarClasses = HashMap<Symbol, Rc<Vec<Symbol>>>;
+fn var_classes(t: &Term) -> VarClasses {
+    #[derive(Default)]
+    struct VariableVisitor {
+        equivs: Vec<(Symbol, Symbol)>,
     }
-}
 
-impl Folder for VariableSubber {
-    fn fold_variable(&mut self, v: Symbol) -> Symbol {
-        if v == self.this_var {
-            sym!("_this")
-        } else {
-            v
+    impl Visitor for VariableVisitor {
+        fn visit_operation(&mut self, o: &Operation) {
+            match o.operator {
+                Operator::Unify if o.args.len() == 2 => {
+                    match (o.args[0].value().as_symbol(), o.args[1].value().as_symbol()) {
+                        (Ok(l), Ok(r)) => self.equivs.push((l.clone(), r.clone())),
+                        _ => walk_operation(self, o),
+                    }
+                }
+                _ => walk_operation(self, o),
+            }
+        }
+
+        fn visit_variable(&mut self, v: &Symbol) {
+            self.equivs.push((v.clone(), v.clone()))
+        }
+        fn visit_rest_variable(&mut self, v: &Symbol) {
+            self.visit_variable(v)
         }
     }
 
-    fn fold_rest_variable(&mut self, v: Symbol) -> Symbol {
-        if v == self.this_var {
-            sym!("_this")
-        } else {
-            v
+    let mut vv = VariableVisitor::default();
+    vv.visit_term(t);
+    let classes = partition_equivs(vv.equivs);
+    let mut map = HashMap::new();
+    for set in classes {
+        let set = Rc::new(set.into_iter().collect::<Vec<_>>());
+        for var in set.iter() {
+            map.insert(var.clone(), set.clone());
         }
     }
+    map
 }
 
 /// Substitute `sym!("_this")` for a variable in a partial.
 pub fn sub_this(this: Symbol, term: Term) -> Term {
+    use crate::folder::Folder;
+    struct VariableSubber(HashMap<Symbol, Symbol>);
+    impl Folder for VariableSubber {
+        fn fold_variable(&mut self, v: Symbol) -> Symbol {
+            if let Some(y) = self.0.get(&v) {
+                y.clone()
+            } else {
+                v
+            }
+        }
+
+        fn fold_rest_variable(&mut self, v: Symbol) -> Symbol {
+            self.fold_variable(v)
+        }
+    }
+
     if term
         .value()
         .as_symbol()
         .map(|s| s == &this)
         .unwrap_or(false)
     {
-        return term;
+        term
+    } else {
+        let mut map = HashMap::new();
+        map.insert(this, sym!("_this"));
+        VariableSubber(map).fold_term(term)
     }
-    fold_term(term, &mut VariableSubber::new(this))
 }
 
 /// Turn `_this = x` into `x` when it's ground.
@@ -88,7 +124,7 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
                 | (Value::Variable(v), Value::RestVariable(w))
                 | (Value::RestVariable(v), Value::Variable(w))
                 | (Value::RestVariable(v), Value::RestVariable(w))
-                    if v == &this && w == &this =>
+                    if v == w =>
                 {
                     TRUE.into()
                 }
@@ -115,15 +151,34 @@ pub fn simplify_partial(
     output_vars: HashSet<Symbol>,
     track_performance: bool,
 ) -> (Term, Option<PerfCounters>) {
+    //    term = normalize_vars(term);
     let mut simplifier = Simplifier::new(output_vars, track_performance);
     simplify_debug!("*** simplify partial {:?}", var);
     simplifier.simplify_partial(&mut term);
     term = simplify_trivial_constraint(var.clone(), term);
     simplify_debug!("simplify partial done {:?}, {:?}", var, term.to_polar());
+
     if matches!(term.value(), Value::Expression(e) if e.operator != Operator::And) {
         (op!(And, term).into(), simplifier.perf_counters())
     } else {
         (term, simplifier.perf_counters())
+    }
+}
+
+fn bindings2partial(bindings: Bindings) -> Operation {
+    use Operator::*;
+    let mut args = vec![];
+    for (k, v) in bindings {
+        let uni = Operation {
+            operator: Unify,
+            args: vec![term!(k), v],
+        };
+        args.push(term!(uni));
+    }
+
+    Operation {
+        operator: And,
+        args,
     }
 }
 
@@ -202,8 +257,59 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
             }
         }
 
-        Some(simplified_bindings)
+        check_consistency(simplified_bindings)
     }
+}
+
+/// FIXME(gw) this is a hack because we don't do a good enough job of maintaining
+/// consistency elsewhere
+fn check_consistency(bindings: Bindings) -> Option<Bindings> {
+    fn subcheck(vcs: &VarClasses, m: &mut HashMap<DotPath, Term>, expr: &Operation) -> Option<()> {
+        for arg in expr.args.iter() {
+            if let Ok(x) = arg.value().as_expression() {
+                subcheck(vcs, m, x)?
+            }
+        }
+        match expr.operator {
+            Unify | Eq => {
+                let (l, r) = (&expr.args[0], &expr.args[1]);
+                if l.is_ground() && r.is_ground() {
+                    (l == r).then(|| ())
+                } else if l.is_ground() {
+                    check(vcs, m, r, l)
+                } else if r.is_ground() {
+                    check(vcs, m, l, r)
+                } else {
+                    Some(())
+                }
+            }
+            _ => Some(()),
+        }
+    }
+
+    fn check(vcs: &VarClasses, m: &mut HashMap<DotPath, Term>, l: &Term, r: &Term) -> Option<()> {
+        if let Some(p) = dot_path_destructure(vcs, l) {
+            if let Some(v) = m.get(&p) {
+                if v != r {
+                    return None;
+                }
+            } else {
+                m.insert(p, r.clone());
+            }
+        }
+        Some(())
+    }
+
+    use Operator::*;
+    let part = bindings2partial(bindings.clone());
+    let vcs = var_classes(&term!(part.clone()));
+    let mut map = HashMap::new();
+    for clause in part.args.iter() {
+        let expr = clause.value().as_expression().unwrap();
+        subcheck(&vcs, &mut map, expr)?;
+    }
+
+    Some(bindings)
 }
 
 #[derive(Clone, Default)]
@@ -295,7 +401,7 @@ pub struct Simplifier {
     counters: PerfCounters,
 }
 
-type TermSimplifier = dyn Fn(&mut Simplifier, &mut Term);
+type TermSimplifier = dyn Fn(&mut Simplifier, &mut Term) -> Option<()>;
 
 impl Simplifier {
     pub fn new(output_vars: HashSet<Symbol>, track_performance: bool) -> Self {
@@ -317,20 +423,29 @@ impl Simplifier {
         Some(counter)
     }
 
-    pub fn bind(&mut self, var: Symbol, value: Term) {
+    fn bind(&mut self, var: Symbol, value: Term) -> Option<&mut Self> {
         // We do not allow rebindings.
-        if !self.is_bound(&var) {
-            self.bindings.insert(var, self.deref(&value));
+        match self.binding(&var) {
+            None => {
+                self.bindings.insert(var, self.deref(&value));
+                Some(self)
+            }
+            Some(x) if *x == value => Some(self),
+            _ => None,
         }
     }
 
-    pub fn deref(&self, term: &Term) -> Term {
+    fn deref(&self, term: &Term) -> Term {
         match term.value() {
             Value::Variable(var) | Value::RestVariable(var) => {
-                self.bindings.get(var).unwrap_or(term).clone()
+                self.binding(var).unwrap_or(term).clone()
             }
             _ => term.clone(),
         }
+    }
+
+    fn binding<'a>(&'a self, var: &Symbol) -> Option<&'a Term> {
+        self.bindings.get(var)
     }
 
     fn is_bound(&self, var: &Symbol) -> bool {
@@ -338,10 +453,9 @@ impl Simplifier {
     }
 
     fn is_output(&self, t: &Term) -> bool {
-        match t.value() {
-            Value::Variable(v) | Value::RestVariable(v) => self.output_vars.contains(v),
-            _ => false,
-        }
+        t.value()
+            .as_symbol()
+            .map_or(false, |v| self.output_vars.contains(v))
     }
 
     /// Determine whether to keep, drop, bind or conditionally bind a unification operation.
@@ -357,53 +471,54 @@ impl Simplifier {
     /// Params:
     ///     constraint: The constraint to consider removing from its parent.
     fn maybe_bind_constraint(&mut self, constraint: &Operation) -> MaybeDrop {
+        use {MaybeDrop::*, Operator::*, Value::*};
         match constraint.operator {
             // X and X is always true, so drop.
-            Operator::And if constraint.args.is_empty() => MaybeDrop::Drop,
+            And if constraint.args.is_empty() => Drop,
 
             // Choose a unification to maybe drop.
-            Operator::Unify | Operator::Eq => {
+            Unify | Eq => {
                 let left = &constraint.args[0];
                 let right = &constraint.args[1];
 
                 if left == right {
                     // The sides are exactly equal, so drop.
-                    MaybeDrop::Drop
+                    Drop
                 } else {
                     // Maybe bind one side to the other.
                     match (left.value(), right.value()) {
                         // Always keep unifications of two output variables (x = y).
-                        (Value::Variable(_), Value::Variable(_))
+                        (Variable(_), Variable(_))
                             if self.is_output(left) && self.is_output(right) =>
                         {
-                            MaybeDrop::Keep
+                            Keep
                         }
                         // Replace non-output variable l with right.
-                        (Value::Variable(l), _) if !self.is_bound(l) && !self.is_output(left) => {
+                        (Variable(l), _) if !self.is_bound(l) && !self.is_output(left) => {
                             simplify_debug!("*** 1");
-                            MaybeDrop::Bind(l.clone(), right.clone())
+                            Bind(l.clone(), right.clone())
                         }
                         // Replace non-output variable r with left.
-                        (_, Value::Variable(r)) if !self.is_bound(r) && !self.is_output(right) => {
+                        (_, Variable(r)) if !self.is_bound(r) && !self.is_output(right) => {
                             simplify_debug!("*** 2");
-                            MaybeDrop::Bind(r.clone(), left.clone())
+                            Bind(r.clone(), left.clone())
                         }
                         // Replace unbound variable with ground value.
-                        (Value::Variable(var), val) if val.is_ground() && !self.is_bound(var) => {
+                        (Variable(var), val) if val.is_ground() && !self.is_bound(var) => {
                             simplify_debug!("*** 3");
-                            MaybeDrop::Check(var.clone(), right.clone())
+                            Check(var.clone(), right.clone())
                         }
                         // Replace unbound variable with ground value.
-                        (val, Value::Variable(var)) if val.is_ground() && !self.is_bound(var) => {
+                        (val, Variable(var)) if val.is_ground() && !self.is_bound(var) => {
                             simplify_debug!("*** 4");
-                            MaybeDrop::Check(var.clone(), left.clone())
+                            Check(var.clone(), left.clone())
                         }
                         // Keep everything else.
-                        _ => MaybeDrop::Keep,
+                        _ => Keep,
                     }
                 }
             }
-            _ => MaybeDrop::Keep,
+            _ => Keep,
         }
     }
 
@@ -417,65 +532,43 @@ impl Simplifier {
         &mut self,
         o: &mut Operation,
         simplify_term: &TermSimplifier,
-    ) {
-        fn toss_trivial_unifies(args: &mut TermList) {
-            args.retain(|c| {
-                let o = c.value().as_expression().unwrap();
-                match o.operator {
-                    Operator::Unify | Operator::Eq => {
-                        assert_eq!(o.args.len(), 2);
-                        let left = &o.args[0];
-                        let right = &o.args[1];
-                        left != right
-                    }
-                    _ => true,
-                }
-            });
-        }
-
-        if o.operator == Operator::And || o.operator == Operator::Or {
+    ) -> Option<()> {
+        use {MaybeDrop::*, Operator::*};
+        if o.operator == And || o.operator == Or {
             toss_trivial_unifies(&mut o.args);
         }
 
         match o.operator {
             // Zero-argument conjunctions & disjunctions represent constants
             // TRUE and FALSE, respectively. We do not simplify them.
-            Operator::And | Operator::Or if o.args.is_empty() => (),
+            And | Or if o.args.is_empty() => (),
 
             // Replace one-argument conjunctions & disjunctions with their argument.
-            Operator::And | Operator::Or if o.args.len() == 1 => {
+            And | Or if o.args.len() == 1 => {
                 if let Value::Expression(operation) = o.args[0].value() {
                     *o = operation.clone();
-                    self.simplify_operation_variables(o, simplify_term);
+                    self.simplify_operation_variables(o, simplify_term)?;
                 }
             }
 
             // Non-trivial conjunctions. Choose unification constraints
             // to make bindings from and throw away; fold the rest.
-            Operator::And if o.args.len() > 1 => {
+            And if o.args.len() > 1 => {
                 // Compute which constraints to keep.
-                let mut keep = o.args.iter().map(|_| true).collect::<Vec<bool>>();
-                let mut references = o.args.iter().map(|_| false).collect::<Vec<bool>>();
+                let mut keep: Vec<_> = o.args.iter().map(|_| true).collect();
+                let mut references: Vec<_> = o.args.iter().map(|_| false).collect();
                 for (i, arg) in o.args.iter().enumerate() {
                     match self.maybe_bind_constraint(arg.value().as_expression().unwrap()) {
-                        MaybeDrop::Keep => (),
-                        MaybeDrop::Drop => keep[i] = false,
-                        MaybeDrop::Bind(var, value) => {
+                        Keep => (),
+                        Drop => keep[i] = false,
+                        Bind(var, value) => {
                             keep[i] = false;
-                            simplify_debug!("bind {:?}, {:?}", var, value.to_polar());
-                            self.bind(var, value);
+                            self.bind(var, value)?;
                         }
-                        MaybeDrop::Check(var, value) => {
-                            simplify_debug!("check {:?}, {:?}", var.to_polar(), value.to_polar());
+                        Check(var, value) => {
                             for (j, arg) in o.args.iter().enumerate() {
                                 if j != i && arg.contains_variable(&var) {
-                                    simplify_debug!(
-                                        "check bind {:?}, {:?} ref: {}",
-                                        var.to_polar(),
-                                        value.to_polar(),
-                                        j
-                                    );
-                                    self.bind(var, value);
+                                    self.bind(var, value)?;
                                     keep[i] = false;
 
                                     // record that this term references var and must be kept.
@@ -496,13 +589,13 @@ impl Simplifier {
 
                 // Simplify the survivors.
                 for arg in &mut o.args {
-                    simplify_term(self, arg);
+                    simplify_term(self, arg)?;
                 }
             }
 
             // Negation. Simplify the negated term, saving & restoring the
             // current bindings because bindings may not leak out of a negation.
-            Operator::Not => {
+            Not => {
                 assert_eq!(o.args.len(), 1);
                 let mut simplified = o.args[0].clone();
                 let mut simplifier = self.clone();
@@ -519,15 +612,22 @@ impl Simplifier {
             // Default case.
             _ => {
                 for arg in &mut o.args {
-                    simplify_term(self, arg);
+                    simplify_term(self, arg)?;
                 }
             }
         }
+
+        Some(())
     }
 
     /// Deduplicate an operation by removing terms that are mirrors or duplicates
     /// of other terms.
-    pub fn deduplicate_operation(&mut self, o: &mut Operation, simplify_term: &TermSimplifier) {
+    pub fn deduplicate_operation(
+        &mut self,
+        o: &mut Operation,
+        simplify_term: &TermSimplifier,
+    ) -> Option<()> {
+        use Operator::*;
         fn preprocess_and(args: &mut TermList) {
             // HashSet of term hash values used to deduplicate. We use hash values
             // to avoid cloning to insert terms.
@@ -540,29 +640,31 @@ impl Simplifier {
             });
         }
 
-        if o.operator == Operator::And {
+        if o.operator == And {
             self.counters.preprocess_and();
             preprocess_and(&mut o.args);
         }
 
         match o.operator {
-            Operator::And | Operator::Or if o.args.is_empty() => (),
+            And | Or if o.args.is_empty() => (),
 
             // Replace one-argument conjunctions & disjunctions with their argument.
-            Operator::And | Operator::Or if o.args.len() == 1 => {
+            And | Or if o.args.len() == 1 => {
                 if let Value::Expression(operation) = o.args[0].value() {
                     *o = operation.clone();
-                    self.deduplicate_operation(o, simplify_term);
+                    self.deduplicate_operation(o, simplify_term)?;
                 }
             }
 
             // Default case.
             _ => {
                 for arg in &mut o.args {
-                    simplify_term(self, arg);
+                    simplify_term(self, arg)?;
                 }
             }
         }
+
+        Some(())
     }
 
     /// Simplify a term `term` in place by calling the simplification
@@ -571,38 +673,37 @@ impl Simplifier {
     /// `simplify_operation` should perform simplification operations in-place
     /// on the operation argument. To recursively simplify sub-terms in that operation,
     /// it must call the passed TermSimplifier.
-    pub fn simplify_term<F>(&mut self, term: &mut Term, simplify_operation: F)
+    pub fn simplify_term<F>(&mut self, term: &mut Term, simplify_operation: F) -> Option<()>
     where
-        F: Fn(&mut Self, &mut Operation, &TermSimplifier) + 'static + Clone,
+        F: (Fn(&mut Self, &mut Operation, &TermSimplifier) -> Option<()>) + 'static + Clone,
     {
         if self.seen.contains(term) {
-            return;
+            return Some(());
         }
+
         let orig = term.clone();
         self.seen.insert(term.clone());
-
-        let de = self.deref(term);
-        *term = de;
+        *term = self.deref(term);
 
         match term.mut_value() {
             Value::Dictionary(dict) => {
                 for (_, v) in dict.fields.iter_mut() {
-                    self.simplify_term(v, simplify_operation.clone());
+                    self.simplify_term(v, simplify_operation.clone())?;
                 }
             }
             Value::Call(call) => {
                 for arg in call.args.iter_mut() {
-                    self.simplify_term(arg, simplify_operation.clone());
+                    self.simplify_term(arg, simplify_operation.clone())?;
                 }
                 if let Some(kwargs) = &mut call.kwargs {
                     for (_, v) in kwargs.iter_mut() {
-                        self.simplify_term(v, simplify_operation.clone());
+                        self.simplify_term(v, simplify_operation.clone())?;
                     }
                 }
             }
             Value::List(list) => {
                 for elem in list.iter_mut() {
-                    self.simplify_term(elem, simplify_operation.clone());
+                    self.simplify_term(elem, simplify_operation.clone())?;
                 }
             }
             Value::Expression(operation) => {
@@ -610,7 +711,7 @@ impl Simplifier {
                 let cont = move |s: &mut Self, term: &mut Term| {
                     s.simplify_term(term, simplify_operation.clone())
                 };
-                so(self, operation, &cont);
+                so(self, operation, &cont)?;
             }
             _ => (),
         }
@@ -621,29 +722,67 @@ impl Simplifier {
             }
         }
         self.seen.remove(&orig);
+        Some(())
+    }
+
+    fn simplify_partial_loop(&mut self, term: &mut Term, hash: u64, len: usize) -> Option<()> {
+        simplify_debug!("simplify loop {:?}", term.to_polar());
+        self.counters.simplify_term();
+        self.simplify_term(term, Simplifier::simplify_operation_variables)?;
+        let (nhash, nlen) = (term.hash_value(), self.bindings.len());
+        if hash == nhash && len == nlen {
+            self.simplify_term(term, Simplifier::deduplicate_operation)
+        } else {
+            self.simplify_partial_loop(term, nhash, nlen)
+        }
     }
 
     /// Simplify a partial until quiescence.
-    pub fn simplify_partial(&mut self, term: &mut Term) {
-        // TODO(ap): This does not handle hash collisions.
-        let mut last = term.hash_value();
-        let mut nbindings = self.bindings.len();
-        loop {
-            simplify_debug!("simplify loop {:?}", term.to_polar());
-            self.counters.simplify_term();
-
-            self.simplify_term(term, Simplifier::simplify_operation_variables);
-            let now = term.hash_value();
-            if last == now && self.bindings.len() == nbindings {
-                break;
-            }
-            last = now;
-            nbindings = self.bindings.len();
-        }
-
-        self.simplify_term(term, Simplifier::deduplicate_operation);
-
+    fn simplify_partial(&mut self, term: &mut Term) -> Option<()> {
+        // FIXME hash collisions
+        self.simplify_partial_loop(term, term.hash_value(), self.bindings.len())?;
         self.counters.finish_acc(term.clone());
+        Some(())
+    }
+}
+
+fn toss_trivial_unifies(args: &mut TermList) {
+    args.retain(|c| {
+        let o = c.value().as_expression().unwrap();
+        match o.operator {
+            Operator::Unify | Operator::Eq => {
+                assert_eq!(o.args.len(), 2);
+                let left = &o.args[0];
+                let right = &o.args[1];
+                left != right
+            }
+            _ => true,
+        }
+    });
+}
+
+#[derive(Hash, PartialEq, Debug, Eq)]
+struct DotPath {
+    var: Rc<Vec<Symbol>>,
+    path: Vec<String>,
+}
+
+fn dot_path_destructure(vcs: &VarClasses, t: &Term) -> Option<DotPath> {
+    match t.value() {
+        Value::Variable(s) => Some(DotPath {
+            var: vcs.get(s).unwrap().clone(),
+            path: vec![],
+        }),
+        Value::Expression(Operation {
+            operator: Operator::Dot,
+            args,
+        }) if args.len() == 2 && args[1].value().as_string().is_ok() => {
+            let mut prec = dot_path_destructure(vcs, &args[0])?;
+            prec.path
+                .push(args[1].value().as_string().unwrap().to_string());
+            Some(prec)
+        }
+        _ => None,
     }
 }
 
