@@ -50,6 +50,7 @@ fn kind(err: &PolarError) -> String {
         Validation(InvalidRule { .. }) => "ValidationError::InvalidRule",
         Validation(InvalidRuleType { .. }) => "ValidationError::InvalidRuleType",
         Validation(UndefinedRule { .. }) => "ValidationError::UndefinedRule",
+        Validation(MissingRequiredRule { .. }) => "ValidationError::MissingRequiredRule",
     }
     .to_owned()
 }

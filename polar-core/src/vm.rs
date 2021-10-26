@@ -3465,6 +3465,7 @@ mod tests {
                 ],
             })),
             source_info: SourceInfo::Test,
+            required: false,
         };
 
         let renamed_rule = vm.rename_rule_vars(&rule);

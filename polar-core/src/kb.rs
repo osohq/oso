@@ -1534,10 +1534,6 @@ mod tests {
         let has_role_rule_types = kb.rule_types.get(&sym!("has_role")).unwrap();
         let has_relation_rule_types = kb.rule_types.get(&sym!("has_relation")).unwrap();
 
-        // two resources with roles, one with relations
-        assert_eq!(has_role_rule_types.len(), 2);
-        assert_eq!(has_relation_rule_types.len(), 1);
-
         // has_role rule types for both `org` and `repo`
         assert!(has_role_rule_types.iter().any(|rule_type| {
             let resource_param = rule_type.params[2].clone();
@@ -1561,12 +1557,12 @@ mod tests {
         }));
 
         // has_relation rule type for `repo`
-        let has_relation = has_relation_rule_types.iter().next().unwrap();
-        let resource_param = has_relation.params[2].clone();
+        let required_has_relation = has_relation_rule_types.iter().find(|r| r.required).unwrap();
+        let resource_param = required_has_relation.params[2].clone();
         let resource_specializer = resource_param.specializer.unwrap();
         let instance = resource_specializer.value().as_pattern().unwrap();
 
-        let relation_param = has_relation.params[1].clone();
+        let relation_param = required_has_relation.params[1].clone();
         let relation = relation_param.parameter.value().as_string().unwrap();
         assert_eq!(relation, "parent".to_string());
 
