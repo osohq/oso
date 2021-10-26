@@ -188,6 +188,7 @@ macro_rules! rule {
             params,
             body: term!(op!(And, $(term!($body)),+)),
             source_info: $crate::sources::SourceInfo::Test,
+            required: false,
         }}
     };
     ($name:expr, [$($args:tt)*]) => {{
@@ -198,6 +199,18 @@ macro_rules! rule {
             params,
             body: term!(op!(And)),
             source_info: $crate::sources::SourceInfo::Test,
+            required: false,
+        }
+    }};
+    ($name:expr, [$($args:tt)*], $required:expr) => {{
+        let mut params = args!($($args)*);
+        params.reverse();
+        Rule {
+            name: sym!($name),
+            params,
+            body: term!(op!(And)),
+            source_info: $crate::sources::SourceInfo::Test,
+            required: $required,
         }
     }};
 }

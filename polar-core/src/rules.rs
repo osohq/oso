@@ -25,6 +25,7 @@ pub struct Rule {
     pub body: Term,
     #[serde(skip, default = "SourceInfo::ffi")]
     pub source_info: SourceInfo,
+    pub required: bool,
 }
 
 impl PartialEq for Rule {
@@ -55,6 +56,7 @@ impl Rule {
             params,
             body,
             source_info: SourceInfo::Test,
+            required: false,
         }
     }
 
@@ -76,6 +78,7 @@ impl Rule {
                 left,
                 right,
             },
+            required: false,
         }
     }
 }
@@ -130,6 +133,10 @@ impl RuleTypes {
     pub fn reset(&mut self) {
         self.0.clear();
         self.add_default_rule_types()
+    }
+
+    pub fn inner(&self) -> &HashMap<Symbol, Vec<Rule>> {
+        &self.0
     }
 }
 

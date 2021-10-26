@@ -161,6 +161,46 @@ impl KnowledgeBase {
                 }
             }
         }
+
+        for (rule_name, types) in self.rule_types.inner().iter() {
+            for rule_type in types {
+                if rule_type.required {
+                    if let Some(GenericRule { rules, .. }) = self.rules.get(rule_name) {
+                        for rule in rules.values() {
+                            let found_match = types
+                                .iter()
+                                .map(|rule_type| {
+                                    self.rule_params_match(rule.as_ref(), rule_type)
+                                        .map(|result| (result, rule_type))
+                                })
+                                .collect::<PolarResult<Vec<(RuleParamMatch, &Rule)>>>()
+                                .map(|results| {
+                                    results.iter().any(|(result, _)| match result {
+                                        RuleParamMatch::True => true,
+                                        RuleParamMatch::False(_) => false,
+                                    })
+                                })?;
+
+                            if !found_match {
+                                return Err(self.set_error_context(
+                                    &rule_type.body,
+                                    error::ValidationError::MissingRequiredRule {
+                                        rule_name: format!("{}", rule_name),
+                                    },
+                                ));
+                            }
+                        }
+                    } else {
+                        return Err(self.set_error_context(
+                            &rule_type.body,
+                            error::ValidationError::MissingRequiredRule {
+                                rule_name: format!("{}", rule_name),
+                            },
+                        ));
+                    }
+                }
+            }
+        }
         Ok(())
     }
 
@@ -734,7 +774,19 @@ impl KnowledgeBase {
     pub fn create_resource_specific_rule_types(&mut self) -> PolarResult<()> {
         let mut unique_relations = HashSet::new();
         let mut rule_types: Vec<Rule> = Vec::new();
-        let mut unique_resource_types = HashSet::new();
+
+        for (object, declarations) in &self.resource_blocks.declarations {
+            for (name, declaration) in declarations.iter() {
+                if let Declaration::Relation(subject) = declaration {
+                    unique_relations.insert((
+                        subject.value().as_symbol()?.clone(),
+                        name.value().as_string()?.clone(),
+                        object.value().as_symbol()?.clone(),
+                        false,
+                    ));
+                }
+            }
+        }
 
         // Iterate through resource blocks and construct tuples describing the
         // unique relationships traversed in shorthand rules.
@@ -760,6 +812,7 @@ impl KnowledgeBase {
                                 subject.value().as_symbol()?.clone(),
                                 relation.value().as_string()?,
                                 object.value().as_symbol()?.clone(),
+                                true,
                             ));
 
                             if let Some(Declaration::Relation(related_subject)) = self
@@ -773,6 +826,7 @@ impl KnowledgeBase {
                                     related_subject.value().as_symbol()?.clone(),
                                     implier.value().as_string()?,
                                     subject.value().as_symbol()?.clone(),
+                                    true,
                                 ));
                             }
                         }
@@ -792,6 +846,7 @@ impl KnowledgeBase {
                                 subject.value().as_symbol()?.clone(),
                                 implier.value().as_string()?,
                                 object.value().as_symbol()?.clone(),
+                                true,
                             ));
                         }
                     }
@@ -799,9 +854,8 @@ impl KnowledgeBase {
             }
         }
 
-        unique_relations.into_iter().for_each(|(subject, relation_name, object)| {
-            unique_resource_types.insert(subject.clone());
-            rule_types.push(rule!("has_relation", ["_subject"; instance!(subject), value!(relation_name), "_object"; instance!(object)]))
+        unique_relations.into_iter().for_each(|(subject, relation_name, object, required)| {
+            rule_types.push(rule!("has_relation", ["_subject"; instance!(subject), value!(relation_name), "_object"; instance!(object)], required))
         });
 
         for (object, declarations) in &self.resource_blocks.declarations {
