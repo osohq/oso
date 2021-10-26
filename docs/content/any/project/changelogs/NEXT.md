@@ -10,6 +10,12 @@ draft: true
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
+### Core
+
+### Other bugs & improvements
+
+- Improved unification behavior for dot lookups on free variables.
+
 ### Go
 
 #### Other bugs & improvements
