@@ -13,13 +13,11 @@ fn main() {
         .generate()
         .map(Some)
         .or_else(|err| {
-            // Continue on syntax errors
-            if let cbindgen::Error::ParseSyntaxError { .. } = err {
-                Ok(None)
-            } else if let cbindgen::Error::CargoMetadata { .. } = err {
-                Ok(None)
-            } else {
-                Err(err)
+            match err {
+                // Continue on syntax errors
+                cbindgen::Error::ParseSyntaxError { .. }
+                | cbindgen::Error::CargoMetadata { .. } => Ok(None),
+                e => Err(e),
             }
         })
         .expect("Unable to generate bindings")
