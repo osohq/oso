@@ -6,12 +6,12 @@ use crate::validations::check_undefined_rule_calls;
 
 pub use super::bindings::Bindings;
 use super::counter::Counter;
+use super::formatting::format_params;
 use super::resource_block::ResourceBlocks;
 use super::resource_block::{Declaration, ShorthandRule, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::*;
 use super::terms::*;
-use super::formatting::format_params;
 use std::sync::Arc;
 
 enum RuleParamMatch {
@@ -189,8 +189,11 @@ impl KnowledgeBase {
                             return Err(self.set_error_context(
                                 &rule_type.body,
                                 error::ValidationError::MissingRequiredRule {
-                                    rule_name: format!("{}({});",
-                                                       rule_name.to_polar(), format_params(&rule_type.params, ", ")),
+                                    rule_name: format!(
+                                        "{}({});",
+                                        rule_name.to_polar(),
+                                        format_params(&rule_type.params, ", ")
+                                    ),
                                 },
                             ));
                         }
@@ -199,8 +202,11 @@ impl KnowledgeBase {
                     return Err(self.set_error_context(
                         &rule_type.body,
                         error::ValidationError::MissingRequiredRule {
-                            rule_name: format!("{}({});",
-                                               rule_name.to_polar(), format_params(&rule_type.params, ", ")),
+                            rule_name: format!(
+                                "{}({});",
+                                rule_name.to_polar(),
+                                format_params(&rule_type.params, ", ")
+                            ),
                         },
                     ));
                 }
