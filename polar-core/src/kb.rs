@@ -781,6 +781,10 @@ impl KnowledgeBase {
         let mut has_relation_rule_types_to_create = HashSet::new();
         let mut rule_types: Vec<Rule> = Vec::new();
 
+        // TODO @patrickod refactor RuleTypes & split out
+        // RequiredRuleType struct to record the related
+        // shorthand rule and relation terms.
+
         // Iterate through all resource block declarations and create
         // non-required rule types for each relation declaration we observe.
         //
