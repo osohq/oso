@@ -374,3 +374,32 @@ jobs:
         env:
           MVN_FLAGS: "-q"
         run: make -C docs test
+
+  # job checks to make sure the parser code doesn't need to be updated,
+  # e.g. someone made a change to polar.lalrpop without rebuilding the parser
+  check-parser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-check-parser-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+      - name: Build parser
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: -p polar-core --features build-parser
+      - name: Check parser code is up-to-date
+        run: |
+          [[ -z $(git status -s polar-core/src/parser/) ]]
