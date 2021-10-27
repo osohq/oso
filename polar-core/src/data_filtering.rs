@@ -24,14 +24,16 @@ type Set<A> = HashSet<A>;
 pub type Types = Map<TypeName, Map<FieldName, Type>>;
 pub type PartialResults = Vec<ResultEvent>;
 
-#[derive(PartialEq, Debug, Serialize)]
+#[derive(PartialEq, Debug, Serialize, Clone)]
 pub struct Proj(Rc<DataFilter>, String);
-#[derive(PartialEq, Debug, Serialize)]
-pub enum Datum { Field(Proj, DataSource), Imm(Value), }
-#[derive(PartialEq, Debug, Serialize)]
+#[derive(Debug)]
+pub enum PreDatum { Field(Proj, DataSource), Imm(Value), }
+#[derive(PartialEq, Debug, Serialize, Clone)]
+pub enum Datum { Field(Proj), Imm(Value), }
+#[derive(PartialEq, Debug, Serialize, Copy, Clone)]
 pub enum SelOp { Eq, Neq, In, Nin, }
 
-#[derive(PartialEq, Debug, Serialize)]
+#[derive(Clone, PartialEq, Debug, Serialize)]
 pub enum DataFilter {
     Source(String),
     Select {
@@ -48,6 +50,7 @@ pub enum DataFilter {
     }
 }
 
+
 #[derive(Debug, Serialize, PartialEq, Eq)]
 pub struct DataSource {
     base: String,
@@ -57,7 +60,7 @@ pub struct DataSource {
 #[derive(Debug)]
 struct QueryInfo {
     entities: Map<Vec<String>, String>,
-    constraints: Vec<(Datum, SelOp, Datum)>,
+    constraints: Vec<(PreDatum, SelOp, PreDatum)>,
     types: Types,
     source: Rc<DataFilter>,
 }
@@ -74,11 +77,29 @@ impl DataSources for QueryInfo {
     }
 }
 
-impl DataSources for Datum {
+impl DataSources for PreDatum {
     fn sources(&self) -> Set<String> {
         match self {
             Self::Field(p, _) => p.0.sources(),
             _ => HashSet::new(),
+        }
+    }
+}
+
+impl DataSources for Datum {
+    fn sources(&self) -> Set<String> {
+        match self {
+            Self::Field(p) => p.0.sources(),
+            _ => HashSet::new(),
+        }
+    }
+}
+
+impl From<PreDatum> for Datum {
+    fn from(other: PreDatum) -> Self {
+        match other {
+            PreDatum::Field(x, _) => Self::Field(x),
+            PreDatum::Imm(x) => Self::Imm(x),
         }
     }
 }
@@ -181,7 +202,7 @@ impl QueryInfo {
     }
 
     fn into_filter(mut self) -> PolarResult<Rc<DataFilter>> {
-        use {Datum::*, DataFilter::*};
+        use {PreDatum::*, DataFilter::*};
         let source = Rc::new(Source(self.entities.get(&vec![String::from("_this")]).unwrap().clone()));
         let source = self.constraints.iter().fold(Ok(source), |source, (lhs, _, rhs)| {
             match (lhs, rhs) {
@@ -195,8 +216,9 @@ impl QueryInfo {
         self.constraints.into_iter().fold(
             Ok(source),
             |source, (lhs, kind, rhs)| match lhs {
-                Datum::Field(lhs, _) => {
+                PreDatum::Field(lhs, _) => {
                     let source = source?;
+                    let rhs = rhs.into();
                     Ok(Rc::new(Select { kind, lhs, rhs, source }))
                 }
                 _ => err_invalid(format!("QueryInfo::into_filter()")),
@@ -223,8 +245,8 @@ impl QueryInfo {
         DataSource { base, path }
     }
 
-    fn datum(&mut self, t: &Term) -> PolarResult<Datum> {
-        use {Datum::*, Operator::*};
+    fn datum(&mut self, t: &Term) -> PolarResult<PreDatum> {
+        use {PreDatum::*, Operator::*};
         match t.value() {
             Value::Number(_) | Value::String(_) => 
                 Ok(Imm(t.value().clone())),
@@ -1384,29 +1406,27 @@ mod test {
 
     #[test]
     fn test_data_filter() -> TestResult {
+        let s = |s: &str| s.to_string();
         let input = test_input_1();
-
         let types = hashmap! {
-            "A".to_owned() => hashmap! {
-                "field".to_owned() => Type::Base {
-                    class_tag: "B".to_owned()
+            s("A") => hashmap! {
+                s("field") => Type::Base {
+                    class_tag: s("B")
                 },
-                "attr".to_owned() => Type::Relation {
-                    my_field: "b_id".to_owned(),
-                    other_field: "id".to_owned(),
-                    kind: "one".to_owned(),
-                    other_class_tag: "B".to_owned(),
+                s("attr") => Type::Relation {
+                    my_field: s("b_id"),
+                    other_field: s("id"),
+                    kind: s("one"),
+                    other_class_tag: s("B"),
                 },
             },
-            "B".to_owned() => hashmap! {
-                "field".to_owned() => Type::Base {
-                    class_tag: "A".to_owned()
+            s("B") => hashmap! {
+                s("field") => Type::Base {
+                    class_tag: s("A")
                 }
             }
         };
-        println!("{}", line!());
         let r1 = DataFilter::from_expr(types.clone(), &input)?;
-        println!("{}", line!());
         let r2 = DataFilter::build(
             types.clone(),
             vec![ResultEvent::from(hashmap! { sym!("resource") => input })],
@@ -1414,12 +1434,21 @@ mod test {
             "something")?;
         assert_eq!(r1, r2);
         let input = test_input_2();
-        println!("{}", line!());
         let r1 = DataFilter::from_expr(types, &input)?;
-        println!("{}", line!());
-        eprintln!("{:?}", r1);
-        eprintln!("{:?}", r1.sources());
-        assert!(false);
+        use {DataFilter::*, Datum::*};
+        let (src_a, src_b) = (Rc::new(Source(s("A"))), Rc::new(Source(s("B"))));
+        let expected = Select {
+            source: Rc::new(Join {
+                left: src_a.clone(),
+                lcol: Proj(src_a.clone(), s("b_id")),
+                rcol: Proj(src_b.clone(), s("id")),
+                right: src_b.clone(),
+            }),
+            lhs: Proj(src_b.clone(), s("x")),
+            rhs: Field(Proj(src_a.clone(), s("attr_x"))),
+            kind: SelOp::Eq,
+        };
+        assert_eq!(*r1, expected);
         Ok(())
     }
 
