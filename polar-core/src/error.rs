@@ -41,6 +41,7 @@ pub struct ErrorContext {
     pub source: Source,
     pub row: usize,
     pub column: usize,
+    pub include_location: bool,
 }
 
 impl PolarError {
@@ -63,16 +64,22 @@ impl PolarError {
                         source: source.clone(),
                         row,
                         column,
+                        include_location: false,
                     });
                 }
                 _ => {}
             },
-            (_, Some(source), Some(term)) => {
+            (e, Some(source), Some(term)) => {
                 let (row, column) = crate::lexer::loc_to_pos(&source.src, term.offset());
                 self.context.replace(ErrorContext {
                     source: source.clone(),
                     row,
                     column,
+                    // @TODO(Sam): find a better way to include this info
+                    include_location: matches!(
+                        e,
+                        ErrorKind::Runtime(RuntimeError::UnhandledPartial { .. })
+                    ),
                 });
             }
             _ => {}
@@ -241,9 +248,12 @@ pub enum ParseError {
 
 impl fmt::Display for ErrorContext {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "found in:")?;
-        write!(f, "{}", self.source.src.split('\n').nth(self.row).unwrap())?;
-        write!(f, "\n{}^", " ".repeat(self.column))?;
+        // @TODO(Sam): find a better way to incorporate this info
+        if self.include_location {
+            writeln!(f, "found in:")?;
+            write!(f, "{}", self.source.src.split('\n').nth(self.row).unwrap())?;
+            write!(f, "\n{}^", " ".repeat(self.column))?;
+        }
         write!(f, " at line {}, column {}", self.row + 1, self.column + 1)?;
         if let Some(ref filename) = self.source.filename {
             write!(f, " in file {}", filename)?;
@@ -389,7 +399,7 @@ impl fmt::Display for RuntimeError {
             Self::UnhandledPartial { var, term } => {
                 write!(
                     f,
-                    "Found an unhandled partial in the query result: {}
+                    "Found an unhandled partial in the query result: {var}
 
 This can happen when there is a variable used inside a rule
 which is not related to any of the query inputs.
@@ -399,12 +409,11 @@ For example: f(_x) if y.a = 1 and y.b = 2;
 In this example, the variable `y` is constrained by `a = 1 and b = 2`,
 but we cannot resolve these constraints without further information.
 
-The unhandled partial is for variable {}.
-The expression is: {}
+The unhandled partial is for variable {var}.
+The expression is: {expr}
 ",
-                    var,
-                    var,
-                    term.to_polar(),
+                    var = var,
+                    expr = term.to_polar(),
                 )
             }
         }
