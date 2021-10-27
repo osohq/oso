@@ -166,41 +166,40 @@ impl KnowledgeBase {
         // resource block definitions.
         for rule_name in self.rule_types.required_rule_types() {
             let types = self.rule_types.get(rule_name).unwrap();
-            for rule_type in types {
-                if rule_type.required {
-                    if let Some(GenericRule { rules, .. }) = self.rules.get(rule_name) {
-                        for rule in rules.values() {
-                            let found_match = types
-                                .iter()
-                                .map(|rule_type| {
-                                    self.rule_params_match(rule.as_ref(), rule_type)
-                                        .map(|result| (result, rule_type))
+            let required_rule_types = types.iter().filter(|r| r.required).collect::<Vec<&Rule>>();
+            for rule_type in &required_rule_types {
+                if let Some(GenericRule { rules, .. }) = self.rules.get(rule_name) {
+                    for rule in rules.values() {
+                        let found_match = types
+                            .iter()
+                            .map(|rule_type| {
+                                self.rule_params_match(rule.as_ref(), rule_type)
+                                    .map(|result| (result, rule_type))
+                            })
+                            .collect::<PolarResult<Vec<(RuleParamMatch, &Rule)>>>()
+                            .map(|results| {
+                                results.iter().any(|(result, _)| match result {
+                                    RuleParamMatch::True => true,
+                                    RuleParamMatch::False(_) => false,
                                 })
-                                .collect::<PolarResult<Vec<(RuleParamMatch, &Rule)>>>()
-                                .map(|results| {
-                                    results.iter().any(|(result, _)| match result {
-                                        RuleParamMatch::True => true,
-                                        RuleParamMatch::False(_) => false,
-                                    })
-                                })?;
+                            })?;
 
-                            if !found_match {
-                                return Err(self.set_error_context(
-                                    &rule_type.body,
-                                    error::ValidationError::MissingRequiredRule {
-                                        rule_name: format!("{}", rule_name),
-                                    },
-                                ));
-                            }
+                        if !found_match {
+                            return Err(self.set_error_context(
+                                &rule_type.body,
+                                error::ValidationError::MissingRequiredRule {
+                                    rule_name: format!("{}", rule_name),
+                                },
+                            ));
                         }
-                    } else {
-                        return Err(self.set_error_context(
-                            &rule_type.body,
-                            error::ValidationError::MissingRequiredRule {
-                                rule_name: format!("{}", rule_name),
-                            },
-                        ));
                     }
+                } else {
+                    return Err(self.set_error_context(
+                        &rule_type.body,
+                        error::ValidationError::MissingRequiredRule {
+                            rule_name: format!("{}", rule_name),
+                        },
+                    ));
                 }
             }
         }
