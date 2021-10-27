@@ -280,12 +280,6 @@ impl Polar {
         }])
     }
 
-    // TODO(gj): ask Sam if we still need this.
-    pub fn remove_file(&self, filename: &str) -> Option<String> {
-        let mut kb = self.kb.write().unwrap();
-        kb.remove_file(filename)
-    }
-
     /// Clear rules from the knowledge base
     pub fn clear_rules(&self) {
         let mut kb = self.kb.write().unwrap();
@@ -375,31 +369,6 @@ mod tests {
         let polar = Polar::new();
         let _query = polar.new_query("1 = 1", false);
         let _ = polar.load_str("f(_);");
-    }
-
-    #[test]
-    fn load_remove_files() {
-        let polar = Polar::new();
-        let valid = Source {
-            src: "f(x) if x = 1;".to_owned(),
-            filename: Some("test.polar".to_string()),
-        };
-        polar.load(vec![valid.clone()]).unwrap();
-        polar.remove_file("test.polar");
-
-        // loading works after removing
-        polar.load(vec![valid.clone()]).unwrap();
-        polar.remove_file("test.polar");
-
-        // load a broken file
-        let invalid = Source {
-            src: "f(x) if x".to_owned(),
-            filename: Some("test.polar".to_string()),
-        };
-        polar.load(vec![invalid]).unwrap_err();
-
-        // can still load files again
-        polar.load(vec![valid]).unwrap();
     }
 
     #[test]
