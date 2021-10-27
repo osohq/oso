@@ -228,7 +228,7 @@ impl VarInfo {
                 self.types.push((lhs, i.tag.0.clone()));
                 Ok(self)
             }
-            _ => err_unsupported(format!("The specializer `{}`", rhs.to_polar())),
+            _ => unsupported_expression_error(op!(Isa, lhs.clone(), rhs.clone())),
         }
     }
 
@@ -246,11 +246,7 @@ impl VarInfo {
             // 1 = 1 is irrelevant for data filtering, other stuff seems like an error.
             // @NOTE(steve): Going with the same not yet supported message but if this is
             // coming through it's probably a bug in the simplifier.
-            _ => err_unsupported(format!(
-                "The expression `{} = {}`",
-                left.to_polar(),
-                right.to_polar()
-            )),
+            _ => unsupported_expression_error(op!(Unify, left.clone(), right.clone())),
         }
     }
 
@@ -270,11 +266,7 @@ impl VarInfo {
                 self.uncycles.push((l, r));
                 Ok(self)
             }
-            _ => err_unsupported(format!(
-                "The expression `{} != {}`",
-                left.to_polar(),
-                right.to_polar()
-            )),
+            _ => unsupported_expression_error(op!(Neq, left.clone(), right.clone())),
         }
     }
 
@@ -288,11 +280,7 @@ impl VarInfo {
                 self.contained_values.push((Term::from(val), var));
                 Ok(self)
             }
-            _ => err_unsupported(format!(
-                "The expression `{} in {}`",
-                left.to_polar(),
-                right.to_polar()
-            )),
+            _ => unsupported_expression_error(op!(In, left.clone(), right.clone())),
         }
     }
 
@@ -307,17 +295,17 @@ impl VarInfo {
             Neq if args.len() == 2 => self.do_neq(&args[0], &args[1]),
             In if args.len() == 2 => self.do_in(&args[0], &args[1]),
             Unify | Eq | Assign if args.len() == 2 => self.do_unify(&args[0], &args[1]),
-            _ => err_unsupported(format!("The expression `{}`", exp.to_polar())),
+            _ => unsupported_expression_error(exp.clone()),
         }
     }
 }
 
-fn err_invalid<A>(msg: String) -> PolarResult<A> {
+fn invalid_state_error<A>(msg: String) -> PolarResult<A> {
     Err(OperationalError::InvalidState { msg }.into())
 }
 
-fn err_unsupported<A>(msg: String) -> PolarResult<A> {
-    Err(DataFilteringError::Unsupported(msg).into())
+fn unsupported_expression_error<A>(op: Operation) -> PolarResult<A> {
+    Err(DataFilteringError::UnsupportedExpression(op).into())
 }
 
 impl FilterPlan {
@@ -521,13 +509,13 @@ impl<'a> ResultSetBuilder<'a> {
 
         // error messages
         let missing = |id| {
-            err_invalid(format!(
+            invalid_state_error(format!(
                 "Request {} missing from resolve order {:?}",
                 id, order
             ))
         };
         let bad_order = |id1, id2, rset| {
-            err_invalid(format!(
+            invalid_state_error(format!(
                 "Result set {} is resolved before its dependency {} in {:?}",
                 id1, id2, rset
             ))
@@ -802,14 +790,12 @@ impl<'a> ResultSetBuilder<'a> {
         if before != after {
             Ok(self)
         } else {
-            err_invalid(format!(
-                "field access: {}.{} = {}",
-                self.var_name(id)
-                    .unwrap_or_else(|| Symbol(format!("{}", id))),
-                field,
-                self.var_name(child)
-                    .unwrap_or_else(|| Symbol(format!("{}", child))),
-            ))
+            let var_name = |id| {
+                term!(self
+                    .var_name(id)
+                    .unwrap_or_else(|| Symbol(format!("{}", id))))
+            };
+            unsupported_expression_error(op!(Dot, var_name(id), str!(field), var_name(child)))
         }
     }
 
@@ -912,7 +898,7 @@ impl Vars {
         });
 
         seek_var_id(&variables, &sym!("_this")).map_or_else(
-            || err_invalid("No `_this` variable".to_string()),
+            || invalid_state_error("No `_this` variable in data filtering expression.".to_string()),
             |this_id| {
                 Ok(Vars {
                     variables,
