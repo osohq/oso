@@ -1586,14 +1586,14 @@ fn test_missing_actor_hint() -> TestResult {
 
     let policy = r#"
 resource Organization {
-	roles = ["owner"];
-	permissions = ["read"];
+    roles = ["owner"];
+    permissions = ["read"];
 
-	"read" if "owner";
+    "read" if "owner";
 }
 
 has_role(user: User, "owner", organization: Organization) if
-	organization.owner_id = user.id;
+    organization.owner_id = user.id;
 "#;
     let err = p.load_str(policy).expect_err("Expected validation error");
     assert!(matches!(&err.kind, ErrorKind::Validation(_)));
@@ -2482,8 +2482,8 @@ fn test_suggested_rule_specializer() -> TestResult {
     let policy = r#"
 actor User {}
 resource Repository {
-	permissions = ["read"];
-	roles = ["contributor"];
+    permissions = ["read"];
+    roles = ["contributor"];
 
     "read" if "contributor";
 }
