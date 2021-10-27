@@ -34,6 +34,7 @@ pub enum ErrorKind {
     Operational(OperationalError),
     Parameter(ParameterError),
     Validation(ValidationError),
+    DataFiltering(DataFilteringError),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -157,6 +158,15 @@ impl From<ValidationError> for PolarError {
     }
 }
 
+impl From<DataFilteringError> for PolarError {
+    fn from(err: DataFilteringError) -> Self {
+        Self {
+            kind: ErrorKind::DataFiltering(err),
+            context: None,
+        }
+    }
+}
+
 pub type PolarResult<T> = std::result::Result<T, PolarError>;
 
 impl<T> From<PolarError> for PolarResult<T> {
@@ -175,6 +185,7 @@ impl fmt::Display for PolarError {
             ErrorKind::Operational(e) => write!(f, "{}", e)?,
             ErrorKind::Parameter(e) => write!(f, "{}", e)?,
             ErrorKind::Validation(e) => write!(f, "{}", e)?,
+            ErrorKind::DataFiltering(e) => write!(f, "{}", e)?,
         }
         if let Some(ref context) = self.context {
             write!(f, "{}", context)?;
@@ -302,6 +313,20 @@ impl fmt::Display for ParseError {
             Self::ResourceBlock { msg, .. } => {
                 write!(f, "{}", msg)
             }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum DataFilteringError {
+    Unsupported(String),
+}
+
+impl fmt::Display for DataFilteringError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use DataFilteringError::*;
+        match self {
+            Unsupported(msg) => write!(f, "{} is unsupported for data filtering.", msg),
         }
     }
 }

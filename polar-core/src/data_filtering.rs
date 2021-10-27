@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     counter::Counter,
-    error::{OperationalError, PolarResult},
+    error::{DataFilteringError, OperationalError, PolarResult},
     events::ResultEvent,
     terms::*,
 };
@@ -228,7 +228,7 @@ impl VarInfo {
                 self.types.push((lhs, i.tag.0.clone()));
                 Ok(self)
             }
-            _ => err_unimplemented(format!("Unsupported specializer: {}", rhs.to_polar())),
+            _ => err_unsupported(format!("The specializer `{}`", rhs.to_polar())),
         }
     }
 
@@ -246,8 +246,8 @@ impl VarInfo {
             // 1 = 1 is irrelevant for data filtering, other stuff seems like an error.
             // @NOTE(steve): Going with the same not yet supported message but if this is
             // coming through it's probably a bug in the simplifier.
-            _ => err_unimplemented(format!(
-                "Unsupported unification: {} = {}",
+            _ => err_unsupported(format!(
+                "The expression `{} = {}`",
                 left.to_polar(),
                 right.to_polar()
             )),
@@ -270,8 +270,8 @@ impl VarInfo {
                 self.uncycles.push((l, r));
                 Ok(self)
             }
-            _ => err_unimplemented(format!(
-                "Unsupported comparison: {} != {}",
+            _ => err_unsupported(format!(
+                "The expression `{} != {}`",
                 left.to_polar(),
                 right.to_polar()
             )),
@@ -288,8 +288,8 @@ impl VarInfo {
                 self.contained_values.push((Term::from(val), var));
                 Ok(self)
             }
-            _ => err_unimplemented(format!(
-                "Unsupported `in` check: {} in {}",
+            _ => err_unsupported(format!(
+                "The expression `{} in {}`",
                 left.to_polar(),
                 right.to_polar()
             )),
@@ -307,11 +307,7 @@ impl VarInfo {
             Neq if args.len() == 2 => self.do_neq(&args[0], &args[1]),
             In if args.len() == 2 => self.do_in(&args[0], &args[1]),
             Unify | Eq | Assign if args.len() == 2 => self.do_unify(&args[0], &args[1]),
-            _ => err_unimplemented(format!(
-                "the expression {:?}/{} is not supported for data filtering",
-                exp.operator,
-                exp.args.len()
-            )),
+            _ => err_unsupported(format!("The expression `{}`", exp.to_polar())),
         }
     }
 }
@@ -320,8 +316,8 @@ fn err_invalid<A>(msg: String) -> PolarResult<A> {
     Err(OperationalError::InvalidState { msg }.into())
 }
 
-fn err_unimplemented<A>(msg: String) -> PolarResult<A> {
-    Err(OperationalError::Unimplemented { msg }.into())
+fn err_unsupported<A>(msg: String) -> PolarResult<A> {
+    Err(DataFilteringError::Unsupported(msg).into())
 }
 
 impl FilterPlan {
@@ -807,7 +803,7 @@ impl<'a> ResultSetBuilder<'a> {
             Ok(self)
         } else {
             err_invalid(format!(
-                "Unsupported field access: {}.{} = {}",
+                "field access: {}.{} = {}",
                 self.var_name(id)
                     .unwrap_or_else(|| Symbol(format!("{}", id))),
                 field,
@@ -1143,18 +1139,11 @@ mod test {
 
     #[test]
     fn test_unsupported_op_msgs() {
-        use crate::error::{ErrorKind::Operational, OperationalError::Unimplemented, PolarError};
-
-        let err = Vars::from_op(&op!(Dot)).expect_err("should've failed");
-        match err {
-            PolarError {
-                kind: Operational(Unimplemented { msg }),
-                ..
-            } => assert_eq!(
-                &msg,
-                "the expression Dot/0 is not supported for data filtering"
-            ),
-            _ => panic!("unexpected"),
-        }
+        let err = Vars::from_op(&op!(Not, var!("_this"))).expect_err("should've failed");
+        let msg = format!("{}", err);
+        assert_eq!(
+            &msg,
+            "The expression `not _this` is unsupported for data filtering."
+        );
     }
 }
