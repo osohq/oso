@@ -142,51 +142,42 @@ impl Value {
 }
 
 impl DataFilter {
-    fn build(
-        types: Types,
-        partials: PartialResults,
-        var: &str,
-        class: &str,
-    ) -> PolarResult<Rc<Self>> {
+    fn build(types: Types, partials: PartialResults, var: &str, _class: &str) -> PolarResult<Self> {
+        let var = Symbol(var.to_string());
         partials
             .iter()
             .find_map(|result| {
-                result.bindings.get(&Symbol::new(var)).and_then(|term| {
+                result.bindings.get(&var).and_then(|term| {
                     match term.value().as_expression() {
-                        Ok(exp) if exp.operator == Operator::And =>
-                            Some(Self::from_expr(types.clone(), term)),
+                        Ok(Operation { operator: Operator::And, args }) => Some({
+                            args.iter()
+                                .map(|arg| match arg.value().as_expression() {
+                                    Ok(x) => Ok(x.clone()),
+                                    Err(e) => Err(e.into()),
+                                })
+                                .collect::<PolarResult<Vec<Operation>>>()
+                                .and_then(|args| QueryInfo::new(types.clone(), args))
+                                .and_then(|qi| qi.into_filter())
+                        }),
                         _ => None
                     }
                 })
             })
-            .unwrap_or_else(|| {
-                err_invalid(format!("DataFilter::build({:?}, {:?}, {}, {})", types, partials, var, class))
-            })
+            .unwrap_or_else(|| err_invalid("from prefilter".to_string()))
+            .map(|rc| (*rc).clone())
     }
-
-    fn from_expr(types: Types, t: &Term) -> PolarResult<Rc<Self>> {
-        use DataFilter::*;
-        match t.value() {
-            Value::Expression(Operation { operator: Operator::And, args }) => {
-                let args: PolarResult<Vec<_>> = args.iter().map(|t| t.value().as_expression().map(|x|x.clone()).map_err(|e| e.into())).collect();
-                QueryInfo::new(types.clone(), args?)?.into_filter()
-            },
-            _ => err_invalid(format!("DataFilter::from_expr({:?}, {})", types, t.to_polar())),
-        }
-    }
-
 }
 
 
 impl QueryInfo {
     fn joins(types: &Types, mut left: Rc<DataFilter>, mut left_type: String, path: Vec<String>) -> PolarResult<Rc<DataFilter>> {
-        use { DataFilter::*, Datum::*};
+        use { DataFilter::*};
         let left_sources = left.sources();
         eprintln!("sources: {:?}, type: {}", left_sources, left_type);
         assert!(left_sources.contains(&left_type));
         for field in path {
             match types.get(&left_type).and_then(|m| m.get(&field)) {
-                Some(rel@Type::Relation {my_field, other_field, other_class_tag, ..}) => {
+                Some(Type::Relation {my_field, other_field, other_class_tag, ..}) => {
                     if !left.sources().contains(other_class_tag) {
                         let lcol = Proj(Rc::new(Source(left_type.to_string())), my_field.to_string());
                         let right = Rc::new(Source(other_class_tag.to_string()));
@@ -201,7 +192,7 @@ impl QueryInfo {
         Ok(left)
     }
 
-    fn into_filter(mut self) -> PolarResult<Rc<DataFilter>> {
+    fn into_filter(self) -> PolarResult<Rc<DataFilter>> {
         use {PreDatum::*, DataFilter::*};
         let source = Rc::new(Source(self.entities.get(&vec![String::from("_this")]).unwrap().clone()));
         let source = self.constraints.iter().fold(Ok(source), |source, (lhs, _, rhs)| {
@@ -221,7 +212,7 @@ impl QueryInfo {
                     let rhs = rhs.into();
                     Ok(Rc::new(Select { kind, lhs, rhs, source }))
                 }
-                _ => err_invalid(format!("QueryInfo::into_filter()")),
+                _ => err_invalid("QueryInfo::into_filter()".to_string()),
             })
     }
 
@@ -272,27 +263,6 @@ impl QueryInfo {
         match self.entities.get(&path) {
             Some(src) => Ok(Rc::new(Source(src.clone()))),
             _ => err_invalid(format!("{:?}.source({})", self, t.to_polar())),
-        }
-    }
-
-    fn join(&self, base: Rc<DataFilter>, t0: &str, attr: &str, t1: &str) -> PolarResult<Rc<DataFilter>> {
-        use {DataFilter::*, Type::Relation};
-        let srcs = base.sources();
-        assert!(srcs.contains(t0));
-        if srcs.contains(t1) {
-            return Ok(base)
-        }
-
-        match self.types.get(t0).and_then(|m| m.get(attr)) {
-            Some(Relation { my_field, other_field, other_class_tag, .. }) if t1 == other_class_tag => {
-                let left = base;
-                let lcol = Proj(Rc::new(Source(t0.to_string())), my_field.to_string());
-                let right = Rc::new(Source(t1.to_string()));
-                let rcol = Proj(right.clone(), other_field.to_string());
-
-                Ok(Rc::new(Join { left, lcol, rcol, right }))
-            }
-            _ => err_invalid(format!("Undefined relation: {}.{} : {}", t0, attr, t1)),
         }
     }
 
@@ -437,6 +407,16 @@ pub fn build_filter_plan(
 ) -> PolarResult<FilterPlan> {
     FilterPlan::build(types, partial_results, variable, class_tag)
 }
+
+pub fn build_filter(
+    types: Types,
+    partials: PartialResults,
+    var: &str,
+    class: &str,
+) -> PolarResult<DataFilter> {
+    DataFilter::build(types, partials, var, class)
+}
+
 
 impl From<Term> for Constraint {
     fn from(term: Term) -> Self {
@@ -1407,7 +1387,6 @@ mod test {
     #[test]
     fn test_data_filter() -> TestResult {
         let s = |s: &str| s.to_string();
-        let input = test_input_1();
         let types = hashmap! {
             s("A") => hashmap! {
                 s("field") => Type::Base {
@@ -1426,15 +1405,14 @@ mod test {
                 }
             }
         };
-        let r1 = DataFilter::from_expr(types.clone(), &input)?;
-        let r2 = DataFilter::build(
-            types.clone(),
+        let input = test_input_2();
+        let r1: PolarResult<DataFilter> = build_filter(
+            types,
             vec![ResultEvent::from(hashmap! { sym!("resource") => input })],
             "resource",
-            "something")?;
-        assert_eq!(r1, r2);
-        let input = test_input_2();
-        let r1 = DataFilter::from_expr(types, &input)?;
+            "something"
+        );
+        let r1 = r1?;
         use {DataFilter::*, Datum::*};
         let (src_a, src_b) = (Rc::new(Source(s("A"))), Rc::new(Source(s("B"))));
         let expected = Select {
@@ -1444,11 +1422,11 @@ mod test {
                 rcol: Proj(src_b.clone(), s("id")),
                 right: src_b.clone(),
             }),
-            lhs: Proj(src_b.clone(), s("x")),
-            rhs: Field(Proj(src_a.clone(), s("attr_x"))),
+            lhs: Proj(src_b, s("x")),
+            rhs: Field(Proj(src_a, s("attr_x"))),
             kind: SelOp::Eq,
         };
-        assert_eq!(*r1, expected);
+        assert_eq!(r1, expected);
         Ok(())
     }
 

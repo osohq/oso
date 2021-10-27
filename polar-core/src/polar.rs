@@ -1,4 +1,4 @@
-use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
+use super::data_filtering::{build_filter, build_filter_plan, DataFilter, FilterPlan, PartialResults, Types};
 use super::error::PolarResult;
 use super::events::*;
 use super::kb::*;
@@ -356,6 +356,16 @@ impl Polar {
         class_tag: &str,
     ) -> PolarResult<FilterPlan> {
         build_filter_plan(types, partial_results, variable, class_tag)
+    }
+
+    pub fn build_filter(
+        &self,
+        types: Types,
+        partial_results: PartialResults,
+        variable: &str,
+        class_tag: &str,
+    ) -> PolarResult<DataFilter> {
+        build_filter(types, partial_results, variable, class_tag)
     }
 
     // TODO(@gkaemmer): this is a hack and should not be used for similar cases.
