@@ -202,16 +202,16 @@ pub struct ShorthandRule {
 }
 
 impl ShorthandRule {
-    pub fn as_rule(&self, resource_block: &Term, blocks: &ResourceBlocks) -> PolarResult<Rule> {
+    pub fn as_rule(&self, resource_name: &Term, blocks: &ResourceBlocks) -> PolarResult<Rule> {
         let Self { head, body } = self;
         // Copy SourceInfo from head of shorthand rule.
         // TODO(gj): assert these can only be None in tests.
         let src_id = head.get_source_id().unwrap_or(0);
         let (start, end) = head.span().unwrap_or((0, 0));
 
-        let name = blocks.get_rule_name_for_declaration_in_resource_block(head, resource_block)?;
-        let params = shorthand_rule_head_to_params(head, resource_block);
-        let body = shorthand_rule_body_to_rule_body(body, resource_block, blocks)?;
+        let name = blocks.get_rule_name_for_declaration_in_resource_block(head, resource_name)?;
+        let params = shorthand_rule_head_to_params(head, resource_name);
+        let body = shorthand_rule_body_to_rule_body(body, resource_name, blocks)?;
 
         Ok(Rule::new_from_parser(
             src_id, start, end, name, params, body,
@@ -319,13 +319,13 @@ impl ResourceBlocks {
     fn get_declaration_in_resource_block(
         &self,
         declaration: &Term,
-        resource: &Term,
+        resource_name: &Term,
     ) -> PolarResult<&Declaration> {
-        if let Some(declaration) = self.declarations[resource].get(declaration) {
+        if let Some(declaration) = self.declarations[resource_name].get(declaration) {
             Ok(declaration)
         } else {
             let (loc, ranges) = (declaration.offset(), vec![]);
-            let msg = format!("Undeclared term {} referenced in rule in the '{}' resource block. Did you mean to declare it as a role, permission, or relation?", declaration.to_polar(), resource);
+            let msg = format!("Undeclared term {} referenced in rule in the '{}' resource block. Did you mean to declare it as a role, permission, or relation?", declaration.to_polar(), resource_name);
             Err(ParseError::ResourceBlock { loc, msg, ranges }.into())
         }
     }
@@ -345,10 +345,10 @@ impl ResourceBlocks {
     fn get_rule_name_for_declaration_in_resource_block(
         &self,
         declaration: &Term,
-        resource: &Term,
+        resource_name: &Term,
     ) -> PolarResult<Symbol> {
         Ok(self
-            .get_declaration_in_resource_block(declaration, resource)?
+            .get_declaration_in_resource_block(declaration, resource_name)?
             .as_rule_name())
     }
 
@@ -469,14 +469,22 @@ fn index_declarations(
     Ok(declarations)
 }
 
-fn resource_as_var(resource: &Term) -> Value {
-    let name = &resource.value().as_symbol().expect("sym").0;
+fn resource_name_as_var(resource_name: &Term, related: bool) -> Value {
+    let name = &resource_name.value().as_symbol().expect("sym").0;
     let mut lowercased = name.to_lowercase();
 
     // If the resource's name is already lowercase, append "_instance" to distinguish the variable
-    // name from the resource's name.
+    // name from the resource's name. In most cases, the resource name will not be lowercase (e.g.,
+    // `Organization` or `RepositorySettings`).
     if &lowercased == name {
         lowercased += "_instance";
+    }
+
+    // If the `related` flag is specified, prepend "related_" to distinguish the variable name for
+    // the *related* resource from the variable name for the relatee resource. Without this logic,
+    // resources in a recursive relationship will have the same variable name.
+    if related {
+        lowercased.insert_str(0, "related_");
     }
 
     value!(sym!(lowercased))
@@ -486,26 +494,24 @@ fn resource_as_var(resource: &Term) -> Value {
 /// a cross-resource rule).
 fn shorthand_rule_body_to_rule_body(
     (implier, relation): &(Term, Option<Term>),
-    resource: &Term,
+    resource_name: &Term,
     blocks: &ResourceBlocks,
 ) -> PolarResult<Term> {
     // Create a variable derived from the current block's resource name. E.g., if we're in the
     // `Repo` resource block, the variable name will be `repo`.
-    let resource_var = implier.clone_with_value(resource_as_var(resource));
+    let resource_var = implier.clone_with_value(resource_name_as_var(resource_name, false));
 
     // The actor variable will always be named `actor`.
     let actor_var = implier.clone_with_value(value!(sym!("actor")));
 
     // If there's a relation, e.g., `if <implier> on <relation>`...
     if let Some(relation) = relation {
-        // TODO(gj): what if the relation is with the same type? E.g.,
-        // `Dir { relations = { parent: Dir }; }`. This might cause Polar to loop.
-
         // ...then we need to link the rewritten `<implier>` and `<relation>` rules via a shared
         // variable. To be clever, we'll name the variable according to the type of the relation,
         // e.g., if the declared relation is `parent: Org` we'll name the variable `org`.
-        let relation_type = blocks.get_relation_type_in_resource_block(relation, resource)?;
-        let relation_type_var = relation.clone_with_value(resource_as_var(relation_type));
+        let relation_type = blocks.get_relation_type_in_resource_block(relation, resource_name)?;
+        let relation_type_var =
+            relation.clone_with_value(resource_name_as_var(relation_type, true));
 
         // For the rewritten `<relation>` call, the rule name will always be `has_relation` and the
         // arguments, in order, will be: the shared variable we just created above, the
@@ -527,7 +533,9 @@ fn shorthand_rule_body_to_rule_body(
         // related type.
         let implier_call = implier.clone_with_value(value!(Call {
             name: blocks.get_rule_name_for_declaration_in_related_resource_block(
-                implier, relation, resource
+                implier,
+                relation,
+                resource_name
             )?,
             args: vec![actor_var, implier.clone(), relation_type_var],
             kwargs: None
@@ -542,7 +550,7 @@ fn shorthand_rule_body_to_rule_body(
         // block. The call's args are, in order: the actor variable, the `<implier>` string, and
         // the resource variable. E.g., `vec![actor, "writer", repo]`.
         let implier_call = implier.clone_with_value(value!(Call {
-            name: blocks.get_rule_name_for_declaration_in_resource_block(implier, resource)?,
+            name: blocks.get_rule_name_for_declaration_in_resource_block(implier, resource_name)?,
             args: vec![actor_var, implier.clone(), resource_var],
             kwargs: None
         }));
@@ -565,7 +573,7 @@ fn shorthand_rule_head_to_params(head: &Term, resource: &Term) -> Vec<Parameter>
             specializer: None,
         },
         Parameter {
-            parameter: head.clone_with_value(resource_as_var(resource)),
+            parameter: head.clone_with_value(resource_name_as_var(resource, false)),
             specializer: Some(
                 resource.clone_with_value(value!(pattern!(instance!(resource_name)))),
             ),
@@ -764,7 +772,34 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
-            format!("has_role(actor: {}{{}}, \"reader\", repo_instance: repo{{}}) if has_relation(org_instance, \"parent\", repo_instance) and has_role(actor, \"member\", org_instance);", ACTOR_UNION_NAME),
+            format!("has_role(actor: {}{{}}, \"reader\", repo_instance: repo{{}}) if has_relation(related_org_instance, \"parent\", repo_instance) and has_role(actor, \"member\", related_org_instance);", ACTOR_UNION_NAME),
+        );
+    }
+
+    #[test]
+    fn test_resource_block_rewrite_shorthand_rules_with_recursive_relation() {
+        let resource = term!(sym!("Dir"));
+        let permissions = term!(["read"]);
+        let relations = term!(btreemap! { sym!("parent") => resource.clone() });
+        let declarations = index_declarations(None, Some(permissions), Some(relations), &resource);
+
+        let mut blocks = ResourceBlocks::new();
+        blocks.add(
+            BlockType::Resource,
+            resource.clone(),
+            declarations.unwrap(),
+            vec![],
+        );
+
+        let shorthand_rule = ShorthandRule {
+            head: term!("read"),
+            body: (term!("read"), Some(term!("parent"))),
+        };
+        let rewritten_role_role = shorthand_rule.as_rule(&resource, &blocks).unwrap();
+
+        assert_eq!(
+            rewritten_role_role.to_polar(),
+            format!("has_permission(actor: {}{{}}, \"read\", dir: Dir{{}}) if has_relation(related_dir, \"parent\", dir) and has_permission(actor, \"read\", related_dir);", ACTOR_UNION_NAME),
         );
     }
 
@@ -845,7 +880,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             rewritten_role_role.to_polar(),
-            format!("has_role(actor: {}{{}}, \"reader\", repo: Repo{{}}) if has_relation(org, \"parent\", repo) and has_role(actor, \"member\", org);", ACTOR_UNION_NAME),
+            format!("has_role(actor: {}{{}}, \"reader\", repo: Repo{{}}) if has_relation(related_org, \"parent\", repo) and has_role(actor, \"member\", related_org);", ACTOR_UNION_NAME),
         );
     }
 
@@ -1033,8 +1068,6 @@ mod tests {
 
     #[test]
     fn test_resource_block_parsing_permutations() {
-        use std::iter::FromIterator;
-
         // Policy pieces
         let roles = r#"roles = ["writer", "reader"];"#;
         let permissions = r#"permissions = ["push", "pull"];"#;

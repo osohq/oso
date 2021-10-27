@@ -118,7 +118,7 @@ oso.set_data_filtering_query_defaults(
 
 oso.register_class(
     Organization,
-    types={
+    fields={
         "id": str,
     },
     build_query=build_query_cls(Organization),
@@ -126,7 +126,7 @@ oso.register_class(
 
 oso.register_class(
     Repository,
-    types={
+    fields={
         "id": str,
         # Here we use a Relation to represent the logical connection between an Organization and a Repository.
         # Note that this only goes in one direction: to access repositories from an organization, we'd have to
@@ -138,7 +138,7 @@ oso.register_class(
     build_query=build_query_cls(Repository),
 )
 
-oso.register_class(User, types={"id": str, "repo_roles": list})
+oso.register_class(User, fields={"id": str, "repo_roles": list})
 # docs: end-b2
 
 with open("../policy_b.polar") as f:

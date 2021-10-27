@@ -10,8 +10,6 @@ mod common;
 
 use common::OsoTest;
 
-use std::convert::TryFrom;
-
 #[test]
 fn test_anything_works() {
     common::setup();
