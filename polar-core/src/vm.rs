@@ -10,7 +10,9 @@ use std::sync::{Arc, RwLock};
 use wasm_bindgen::prelude::*;
 
 use super::visitor::{walk_term, Visitor};
-use crate::bindings::{Binding, BindingManager, BindingStack, Bindings, Bsp, FollowerId, VariableState};
+use crate::bindings::{
+    Binding, BindingManager, BindingStack, Bindings, Bsp, FollowerId, VariableState,
+};
 use crate::counter::Counter;
 use crate::data_filtering::partition_equivs;
 use crate::debugger::{get_binding_for_var, DebugEvent, Debugger};
@@ -2815,10 +2817,13 @@ impl Runnable for PolarVirtualMachine {
                     // there was an unhandled partial in the bindings
                     // grab the context from the variable that was defined and
                     // set the context before returning
-                    return Err(self.set_error_context(term, RuntimeError::UnhandledPartial {
-                        term: simplified,
-                        var: original_var_name
-                    }));
+                    return Err(self.set_error_context(
+                        term,
+                        RuntimeError::UnhandledPartial {
+                            term: simplified,
+                            var: original_var_name,
+                        },
+                    ));
                 }
                 Err(e) => unreachable!("unexpected error: {}", e.to_string()),
             }
