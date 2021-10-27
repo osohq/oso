@@ -425,6 +425,57 @@ pub extern "C" fn query_free(query: *mut Query) -> i32 {
 }
 
 #[no_mangle]
+pub extern "C" fn polar_build_filter(
+    polar_ptr: *mut Polar,
+    types: *const c_char,
+    results: *const c_char,
+    variable: *const c_char,
+    class_tag: *const c_char,
+) -> *const c_char {
+    ffi_try!({
+        let polar = unsafe { ffi_ref!(polar_ptr) };
+
+        let types_str = unsafe { ffi_string!(types) };
+        let results_str = unsafe { ffi_string!(results) };
+        let types = match serde_json::from_str(&types_str)
+            .map_err(|e| error::RuntimeError::Serialization { msg: e.to_string() }.into())
+        {
+            Ok(types) => types,
+            Err(e) => {
+                set_error(e);
+                return null();
+            }
+        };
+        let partial_results = match serde_json::from_str(&results_str)
+            .map_err(|e| error::RuntimeError::Serialization { msg: e.to_string() }.into())
+        {
+            Ok(partial_results) => partial_results,
+            Err(e) => {
+                set_error(e);
+                return null();
+            }
+        };
+
+        let variable = unsafe { ffi_string!(variable) };
+        let class_tag = unsafe { ffi_string!(class_tag) };
+
+        let filter = polar.build_filter(types, partial_results, &variable, &class_tag);
+        match filter {
+            Ok(filter) => {
+                let json = serde_json::to_string(&filter).unwrap();
+                CString::new(json)
+                    .expect("JSON should not contain any 0 bytes")
+                    .into_raw()
+            }
+            Err(e) => {
+                set_error(e);
+                null()
+            }
+        }
+    })
+}
+
+#[no_mangle]
 pub extern "C" fn polar_build_filter_plan(
     polar_ptr: *mut Polar,
     types: *const c_char,
