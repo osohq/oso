@@ -1,5 +1,5 @@
 # docs: begin-b1
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, not_, or_, and_, false
 from sqlalchemy.types import String, Boolean, Integer
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.orm import sessionmaker, relationship
@@ -84,17 +84,38 @@ session.commit()
 # docs: begin-b2
 # The query functions are the same.
 def build_query_cls(cls):
+    handlers = {
+        'Eq': lambda a, b: a == b,
+        'Neq': lambda a, b: a != b,
+        'In': lambda a, b: a.in_(b),
+        'Nin': lambda a, b: not_(a.in_(b)),
+    }
     def build_query(filters):
         query = session.query(cls)
         for filter in filters:
             assert filter.kind in ["Eq", "In"]
-            field = getattr(cls, filter.field)
-            if filter.kind == "Eq":
-                query = query.filter(field == filter.value)
-            elif filter.kind == "In":
-                query = query.filter(field.in_(filter.value))
-        return query
+            if filter.field is None:
+                field = cls.id
+                if fil.kind != 'Nin':
+                    value = fil.value.id
+                else:
+                    value = [value.id for value in fil.value]
+            elif isinstance(filter.field, list):
+                field = [cls.id if fld is None else getattr(cls, fld)]
+                value = filter.value
+            else:
+                field = getattr(cls, filter.field)
+                value = filter.value
 
+            if not isinstance(field, list):
+                cond = handlers[filter.kind](field, value)
+            else:
+                combine = handlers['Eq' if filter.kind == 'In' else 'Neq']
+                conds = [and_(*[co(*fv) for fv in zip(field, val)]) for val in value]
+                cond = or_(*conds) if conds else false()
+
+            query = query.filter(cond)
+        return query
     return build_query
 
 
@@ -141,7 +162,7 @@ oso.register_class(
 oso.register_class(User, fields={"id": str, "repo_roles": list})
 # docs: end-b2
 
-with open("../policy_b.polar") as f:
+with open("policy_b.polar") as f:
     policy_a = f.read()
 
 # docs: begin-b3
