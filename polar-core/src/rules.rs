@@ -135,8 +135,12 @@ impl RuleTypes {
         self.add_default_rule_types()
     }
 
-    pub fn inner(&self) -> &HashMap<Symbol, Vec<Rule>> {
-        &self.0
+    pub fn required_rule_types(&self) -> Vec<&Symbol> {
+        self.0
+            .iter()
+            .filter(|(_, types)| types.iter().any(|rule_type| rule_type.required))
+            .map(|(name, _)| name)
+            .collect()
     }
 }
 

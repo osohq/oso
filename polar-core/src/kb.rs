@@ -162,7 +162,10 @@ impl KnowledgeBase {
             }
         }
 
-        for (rule_name, types) in self.rule_types.inner().iter() {
+        // Enforce rule type validation for "required" rule types derived from
+        // resource block definitions.
+        for rule_name in self.rule_types.required_rule_types() {
+            let types = self.rule_types.get(rule_name).unwrap();
             for rule_type in types {
                 if rule_type.required {
                     if let Some(GenericRule { rules, .. }) = self.rules.get(rule_name) {
@@ -201,6 +204,7 @@ impl KnowledgeBase {
                 }
             }
         }
+
         Ok(())
     }
 
@@ -772,13 +776,19 @@ impl KnowledgeBase {
     }
 
     pub fn create_resource_specific_rule_types(&mut self) -> PolarResult<()> {
-        let mut unique_relations = HashSet::new();
+        let mut has_relation_rule_types_to_create = HashSet::new();
         let mut rule_types: Vec<Rule> = Vec::new();
 
+        // Iterate through all resource block declarations and create
+        // non-required rule types for each relation declaration we observe.
+        //
+        // We create non-required rule types to gracefully account for the case
+        // where users have declared relations ahead of time they are used in
+        // rule or resource definitions.
         for (object, declarations) in &self.resource_blocks.declarations {
             for (name, declaration) in declarations.iter() {
                 if let Declaration::Relation(subject) = declaration {
-                    unique_relations.insert((
+                    has_relation_rule_types_to_create.insert((
                         subject.value().as_symbol()?.clone(),
                         name.value().as_string()?,
                         object.value().as_symbol()?.clone(),
@@ -788,8 +798,8 @@ impl KnowledgeBase {
             }
         }
 
-        // Iterate through resource blocks and construct tuples describing the
-        // unique relationships traversed in shorthand rules.
+        // Iterate through resource block shorthand rules and create *required*
+        // rule types for each relation which is traversed in the rules.
         for (object, shorthand_rules) in &self.resource_blocks.shorthand_rules {
             for shorthand_rule in shorthand_rules {
                 // We create rule types from shorthand rules in the following scenarios:
@@ -808,7 +818,7 @@ impl KnowledgeBase {
                             .unwrap()
                             .get(relation)
                         {
-                            unique_relations.insert((
+                            has_relation_rule_types_to_create.insert((
                                 subject.value().as_symbol()?.clone(),
                                 relation.value().as_string()?,
                                 object.value().as_symbol()?.clone(),
@@ -822,7 +832,7 @@ impl KnowledgeBase {
                                 .unwrap()
                                 .get(implier)
                             {
-                                unique_relations.insert((
+                                has_relation_rule_types_to_create.insert((
                                     related_subject.value().as_symbol()?.clone(),
                                     implier.value().as_string()?,
                                     subject.value().as_symbol()?.clone(),
@@ -842,7 +852,7 @@ impl KnowledgeBase {
                             .unwrap()
                             .get(implier)
                         {
-                            unique_relations.insert((
+                            has_relation_rule_types_to_create.insert((
                                 subject.value().as_symbol()?.clone(),
                                 implier.value().as_string()?,
                                 object.value().as_symbol()?.clone(),
@@ -854,7 +864,7 @@ impl KnowledgeBase {
             }
         }
 
-        unique_relations.into_iter().for_each(|(subject, relation_name, object, required)| {
+        has_relation_rule_types_to_create.into_iter().for_each(|(subject, relation_name, object, required)| {
             rule_types.push(rule!("has_relation", ["_subject"; instance!(subject), value!(relation_name), "_object"; instance!(object)], required))
         });
 
