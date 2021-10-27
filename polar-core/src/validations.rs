@@ -103,7 +103,7 @@ impl<'kb> SingletonVisitor<'kb> {
                 }
                 Ok(msg)
             })
-            .collect::<PolarResult<Vec<String>>>()
+            .collect()
     }
 }
 
