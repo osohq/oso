@@ -132,7 +132,7 @@ oso.register_class(
 oso.register_class(User, fields={"id": str, "repo_roles": list})
 # docs: end-a2
 
-with open("../policy_a.polar") as f:
+with open("policy_a.polar") as f:
     policy_a = f.read()
 
 # docs: begin-a3

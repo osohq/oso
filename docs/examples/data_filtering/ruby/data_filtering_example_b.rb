@@ -186,7 +186,7 @@ def example
 
   OrgRole.create user: leina, organization: osohq, name: 'owner'
 
-  oso.load_files(['../policy_b.polar'])
+  oso.load_files(['policy_b.polar'])
 
   results = oso.authorized_resources(leina, 'read', Repository)
   raise unless results == [oso_repo, demo_repo]

@@ -150,7 +150,7 @@ def example
   RepoRole.create user: leina, repository: oso_repo, name: 'contributor'
   RepoRole.create user: leina, repository: demo_repo, name: 'maintainer'
 
-  oso.load_files(['../policy_a.polar'])
+  oso.load_files(['policy_a.polar'])
 
   results = oso.authorized_resources(leina, 'read', Repository)
   raise unless results == [demo_repo, oso_repo]

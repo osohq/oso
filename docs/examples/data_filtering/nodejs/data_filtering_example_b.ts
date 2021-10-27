@@ -145,7 +145,7 @@ createConnection({
   // docs: end-b2
 
   // docs: begin-b3
-  oso.loadFiles(["../policy_b.polar"]);
+  oso.loadFiles(["policy_b.polar"]);
   const orgs = connection.getRepository(Organization),
     users = connection.getRepository(User),
     repos = connection.getRepository(Repository),
