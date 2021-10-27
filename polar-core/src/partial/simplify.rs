@@ -129,7 +129,8 @@ pub fn simplify_partial(
 }
 
 pub fn simplify_bindings(bindings: Bindings) -> Option<Bindings> {
-    simplify_bindings_opt(bindings, true).unwrap()
+    simplify_bindings_opt(bindings, true)
+        .expect("unexpected error thrown by the simplifier when simplifying all bindings")
 }
 
 /// Simplify the values of the bindings to be returned to the host language.
