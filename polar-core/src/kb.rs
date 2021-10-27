@@ -7,6 +7,7 @@ use crate::visitor::{walk_term, Visitor};
 
 pub use super::bindings::Bindings;
 use super::counter::Counter;
+use super::polar::Diagnostic;
 use super::resource_block::ResourceBlocks;
 use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
@@ -722,17 +723,12 @@ impl KnowledgeBase {
         error.set_context(source.as_ref(), term.as_ref())
     }
 
-    pub fn rewrite_shorthand_rules(&mut self) -> PolarResult<()> {
+    pub fn rewrite_shorthand_rules(&mut self) -> Vec<Diagnostic> {
         let mut errors = vec![];
 
         errors.append(
             &mut super::resource_block::check_all_relation_types_have_been_registered(self),
         );
-
-        // TODO(gj): Emit all errors instead of just the first.
-        if !errors.is_empty() {
-            return Err(errors[0].clone());
-        }
 
         let mut rules = vec![];
         for (resource_name, shorthand_rules) in &self.resource_blocks.shorthand_rules {
@@ -744,17 +740,13 @@ impl KnowledgeBase {
             }
         }
 
-        // TODO(gj): Emit all errors instead of just the first.
-        if !errors.is_empty() {
-            return Err(errors[0].clone());
-        }
-
+        // TODO(gj): maybe only add rules to the KB if there are no errors?
         // Add the rewritten rules to the KB.
         for rule in rules {
             self.add_rule(rule);
         }
 
-        Ok(())
+        errors.into_iter().map(Diagnostic::Error).collect()
     }
 
     pub fn is_union(&self, maybe_union: &Term) -> bool {

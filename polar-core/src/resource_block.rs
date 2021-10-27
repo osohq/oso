@@ -6,6 +6,7 @@ use lalrpop_util::ParseError as LalrpopError;
 use super::error::{ParseError, PolarError, PolarResult, RuntimeError};
 use super::kb::KnowledgeBase;
 use super::lexer::Token;
+use super::polar::Diagnostic;
 use super::rules::*;
 use super::terms::*;
 
@@ -675,7 +676,7 @@ fn check_that_shorthand_rule_heads_are_declared_locally(
 }
 
 impl ResourceBlock {
-    pub fn add_to_kb(self, kb: &mut KnowledgeBase) -> PolarResult<()> {
+    pub fn add_to_kb(self, kb: &mut KnowledgeBase) -> Vec<Diagnostic> {
         let mut errors = vec![];
         errors.extend(
             check_that_block_type_is_not_already_registered(kb, &self.block_type, &self.resource)
@@ -694,23 +695,22 @@ impl ResourceBlock {
             shorthand_rules,
         } = self;
 
-        let declarations = index_declarations(roles, permissions, relations, &resource)?;
-
-        errors.append(&mut check_that_shorthand_rule_heads_are_declared_locally(
-            &shorthand_rules,
-            &declarations,
-            &resource,
-        ));
-
-        // TODO(gj): Emit all errors instead of just the first.
-        if !errors.is_empty() {
-            return Err(errors[0].clone());
+        match index_declarations(roles, permissions, relations, &resource) {
+            Ok(declarations) => {
+                errors.append(&mut check_that_shorthand_rule_heads_are_declared_locally(
+                    &shorthand_rules,
+                    &declarations,
+                    &resource,
+                ));
+                if errors.is_empty() {
+                    kb.resource_blocks
+                        .add(block_type, resource, declarations, shorthand_rules);
+                }
+            }
+            Err(e) => errors.push(e),
         }
 
-        kb.resource_blocks
-            .add(block_type, resource, declarations, shorthand_rules);
-
-        Ok(())
+        errors.into_iter().map(Diagnostic::Error).collect()
     }
 }
 

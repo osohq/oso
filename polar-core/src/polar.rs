@@ -152,6 +152,11 @@ impl Default for Polar {
 const MULTIPLE_LOAD_ERROR_MSG: &str =
     "Cannot load additional Polar code -- all Polar code must be loaded at the same time.";
 
+pub enum Diagnostic {
+    Error(error::PolarError),
+    Warning(String),
+}
+
 impl Polar {
     pub fn new() -> Self {
         // TODO(@gkaemmer): pulling this from an environment variable is a hack
@@ -167,29 +172,34 @@ impl Polar {
         }
     }
 
-    /// Load `Source`s into the KB.
-    pub fn load(&self, sources: Vec<Source>) -> PolarResult<()> {
-        if self.kb.read().unwrap().has_rules() {
-            let msg = MULTIPLE_LOAD_ERROR_MSG.to_owned();
-            return Err(error::RuntimeError::FileLoading { msg }.into());
-        }
-
+    pub fn diagnostic_load(&self, sources: Vec<Source>) -> Vec<Diagnostic> {
         // we extract this into a separate function
         // so that any errors returned with `?` are captured
         fn load_source(
             source_id: u64,
             source: &Source,
             kb: &mut KnowledgeBase,
-        ) -> PolarResult<Vec<String>> {
+        ) -> PolarResult<Vec<Diagnostic>> {
             let mut lines = parser::parse_lines(source_id, &source.src)
+                // TODO(gj): we still bomb out at the first ParseError.
                 .map_err(|e| e.set_context(Some(source), None))?;
             lines.reverse();
-            let mut warnings = vec![];
+            let mut diagnostics = vec![];
             while let Some(line) = lines.pop() {
                 match line {
                     parser::Line::Rule(rule) => {
-                        warnings.append(&mut check_singletons(&rule, kb)?);
-                        warnings.append(&mut check_ambiguous_precedence(&rule, kb));
+                        match check_singletons(&rule, kb) {
+                            Ok(warnings) => diagnostics.append(
+                                &mut warnings.into_iter().map(Diagnostic::Warning).collect(),
+                            ),
+                            Err(e) => diagnostics.push(Diagnostic::Error(e)),
+                        }
+                        diagnostics.append(
+                            &mut check_ambiguous_precedence(&rule, kb)
+                                .into_iter()
+                                .map(Diagnostic::Warning)
+                                .collect(),
+                        );
                         let rule = rewrite_rule(rule, kb);
                         kb.add_rule(rule);
                     }
@@ -208,67 +218,102 @@ impl Polar {
                                 }
                             ) if args.is_empty()
                         ) {
-                            return Err(kb.set_error_context(
+                            diagnostics.push(Diagnostic::Error(kb.set_error_context(
                                 &rule_type.body,
                                 error::ValidationError::InvalidRuleType {
                                     rule_type: rule_type.to_polar(),
                                     msg: "\nRule types cannot contain dot lookups.".to_owned(),
                                 },
-                            ));
+                            )));
+                        } else {
+                            kb.add_rule_type(rule_type);
                         }
-                        kb.add_rule_type(rule_type);
                     }
                     parser::Line::ResourceBlock(block) => {
-                        block.add_to_kb(kb)?;
+                        diagnostics.append(&mut block.add_to_kb(kb))
                     }
                 }
             }
-            Ok(warnings)
+            Ok(diagnostics)
         }
 
         let mut kb = self.kb.write().unwrap();
+        let mut encountered_unrecoverable_error = false;
+        let mut diagnostics = vec![];
+
         for source in &sources {
             let result = kb.add_source(source.clone());
             let result = result.and_then(|source_id| load_source(source_id, source, &mut kb));
             match result {
-                Ok(warnings) => {
-                    self.messages
-                        .extend(warnings.into_iter().map(Message::warning));
-                }
+                Ok(mut ds) => diagnostics.append(&mut ds),
                 Err(e) => {
-                    // If any source fails to load, clear the KB.
-                    kb.clear_rules();
-                    return Err(e);
+                    diagnostics.push(Diagnostic::Error(e));
+                    // TODO(gj): In this match arm, `e` *must* be a `ParseError`.
+                    encountered_unrecoverable_error = true;
                 }
             }
         }
 
         // Rewrite shorthand rules in resource blocks before validating rule types.
-        if let Err(e) = kb.rewrite_shorthand_rules() {
-            // If rewriting shorthand rules fails, clear the KB.
-            kb.clear_rules();
-            return Err(e);
+        diagnostics.append(&mut kb.rewrite_shorthand_rules());
+
+        // TODO(gj): need to bomb out before rule type validation in case additional rule types
+        // were defined later on in the file that encountered the `ParseError`. Those additional
+        // rule types might extend the valid shapes for a rule type defined in a different,
+        // well-parsed file that also contains rules that don't conform to the shapes laid out in
+        // the well-parsed file but *would have* conformed to the shapes laid out in the file that
+        // failed to parse.
+        if encountered_unrecoverable_error {
+            return diagnostics;
         }
 
         // check rules are valid against rule types
         if let Err(e) = kb.validate_rules() {
-            // If rule type validation fails, clear the KB.
-            kb.clear_rules();
-            return Err(e);
+            diagnostics.push(Diagnostic::Error(e));
         }
 
         // Perform validation checks against the whole policy
-        let mut warnings = vec![];
         if !self.ignore_no_allow_warning {
-            warnings.append(&mut check_no_allow_rule(&kb));
+            diagnostics.append(
+                &mut check_no_allow_rule(&kb)
+                    .into_iter()
+                    .map(Diagnostic::Warning)
+                    .collect(),
+            );
         }
 
         // Check for has_permission calls alongside resource block definitions
-        warnings.append(&mut check_resource_blocks_missing_has_permission(&kb));
+        diagnostics.append(
+            &mut check_resource_blocks_missing_has_permission(&kb)
+                .into_iter()
+                .map(Diagnostic::Warning)
+                .collect(),
+        );
 
+        diagnostics
+    }
+
+    /// Load `Source`s into the KB.
+    pub fn load(&self, sources: Vec<Source>) -> PolarResult<()> {
+        if self.kb.read().unwrap().has_rules() {
+            let msg = MULTIPLE_LOAD_ERROR_MSG.to_owned();
+            return Err(error::RuntimeError::FileLoading { msg }.into());
+        }
+
+        let diagnostics = self.diagnostic_load(sources);
+        let (mut errors, mut warnings) = (vec![], vec![]);
+        for diagnostic in diagnostics {
+            match diagnostic {
+                Diagnostic::Error(e) => errors.push(e),
+                Diagnostic::Warning(w) => warnings.push(w),
+            }
+        }
         self.messages
             .extend(warnings.into_iter().map(Message::warning));
-
+        if let Some(e) = errors.into_iter().next() {
+            self.kb.write().unwrap().clear_rules();
+            return Err(e);
+        }
         Ok(())
     }
 

@@ -2406,19 +2406,44 @@ fn test_lookup_in_rule_head() -> TestResult {
 #[test]
 fn test_default_rule_types() -> TestResult {
     let p = Polar::new();
+
     // This should fail
     let e = p
         .load_str(r#"has_permission("leina", "eat", "food");"#)
         .expect_err("Expected validation error");
     assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    assert!(matches!(
+        p.next_message(),
+        Some(Message {
+            kind: MessageKind::Warning,
+            msg
+        }) if msg.starts_with("Your policy does not contain an allow rule")
+    ));
+
     let e = p
         .load_str(r#"has_role("leina", "eater", "food");"#)
         .expect_err("Expected validation error");
     assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    assert!(matches!(
+        p.next_message(),
+        Some(Message {
+            kind: MessageKind::Warning,
+            msg
+        }) if msg.starts_with("Your policy does not contain an allow rule")
+    ));
+
     let e = p
         .load_str(r#"has_relation("leina", "eater", "food");"#)
         .expect_err("Expected validation error");
     assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    assert!(matches!(
+        p.next_message(),
+        Some(Message {
+            kind: MessageKind::Warning,
+            msg
+        }) if msg.starts_with("Your policy does not contain an allow rule")
+    ));
+
     let e = p
         .load_str(r#"allow("leina", "food");"#)
         .expect_err("Expected validation error");
