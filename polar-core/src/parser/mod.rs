@@ -1,5 +1,10 @@
 use crate::lexer::Token;
-use lalrpop_util::{lalrpop_mod, ParseError};
+use lalrpop_util::ParseError;
+
+#[allow(clippy::all, dead_code, unused_imports, unused_mut)]
+mod polar;
+
+pub use polar::*;
 
 /// Used to denote whether an enclosed value is a value or a logical operator
 pub enum ValueOrLogical {
@@ -7,11 +12,6 @@ pub enum ValueOrLogical {
     Logical(Term),
     Either(Term),
 }
-
-lalrpop_mod!(
-    #[allow(clippy::all, dead_code, unused_imports, unused_mut)]
-    polar
-);
 
 use super::error::{self, PolarResult};
 use super::lexer::{self, Lexer};

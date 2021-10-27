@@ -1,5 +1,8 @@
-extern crate lalrpop;
-
 fn main() {
-    lalrpop::process_root().unwrap();
+    #[cfg(feature = "build-parser")]
+    lalrpop::Configuration::new()
+        .emit_rerun_directives(true)
+        .generate_in_source_tree()
+        .process()
+        .unwrap()
 }
