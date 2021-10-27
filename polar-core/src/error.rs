@@ -319,14 +319,14 @@ impl fmt::Display for ParseError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DataFilteringError {
-    UnsupportedExpression(Operation),
+    UnsupportedOperation(Operation),
 }
 
 impl fmt::Display for DataFilteringError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use DataFilteringError::*;
         match self {
-            UnsupportedExpression(op) => write!(
+            UnsupportedOperation(op) => write!(
                 f,
                 "The expression `{}` is unsupported for data filtering.",
                 op.to_polar()

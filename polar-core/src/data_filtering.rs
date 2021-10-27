@@ -228,7 +228,7 @@ impl VarInfo {
                 self.types.push((lhs, i.tag.0.clone()));
                 Ok(self)
             }
-            _ => unsupported_expression_error(op!(Isa, lhs.clone(), rhs.clone())),
+            _ => unsupported_operation_error(op!(Isa, lhs.clone(), rhs.clone())),
         }
     }
 
@@ -246,7 +246,7 @@ impl VarInfo {
             // 1 = 1 is irrelevant for data filtering, other stuff seems like an error.
             // @NOTE(steve): Going with the same not yet supported message but if this is
             // coming through it's probably a bug in the simplifier.
-            _ => unsupported_expression_error(op!(Unify, left.clone(), right.clone())),
+            _ => unsupported_operation_error(op!(Unify, left.clone(), right.clone())),
         }
     }
 
@@ -266,7 +266,7 @@ impl VarInfo {
                 self.uncycles.push((l, r));
                 Ok(self)
             }
-            _ => unsupported_expression_error(op!(Neq, left.clone(), right.clone())),
+            _ => unsupported_operation_error(op!(Neq, left.clone(), right.clone())),
         }
     }
 
@@ -280,7 +280,7 @@ impl VarInfo {
                 self.contained_values.push((Term::from(val), var));
                 Ok(self)
             }
-            _ => unsupported_expression_error(op!(In, left.clone(), right.clone())),
+            _ => unsupported_operation_error(op!(In, left.clone(), right.clone())),
         }
     }
 
@@ -295,7 +295,7 @@ impl VarInfo {
             Neq if args.len() == 2 => self.do_neq(&args[0], &args[1]),
             In if args.len() == 2 => self.do_in(&args[0], &args[1]),
             Unify | Eq | Assign if args.len() == 2 => self.do_unify(&args[0], &args[1]),
-            _ => unsupported_expression_error(exp.clone()),
+            _ => unsupported_operation_error(exp.clone()),
         }
     }
 }
@@ -304,8 +304,8 @@ fn invalid_state_error<A>(msg: String) -> PolarResult<A> {
     Err(OperationalError::InvalidState { msg }.into())
 }
 
-fn unsupported_expression_error<A>(op: Operation) -> PolarResult<A> {
-    Err(DataFilteringError::UnsupportedExpression(op).into())
+fn unsupported_operation_error<A>(op: Operation) -> PolarResult<A> {
+    Err(DataFilteringError::UnsupportedOperation(op).into())
 }
 
 impl FilterPlan {
@@ -795,7 +795,7 @@ impl<'a> ResultSetBuilder<'a> {
                     .var_name(id)
                     .unwrap_or_else(|| Symbol(format!("{}", id))))
             };
-            unsupported_expression_error(op!(Dot, var_name(id), str!(field), var_name(child)))
+            unsupported_operation_error(op!(Dot, var_name(id), str!(field), var_name(child)))
         }
     }
 
