@@ -31,6 +31,33 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     issues_repos_orgs = Join[issues_repos, repo_org_name, org_name, orgs]
 
     context 'gitclub' do
+      it 'field field two joins' do
+        # query = Select[
+        #   Join[
+        #     Join[
+        #       Src[Issue],
+        #       Field[Src[Issue], :repo_name],
+        #       Field[Src[Repo], :name],
+        #       Src[Repo]
+        #     ],
+        #     Field[Src[Repo], :org_name],
+        #     Field[Src[Org], :name],
+        #     Src[Org]
+        #   ],
+        #   Field[Src[Repo], :name],
+        #   Field[Src[Org], :name],
+        # ]
+        query = Select[issues_repos_orgs, repo_name, org_name]
+        require 'pry'
+        binding.pry
+        result = query.to_a
+        expect(result).to eq [bug]
+
+        # issue.repo.name != issue.repo.org.name
+        result = Select[issues_repos_orgs, repo_name, org_name, kind: :neq].to_a
+        expect(result).to contain_exactly(*[laggy, endings])
+      end
+
       it 'field value no join' do
         # user.name = 'steve'
         result = Select[users, user_name, Value['steve']].to_a
@@ -79,16 +106,6 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         # issue.repo.org.name != 'apple'
         result = Select[issues_repos_orgs, org_name, Value['apple'], kind: :neq].to_a
         expect(result).to contain_exactly(*[bug, endings])
-      end
-
-      it 'field field two joins' do
-        # issue.repo.name = issue.repo.org.name
-        result = Select[issues_repos_orgs, repo_name, org_name].to_a
-        expect(result).to eq [bug]
-
-        # issue.repo.name != issue.repo.org.name
-        result = Select[issues_repos_orgs, repo_name, org_name, kind: :neq].to_a
-        expect(result).to contain_exactly(*[laggy, endings])
       end
 
       it 'pls' do

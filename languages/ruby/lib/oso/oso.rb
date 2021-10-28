@@ -230,7 +230,12 @@ module Oso
         .map { |filter| ::Oso::Polar::Data::DataFilter.parse(self, filter).to_query }
         .group_by(&:joins_values)
       key = opts.keys.min_by(&:length) # FIXME total hack, won't always work,
-      opts[key].reduce(:or)
+      queries = opts[key]
+      if queries.nil?
+        resource_cls.none
+      else
+        queries.reduce(:or)
+      end
     end
 
     # Determine the resources of type +resource_cls+ that +actor+
