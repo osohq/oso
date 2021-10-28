@@ -1779,7 +1779,7 @@ fn test_rest_vars() -> TestResult {
         "a = [1, *b] and b = [2, *c] and c=[3] and 1 in a and 2 in a and 3 in a",
     );
 
-    let a = &var(&mut p, "[*_] in [*a] and [*b] in [*_] and b = 1", "a")[0];
+    let a = &var(&mut p, "[*c] in [*a] and [*b] in [*d] and b = 1", "a")[0];
     // check that a isn't bound to [b]
     assert!(!matches!(a, Value::List(b) if matches!(b[0].value(), Value::Number(_))));
     Ok(())
