@@ -4,14 +4,16 @@ use std::{
     rc::Rc,
 };
 
-use crate::bindings::Bindings;
-use crate::formatting::ToPolarString;
-use crate::terms::*;
-use crate::visitor::*;
+use crate::{
+    bindings::Bindings,
+    data_filtering::partition_equivs,
+    error::{PolarResult, RuntimeError},
+    formatting::ToPolarString,
+    terms::*,
+    visitor::*,
+};
 
 use super::partial::{invert_operation, FALSE, TRUE};
-use crate::data_filtering::partition_equivs;
-
 /// Set to `true` to debug performance in simplifier by turning on
 /// performance counters.
 const TRACK_PERF: bool = false;
@@ -175,11 +177,16 @@ pub fn simplify_partial(
     Some(result)
 }
 
+pub fn simplify_bindings(bindings: Bindings) -> Option<Bindings> {
+    simplify_bindings_opt(bindings, true)
+        .expect("unexpected error thrown by the simplifier when simplifying all bindings")
+}
+
 /// Simplify the values of the bindings to be returned to the host language.
 ///
 /// - For partials, simplify the constraint expressions.
 /// - For non-partials, deep deref. TODO(ap/gj): deep deref.
-pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
+pub fn simplify_bindings_opt(bindings: Bindings, all: bool) -> PolarResult<Option<Bindings>> {
     let mut perf = PerfCounters::new(TRACK_PERF);
     simplify_debug!("simplify bindings");
 
@@ -232,10 +239,23 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
 
     let mut simplified_bindings = HashMap::new();
     for (var, value) in &bindings {
-        let simplified = simplify_var(&bindings, var, value)?;
-        check_consistency(&simplified)?;
+        let simplified = match simplify_var(&bindings, var, value).and_then(|s| {
+            check_consistency(&s)?;
+            Some(s)
+        }) {
+            Some(s) => s,
+            _ => return Ok(None),
+        };
         if !var.is_temporary_var() || all {
             simplified_bindings.insert(var.clone(), simplified);
+        } else if let Value::Expression(e) = value.value() {
+            if e.variables().iter().all(|v| v.is_temporary_var()) {
+                return Err(RuntimeError::UnhandledPartial {
+                    term: value.clone(),
+                    var: var.clone(),
+                }
+                .into());
+            }
         }
     }
 
@@ -246,7 +266,7 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
         }
     }
 
-    Some(simplified_bindings)
+    Ok(Some(simplified_bindings))
 }
 
 /// FIXME(gw) this is a hack because we don't do a good enough job of maintaining

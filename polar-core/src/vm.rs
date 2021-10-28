@@ -1,34 +1,33 @@
-use std::cell::RefCell;
-use std::collections::BTreeMap;
-use std::collections::{HashMap, HashSet};
-use std::fmt::Write;
-use std::rc::Rc;
-use std::string::ToString;
-use std::sync::{Arc, RwLock};
+use std::{
+    cell::RefCell,
+    collections::BTreeMap,
+    collections::{HashMap, HashSet},
+    fmt::Write,
+    rc::Rc,
+    string::ToString,
+    sync::{Arc, RwLock},
+};
+
+use crate::{
+    bindings::*,
+    counter::Counter,
+    debugger::{get_binding_for_var, DebugEvent, Debugger},
+    error::{self, ErrorKind, PolarError, PolarResult, RuntimeError},
+    events::*,
+    formatting::ToPolarString,
+    kb::*,
+    lexer::loc_to_pos,
+    messages::*,
+    numerics::*,
+    rules::*,
+    runnable::Runnable,
+    sources::*,
+    terms::*,
+    traces::*,
+};
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
-
-use super::visitor::{walk_term, Visitor};
-use crate::bindings::{BindingManager, BindingStack, Bindings, Bsp, FollowerId, VariableState};
-use crate::counter::Counter;
-use crate::data_filtering::partition_equivs;
-use crate::debugger::{DebugEvent, Debugger};
-use crate::error::{self, PolarError, PolarResult};
-use crate::events::*;
-use crate::folder::Folder;
-use crate::formatting::ToPolarString;
-use crate::inverter::Inverter;
-use crate::kb::*;
-use crate::lexer::loc_to_pos;
-use crate::messages::*;
-use crate::numerics::*;
-use crate::rewrites::Renamer;
-use crate::rules::*;
-use crate::runnable::Runnable;
-use crate::sources::*;
-use crate::terms::*;
-use crate::traces::*;
 
 pub const MAX_STACK_SIZE: usize = 10_000;
 pub const DEFAULT_TIMEOUT_MS: u64 = 30_000;
@@ -345,6 +344,7 @@ impl PolarVirtualMachine {
     }
 
     fn query_contains_partial(&mut self) {
+        use crate::visitor::{walk_term, Visitor};
         struct VarVisitor<'vm> {
             has_partial: bool,
             vm: &'vm PolarVirtualMachine,
@@ -726,6 +726,7 @@ impl PolarVirtualMachine {
 
     /// Generate a fresh set of variables for a rule.
     fn rename_rule_vars(&self, rule: &Rule) -> Rule {
+        use crate::{folder::Folder, rewrites::Renamer};
         let kb = &*self.kb.read().unwrap();
         let mut renamer = Renamer::new(kb);
         renamer.fold_rule(rule.clone())
@@ -1108,6 +1109,7 @@ impl PolarVirtualMachine {
     }
 
     fn get_names(&self, s: &Symbol) -> HashSet<Symbol> {
+        use crate::data_filtering::partition_equivs;
         let cycles = self
             .binding_manager
             .get_constraints(s)
@@ -1532,6 +1534,7 @@ impl PolarVirtualMachine {
     }
 
     fn query_for_operation(&mut self, term: &Term) -> PolarResult<QueryEvent> {
+        use crate::inverter::Inverter;
         let operation = term.value().as_expression().unwrap();
         let mut args = operation.args.clone();
         match operation.operator {
@@ -2694,7 +2697,7 @@ impl PolarVirtualMachine {
         if include_info {
             if let Some(source) = source {
                 let offset = term.offset();
-                let (row, column) = crate::lexer::loc_to_pos(&source.src, offset);
+                let (row, column) = loc_to_pos(&source.src, offset);
                 source_string.push_str(&format!(" at line {}, column {}", row + 1, column));
                 if let Some(filename) = source.filename {
                     source_string.push_str(&format!(" in file {}", filename));
@@ -2797,17 +2800,46 @@ impl Runnable for PolarVirtualMachine {
 
         let mut bindings = self.bindings(true);
 
-        use crate::partial::{simplify_bindings, sub_this};
+        use crate::partial::{simplify_bindings_opt, sub_this};
         if !self.inverting {
-            if let Some(bs) = simplify_bindings(bindings, false) {
-                bindings = bs
-                    .into_iter()
-                    .filter(|(var, _)| !var.is_temporary_var())
-                    .map(|(var, value)| (var.clone(), sub_this(var, value)))
-                    .collect();
-            } else {
-                return Ok(QueryEvent::None);
+            match simplify_bindings_opt(bindings, false) {
+                Ok(Some(bs)) => {
+                    // simplification succeeds
+                    bindings = bs;
+                }
+                Ok(None) => {
+                    // incompatible bindings; simplification fails
+                    // do not return result
+                    return Ok(QueryEvent::None);
+                }
+
+                Err(PolarError {
+                    kind: ErrorKind::Runtime(RuntimeError::UnhandledPartial { ref term, ref var }),
+                    ..
+                }) => {
+                    // use the debugger to get the nicest possible version of this binding
+                    let Binding(original_var_name, simplified) = get_binding_for_var(&var.0, self);
+
+                    // there was an unhandled partial in the bindings
+                    // grab the context from the variable that was defined and
+                    // set the context before returning
+                    return Err(self.set_error_context(
+                        term,
+                        RuntimeError::UnhandledPartial {
+                            term: simplified,
+                            var: original_var_name,
+                        },
+                    ));
+                }
+                Err(e) => unreachable!("unexpected error: {}", e.to_string()),
             }
+            bindings = bindings
+                .clone()
+                .into_iter()
+                .filter_map(|(var, value)| {
+                    (!var.is_temporary_var()).then(|| (var.clone(), sub_this(var, value)))
+                })
+                .collect();
         }
 
         Ok(QueryEvent::Result { bindings, trace })
