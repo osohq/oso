@@ -1612,8 +1612,6 @@ mod test {
             "1 in _this.foo.bar and 2 = _this.foo.baz"
         );
         assert_query_done!(q);
-        /*
-         */
 
         Ok(())
     }
