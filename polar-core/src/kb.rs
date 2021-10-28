@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use crate::error::ParameterError;
 use crate::error::{PolarError, PolarResult};
 use crate::validations::check_undefined_rule_calls;
+use crate::visitor::{walk_term, Visitor};
 
 pub use super::bindings::Bindings;
 use super::counter::Counter;
@@ -720,11 +721,40 @@ impl KnowledgeBase {
     }
 
     pub fn set_error_context(&self, term: &Term, error: impl Into<PolarError>) -> PolarError {
-        let source = term
-            .get_source_id()
-            .and_then(|id| self.sources.get_source(id));
+        /// `GetSource` will talk a term and return the _first_ piece of source
+        /// info it finds
+        struct GetSource<'kb> {
+            kb: &'kb KnowledgeBase,
+            source: Option<Source>,
+            term: Option<Term>,
+        }
+
+        impl<'kb> Visitor for GetSource<'kb> {
+            fn visit_term(&mut self, t: &Term) {
+                if self.source.is_none() {
+                    self.source = t
+                        .get_source_id()
+                        .and_then(|id| self.kb.sources.get_source(id));
+
+                    if self.source.is_none() {
+                        walk_term(self, t)
+                    } else {
+                        self.term = Some(t.clone())
+                    }
+                }
+            }
+        }
+
+        let mut source_getter = GetSource {
+            kb: self,
+            source: None,
+            term: None,
+        };
+        source_getter.visit_term(term);
+        let source = source_getter.source;
+        let term = source_getter.term;
         let error: PolarError = error.into();
-        error.set_context(source.as_ref(), Some(term))
+        error.set_context(source.as_ref(), term.as_ref())
     }
 
     pub fn rewrite_shorthand_rules(&mut self) -> PolarResult<()> {

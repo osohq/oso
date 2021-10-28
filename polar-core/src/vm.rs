@@ -10,11 +10,13 @@ use std::sync::{Arc, RwLock};
 use wasm_bindgen::prelude::*;
 
 use super::visitor::{walk_term, Visitor};
-use crate::bindings::{BindingManager, BindingStack, Bindings, Bsp, FollowerId, VariableState};
+use crate::bindings::{
+    Binding, BindingManager, BindingStack, Bindings, Bsp, FollowerId, VariableState,
+};
 use crate::counter::Counter;
 use crate::data_filtering::partition_equivs;
-use crate::debugger::{DebugEvent, Debugger};
-use crate::error::{self, PolarError, PolarResult};
+use crate::debugger::{get_binding_for_var, DebugEvent, Debugger};
+use crate::error::{self, ErrorKind, PolarError, PolarResult, RuntimeError};
 use crate::events::*;
 use crate::folder::Folder;
 use crate::formatting::ToPolarString;
@@ -23,7 +25,7 @@ use crate::kb::*;
 use crate::lexer::loc_to_pos;
 use crate::messages::*;
 use crate::numerics::*;
-use crate::partial::{simplify_bindings, simplify_partial, sub_this, IsaConstraintCheck};
+use crate::partial::{simplify_bindings_opt, simplify_partial, sub_this, IsaConstraintCheck};
 use crate::rewrites::Renamer;
 use crate::rules::*;
 use crate::runnable::Runnable;
@@ -2794,10 +2796,36 @@ impl Runnable for PolarVirtualMachine {
 
         let mut bindings = self.bindings(true);
         if !self.inverting {
-            if let Some(bs) = simplify_bindings(bindings, false) {
-                bindings = bs;
-            } else {
-                return Ok(QueryEvent::None);
+            match simplify_bindings_opt(bindings, false) {
+                Ok(Some(bs)) => {
+                    // simplification succeeds
+                    bindings = bs;
+                }
+                Ok(None) => {
+                    // incompatible bindings; simplification fails
+                    // do not return result
+                    return Ok(QueryEvent::None);
+                }
+
+                Err(PolarError {
+                    kind: ErrorKind::Runtime(RuntimeError::UnhandledPartial { ref term, ref var }),
+                    ..
+                }) => {
+                    // use the debugger to get the nicest possible version of this binding
+                    let Binding(original_var_name, simplified) = get_binding_for_var(&var.0, self);
+
+                    // there was an unhandled partial in the bindings
+                    // grab the context from the variable that was defined and
+                    // set the context before returning
+                    return Err(self.set_error_context(
+                        term,
+                        RuntimeError::UnhandledPartial {
+                            term: simplified,
+                            var: original_var_name,
+                        },
+                    ));
+                }
+                Err(e) => unreachable!("unexpected error: {}", e.to_string()),
             }
 
             bindings = bindings

@@ -9,7 +9,8 @@ import {
   Column,
   PrimaryColumn,
   PrimaryGeneratedColumn,
-} from "typeorm";
+  IsNull,
+} from 'typeorm';
 import { readFileSync } from "fs";
 import * as assert from 'assert';
 
@@ -68,7 +69,7 @@ const constrain = (query, filter) => {
 // Create a query from a list of filters
 const buildQuery = filters => {
   // TypeORM dislikes empty queries, so give it this instead.
-  if (!filters.length) return { id: Not(null) };
+  if (!filters.length) return { id: Not(IsNull()) };
   return filters.reduce(constrain, {});
 };
 
