@@ -25,6 +25,8 @@ pub struct Rule {
     pub body: Term,
     #[serde(skip, default = "SourceInfo::ffi")]
     pub source_info: SourceInfo,
+    // TODO @patrickod: refactor Rule into Rule & RuleType structs
+    // `required` is used exclusively with rule *types* and not normal rules.
     pub required: bool,
 }
 
@@ -135,11 +137,11 @@ impl RuleTypes {
         self.add_default_rule_types()
     }
 
-    pub fn required_rule_types(&self) -> Vec<&Symbol> {
+    pub fn required_rule_types(&self) -> Vec<&Rule> {
         self.0
-            .iter()
-            .filter(|(_, types)| types.iter().any(|rule_type| rule_type.required))
-            .map(|(name, _)| name)
+            .values()
+            .flatten()
+            .filter(|rule_type| rule_type.required)
             .collect()
     }
 }

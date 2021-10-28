@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use std::{fmt, ops};
 
+use crate::formatting::format_params;
+use crate::rules::Rule;
 use crate::sources::*;
 use crate::terms::*;
 
@@ -425,7 +427,7 @@ pub enum ValidationError {
     InvalidRule { rule: String, msg: String },
     InvalidRuleType { rule_type: String, msg: String },
     UndefinedRule { rule_name: String },
-    MissingRequiredRule { rule_name: String },
+    MissingRequiredRule { rule: Rule },
     // TODO(lm|gj): add ResourceBlock and SingletonVariable.
 }
 
@@ -441,11 +443,12 @@ impl fmt::Display for ValidationError {
             Self::UndefinedRule { rule_name } => {
                 write!(f, r#"Call to undefined rule "{}""#, rule_name)
             }
-            Self::MissingRequiredRule { rule_name } => {
+            Self::MissingRequiredRule { rule } => {
                 write!(
                     f,
-                    r#"Missing implementation for required rule "{}""#,
-                    rule_name
+                    r#"Missing implementation for required rule {}({});"#,
+                    rule.name,
+                    format_params(&rule.params, ", ")
                 )
             }
         }

@@ -202,6 +202,8 @@ macro_rules! rule {
             required: false,
         }
     }};
+    // this macro variant is used exclusively to create rule *types*
+    // TODO: @patrickod break into specific-purpose rule_type! macro and RuleType struct
     ($name:expr, [$($args:tt)*], $required:expr) => {{
         let mut params = args!($($args)*);
         params.reverse();

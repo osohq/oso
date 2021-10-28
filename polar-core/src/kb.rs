@@ -6,7 +6,6 @@ use crate::validations::check_undefined_rule_calls;
 
 pub use super::bindings::Bindings;
 use super::counter::Counter;
-use super::formatting::format_params;
 use super::resource_block::ResourceBlocks;
 use super::resource_block::{Declaration, ShorthandRule, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
@@ -165,51 +164,30 @@ impl KnowledgeBase {
 
         // Enforce rule type validation for "required" rule types derived from
         // resource block definitions.
-        for rule_name in self.rule_types.required_rule_types() {
-            let types = self.rule_types.get(rule_name).unwrap();
-            let required_rule_types = types.iter().filter(|r| r.required).collect::<Vec<&Rule>>();
-            for rule_type in &required_rule_types {
-                if let Some(GenericRule { rules, .. }) = self.rules.get(rule_name) {
-                    for rule in rules.values() {
-                        let found_match = types
-                            .iter()
-                            .map(|rule_type| {
-                                self.rule_params_match(rule.as_ref(), rule_type)
-                                    .map(|result| (result, rule_type))
-                            })
-                            .collect::<PolarResult<Vec<(RuleParamMatch, &Rule)>>>()
-                            .map(|results| {
-                                results.iter().any(|(result, _)| match result {
-                                    RuleParamMatch::True => true,
-                                    RuleParamMatch::False(_) => false,
-                                })
-                            })?;
+        for rule_type in self.rule_types.required_rule_types() {
+            if let Some(GenericRule { rules, .. }) = self.rules.get(&rule_type.name) {
+                for rule in rules.values() {
+                    let found_match = match self.rule_params_match(rule.as_ref(), rule_type)? {
+                        RuleParamMatch::True => true,
+                        RuleParamMatch::False(_) => false,
+                    };
 
-                        if !found_match {
-                            return Err(self.set_error_context(
-                                &rule_type.body,
-                                error::ValidationError::MissingRequiredRule {
-                                    rule_name: format!(
-                                        "{}({});",
-                                        rule_name.to_polar(),
-                                        format_params(&rule_type.params, ", ")
-                                    ),
-                                },
-                            ));
-                        }
+                    if !found_match {
+                        return Err(self.set_error_context(
+                            &rule_type.body,
+                            error::ValidationError::MissingRequiredRule {
+                                rule: rule_type.clone(),
+                            },
+                        ));
                     }
-                } else {
-                    return Err(self.set_error_context(
-                        &rule_type.body,
-                        error::ValidationError::MissingRequiredRule {
-                            rule_name: format!(
-                                "{}({});",
-                                rule_name.to_polar(),
-                                format_params(&rule_type.params, ", ")
-                            ),
-                        },
-                    ));
                 }
+            } else {
+                return Err(self.set_error_context(
+                    &rule_type.body,
+                    error::ValidationError::MissingRequiredRule {
+                        rule: rule_type.clone(),
+                    },
+                ));
             }
         }
 
