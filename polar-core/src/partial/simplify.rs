@@ -167,23 +167,6 @@ pub fn simplify_partial(
     )
 }
 
-fn bindings2partial(bindings: Bindings) -> Operation {
-    use Operator::*;
-    let mut args = vec![];
-    for (k, v) in bindings {
-        let uni = Operation {
-            operator: Unify,
-            args: vec![term!(k), v],
-        };
-        args.push(term!(uni));
-    }
-
-    Operation {
-        operator: And,
-        args,
-    }
-}
-
 /// Simplify the values of the bindings to be returned to the host language.
 ///
 /// - For partials, simplify the constraint expressions.
@@ -242,6 +225,7 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
     let mut simplified_bindings = HashMap::new();
     for (var, value) in &bindings {
         let simplified = simplify_var(&bindings, var, value)?;
+        check_consistency(&simplified)?;
         if !var.is_temporary_var() || all {
             simplified_bindings.insert(var.clone(), simplified);
         }
@@ -254,18 +238,13 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
         }
     }
 
-    check_consistency(simplified_bindings)
+    Some(simplified_bindings)
 }
 
 /// FIXME(gw) this is a hack because we don't do a good enough job of maintaining
 /// consistency elsewhere
-fn check_consistency(bindings: Bindings) -> Option<Bindings> {
+fn check_consistency(term: &Term) -> Option<()> {
     fn subcheck(vcs: &VarClasses, m: &mut HashMap<DotPath, Term>, expr: &Operation) -> Option<()> {
-        for arg in expr.args.iter() {
-            if let Ok(x) = arg.value().as_expression() {
-                subcheck(vcs, m, x)?
-            }
-        }
         match expr.operator {
             Unify | Eq => {
                 let (l, r) = (&expr.args[0], &expr.args[1]);
@@ -278,6 +257,22 @@ fn check_consistency(bindings: Bindings) -> Option<Bindings> {
                 } else {
                     Some(())
                 }
+            }
+            And => {
+                for arg in expr.args.iter() {
+                    if let Ok(x) = arg.value().as_expression() {
+                        subcheck(vcs, m, x)?
+                    }
+                }
+                Some(())
+            }
+            Or => {
+                for arg in &expr.args {
+                    let mut map = m.clone();
+                    let expr = arg.value().as_expression().unwrap();
+                    subcheck(vcs, &mut map, expr)?;
+                }
+                Some(())
             }
             _ => Some(()),
         }
@@ -297,15 +292,13 @@ fn check_consistency(bindings: Bindings) -> Option<Bindings> {
     }
 
     use Operator::*;
-    let part = bindings2partial(bindings.clone());
-    let vcs = var_classes(&term!(part.clone()));
-    let mut map = HashMap::new();
-    for clause in part.args.iter() {
-        let expr = clause.value().as_expression().unwrap();
-        subcheck(&vcs, &mut map, expr)?;
+    if let Value::Expression(part) = term.value() {
+        let vcs = var_classes(term);
+        let mut map = HashMap::new();
+        subcheck(&vcs, &mut map, part)?;
     }
 
-    Some(bindings)
+    Some(())
 }
 
 #[derive(Clone, Default)]
@@ -757,7 +750,7 @@ fn toss_trivial_unifies(args: &mut TermList) {
     });
 }
 
-#[derive(Hash, PartialEq, Debug, Eq)]
+#[derive(Clone, Hash, PartialEq, Debug, Eq)]
 struct DotPath {
     var: Rc<Vec<Symbol>>,
     path: Vec<String>,
