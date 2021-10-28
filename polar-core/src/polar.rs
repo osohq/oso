@@ -190,12 +190,7 @@ impl Polar {
                             ),
                             Err(e) => diagnostics.push(Diagnostic::Error(e)),
                         }
-                        diagnostics.append(
-                            &mut check_ambiguous_precedence(&rule, kb)
-                                .into_iter()
-                                .map(Diagnostic::Warning)
-                                .collect(),
-                        );
+                        diagnostics.append(&mut check_ambiguous_precedence(&rule, kb));
                         let rule = rewrite_rule(rule, kb);
                         kb.add_rule(rule);
                     }
@@ -274,12 +269,7 @@ impl Polar {
         }
 
         // Check for has_permission calls alongside resource block definitions
-        diagnostics.append(
-            &mut check_resource_blocks_missing_has_permission(&kb)
-                .into_iter()
-                .map(Diagnostic::Warning)
-                .collect(),
-        );
+        check_resource_blocks_missing_has_permission(&kb).map(|w| diagnostics.push(w));
 
         diagnostics
     }

@@ -153,7 +153,7 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
         }
     }
 
-    fn warnings(&mut self) -> Vec<String> {
+    fn warnings(&mut self) -> Vec<Diagnostic> {
         self.unparenthesized_expr
             .iter()
             .map(|(source, or_term)| {
@@ -163,7 +163,7 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
                 \n\n"
                     .to_string();
                 msg.push_str(&source_lines(source, or_term.offset(), 0));
-                msg
+                Diagnostic::Warning(msg)
             })
             .collect()
     }
@@ -198,7 +198,7 @@ impl<'kb> Visitor for AndOrPrecendenceCheck<'kb> {
     }
 }
 
-pub fn check_ambiguous_precedence(rule: &Rule, kb: &KnowledgeBase) -> Vec<String> {
+pub fn check_ambiguous_precedence(rule: &Rule, kb: &KnowledgeBase) -> Vec<Diagnostic> {
     let mut visitor = AndOrPrecendenceCheck::new(kb);
     walk_rule(&mut visitor, rule);
     visitor.warnings()
@@ -247,9 +247,9 @@ impl ResourceBlocksMissingHasPermissionVisitor {
         }
     }
 
-    fn warnings(&mut self) -> Vec<String> {
+    fn warnings(&mut self) -> Option<Diagnostic> {
         if !self.calls_has_permission {
-            return vec!["Warning: your policy uses resource blocks but does not call the \
+            return Some(Diagnostic::Warning("Warning: your policy uses resource blocks but does not call the \
 has_permission rule. This means that permissions you define in a \
 resource block will not have any effect. Did you mean to include a \
 call to has_permission in a top-level allow rule?
@@ -257,17 +257,16 @@ call to has_permission in a top-level allow rule?
   allow(actor, action, resource) if
       has_permission(actor, action, resource);
 
-For more information about resource blocks, see https://docs.osohq.com/any/reference/polar/polar-syntax.html#actor-and-resource-blocks".to_string(),
-
-            ];
+For more information about resource blocks, see https://docs.osohq.com/any/reference/polar/polar-syntax.html#actor-and-resource-blocks".to_string()
+            ));
         }
-        vec![]
+        None
     }
 }
 
-pub fn check_resource_blocks_missing_has_permission(kb: &KnowledgeBase) -> Vec<String> {
+pub fn check_resource_blocks_missing_has_permission(kb: &KnowledgeBase) -> Option<Diagnostic> {
     if kb.resource_blocks.resources.is_empty() {
-        return vec![];
+        return None;
     }
 
     let mut visitor = ResourceBlocksMissingHasPermissionVisitor::new();
@@ -385,24 +384,22 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_blocks_missing_has_permission_warning() {
+    fn test_check_resource_blocks_missing_has_permission_warning() {
         let mut kb = KnowledgeBase::new();
         kb.resource_blocks
             .resources
             .insert(term!(sym!("Organization")));
-        assert_eq!(check_resource_blocks_missing_has_permission(&kb).len(), 1);
+        assert!(check_resource_blocks_missing_has_permission(&kb).is_some());
     }
 
     #[test]
-    fn test_resource_blocks_missing_has_permission_clean() {
+    fn test_check_resource_blocks_missing_has_permission_clean() {
         let mut kb = KnowledgeBase::new();
         kb.resource_blocks
             .resources
             .insert(term!(sym!("Organization")));
         kb.add_rule(rule!("f", [sym!("x")] => call!("has_permission", [sym!("y")])));
-        let warnings = check_resource_blocks_missing_has_permission(&kb);
-
-        assert_eq!(warnings.len(), 0);
+        assert!(check_resource_blocks_missing_has_permission(&kb).is_none());
     }
 
     #[test]
