@@ -241,8 +241,8 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
 
     let mut simplified_bindings = HashMap::new();
     for (var, value) in &bindings {
+        let simplified = simplify_var(&bindings, var, value)?;
         if !var.is_temporary_var() || all {
-            let simplified = simplify_var(&bindings, var, value)?;
             simplified_bindings.insert(var.clone(), simplified);
         }
     }

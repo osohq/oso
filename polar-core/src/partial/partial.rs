@@ -389,6 +389,7 @@ mod test {
         }};
     }
 
+    #[track_caller]
     fn next_binding(query: &mut Query) -> Result<Bindings, PolarError> {
         let event = query.next_event()?;
         if let QueryEvent::Result { bindings, .. } = event {
@@ -1296,23 +1297,29 @@ mod test {
             r#"f(x) if not (y = 1 and x.foo = y);
                g(x) if not (x.foo = y and 1 = y);
                h(x) if not (y = 1 and x.foo.bar = y);
-               i(x) if not (y = x.foo.bar and 1 = y);"#,
+               i(x) if not (y = x.foo.bar and 1 = y);
+               j(x) if not (x.foo = 1 and x.foo = 2);
+               "#,
         )?;
 
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "1 != _this.foo"); // FIXME order reversed??
+        assert_partial_expression!(next_binding(&mut q)?, "x", "1 != _this.foo");
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "1 != _this.foo"); // here too
+        assert_partial_expression!(next_binding(&mut q)?, "x", "1 != _this.foo");
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("h", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "1 != _this.foo.bar"); // and here
+        assert_partial_expression!(next_binding(&mut q)?, "x", "1 != _this.foo.bar");
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("i", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "1 != _this.foo.bar"); // not here!
+        assert_partial_expression!(next_binding(&mut q)?, "x", "1 != _this.foo.bar");
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("j", [sym!("x")])), false);
+        assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(sym!("x")));
         assert_query_done!(q);
 
         Ok(())
