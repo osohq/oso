@@ -794,6 +794,7 @@ impl KnowledgeBase {
 
     pub fn create_resource_specific_rule_types(&mut self) -> PolarResult<()> {
         let mut has_relation_rule_types_to_create = HashSet::new();
+        let mut has_role_rule_types_to_create = HashSet::new();
         let mut rule_types: Vec<Rule> = Vec::new();
 
         // TODO @patrickod refactor RuleTypes & split out
@@ -808,13 +809,24 @@ impl KnowledgeBase {
         // rule or resource definitions.
         for (object, declarations) in &self.resource_blocks.declarations {
             for (name, declaration) in declarations.iter() {
-                if let Declaration::Relation(subject) = declaration {
-                    has_relation_rule_types_to_create.insert((
-                        subject.value().as_symbol()?.clone(),
-                        name.value().as_string()?,
-                        object.value().as_symbol()?.clone(),
-                        false,
-                    ));
+                match declaration {
+                    Declaration::Relation(subject) => {
+                        has_relation_rule_types_to_create.insert((
+                            subject.value().as_symbol()?.clone(),
+                            name.value().as_string()?,
+                            object.value().as_symbol()?.clone(),
+                            false,
+                        ));
+                    }
+                    Declaration::Role => {
+                        has_role_rule_types_to_create.insert((
+                            sym!("Actor"),
+                            name.value().as_string()?,
+                            object.value().as_symbol()?.clone(),
+                            false,
+                        ));
+                    }
+                    _ => {}
                 }
             }
         }
@@ -846,19 +858,30 @@ impl KnowledgeBase {
                                 true,
                             ));
 
-                            if let Some(Declaration::Relation(related_subject)) = self
+                            match self
                                 .resource_blocks
                                 .declarations
                                 .get(subject)
                                 .unwrap()
                                 .get(implier)
                             {
-                                has_relation_rule_types_to_create.insert((
-                                    related_subject.value().as_symbol()?.clone(),
-                                    implier.value().as_string()?,
-                                    subject.value().as_symbol()?.clone(),
-                                    true,
-                                ));
+                                Some(Declaration::Relation(related_subject)) => {
+                                    has_relation_rule_types_to_create.insert((
+                                        related_subject.value().as_symbol()?.clone(),
+                                        implier.value().as_string()?,
+                                        subject.value().as_symbol()?.clone(),
+                                        true,
+                                    ));
+                                }
+                                Some(Declaration::Role) => {
+                                    has_role_rule_types_to_create.insert((
+                                        sym!("Actor"),
+                                        implier.value().as_string()?,
+                                        subject.value().as_symbol()?.clone(),
+                                        true,
+                                    ));
+                                }
+                                _ => {}
                             }
                         }
                     }
@@ -866,19 +889,30 @@ impl KnowledgeBase {
                         head: _,
                         body: (implier, None),
                     } => {
-                        if let Some(Declaration::Relation(subject)) = self
+                        match self
                             .resource_blocks
                             .declarations
                             .get(object)
                             .unwrap()
                             .get(implier)
                         {
-                            has_relation_rule_types_to_create.insert((
-                                subject.value().as_symbol()?.clone(),
-                                implier.value().as_string()?,
-                                object.value().as_symbol()?.clone(),
-                                true,
-                            ));
+                            Some(Declaration::Relation(subject)) => {
+                                has_relation_rule_types_to_create.insert((
+                                    subject.value().as_symbol()?.clone(),
+                                    implier.value().as_string()?,
+                                    object.value().as_symbol()?.clone(),
+                                    true,
+                                ));
+                            }
+                            Some(Declaration::Role) => {
+                                has_role_rule_types_to_create.insert((
+                                    sym!("Actor"),
+                                    implier.value().as_string()?,
+                                    object.value().as_symbol()?.clone(),
+                                    true,
+                                ));
+                            }
+                            _ => {}
                         }
                     }
                 }
@@ -889,13 +923,9 @@ impl KnowledgeBase {
             rule_types.push(rule!("has_relation", ["_subject"; instance!(subject), value!(relation_name), "_object"; instance!(object)], required))
         });
 
-        for (object, declarations) in &self.resource_blocks.declarations {
-            for declaration in declarations.values() {
-                if let Declaration::Role = declaration {
-                    rule_types.push(rule!("has_role", ["actor"; instance!(sym!("Actor")), "_role"; instance!(sym!("String")), "resource"; instance!(object.value().as_symbol().unwrap().clone())]));
-                }
-            }
-        }
+        has_role_rule_types_to_create.into_iter().for_each(|(subject, _relation_name, object, required)| {
+            rule_types.push(rule!("has_role", ["_actor"; instance!(subject), "_role"; instance!(sym!("String")), "_resource"; instance!(object)], required))
+        });
 
         for rule_type in rule_types {
             self.add_rule_type(rule_type.clone());
