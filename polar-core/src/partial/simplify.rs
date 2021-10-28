@@ -156,6 +156,8 @@ fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
     }
 }
 
+/// Simplifies a partial (surprise).
+/// Fails by returning None.
 pub fn simplify_partial(
     var: &Symbol,
     mut term: Term,
@@ -185,7 +187,7 @@ pub fn simplify_bindings(bindings: Bindings) -> Option<Bindings> {
 /// Simplify the values of the bindings to be returned to the host language.
 ///
 /// - For partials, simplify the constraint expressions.
-/// - For non-partials, deep deref. TODO(ap/gj): deep deref.
+/// - For bound temporary variables, deref them.
 pub fn simplify_bindings_opt(bindings: Bindings, all: bool) -> PolarResult<Option<Bindings>> {
     let mut perf = PerfCounters::new(TRACK_PERF);
     simplify_debug!("simplify bindings");
@@ -239,10 +241,9 @@ pub fn simplify_bindings_opt(bindings: Bindings, all: bool) -> PolarResult<Optio
 
     let mut simplified_bindings = HashMap::new();
     for (var, value) in &bindings {
-        let simplified = match simplify_var(&bindings, var, value).and_then(|s| {
-            check_consistency(&s)?;
-            Some(s)
-        }) {
+        let simplified = match simplify_var(&bindings, var, value)
+            .and_then(|s| check_consistency(&s).map(|_| s))
+        {
             Some(s) => s,
             _ => return Ok(None),
         };
@@ -270,7 +271,7 @@ pub fn simplify_bindings_opt(bindings: Bindings, all: bool) -> PolarResult<Optio
 }
 
 /// FIXME(gw) this is a hack because we don't do a good enough job of maintaining
-/// consistency elsewhere
+/// consistency elsewhere.
 fn check_consistency(term: &Term) -> Option<()> {
     use Operator::*;
     // check functions fail by returning `None`
@@ -435,8 +436,9 @@ pub struct Simplifier {
     counters: PerfCounters,
 }
 
+// Most of these functions are called for side effects, but they can signal
+// failure by returning None.
 type TermSimplifier = dyn Fn(&mut Simplifier, &mut Term) -> Option<()>;
-
 impl Simplifier {
     pub fn new(output_vars: HashSet<Symbol>, track_performance: bool) -> Self {
         Self {
