@@ -85,12 +85,17 @@ module Oso
 
             yrefs, nrefs = xrefs.partition { |r| %w[In Eq].include? r.kind }
             [[yrefs, 'In'], [nrefs, 'Nin']].each do |refs, kind|
-              next unless refs.any?
-
               refs.group_by { |f| f.value.result_id }.each do |rid, fils|
-                value = results[rid].map { |r| fils.map { |f| GETATTR[r, f.value.field] } }
-                field = fils.map(&:field)
-                rest.push(Filter.new(kind: kind, value: value, field: field))
+                if fils.length > 1
+                  value = results[rid].map { |r| fils.map { |f| GETATTR[r, f.value.field] } }
+                  field = fils.map(&:field)
+                  rest.push(Filter.new(kind: kind, value: value, field: field))
+                else
+                  fil = fils[0]
+                  field = fil.value.field
+                  value = results[rid].map { |r| field.nil? ? r : r.send(field) }
+                  rest.push(Filter.new(kind: kind, field: fil.field, value: value))
+                end
               end
             end
             rest
