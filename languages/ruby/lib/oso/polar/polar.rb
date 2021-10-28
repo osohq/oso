@@ -93,8 +93,6 @@ module Oso
           host.types[klass.name].name
         else
           rec = host.types.values.find do |v|
-            raise "NO" if v.nil?
-
             v.klass.get == klass
           end
           raise "Unknown class `#{klass}`" if rec.nil?

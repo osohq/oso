@@ -48,11 +48,8 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         #   Field[Src[Org], :name],
         # ]
         query = Select[issues_repos_orgs, repo_name, org_name]
-        require 'pry'
-        binding.pry
         result = query.to_a
         expect(result).to eq [bug]
-
         # issue.repo.name != issue.repo.org.name
         result = Select[issues_repos_orgs, repo_name, org_name, kind: :neq].to_a
         expect(result).to contain_exactly(*[laggy, endings])

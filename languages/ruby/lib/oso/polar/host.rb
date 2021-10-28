@@ -126,7 +126,6 @@ module Oso
       def register_mros # rubocop:disable Metrics/AbcSize
         types.values.uniq.each do |typ|
           mro = []
-          raise "NO" if typ.nil?
           typ.klass.get.ancestors.each do |a|
             mro.push(types[a].id) if types.key?(a)
           end
