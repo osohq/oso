@@ -1,4 +1,5 @@
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
+use super::diagnostic::Diagnostic;
 use super::error::PolarResult;
 use super::events::*;
 use super::kb::*;
@@ -151,11 +152,6 @@ impl Default for Polar {
 
 const MULTIPLE_LOAD_ERROR_MSG: &str =
     "Cannot load additional Polar code -- all Polar code must be loaded at the same time.";
-
-pub enum Diagnostic {
-    Error(error::PolarError),
-    Warning(String),
-}
 
 impl Polar {
     pub fn new() -> Self {

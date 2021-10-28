@@ -7,7 +7,7 @@ use crate::visitor::{walk_term, Visitor};
 
 pub use super::bindings::Bindings;
 use super::counter::Counter;
-use super::polar::Diagnostic;
+use super::diagnostic::Diagnostic;
 use super::resource_block::ResourceBlocks;
 use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;

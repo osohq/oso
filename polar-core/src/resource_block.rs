@@ -3,10 +3,10 @@ use std::ops::Range;
 
 use lalrpop_util::ParseError as LalrpopError;
 
+use super::diagnostic::Diagnostic;
 use super::error::{ParseError, PolarError, PolarResult, RuntimeError};
 use super::kb::KnowledgeBase;
 use super::lexer::Token;
-use super::polar::Diagnostic;
 use super::rules::*;
 use super::terms::*;
 
