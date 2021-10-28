@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 use crate::bindings::Bindings;
+use crate::error::{PolarResult, RuntimeError};
 use crate::folder::{fold_term, Folder};
 use crate::formatting::ToPolarString;
 use crate::terms::*;
@@ -130,14 +131,20 @@ pub fn simplify_partial(
     }
 }
 
+pub fn simplify_bindings(bindings: Bindings) -> Option<Bindings> {
+    simplify_bindings_opt(bindings, true)
+        .expect("unexpected error thrown by the simplifier when simplifying all bindings")
+}
+
 /// Simplify the values of the bindings to be returned to the host language.
 ///
 /// - For partials, simplify the constraint expressions.
 /// - For non-partials, deep deref. TODO(ap/gj): deep deref.
-pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
-    let span = tracy_client::span!("simplify bindings");
-    span.emit_color(0x7d309c);
-    let mut perf = PerfCounters::new(TRACK_PERF);
+pub fn simplify_bindings_opt(bindings: Bindings, all: bool) -> PolarResult<Option<Bindings>> {
+	let span = tracy_client::span!("simplify bindings");
+    span.emit_color(0x7d309c);    
+	
+	let mut perf = PerfCounters::new(TRACK_PERF);
     simplify_debug!("simplify bindings");
 
     if_debug! {
@@ -199,11 +206,19 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
         if !var.is_temporary_var() || all {
             let simplified = simplify_var(&bindings, var, value);
             simplified_bindings.insert(var.clone(), simplified);
+        } else if let Value::Expression(e) = value.value() {
+            if e.variables().iter().all(|v| v.is_temporary_var()) {
+                return Err(RuntimeError::UnhandledPartial {
+                    term: value.clone(),
+                    var: var.clone(),
+                }
+                .into());
+            }
         }
     }
 
     if unsatisfiable {
-        None
+        Ok(None)
     } else {
         if_debug! {
             eprintln!("after simplified");
@@ -212,7 +227,7 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
             }
         }
 
-        Some(simplified_bindings)
+        Ok(Some(simplified_bindings))
     }
 }
 
