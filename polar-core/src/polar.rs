@@ -265,11 +265,15 @@ impl Polar {
 
         // Perform validation checks against the whole policy
         if !self.ignore_no_allow_warning {
-            check_no_allow_rule(&kb).map(|w| diagnostics.push(w));
+            if let Some(w) = check_no_allow_rule(&kb) {
+                diagnostics.push(w)
+            }
         }
 
         // Check for has_permission calls alongside resource block definitions
-        check_resource_blocks_missing_has_permission(&kb).map(|w| diagnostics.push(w));
+        if let Some(w) = check_resource_blocks_missing_has_permission(&kb) {
+            diagnostics.push(w)
+        };
 
         diagnostics
     }
