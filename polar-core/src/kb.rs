@@ -821,7 +821,7 @@ impl KnowledgeBase {
                     Declaration::Role => {
                         has_role_rule_types_to_create.insert((
                             sym!("Actor"),
-                            name.value().as_string()?,
+                            instance!(sym!("String")),
                             object.value().as_symbol()?.clone(),
                             false,
                         ));
@@ -874,9 +874,15 @@ impl KnowledgeBase {
                                     ));
                                 }
                                 Some(Declaration::Role) => {
+                                    has_role_rule_types_to_create.remove(&(
+                                        sym!("Actor"),
+                                        instance!(sym!("String")),
+                                        subject.value().as_symbol()?.clone(),
+                                        false,
+                                    ));
                                     has_role_rule_types_to_create.insert((
                                         sym!("Actor"),
-                                        implier.value().as_string()?,
+                                        instance!(sym!("String")),
                                         subject.value().as_symbol()?.clone(),
                                         true,
                                     ));
@@ -905,9 +911,15 @@ impl KnowledgeBase {
                                 ));
                             }
                             Some(Declaration::Role) => {
+                                has_role_rule_types_to_create.remove(&(
+                                    sym!("Actor"),
+                                    instance!(sym!("String")),
+                                    object.value().as_symbol()?.clone(),
+                                    false,
+                                ));
                                 has_role_rule_types_to_create.insert((
                                     sym!("Actor"),
-                                    implier.value().as_string()?,
+                                    instance!(sym!("String")),
                                     object.value().as_symbol()?.clone(),
                                     true,
                                 ));
