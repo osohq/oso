@@ -1054,6 +1054,7 @@ test('can deal with lookups on unbound but typed values', async () => {
     roles!: Role[];
   }
 
+  const org1Repo = new Repo({ id: 1, orgId: 1 });
   const org2Repo = new Repo({ id: 2, orgId: 2 });
   const org1Role = new Role({ orgId: 1 });
   const user = new User({ roles: [org1Role] });
@@ -1072,6 +1073,8 @@ allow(user: User, "read", repo: Repo) if
   repo.orgId = org.id;
   `);
 
-  const res = await p.queryRuleOnce('allow', user, 'read', org2Repo);
-  expect(res).toBeFalsy();
+  expect(await p.queryRuleOnce('allow', user, 'read', org2Repo)).toBeFalsy();
+  await expect(
+    p.queryRuleOnce('allow', user, 'read', org1Repo)
+  ).rejects.toThrow('Found an unhandled partial');
 });
