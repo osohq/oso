@@ -1,4 +1,6 @@
-use super::data_filtering::{build_filter, build_filter_plan, DataFilter, FilterPlan, PartialResults, Types};
+use super::data_filtering::{
+    build_filter, build_filter_plan, DataFilter, FilterPlan, PartialResults, Types,
+};
 use super::error::PolarResult;
 use super::events::*;
 use super::kb::*;
