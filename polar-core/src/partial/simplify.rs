@@ -41,13 +41,15 @@ enum MaybeDrop {
 }
 
 type VarClasses = HashMap<Symbol, Rc<Vec<Symbol>>>;
+
+/// Produce a map from var names -> variable equivalence classes
 fn var_classes(t: &Term) -> VarClasses {
     #[derive(Default)]
-    struct VariableVisitor {
+    struct EqualVariableVisitor {
         equivs: Vec<(Symbol, Symbol)>,
     }
 
-    impl Visitor for VariableVisitor {
+    impl Visitor for EqualVariableVisitor {
         fn visit_operation(&mut self, o: &Operation) {
             match o.operator {
                 Operator::Unify if o.args.len() == 2 => {
@@ -68,11 +70,18 @@ fn var_classes(t: &Term) -> VarClasses {
         }
     }
 
-    let mut vv = VariableVisitor::default();
-    vv.visit_term(t);
-    let classes = partition_equivs(vv.equivs);
+    // Collect all pairs of variables that are unified with each other in
+    // the term.
+    let mut evv = EqualVariableVisitor::default();
+    evv.visit_term(t);
+
+    // Aggregate the pairs into equivalence classes
+    let classes = partition_equivs(evv.equivs);
+
+    // Map each variable to its equivalence class
     let mut map = HashMap::new();
     for set in classes {
+        // set -> vec for hashability
         let set = Rc::new(set.into_iter().collect::<Vec<_>>());
         for var in set.iter() {
             map.insert(var.clone(), set.clone());
@@ -151,20 +160,19 @@ pub fn simplify_partial(
     output_vars: HashSet<Symbol>,
     track_performance: bool,
 ) -> Option<(Term, Option<PerfCounters>)> {
-    //    term = normalize_vars(term);
     let mut simplifier = Simplifier::new(output_vars, track_performance);
     simplify_debug!("*** simplify partial {:?}", var);
     simplifier.simplify_partial(&mut term)?;
     term = simplify_trivial_constraint(var.clone(), term);
     simplify_debug!("simplify partial done {:?}, {:?}", var, term.to_polar());
 
-    Some(
-        if matches!(term.value(), Value::Expression(e) if e.operator != Operator::And) {
-            (op!(And, term).into(), simplifier.perf_counters())
-        } else {
-            (term, simplifier.perf_counters())
-        },
-    )
+    let result = if matches!(term.value(), Value::Expression(e) if e.operator != Operator::And) {
+        (op!(And, term).into(), simplifier.perf_counters())
+    } else {
+        (term, simplifier.perf_counters())
+    };
+
+    Some(result)
 }
 
 /// Simplify the values of the bindings to be returned to the host language.
@@ -244,16 +252,47 @@ pub fn simplify_bindings(bindings: Bindings, all: bool) -> Option<Bindings> {
 /// FIXME(gw) this is a hack because we don't do a good enough job of maintaining
 /// consistency elsewhere
 fn check_consistency(term: &Term) -> Option<()> {
-    fn subcheck(vcs: &VarClasses, m: &mut HashMap<DotPath, Term>, expr: &Operation) -> Option<()> {
+    use Operator::*;
+    // check functions fail by returning `None`
+    fn check_op(
+        vcs: &VarClasses,
+        map: &mut HashMap<DotPath, Term>,
+        expr: &Operation,
+    ) -> Option<()> {
+        fn check_ground_univalence(
+            vcs: &VarClasses,
+            map: &mut HashMap<DotPath, Term>,
+            free_term: &Term,
+            ground_term: &Term,
+        ) -> Option<()> {
+            // fail if
+            // 1) free_term is a variable with optional dot path
+            if let Some(path) = dot_path_destructure(vcs, free_term) {
+                // 2) free_term is bound to ground value val
+                if let Some(val) = map.get(&path) {
+                    // 3) val != ground_term
+                    if val != ground_term {
+                        return None;
+                    }
+                } else {
+                    // if 1 and not 2 then add the binding
+                    map.insert(path, ground_term.clone());
+                }
+            }
+            Some(())
+        }
+
+        // expression type handlers
+        // TODO(gw) Neq
         match expr.operator {
-            Unify | Eq => {
+            Unify | Eq | Assign => {
                 let (l, r) = (&expr.args[0], &expr.args[1]);
                 if l.is_ground() && r.is_ground() {
                     (l == r).then(|| ())
                 } else if l.is_ground() {
-                    check(vcs, m, r, l)
+                    check_ground_univalence(vcs, map, r, l)
                 } else if r.is_ground() {
-                    check(vcs, m, l, r)
+                    check_ground_univalence(vcs, map, l, r)
                 } else {
                     Some(())
                 }
@@ -261,16 +300,16 @@ fn check_consistency(term: &Term) -> Option<()> {
             And => {
                 for arg in expr.args.iter() {
                     if let Ok(x) = arg.value().as_expression() {
-                        subcheck(vcs, m, x)?
+                        check_op(vcs, map, x)?
                     }
                 }
                 Some(())
             }
             Or => {
                 for arg in &expr.args {
-                    let mut map = m.clone();
+                    let mut map = map.clone();
                     let expr = arg.value().as_expression().unwrap();
-                    subcheck(vcs, &mut map, expr)?;
+                    check_op(vcs, &mut map, expr)?;
                 }
                 Some(())
             }
@@ -278,24 +317,10 @@ fn check_consistency(term: &Term) -> Option<()> {
         }
     }
 
-    fn check(vcs: &VarClasses, m: &mut HashMap<DotPath, Term>, l: &Term, r: &Term) -> Option<()> {
-        if let Some(p) = dot_path_destructure(vcs, l) {
-            if let Some(v) = m.get(&p) {
-                if v != r {
-                    return None;
-                }
-            } else {
-                m.insert(p, r.clone());
-            }
-        }
-        Some(())
-    }
-
-    use Operator::*;
     if let Value::Expression(part) = term.value() {
         let vcs = var_classes(term);
         let mut map = HashMap::new();
-        subcheck(&vcs, &mut map, part)?;
+        check_op(&vcs, &mut map, part)?;
     }
 
     Some(())

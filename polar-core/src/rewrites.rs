@@ -66,7 +66,7 @@ impl<'kb> Rewriter<'kb> {
     }
 
     fn temp_name(&mut self, op: &Operation) -> Symbol {
-        use Operator::Dot;
+        use Operator::*;
         if op.operator == Dot {
             if let Ok(s) = op.args[1].value().as_string() {
                 match &op.args[0].value() {
@@ -84,17 +84,13 @@ impl<'kb> Rewriter<'kb> {
                 }
             }
         }
-        self.kb.gensym(temp_name(&op.operator))
-    }
-}
-
-fn temp_name(o: &Operator) -> &'static str {
-    use Operator::*;
-    match o {
-        Add | Div | Mul | Sub => "op",
-        Dot => "value",
-        New => "instance",
-        _ => "temp",
+        let temp_name = match op.operator {
+            Add | Div | Mul | Sub => "op",
+            Dot => "value",
+            New => "instance",
+            _ => "temp",
+        };
+        self.kb.gensym(temp_name)
     }
 }
 

@@ -72,26 +72,17 @@ pub fn invert_operation(Operation { operator, args }: Operation) -> Operation {
 }
 
 fn reduce_term(t: Term) -> Term {
-    use Operator::Dot;
     match t.value().as_expression() {
         Ok(Operation {
-            operator: Dot,
+            operator: Operator::Dot,
             args,
-        }) if args.len() == 2
-            && args[1].value().as_string().is_ok()
-            && args[0].value().as_dict().is_ok() =>
-        {
-            match args[0]
-                .value()
-                .as_dict()
-                .unwrap()
-                .fields
-                .get(&Symbol(args[1].value().as_string().unwrap().to_string()))
-            {
+        }) if args.len() == 2 => match (args[0].value().as_dict(), args[1].value().as_string()) {
+            (Ok(d), Ok(s)) => match d.fields.get(&Symbol(s.to_string())) {
                 Some(t) => reduce_term(t.clone()),
                 _ => t,
-            }
-        }
+            },
+            _ => t,
+        },
         _ => t,
     }
 }
