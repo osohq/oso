@@ -1,3 +1,4 @@
+use super::diagnostic::Diagnostic;
 use super::error::*;
 use super::formatting::source_lines;
 use super::kb::*;
@@ -203,14 +204,14 @@ pub fn check_ambiguous_precedence(rule: &Rule, kb: &KnowledgeBase) -> Vec<String
     visitor.warnings()
 }
 
-pub fn check_no_allow_rule(kb: &KnowledgeBase) -> Vec<String> {
+pub fn check_no_allow_rule(kb: &KnowledgeBase) -> Option<Diagnostic> {
     let has_allow = kb.get_rules().contains_key(&sym!("allow"));
     let has_allow_field = kb.get_rules().contains_key(&sym!("allow_field"));
     let has_allow_request = kb.get_rules().contains_key(&sym!("allow_request"));
     if has_allow || has_allow_field || has_allow_request {
-        vec![]
+        None
     } else {
-        vec![
+        Some(Diagnostic::Warning(
             "Your policy does not contain an allow rule, which usually means \
 that no actions are allowed. Did you mean to add an allow rule to \
 the top of your policy?
@@ -222,7 +223,7 @@ rule. For more information about allow rules, see:
 
   https://docs.osohq.com/reference/polar/builtin_rule_types.html#allow"
                 .to_string(),
-        ]
+        ))
     }
 }
 
@@ -342,7 +343,7 @@ mod tests {
         let mut kb = KnowledgeBase::new();
         kb.add_rule(rule!("f", [sym!("x")]));
         kb.add_rule(rule!("g", [sym!("x")]));
-        assert_eq!(check_no_allow_rule(&kb).len(), 1);
+        assert!(check_no_allow_rule(&kb).is_some());
     }
 
     #[test]
@@ -354,7 +355,7 @@ mod tests {
             [sym!("actor"), sym!("action"), sym!("resource")]
         ));
         kb.add_rule(rule!("g", [sym!("x")]));
-        assert_eq!(check_no_allow_rule(&kb).len(), 0);
+        assert!(check_no_allow_rule(&kb).is_none());
     }
 
     #[test]
@@ -371,7 +372,7 @@ mod tests {
             ]
         ));
         kb.add_rule(rule!("g", [sym!("x")]));
-        assert_eq!(check_no_allow_rule(&kb).len(), 0);
+        assert!(check_no_allow_rule(&kb).is_none());
     }
 
     #[test]
@@ -380,7 +381,7 @@ mod tests {
         kb.add_rule(rule!("f", [sym!("x")]));
         kb.add_rule(rule!("allow_request", [sym!("actor"), sym!("request")]));
         kb.add_rule(rule!("g", [sym!("x")]));
-        assert_eq!(check_no_allow_rule(&kb).len(), 0);
+        assert!(check_no_allow_rule(&kb).is_none());
     }
 
     #[test]

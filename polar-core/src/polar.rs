@@ -270,12 +270,7 @@ impl Polar {
 
         // Perform validation checks against the whole policy
         if !self.ignore_no_allow_warning {
-            diagnostics.append(
-                &mut check_no_allow_rule(&kb)
-                    .into_iter()
-                    .map(Diagnostic::Warning)
-                    .collect(),
-            );
+            check_no_allow_rule(&kb).map(|w| diagnostics.push(w));
         }
 
         // Check for has_permission calls alongside resource block definitions
