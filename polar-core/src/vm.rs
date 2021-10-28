@@ -2797,21 +2797,17 @@ impl Runnable for PolarVirtualMachine {
 
         let mut bindings = self.bindings(true);
 
-        // FIXME(gw) this is a last-minute consistency check
-        if simplify_bindings(bindings.clone(), true).is_none() {
-            return Ok(QueryEvent::None);
-        }
         use crate::partial::{simplify_bindings, sub_this};
         if !self.inverting {
-            // if it worked with `all = true` it'll work here.
-            bindings = simplify_bindings(bindings, false).unwrap();
-
-            bindings = bindings
-                .clone()
-                .into_iter()
-                .filter(|(var, _)| !var.is_temporary_var())
-                .map(|(var, value)| (var.clone(), sub_this(var, value)))
-                .collect();
+            if let Some(bs) = simplify_bindings(bindings, false) {
+                bindings = bs
+                    .into_iter()
+                    .filter(|(var, _)| !var.is_temporary_var())
+                    .map(|(var, value)| (var.clone(), sub_this(var, value)))
+                    .collect();
+            } else {
+                return Ok(QueryEvent::None);
+            }
         }
 
         Ok(QueryEvent::Result { bindings, trace })
