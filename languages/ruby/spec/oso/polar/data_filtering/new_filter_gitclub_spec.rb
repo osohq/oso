@@ -91,6 +91,15 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         expect(result).to contain_exactly(*[laggy, endings])
       end
 
+      it 'pls' do
+        filter = subject.authzd_query gabe, 'read', Repo
+        expect(filter.to_a).to eq [oso]
+      end
+      it 'and also' do
+        filter = subject.authzd_query gabe, 'read', Issue
+        expect(filter.to_a).to eq [bug]
+      end
+
       DB_FILE = 'gitclub_test.db'
       before do # rubocop:disable Metrics/BlockLength
         File.delete DB_FILE if File.exist? DB_FILE
@@ -169,6 +178,76 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         Issue.create name: 'bug', repo: oso
         Issue.create name: 'laggy', repo: ios
         Issue.create name: 'more polar adventure endings', repo: demo
+
+        subject.register_class(
+          User,
+          fields: {
+            name: String,
+            org_name: String,
+            org: Relation.new(
+              kind: 'one',
+              other_type: 'Org',
+              my_field: 'org_name',
+              other_field: 'name'
+            )
+          }
+        )
+
+        subject.register_class(
+          Org,
+          fields: {
+            name: String,
+            users: Relation.new(
+              kind: 'many',
+              other_type: 'User',
+              my_field: 'name',
+              other_field: 'org_name'
+            ),
+            repos: Relation.new(
+              kind: 'many',
+              other_type: 'Repo',
+              my_field: 'name',
+              other_field: 'org_name'
+            )
+          }
+        )
+
+        subject.register_class(
+          Repo,
+          fields: {
+            name: String,
+            org_name: String,
+            org: Relation.new(
+              kind: 'one',
+              other_type: 'Org',
+              my_field: 'org_name',
+              other_field: 'name'
+            ),
+            roles: Relation.new(
+              kind: 'many',
+              other_type: 'Role',
+              my_field: 'name',
+              other_field: 'user_name'
+            )
+          }
+        )
+
+        subject.register_class(
+          Issue,
+          fields: {
+            name: String,
+            repo_name: String,
+            repo: Relation.new(
+              kind: 'one',
+              other_type: 'Repo',
+              my_field: 'repo_name',
+              other_field: 'name'
+            )
+          }
+        )
+
+        policy_file = File.join(__dir__, 'dumb_gitclub.polar')
+        subject.load_files [policy_file]
       end
       let(:apple) { Org.find 'apple' }
       let(:osohq) { Org.find 'oso' }

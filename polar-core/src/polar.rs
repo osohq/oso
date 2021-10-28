@@ -364,7 +364,7 @@ impl Polar {
         partial_results: PartialResults,
         variable: &str,
         class_tag: &str,
-    ) -> PolarResult<DataFilter> {
+    ) -> PolarResult<Vec<DataFilter>> {
         build_filter(types, partial_results, variable, class_tag)
     }
 

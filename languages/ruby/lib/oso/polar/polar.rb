@@ -92,7 +92,11 @@ module Oso
         elsif host.types.key? klass.name
           host.types[klass.name].name
         else
-          rec = host.types.values.find { |v| v.klass.get == klass }
+          rec = host.types.values.find do |v|
+            raise "NO" if v.nil?
+
+            v.klass.get == klass
+          end
           raise "Unknown class `#{klass}`" if rec.nil?
 
           host.types[klass] = rec

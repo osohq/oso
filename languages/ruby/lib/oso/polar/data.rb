@@ -4,7 +4,6 @@ module Oso
   module Polar
     # Data filtering interface for Ruby
     module Data
-
       # Data filtering configuration now consists of:
       #
       # 1. Subclass the abstract query classes and implement `to_query` for each one.
@@ -19,11 +18,47 @@ module Oso
       # Abstract superclass
       # not really needed, methods are just conveniences for demo purposes
       class DataFilter
+        PARSERS = {
+          'Select' => ->(p, j) do
+            ArelSelect.new(
+              parse(p, j['source']), 
+              Proj.new(parse(p, j['lhs'][0]), j['lhs'][1]),
+              parse(p, j['rhs']),
+              kind: j['kind'] || 'Eq'
+            )
+          end,
+          'Source' => -> (p, j) do
+            ArelSource.new(
+              p.host.types[j].klass.get
+            )
+          end,
+          'Join' => ->(p, j) do
+            ArelJoin.new(
+              parse(p, j['left']),
+              Proj.new(parse(p, j['lcol'][0]), j['lcol'][1]),
+              Proj.new(parse(p, j['rcol'][0]), j['rcol'][1]),
+              parse(p, j['right']),
+            )
+          end,
+          'Imm' => -> (p, j) do
+            Value.new(p.host.to_ruby({
+              'value' => [[j.keys.first, j.values.first]]
+            }))
+          end,
+          'Field' => -> (p, j) do
+            Proj.new(parse(p, j[0]), j[1])
+          end
+        }
+
         def to_a
           to_query.to_a
         end
         class << self
           alias [] new
+          def parse(polar, json)
+            key = json.keys.first
+            PARSERS[key][polar, json[key]]
+          end
         end
       end
 
@@ -141,7 +176,10 @@ module Oso
 
       class ArelSelect < Select
         include ArelColumnizer
-        OPS = {eq: '=', in: 'IN', nin: 'NOT IN', neq: '!='}
+        OPS = {
+          'Eq' => '=', 'In' => 'IN', 'Nin' => 'NOT IN', 'Neq' => '!=',
+          eq: '=', in: 'IN', nin: 'NOT IN', neq: '!=',
+        }
 
         def to_query
           query = source.to_query

@@ -204,6 +204,35 @@ module Oso
         .build_query
     end
 
+    def authzd_query(actor, action, resource_cls) # rubocop:disable Metrics/MethodLength
+      resource = Polar::Variable.new 'resource'
+
+      partials = query_rule(
+        'allow',
+        actor,
+        action,
+        resource,
+        bindings: { 'resource' => type_constraint(resource, resource_cls) },
+        accept_expression: true
+      )
+      partials = partials.each_with_object([]) do |result, out|
+        result.each do |key, val|
+          out.push({ 'bindings' => { key => host.to_polar(val) } })
+        end
+      end
+
+      opts = ffi
+        .build_filter(
+          host.serialize_types,
+          partials,
+          'resource',
+          get_class_name(resource_cls))
+        .map { |filter| ::Oso::Polar::Data::DataFilter.parse(self, filter).to_query }
+        .group_by(&:joins_values)
+      key = opts.keys.min_by(&:length) # FIXME total hack, won't always work,
+      opts[key].reduce(:or)
+    end
+
     # Determine the resources of type +resource_cls+ that +actor+
     # is allowed to perform +action+ on.
     #

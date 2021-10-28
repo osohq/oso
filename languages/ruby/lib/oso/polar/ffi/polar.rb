@@ -30,6 +30,12 @@ module Oso
             [FFI::Polar, :string, :string, :string, :string],
             :string
           )
+          attach_function(
+            :build_filter,
+            :polar_build_filter,
+            [FFI::Polar, :string, :string, :string, :string],
+            :string
+          )
         end
         private_constant :Rust
 
@@ -46,6 +52,16 @@ module Oso
           types = JSON.dump(types)
           partials = JSON.dump(partials)
           plan = Rust.build_filter_plan(self, types, partials, variable, class_tag)
+          process_messages
+          handle_error if plan.nil?
+          # TODO(gw) more error checking?
+          JSON.parse plan
+        end
+
+        def build_filter(types, partials, variable, class_tag)
+          types = JSON.dump(types)
+          partials = JSON.dump(partials)
+          plan = Rust.build_filter(self, types, partials, variable, class_tag)
           process_messages
           handle_error if plan.nil?
           # TODO(gw) more error checking?

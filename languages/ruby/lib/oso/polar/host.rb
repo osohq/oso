@@ -95,9 +95,10 @@ module Oso
       # @return [Class]
       # @raise [UnregisteredClassError] if the class has not been registered.
       def get_class(name)
-        raise UnregisteredClassError, name unless types.key? name
+        typ = types[name]
+        raise UnregisteredClassError, name if typ.nil?
 
-        types[name].klass.get
+        typ.klass.get
       end
 
       # Store a Ruby class in the {#types} cache.
@@ -125,6 +126,7 @@ module Oso
       def register_mros # rubocop:disable Metrics/AbcSize
         types.values.uniq.each do |typ|
           mro = []
+          raise "NO" if typ.nil?
           typ.klass.get.ancestors.each do |a|
             mro.push(types[a].id) if types.key?(a)
           end
@@ -337,21 +339,24 @@ module Oso
           value
         when 'Number'
           num = value.values.first
-          if value.key? 'Float'
+          case value.keys.first
+          when 'Float'
             case num
             when 'Infinity'
-              return Float::INFINITY
+              Float::INFINITY
             when '-Infinity'
-              return -Float::INFINITY
+              -Float::INFINITY
             when 'NaN'
-              return Float::NAN
+              Float::NAN
             else
               unless value['Float'].is_a? Float # rubocop:disable Metrics/BlockNesting
                 raise PolarRuntimeError, "Expected a floating point number, got \"#{value['Float']}\""
               end
+              num
             end
+          else
+            num
           end
-          num
         when 'List'
           value.map { |el| to_ruby(el) }
         when 'Dictionary'

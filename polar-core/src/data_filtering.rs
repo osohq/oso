@@ -142,11 +142,11 @@ impl Value {
 }
 
 impl DataFilter {
-    fn build(types: Types, partials: PartialResults, var: &str, _class: &str) -> PolarResult<Self> {
+    fn build(types: Types, partials: PartialResults, var: &str, _class: &str) -> PolarResult<Vec<Self>> {
         let var = Symbol(var.to_string());
         partials
             .iter()
-            .find_map(|result| {
+            .filter_map(|result| {
                 result.bindings.get(&var).and_then(|term| {
                     match term.value().as_expression() {
                         Ok(Operation { operator: Operator::And, args }) => Some({
@@ -163,17 +163,15 @@ impl DataFilter {
                     }
                 })
             })
-            .unwrap_or_else(|| err_invalid("from prefilter".to_string()))
-            .map(|rc| (*rc).clone())
+            .collect()
+
     }
 }
-
 
 impl QueryInfo {
     fn joins(types: &Types, mut left: Rc<DataFilter>, mut left_type: String, path: Vec<String>) -> PolarResult<Rc<DataFilter>> {
         use { DataFilter::*};
         let left_sources = left.sources();
-        eprintln!("sources: {:?}, type: {}", left_sources, left_type);
         assert!(left_sources.contains(&left_type));
         for field in path {
             match types.get(&left_type).and_then(|m| m.get(&field)) {
@@ -182,6 +180,7 @@ impl QueryInfo {
                         let lcol = Proj(Rc::new(Source(left_type.to_string())), my_field.to_string());
                         let right = Rc::new(Source(other_class_tag.to_string()));
                         let rcol = Proj(right.clone(), other_field.to_string());
+                        // the only place a Join is constructed
                         left = Rc::new(Join { left, lcol, rcol, right });
                     }
                     left_type = other_class_tag.to_string();
@@ -192,28 +191,77 @@ impl QueryInfo {
         Ok(left)
     }
 
-    fn into_filter(self) -> PolarResult<Rc<DataFilter>> {
-        use {PreDatum::*, DataFilter::*};
+    fn into_filter(self) -> PolarResult<DataFilter> {
+        use {DataFilter::*};
         let source = Rc::new(Source(self.entities.get(&vec![String::from("_this")]).unwrap().clone()));
-        let source = self.constraints.iter().fold(Ok(source), |source, (lhs, _, rhs)| {
+        let source = self.constraints.iter().fold(Ok(source), |source: PolarResult<Rc<DataFilter>>, (lhs, _, rhs)| {
+            // FIXME a mess
+            // the only place Self::joins is called
             match (lhs, rhs) {
-                (Field(_, lds), Field(_, rds)) => {
-                    let source = Self::joins(&self.types, source?, lds.base.clone(), lds.path.clone());
-                    Self::joins(&self.types, source?, rds.base.clone(), rds.path.clone())
+                (PreDatum::Field(Proj(lss, _lf), lds), PreDatum::Field(Proj(rss, _rf), rds)) => {
+                    let mut source = source?;
+                    // omg lol // this isn't very robust
+                    for (k, v) in self.types.get(&lds.base).unwrap().iter() {
+                        match v {
+                            Type::Relation { other_class_tag, other_field, my_field, .. }
+                                if other_class_tag == &rds.base && my_field == _lf && other_field == _rf =>
+                            {
+                                source = Self::joins(&self.types, source, lds.base.clone(), vec![k.clone()])?;
+                            }
+                            _ => {}
+                        }
+                    }
+                    source = Self::joins(&self.types, source, lds.base.clone(), lds.path.clone())?;
+                    source = Self::joins(&self.types, source, rds.base.clone(), rds.path.clone())?;
+                    if let Source(lps) = &**lss {
+                        source = Self::joins(&self.types, source, lps.clone(), vec![])?;
+                    }
+                    /*
+                    match self.types.get(&lds.base).and_then(|m| m.get(_f)) {
+                        Some( Type::Relation {
+                            other_class_tag,
+                            my_field,
+                            other_field,
+                            ..
+                        }) if other_class_tag == &rds.
+                    }
+                    if let Some(
+                    {
+
+                    }
+                    */
+                    if let Source(rps) = &**rss {
+                        source = Self::joins(&self.types, source, rps.clone(), vec![])?;
+                    }
+
+                    Ok(source)
+                }
+
+                (PreDatum::Field(Proj(lss, _), lds), _) |
+                (_, PreDatum::Field(Proj(lss, _), lds)) => {
+
+                    let mut source = source?;
+                    source = Self::joins(&self.types, source, lds.base.clone(), lds.path.clone())?;
+                    if let Source(lps) = &**lss {
+                        source = Self::joins(&self.types, source, lps.clone(), vec![])?;
+                    }
+                    Ok(source)
                 }
                 _ => source,
             }
         })?;
-        self.constraints.into_iter().fold(
+        let rc = self.constraints.into_iter().fold(
             Ok(source),
-            |source, (lhs, kind, rhs)| match lhs {
-                PreDatum::Field(lhs, _) => {
+            |source, con| match con {
+                (PreDatum::Field(lhs, _), kind, rhs) |
+                (rhs, kind, PreDatum::Field(lhs, _)) => {
                     let source = source?;
                     let rhs = rhs.into();
                     Ok(Rc::new(Select { kind, lhs, rhs, source }))
                 }
                 _ => err_invalid("QueryInfo::into_filter()".to_string()),
-            })
+            })?;
+        Ok((*rc).clone())
     }
 
 
@@ -226,6 +274,16 @@ impl QueryInfo {
                 Ok(p)
             }
             Value::Variable(Symbol(s)) => Ok(vec![s.clone()]),
+            Value::ExternalInstance(ExternalInstance { repr: Some(repr), .. }) => {
+                eprintln!("{}", repr);
+                // FIXME hack for Ruby, obviously wrong
+                let re = regex::Regex::new(r"^#<([^:]+):.*").unwrap();
+                match re.captures(repr).and_then(|cap| cap.get(1)).map(|c| c.as_str().to_owned()) {
+                    Some(tag) => Ok(vec![tag.to_string()]),
+                    None => err_unimplemented(format!("QueryInfo::path_disasm({})", t.to_polar())),
+                }
+
+            }
             _ => err_unimplemented(format!("QueryInfo::path_disasm({})", t.to_polar())),
         }
     }
@@ -258,11 +316,10 @@ impl QueryInfo {
 
     fn source(&mut self, t: &Term) -> PolarResult<Rc<DataFilter>> {
         use DataFilter::Source;
-        eprintln!("{:?}", self.entities);
         let path = Self::path_disasm(t)?;
         match self.entities.get(&path) {
             Some(src) => Ok(Rc::new(Source(src.clone()))),
-            _ => err_invalid(format!("{:?}.source({})", self, t.to_polar())),
+            _ => err_invalid(format!("No entity for {:?}", path)),
         }
     }
 
@@ -271,10 +328,23 @@ impl QueryInfo {
         let (isas, othas): (Vec<_>, Vec<_>) = parts.into_iter().partition(|x| {
             matches!(x, Operation { operator: Isa, args } if args.len() == 2)
         });
-        let entities = isas.into_iter().map(|Operation { args, .. }| {
+        let mut entities = isas.into_iter().map(|Operation { args, .. }| {
             Ok((Self::path_disasm(&args[0])?, args[1].value().to_class_tag()?))
         }).collect::<PolarResult<HashMap<Vec<String>, String>>>()?;
-        let source = Rc::new(DataFilter::Source(entities.get(&vec!["_this".to_string()]).unwrap().to_string()));
+        let source_tag = entities.get(&vec!["_this".to_string()]).unwrap().to_string();
+
+        if let Some(fields) = types.get(&source_tag) {
+            for (field, typ) in fields {
+                if let Type::Relation { other_class_tag, .. } = typ {
+                    entities.insert(
+                        vec!["_this".to_string(), field.clone()],
+                        other_class_tag.clone(),
+                    );
+                }
+            }
+        }
+
+        let source = Rc::new(DataFilter::Source(source_tag));
         let constraints = vec![];
         let this = Self { source, types, entities, constraints };
         othas.into_iter().fold(Ok(this), |this, opn| this?.constrain(&opn))
@@ -413,7 +483,13 @@ pub fn build_filter(
     partials: PartialResults,
     var: &str,
     class: &str,
-) -> PolarResult<DataFilter> {
+) -> PolarResult<Vec<DataFilter>> {
+    /*
+    println!(
+        "{:?}",
+        partials.iter().filter_map(|pr| pr.bindings.get(&sym!(var)).map(|x| x.to_polar())).collect::<Vec<_>>()
+    );
+    */
     DataFilter::build(types, partials, var, class)
 }
 
@@ -1406,16 +1482,15 @@ mod test {
             }
         };
         let input = test_input_2();
-        let r1: PolarResult<DataFilter> = build_filter(
+        let r1 = build_filter(
             types,
             vec![ResultEvent::from(hashmap! { sym!("resource") => input })],
             "resource",
             "something"
-        );
-        let r1 = r1?;
+        )?;
         use {DataFilter::*, Datum::*};
         let (src_a, src_b) = (Rc::new(Source(s("A"))), Rc::new(Source(s("B"))));
-        let expected = Select {
+        let expected = vec![Select {
             source: Rc::new(Join {
                 left: src_a.clone(),
                 lcol: Proj(src_a.clone(), s("b_id")),
@@ -1425,7 +1500,7 @@ mod test {
             lhs: Proj(src_b, s("x")),
             rhs: Field(Proj(src_a, s("attr_x"))),
             kind: SelOp::Eq,
-        };
+        }];
         assert_eq!(r1, expected);
         Ok(())
     }

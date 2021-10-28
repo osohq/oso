@@ -4,14 +4,53 @@ require_relative './helpers'
 require 'sqlite3'
 require 'active_record'
 
-D = Oso::Polar::Data
 RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
+  D = Oso::Polar::Data
+  Join = D::ArelJoin
+  Src = D::ArelSource
+  Select = D::ArelSelect
+  Field = D::Proj
+  Value = D::Value
+  context '#authzd_query' do
+    C0 = Struct.new(:id, :c1_id)
+    C1 = Struct.new(:id, :c2_id)
+    C2 = Struct.new(:id)
+    
+#    it 'works' do
+#      subject.load_str <<~POL
+#        allow(boo: C2, _, foo: C0) if foo.goo matches C1 and foo.goo.boo matches C2 and boo.id = foo.goo.boo.id;
+#      POL
+#      res = subject.authzd_query C2.new(0), 'moo', C0
+#    end
+    before do
+      subject.register_class(
+        C0,
+        fields: {
+          goo: Relation.new(
+            kind: 'one',
+            other_type: 'C1',
+            my_field: 'c1_id',
+            other_field: 'id'
+          )
+        }
+      )
+      subject.register_class(
+        C1,
+        fields: {
+          boo: Relation.new(
+            kind: 'one',
+            other_type: 'C2',
+            my_field: 'c2_id',
+            other_field: 'id'
+          )
+        }
+      )
+
+      subject.register_class(C2)
+    end
+  end
+
   context 'new filters' do
-    Join = D::ArelJoin
-    Src = D::ArelSource
-    Select = D::ArelSelect
-    Field = D::Proj
-    Value = D::Value
     persons = Src[Person]
     signs = Src[Sign]
     person_name = Field[persons, :name]
@@ -111,58 +150,58 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       let(:leo) { Person.find 'leo' }
     end
   end
-end
 
-class Sign < ActiveRecord::Base
-  include DFH::ActiveRecordFetcher
-  self.primary_key = 'name'
-  has_many :people, foreign_key: :sign_name
-end
+  class Sign < ActiveRecord::Base
+    include DFH::ActiveRecordFetcher
+    self.primary_key = 'name'
+    has_many :people, foreign_key: :sign_name
+  end
 
-class Person < ActiveRecord::Base
-  include DFH::ActiveRecordFetcher
-  self.primary_key = 'name'
-  belongs_to :sign, foreign_key: :sign_name
-end
+  class Person < ActiveRecord::Base
+    include DFH::ActiveRecordFetcher
+    self.primary_key = 'name'
+    belongs_to :sign, foreign_key: :sign_name
+  end
 
-class User < ActiveRecord::Base
-  include DFH::ActiveRecordFetcher
-  self.primary_key = :name
-  belongs_to :org, foreign_key: :org_name
-  has_many :org_roles, foreign_key: :user_name
-  has_many :repo_roles, foreign_key: :user_name
-end
+  class User < ActiveRecord::Base
+    include DFH::ActiveRecordFetcher
+    self.primary_key = :name
+    belongs_to :org, foreign_key: :org_name
+    has_many :org_roles, foreign_key: :user_name
+    has_many :repo_roles, foreign_key: :user_name
+  end
 
-class Repo < ActiveRecord::Base
-  include DFH::ActiveRecordFetcher
-  self.primary_key = :name
-  belongs_to :org, foreign_key: :org_name
-  has_many :issues, foreign_key: :repo_name
-  has_many :repo_roles, foreign_key: :repo_name
-end
+  class Repo < ActiveRecord::Base
+    include DFH::ActiveRecordFetcher
+    self.primary_key = :name
+    belongs_to :org, foreign_key: :org_name
+    has_many :issues, foreign_key: :repo_name
+    has_many :repo_roles, foreign_key: :repo_name
+  end
 
-class Org < ActiveRecord::Base
-  include DFH::ActiveRecordFetcher
-  self.primary_key = :name
-  has_many :users, foreign_key: :org_name
-  has_many :repos, foreign_key: :org_name
-  has_many :org_roles, foreign_key: :org_name
-end
+  class Org < ActiveRecord::Base
+    include DFH::ActiveRecordFetcher
+    self.primary_key = :name
+    has_many :users, foreign_key: :org_name
+    has_many :repos, foreign_key: :org_name
+    has_many :org_roles, foreign_key: :org_name
+  end
 
-class Issue < ActiveRecord::Base
-  include DFH::ActiveRecordFetcher
-  self.primary_key = :name
-  belongs_to :repo, foreign_key: :repo_name
-end
+  class Issue < ActiveRecord::Base
+    include DFH::ActiveRecordFetcher
+    self.primary_key = :name
+    belongs_to :repo, foreign_key: :repo_name
+  end
 
-class RepoRole < ActiveRecord::Base
-  include DFH::ActiveRecordFetcher
-  belongs_to :user, foreign_key: :user_name
-  belongs_to :repo, foreign_key: :repo_name
-end
+  class RepoRole < ActiveRecord::Base
+    include DFH::ActiveRecordFetcher
+    belongs_to :user, foreign_key: :user_name
+    belongs_to :repo, foreign_key: :repo_name
+  end
 
-class OrgRole < ActiveRecord::Base
-  include DFH::ActiveRecordFetcher
-  belongs_to :user, foreign_key: :user_name
-  belongs_to :org, foreign_key: :org_name
+  class OrgRole < ActiveRecord::Base
+    include DFH::ActiveRecordFetcher
+    belongs_to :user, foreign_key: :user_name
+    belongs_to :org, foreign_key: :org_name
+  end
 end
