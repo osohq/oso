@@ -110,17 +110,14 @@ impl KnowledgeBase {
         generic_rule.add_rule(Arc::new(rule));
     }
 
-    pub fn validate_rules(&self) -> PolarResult<()> {
+    // TODO(gj): return Vec<Diagnostic> (no Result)
+    pub fn validate_rules(&self) -> PolarResult<Vec<Diagnostic>> {
         self.validate_rule_types()?;
-        self.validate_rule_calls()
+        Ok(self.validate_rule_calls())
     }
 
-    fn validate_rule_calls(&self) -> PolarResult<()> {
-        let errors = check_undefined_rule_calls(self);
-        match errors.into_iter().next() {
-            Some(e) => Err(e),
-            None => Ok(()),
-        }
+    fn validate_rule_calls(&self) -> Vec<Diagnostic> {
+        check_undefined_rule_calls(self)
     }
 
     /// Validate that all rules loaded into the knowledge base are valid based on rule types.

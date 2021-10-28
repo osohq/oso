@@ -291,17 +291,17 @@ impl<'kb> UndefinedRuleVisitor<'kb> {
         }
     }
 
-    fn errors(&mut self) -> Vec<PolarError> {
+    fn errors(&mut self) -> Vec<Diagnostic> {
         let mut errors = vec![];
         for term in &self.call_terms {
             let call = term.value().as_call().unwrap();
             if !self.defined_rules.contains(&call.name) {
-                errors.push(self.kb.set_error_context(
+                errors.push(Diagnostic::Error(self.kb.set_error_context(
                     term,
                     error::ValidationError::UndefinedRule {
                         rule_name: call.name.0.clone(),
                     },
-                ));
+                )));
             }
         }
         errors
@@ -323,7 +323,7 @@ impl<'kb> Visitor for UndefinedRuleVisitor<'kb> {
     }
 }
 
-pub fn check_undefined_rule_calls(kb: &KnowledgeBase) -> Vec<PolarError> {
+pub fn check_undefined_rule_calls(kb: &KnowledgeBase) -> Vec<Diagnostic> {
     let mut visitor = UndefinedRuleVisitor::new(kb, kb.get_rules().keys().collect());
     for rule in kb.get_rules().values() {
         visitor.visit_generic_rule(rule);
@@ -417,7 +417,6 @@ mod tests {
         let mut kb = KnowledgeBase::new();
         kb.add_rule(rule!("f", [sym!("x")] => call!("defined_rule", [sym!("y")])));
         kb.add_rule(rule!("defined_rule", [sym!("x")]));
-        let errors = check_undefined_rule_calls(&kb);
-        assert_eq!(errors.len(), 0);
+        assert!(check_undefined_rule_calls(&kb).is_empty());
     }
 }
