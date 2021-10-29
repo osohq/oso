@@ -168,6 +168,7 @@ impl Polar {
         }
     }
 
+    /// Load `sources` into the KB, returning compile-time diagnostics accumulated during the load.
     pub fn diagnostic_load(&self, sources: Vec<Source>) -> Vec<Diagnostic> {
         // we extract this into a separate function
         // so that any errors returned with `?` are captured
@@ -233,8 +234,14 @@ impl Polar {
             match result {
                 Ok(mut ds) => diagnostics.append(&mut ds),
                 Err(e) => {
+                    let is_parse_error = matches!(e.kind, error::ErrorKind::Parse(_));
+                    let is_file_loading_error = matches!(
+                        e.kind,
+                        error::ErrorKind::Runtime(error::RuntimeError::FileLoading { .. })
+                    );
+                    assert!(is_parse_error || is_file_loading_error, "{}", e);
+
                     diagnostics.push(Diagnostic::Error(e));
-                    // TODO(gj): In this match arm, `e` *must* be a `ParseError`.
                     encountered_unrecoverable_error = true;
                 }
             }
