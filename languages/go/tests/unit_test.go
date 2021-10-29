@@ -436,7 +436,7 @@ func TestFailingALot(t *testing.T) {
 
 		if err = <-errors; err != nil {
 			if !strings.Contains(err.Error(), "'1' object has no attribute 'Foo'") {
-				t.Errorf("Expected Polar runtime error, got: {}", err)
+				t.Errorf("Expected Polar runtime error, got: %s", err)
 			}
 		} else {
 			t.Fatal("oops")
