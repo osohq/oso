@@ -1586,14 +1586,14 @@ fn test_missing_actor_hint() -> TestResult {
 
     let policy = r#"
 resource Organization {
-	roles = ["owner"];
-	permissions = ["read"];
+    roles = ["owner"];
+    permissions = ["read"];
 
-	"read" if "owner";
+    "read" if "owner";
 }
 
 has_role(user: User, "owner", organization: Organization) if
-	organization.owner_id = user.id;
+    organization.owner_id = user.id;
 "#;
     let err = p.load_str(policy).expect_err("Expected validation error");
     assert!(matches!(&err.kind, ErrorKind::Validation(_)));
@@ -2406,11 +2406,44 @@ fn test_lookup_in_rule_head() -> TestResult {
 #[test]
 fn test_default_rule_types() -> TestResult {
     let p = Polar::new();
+
     // This should fail
     let e = p
         .load_str(r#"has_permission("leina", "eat", "food");"#)
         .expect_err("Expected validation error");
     assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    assert!(matches!(
+        p.next_message(),
+        Some(Message {
+            kind: MessageKind::Warning,
+            msg
+        }) if msg.starts_with("Your policy does not contain an allow rule")
+    ));
+
+    let e = p
+        .load_str(r#"has_role("leina", "eater", "food");"#)
+        .expect_err("Expected validation error");
+    assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    assert!(matches!(
+        p.next_message(),
+        Some(Message {
+            kind: MessageKind::Warning,
+            msg
+        }) if msg.starts_with("Your policy does not contain an allow rule")
+    ));
+
+    let e = p
+        .load_str(r#"has_relation("leina", "eater", "food");"#)
+        .expect_err("Expected validation error");
+    assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    assert!(matches!(
+        p.next_message(),
+        Some(Message {
+            kind: MessageKind::Warning,
+            msg
+        }) if msg.starts_with("Your policy does not contain an allow rule")
+    ));
+
     let e = p
         .load_str(r#"allow("leina", "food");"#)
         .expect_err("Expected validation error");
@@ -2474,8 +2507,8 @@ fn test_suggested_rule_specializer() -> TestResult {
     let policy = r#"
 actor User {}
 resource Repository {
-	permissions = ["read"];
-	roles = ["contributor"];
+    permissions = ["read"];
+    roles = ["contributor"];
 
     "read" if "contributor";
 }

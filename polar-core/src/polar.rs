@@ -1,4 +1,5 @@
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
+use super::diagnostic::Diagnostic;
 use super::error::PolarResult;
 use super::events::*;
 use super::kb::*;
@@ -167,29 +168,25 @@ impl Polar {
         }
     }
 
-    /// Load `Source`s into the KB.
-    pub fn load(&self, sources: Vec<Source>) -> PolarResult<()> {
-        if self.kb.read().unwrap().has_rules() {
-            let msg = MULTIPLE_LOAD_ERROR_MSG.to_owned();
-            return Err(error::RuntimeError::FileLoading { msg }.into());
-        }
-
+    /// Load `sources` into the KB, returning compile-time diagnostics accumulated during the load.
+    pub fn diagnostic_load(&self, sources: Vec<Source>) -> Vec<Diagnostic> {
         // we extract this into a separate function
         // so that any errors returned with `?` are captured
         fn load_source(
             source_id: u64,
             source: &Source,
             kb: &mut KnowledgeBase,
-        ) -> PolarResult<Vec<String>> {
+        ) -> PolarResult<Vec<Diagnostic>> {
             let mut lines = parser::parse_lines(source_id, &source.src)
+                // TODO(gj): we still bomb out at the first ParseError.
                 .map_err(|e| e.set_context(Some(source), None))?;
             lines.reverse();
-            let mut warnings = vec![];
+            let mut diagnostics = vec![];
             while let Some(line) = lines.pop() {
                 match line {
                     parser::Line::Rule(rule) => {
-                        warnings.append(&mut check_singletons(&rule, kb)?);
-                        warnings.append(&mut check_ambiguous_precedence(&rule, kb));
+                        diagnostics.append(&mut check_singletons(&rule, kb));
+                        diagnostics.append(&mut check_ambiguous_precedence(&rule, kb));
                         let rule = rewrite_rule(rule, kb);
                         kb.add_rule(rule);
                     }
@@ -208,46 +205,49 @@ impl Polar {
                                 }
                             ) if args.is_empty()
                         ) {
-                            return Err(kb.set_error_context(
+                            diagnostics.push(Diagnostic::Error(kb.set_error_context(
                                 &rule_type.body,
                                 error::ValidationError::InvalidRuleType {
                                     rule_type: rule_type.to_polar(),
                                     msg: "\nRule types cannot contain dot lookups.".to_owned(),
                                 },
-                            ));
+                            )));
+                        } else {
+                            kb.add_rule_type(rule_type);
                         }
-                        kb.add_rule_type(rule_type);
                     }
                     parser::Line::ResourceBlock(block) => {
-                        block.add_to_kb(kb)?;
+                        diagnostics.append(&mut block.add_to_kb(kb))
                     }
                 }
             }
-            Ok(warnings)
+            Ok(diagnostics)
         }
 
         let mut kb = self.kb.write().unwrap();
+        let mut diagnostics = vec![];
+
         for source in &sources {
             let result = kb.add_source(source.clone());
             let result = result.and_then(|source_id| load_source(source_id, source, &mut kb));
             match result {
-                Ok(warnings) => {
-                    self.messages
-                        .extend(warnings.into_iter().map(Message::warning));
-                }
-                Err(e) => {
-                    // If any source fails to load, clear the KB.
-                    kb.clear_rules();
-                    return Err(e);
-                }
+                Ok(mut ds) => diagnostics.append(&mut ds),
+                Err(e) => diagnostics.push(Diagnostic::Error(e)),
             }
         }
 
         // Rewrite shorthand rules in resource blocks before validating rule types.
-        if let Err(e) = kb.rewrite_shorthand_rules() {
-            // If rewriting shorthand rules fails, clear the KB.
+        diagnostics.append(&mut kb.rewrite_shorthand_rules());
+
+        // TODO(gj): need to bomb out before rule type validation in case additional rule types
+        // were defined later on in the file that encountered the `ParseError`. Those additional
+        // rule types might extend the valid shapes for a rule type defined in a different,
+        // well-parsed file that also contains rules that don't conform to the shapes laid out in
+        // the well-parsed file but *would have* conformed to the shapes laid out in the file that
+        // failed to parse.
+        if diagnostics.iter().any(Diagnostic::is_error) {
             kb.clear_rules();
-            return Err(e);
+            return diagnostics;
         }
 
         // Generate appropriate rule_type definitions using the types contained
@@ -258,24 +258,49 @@ impl Polar {
         }
 
         // check rules are valid against rule types
-        if let Err(e) = kb.validate_rules() {
-            // If rule type validation fails, clear the KB.
-            kb.clear_rules();
-            return Err(e);
-        }
+        diagnostics.append(&mut kb.validate_rules());
 
         // Perform validation checks against the whole policy
-        let mut warnings = vec![];
         if !self.ignore_no_allow_warning {
-            warnings.append(&mut check_no_allow_rule(&kb));
+            if let Some(w) = check_no_allow_rule(&kb) {
+                diagnostics.push(w)
+            }
         }
 
         // Check for has_permission calls alongside resource block definitions
-        warnings.append(&mut check_resource_blocks_missing_has_permission(&kb));
+        if let Some(w) = check_resource_blocks_missing_has_permission(&kb) {
+            diagnostics.push(w)
+        };
+
+        // If we've encountered any errors, clear the KB.
+        if diagnostics.iter().any(Diagnostic::is_error) {
+            kb.clear_rules();
+        }
+
+        diagnostics
+    }
+
+    /// Load `Source`s into the KB.
+    pub fn load(&self, sources: Vec<Source>) -> PolarResult<()> {
+        if self.kb.read().unwrap().has_rules() {
+            let msg = MULTIPLE_LOAD_ERROR_MSG.to_owned();
+            return Err(error::RuntimeError::FileLoading { msg }.into());
+        }
+
+        let (mut errors, mut warnings) = (vec![], vec![]);
+        for diagnostic in self.diagnostic_load(sources) {
+            match diagnostic {
+                Diagnostic::Error(e) => errors.push(e),
+                Diagnostic::Warning(w) => warnings.push(w),
+            }
+        }
 
         self.messages
             .extend(warnings.into_iter().map(Message::warning));
 
+        if let Some(e) = errors.into_iter().next() {
+            return Err(e);
+        }
         Ok(())
     }
 
@@ -285,12 +310,6 @@ impl Polar {
             src: src.to_owned(),
             filename: None,
         }])
-    }
-
-    // TODO(gj): ask Sam if we still need this.
-    pub fn remove_file(&self, filename: &str) -> Option<String> {
-        let mut kb = self.kb.write().unwrap();
-        kb.remove_file(filename)
     }
 
     /// Clear rules from the knowledge base
@@ -385,31 +404,6 @@ mod tests {
     }
 
     #[test]
-    fn load_remove_files() {
-        let polar = Polar::new();
-        let valid = Source {
-            src: "f(x) if x = 1;".to_owned(),
-            filename: Some("test.polar".to_string()),
-        };
-        polar.load(vec![valid.clone()]).unwrap();
-        polar.remove_file("test.polar");
-
-        // loading works after removing
-        polar.load(vec![valid.clone()]).unwrap();
-        polar.remove_file("test.polar");
-
-        // load a broken file
-        let invalid = Source {
-            src: "f(x) if x".to_owned(),
-            filename: Some("test.polar".to_string()),
-        };
-        polar.load(vec![invalid]).unwrap_err();
-
-        // can still load files again
-        polar.load(vec![valid]).unwrap();
-    }
-
-    #[test]
     fn loading_a_second_time_fails() {
         let polar = Polar::new();
         let src = "f();";
@@ -443,7 +437,7 @@ mod tests {
     }
 
     #[test]
-    fn loading_duplicate_files_clears_the_kb() {
+    fn loading_duplicate_files_errors_and_leaves_the_kb_empty() {
         let polar = Polar::new();
         let source = Source {
             src: "f();".to_owned(),
@@ -459,6 +453,35 @@ mod tests {
         };
         assert_eq!(msg, "File file has already been loaded.");
 
+        assert!(!polar.kb.read().unwrap().has_rules());
+    }
+
+    #[test]
+    fn diagnostic_load_returns_multiple_diagnostics() {
+        let polar = Polar::new();
+        let source = Source {
+            src: "f() if g();".to_owned(),
+            filename: Some("file".to_owned()),
+        };
+
+        let diagnostics = polar.diagnostic_load(vec![source]);
+        assert_eq!(diagnostics.len(), 2);
+        let mut diagnostics = diagnostics.into_iter();
+        let next = diagnostics.next().unwrap();
+        assert!(matches!(next, Diagnostic::Error(_)));
+        assert!(
+            next.to_string().starts_with("Call to undefined rule \"g\""),
+            "{}",
+            next
+        );
+        let next = diagnostics.next().unwrap();
+        assert!(matches!(next, Diagnostic::Warning(_)));
+        assert!(
+            next.to_string()
+                .starts_with("Your policy does not contain an allow rule"),
+            "{}",
+            next
+        );
         assert!(!polar.kb.read().unwrap().has_rules());
     }
 }

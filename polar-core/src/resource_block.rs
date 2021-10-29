@@ -3,6 +3,7 @@ use std::ops::Range;
 
 use lalrpop_util::ParseError as LalrpopError;
 
+use super::diagnostic::Diagnostic;
 use super::error::{ParseError, PolarError, PolarResult, RuntimeError};
 use super::kb::KnowledgeBase;
 use super::lexer::Token;
@@ -675,7 +676,7 @@ fn check_that_shorthand_rule_heads_are_declared_locally(
 }
 
 impl ResourceBlock {
-    pub fn add_to_kb(self, kb: &mut KnowledgeBase) -> PolarResult<()> {
+    pub fn add_to_kb(self, kb: &mut KnowledgeBase) -> Vec<Diagnostic> {
         let mut errors = vec![];
         errors.extend(
             check_that_block_type_is_not_already_registered(kb, &self.block_type, &self.resource)
@@ -694,23 +695,22 @@ impl ResourceBlock {
             shorthand_rules,
         } = self;
 
-        let declarations = index_declarations(roles, permissions, relations, &resource)?;
-
-        errors.append(&mut check_that_shorthand_rule_heads_are_declared_locally(
-            &shorthand_rules,
-            &declarations,
-            &resource,
-        ));
-
-        // TODO(gj): Emit all errors instead of just the first.
-        if !errors.is_empty() {
-            return Err(errors[0].clone());
+        match index_declarations(roles, permissions, relations, &resource) {
+            Ok(declarations) => {
+                errors.append(&mut check_that_shorthand_rule_heads_are_declared_locally(
+                    &shorthand_rules,
+                    &declarations,
+                    &resource,
+                ));
+                if errors.is_empty() {
+                    kb.resource_blocks
+                        .add(block_type, resource, declarations, shorthand_rules);
+                }
+            }
+            Err(e) => errors.push(e),
         }
 
-        kb.resource_blocks
-            .add(block_type, resource, declarations, shorthand_rules);
-
-        Ok(())
+        errors.into_iter().map(Diagnostic::Error).collect()
     }
 }
 
@@ -1383,7 +1383,7 @@ mod tests {
         // Union matches union.
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
-        assert!(kb.validate_rules().is_ok());
+        assert!(kb.validate_rules().is_empty());
 
         kb.clear_rules();
         kb.resource_blocks.resources.insert(term!(sym!("Citrus")));
@@ -1396,11 +1396,11 @@ mod tests {
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!(ACTOR_UNION_NAME))]));
         assert!(matches!(
-            kb.validate_rules().unwrap_err(),
-            PolarError {
+            kb.validate_rules().first().unwrap(),
+            Diagnostic::Error(PolarError {
                 kind: error::ErrorKind::Validation(error::ValidationError::InvalidRule { .. }),
                 ..
-            }
+            })
         ));
 
         kb.clear_rules();
@@ -1410,7 +1410,7 @@ mod tests {
         // Member of union matches union.
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Citrus"))]));
-        assert!(kb.validate_rules().is_ok());
+        assert!(kb.validate_rules().is_empty());
 
         kb.clear_rules();
         kb.resource_blocks.resources.insert(term!(sym!("Citrus")));
@@ -1423,11 +1423,11 @@ mod tests {
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(ACTOR_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Citrus"))]));
         assert!(matches!(
-            kb.validate_rules().unwrap_err(),
-            PolarError {
+            kb.validate_rules().first().unwrap(),
+            Diagnostic::Error(PolarError {
                 kind: error::ErrorKind::Validation(error::ValidationError::InvalidRule { .. }),
                 ..
-            }
+            })
         ));
 
         kb.clear_rules();
@@ -1437,7 +1437,7 @@ mod tests {
         // Subclass of member of union matches union.
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Orange"))]));
-        assert!(kb.validate_rules().is_ok());
+        assert!(kb.validate_rules().is_empty());
 
         kb.clear_rules();
         kb.resource_blocks.resources.insert(term!(sym!("Citrus")));
@@ -1447,11 +1447,11 @@ mod tests {
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Fruit"))]));
         assert!(matches!(
-            kb.validate_rules().unwrap_err(),
-            PolarError {
+            kb.validate_rules().first().unwrap(),
+            Diagnostic::Error(PolarError {
                 kind: error::ErrorKind::Validation(error::ValidationError::InvalidRule { .. }),
                 ..
-            }
+            })
         ));
 
         // kb.clear_rules();
