@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 
 use std::{fmt, ops};
 
-use crate::formatting::format_params;
 use crate::rules::Rule;
 use crate::sources::*;
 use crate::terms::*;
@@ -481,12 +480,7 @@ impl fmt::Display for ValidationError {
                 write!(f, r#"Call to undefined rule "{}""#, rule_name)
             }
             Self::MissingRequiredRule { rule } => {
-                write!(
-                    f,
-                    r#"Missing implementation for required rule {}({});"#,
-                    rule.name,
-                    format_params(&rule.params, ", ")
-                )
+                write!(f, r#"Missing implementation for required rule {}"#, rule)
             }
         }
     }
