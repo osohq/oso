@@ -339,7 +339,7 @@ pub enum RuntimeError {
         sym: Symbol,
     },
     StackOverflow {
-        msg: String,
+        limit: usize,
     },
     QueryTimeout {
         msg: String,
@@ -385,7 +385,9 @@ impl fmt::Display for RuntimeError {
                 write!(f, "Type error: {}", msg)
             }
             Self::UnboundVariable { sym } => write!(f, "{} is an unbound variable", sym.0),
-            Self::StackOverflow { msg } => write!(f, "Hit a stack limit: {}", msg),
+            Self::StackOverflow { limit } => {
+                write!(f, "Goal stack overflow! MAX_GOALS = {}", limit)
+            }
             Self::QueryTimeout { msg } => write!(f, "Query timeout: {}", msg),
             Self::Application { msg, stack_trace } => {
                 if let Some(stack_trace) = stack_trace {
