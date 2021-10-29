@@ -20,8 +20,8 @@ enum RuleParamMatch {
     False(String),
 }
 
+#[cfg(test)]
 impl RuleParamMatch {
-    #[cfg(test)]
     fn is_true(&self) -> bool {
         matches!(self, RuleParamMatch::True)
     }
