@@ -184,12 +184,7 @@ impl Polar {
             while let Some(line) = lines.pop() {
                 match line {
                     parser::Line::Rule(rule) => {
-                        match check_singletons(&rule, kb) {
-                            Ok(warnings) => diagnostics.append(
-                                &mut warnings.into_iter().map(Diagnostic::Warning).collect(),
-                            ),
-                            Err(e) => diagnostics.push(Diagnostic::Error(e)),
-                        }
+                        diagnostics.append(&mut check_singletons(&rule, kb));
                         diagnostics.append(&mut check_ambiguous_precedence(&rule, kb));
                         let rule = rewrite_rule(rule, kb);
                         kb.add_rule(rule);

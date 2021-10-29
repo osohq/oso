@@ -1,5 +1,4 @@
 use super::diagnostic::Diagnostic;
-use super::error::*;
 use super::formatting::source_lines;
 use super::kb::*;
 use super::rules::*;
@@ -50,13 +49,17 @@ struct SingletonVisitor<'kb> {
     singletons: HashMap<Symbol, Option<Term>>,
 }
 
-fn warn_str(sym: &Symbol, term: &Term, source: &Option<Source>) -> PolarResult<String> {
+fn warn_str(sym: &Symbol, term: &Term, source: &Option<Source>) -> Diagnostic {
     if let Value::Pattern(..) = term.value() {
         let mut msg = format!("Unknown specializer {}", sym);
         if let Some(t) = common_misspellings(&sym.0) {
             msg.push_str(&format!(", did you mean {}?", t));
         }
-        Ok(msg)
+        if let Some(ref source) = source {
+            msg.push('\n');
+            msg.push_str(&source_lines(source, term.offset(), 0));
+        }
+        Diagnostic::Warning(msg)
     } else {
         let perr = error::ParseError::SingletonVariable {
             loc: term.offset(),
@@ -72,7 +75,7 @@ fn warn_str(sym: &Symbol, term: &Term, source: &Option<Source>) -> PolarResult<S
         } else {
             None
         };
-        Err(err.set_context(src, Some(term)))
+        Diagnostic::Error(err.set_context(src, Some(term)))
     }
 }
 
@@ -84,7 +87,7 @@ impl<'kb> SingletonVisitor<'kb> {
         }
     }
 
-    fn warnings(&mut self) -> PolarResult<Vec<String>> {
+    fn warnings(&mut self) -> Vec<Diagnostic> {
         let mut singletons = self
             .singletons
             .drain()
@@ -97,12 +100,7 @@ impl<'kb> SingletonVisitor<'kb> {
                 let src = term
                     .get_source_id()
                     .and_then(|id| self.kb.sources.get_source(id));
-                let mut msg = warn_str(sym, term, &src)?;
-                if let Some(ref source) = src {
-                    msg.push('\n');
-                    msg.push_str(&source_lines(source, term.offset(), 0));
-                }
-                Ok(msg)
+                warn_str(sym, term, &src)
             })
             .collect()
     }
@@ -134,7 +132,7 @@ impl<'kb> Visitor for SingletonVisitor<'kb> {
     }
 }
 
-pub fn check_singletons(rule: &Rule, kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
+pub fn check_singletons(rule: &Rule, kb: &KnowledgeBase) -> Vec<Diagnostic> {
     let mut visitor = SingletonVisitor::new(kb);
     walk_rule(&mut visitor, rule);
     visitor.warnings()
