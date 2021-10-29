@@ -23,7 +23,7 @@ draft: true
 
 - Fixed a bug that caused the Go library to crash when using Go 1.17 on macOS.
 
-### JavaScript
+### Node.js
 
 #### Other bugs & improvements
 
