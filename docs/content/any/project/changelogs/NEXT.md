@@ -10,6 +10,13 @@ draft: true
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
+### Core
+
+#### Other bugs & improvements
+
+- Fixes a case where partially bound variables caused authorization to succeed incorrectly.
+- Reverts a breaking change to the data filter format when applying conditions across a relation.
+
 ### Go
 
 #### Other bugs & improvements
