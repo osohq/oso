@@ -11,9 +11,7 @@ use lsp_types::{
     VersionedTextDocumentIdentifier,
 };
 use polar_core::{
-    error::{PolarError, PolarResult},
-    polar::Polar,
-    sources::Source,
+    diagnostic::Diagnostic as PolarDiagnostic, error::PolarError, polar::Polar, sources::Source,
 };
 use serde_wasm_bindgen::{from_value, to_value};
 use wasm_bindgen::prelude::*;
@@ -255,10 +253,10 @@ impl PolarLanguageServer {
             .collect()
     }
 
-    fn document_from_polar_error_context(&self, e: &PolarError) -> Option<&TextDocumentItem> {
+    fn document_from_polar_error_context(&self, e: &PolarError) -> Option<TextDocumentItem> {
         uri_from_polar_error_context(e).and_then(|uri| {
             if let Some(document) = self.documents.get(&uri) {
-                Some(document)
+                Some(document.clone())
             } else {
                 let tracked_docs = self.documents.keys().map(ToString::to_string);
                 let tracked_docs = tracked_docs.collect::<Vec<_>>().join(", ");
@@ -271,24 +269,23 @@ impl PolarLanguageServer {
         })
     }
 
-    fn diagnostic_from_polar_error(&self, e: &PolarError) -> Option<PublishDiagnosticsParams> {
-        self.document_from_polar_error_context(e).map(|d| {
+    fn diagnostic_from_polar_error(
+        &self,
+        e: &PolarError,
+    ) -> Option<(TextDocumentItem, Diagnostic)> {
+        self.document_from_polar_error_context(e).map(|doc| {
             let diagnostic = Diagnostic {
                 range: range_from_polar_error_context(e),
                 severity: Some(DiagnosticSeverity::Error),
-                source: Some("polar-language-server".to_owned()),
+                source: Some("Polar Language Server".to_owned()),
                 message: e.to_string(),
                 ..Default::default()
             };
-            PublishDiagnosticsParams {
-                uri: d.uri.clone(),
-                version: Some(d.version),
-                diagnostics: vec![diagnostic],
-            }
+            (doc, diagnostic)
         })
     }
 
-    /// Turn tracked documents into a set of Polar `Source` structs for `Polar::load`.
+    /// Turn tracked documents into a set of Polar `Source` structs for `Polar::diagnostic_load`.
     fn documents_to_polar_sources(&self) -> Vec<Source> {
         self.documents
             .values()
@@ -299,12 +296,26 @@ impl PolarLanguageServer {
             .collect()
     }
 
-    fn load_documents(&self) -> PolarResult<()> {
-        self.polar.load(self.documents_to_polar_sources())
+    fn load_documents(&self) -> Diagnostics {
+        self.polar
+            .diagnostic_load(self.documents_to_polar_sources())
+            .into_iter()
+            .filter_map(|d| match d {
+                PolarDiagnostic::Error(e) => self.diagnostic_from_polar_error(&e),
+                // TODO(gj): handle warnings
+                PolarDiagnostic::Warning(_) => None,
+            })
+            .fold(Diagnostics::new(), |mut acc, (doc, diagnostic)| {
+                let params = acc.entry(doc.uri.clone()).or_insert_with(|| {
+                    PublishDiagnosticsParams::new(doc.uri, vec![], Some(doc.version))
+                });
+                params.diagnostics.push(diagnostic);
+                acc
+            })
     }
 
-    /// Reloads tracked documents into the `KnowledgeBase`, translates errors from `Polar::load`
-    /// into diagnostics, and returns a set of diagnostics for publishing.
+    /// Reloads tracked documents into the `KnowledgeBase`, translates `polar-core` diagnostics
+    /// into `polar-language-server` diagnostics, and returns a set of diagnostics for publishing.
     ///
     /// NOTE(gj): we currently only receive a single error (pertaining to a single document) at a
     /// time from the core, but we republish 'empty' diagnostics for all other documents in order
@@ -312,14 +323,7 @@ impl PolarLanguageServer {
     fn reload_kb(&self) -> Diagnostics {
         self.polar.clear_rules();
         let mut diagnostics = self.empty_diagnostics_for_all_documents();
-        if let Err(e) = self.load_documents() {
-            if let Some(d) = self.diagnostic_from_polar_error(&e) {
-                // NOTE(gj): this assertion should never fail b/c we should only get Polar errors
-                // for documents we load into the KB and this `diagnostics` map contains an (empty)
-                // entry for every document we load into the KB.
-                assert!(diagnostics.insert(d.uri.clone(), d).is_some());
-            }
-        }
+        diagnostics.extend(self.load_documents());
         diagnostics
     }
 }
@@ -435,18 +439,14 @@ mod tests {
         // Load a fourth doc w/ errors.
         let diagnostics = pls.on_did_open_text_document(d.clone());
         assert_eq!(diagnostics.len(), 4);
-        // NOTE(gj): we currently surface at most one error per `Polar::load` call, so even if two
-        // documents have semicolon errors we'll only publish a single diagnostic.
-        assert_no_errors(&diagnostics, vec![&a, &b, &d]);
-        assert_missing_semicolon_error(&diagnostics, vec![&c]);
+        assert_no_errors(&diagnostics, vec![&a, &b]);
+        assert_missing_semicolon_error(&diagnostics, vec![&c, &d]);
 
         // Load a fifth doc w/ no errors.
         let diagnostics = pls.on_did_open_text_document(e.clone());
         assert_eq!(diagnostics.len(), 5);
-        // NOTE(gj): we currently surface at most one error per `Polar::load` call, so even if two
-        // documents have semicolon errors we'll only publish a single diagnostic.
-        assert_no_errors(&diagnostics, vec![&a, &b, &d, &e]);
-        assert_missing_semicolon_error(&diagnostics, vec![&c]);
+        assert_no_errors(&diagnostics, vec![&a, &b, &e]);
+        assert_missing_semicolon_error(&diagnostics, vec![&c, &d]);
     }
 
     #[wasm_bindgen_test]
@@ -475,10 +475,7 @@ mod tests {
         let b3 = doc_with_missing_semicolon("banana");
         let diagnostics3 = pls.on_did_change_text_document(b3.clone());
         assert_eq!(diagnostics3.len(), 2);
-        // NOTE(gj): we currently surface at most one error per `Polar::load` call, so even if two
-        // documents have semicolon errors we'll only publish a single diagnostic.
-        assert_missing_semicolon_error(&diagnostics3, vec![&a2]);
-        assert_no_errors(&diagnostics3, vec![&b3]);
+        assert_missing_semicolon_error(&diagnostics3, vec![&a2, &b3]);
 
         // Change tracked doc, fixing an error.
         let a4 = update_text(a2, "pie();");
