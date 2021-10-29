@@ -116,7 +116,7 @@ impl<'kb> Visitor for SingletonVisitor<'kb> {
                 if !v.is_temporary_var()
                     && !v.is_namespaced_var()
                     && !self.kb.is_constant(v)
-                    && !self.kb.is_union(t) =>
+                    && !t.is_union() =>
             {
                 match self.singletons.entry(v.clone()) {
                     Entry::Occupied(mut o) => {

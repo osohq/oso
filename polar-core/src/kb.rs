@@ -242,8 +242,8 @@ impl KnowledgeBase {
                     } else {
                         RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match rule type specializer {} because the specializer fields did not match.", rule_instance.to_polar(), index, rule_type_instance.to_polar()))
                     }
-                } else if self.is_union(&term!(sym!(&rule_type_instance.tag.0))) {
-                    if self.is_union(&term!(sym!(&rule_instance.tag.0))) {
+                } else if term!(sym!(&rule_type_instance.tag.0)).is_union() {
+                    if term!(sym!(&rule_instance.tag.0)).is_union() {
                         // If both specializers are the same union, check fields.
                         if rule_instance.tag == rule_type_instance.tag {
                             if self.param_fields_match(
@@ -755,10 +755,6 @@ impl KnowledgeBase {
         }
 
         Ok(())
-    }
-
-    pub fn is_union(&self, maybe_union: &Term) -> bool {
-        (maybe_union.is_actor_union()) || (maybe_union.is_resource_union())
     }
 
     pub fn get_union_members(&self, union: &Term) -> &HashSet<Term> {
