@@ -787,9 +787,8 @@ impl KnowledgeBase {
     }
 
     pub fn create_resource_specific_rule_types(&mut self) -> PolarResult<()> {
-        let mut has_relation_rule_types_to_create = HashSet::new();
-        let mut has_role_rule_types_to_create = HashSet::new();
-        let mut rule_types: Vec<Rule> = Vec::new();
+        let mut has_relation_rule_types_to_create = HashMap::new();
+        let mut has_role_rule_types_to_create = HashMap::new();
 
         // TODO @patrickod refactor RuleTypes & split out
         // RequiredRuleType struct to record the related
@@ -805,20 +804,24 @@ impl KnowledgeBase {
             for (name, declaration) in declarations.iter() {
                 match declaration {
                     Declaration::Relation(subject) => {
-                        has_relation_rule_types_to_create.insert((
-                            subject.value().as_symbol()?.clone(),
-                            name.value().as_string()?,
-                            object.value().as_symbol()?.clone(),
+                        has_relation_rule_types_to_create.insert(
+                            (
+                                subject.value().as_symbol()?.clone(),
+                                name.value().as_string()?,
+                                object.value().as_symbol()?.clone(),
+                            ),
                             false,
-                        ));
+                        );
                     }
                     Declaration::Role => {
-                        has_role_rule_types_to_create.insert((
-                            sym!("Actor"),
-                            instance!(sym!("String")),
-                            object.value().as_symbol()?.clone(),
+                        has_role_rule_types_to_create.insert(
+                            (
+                                sym!("Actor"),
+                                instance!(sym!("String")),
+                                object.value().as_symbol()?.clone(),
+                            ),
                             false,
-                        ));
+                        );
                     }
                     _ => {}
                 }
@@ -845,12 +848,14 @@ impl KnowledgeBase {
                             .unwrap()
                             .get(relation)
                         {
-                            has_relation_rule_types_to_create.insert((
-                                subject.value().as_symbol()?.clone(),
-                                relation.value().as_string()?,
-                                object.value().as_symbol()?.clone(),
+                            has_relation_rule_types_to_create.insert(
+                                (
+                                    subject.value().as_symbol()?.clone(),
+                                    relation.value().as_string()?,
+                                    object.value().as_symbol()?.clone(),
+                                ),
                                 true,
-                            ));
+                            );
 
                             match self
                                 .resource_blocks
@@ -860,26 +865,24 @@ impl KnowledgeBase {
                                 .get(implier)
                             {
                                 Some(Declaration::Relation(related_subject)) => {
-                                    has_relation_rule_types_to_create.insert((
-                                        related_subject.value().as_symbol()?.clone(),
-                                        implier.value().as_string()?,
-                                        subject.value().as_symbol()?.clone(),
+                                    has_relation_rule_types_to_create.insert(
+                                        (
+                                            related_subject.value().as_symbol()?.clone(),
+                                            implier.value().as_string()?,
+                                            subject.value().as_symbol()?.clone(),
+                                        ),
                                         true,
-                                    ));
+                                    );
                                 }
                                 Some(Declaration::Role) => {
-                                    has_role_rule_types_to_create.remove(&(
-                                        sym!("Actor"),
-                                        instance!(sym!("String")),
-                                        subject.value().as_symbol()?.clone(),
-                                        false,
-                                    ));
-                                    has_role_rule_types_to_create.insert((
-                                        sym!("Actor"),
-                                        instance!(sym!("String")),
-                                        subject.value().as_symbol()?.clone(),
+                                    has_role_rule_types_to_create.insert(
+                                        (
+                                            sym!("Actor"),
+                                            instance!(sym!("String")),
+                                            subject.value().as_symbol()?.clone(),
+                                        ),
                                         true,
-                                    ));
+                                    );
                                 }
                                 _ => {}
                             }
@@ -897,26 +900,24 @@ impl KnowledgeBase {
                             .get(implier)
                         {
                             Some(Declaration::Relation(subject)) => {
-                                has_relation_rule_types_to_create.insert((
-                                    subject.value().as_symbol()?.clone(),
-                                    implier.value().as_string()?,
-                                    object.value().as_symbol()?.clone(),
+                                has_relation_rule_types_to_create.insert(
+                                    (
+                                        subject.value().as_symbol()?.clone(),
+                                        implier.value().as_string()?,
+                                        object.value().as_symbol()?.clone(),
+                                    ),
                                     true,
-                                ));
+                                );
                             }
                             Some(Declaration::Role) => {
-                                has_role_rule_types_to_create.remove(&(
-                                    sym!("Actor"),
-                                    instance!(sym!("String")),
-                                    object.value().as_symbol()?.clone(),
-                                    false,
-                                ));
-                                has_role_rule_types_to_create.insert((
-                                    sym!("Actor"),
-                                    instance!(sym!("String")),
-                                    object.value().as_symbol()?.clone(),
+                                has_role_rule_types_to_create.insert(
+                                    (
+                                        sym!("Actor"),
+                                        instance!(sym!("String")),
+                                        object.value().as_symbol()?.clone(),
+                                    ),
                                     true,
-                                ));
+                                );
                             }
                             _ => {}
                         }
@@ -925,13 +926,13 @@ impl KnowledgeBase {
             }
         }
 
-        has_relation_rule_types_to_create.into_iter().for_each(|(subject, relation_name, object, required)| {
-            rule_types.push(rule!("has_relation", ["_subject"; instance!(subject), value!(relation_name), "_object"; instance!(object)], required))
+        let rule_types = has_relation_rule_types_to_create.into_iter().map(|((subject, relation_name, object), required)| {
+            rule!("has_relation", ["_subject"; instance!(subject), value!(relation_name), "_object"; instance!(object)], required)
         });
 
-        has_role_rule_types_to_create.into_iter().for_each(|(subject, _relation_name, object, required)| {
-            rule_types.push(rule!("has_role", ["_actor"; instance!(subject), "_role"; instance!(sym!("String")), "_resource"; instance!(object)], required))
-        });
+        let rule_types = rule_types.chain(has_role_rule_types_to_create.into_iter().map(|((subject, _relation_name, object), required)| {
+            rule!("has_role", ["_actor"; instance!(subject), "_role"; instance!(sym!("String")), "_resource"; instance!(object)], required)
+        })).collect::<Vec<_>>();
 
         for rule_type in rule_types {
             self.add_rule_type(rule_type.clone());
@@ -1554,13 +1555,13 @@ mod tests {
 
     #[test]
     fn test_create_resource_specific_rule_types() -> Result<(), PolarError> {
-        let repo_resource = term!(sym!("repo"));
+        let repo_resource = term!(sym!("Repo"));
         let repo_roles = term!(["reader"]);
         let repo_relations = term!(btreemap! { sym!("parent") => term!(sym!("org")) });
         let repo_declarations =
             index_declarations(Some(repo_roles), None, Some(repo_relations), &repo_resource);
 
-        let org_resource = term!(sym!("org"));
+        let org_resource = term!(sym!("Org"));
         let org_roles = term!(["member"]);
         let org_declarations = index_declarations(Some(org_roles), None, None, &org_resource);
 
@@ -1583,17 +1584,8 @@ mod tests {
         );
 
         let mut kb = KnowledgeBase {
-            constants: HashMap::new(),
-            mro: HashMap::new(),
-            loaded_files: Default::default(),
-            loaded_content: Default::default(),
-            rules: HashMap::new(),
-            rule_types: RuleTypes::default(),
-            sources: Sources::default(),
-            id_counter: Counter::default(),
-            gensym_counter: Counter::default(),
-            inline_queries: vec![],
             resource_blocks: blocks,
+            ..Default::default()
         };
 
         kb.create_resource_specific_rule_types()?;
@@ -1606,8 +1598,8 @@ mod tests {
             let resource_param = rule_type.params[2].clone();
             let resource_specializer = resource_param.specializer.unwrap();
             let instance = resource_specializer.value().as_pattern().unwrap();
-            if let Pattern::Instance(InstanceLiteral { tag, fields: _ }) = instance {
-                tag == &sym!("org")
+            if let Pattern::Instance(InstanceLiteral { tag, .. }) = instance {
+                tag == &sym!("Org")
             } else {
                 false
             }
@@ -1616,8 +1608,8 @@ mod tests {
             let resource_param = rule_type.params[2].clone();
             let resource_specializer = resource_param.specializer.unwrap();
             let instance = resource_specializer.value().as_pattern().unwrap();
-            if let Pattern::Instance(InstanceLiteral { tag, fields: _ }) = instance {
-                tag == &sym!("repo")
+            if let Pattern::Instance(InstanceLiteral { tag, .. }) = instance {
+                tag == &sym!("Repo")
             } else {
                 false
             }
