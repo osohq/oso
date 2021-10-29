@@ -110,10 +110,12 @@ impl KnowledgeBase {
         generic_rule.add_rule(Arc::new(rule));
     }
 
-    // TODO(gj): return Vec<Diagnostic> (no Result)
-    pub fn validate_rules(&self) -> PolarResult<Vec<Diagnostic>> {
-        self.validate_rule_types()?;
-        Ok(self.validate_rule_calls())
+    pub fn validate_rules(&self) -> Vec<Diagnostic> {
+        let mut diagnostics = self.validate_rule_calls();
+        if let Err(e) = self.validate_rule_types() {
+            diagnostics.push(Diagnostic::Error(e));
+        }
+        diagnostics
     }
 
     fn validate_rule_calls(&self) -> Vec<Diagnostic> {
@@ -516,6 +518,8 @@ impl KnowledgeBase {
             })
             .collect::<PolarResult<Vec<RuleParamMatch>>>()
             .map(|results| {
+                // TODO(gj): all() is short-circuiting -- do we want to gather up *all* failure
+                // messages instead of just the first one?
                 results.iter().all(|r| {
                     if let RuleParamMatch::False(msg) = r {
                         failure_message = msg.to_owned();
@@ -1321,11 +1325,11 @@ mod tests {
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Fruit"))]));
 
         assert!(matches!(
-            kb.validate_rules().err().unwrap(),
-            PolarError {
+            kb.validate_rules().first().unwrap(),
+            Diagnostic::Error(PolarError {
                 kind: ErrorKind::Validation(ValidationError::InvalidRule { .. }),
                 ..
-            }
+            })
         ));
 
         // Rule type does not apply if it doesn't have the same name as a rule
@@ -1334,7 +1338,7 @@ mod tests {
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Orange"))]));
         kb.add_rule(rule!("g", ["x"; instance!(sym!("Fruit"))]));
 
-        kb.validate_rules().unwrap();
+        assert!(kb.validate_rules().is_empty());
 
         // Rule type does apply if it has the same name as a rule even if different arity
         kb.clear_rules();
@@ -1342,11 +1346,11 @@ mod tests {
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Orange"))]));
 
         assert!(matches!(
-            kb.validate_rules().err().unwrap(),
-            PolarError {
+            kb.validate_rules().first().unwrap(),
+            Diagnostic::Error(PolarError {
                 kind: ErrorKind::Validation(ValidationError::InvalidRule { .. }),
                 ..
-            }
+            })
         ));
         // Multiple templates can exist for the same name but only one needs to match
         kb.clear_rules();

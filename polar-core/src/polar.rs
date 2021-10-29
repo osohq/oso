@@ -254,9 +254,7 @@ impl Polar {
         }
 
         // check rules are valid against rule types
-        if let Err(e) = kb.validate_rules() {
-            diagnostics.push(Diagnostic::Error(e));
-        }
+        diagnostics.append(&mut kb.validate_rules());
 
         // Perform validation checks against the whole policy
         if !self.ignore_no_allow_warning {

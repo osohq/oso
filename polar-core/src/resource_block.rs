@@ -1383,7 +1383,7 @@ mod tests {
         // Union matches union.
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
-        assert!(kb.validate_rules().is_ok());
+        assert!(kb.validate_rules().is_empty());
 
         kb.clear_rules();
         kb.resource_blocks.resources.insert(term!(sym!("Citrus")));
@@ -1396,11 +1396,11 @@ mod tests {
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!(ACTOR_UNION_NAME))]));
         assert!(matches!(
-            kb.validate_rules().unwrap_err(),
-            PolarError {
+            kb.validate_rules().first().unwrap(),
+            Diagnostic::Error(PolarError {
                 kind: error::ErrorKind::Validation(error::ValidationError::InvalidRule { .. }),
                 ..
-            }
+            })
         ));
 
         kb.clear_rules();
@@ -1410,7 +1410,7 @@ mod tests {
         // Member of union matches union.
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Citrus"))]));
-        assert!(kb.validate_rules().is_ok());
+        assert!(kb.validate_rules().is_empty());
 
         kb.clear_rules();
         kb.resource_blocks.resources.insert(term!(sym!("Citrus")));
@@ -1423,11 +1423,11 @@ mod tests {
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(ACTOR_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Citrus"))]));
         assert!(matches!(
-            kb.validate_rules().unwrap_err(),
-            PolarError {
+            kb.validate_rules().first().unwrap(),
+            Diagnostic::Error(PolarError {
                 kind: error::ErrorKind::Validation(error::ValidationError::InvalidRule { .. }),
                 ..
-            }
+            })
         ));
 
         kb.clear_rules();
@@ -1437,7 +1437,7 @@ mod tests {
         // Subclass of member of union matches union.
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Orange"))]));
-        assert!(kb.validate_rules().is_ok());
+        assert!(kb.validate_rules().is_empty());
 
         kb.clear_rules();
         kb.resource_blocks.resources.insert(term!(sym!("Citrus")));
@@ -1447,11 +1447,11 @@ mod tests {
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Fruit"))]));
         assert!(matches!(
-            kb.validate_rules().unwrap_err(),
-            PolarError {
+            kb.validate_rules().first().unwrap(),
+            Diagnostic::Error(PolarError {
                 kind: error::ErrorKind::Validation(error::ValidationError::InvalidRule { .. }),
                 ..
-            }
+            })
         ));
 
         // kb.clear_rules();
