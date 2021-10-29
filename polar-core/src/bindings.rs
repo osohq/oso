@@ -189,7 +189,7 @@ impl BindingManager {
     ///    constraints (as determined by `Operation::ground()`)
     ///
     /// If a binding is compatible, it is recorded. If the binding was to a ground value,
-    /// subsequent calls to `variable_state` or `deep_deref` will return that value.
+    /// subsequent calls to `variable_state` or `deref` will return that value.
     ///
     /// If the binding was between two variables, the two will always have the same value
     /// or constraints going forward. Further, a unification constraint is recorded between
@@ -317,7 +317,7 @@ impl BindingManager {
     // *** Binding Inspection ***
     /// Dereference all variables in term, including within nested structures like
     /// lists and dictionaries.
-    pub fn deep_deref(&self, term: &Term) -> Term {
+    pub fn deref(&self, term: &Term) -> Term {
         Derefer::new(self).fold_term(term.clone())
     }
 
@@ -390,7 +390,7 @@ impl BindingManager {
             if !include_temps && var.is_temporary_var() {
                 continue;
             }
-            bindings.insert(var.clone(), self.deep_deref(value));
+            bindings.insert(var.clone(), self.deref(value));
         }
         bindings
     }
@@ -400,7 +400,7 @@ impl BindingManager {
         for var in variables.iter() {
             let value = self.value(var, self.bsp().bindings_index);
             if let Some(value) = value {
-                bindings.insert(var.clone(), self.deep_deref(value));
+                bindings.insert(var.clone(), self.deref(value));
             }
         }
         bindings
@@ -803,29 +803,29 @@ mod test {
         let term_y = term!(y.clone());
 
         // unbound var
-        assert_eq!(bm.deep_deref(&term_x), term_x);
+        assert_eq!(bm.deref(&term_x), term_x);
 
         // unbound var -> unbound var
         bm.bind(&x, term_y.clone()).unwrap();
-        assert_eq!(bm.deep_deref(&term_x), term_x);
+        assert_eq!(bm.deref(&term_x), term_x);
 
         // value
-        assert_eq!(bm.deep_deref(&value), value.clone());
+        assert_eq!(bm.deref(&value), value.clone());
 
         // unbound var -> value
         let mut bm = BindingManager::default();
         bm.bind(&x, value.clone()).unwrap();
-        assert_eq!(bm.deep_deref(&term_x), value);
+        assert_eq!(bm.deref(&term_x), value);
 
         // unbound var -> unbound var -> value
         let mut bm = BindingManager::default();
         bm.bind(&x, term_y).unwrap();
         bm.bind(&y, value.clone()).unwrap();
-        assert_eq!(bm.deep_deref(&term_x), value);
+        assert_eq!(bm.deref(&term_x), value);
     }
 
     #[test]
-    fn deep_deref() {
+    fn deref() {
         let mut bm = BindingManager::default();
         let one = term!(1);
         let two = term!(1);
@@ -839,7 +839,7 @@ mod test {
         };
         let list = term!([dict]);
         assert_eq!(
-            bm.deep_deref(&list).value().clone(),
+            bm.deref(&list).value().clone(),
             Value::List(vec![term!(btreemap! {
                 sym!("x") => one,
                 sym!("y") => two,
