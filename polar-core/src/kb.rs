@@ -799,7 +799,7 @@ impl KnowledgeBase {
         // non-required rule types for each relation declaration we observe.
         //
         // We create non-required rule types to gracefully account for the case
-        // where users have declared relations ahead of time they are used in
+        // where users have declared relations ahead of time that are used in
         // rule or resource definitions.
         for (object, declarations) in &self.resource_blocks.declarations {
             for (name, declaration) in declarations.iter() {
