@@ -11,7 +11,7 @@ mod bindings;
 mod counter;
 pub mod data_filtering;
 mod debugger;
-mod diagnostic;
+pub mod diagnostic;
 pub mod error;
 pub mod events;
 mod folder;
