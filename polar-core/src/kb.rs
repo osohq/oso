@@ -741,10 +741,11 @@ impl KnowledgeBase {
             }
         }
 
-        // TODO(gj): maybe only add rules to the KB if there are no errors?
-        // Add the rewritten rules to the KB.
-        for rule in rules {
-            self.add_rule(rule);
+        if errors.is_empty() {
+            // Add the rewritten rules to the KB.
+            for rule in rules {
+                self.add_rule(rule);
+            }
         }
 
         errors.into_iter().map(Diagnostic::Error).collect()
