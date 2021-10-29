@@ -862,19 +862,47 @@ impl KnowledgeBase {
                                 true,
                             );
 
-                            match self
-                                .resource_blocks
-                                .declarations
-                                .get(subject)
-                                .unwrap()
-                                .get(implier)
+                            if let Some(declarations) =
+                                self.resource_blocks.declarations.get(subject)
                             {
-                                Some(Declaration::Relation(related_subject)) => {
+                                match declarations.get(implier) {
+                                    Some(Declaration::Relation(related_subject)) => {
+                                        has_relation_rule_types_to_create.insert(
+                                            (
+                                                related_subject.value().as_symbol()?.clone(),
+                                                implier.value().as_string()?,
+                                                subject.value().as_symbol()?.clone(),
+                                            ),
+                                            true,
+                                        );
+                                    }
+                                    Some(Declaration::Role) => {
+                                        has_role_rule_types_to_create.insert(
+                                            (
+                                                sym!("Actor"),
+                                                instance!(sym!("String")),
+                                                subject.value().as_symbol()?.clone(),
+                                            ),
+                                            true,
+                                        );
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
+                    }
+                    ShorthandRule {
+                        head: _,
+                        body: (implier, None),
+                    } => {
+                        if let Some(declarations) = self.resource_blocks.declarations.get(object) {
+                            match declarations.get(implier) {
+                                Some(Declaration::Relation(subject)) => {
                                     has_relation_rule_types_to_create.insert(
                                         (
-                                            related_subject.value().as_symbol()?.clone(),
-                                            implier.value().as_string()?,
                                             subject.value().as_symbol()?.clone(),
+                                            implier.value().as_string()?,
+                                            object.value().as_symbol()?.clone(),
                                         ),
                                         true,
                                     );
@@ -884,47 +912,13 @@ impl KnowledgeBase {
                                         (
                                             sym!("Actor"),
                                             instance!(sym!("String")),
-                                            subject.value().as_symbol()?.clone(),
+                                            object.value().as_symbol()?.clone(),
                                         ),
                                         true,
                                     );
                                 }
                                 _ => {}
                             }
-                        }
-                    }
-                    ShorthandRule {
-                        head: _,
-                        body: (implier, None),
-                    } => {
-                        match self
-                            .resource_blocks
-                            .declarations
-                            .get(object)
-                            .unwrap()
-                            .get(implier)
-                        {
-                            Some(Declaration::Relation(subject)) => {
-                                has_relation_rule_types_to_create.insert(
-                                    (
-                                        subject.value().as_symbol()?.clone(),
-                                        implier.value().as_string()?,
-                                        object.value().as_symbol()?.clone(),
-                                    ),
-                                    true,
-                                );
-                            }
-                            Some(Declaration::Role) => {
-                                has_role_rule_types_to_create.insert(
-                                    (
-                                        sym!("Actor"),
-                                        instance!(sym!("String")),
-                                        object.value().as_symbol()?.clone(),
-                                    ),
-                                    true,
-                                );
-                            }
-                            _ => {}
                         }
                     }
                 }
