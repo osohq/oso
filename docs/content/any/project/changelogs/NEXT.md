@@ -14,14 +14,20 @@ draft: true
 
 #### Other bugs & improvements
 
-- Fixes a case where partially bound variables caused authorization to succeed incorrectly.
-- Reverts a breaking change to the data filter format when applying conditions across a relation.
+- Fixed a case where partially bound variables caused authorization to succeed incorrectly.
+- Reverted a breaking change to the data filter format when applying conditions across a relation.
 
 ### Go
 
 #### Other bugs & improvements
 
 - Fixed a bug that caused the Go library to crash when using Go 1.17 on macOS.
+
+### JavaScript
+
+#### Other bugs & improvements
+
+- Fixed an error in JavaScript data filtering documentation (thanks to Ken Fukuyama for the change)
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
