@@ -257,6 +257,9 @@ impl Polar {
         // the well-parsed file but *would have* conformed to the shapes laid out in the file that
         // failed to parse.
         if encountered_unrecoverable_error {
+            if diagnostics.iter().any(Diagnostic::is_error) {
+                kb.clear_rules();
+            }
             return diagnostics;
         }
 
@@ -275,6 +278,11 @@ impl Polar {
             diagnostics.push(w)
         };
 
+        // If we've encountered any errors, clear the KB.
+        if diagnostics.iter().any(Diagnostic::is_error) {
+            kb.clear_rules();
+        }
+
         diagnostics
     }
 
@@ -285,18 +293,18 @@ impl Polar {
             return Err(error::RuntimeError::FileLoading { msg }.into());
         }
 
-        let diagnostics = self.diagnostic_load(sources);
         let (mut errors, mut warnings) = (vec![], vec![]);
-        for diagnostic in diagnostics {
+        for diagnostic in self.diagnostic_load(sources) {
             match diagnostic {
                 Diagnostic::Error(e) => errors.push(e),
                 Diagnostic::Warning(w) => warnings.push(w),
             }
         }
+
         self.messages
             .extend(warnings.into_iter().map(Message::warning));
+
         if let Some(e) = errors.into_iter().next() {
-            self.kb.write().unwrap().clear_rules();
             return Err(e);
         }
         Ok(())
@@ -435,7 +443,7 @@ mod tests {
     }
 
     #[test]
-    fn loading_duplicate_files_clears_the_kb() {
+    fn loading_duplicate_files_errors_and_leaves_the_kb_empty() {
         let polar = Polar::new();
         let source = Source {
             src: "f();".to_owned(),
@@ -451,6 +459,35 @@ mod tests {
         };
         assert_eq!(msg, "File file has already been loaded.");
 
+        assert!(!polar.kb.read().unwrap().has_rules());
+    }
+
+    #[test]
+    fn diagnostic_load_returns_multiple_diagnostics() {
+        let polar = Polar::new();
+        let source = Source {
+            src: "f() if g();".to_owned(),
+            filename: Some("file".to_owned()),
+        };
+
+        let diagnostics = polar.diagnostic_load(vec![source]);
+        assert_eq!(diagnostics.len(), 2);
+        let mut diagnostics = diagnostics.into_iter();
+        let next = diagnostics.next().unwrap();
+        assert!(matches!(next, Diagnostic::Error(_)));
+        assert!(
+            next.to_string().starts_with("Call to undefined rule \"g\""),
+            "{}",
+            next
+        );
+        let next = diagnostics.next().unwrap();
+        assert!(matches!(next, Diagnostic::Warning(_)));
+        assert!(
+            next.to_string()
+                .starts_with("Your policy does not contain an allow rule"),
+            "{}",
+            next
+        );
         assert!(!polar.kb.read().unwrap().has_rules());
     }
 }

@@ -8,6 +8,12 @@ pub enum Diagnostic {
     Warning(String),
 }
 
+impl Diagnostic {
+    pub fn is_error(&self) -> bool {
+        matches!(self, Diagnostic::Error(_))
+    }
+}
+
 impl fmt::Display for Diagnostic {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
