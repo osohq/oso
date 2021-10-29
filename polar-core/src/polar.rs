@@ -239,6 +239,12 @@ impl Polar {
         // Rewrite shorthand rules in resource blocks before validating rule types.
         diagnostics.append(&mut kb.rewrite_shorthand_rules());
 
+        // Generate appropriate rule_type definitions using the types contained
+        // in policy resource blocks
+        if let Err(e) = kb.create_resource_specific_rule_types() {
+            diagnostics.push(Diagnostic::Error(e));
+        }
+
         // TODO(gj): need to bomb out before rule type validation in case additional rule types
         // were defined later on in the file that encountered the `ParseError`. Those additional
         // rule types might extend the valid shapes for a rule type defined in a different,
@@ -248,13 +254,6 @@ impl Polar {
         if diagnostics.iter().any(Diagnostic::is_error) {
             kb.clear_rules();
             return diagnostics;
-        }
-
-        // Generate appropriate rule_type definitions using the types contained
-        // in policy resource blocks
-        if let Err(e) = kb.create_resource_specific_rule_types() {
-            kb.clear_rules();
-            return Err(e);
         }
 
         // check rules are valid against rule types
