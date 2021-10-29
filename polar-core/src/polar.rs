@@ -225,7 +225,6 @@ impl Polar {
         }
 
         let mut kb = self.kb.write().unwrap();
-        let mut encountered_unrecoverable_error = false;
         let mut diagnostics = vec![];
 
         for source in &sources {
@@ -233,17 +232,7 @@ impl Polar {
             let result = result.and_then(|source_id| load_source(source_id, source, &mut kb));
             match result {
                 Ok(mut ds) => diagnostics.append(&mut ds),
-                Err(e) => {
-                    let is_parse_error = matches!(e.kind, error::ErrorKind::Parse(_));
-                    let is_file_loading_error = matches!(
-                        e.kind,
-                        error::ErrorKind::Runtime(error::RuntimeError::FileLoading { .. })
-                    );
-                    assert!(is_parse_error || is_file_loading_error, "{}", e);
-
-                    diagnostics.push(Diagnostic::Error(e));
-                    encountered_unrecoverable_error = true;
-                }
+                Err(e) => diagnostics.push(Diagnostic::Error(e)),
             }
         }
 
@@ -256,10 +245,8 @@ impl Polar {
         // well-parsed file that also contains rules that don't conform to the shapes laid out in
         // the well-parsed file but *would have* conformed to the shapes laid out in the file that
         // failed to parse.
-        if encountered_unrecoverable_error {
-            if diagnostics.iter().any(Diagnostic::is_error) {
-                kb.clear_rules();
-            }
+        if diagnostics.iter().any(Diagnostic::is_error) {
+            kb.clear_rules();
             return diagnostics;
         }
 
