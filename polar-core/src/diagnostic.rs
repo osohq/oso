@@ -2,6 +2,7 @@ use std::fmt;
 
 use super::error::PolarError;
 
+#[derive(Debug)]
 pub enum Diagnostic {
     Error(PolarError),
     Warning(String),
