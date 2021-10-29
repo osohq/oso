@@ -358,6 +358,7 @@ pub enum RuntimeError {
         var: Symbol,
         term: Term,
     },
+    DataFilteringError(String),
 }
 
 impl RuntimeError {
@@ -416,6 +417,7 @@ The expression is: {expr}
                     expr = term.to_polar(),
                 )
             }
+            Self::DataFilteringError(msg) => write!(f, "Data filtering error: {}", msg),
         }
     }
 }

@@ -5,10 +5,12 @@ use std::{
 
 use crate::{
     counter::Counter,
-    error::{OperationalError, PolarResult},
+    error::{OperationalError, PolarResult, RuntimeError},
     events::ResultEvent,
     terms::*,
 };
+
+use indoc::formatdoc;
 
 use serde::{Deserialize, Serialize};
 
@@ -314,6 +316,30 @@ impl VarInfo {
             )),
         }
     }
+}
+
+fn data_filtering_error<A>(msg: String) -> PolarResult<A> {
+    Err(RuntimeError::DataFilteringError(msg).into())
+}
+
+fn unregistered_field_error<A>(var_type: &str, field: &str) -> PolarResult<A> {
+    let msg = formatdoc!(
+        r#"Unregistered field or relation: {}.{}
+        
+        Please include `{}` as a field in your `register_class` call:
+
+        oso.register_class({}, fields={{
+            {:?}: <type or relation>
+        }})
+        "#,
+        var_type,
+        field,
+        field,
+        var_type,
+        field
+    );
+
+    data_filtering_error(msg)
 }
 
 fn err_invalid<A>(msg: String) -> PolarResult<A> {
@@ -832,6 +858,7 @@ impl<'a> ResultSetBuilder<'a> {
             Some(fs) => fs.iter().fold(Ok(self), |this, (field, child)| {
                 let this = this?;
                 match this.types.get(var_type).and_then(|m| m.get(field)) {
+                    None => unregistered_field_error(var_type, field),
                     Some(Type::Relation {
                         other_class_tag,
                         my_field,
@@ -1040,7 +1067,10 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::bindings::Bindings;
+    use crate::{
+        bindings::Bindings,
+        error::{ErrorKind::*, OperationalError::Unimplemented, PolarError},
+    };
     type TestResult = PolarResult<()>;
 
     impl From<Bindings> for ResultEvent {
@@ -1101,7 +1131,7 @@ mod test {
                 }
             }
         };
-        build_filter_plan(types, vec![bindings], "resource", "something")?;
+        build_filter_plan(types, vec![bindings], "resource", "A")?;
         Ok(())
     }
 
@@ -1112,7 +1142,40 @@ mod test {
             sym!("resource") => partial
         });
 
-        build_filter_plan(hashmap! {}, vec![bindings], "resource", "something")?;
+        build_filter_plan(hashmap! {}, vec![bindings], "resource", "SomeClass")?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_unregistered_field() -> TestResult {
+        let pat_a = term!(pattern!(instance!("A")));
+        let partial = term!(op!(
+            And,
+            term!(op!(Isa, var!("_this"), pat_a)),
+            term!(op!(
+                Unify,
+                term!(op!(Dot, var!("_this"), str!("field"))),
+                str!("nope")
+            ))
+        ));
+
+        let bindings = ResultEvent::from(hashmap! {
+            sym!("resource") => partial
+        });
+        let types = hashmap! {
+            "A".to_owned() => hashmap! { },
+        };
+
+        let err = build_filter_plan(types, vec![bindings], "resource", "A").unwrap_err();
+        match err {
+            PolarError {
+                kind: Runtime(RuntimeError::DataFilteringError(msg)),
+                ..
+            } => {
+                assert_eq!(&msg,"Unregistered field or relation: A.field\n\nPlease include `field` as a field in your `register_class` call:\n\noso.register_class(A, fields={\n    \"field\": <type or relation>\n})\n")
+            }
+            _ => panic!("unexpected {:?}", err),
+        }
         Ok(())
     }
 
@@ -1143,8 +1206,6 @@ mod test {
 
     #[test]
     fn test_unsupported_op_msgs() {
-        use crate::error::{ErrorKind::Operational, OperationalError::Unimplemented, PolarError};
-
         let err = Vars::from_op(&op!(Dot)).expect_err("should've failed");
         match err {
             PolarError {
