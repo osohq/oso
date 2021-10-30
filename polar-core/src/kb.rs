@@ -1,18 +1,16 @@
 use std::collections::{HashMap, HashSet};
-
-use crate::error::{PolarError, PolarResult};
-use crate::validations::check_undefined_rule_calls;
-use crate::visitor::{walk_term, Visitor};
+use std::sync::Arc;
 
 pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::diagnostic::Diagnostic;
-use super::resource_block::ResourceBlocks;
-use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
+use super::error::{PolarError, PolarResult};
+use super::resource_block::{ResourceBlocks, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::*;
 use super::terms::*;
-use std::sync::Arc;
+use super::validations::check_undefined_rule_calls;
+use super::visitor::{walk_term, Visitor};
 
 enum RuleParamMatch {
     True,
