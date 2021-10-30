@@ -294,7 +294,7 @@ impl ResourceBlocks {
         self.resources.clear();
     }
 
-    pub fn add(
+    fn add(
         &mut self,
         block_type: BlockType,
         resource: Term,
@@ -391,7 +391,7 @@ pub fn check_all_relation_types_have_been_registered(kb: &KnowledgeBase) -> Vec<
     errors
 }
 
-pub fn index_declarations(
+fn index_declarations(
     roles: Option<Term>,
     permissions: Option<Term>,
     relations: Option<Term>,
