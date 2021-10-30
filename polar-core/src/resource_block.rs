@@ -1565,7 +1565,7 @@ mod tests {
         let relation = relation_param.parameter.value().as_string().unwrap();
         assert_eq!(relation, "parent".to_string());
 
-        if let Pattern::Instance(InstanceLiteral { tag, fields: _ }) = instance {
+        if let Pattern::Instance(InstanceLiteral { tag, .. }) = instance {
             assert_eq!(tag, &sym!("Repository"));
         } else {
             panic!("Missing has_relation resource parameter specialization");
