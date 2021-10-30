@@ -169,10 +169,7 @@ impl KnowledgeBase {
             if let Some(GenericRule { rules, .. }) = self.rules.get(&rule_type.name) {
                 let found_match = rules.values().any(|rule| {
                     self.rule_params_match(rule.as_ref(), rule_type)
-                        .map(|r| match r {
-                            RuleParamMatch::True => true,
-                            RuleParamMatch::False(_) => false,
-                        })
+                        .map(|r| matches!(r, RuleParamMatch::True))
                         .unwrap()
                 });
                 if !found_match {
