@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::error::ParameterError;
 use crate::error::{PolarError, PolarResult};
 use crate::validations::check_undefined_rule_calls;
 use crate::visitor::{walk_term, Visitor};
@@ -570,9 +569,10 @@ impl KnowledgeBase {
     /// The `mro` argument is a list of the `instance_id` associated with a registered class.
     pub fn add_mro(&mut self, name: Symbol, mro: Vec<u64>) -> PolarResult<()> {
         // Confirm name is a registered class
-        self.constants.get(&name).ok_or_else(|| {
-            ParameterError(format!("Cannot add MRO for unregistered class {}", name))
-        })?;
+        if !self.is_constant(&name) {
+            let msg = format!("Cannot add MRO for unregistered class {}", name);
+            return Err(error::OperationalError::InvalidState { msg }.into());
+        }
         self.mro.insert(name, mro);
         Ok(())
     }
