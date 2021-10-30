@@ -335,13 +335,7 @@ impl KnowledgeBase {
                 }
             }
             (Pattern::Dictionary(rule_type_fields), Pattern::Dictionary(rule_fields))
-            | (
-                Pattern::Dictionary(rule_type_fields),
-                Pattern::Instance(InstanceLiteral {
-                    tag: _,
-                    fields: rule_fields,
-                }),
-            ) => {
+            | (Pattern::Dictionary(rule_type_fields), Pattern::Instance(InstanceLiteral { fields: rule_fields, .. })) => {
                 if self.param_fields_match(rule_type_fields, rule_fields) {
                     RuleParamMatch::True
                 } else {
@@ -840,8 +834,8 @@ impl KnowledgeBase {
                 // 3. when the second "implier" term ponits to a related Actor
                 match shorthand_rule {
                     ShorthandRule {
-                        head: _,
                         body: (implier, Some(relation)),
+                        ..
                     } => {
                         if let Some(Declaration::Relation(subject)) = self
                             .resource_blocks
@@ -889,8 +883,8 @@ impl KnowledgeBase {
                         }
                     }
                     ShorthandRule {
-                        head: _,
                         body: (implier, None),
+                        ..
                     } => {
                         if let Some(declarations) = self.resource_blocks.declarations.get(object) {
                             match declarations.get(implier) {
