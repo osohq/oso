@@ -802,22 +802,15 @@ impl KnowledgeBase {
                     Declaration::Relation(subject) => {
                         has_relation_rule_types_to_create.insert(
                             (
-                                subject.value().as_symbol()?.clone(),
+                                subject.value().as_symbol()?,
                                 name.value().as_string()?,
-                                object.value().as_symbol()?.clone(),
+                                object.value().as_symbol()?,
                             ),
                             false,
                         );
                     }
                     Declaration::Role => {
-                        has_role_rule_types_to_create.insert(
-                            (
-                                sym!("Actor"),
-                                instance!(sym!("String")),
-                                object.value().as_symbol()?.clone(),
-                            ),
-                            false,
-                        );
+                        has_role_rule_types_to_create.insert(object.value().as_symbol()?, false);
                     }
                     _ => {}
                 }
@@ -842,9 +835,9 @@ impl KnowledgeBase {
                         {
                             has_relation_rule_types_to_create.insert(
                                 (
-                                    subject.value().as_symbol()?.clone(),
+                                    subject.value().as_symbol()?,
                                     relation.value().as_string()?,
-                                    object.value().as_symbol()?.clone(),
+                                    object.value().as_symbol()?,
                                 ),
                                 true,
                             );
@@ -856,22 +849,16 @@ impl KnowledgeBase {
                                     Some(Declaration::Relation(related_subject)) => {
                                         has_relation_rule_types_to_create.insert(
                                             (
-                                                related_subject.value().as_symbol()?.clone(),
+                                                related_subject.value().as_symbol()?,
                                                 implier.value().as_string()?,
-                                                subject.value().as_symbol()?.clone(),
+                                                subject.value().as_symbol()?,
                                             ),
                                             true,
                                         );
                                     }
                                     Some(Declaration::Role) => {
-                                        has_role_rule_types_to_create.insert(
-                                            (
-                                                sym!("Actor"),
-                                                instance!(sym!("String")),
-                                                subject.value().as_symbol()?.clone(),
-                                            ),
-                                            true,
-                                        );
+                                        has_role_rule_types_to_create
+                                            .insert(subject.value().as_symbol()?, true);
                                     }
                                     _ => {}
                                 }
@@ -884,22 +871,16 @@ impl KnowledgeBase {
                                 Some(Declaration::Relation(subject)) => {
                                     has_relation_rule_types_to_create.insert(
                                         (
-                                            subject.value().as_symbol()?.clone(),
+                                            subject.value().as_symbol()?,
                                             implier.value().as_string()?,
-                                            object.value().as_symbol()?.clone(),
+                                            object.value().as_symbol()?,
                                         ),
                                         true,
                                     );
                                 }
                                 Some(Declaration::Role) => {
-                                    has_role_rule_types_to_create.insert(
-                                        (
-                                            sym!("Actor"),
-                                            instance!(sym!("String")),
-                                            object.value().as_symbol()?.clone(),
-                                        ),
-                                        true,
-                                    );
+                                    has_role_rule_types_to_create
+                                        .insert(object.value().as_symbol()?, true);
                                 }
                                 _ => {}
                             }
@@ -910,11 +891,11 @@ impl KnowledgeBase {
         }
 
         let rule_types = has_relation_rule_types_to_create.into_iter().map(|((subject, relation_name, object), required)| {
-            rule!("has_relation", ["_subject"; instance!(subject), value!(relation_name), "_object"; instance!(object)], required)
+            rule!("has_relation", ["_subject"; instance!(&subject.0), value!(relation_name), "_object"; instance!(&object.0)], required)
         });
 
-        let rule_types = rule_types.chain(has_role_rule_types_to_create.into_iter().map(|((subject, _relation_name, object), required)| {
-            rule!("has_role", ["_actor"; instance!(subject), "_role"; instance!(sym!("String")), "_resource"; instance!(object)], required)
+        let rule_types = rule_types.chain(has_role_rule_types_to_create.into_iter().map(|(object, required)| {
+            rule!("has_role", ["_actor"; instance!("Actor"), "_role"; instance!("String"), "_resource"; instance!(&object.0)], required)
         })).collect::<Vec<_>>();
 
         for rule_type in rule_types {
