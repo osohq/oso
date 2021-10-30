@@ -112,10 +112,6 @@ impl PolarError {
 
         self
     }
-
-    pub fn unimplemented(msg: String) -> Self {
-        OperationalError::Unimplemented { msg }.into()
-    }
 }
 
 impl From<ParseError> for PolarError {
