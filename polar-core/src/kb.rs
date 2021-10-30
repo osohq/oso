@@ -52,19 +52,7 @@ pub struct KnowledgeBase {
 
 impl KnowledgeBase {
     pub fn new() -> Self {
-        Self {
-            constants: HashMap::new(),
-            mro: HashMap::new(),
-            loaded_files: Default::default(),
-            loaded_content: Default::default(),
-            rules: HashMap::new(),
-            rule_types: RuleTypes::default(),
-            sources: Sources::default(),
-            id_counter: Counter::default(),
-            gensym_counter: Counter::default(),
-            inline_queries: vec![],
-            resource_blocks: ResourceBlocks::new(),
-        }
+        Self::default()
     }
 
     /// Return a monotonically increasing integer ID.
