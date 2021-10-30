@@ -9,7 +9,7 @@ pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::diagnostic::Diagnostic;
 use super::resource_block::ResourceBlocks;
-use super::resource_block::{Declaration, ShorthandRule, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
+use super::resource_block::{Declaration, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::*;
 use super::terms::*;
@@ -832,11 +832,8 @@ impl KnowledgeBase {
                 // 1. when the the third "relation" term points to a related Resource
                 // 2. when the second "implier" term points to a related Resource
                 // 3. when the second "implier" term ponits to a related Actor
-                match shorthand_rule {
-                    ShorthandRule {
-                        body: (implier, Some(relation)),
-                        ..
-                    } => {
+                match &shorthand_rule.body {
+                    (implier, Some(relation)) => {
                         if let Some(Declaration::Relation(subject)) = self
                             .resource_blocks
                             .declarations
@@ -882,10 +879,7 @@ impl KnowledgeBase {
                             }
                         }
                     }
-                    ShorthandRule {
-                        body: (implier, None),
-                        ..
-                    } => {
+                    (implier, None) => {
                         if let Some(declarations) = self.resource_blocks.declarations.get(object) {
                             match declarations.get(implier) {
                                 Some(Declaration::Relation(subject)) => {
