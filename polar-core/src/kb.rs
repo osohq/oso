@@ -838,8 +838,7 @@ impl KnowledgeBase {
                             .resource_blocks
                             .declarations
                             .get(object)
-                            .unwrap()
-                            .get(relation)
+                            .and_then(|d| d.get(relation))
                         {
                             has_relation_rule_types_to_create.insert(
                                 (
