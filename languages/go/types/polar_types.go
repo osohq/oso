@@ -68,22 +68,6 @@ func (variant *ErrorKindOperational) UnmarshalJSON(b []byte) error {
 
 func (ErrorKindOperational) isErrorKind() {}
 
-// ErrorKindParameter newtype
-type ErrorKindParameter ParameterError
-
-func (variant ErrorKindParameter) MarshalJSON() ([]byte, error) {
-	return json.Marshal(ParameterError(variant))
-}
-
-func (variant *ErrorKindParameter) UnmarshalJSON(b []byte) error {
-	inner := ParameterError(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ErrorKindParameter(inner)
-	return err
-}
-
-func (ErrorKindParameter) isErrorKind() {}
-
 // ErrorKindValidation newtype
 type ErrorKindValidation ValidationError
 
@@ -165,17 +149,6 @@ func (result *ErrorKind) UnmarshalJSON(b []byte) error {
 		*result = ErrorKind{variant}
 		return nil
 
-	case "Parameter":
-		var variant ErrorKindParameter
-		if variantValue != nil {
-			err := json.Unmarshal(*variantValue, &variant)
-			if err != nil {
-				return err
-			}
-		}
-		*result = ErrorKind{variant}
-		return nil
-
 	case "Validation":
 		var variant ErrorKindValidation
 		if variantValue != nil {
@@ -208,11 +181,6 @@ func (variant ErrorKind) MarshalJSON() ([]byte, error) {
 	case ErrorKindOperational:
 		return json.Marshal(map[string]ErrorKindOperational{
 			"Operational": inner,
-		})
-
-	case ErrorKindParameter:
-		return json.Marshal(map[string]ErrorKindParameter{
-			"Parameter": inner,
 		})
 
 	}
@@ -1220,20 +1188,6 @@ type Parameter struct {
 	Parameter Term `json:"parameter"`
 	// Specializer
 	Specializer *Term `json:"specializer"`
-}
-
-// ParameterError newtype
-type ParameterError string
-
-func (variant ParameterError) MarshalJSON() ([]byte, error) {
-	return json.Marshal(string(variant))
-}
-
-func (variant *ParameterError) UnmarshalJSON(b []byte) error {
-	inner := string(*variant)
-	err := json.Unmarshal(b, &inner)
-	*variant = ParameterError(inner)
-	return err
 }
 
 // ParseErrorIntegerOverflow struct
