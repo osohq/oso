@@ -152,12 +152,6 @@ impl From<ValidationError> for PolarError {
 
 pub type PolarResult<T> = std::result::Result<T, PolarError>;
 
-impl<T> From<PolarError> for PolarResult<T> {
-    fn from(err: PolarError) -> Self {
-        Err(err)
-    }
-}
-
 impl std::error::Error for PolarError {}
 
 impl fmt::Display for PolarError {
