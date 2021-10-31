@@ -35,10 +35,10 @@ pub struct KnowledgeBase {
     /// Map of class name -> MRO list where the MRO list is a list of class instance IDs
     mro: HashMap<Symbol, Vec<u64>>,
 
-    /// Map from loaded files to the source ID
-    pub loaded_files: HashMap<String, u64>,
-    /// Map from source code loaded to the filename it was loaded as
-    pub loaded_content: HashMap<String, String>,
+    /// Map from filename to source ID for files loaded into the KB.
+    loaded_files: HashMap<String, u64>,
+    /// Map from contents to filename for files loaded into the KB.
+    loaded_content: HashMap<String, String>,
 
     rules: HashMap<Symbol, GenericRule>,
     rule_types: RuleTypes,
