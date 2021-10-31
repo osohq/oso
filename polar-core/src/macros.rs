@@ -187,7 +187,6 @@ macro_rules! rule {
             name: sym!($name),
             params,
             body: term!(op!(And, $(term!($body)),+)),
-            source_info: $crate::sources::SourceInfo::Test,
         }}
     };
     ($name:expr, [$($args:tt)*]) => {{
@@ -197,7 +196,6 @@ macro_rules! rule {
             name: sym!($name),
             params,
             body: term!(op!(And)),
-            source_info: $crate::sources::SourceInfo::Test,
         }
     }};
 }

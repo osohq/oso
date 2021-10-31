@@ -2,8 +2,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
 
-use crate::sources::SourceInfo;
-
 use super::terms::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -18,65 +16,16 @@ impl Parameter {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Serialize)]
 pub struct Rule {
     pub name: Symbol,
     pub params: Vec<Parameter>,
     pub body: Term,
-    #[serde(skip, default = "SourceInfo::ffi")]
-    pub source_info: SourceInfo,
-}
-
-impl PartialEq for Rule {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
-            && self.params.len() == other.params.len()
-            && self.params == other.params
-            && self.body == other.body
-    }
 }
 
 impl Rule {
     pub fn is_ground(&self) -> bool {
         self.params.iter().all(|p| p.is_ground())
-    }
-
-    pub fn span(&self) -> Option<(usize, usize)> {
-        if let SourceInfo::Parser { left, right, .. } = self.source_info {
-            Some((left, right))
-        } else {
-            None
-        }
-    }
-
-    pub fn new_from_test(name: Symbol, params: Vec<Parameter>, body: Term) -> Self {
-        Self {
-            name,
-            params,
-            body,
-            source_info: SourceInfo::Test,
-        }
-    }
-
-    /// Creates a new term from the parser
-    pub fn new_from_parser(
-        src_id: u64,
-        left: usize,
-        right: usize,
-        name: Symbol,
-        params: Vec<Parameter>,
-        body: Term,
-    ) -> Self {
-        Self {
-            name,
-            params,
-            body,
-            source_info: SourceInfo::Parser {
-                src_id,
-                left,
-                right,
-            },
-        }
     }
 }
 
@@ -176,13 +125,6 @@ impl RuleIndex {
         }
     }
 
-    pub fn remove_rule(&mut self, rule_id: u64) {
-        self.rules.remove(&rule_id);
-        self.index
-            .iter_mut()
-            .for_each(|(_, index)| index.remove_rule(rule_id));
-    }
-
     #[allow(clippy::comparison_chain)]
     pub fn get_applicable_rules(&self, args: &[Term], i: usize) -> RuleSet {
         if i < args.len() {
@@ -252,11 +194,6 @@ impl GenericRule {
             "Rule id already used."
         );
         self.index.index_rule(rule_id, &rule.params[..], 0);
-    }
-
-    pub fn remove_rule(&mut self, rule_id: u64) {
-        self.rules.remove(&rule_id);
-        self.index.remove_rule(rule_id);
     }
 
     #[allow(clippy::ptr_arg)]

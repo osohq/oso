@@ -604,55 +604,6 @@ impl KnowledgeBase {
         self.resource_blocks.clear();
     }
 
-    /// Removes a file from the knowledge base by finding the associated
-    /// `Source` and removing all rules for that source, and
-    /// removes the file from loaded files.
-    ///
-    /// Optionally return the source for the file, returning `None`
-    /// if the file was not in the loaded files.
-    pub fn remove_file(&mut self, filename: &str) -> Option<String> {
-        self.loaded_files
-            .get(filename)
-            .cloned()
-            .map(|src_id| self.remove_source(src_id))
-    }
-
-    /// Removes a source from the knowledge base by finding the associated
-    /// `Source` and removing all rules for that source. Will
-    /// also remove the loaded files if the source was loaded from a file.
-    pub fn remove_source(&mut self, source_id: u64) -> String {
-        // remove from rules
-        self.rules.retain(|_, gr| {
-            let to_remove: Vec<u64> = gr.rules.iter().filter_map(|(idx, rule)| {
-                matches!(rule.source_info, SourceInfo::Parser { src_id, ..} if src_id == source_id)
-                    .then(||*idx)
-            }).collect();
-
-            for idx in to_remove {
-                gr.remove_rule(idx);
-            }
-            !gr.rules.is_empty()
-        });
-
-        // remove from sources
-        let source = self
-            .sources
-            .remove_source(source_id)
-            .expect("source doesn't exist in KB");
-        let filename = source.filename;
-
-        // remove queries
-        self.inline_queries
-            .retain(|q| q.get_source_id() != Some(source_id));
-
-        // remove from files
-        if let Some(filename) = filename {
-            self.loaded_files.remove(&filename);
-            self.loaded_content.retain(|_, f| f != &filename);
-        }
-        source.src
-    }
-
     fn check_file(&self, src: &str, filename: &str) -> PolarResult<()> {
         match (
             self.loaded_content.get(src),

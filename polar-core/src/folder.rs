@@ -86,20 +86,11 @@ pub trait Folder: Sized {
     }
 }
 
-pub fn fold_rule<T: Folder>(
-    Rule {
-        name,
-        params,
-        body,
-        source_info,
-    }: Rule,
-    fld: &mut T,
-) -> Rule {
+pub fn fold_rule<T: Folder>(Rule { name, params, body }: Rule, fld: &mut T) -> Rule {
     Rule {
         name: fld.fold_name(name),
         params: params.into_iter().map(|p| fld.fold_param(p)).collect(),
         body: fld.fold_term(body),
-        source_info,
     }
 }
 

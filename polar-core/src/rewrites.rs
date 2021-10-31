@@ -89,15 +89,7 @@ fn temp_name(o: &Operator) -> &'static str {
 /// conjunction, creating one if necessary.
 impl<'kb> Folder for Rewriter<'kb> {
     /// Rewrite a rule, pushing expressions in the head into the body.
-    fn fold_rule(
-        &mut self,
-        Rule {
-            name,
-            body,
-            params,
-            source_info,
-        }: Rule,
-    ) -> Rule {
+    fn fold_rule(&mut self, Rule { name, body, params }: Rule) -> Rule {
         let mut body = self.fold_term(body);
 
         self.stack.push(vec![]);
@@ -110,12 +102,7 @@ impl<'kb> Folder for Rewriter<'kb> {
                 args: terms.into_iter().chain(rewrites).collect(),
             }));
         }
-        Rule {
-            name,
-            params,
-            body,
-            source_info,
-        }
+        Rule { name, params, body }
     }
 
     /// Rewrite an expression as a temp, and push a rewritten
