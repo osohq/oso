@@ -18,10 +18,11 @@ var CLASSES = make(map[string]reflect.Type)
 type None struct{}
 
 type Host struct {
-	ffiPolar     ffi.PolarFfi
-	classes      map[string]reflect.Type
-	constructors map[string]reflect.Value
-	instances    map[uint64]reflect.Value
+	ffiPolar         ffi.PolarFfi
+	classes          map[string]reflect.Type
+	constructors     map[string]reflect.Value
+	instances        map[uint64]reflect.Value
+	acceptExpression bool
 }
 
 func NewHost(polar ffi.PolarFfi) Host {
@@ -32,10 +33,11 @@ func NewHost(polar ffi.PolarFfi) Host {
 	instances := make(map[uint64]reflect.Value)
 	constructors := make(map[string]reflect.Value)
 	return Host{
-		ffiPolar:     polar,
-		classes:      classes,
-		instances:    instances,
-		constructors: constructors,
+		ffiPolar:         polar,
+		classes:          classes,
+		instances:        instances,
+		constructors:     constructors,
+		acceptExpression: false,
 	}
 }
 
@@ -388,10 +390,14 @@ func (h Host) ToGo(v types.Term) (interface{}, error) {
 	case ValueVariable:
 		return inner, nil
 	case ValueExpression:
-		return nil, fmt.Errorf(
-			"Received Expression from Polar VM. The Expression type is not yet supported in this language.\n" +
-				"This may mean you performed an operation in your policy over an unbound variable.")
+		if !h.acceptExpression {
+			return nil, &errors.UnexpectedExpressionError{}
+		}
 	}
 
 	return nil, fmt.Errorf("Unexpected Polar type %v", v)
+}
+
+func (h *Host) SetAcceptExpression(acceptExpression bool) {
+	h.acceptExpression = acceptExpression
 }
