@@ -406,6 +406,7 @@ pub enum OperationalError {
     Unimplemented {
         msg: String,
     },
+    /// Rust panics caught in the `polar-c-api` crate.
     Unknown,
 
     /// An invariant has been broken internally.
