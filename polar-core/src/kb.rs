@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::error::ParameterError;
-use crate::error::{ErrorKind, PolarError, PolarResult, ValidationError};
+use crate::error::{PolarError, PolarResult};
 use crate::validations::check_undefined_rule_calls;
 use crate::visitor::{walk_term, Visitor};
 
@@ -675,7 +675,7 @@ impl KnowledgeBase {
         error.set_context(source.as_ref(), term.as_ref())
     }
 
-    pub fn rewrite_shorthand_rules(&mut self) -> Vec<Diagnostic> {
+    pub fn rewrite_shorthand_rules(&mut self) -> Vec<PolarError> {
         let mut errors = vec![];
 
         errors.append(
@@ -700,19 +700,6 @@ impl KnowledgeBase {
         }
 
         errors
-            .into_iter()
-            // Attach context to ResourceBlock errors.
-            //
-            // TODO(gj): can we attach context to *all* errors here since all errors will be
-            // parse-time errors and so will have some source context to attach?
-            .map(|e| match e.kind {
-                ErrorKind::Validation(ref e @ ValidationError::ResourceBlock { ref term, .. }) => {
-                    self.set_error_context(term, e.clone())
-                }
-                _ => e,
-            })
-            .map(Diagnostic::Error)
-            .collect()
     }
 
     pub fn is_union(&self, maybe_union: &Term) -> bool {
