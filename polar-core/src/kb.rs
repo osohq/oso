@@ -224,12 +224,7 @@ impl KnowledgeBase {
         rule_type_instance: &InstanceLiteral,
         index: usize,
     ) -> PolarResult<RuleParamMatch> {
-        // TODO @patrickod remove this hacky comparison edge-case by making Actor and Resource "real" classes
-        if (rule_instance.tag.0 == RESOURCE_UNION_NAME) || (rule_instance.tag.0 == ACTOR_UNION_NAME)
-        {
-            Ok(RuleParamMatch::True)
-        // Get the unique ID of the prototype instance pattern class.
-        } else if let Some(Value::ExternalInstance(ExternalInstance { instance_id, .. })) = self
+        if let Some(Value::ExternalInstance(ExternalInstance { instance_id, .. })) = self
             .constants
             .get(&rule_type_instance.tag)
             .map(|t| t.value())

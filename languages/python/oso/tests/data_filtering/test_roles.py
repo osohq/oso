@@ -130,10 +130,15 @@ def oso():
         allow(actor, action, resource) if
           has_permission(actor, action, resource);
 
-        has_role(user: User, name: String, resource: Resource) if
+        has_role(user: User, name: String, repo: Repo) if
           role in user.roles and
           role.role = name and
-          role.resource_name = resource.name;
+          role.resource_name = repo.name;
+
+        has_role(user: User, name: String, org: Org) if
+          role in user.roles and
+          role.role = name and
+          role.resource_name = org.name;
 
         actor User {}
 

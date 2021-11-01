@@ -889,9 +889,13 @@ describe('Oso Roles', () => {
       allow(actor, action, resource) if
         has_permission(actor, action, resource);
 
-      has_role(user: User, name: String, resource: Resource) if
+      has_role(user: User, name: String, org: Org) if
         role in user.roles and
-        role matches { name: name, resource: resource };
+        role matches { name: name, resource: org };
+
+      has_role(user: User, name: String, repo: Repo) if
+        role in user.roles and
+        role matches { name: name, resource: repo };
 
       actor User {}
 
