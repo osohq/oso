@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use std::{fmt, ops};
+use std::fmt;
 
 use crate::sources::*;
 use crate::terms::*;
@@ -68,7 +68,12 @@ impl PolarError {
                 }
                 _ => {}
             },
-            (e, Some(source), Some(term)) => {
+            (e, Some(source), Some(term))
+            | (
+                e @ ErrorKind::Validation(ValidationError::ResourceBlock { term, .. }),
+                Some(source),
+                _,
+            ) => {
                 let (row, column) = crate::lexer::loc_to_pos(&source.src, term.offset());
                 self.context.replace(ErrorContext {
                     source: source.clone(),
@@ -83,41 +88,6 @@ impl PolarError {
             }
             _ => {}
         }
-
-        // Augment ResourceBlock errors with relevant snippets of parsed Polar policy.
-        if let ErrorKind::Validation(ValidationError::ResourceBlock {
-            ref mut msg,
-            ref ranges,
-            ref loc,
-        }) = self.kind
-        {
-            if let Some(source) = source {
-                let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
-                self.context.replace(ErrorContext {
-                    source: source.clone(),
-                    row,
-                    column,
-                    include_location: false,
-                });
-
-                match ranges.len() {
-                    // If one range is provided, print it with no label.
-                    1 => {
-                        let first = &source.src[ranges[0].clone()];
-                        msg.push_str(&format!("\t{}\n", first));
-                    }
-                    // If two ranges are provided, label them `First` and `Second`.
-                    2 => {
-                        let first = &source.src[ranges[0].clone()];
-                        msg.push_str(&format!("\tFirst:\n\t\t{}\n", first));
-                        let second = &source.src[ranges[1].clone()];
-                        msg.push_str(&format!("\tSecond:\n\t\t{}\n", second));
-                    }
-                    _ => (),
-                }
-            }
-        }
-
         self
     }
 
@@ -470,11 +440,12 @@ pub enum ValidationError {
         rule_name: String,
     },
     ResourceBlock {
-        loc: usize,
+        term: Term,
         msg: String,
-        /// Set of source ranges to augment the error message with relevant snippets of the parsed
-        /// Polar policy.
-        ranges: Vec<ops::Range<usize>>,
+        // TODO(gj): enum for RelatedInformation that has a variant for capturing "other relevant
+        // terms" for a particular diagnostic, e.g., for a DuplicateResourceBlock error the
+        // already-declared resource block would be relevant info for the error emitted on
+        // redeclaration.
     },
     // TODO(lm|gj): add SingletonVariable.
 }

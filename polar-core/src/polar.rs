@@ -222,8 +222,19 @@ impl Polar {
                         resource,
                         productions,
                     } => match resource_block_from_productions(keyword, resource, productions) {
-                        Ok(block) => diagnostics.append(&mut block.add_to_kb(kb)),
-                        Err(mut ds) => diagnostics.append(&mut ds),
+                        Ok(block) => {
+                            let errors = block
+                                .add_to_kb(kb)
+                                .into_iter()
+                                .map(|e| e.set_context(Some(source), None));
+                            diagnostics.append(&mut errors.map(Diagnostic::Error).collect());
+                        }
+                        Err(errors) => {
+                            let errors = errors
+                                .into_iter()
+                                .map(|e| e.set_context(Some(source), None));
+                            diagnostics.append(&mut errors.map(Diagnostic::Error).collect());
+                        }
                     },
                 }
             }
