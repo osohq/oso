@@ -1,7 +1,7 @@
 import math
 import os
 
-from polar.exceptions import UnrecognizedEOF
+from polar.exceptions import PolarRuntimeError, UnrecognizedEOF
 from oso import Oso, OsoError, Variable
 
 oso = Oso()
@@ -122,3 +122,12 @@ result = oso.query_rule("testUnspecializedRuleOrder", "foo", "bar", Variable("z"
 assert next(result)["bindings"]["z"] == 1
 assert next(result)["bindings"]["z"] == 2
 assert next(result)["bindings"]["z"] == 3
+
+exception_thrown = False
+try:
+    next(oso.query("testUnhandledPartial()"))
+except PolarRuntimeError as e:
+    assert e.message.startswith("Found an unhandled partial")
+    exception_thrown = True
+
+assert exception_thrown
