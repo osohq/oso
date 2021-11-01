@@ -53,23 +53,23 @@ fn validate_parsed_declaration((name, term): (Term, Term)) -> PolarResult<Parsed
         ("relations", Value::Dictionary(_)) => Ok(ParsedDeclaration::Relations(term)),
 
         ("roles", Value::Dictionary(_)) | ("permissions", Value::Dictionary(_)) => {
-            let msg = format!("Expected '{}' declaration to be a list of strings; found a dictionary:\n", name.to_polar());
+            let msg = format!("Expected '{}' declaration to be a list of strings; found a dictionary", name.to_polar());
             Err(ValidationError::ResourceBlock { msg, term}.into())
         }
         ("relations", Value::List(_)) => Err(ValidationError::ResourceBlock {
-            msg: "Expected 'relations' declaration to be a dictionary; found a list:\n".to_owned(),
+            msg: "Expected 'relations' declaration to be a dictionary; found a list".to_owned(),
             term
         }.into()),
 
         (_, Value::List(_)) => Err(ValidationError::ResourceBlock {
             msg: format!(
-                "Unexpected declaration '{}'. Did you mean for this to be 'roles = [ ... ];' or 'permissions = [ ... ];'?\n", name.to_polar()
+                "Unexpected declaration '{}'. Did you mean for this to be 'roles = [ ... ];' or 'permissions = [ ... ];'?", name.to_polar()
             ),
             term
         }.into()),
         (_, Value::Dictionary(_)) => Err(ValidationError::ResourceBlock {
             msg: format!(
-                "Unexpected declaration '{}'. Did you mean for this to be 'relations = {{ ... }};'?\n", name.to_polar()
+                "Unexpected declaration '{}'. Did you mean for this to be 'relations = {{ ... }};'?", name.to_polar()
             ),
             term
         }.into()),
@@ -126,7 +126,7 @@ pub fn resource_block_from_productions(
     // TODO(gj): attach 'previous' to error via `related_info` section.
     let make_error = |name: &str, _previous: &Term, new: &Term| {
         let msg = format!(
-            "Multiple '{}' declarations in '{}' resource block.\n",
+            "Multiple '{}' declarations in '{}' resource block.",
             name,
             resource.to_polar()
         );
@@ -1274,12 +1274,12 @@ mod tests {
         expect_error(
             &p,
             r#"resource Org{roles={};}"#,
-            r#"Expected 'roles' declaration to be a list of strings; found a dictionary:"#,
+            r#"Expected 'roles' declaration to be a list of strings; found a dictionary"#,
         );
         expect_error(
             &p,
             r#"resource Org{relations=[];}"#,
-            r#"Expected 'relations' declaration to be a dictionary; found a list:"#,
+            r#"Expected 'relations' declaration to be a dictionary; found a list"#,
         );
         expect_error(
             &p,
