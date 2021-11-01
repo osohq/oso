@@ -111,10 +111,13 @@ impl KnowledgeBase {
     }
 
     pub fn validate_rules(&self) -> Vec<Diagnostic> {
-        let mut diagnostics = self.validate_rule_calls();
+        let mut diagnostics = vec![];
         if let Err(e) = self.validate_rule_types() {
             diagnostics.push(Diagnostic::Error(e));
         }
+
+        diagnostics.append(&mut self.validate_rule_calls());
+
         diagnostics
     }
 

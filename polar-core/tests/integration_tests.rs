@@ -2549,14 +2549,12 @@ resource Issue {
     relations = {repo: Repository};
     "write" if "owner" on "repo";
 }
+
+allow(actor, action, resource) if has_permission(actor, action, resource);
 "#;
 
     let err = p.load_str(policy).expect_err("Expected validation error");
     assert!(matches!(&err.kind, ErrorKind::Validation(_)));
-    eprintln!("{}", err);
-    // assert!(format!("{}", err).contains(
-    // "Failed to match because: Parameter `role_name` expects a String type constraint."
-    // ));
-
+    assert!(format!("{}", err).contains("Missing implementation for required rule has_relation("));
     Ok(())
 }
