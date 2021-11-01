@@ -27,6 +27,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: echo "hello world"
+      # so, self hosted runners on mac only support x64 (extreme sigh)
+      # the runner runs under a rosetta shell, we literally only are doing
+      # this so we can do stuff on the M1 so we have to break out of rosetta
+      # for every command.
+      - run: uname -m
+      - run: arch -arm64 uname -m
 
   # # Dispatch an oso_release event to other repos to test against this commit
   # dispatch:
