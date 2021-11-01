@@ -532,7 +532,7 @@ impl PolarVirtualMachine {
     pub fn push_goal(&mut self, goal: Goal) -> PolarResult<()> {
         if self.goals.len() >= self.stack_limit {
             return Err(error::RuntimeError::StackOverflow {
-                msg: format!("Goal stack overflow! MAX_GOALS = {}", self.stack_limit),
+                limit: self.stack_limit,
             }
             .into());
         }
@@ -3478,10 +3478,10 @@ mod tests {
     fn test_gen_var() {
         let vm = PolarVirtualMachine::default();
 
-        let rule = Rule {
-            name: Symbol::new("foo"),
-            params: vec![],
-            body: Term::new_from_test(Value::Expression(Operation {
+        let rule = Rule::new_from_test(
+            Symbol::new("foo"),
+            vec![],
+            Term::new_from_test(Value::Expression(Operation {
                 operator: Operator::And,
                 args: vec![
                     term!(1),
@@ -3492,8 +3492,7 @@ mod tests {
                     ))])),
                 ],
             })),
-            source_info: SourceInfo::Test,
-        };
+        );
 
         let renamed_rule = vm.rename_rule_vars(&rule);
         let renamed_terms = unwrap_and(&renamed_rule.body);

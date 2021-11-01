@@ -2,8 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
 
-use crate::sources::SourceInfo;
-
+use super::sources::SourceInfo;
 use super::terms::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -176,13 +175,6 @@ impl RuleIndex {
         }
     }
 
-    pub fn remove_rule(&mut self, rule_id: u64) {
-        self.rules.remove(&rule_id);
-        self.index
-            .iter_mut()
-            .for_each(|(_, index)| index.remove_rule(rule_id));
-    }
-
     #[allow(clippy::comparison_chain)]
     pub fn get_applicable_rules(&self, args: &[Term], i: usize) -> RuleSet {
         if i < args.len() {
@@ -252,11 +244,6 @@ impl GenericRule {
             "Rule id already used."
         );
         self.index.index_rule(rule_id, &rule.params[..], 0);
-    }
-
-    pub fn remove_rule(&mut self, rule_id: u64) {
-        self.rules.remove(&rule_id);
-        self.index.remove_rule(rule_id);
     }
 
     #[allow(clippy::ptr_arg)]
