@@ -31,8 +31,9 @@ jobs:
       # the runner runs under a rosetta shell, we literally only are doing
       # this so we can do stuff on the M1 so we have to break out of rosetta
       # for every command.
-      - run: uname -m
-      - run: arch -arm64 uname -m
+      - run: arch -arm64 uname -m && uname -m
+
+
 
   # # Dispatch an oso_release event to other repos to test against this commit
   # dispatch:
