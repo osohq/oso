@@ -112,10 +112,6 @@
                     <shadedPattern>com.osohq.shaded.org.objectweb</shadedPattern>
                 </relocation>
                 <relocation>
-                    <pattern>com.kenai</pattern>
-                    <shadedPattern>com.osohq.shaded.com.kenai</shadedPattern>
-                </relocation>
-                <relocation>
                     <pattern>com.github.jnr</pattern>
                     <shadedPattern>com.osohq.shaded.com.github.jnr</shadedPattern>
                 </relocation>
