@@ -67,12 +67,7 @@ impl PolarError {
                 }
                 _ => {}
             },
-            (e, Some(source), Some(term))
-            | (
-                e @ ErrorKind::Validation(ValidationError::ResourceBlock { term, .. }),
-                Some(source),
-                _,
-            ) => {
+            (e, Some(source), Some(term)) => {
                 let (row, column) = crate::lexer::loc_to_pos(&source.src, term.offset());
                 self.context.replace(ErrorContext {
                     source: source.clone(),
