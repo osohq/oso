@@ -16,6 +16,12 @@ draft: true
 
 - Fixed a bug that caused the Go library to crash when using Go 1.17 on macOS.
 
+### Node.js
+
+#### Other bugs & improvements
+- The `Class` type for representing abstract resources for data filtering is
+  now a top-level export.
+
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
 #### Breaking changes
