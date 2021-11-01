@@ -266,7 +266,7 @@ pub struct ResourceBlock {
 #[derive(Clone, Default)]
 pub struct ResourceBlocks {
     /// Map from resource (`Symbol`) to the declarations in that resource's block.
-    pub declarations: HashMap<Term, Declarations>,
+    declarations: HashMap<Term, Declarations>,
     /// Map from resource (`Symbol`) to the shorthand rules declared in that resource's block.
     pub shorthand_rules: HashMap<Term, Vec<ShorthandRule>>,
     /// Set of all resource block types declared as actors. Internally treated like a union type
@@ -376,6 +376,10 @@ impl ResourceBlocks {
             let msg = format!("{}: Relation {} in rule body `{} on {}` has type '{}', but no such resource block exists. Try declaring one: `resource {} {{}}`", resource.to_polar(), relation.to_polar(), declaration.to_polar(), relation.to_polar(), related_block.to_polar(), related_block.to_polar());
             Err(ParseError::ResourceBlock { loc, msg, ranges }.into())
         }
+    }
+
+    pub fn declarations(&self) -> &HashMap<Term, Declarations> {
+        &self.declarations
     }
 }
 

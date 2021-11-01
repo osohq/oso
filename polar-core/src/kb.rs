@@ -799,7 +799,7 @@ impl KnowledgeBase {
         // We create non-required rule types to gracefully account for the case
         // where users have declared relations ahead of time that are used in
         // rule or resource definitions.
-        for (object, declarations) in &self.resource_blocks.declarations {
+        for (object, declarations) in self.resource_blocks.declarations() {
             for (name, declaration) in declarations.iter() {
                 match declaration {
                     Declaration::Relation(subject) => {
@@ -832,7 +832,7 @@ impl KnowledgeBase {
                     (implier, Some(relation)) => {
                         if let Some(Declaration::Relation(subject)) = self
                             .resource_blocks
-                            .declarations
+                            .declarations()
                             .get(object)
                             .and_then(|d| d.get(relation))
                         {
@@ -846,7 +846,7 @@ impl KnowledgeBase {
                             );
 
                             if let Some(declarations) =
-                                self.resource_blocks.declarations.get(subject)
+                                self.resource_blocks.declarations().get(subject)
                             {
                                 match declarations.get(implier) {
                                     Some(Declaration::Relation(related_subject)) => {
@@ -869,7 +869,8 @@ impl KnowledgeBase {
                         }
                     }
                     (implier, None) => {
-                        if let Some(declarations) = self.resource_blocks.declarations.get(object) {
+                        if let Some(declarations) = self.resource_blocks.declarations().get(object)
+                        {
                             match declarations.get(implier) {
                                 Some(Declaration::Relation(subject)) => {
                                     has_relation_rule_types_to_create.insert(
