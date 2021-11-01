@@ -98,6 +98,32 @@
               <goal>shade</goal>
             </goals>
             <configuration>
+              <relocations>
+                <relocation>
+                    <pattern>org.json</pattern>
+                    <shadedPattern>com.osohq.shaded.org.json</shadedPattern>
+                </relocation>
+                <relocation>
+                    <pattern>org.apache.commons</pattern>
+                    <shadedPattern>com.osohq.shaded.org.apache.commons</shadedPattern>
+                </relocation>
+                <relocation>
+                    <pattern>org.objectweb</pattern>
+                    <shadedPattern>com.osohq.shaded.org.objectweb</shadedPattern>
+                </relocation>
+                <relocation>
+                    <pattern>com.kenai</pattern>
+                    <shadedPattern>com.osohq.shaded.com.kenai</shadedPattern>
+                </relocation>
+                <relocation>
+                    <pattern>com.github.jnr</pattern>
+                    <shadedPattern>com.osohq.shaded.com.github.jnr</shadedPattern>
+                </relocation>
+                <relocation>
+                    <pattern>org.junit.jupiter</pattern>
+                    <shadedPattern>com.osohq.shaded.org.junit.jupiter</shadedPattern>
+                </relocation>
+              </relocations>
             </configuration>
           </execution>
         </executions>
