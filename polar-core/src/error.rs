@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use std::{fmt, ops};
+use std::fmt;
 
 use crate::sources::*;
 use crate::terms::*;
@@ -56,8 +56,7 @@ impl PolarError {
                 | ParseError::WrongValueType { loc, .. }
                 | ParseError::ReservedWord { loc, .. }
                 | ParseError::DuplicateKey { loc, .. }
-                | ParseError::SingletonVariable { loc, .. }
-                | ParseError::ResourceBlock { loc, .. } => {
+                | ParseError::SingletonVariable { loc, .. } => {
                     let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
                     self.context.replace(ErrorContext {
                         source: source.clone(),
@@ -75,6 +74,8 @@ impl PolarError {
                     row,
                     column,
                     // @TODO(Sam): find a better way to include this info
+                    // TODO(gj|sam): this bool can probably be removed -- we should include
+                    // location unconditionally for errors that have the available context.
                     include_location: matches!(
                         e,
                         ErrorKind::Runtime(RuntimeError::UnhandledPartial { .. })
@@ -83,33 +84,6 @@ impl PolarError {
             }
             _ => {}
         }
-
-        // Augment ResourceBlock errors with relevant snippets of parsed Polar policy.
-        if let ErrorKind::Parse(ParseError::ResourceBlock {
-            ref mut msg,
-            ref ranges,
-            ..
-        }) = self.kind
-        {
-            if let Some(source) = source {
-                match ranges.len() {
-                    // If one range is provided, print it with no label.
-                    1 => {
-                        let first = &source.src[ranges[0].clone()];
-                        msg.push_str(&format!("\t{}\n", first));
-                    }
-                    // If two ranges are provided, label them `First` and `Second`.
-                    2 => {
-                        let first = &source.src[ranges[0].clone()];
-                        msg.push_str(&format!("\tFirst:\n\t\t{}\n", first));
-                        let second = &source.src[ranges[1].clone()];
-                        msg.push_str(&format!("\tSecond:\n\t\t{}\n", second));
-                    }
-                    _ => (),
-                }
-            }
-        }
-
         self
     }
 }
@@ -216,13 +190,6 @@ pub enum ParseError {
         loc: usize,
         name: String,
     },
-    ResourceBlock {
-        loc: usize,
-        msg: String,
-        /// Set of source ranges to augment the error message with relevant snippets of the parsed
-        /// Polar policy.
-        ranges: Vec<ops::Range<usize>>,
-    },
 }
 
 impl fmt::Display for ErrorContext {
@@ -290,9 +257,6 @@ impl fmt::Display for ParseError {
                     "Singleton variable {} is unused or undefined; try renaming to _{} or _",
                     name, name
                 )
-            }
-            Self::ResourceBlock { msg, .. } => {
-                write!(f, "{}", msg)
             }
         }
     }
@@ -431,10 +395,27 @@ impl fmt::Display for OperationalError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationError {
-    InvalidRule { rule: String, msg: String },
-    InvalidRuleType { rule_type: String, msg: String },
-    UndefinedRule { rule_name: String },
-    // TODO(lm|gj): add ResourceBlock and SingletonVariable.
+    InvalidRule {
+        rule: String,
+        msg: String,
+    },
+    InvalidRuleType {
+        rule_type: String,
+        msg: String,
+    },
+    UndefinedRule {
+        rule_name: String,
+    },
+    ResourceBlock {
+        /// Term where the error arose, tracked for lexical context.
+        term: Term,
+        msg: String,
+        // TODO(gj): enum for RelatedInformation that has a variant for capturing "other relevant
+        // terms" for a particular diagnostic, e.g., for a DuplicateResourceBlock error the
+        // already-declared resource block would be relevant info for the error emitted on
+        // redeclaration.
+    },
+    // TODO(lm|gj): add SingletonVariable.
 }
 
 impl fmt::Display for ValidationError {
@@ -448,6 +429,9 @@ impl fmt::Display for ValidationError {
             }
             Self::UndefinedRule { rule_name } => {
                 write!(f, r#"Call to undefined rule "{}""#, rule_name)
+            }
+            Self::ResourceBlock { msg, .. } => {
+                write!(f, "{}", msg)
             }
         }
     }
