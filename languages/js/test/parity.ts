@@ -202,7 +202,7 @@ void (async function () {
     const { name, message } = e as Error;
     if (
       name === expectedName &&
-      !message.startsWith('Found an unhandled partial')
+      message.startsWith('Found an unhandled partial')
     )
       exceptionThrown = true;
   } finally {
