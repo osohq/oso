@@ -74,6 +74,8 @@ impl PolarError {
                     row,
                     column,
                     // @TODO(Sam): find a better way to include this info
+                    // TODO(gj|sam): this bool can probably be removed -- we should include
+                    // location unconditionally for errors that have the available context.
                     include_location: matches!(
                         e,
                         ErrorKind::Runtime(RuntimeError::UnhandledPartial { .. })
