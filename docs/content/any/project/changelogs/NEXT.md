@@ -10,18 +10,6 @@ draft: true
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
-### Java
-
-#### Other bugs & improvements
-
-- Shade dependency jars so they don't conflict with project's dependencies.
-
-### Go
-
-#### Other bugs & improvements
-
-- Fixed a bug that caused the Go library to crash when using Go 1.17 on macOS.
-
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
 #### Breaking changes
