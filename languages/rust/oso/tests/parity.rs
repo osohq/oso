@@ -1,4 +1,5 @@
 use oso::{ClassBuilder, Oso, PolarClass};
+use polar_core::error::{ErrorKind, PolarError, RuntimeError};
 
 macro_rules! res {
     ($res:expr) => {
@@ -142,4 +143,17 @@ fn test() {
     res!(@not oso.query(r#"builtinSpecializers({}, "DictionaryWithFields")"#));
     res!(@not oso.query(r#"builtinSpecializers({z: 1}, "DictionaryWithFields")"#));
     res!(oso.query(r#"builtinSpecializers({y: 1}, "DictionaryWithFields")"#));
+
+    let res = oso.query("testUnhandledPartial()").unwrap().next().unwrap();
+    assert!(
+        matches!(
+            res,
+            Err(oso::OsoError::Polar(PolarError {
+                kind: ErrorKind::Runtime(RuntimeError::UnhandledPartial { .. }),
+                ..
+            })),
+        ),
+        "Expected unhandled partial error, got: {:#?}",
+        res
+    )
 }
