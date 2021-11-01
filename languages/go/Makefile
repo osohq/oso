@@ -16,7 +16,7 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 test: copy_lib
-	go test -v ./tests/ -count=1
+	POLAR_IGNORE_NO_ALLOW_WARNING=1 go test -v ./tests/ -count=1
 
 fmt:
 	go fmt ./...
