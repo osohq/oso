@@ -688,7 +688,7 @@ impl KnowledgeBase {
     }
 
     pub fn set_error_context(&self, term: &Term, error: impl Into<PolarError>) -> PolarError {
-        /// `GetSource` will talk a term and return the _first_ piece of source
+        /// `GetSource` will walk a term and return the _first_ piece of source
         /// info it finds
         struct GetSource<'kb> {
             kb: &'kb KnowledgeBase,
