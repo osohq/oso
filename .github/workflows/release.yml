@@ -548,6 +548,9 @@ jobs:
           name: wheel
       - name: "test"
         run: |
+          # first install _only_ the wheel and make sure it's available
+          pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel --no-deps --no-index
+          # then install deps too
           pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
           python test.py
         working-directory: test
@@ -574,6 +577,9 @@ jobs:
           name: wheel
       - name: "test"
         run: |
+          # first install _only_ the wheel and make sure it's available
+          pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel --no-deps --no-index
+          # then install deps too
           pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
           python test.py
         working-directory: test
@@ -601,6 +607,9 @@ jobs:
           name: wheel
       - name: "test"
         run: |
+          # first install _only_ the wheel and make sure it's available
+          pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel --no-deps --no-index
+          # then install deps too
           pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
           python test.py
         working-directory: test
@@ -627,6 +636,9 @@ jobs:
           name: wheel
       - name: "test"
         run: |
+          # first install _only_ the wheel and make sure it's available
+          pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel --no-deps --no-index
+          # then install deps too
           pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
           python test.py
         working-directory: test
