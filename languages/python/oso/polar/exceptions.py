@@ -183,22 +183,7 @@ class UnknownError(OperationalError):
     pass
 
 
-# ==============
-# API EXCEPTIONS
-# ==============
-
-
-class PolarApiError(OsoError):
-    """Errors coming from the python bindings to polar, not the engine itself."""
-
-    pass
-
-
-class ParameterError(PolarApiError):
-    pass
-
-
-class ValidationError(PolarApiError):
+class ValidationError(OsoError):
     pass
 
 

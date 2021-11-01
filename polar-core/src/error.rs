@@ -32,7 +32,6 @@ pub enum ErrorKind {
     Parse(ParseError),
     Runtime(RuntimeError),
     Operational(OperationalError),
-    Parameter(ParameterError),
     Validation(ValidationError),
 }
 
@@ -113,10 +112,6 @@ impl PolarError {
 
         self
     }
-
-    pub fn unimplemented(msg: String) -> Self {
-        OperationalError::Unimplemented { msg }.into()
-    }
 }
 
 impl From<ParseError> for PolarError {
@@ -146,15 +141,6 @@ impl From<OperationalError> for PolarError {
     }
 }
 
-impl From<ParameterError> for PolarError {
-    fn from(err: ParameterError) -> Self {
-        Self {
-            kind: ErrorKind::Parameter(err),
-            context: None,
-        }
-    }
-}
-
 impl From<ValidationError> for PolarError {
     fn from(err: ValidationError) -> Self {
         Self {
@@ -166,12 +152,6 @@ impl From<ValidationError> for PolarError {
 
 pub type PolarResult<T> = std::result::Result<T, PolarError>;
 
-impl<T> From<PolarError> for PolarResult<T> {
-    fn from(err: PolarError) -> Self {
-        Err(err)
-    }
-}
-
 impl std::error::Error for PolarError {}
 
 impl fmt::Display for PolarError {
@@ -180,7 +160,6 @@ impl fmt::Display for PolarError {
             ErrorKind::Parse(e) => write!(f, "{}", e)?,
             ErrorKind::Runtime(e) => write!(f, "{}", e)?,
             ErrorKind::Operational(e) => write!(f, "{}", e)?,
-            ErrorKind::Parameter(e) => write!(f, "{}", e)?,
             ErrorKind::Validation(e) => write!(f, "{}", e)?,
         }
         if let Some(ref context) = self.context {
@@ -427,6 +406,7 @@ pub enum OperationalError {
     Unimplemented {
         msg: String,
     },
+    /// Rust panics caught in the `polar-c-api` crate.
     Unknown,
 
     /// An invariant has been broken internally.
@@ -446,16 +426,6 @@ impl fmt::Display for OperationalError {
                 Please submit a bug report at <https://github.com/osohq/oso/issues>"
             ),
         }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-/// Parameter passed to FFI lib function is invalid.
-pub struct ParameterError(pub String);
-
-impl fmt::Display for ParameterError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Invalid parameter used in FFI function: {}", self.0)
     }
 }
 
