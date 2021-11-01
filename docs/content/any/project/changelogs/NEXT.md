@@ -10,6 +10,12 @@ draft: true
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
+### Java
+
+#### Other bugs & improvements
+
+- Shade dependency jars so they don't conflict with project's dependencies.
+
 ### Go
 
 #### Other bugs & improvements
