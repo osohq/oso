@@ -3478,10 +3478,10 @@ mod tests {
     fn test_gen_var() {
         let vm = PolarVirtualMachine::default();
 
-        let rule = Rule {
-            name: Symbol::new("foo"),
-            params: vec![],
-            body: Term::new_from_test(Value::Expression(Operation {
+        let rule = Rule::new_from_test(
+            Symbol::new("foo"),
+            vec![],
+            Term::new_from_test(Value::Expression(Operation {
                 operator: Operator::And,
                 args: vec![
                     term!(1),
@@ -3492,7 +3492,7 @@ mod tests {
                     ))])),
                 ],
             })),
-        };
+        );
 
         let renamed_rule = vm.rename_rule_vars(&rule);
         let renamed_terms = unwrap_and(&renamed_rule.body);

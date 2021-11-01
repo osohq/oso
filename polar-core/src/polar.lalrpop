@@ -682,16 +682,16 @@ RuleHead: (Symbol, Vec<Parameter>) = {
 
 Define = {"if"};
 
-BodilessRule: Rule = <head:RuleHead> <start:@L> <end:@R> ";" => {
+BodilessRule: Rule = <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";" => {
     let (name, params) = head;
     let op = Operation{operator: Operator::And, args: vec![]};
     let body = Term::new_from_parser(src_id, start, end, Value::Expression(op));
-    Rule { name, params, body }
+    Rule::new_from_parser(src_id, start_head, start, name, params, body)
 };
 
 Rule: Rule = {
     <BodilessRule>,
-    <head:RuleHead> Define <body:TermExp> ";" => {
+    <start_head:@L> <head:RuleHead> <end_head:@R> Define <body:TermExp> ";" => {
         let (name, params) = head;
         let body = match body.value() {
             Value::Expression(Operation{operator: Operator::And, ..}) => {
@@ -702,7 +702,7 @@ Rule: Rule = {
                 body.clone_with_value(Value::Expression(op))
             }
         };
-        Rule { name, params, body }
+        Rule::new_from_parser(src_id, start_head, end_head, name, params, body)
     }
 }
 

@@ -67,14 +67,14 @@ mod tests {
         };
         let err: PolarError = e.into();
         eprintln!("{}", serde_json::to_string(&err).unwrap());
-        let rule = Rule {
-            name: Symbol::new("foo"),
-            params: vec![],
-            body: Term::new_temporary(Value::Expression(Operation {
+        let rule = Rule::new_from_test(
+            Symbol::new("foo"),
+            vec![],
+            Term::new_temporary(Value::Expression(Operation {
                 operator: Operator::And,
                 args: vec![dict.clone(), dict.clone(), dict],
             })),
-        };
+        );
         eprintln!("{}", rule);
     }
 }

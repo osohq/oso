@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
 
+use super::sources::SourceInfo;
 use super::terms::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -16,16 +17,65 @@ impl Parameter {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Rule {
     pub name: Symbol,
     pub params: Vec<Parameter>,
     pub body: Term,
+    #[serde(skip, default = "SourceInfo::ffi")]
+    pub source_info: SourceInfo,
+}
+
+impl PartialEq for Rule {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+            && self.params.len() == other.params.len()
+            && self.params == other.params
+            && self.body == other.body
+    }
 }
 
 impl Rule {
     pub fn is_ground(&self) -> bool {
         self.params.iter().all(|p| p.is_ground())
+    }
+
+    pub fn span(&self) -> Option<(usize, usize)> {
+        if let SourceInfo::Parser { left, right, .. } = self.source_info {
+            Some((left, right))
+        } else {
+            None
+        }
+    }
+
+    pub fn new_from_test(name: Symbol, params: Vec<Parameter>, body: Term) -> Self {
+        Self {
+            name,
+            params,
+            body,
+            source_info: SourceInfo::Test,
+        }
+    }
+
+    /// Creates a new term from the parser
+    pub fn new_from_parser(
+        src_id: u64,
+        left: usize,
+        right: usize,
+        name: Symbol,
+        params: Vec<Parameter>,
+        body: Term,
+    ) -> Self {
+        Self {
+            name,
+            params,
+            body,
+            source_info: SourceInfo::Parser {
+                src_id,
+                left,
+                right,
+            },
+        }
     }
 }
 
