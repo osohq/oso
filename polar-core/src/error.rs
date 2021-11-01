@@ -440,6 +440,7 @@ pub enum ValidationError {
         rule_name: String,
     },
     ResourceBlock {
+        /// Term where the error arose, tracked for lexical context.
         term: Term,
         msg: String,
         // TODO(gj): enum for RelatedInformation that has a variant for capturing "other relevant
