@@ -682,13 +682,15 @@ RuleHead: (Symbol, Vec<Parameter>) = {
 
 Define = {"if"};
 
+BodilessRule: Rule = <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";" => {
+    let (name, params) = head;
+    let op = Operation{operator: Operator::And, args: vec![]};
+    let body = Term::new_from_parser(src_id, start, end, Value::Expression(op));
+    Rule::new_from_parser(src_id, start_head, start, name, params, body)
+};
+
 Rule: Rule = {
-    <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";" => {
-        let (name, params) = head;
-        let op = Operation{operator: Operator::And, args: vec![]};
-        let body = Term::new_from_parser(src_id, start, end, Value::Expression(op));
-        Rule::new_from_parser(src_id, start_head, start, name, params, body)
-    },
+    <BodilessRule>,
     <start_head:@L> <head:RuleHead> <end_head:@R> Define <body:TermExp> ";" => {
         let (name, params) = head;
         let body = match body.value() {
@@ -704,14 +706,7 @@ Rule: Rule = {
     }
 }
 
-RuleType: Rule = {
-    "type" <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";" => {
-        let (name, params) = head;
-        let op = Operation{operator: Operator::And, args: vec![]};
-        let body = Term::new_from_parser(src_id, start, end, Value::Expression(op));
-        Rule::new_from_parser(src_id, start_head, start, name, params, body)
-    }
-}
+RuleType: Rule = "type" <BodilessRule>;
 
 pub(crate) Rules: Vec<Rule> = <Rule*>;
 
