@@ -2100,8 +2100,8 @@ func (RuntimeErrorUnboundVariable) isRuntimeError() {}
 
 // RuntimeErrorStackOverflow struct
 type RuntimeErrorStackOverflow struct {
-	// Msg
-	Msg string `json:"msg"`
+	// Limit
+	Limit uint64 `json:"limit"`
 }
 
 func (RuntimeErrorStackOverflow) isRuntimeError() {}
