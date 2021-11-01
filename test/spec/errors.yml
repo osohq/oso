@@ -1,5 +1,5 @@
 name: Errors
-policies: []
+policies: [errors]
 description: Test for common errors
 cases:
   # parser errors
@@ -31,3 +31,8 @@ cases:
   - description: invalid lookup
     query: x = new UnitClass() and x.missing_attribute
     err: "Application error: 'UnitClass' object has no attribute 'missing_attribute'"
+
+  # unhandled partial errors
+  - description: unhandled partial
+    query: testUnhandledPartial()
+    err: "Found an unhandled partial"

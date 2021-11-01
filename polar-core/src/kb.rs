@@ -7,6 +7,7 @@ use crate::visitor::{walk_term, Visitor};
 
 pub use super::bindings::Bindings;
 use super::counter::Counter;
+use super::diagnostic::Diagnostic;
 use super::resource_block::ResourceBlocks;
 use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
@@ -19,8 +20,8 @@ enum RuleParamMatch {
     False(String),
 }
 
+#[cfg(test)]
 impl RuleParamMatch {
-    #[cfg(test)]
     fn is_true(&self) -> bool {
         matches!(self, RuleParamMatch::True)
     }
@@ -109,17 +110,16 @@ impl KnowledgeBase {
         generic_rule.add_rule(Arc::new(rule));
     }
 
-    pub fn validate_rules(&self) -> PolarResult<()> {
-        self.validate_rule_types()?;
-        self.validate_rule_calls()
+    pub fn validate_rules(&self) -> Vec<Diagnostic> {
+        let mut diagnostics = self.validate_rule_calls();
+        if let Err(e) = self.validate_rule_types() {
+            diagnostics.push(Diagnostic::Error(e));
+        }
+        diagnostics
     }
 
-    fn validate_rule_calls(&self) -> PolarResult<()> {
-        let errors = check_undefined_rule_calls(self);
-        match errors.into_iter().next() {
-            Some(e) => Err(e),
-            None => Ok(()),
-        }
+    fn validate_rule_calls(&self) -> Vec<Diagnostic> {
+        check_undefined_rule_calls(self)
     }
 
     /// Validate that all rules loaded into the knowledge base are valid based on rule types.
@@ -518,6 +518,8 @@ impl KnowledgeBase {
             })
             .collect::<PolarResult<Vec<RuleParamMatch>>>()
             .map(|results| {
+                // TODO(gj): all() is short-circuiting -- do we want to gather up *all* failure
+                // messages instead of just the first one?
                 results.iter().all(|r| {
                     if let RuleParamMatch::False(msg) = r {
                         failure_message = msg.to_owned();
@@ -722,17 +724,12 @@ impl KnowledgeBase {
         error.set_context(source.as_ref(), term.as_ref())
     }
 
-    pub fn rewrite_shorthand_rules(&mut self) -> PolarResult<()> {
+    pub fn rewrite_shorthand_rules(&mut self) -> Vec<Diagnostic> {
         let mut errors = vec![];
 
         errors.append(
             &mut super::resource_block::check_all_relation_types_have_been_registered(self),
         );
-
-        // TODO(gj): Emit all errors instead of just the first.
-        if !errors.is_empty() {
-            return Err(errors[0].clone());
-        }
 
         let mut rules = vec![];
         for (resource_name, shorthand_rules) in &self.resource_blocks.shorthand_rules {
@@ -744,17 +741,14 @@ impl KnowledgeBase {
             }
         }
 
-        // TODO(gj): Emit all errors instead of just the first.
-        if !errors.is_empty() {
-            return Err(errors[0].clone());
+        if errors.is_empty() {
+            // Add the rewritten rules to the KB.
+            for rule in rules {
+                self.add_rule(rule);
+            }
         }
 
-        // Add the rewritten rules to the KB.
-        for rule in rules {
-            self.add_rule(rule);
-        }
-
-        Ok(())
+        errors.into_iter().map(Diagnostic::Error).collect()
     }
 
     pub fn get_union_members(&self, union: &Term) -> &HashSet<Term> {
@@ -1328,11 +1322,11 @@ mod tests {
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Fruit"))]));
 
         assert!(matches!(
-            kb.validate_rules().err().unwrap(),
-            PolarError {
+            kb.validate_rules().first().unwrap(),
+            Diagnostic::Error(PolarError {
                 kind: ErrorKind::Validation(ValidationError::InvalidRule { .. }),
                 ..
-            }
+            })
         ));
 
         // Rule type does not apply if it doesn't have the same name as a rule
@@ -1341,7 +1335,7 @@ mod tests {
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Orange"))]));
         kb.add_rule(rule!("g", ["x"; instance!(sym!("Fruit"))]));
 
-        kb.validate_rules().unwrap();
+        assert!(kb.validate_rules().is_empty());
 
         // Rule type does apply if it has the same name as a rule even if different arity
         kb.clear_rules();
@@ -1349,11 +1343,11 @@ mod tests {
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Orange"))]));
 
         assert!(matches!(
-            kb.validate_rules().err().unwrap(),
-            PolarError {
+            kb.validate_rules().first().unwrap(),
+            Diagnostic::Error(PolarError {
                 kind: ErrorKind::Validation(ValidationError::InvalidRule { .. }),
                 ..
-            }
+            })
         ));
         // Multiple templates can exist for the same name but only one needs to match
         kb.clear_rules();

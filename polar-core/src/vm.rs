@@ -524,7 +524,7 @@ impl PolarVirtualMachine {
     pub fn push_goal(&mut self, goal: Goal) -> PolarResult<()> {
         if self.goals.len() >= self.stack_limit {
             return Err(error::RuntimeError::StackOverflow {
-                msg: format!("Goal stack overflow! MAX_GOALS = {}", self.stack_limit),
+                limit: self.stack_limit,
             }
             .into());
         }
