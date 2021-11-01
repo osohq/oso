@@ -62,8 +62,4 @@ impl Sources {
     pub fn get_source(&self, src_id: u64) -> Option<Source> {
         self.sources.get(&src_id).cloned()
     }
-
-    pub fn remove_source(&mut self, src_id: u64) -> Option<Source> {
-        self.sources.remove(&src_id)
-    }
 }
