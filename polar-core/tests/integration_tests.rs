@@ -7,6 +7,7 @@ use permute::permute;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
 
+use mock_externals::MockExternal;
 use polar_core::{
     error::*,
     events::*,
@@ -17,9 +18,6 @@ use polar_core::{
     traces::*,
     value, values,
 };
-
-type QueryResults = Vec<(HashMap<Symbol, Value>, Option<TraceResult>)>;
-use mock_externals::MockExternal;
 
 fn no_results(
     _: u64,
@@ -40,6 +38,8 @@ fn no_externals(_: u64, _: Term) {}
 fn no_debug(_: &str) -> String {
     "".to_string()
 }
+
+type QueryResults = Vec<(HashMap<Symbol, Value>, Option<TraceResult>)>;
 
 fn no_error_handler(e: PolarError) -> QueryResults {
     panic!("Query returned error: {}", e.to_string())
