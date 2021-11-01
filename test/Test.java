@@ -132,6 +132,15 @@ class Test {
         .results()
         .equals(List.of(Map.of("z", 1), Map.of("z", 2), Map.of("z", 3)));
 
+    throwsException = false;
+    try {
+      o.query("testUnhandledPartial()").results();
+    } catch (Exceptions.PolarRuntimeException e) {
+      assert e.getMessage().startsWith("Found an unhandled partial");
+      throwsException = true;
+    }
+    assert throwsException;
+
     System.out.println("Tests Pass");
   }
 }
