@@ -625,7 +625,7 @@ impl KnowledgeBase {
     }
 
     pub fn set_error_context(&self, term: &Term, error: impl Into<PolarError>) -> PolarError {
-        /// `GetSource` will talk a term and return the _first_ piece of source
+        /// `GetSource` will walk a term and return the _first_ piece of source
         /// info it finds
         struct GetSource<'kb> {
             kb: &'kb KnowledgeBase,
@@ -661,7 +661,7 @@ impl KnowledgeBase {
         error.set_context(source.as_ref(), term.as_ref())
     }
 
-    pub fn rewrite_shorthand_rules(&mut self) -> Vec<Diagnostic> {
+    pub fn rewrite_shorthand_rules(&mut self) -> Vec<PolarError> {
         let mut errors = vec![];
 
         errors.append(
@@ -685,7 +685,7 @@ impl KnowledgeBase {
             }
         }
 
-        errors.into_iter().map(Diagnostic::Error).collect()
+        errors
     }
 
     pub fn is_union(&self, maybe_union: &Term) -> bool {
