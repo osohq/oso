@@ -2503,3 +2503,60 @@ has_role(actor: User, role_name, repository: Repository) if
 
     Ok(())
 }
+
+#[test]
+fn test_missing_required_rule_type() -> TestResult {
+    let p = Polar::new();
+
+    let repo_instance = ExternalInstance {
+        instance_id: 1,
+        constructor: None,
+        repr: None,
+    };
+    let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
+    let repo_name = sym!("Repository");
+    p.register_constant(repo_name.clone(), repo_term)?;
+    p.register_mro(repo_name, vec![repo_instance.instance_id])?;
+
+    let issue_instance = ExternalInstance {
+        instance_id: 2,
+        constructor: None,
+        repr: None,
+    };
+    let issue_term = term!(Value::ExternalInstance(issue_instance.clone()));
+    let issue_name = sym!("Issue");
+    p.register_constant(issue_name.clone(), issue_term)?;
+    p.register_mro(issue_name, vec![issue_instance.instance_id])?;
+
+    let user_instance = ExternalInstance {
+        instance_id: 3,
+        constructor: None,
+        repr: None,
+    };
+    let user_term = term!(Value::ExternalInstance(user_instance.clone()));
+    let user_name = sym!("User");
+    p.register_constant(user_name.clone(), user_term)?;
+    p.register_mro(user_name, vec![user_instance.instance_id])?;
+
+    let policy = r#"
+actor User {}
+resource Repository {
+    relations = {owner: User};
+}
+
+resource Issue {
+    roles = ["write"];
+    relations = {repo: Repository};
+    "write" if "owner" on "repo";
+}
+"#;
+
+    let err = p.load_str(policy).expect_err("Expected validation error");
+    assert!(matches!(&err.kind, ErrorKind::Validation(_)));
+    eprintln!("{}", err);
+    // assert!(format!("{}", err).contains(
+    // "Failed to match because: Parameter `role_name` expects a String type constraint."
+    // ));
+
+    Ok(())
+}

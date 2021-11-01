@@ -482,7 +482,7 @@ impl fmt::Display for ValidationError {
                 write!(f, r#"Call to undefined rule "{}""#, rule_name)
             }
             Self::MissingRequiredRule { rule } => {
-                write!(f, r#"Missing implementation for required rule {}"#, rule)
+                write!(f, "Missing implementation for required rule {}", rule)
             }
         }
     }
