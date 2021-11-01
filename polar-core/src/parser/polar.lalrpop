@@ -756,6 +756,7 @@ Line: Line = {
     <Rule> => Line::Rule(<>),
     <RuleType> => Line::RuleType(<>),
     "?=" <TermExp> ";" => Line::Query(<>),
+    "!=" <TermExp> ";" => Line::Query(<>), // test to make the parser change
 
     <start:@L> <keyword:Spanned<Variable>?> <resource:Variable> "{" <productions:ResourceBlockProductions> "}" <end:@R> =>? {
         let resource = Term::new_from_parser(src_id, start, end, resource);
