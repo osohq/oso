@@ -223,15 +223,10 @@ impl Polar {
                         keyword,
                         resource,
                         productions,
-                    } => match resource_block_from_productions(keyword, resource, productions) {
-                        Ok(block) => diagnostics.append(
-                            &mut block
-                                .add_to_kb(kb)
-                                .into_iter()
-                                .map(Diagnostic::Error)
-                                .collect(),
-                        ),
-                        Err(errors) => diagnostics
+                    } => match resource_block_from_productions(keyword, resource, productions)
+                        .map(|block| block.add_to_kb(kb))
+                    {
+                        Ok(errors) | Err(errors) => diagnostics
                             .append(&mut errors.into_iter().map(Diagnostic::Error).collect()),
                     },
                 }
