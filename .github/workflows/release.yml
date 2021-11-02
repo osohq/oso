@@ -77,8 +77,8 @@ jobs:
       #     RUSTFLAGS="-C target-feature=-crt-static" cargo build --target x86_64-unknown-linux-musl --release
       - name: Build release arm library
         run: |
-          rustup target add aarch64-unknown-linux-musleabihf
-          cargo build --target aarch64-unknown-linux-musleabihf --release -p polar-c-api
+          rustup target add aarch64-unknown-linux-musl
+          cargo build --target aarch64-unknown-linux-musl --release -p polar-c-api
         env:
           RUSTFLAGS: "-C target-feature=-crt-static"
           CC: arm-linux-gnueabi-gcc
