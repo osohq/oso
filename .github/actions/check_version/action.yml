@@ -34,4 +34,5 @@ runs:
         grep "^version = \"$oso_version\"$" polar-core/Cargo.toml
         grep "^version = \"$oso_version\"$" polar-c-api/Cargo.toml
         grep "^version = \"$oso_version\"$" polar-wasm-api/Cargo.toml
+        grep "^version = \"$oso_version\"$" polar-language-server/Cargo.toml
       shell: bash

@@ -1,19 +1,16 @@
 use std::collections::{HashMap, HashSet};
-
-use crate::error::ParameterError;
-use crate::error::{PolarError, PolarResult};
-use crate::validations::check_undefined_rule_calls;
-use crate::visitor::{walk_term, Visitor};
+use std::sync::Arc;
 
 pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::diagnostic::Diagnostic;
-use super::resource_block::ResourceBlocks;
-use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
+use super::error::{PolarError, PolarResult};
+use super::resource_block::{ResourceBlocks, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::*;
 use super::terms::*;
-use std::sync::Arc;
+use super::validations::check_undefined_rule_calls;
+use super::visitor::{walk_term, Visitor};
 
 enum RuleParamMatch {
     True,
@@ -35,10 +32,10 @@ pub struct KnowledgeBase {
     /// Map of class name -> MRO list where the MRO list is a list of class instance IDs
     mro: HashMap<Symbol, Vec<u64>>,
 
-    /// Map from loaded files to the source ID
-    pub loaded_files: HashMap<String, u64>,
-    /// Map from source code loaded to the filename it was loaded as
-    pub loaded_content: HashMap<String, String>,
+    /// Map from filename to source ID for files loaded into the KB.
+    loaded_files: HashMap<String, u64>,
+    /// Map from contents to filename for files loaded into the KB.
+    loaded_content: HashMap<String, String>,
 
     rules: HashMap<Symbol, GenericRule>,
     rule_types: RuleTypes,
@@ -55,19 +52,7 @@ pub struct KnowledgeBase {
 
 impl KnowledgeBase {
     pub fn new() -> Self {
-        Self {
-            constants: HashMap::new(),
-            mro: HashMap::new(),
-            loaded_files: Default::default(),
-            loaded_content: Default::default(),
-            rules: HashMap::new(),
-            rule_types: RuleTypes::default(),
-            sources: Sources::default(),
-            id_counter: Counter::default(),
-            gensym_counter: Counter::default(),
-            inline_queries: vec![],
-            resource_blocks: ResourceBlocks::new(),
-        }
+        Self::default()
     }
 
     /// Return a monotonically increasing integer ID.
@@ -570,9 +555,10 @@ impl KnowledgeBase {
     /// The `mro` argument is a list of the `instance_id` associated with a registered class.
     pub fn add_mro(&mut self, name: Symbol, mro: Vec<u64>) -> PolarResult<()> {
         // Confirm name is a registered class
-        self.constants.get(&name).ok_or_else(|| {
-            ParameterError(format!("Cannot add MRO for unregistered class {}", name))
-        })?;
+        if !self.is_constant(&name) {
+            let msg = format!("Cannot add MRO for unregistered class {}", name);
+            return Err(error::OperationalError::InvalidState { msg }.into());
+        }
         self.mro.insert(name, mro);
         Ok(())
     }
@@ -602,55 +588,6 @@ impl KnowledgeBase {
         self.loaded_content.clear();
         self.loaded_files.clear();
         self.resource_blocks.clear();
-    }
-
-    /// Removes a file from the knowledge base by finding the associated
-    /// `Source` and removing all rules for that source, and
-    /// removes the file from loaded files.
-    ///
-    /// Optionally return the source for the file, returning `None`
-    /// if the file was not in the loaded files.
-    pub fn remove_file(&mut self, filename: &str) -> Option<String> {
-        self.loaded_files
-            .get(filename)
-            .cloned()
-            .map(|src_id| self.remove_source(src_id))
-    }
-
-    /// Removes a source from the knowledge base by finding the associated
-    /// `Source` and removing all rules for that source. Will
-    /// also remove the loaded files if the source was loaded from a file.
-    pub fn remove_source(&mut self, source_id: u64) -> String {
-        // remove from rules
-        self.rules.retain(|_, gr| {
-            let to_remove: Vec<u64> = gr.rules.iter().filter_map(|(idx, rule)| {
-                matches!(rule.source_info, SourceInfo::Parser { src_id, ..} if src_id == source_id)
-                    .then(||*idx)
-            }).collect();
-
-            for idx in to_remove {
-                gr.remove_rule(idx);
-            }
-            !gr.rules.is_empty()
-        });
-
-        // remove from sources
-        let source = self
-            .sources
-            .remove_source(source_id)
-            .expect("source doesn't exist in KB");
-        let filename = source.filename;
-
-        // remove queries
-        self.inline_queries
-            .retain(|q| q.get_source_id() != Some(source_id));
-
-        // remove from files
-        if let Some(filename) = filename {
-            self.loaded_files.remove(&filename);
-            self.loaded_content.retain(|_, f| f != &filename);
-        }
-        source.src
     }
 
     fn check_file(&self, src: &str, filename: &str) -> PolarResult<()> {
@@ -688,7 +625,7 @@ impl KnowledgeBase {
     }
 
     pub fn set_error_context(&self, term: &Term, error: impl Into<PolarError>) -> PolarError {
-        /// `GetSource` will talk a term and return the _first_ piece of source
+        /// `GetSource` will walk a term and return the _first_ piece of source
         /// info it finds
         struct GetSource<'kb> {
             kb: &'kb KnowledgeBase,
@@ -724,7 +661,7 @@ impl KnowledgeBase {
         error.set_context(source.as_ref(), term.as_ref())
     }
 
-    pub fn rewrite_shorthand_rules(&mut self) -> Vec<Diagnostic> {
+    pub fn rewrite_shorthand_rules(&mut self) -> Vec<PolarError> {
         let mut errors = vec![];
 
         errors.append(
@@ -748,7 +685,7 @@ impl KnowledgeBase {
             }
         }
 
-        errors.into_iter().map(Diagnostic::Error).collect()
+        errors
     }
 
     pub fn is_union(&self, maybe_union: &Term) -> bool {
