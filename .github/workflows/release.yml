@@ -414,6 +414,7 @@ jobs:
         run: |
           arch -arm64 /opt/homebrew/opt/python@3.8/bin/python3 setup.py sdist bdist_wheel
           arch -arm64 /opt/homebrew/opt/python@3.9/bin/python3 setup.py sdist bdist_wheel
+          arch -arm64 /opt/homebrew/opt/python@3.10/bin/python3 setup.py sdist bdist_wheel
         working-directory: languages/python/oso
       - uses: actions/upload-artifact@v2
         with:
@@ -662,6 +663,7 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: wheel
+      # 3.8 is the earliest python for M1
       - name: "test python 3.8"
         run: |
           arch -arm64 /opt/homebrew/opt/python@3.8/bin/python3 -m venv venv38
@@ -673,6 +675,12 @@ jobs:
           arch -arm64 /opt/homebrew/opt/python@3.9/bin/python3 -m venv venv39
           arch -arm64 ./venv39/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
           arch -arm64 ./venv39/bin/python test.py
+        working-directory: test
+      - name: "test python 3.10"
+        run: |
+          arch -arm64 /opt/homebrew/opt/python@3.10/bin/python3 -m venv venv310
+          arch -arm64 ./venv310/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
+          arch -arm64 ./venv310/bin/python test.py
         working-directory: test
 
   # validate_python_windows:
