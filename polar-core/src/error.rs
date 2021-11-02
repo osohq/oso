@@ -278,9 +278,6 @@ pub enum RuntimeError {
         msg: String,
         stack_trace: Option<String>,
     },
-    UnboundVariable {
-        sym: Symbol,
-    },
     StackOverflow {
         limit: usize,
     },
@@ -326,7 +323,6 @@ impl fmt::Display for RuntimeError {
                 }
                 write!(f, "Type error: {}", msg)
             }
-            Self::UnboundVariable { sym } => write!(f, "{} is an unbound variable", sym.0),
             Self::StackOverflow { limit } => {
                 write!(f, "Goal stack overflow! MAX_GOALS = {}", limit)
             }
