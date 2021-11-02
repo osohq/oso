@@ -188,11 +188,6 @@ func (variant ErrorKind) MarshalJSON() ([]byte, error) {
 			"Validation": inner,
 		})
 
-	case ErrorKindValidation:
-		return json.Marshal(map[string]ErrorKindValidation{
-			"Validation": inner,
-		})
-
 	}
 
 	return nil, fmt.Errorf("unexpected variant of %v", variant)
@@ -2015,14 +2010,6 @@ func (variant QueryEvent) MarshalJSON() ([]byte, error) {
 	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
-// Range struct
-type Range struct {
-	// Start
-	Start uint64 `json:"start"`
-	// End
-	End uint64 `json:"end"`
-}
-
 // Rule struct
 type Rule struct {
 	// Name
@@ -2230,28 +2217,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 
 	case "FileLoading":
 		var variant RuntimeErrorFileLoading
-		if variantValue != nil {
-			err := json.Unmarshal(*variantValue, &variant)
-			if err != nil {
-				return err
-			}
-		}
-		*result = RuntimeError{variant}
-		return nil
-
-	case "IncompatibleBindings":
-		var variant RuntimeErrorIncompatibleBindings
-		if variantValue != nil {
-			err := json.Unmarshal(*variantValue, &variant)
-			if err != nil {
-				return err
-			}
-		}
-		*result = RuntimeError{variant}
-		return nil
-
-	case "UnhandledPartial":
-		var variant RuntimeErrorUnhandledPartial
 		if variantValue != nil {
 			err := json.Unmarshal(*variantValue, &variant)
 			if err != nil {
