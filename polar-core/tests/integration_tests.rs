@@ -1560,7 +1560,7 @@ fn test_singleton_vars() {
     assert!(err.context.is_some());
     assert!(matches!(
         err.kind,
-        ErrorKind::Parse(ParseError::SingletonVariable { .. })
+        ErrorKind::Validation(ValidationError::SingletonVariable { .. })
     ))
 }
 

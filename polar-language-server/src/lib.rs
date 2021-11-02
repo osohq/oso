@@ -274,10 +274,10 @@ impl PolarLanguageServer {
         &self,
         e: &PolarError,
     ) -> Option<(TextDocumentItem, Diagnostic)> {
-        use polar_core::error::{ErrorKind::*, ParseError::*, ValidationError::*};
+        use polar_core::error::{ErrorKind::Validation, ValidationError::*};
         match e.kind {
             // Ignore errors that depend on app data.
-            Validation(UnregisteredConstant { .. }) | Parse(SingletonVariable { .. }) => None,
+            Validation(UnregisteredConstant { .. }) | Validation(SingletonVariable { .. }) => None,
 
             _ => self.document_from_polar_error_context(e).map(|doc| {
                 let diagnostic = Diagnostic {

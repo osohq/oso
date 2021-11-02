@@ -61,12 +61,12 @@ fn warn_str(sym: &Symbol, term: &Term, source: &Option<Source>) -> Diagnostic {
         }
         Diagnostic::Warning(msg)
     } else {
-        let perr = error::ParseError::SingletonVariable {
+        let verr = error::ValidationError::SingletonVariable {
             loc: term.offset(),
             name: sym.0.clone(),
         };
         let err = error::PolarError {
-            kind: error::ErrorKind::Parse(perr),
+            kind: error::ErrorKind::Validation(verr),
             context: None,
         };
 

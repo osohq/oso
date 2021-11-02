@@ -31,7 +31,6 @@ fn kind(err: &PolarError) -> String {
         Parse(InvalidFloat { .. }) => "ParseError::InvalidFloat",
         Parse(WrongValueType { .. }) => "ParseError::WrongValueType",
         Parse(DuplicateKey { .. }) => "ParseError::DuplicateKey",
-        Parse(SingletonVariable { .. }) => "ParseError::SingletonVariable",
         Runtime(Application { .. }) => "RuntimeError::Application",
         Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
         Runtime(FileLoading { .. }) => "RuntimeError::FileLoading",
@@ -49,6 +48,7 @@ fn kind(err: &PolarError) -> String {
         Validation(InvalidRuleType { .. }) => "ValidationError::InvalidRuleType",
         Validation(ResourceBlock { .. }) => "ValidationError::ResourceBlock",
         Validation(UndefinedRule { .. }) => "ValidationError::UndefinedRule",
+        Validation(SingletonVariable { .. }) => "ValidationError::SingletonVariable",
         Validation(UnregisteredConstant { .. }) => "ValidationError::UnregisteredConstant",
     }
     .to_owned()
