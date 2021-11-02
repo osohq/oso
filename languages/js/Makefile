@@ -12,7 +12,7 @@ test: install wasm
 
 # Run the parity tests.
 parity: install wasm
-	@yarn ts-node test/parity.ts
+	@NODE_OPTIONS='--unhandled-rejections=strict' yarn ts-node test/parity.ts
 
 # Check formatting and types and run ESLint.
 lint: fmtcheck typecheck
