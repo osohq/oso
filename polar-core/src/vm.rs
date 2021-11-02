@@ -179,7 +179,7 @@ fn invalid_state<A>(msg: String) -> PolarResult<A> {
 }
 
 pub fn compare(op: Operator, left: &Term, right: &Term) -> PolarResult<bool> {
-    use {Value::*, Operator::*};
+    use {Operator::*, Value::*};
     // Coerce booleans to integers.
     // FIXME(gw) why??
     fn to_int(x: bool) -> Numeric {
@@ -1293,12 +1293,10 @@ impl PolarVirtualMachine {
                     self.push_goal(Goal::Backtrack)
                 }
             }
-            v => {
-                Err(self.type_error(
-                    &field,
-                    format!("cannot look up field {:?} on a dictionary", v),
-                ))
-            }
+            v => Err(self.type_error(
+                &field,
+                format!("cannot look up field {:?} on a dictionary", v),
+            )),
         }
     }
 
@@ -1501,13 +1499,19 @@ impl PolarVirtualMachine {
     /// Create a choice over the applicable rules.
     fn query_for_predicate(&mut self, predicate: Call) -> PolarResult<()> {
         if predicate.kwargs.is_some() {
-            return invalid_state(format!("query_for_predicate: unexpected kwargs: {}", predicate.to_polar()));
+            return invalid_state(format!(
+                "query_for_predicate: unexpected kwargs: {}",
+                predicate.to_polar()
+            ));
         }
         let goals = match self.kb.read().unwrap().get_generic_rule(&predicate.name) {
             None => vec![Goal::Backtrack],
             Some(generic_rule) => {
                 if generic_rule.name != predicate.name {
-                    return invalid_state(format!("query_for_predicate: different rule names: {} != {}", generic_rule.name, predicate.name));
+                    return invalid_state(format!(
+                        "query_for_predicate: different rule names: {} != {}",
+                        generic_rule.name, predicate.name
+                    ));
                 }
 
                 // Pre-filter rules.
@@ -1534,7 +1538,12 @@ impl PolarVirtualMachine {
     fn query_for_operation(&mut self, term: &Term) -> PolarResult<QueryEvent> {
         let operation = term.value().as_expression().unwrap();
         let mut args = operation.args.clone();
-        let wrong_arity = || invalid_state(format!("query_for_operation: wrong arity: {}", term.to_polar()));
+        let wrong_arity = || {
+            invalid_state(format!(
+                "query_for_operation: wrong arity: {}",
+                term.to_polar()
+            ))
+        };
         match operation.operator {
             Operator::And => {
                 // Query for each conjunct.
@@ -1549,7 +1558,7 @@ impl PolarVirtualMachine {
             Operator::Not => {
                 // Query in a sub-VM and invert the results.
                 if args.len() != 1 {
-                    return wrong_arity()
+                    return wrong_arity();
                 }
 
                 let term = args.pop().unwrap();
@@ -1568,7 +1577,7 @@ impl PolarVirtualMachine {
             }
             Operator::Assign => {
                 if args.len() != 2 {
-                    return wrong_arity()
+                    return wrong_arity();
                 }
                 let right = args.pop().unwrap();
                 let left = args.pop().unwrap();
@@ -1599,7 +1608,7 @@ impl PolarVirtualMachine {
             Operator::Unify => {
                 // Push a `Unify` goal
                 if args.len() != 2 {
-                    return wrong_arity()
+                    return wrong_arity();
                 }
                 let right = args.pop().unwrap();
                 let left = args.pop().unwrap();
@@ -1654,7 +1663,7 @@ impl PolarVirtualMachine {
             }
             Operator::New => {
                 if args.len() != 2 {
-                    return wrong_arity()
+                    return wrong_arity();
                 }
                 let result = args.pop().unwrap();
                 if !matches!(result.value(), Value::Variable(_)) {
@@ -1713,7 +1722,7 @@ impl PolarVirtualMachine {
             Operator::Isa => {
                 // TODO (dhatch): Use query op helper.
                 if args.len() != 2 {
-                    return wrong_arity()
+                    return wrong_arity();
                 }
                 let right = args.pop().unwrap();
                 let left = args.pop().unwrap();
@@ -1721,7 +1730,7 @@ impl PolarVirtualMachine {
             }
             Operator::ForAll => {
                 if args.len() != 2 {
-                    return wrong_arity()
+                    return wrong_arity();
                 }
                 let action = args.pop().unwrap();
                 let condition = args.pop().unwrap();
@@ -1779,7 +1788,13 @@ impl PolarVirtualMachine {
         let right = &args[1];
 
         match (left.value(), right.value()) {
-            (Value::Expression(Operation { operator: Operator::Dot, args }), other) if args.len() == 2 => { 
+            (
+                Value::Expression(Operation {
+                    operator: Operator::Dot,
+                    args,
+                }),
+                other,
+            ) if args.len() == 2 => {
                 let var = term!(self.kb().gensym("rwdot"));
                 let val = Value::Expression(Operation {
                     operator: *op,
@@ -1787,10 +1802,19 @@ impl PolarVirtualMachine {
                 });
                 let term = term.clone_with_value(val);
                 self.push_goal(Goal::Query { term })?;
-                self.push_goal(Goal::Unify { left: left.clone(), right: var })?;
-                return Ok(QueryEvent::None)
+                self.push_goal(Goal::Unify {
+                    left: left.clone(),
+                    right: var,
+                })?;
+                return Ok(QueryEvent::None);
             }
-            (other, Value::Expression(Operation { operator: Operator::Dot, args })) if args.len() == 2 => {
+            (
+                other,
+                Value::Expression(Operation {
+                    operator: Operator::Dot,
+                    args,
+                }),
+            ) if args.len() == 2 => {
                 let var = term!(self.kb().gensym("rwdot"));
                 let val = Value::Expression(Operation {
                     operator: *op,
@@ -1798,8 +1822,11 @@ impl PolarVirtualMachine {
                 });
                 let term = term.clone_with_value(val);
                 self.push_goal(Goal::Query { term })?;
-                self.push_goal(Goal::Unify { left: var, right: right.clone() })?;
-                return Ok(QueryEvent::None)
+                self.push_goal(Goal::Unify {
+                    left: var,
+                    right: right.clone(),
+                })?;
+                return Ok(QueryEvent::None);
             }
             (Value::Expression(_), _)
             | (_, Value::Expression(_))
@@ -1853,7 +1880,10 @@ impl PolarVirtualMachine {
         let Operation { operator: op, args } = term.value().as_expression().unwrap();
 
         if args.len() != 2 {
-            return invalid_state(format!("comparison_op_helper: wrong arity: {}", term.to_polar()));
+            return invalid_state(format!(
+                "comparison_op_helper: wrong arity: {}",
+                term.to_polar()
+            ));
         }
         let left = &args[0];
         let right = &args[1];
@@ -1892,14 +1922,20 @@ impl PolarVirtualMachine {
         let Operation { operator: op, args } = term.value().as_expression().unwrap();
 
         if args.len() != 3 {
-            return invalid_state(format!("arithmetic_op_helper: wrong arity: {}", term.to_polar()));
+            return invalid_state(format!(
+                "arithmetic_op_helper: wrong arity: {}",
+                term.to_polar()
+            ));
         }
         let left = &args[0];
         let right = &args[1];
         let result = &args[2];
 
         if !matches!(result.value(), Value::Variable(_)) {
-            return invalid_state(format!("arithmetic_op_helper: not a variable: {}", result.to_polar()));
+            return invalid_state(format!(
+                "arithmetic_op_helper: not a variable: {}",
+                result.to_polar()
+            ));
         }
 
         match (left.value(), right.value()) {
@@ -2234,7 +2270,7 @@ impl PolarVirtualMachine {
             (Value::Call(left), Value::Call(right)) => {
                 if left.kwargs.is_some() || right.kwargs.is_some() {
                     // Handled in the parser.
-                    return invalid_state("unify: unexpected kwargs".to_string())
+                    return invalid_state("unify: unexpected kwargs".to_string());
                 }
                 if left.name == right.name && left.args.len() == right.args.len() {
                     self.append_goals(left.args.iter().zip(right.args.iter()).map(
@@ -2500,11 +2536,11 @@ impl PolarVirtualMachine {
         if rules.is_empty() {
             return self.push_goal(Goal::Backtrack);
         } else if outer > rules.len() {
-            return invalid_state("bad outer index".to_string())
+            return invalid_state("bad outer index".to_string());
         } else if inner > rules.len() {
-            return invalid_state("bad inner index".to_string())
+            return invalid_state("bad inner index".to_string());
         } else if inner > outer {
-            return invalid_state("bad insertion sort state".to_string())
+            return invalid_state("bad insertion sort state".to_string());
         }
 
         let next_outer = Goal::SortRules {
@@ -2537,7 +2573,7 @@ impl PolarVirtualMachine {
                 self.choose_conditional(vec![compare], vec![next_inner], vec![next_outer])?;
             } else {
                 if inner != 0 {
-                    return invalid_state("inner == 0".to_string())
+                    return invalid_state("inner == 0".to_string());
                 }
                 self.push_goal(next_outer)?;
             }
@@ -2985,7 +3021,6 @@ mod tests {
             self.goals.is_empty() && self.choices.is_empty()
         }
     }
-
 
     /// Shorthand for constructing Goal::Query.
     ///

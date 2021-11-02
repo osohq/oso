@@ -2224,10 +2224,28 @@ mod test {
     }
 
     #[test]
-    fn test_negated_dot_comparisons() -> TestResult {
+    fn test_grounded_negated_dot_comparison() -> TestResult {
         let p = Polar::new();
-        let mut q = p.new_query("x != 1 and not x.a = nil and x = {}", false)?;
+
+        let mut q = p.new_query("x in _ and not x.a = q and x = {}", false)?;
         assert_query_done!(q);
+
+        let mut q = p.new_query("x in _ and not q = x.a and x = {}", false)?;
+        assert_query_done!(q);
+
+        let mut q = p.new_query("x in _ and not q = x.a and x = {a: q}", false)?;
+        let bindings = next_binding(&mut q)?;
+        let expd = term!(Value::Dictionary(dict!(
+            btreemap! { sym!("a") => var!("q") }
+        )));
+        assert_eq!(bindings.get(&sym!("x")).unwrap(), &expd);
+
+        let mut q = p.new_query("x in _ and not x.a = q and x = {a: q}", false)?;
+        let bindings = next_binding(&mut q)?;
+        let expd = term!(Value::Dictionary(dict!(
+            btreemap! { sym!("a") => var!("q") }
+        )));
+        assert_eq!(bindings.get(&sym!("x")).unwrap(), &expd);
         Ok(())
     }
 
