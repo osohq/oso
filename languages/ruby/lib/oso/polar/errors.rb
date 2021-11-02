@@ -96,10 +96,6 @@ module Oso
       class UnrecognizedToken < ParseError; end
     end
 
-    # Generic Polar API exception.
-    class ApiError < Error; end
-    class ParameterError < ApiError; end
-
     class ValidationError < Error; end
 
     UNEXPECTED_EXPRESSION_MESSAGE = <<~MSG
