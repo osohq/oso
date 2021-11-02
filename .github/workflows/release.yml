@@ -664,12 +664,12 @@ jobs:
           name: wheel
       - name: "test python 3.8"
         run: |
-          arch -arm64 /opt/homebrew/opt/python@3.8/bin/python3 -m venv38
+          arch -arm64 /opt/homebrew/opt/python@3.8/bin/python3 -m venv venv38
           arch -arm64 ./venv38/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
           arch -arm64 ./venv38/bin/python test.py
       - name: "test python 3.9"
         run: |
-          arch -arm64 /opt/homebrew/opt/python@3.9/bin/python3 -m venv39
+          arch -arm64 /opt/homebrew/opt/python@3.9/bin/python3 -m venv venv39
           arch -arm64 ./venv39/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
           arch -arm64 ./venv39/bin/python test.py
         working-directory: test
