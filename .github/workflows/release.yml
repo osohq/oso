@@ -390,7 +390,7 @@ jobs:
   #         path: languages/python/oso/wheelhouse/*.whl
 
   build_macos_arm_wheels:
-    name: Build arm wheels
+    name: Build macOS arm wheels
     runs-on: [self-hosted, m1]
     needs: [version, macos_libs]
     env:
@@ -667,6 +667,7 @@ jobs:
           arch -arm64 /opt/homebrew/opt/python@3.8/bin/python3 -m venv venv38
           arch -arm64 ./venv38/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
           arch -arm64 ./venv38/bin/python test.py
+        working-directory: test
       - name: "test python 3.9"
         run: |
           arch -arm64 /opt/homebrew/opt/python@3.9/bin/python3 -m venv venv39
