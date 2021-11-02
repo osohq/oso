@@ -68,7 +68,7 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - run: sudo apt-get update && sudo apt-get install -y gcc-arm-linux-gnueabi gcc-arm-linux-gnueabihf
+      - run: sudo apt-get update && sudo apt-get install -y armv7-linux-musleabihf-gcc armv7-linux-musleabihf-g++ armv7-linux-musleabihf-ld
       # - name: Build release libraries
       #   run: cargo build --release
       # - name: Build release musl library
@@ -78,7 +78,12 @@ jobs:
       - name: Build release arm library
         run: |
           rustup target add aarch64-unknown-linux-musl
-          RUSTFLAGS="-C target-feature=-crt-static -C link-arg=-lgcc" cargo build --target aarch64-unknown-linux-musl --release -p polar-c-api
+          cargo build --target aarch64-unknown-linux-musl --release -p polar-c-api
+        environment:
+          RUSTFLAGS: "-C target-feature=-crt-static -C link-arg=-lgcc"
+          CC: armv7-linux-musleabihf-gcc
+          CXX: armv7-linux-musleabihf-g++
+          LD: armv7-linux-musleabihf-ld
       - name: Rename static lib
         run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
       - name: Rename static lib
