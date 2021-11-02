@@ -1788,17 +1788,23 @@ impl PolarVirtualMachine {
         let right = &args[1];
 
         match (left.value(), right.value()) {
+            // We may be querying a partial from the simplifier, which can contain
+            // embedded binary (as opposed to ternary) dot operations. In that case
+            // we introduce a new variable, unify it with the dot lookup, then query
+            // against the variable instead.
+            //
+            // dot on the left
             (
                 Value::Expression(Operation {
                     operator: Operator::Dot,
                     args,
                 }),
-                other,
+                _,
             ) if args.len() == 2 => {
                 let var = term!(self.kb().gensym("rwdot"));
                 let val = Value::Expression(Operation {
                     operator: *op,
-                    args: vec![var.clone(), right.clone_with_value(other.clone())],
+                    args: vec![var.clone(), right.clone()],
                 });
                 let term = term.clone_with_value(val);
                 self.push_goal(Goal::Query { term })?;
@@ -1808,8 +1814,10 @@ impl PolarVirtualMachine {
                 })?;
                 return Ok(QueryEvent::None);
             }
+
+            // dot on the right
             (
-                other,
+                _,
                 Value::Expression(Operation {
                     operator: Operator::Dot,
                     args,
@@ -1818,7 +1826,7 @@ impl PolarVirtualMachine {
                 let var = term!(self.kb().gensym("rwdot"));
                 let val = Value::Expression(Operation {
                     operator: *op,
-                    args: vec![left.clone_with_value(other.clone()), var.clone()],
+                    args: vec![left.clone(), var.clone()],
                 });
                 let term = term.clone_with_value(val);
                 self.push_goal(Goal::Query { term })?;
@@ -1828,6 +1836,8 @@ impl PolarVirtualMachine {
                 })?;
                 return Ok(QueryEvent::None);
             }
+
+            // otherwise this isn't allowed.
             (Value::Expression(_), _)
             | (_, Value::Expression(_))
             | (Value::RestVariable(_), _)
