@@ -536,7 +536,7 @@ impl KnowledgeBase {
     }
 
     /// Define a constant variable.
-    pub fn constant(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
+    pub fn register_constant(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
         if name.0 == ACTOR_UNION_NAME || name.0 == RESOURCE_UNION_NAME {
             return Err(error::RuntimeError::TypeError {
                 msg: format!(
@@ -783,7 +783,7 @@ mod tests {
         let mut kb = KnowledgeBase::new();
 
         let mut constant = |name: &str, instance_id: u64| {
-            kb.constant(
+            kb.register_constant(
                 sym!(name),
                 term!(Value::ExternalInstance(ExternalInstance {
                     instance_id,
@@ -1224,7 +1224,7 @@ mod tests {
     #[test]
     fn test_validate_rules() {
         let mut kb = KnowledgeBase::new();
-        kb.constant(
+        kb.register_constant(
             sym!("Fruit"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 1,
@@ -1233,7 +1233,7 @@ mod tests {
             })),
         )
         .unwrap();
-        kb.constant(
+        kb.register_constant(
             sym!("Citrus"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 2,
@@ -1242,7 +1242,7 @@ mod tests {
             })),
         )
         .unwrap();
-        kb.constant(
+        kb.register_constant(
             sym!("Orange"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 3,

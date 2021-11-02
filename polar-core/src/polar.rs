@@ -385,7 +385,7 @@ impl Polar {
     }
 
     pub fn register_constant(&self, name: Symbol, value: Term) -> PolarResult<()> {
-        self.kb.write().unwrap().constant(name, value)
+        self.kb.write().unwrap().register_constant(name, value)
     }
 
     /// Register MRO for `name` with `mro`.

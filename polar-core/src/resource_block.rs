@@ -1402,7 +1402,7 @@ mod tests {
     #[test]
     fn test_validate_rules_with_union_type_specializers() {
         let mut kb = KnowledgeBase::new();
-        kb.constant(
+        kb.register_constant(
             sym!("Fruit"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 1,
@@ -1411,7 +1411,7 @@ mod tests {
             })),
         )
         .unwrap();
-        kb.constant(
+        kb.register_constant(
             sym!("Citrus"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 2,
@@ -1420,7 +1420,7 @@ mod tests {
             })),
         )
         .unwrap();
-        kb.constant(
+        kb.register_constant(
             sym!("Orange"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 3,
@@ -1435,7 +1435,7 @@ mod tests {
         // Orange is a subclass of Citrus
         kb.add_mro(sym!("Orange"), vec![3, 2, 1]).unwrap();
 
-        kb.constant(
+        kb.register_constant(
             sym!("User"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 4,

@@ -608,9 +608,9 @@ fn test_constants() -> TestResult {
     let mut p = Polar::new();
     {
         let mut kb = p.kb.write().unwrap();
-        kb.constant(sym!("one"), term!(1))?;
-        kb.constant(sym!("two"), term!(2))?;
-        kb.constant(sym!("three"), term!(3))?;
+        kb.register_constant(sym!("one"), term!(1))?;
+        kb.register_constant(sym!("two"), term!(2))?;
+        kb.register_constant(sym!("three"), term!(3))?;
     }
     p.load_str(
         r#"one(x) if one = one and one = x and x < two;
