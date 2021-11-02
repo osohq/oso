@@ -143,8 +143,7 @@ WHERE "app_post"."id" IN (
 
 This feature is still under active development. Not all valid policies are
 currently supported, but more will be supported as we continue working on this
-feature. The Django adapter is ready for evaluation and testing. However, we
-recommend getting in touch with us on [Slack](https://join-slack.osohq.com/) before using it in production.
+feature.
 
 There are some operators and features that do not currently work with the
 Django adapter when used **anywhere in the policy**:
