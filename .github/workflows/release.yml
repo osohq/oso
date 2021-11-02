@@ -74,7 +74,7 @@ jobs:
       #   run: |
       #     rustup target add x86_64-unknown-linux-musl
       #     RUSTFLAGS="-C target-feature=-crt-static" cargo build --target x86_64-unknown-linux-musl --release
-      # - run: sudo apt-get update && sudo apt-get install -y gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi
+      - run: sudo apt-get update && sudo apt-get install -y gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi ia32-libs
       - name: Build release arm library
         run: |
           rustup target add aarch64-unknown-linux-musl
