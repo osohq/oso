@@ -1,19 +1,16 @@
 use std::collections::{HashMap, HashSet};
-
-use crate::error::ParameterError;
-use crate::error::{PolarError, PolarResult};
-use crate::validations::check_undefined_rule_calls;
-use crate::visitor::{walk_term, Visitor};
+use std::sync::Arc;
 
 pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::diagnostic::Diagnostic;
-use super::resource_block::ResourceBlocks;
-use super::resource_block::{Declaration, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
+use super::error::{PolarError, PolarResult};
+use super::resource_block::{Declaration, ResourceBlocks, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::*;
 use super::terms::*;
-use std::sync::Arc;
+use super::validations::check_undefined_rule_calls;
+use super::visitor::{walk_term, Visitor};
 
 enum RuleParamMatch {
     True,
@@ -55,19 +52,7 @@ pub struct KnowledgeBase {
 
 impl KnowledgeBase {
     pub fn new() -> Self {
-        Self {
-            constants: HashMap::new(),
-            mro: HashMap::new(),
-            loaded_files: Default::default(),
-            loaded_content: Default::default(),
-            rules: HashMap::new(),
-            rule_types: RuleTypes::default(),
-            sources: Sources::default(),
-            id_counter: Counter::default(),
-            gensym_counter: Counter::default(),
-            inline_queries: vec![],
-            resource_blocks: ResourceBlocks::new(),
-        }
+        Self::default()
     }
 
     /// Return a monotonically increasing integer ID.
@@ -599,9 +584,10 @@ impl KnowledgeBase {
     /// The `mro` argument is a list of the `instance_id` associated with a registered class.
     pub fn add_mro(&mut self, name: Symbol, mro: Vec<u64>) -> PolarResult<()> {
         // Confirm name is a registered class
-        self.constants.get(&name).ok_or_else(|| {
-            ParameterError(format!("Cannot add MRO for unregistered class {}", name))
-        })?;
+        if !self.is_constant(&name) {
+            let msg = format!("Cannot add MRO for unregistered class {}", name);
+            return Err(error::OperationalError::InvalidState { msg }.into());
+        }
         self.mro.insert(name, mro);
         Ok(())
     }
@@ -668,7 +654,7 @@ impl KnowledgeBase {
     }
 
     pub fn set_error_context(&self, term: &Term, error: impl Into<PolarError>) -> PolarError {
-        /// `GetSource` will talk a term and return the _first_ piece of source
+        /// `GetSource` will walk a term and return the _first_ piece of source
         /// info it finds
         struct GetSource<'kb> {
             kb: &'kb KnowledgeBase,
@@ -704,7 +690,7 @@ impl KnowledgeBase {
         error.set_context(source.as_ref(), term.as_ref())
     }
 
-    pub fn rewrite_shorthand_rules(&mut self) -> Vec<Diagnostic> {
+    pub fn rewrite_shorthand_rules(&mut self) -> Vec<PolarError> {
         let mut errors = vec![];
 
         errors.append(
@@ -728,7 +714,7 @@ impl KnowledgeBase {
             }
         }
 
-        errors.into_iter().map(Diagnostic::Error).collect()
+        errors
     }
 
     pub fn create_resource_specific_rule_types(&mut self) -> PolarResult<()> {
@@ -768,7 +754,7 @@ impl KnowledgeBase {
                 // 2. when the second "implier" term points to a related Resource
                 // 3. when the second "implier" term ponits to a related Actor
                 match &shorthand_rule.body {
-                    (implier, Some(relation)) => {
+                    (implier, Some((_, relation))) => {
                         if let Some(Declaration::Relation(subject)) = self
                             .resource_blocks
                             .declarations()

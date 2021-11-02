@@ -1,3 +1,5 @@
+use crate::error::{ErrorKind, ValidationError};
+
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
 use super::diagnostic::Diagnostic;
 use super::error::PolarResult;
@@ -5,6 +7,7 @@ use super::events::*;
 use super::kb::*;
 use super::messages::*;
 use super::parser;
+use super::resource_block::resource_block_from_productions;
 use super::rewrites::*;
 use super::runnable::Runnable;
 use super::sources::*;
@@ -216,9 +219,16 @@ impl Polar {
                             kb.add_rule_type(rule_type);
                         }
                     }
-                    parser::Line::ResourceBlock(block) => {
-                        diagnostics.append(&mut block.add_to_kb(kb))
-                    }
+                    parser::Line::ResourceBlock {
+                        keyword,
+                        resource,
+                        productions,
+                    } => match resource_block_from_productions(keyword, resource, productions)
+                        .map(|block| block.add_to_kb(kb))
+                    {
+                        Ok(errors) | Err(errors) => diagnostics
+                            .append(&mut errors.into_iter().map(Diagnostic::Error).collect()),
+                    },
                 }
             }
             Ok(diagnostics)
@@ -237,7 +247,32 @@ impl Polar {
         }
 
         // Rewrite shorthand rules in resource blocks before validating rule types.
-        diagnostics.append(&mut kb.rewrite_shorthand_rules());
+        diagnostics.append(
+            &mut kb
+                .rewrite_shorthand_rules()
+                .into_iter()
+                .map(Diagnostic::Error)
+                .collect(),
+        );
+
+        // Attach context to ResourceBlock errors.
+        //
+        // TODO(gj): can we attach context to *all* errors here since all errors will be parse-time
+        // errors and so will have some source context to attach?
+        diagnostics = diagnostics
+            .into_iter()
+            .map(|d| {
+                if let Diagnostic::Error(ref e) = d {
+                    if let ErrorKind::Validation(
+                        ref e @ ValidationError::ResourceBlock { ref term, .. },
+                    ) = e.kind
+                    {
+                        return Diagnostic::Error(kb.set_error_context(term, e.clone()));
+                    }
+                }
+                d
+            })
+            .collect();
 
         // Generate appropriate rule_type definitions using the types contained
         // in policy resource blocks

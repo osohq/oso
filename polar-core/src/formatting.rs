@@ -624,11 +624,12 @@ pub mod to_polar {
                 head,
                 body: (implier, relation),
             } = self;
-            if let Some(relation) = relation {
+            if let Some((keyword, relation)) = relation {
                 format!(
-                    "{} if {} on {};",
+                    "{} if {} {} {};",
                     head.to_polar(),
                     implier.to_polar(),
+                    keyword.to_polar(),
                     relation.to_polar()
                 )
             } else {
