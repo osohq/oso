@@ -551,6 +551,11 @@ impl KnowledgeBase {
         Ok(())
     }
 
+    /// Return true if a constant with the given name has been defined.
+    pub fn is_constant(&self, name: &Symbol) -> bool {
+        self.constants.contains_key(name)
+    }
+
     /// Add the Method Resolution Order (MRO) list for a registered class.
     /// The `mro` argument is a list of the `instance_id` associated with a registered class.
     pub fn add_mro(&mut self, name: Symbol, mro: Vec<u64>) -> PolarResult<()> {
@@ -561,11 +566,6 @@ impl KnowledgeBase {
         }
         self.mro.insert(name, mro);
         Ok(())
-    }
-
-    /// Return true if a constant with the given name has been defined.
-    pub fn is_constant(&self, name: &Symbol) -> bool {
-        self.constants.contains_key(name)
     }
 
     pub fn add_source(&mut self, source: Source) -> PolarResult<u64> {
