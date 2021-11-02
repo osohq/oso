@@ -74,12 +74,11 @@ jobs:
         run: |
           rustup target add x86_64-unknown-linux-musl
           RUSTFLAGS="-C target-feature=-crt-static" cargo build --target x86_64-unknown-linux-musl --release
+      - run: sudo apt-get update && sudo apt-get install -y gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi
       - name: Build release arm library
         run: |
-          cargo install cross
-          cross build --target aarch64-unknown-linux-musl --release -p polar-c-api
-        env:
-          RUSTFLAGS: "-C target-feature=-crt-static"
+          rustup target add aarch64-unknown-linux-musl
+          RUSTFLAGS="-C target-feature=-crt-static -C linker=arm-linux-gnueabi-ld"" cargo build --target aarch64-unknown-linux-musl --release -p polar-c-api
       - name: Rename static lib
         run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
       - name: Rename static lib
