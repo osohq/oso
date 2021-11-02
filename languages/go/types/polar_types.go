@@ -2090,14 +2090,6 @@ type RuntimeErrorTypeError struct {
 
 func (RuntimeErrorTypeError) isRuntimeError() {}
 
-// RuntimeErrorUnboundVariable struct
-type RuntimeErrorUnboundVariable struct {
-	// Sym
-	Sym Symbol `json:"sym"`
-}
-
-func (RuntimeErrorUnboundVariable) isRuntimeError() {}
-
 // RuntimeErrorStackOverflow struct
 type RuntimeErrorStackOverflow struct {
 	// Limit
@@ -2226,17 +2218,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		*result = RuntimeError{variant}
 		return nil
 
-	case "UnboundVariable":
-		var variant RuntimeErrorUnboundVariable
-		if variantValue != nil {
-			err := json.Unmarshal(*variantValue, &variant)
-			if err != nil {
-				return err
-			}
-		}
-		*result = RuntimeError{variant}
-		return nil
-
 	case "StackOverflow":
 		var variant RuntimeErrorStackOverflow
 		if variantValue != nil {
@@ -2329,11 +2310,6 @@ func (variant RuntimeError) MarshalJSON() ([]byte, error) {
 	case RuntimeErrorTypeError:
 		return json.Marshal(map[string]RuntimeErrorTypeError{
 			"TypeError": inner,
-		})
-
-	case RuntimeErrorUnboundVariable:
-		return json.Marshal(map[string]RuntimeErrorUnboundVariable{
-			"UnboundVariable": inner,
 		})
 
 	case RuntimeErrorStackOverflow:
