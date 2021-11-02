@@ -79,7 +79,7 @@ jobs:
         run: |
           rustup target add aarch64-unknown-linux-musl
           cargo build --target aarch64-unknown-linux-musl --release -p polar-c-api
-        environment:
+        env:
           RUSTFLAGS: "-C target-feature=-crt-static -C link-arg=-lgcc"
           CC: armv7-linux-musleabihf-gcc
           CXX: armv7-linux-musleabihf-g++
