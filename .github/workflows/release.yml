@@ -78,7 +78,7 @@ jobs:
       - name: Build release arm library
         run: |
           rustup target add aarch64-unknown-linux-musl
-          RUSTFLAGS="-C target-feature=-crt-static -C linker=arm-linux-gnueabi-ld"" cargo build --target aarch64-unknown-linux-musl --release -p polar-c-api
+          RUSTFLAGS="-C target-feature=-crt-static -C linker=arm-linux-gnueabi-ld" cargo build --target aarch64-unknown-linux-musl --release -p polar-c-api
       - name: Rename static lib
         run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
       - name: Rename static lib
