@@ -733,7 +733,6 @@ impl KnowledgeBase {
 
     pub fn create_resource_specific_rule_types(&mut self) -> PolarResult<()> {
         let mut has_relation_rule_types_to_create = HashMap::new();
-        let mut has_role_rule_types_to_create = HashMap::new();
 
         // TODO @patrickod refactor RuleTypes & split out
         // RequiredRuleType struct to record the related
@@ -747,21 +746,15 @@ impl KnowledgeBase {
         // rule or resource definitions.
         for (object, declarations) in self.resource_blocks.declarations() {
             for (name, declaration) in declarations.iter() {
-                match declaration {
-                    Declaration::Relation(subject) => {
-                        has_relation_rule_types_to_create.insert(
-                            (
-                                subject.value().as_symbol()?,
-                                name.value().as_string()?,
-                                object.value().as_symbol()?,
-                            ),
-                            false,
-                        );
-                    }
-                    Declaration::Role => {
-                        has_role_rule_types_to_create.insert(object.value().as_symbol()?, false);
-                    }
-                    _ => {}
+                if let Declaration::Relation(subject) = declaration {
+                    has_relation_rule_types_to_create.insert(
+                        (
+                            subject.value().as_symbol()?,
+                            name.value().as_string()?,
+                            object.value().as_symbol()?,
+                        ),
+                        false,
+                    );
                 }
             }
         }
@@ -794,22 +787,17 @@ impl KnowledgeBase {
                             if let Some(declarations) =
                                 self.resource_blocks.declarations().get(subject)
                             {
-                                match declarations.get(implier) {
-                                    Some(Declaration::Relation(related_subject)) => {
-                                        has_relation_rule_types_to_create.insert(
-                                            (
-                                                related_subject.value().as_symbol()?,
-                                                implier.value().as_string()?,
-                                                subject.value().as_symbol()?,
-                                            ),
-                                            true,
-                                        );
-                                    }
-                                    Some(Declaration::Role) => {
-                                        has_role_rule_types_to_create
-                                            .insert(subject.value().as_symbol()?, true);
-                                    }
-                                    _ => {}
+                                if let Some(Declaration::Relation(related_subject)) =
+                                    declarations.get(implier)
+                                {
+                                    has_relation_rule_types_to_create.insert(
+                                        (
+                                            related_subject.value().as_symbol()?,
+                                            implier.value().as_string()?,
+                                            subject.value().as_symbol()?,
+                                        ),
+                                        true,
+                                    );
                                 }
                             }
                         }
@@ -817,22 +805,16 @@ impl KnowledgeBase {
                     (implier, None) => {
                         if let Some(declarations) = self.resource_blocks.declarations().get(object)
                         {
-                            match declarations.get(implier) {
-                                Some(Declaration::Relation(subject)) => {
-                                    has_relation_rule_types_to_create.insert(
-                                        (
-                                            subject.value().as_symbol()?,
-                                            implier.value().as_string()?,
-                                            object.value().as_symbol()?,
-                                        ),
-                                        true,
-                                    );
-                                }
-                                Some(Declaration::Role) => {
-                                    has_role_rule_types_to_create
-                                        .insert(object.value().as_symbol()?, true);
-                                }
-                                _ => {}
+                            if let Some(Declaration::Relation(subject)) = declarations.get(implier)
+                            {
+                                has_relation_rule_types_to_create.insert(
+                                    (
+                                        subject.value().as_symbol()?,
+                                        implier.value().as_string()?,
+                                        object.value().as_symbol()?,
+                                    ),
+                                    true,
+                                );
                             }
                         }
                     }
@@ -840,13 +822,26 @@ impl KnowledgeBase {
             }
         }
 
-        let rule_types = has_relation_rule_types_to_create.into_iter().map(|((subject, relation_name, object), required)| {
+        let mut rule_types = has_relation_rule_types_to_create.into_iter().map(|((subject, relation_name, object), required)| {
             rule!("has_relation", ["_subject"; instance!(&subject.0), value!(relation_name), "_object"; instance!(&object.0)], required)
-        });
+        }).collect::<Vec<_>>();
 
-        let rule_types = rule_types.chain(has_role_rule_types_to_create.into_iter().map(|(object, required)| {
-            rule!("has_role", ["_actor"; instance!("Actor"), "_role"; instance!("String"), "_resource"; instance!(&object.0)], required)
-        })).collect::<Vec<_>>();
+        // If there are any Relation::Role declarations in *any* of our resource
+        // blocks then we want to add the `has_role` rule type.
+        if self
+            .resource_blocks
+            .declarations()
+            .iter()
+            .any(|(_, declarations)| {
+                declarations
+                    .values()
+                    .any(|declaration| matches!(declaration, Declaration::Role))
+            })
+        {
+            rule_types.push(
+                rule!("has_role", ["_actor"; instance!("Actor"), "_role"; instance!("String"), "_resource"; instance!("Resource")], true)
+            );
+        }
 
         for rule_type in rule_types {
             self.add_rule_type(rule_type.clone());

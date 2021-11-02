@@ -1511,7 +1511,7 @@ mod tests {
         let org_term = term!(Value::ExternalInstance(org_instance.clone()));
         let org_name = sym!("Organization");
         polar.register_constant(org_name.clone(), org_term)?;
-        polar.register_mro(org_name.clone(), vec![org_instance.instance_id])?;
+        polar.register_mro(org_name, vec![org_instance.instance_id])?;
 
         let policy = r#"
             resource Organization {
@@ -1537,26 +1537,29 @@ mod tests {
         let has_role_rule_types = kb.get_rule_types(&sym!("has_role")).unwrap();
         let has_relation_rule_types = kb.get_rule_types(&sym!("has_relation")).unwrap();
 
-        // has_role rule types for both `Organization` and `Repository`
-        assert!(has_role_rule_types.iter().any(|rule_type| {
-            let resource_param = rule_type.params[2].clone();
-            let resource_specializer = resource_param.specializer.unwrap();
-            let instance = resource_specializer.value().as_pattern().unwrap();
-            matches!(instance, Pattern::Instance(InstanceLiteral { tag, .. }) if tag == &org_name)
-        }));
-        assert!(has_role_rule_types.iter().any(|rule_type| {
-            let resource_param = rule_type.params[2].clone();
-            let resource_specializer = resource_param.specializer.unwrap();
-            let instance = resource_specializer.value().as_pattern().unwrap();
-            matches!(instance, Pattern::Instance(InstanceLiteral { tag, .. }) if tag == &repo_name)
-        }));
+        // has_role(actor: Actor, role: String, resource: Resource)
+        assert_eq!(1, has_role_rule_types.len());
+        let has_role_rule_type = has_role_rule_types.iter().next().unwrap();
 
-        // has_relation rule type for `Repository`
+        let actor_param = has_role_rule_type.params[0].clone();
+        let actor_specializer = actor_param.specializer.unwrap();
+        let actor_instance = actor_specializer.value().as_pattern().unwrap();
+        assert!(
+            matches!(actor_instance, Pattern::Instance(InstanceLiteral { tag, .. }) if tag == &sym!("Actor"))
+        );
+
+        let resource_param = has_role_rule_type.params[2].clone();
+        let resource_specializer = resource_param.specializer.unwrap();
+        let resource_instance = resource_specializer.value().as_pattern().unwrap();
+        assert!(
+            matches!(resource_instance, Pattern::Instance(InstanceLiteral { tag, .. }) if tag == &sym!("Resource"))
+        );
+
+        // has_relation(organization: Organization, "parent", repository: Repository)
         let required_has_relation = has_relation_rule_types.iter().find(|r| r.required).unwrap();
         let resource_param = &required_has_relation.params[2];
         let resource_specializer = resource_param.specializer.as_ref().unwrap();
         let instance = resource_specializer.value().as_pattern().unwrap();
-
         let relation_param = &required_has_relation.params[1];
         let relation = relation_param.parameter.value().as_string().unwrap();
         assert_eq!(relation, "parent");
