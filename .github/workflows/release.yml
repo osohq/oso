@@ -80,7 +80,7 @@ jobs:
           rustup target add aarch64-unknown-linux-musl
           cargo build --target aarch64-unknown-linux-musl --release -p polar-c-api
         env:
-          RUSTFLAGS: "-C target-feature=-crt-static -C link-arg=-lgcc"
+          RUSTFLAGS: "-C target-feature=-crt-static"
           CC: arm-linux-gnueabi-gcc
           LD: arm-linux-gnueabi-ld
       - name: Rename static lib
