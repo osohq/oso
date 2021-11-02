@@ -2223,6 +2223,14 @@ mod test {
         Ok(())
     }
 
+    #[test]
+    fn test_negated_dot_comparisons() -> TestResult {
+        let p = Polar::new();
+        let mut q = p.new_query("x != 1 and not x.a = nil and x = {}", false)?;
+        assert_query_done!(q);
+        Ok(())
+    }
+
     // Tests that if a policy constructs any partials that aren't tied to
     // the result variables, that we will get an error
     #[test]
