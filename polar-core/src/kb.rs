@@ -28,7 +28,7 @@ impl RuleParamMatch {
 pub struct KnowledgeBase {
     /// A map of bindings: variable name → value. The VM uses a stack internally,
     /// but can translate to and from this type.
-    pub constants: Bindings,
+    constants: Bindings,
     /// Map of class name -> MRO list where the MRO list is a list of class instance IDs
     mro: HashMap<Symbol, Vec<u64>>,
 
@@ -554,6 +554,11 @@ impl KnowledgeBase {
     /// Return true if a constant with the given name has been defined.
     pub fn is_constant(&self, name: &Symbol) -> bool {
         self.constants.contains_key(name)
+    }
+
+    /// Getter for `constants` map without exposing it for mutation.
+    pub fn get_registered_constants(&self) -> &Bindings {
+        &self.constants
     }
 
     /// Add the Method Resolution Order (MRO) list for a registered class.
