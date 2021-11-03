@@ -888,7 +888,6 @@ jobs:
         build_linux_wheels,
         build_macos_wheels,
         build_windows_wheels,
-        build_musl_wheels,
         build_jar,
         build_gem,
         build_go,
