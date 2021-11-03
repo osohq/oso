@@ -450,33 +450,33 @@ jobs:
           name: wheel
           path: languages/python/oso/wheelhouse/*.whl
 
-  build_musl_wheels:
-    name: Build musl wheels
-    runs-on: ubuntu-latest
-    needs: [version, linux_libs]
-    env:
-      OSO_ENV: CI
-      RUSTFLAGS: "-C target-feature=-crt-static -C relocation-model=pic"
-    steps:
-      - uses: actions/checkout@v2
-      - name: Download static libs
-        uses: actions/download-artifact@v1
-        with:
-          name: oso_static_library
-      - name: Copy static library.
-        run: |
-          mkdir -p languages/python/oso/native
-          cp -r oso_static_library/libpolar-musl.a languages/python/oso/native/libpolar.a
-          cp -r oso_static_library/polar.h languages/python/oso/native/polar.h
-      - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.6-alpine oso/scripts/build_musl.sh
-      - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.7-alpine oso/scripts/build_musl.sh
-      - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.8-alpine oso/scripts/build_musl.sh
-      - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.9-alpine oso/scripts/build_musl.sh
-      - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.10-alpine oso/scripts/build_musl.sh
-      - uses: actions/upload-artifact@v2
-        with:
-          name: musl-wheel
-          path: languages/python/oso/dist/*.whl
+  # build_musl_wheels:
+  #   name: Build musl wheels
+  #   runs-on: ubuntu-latest
+  #   needs: [version, linux_libs]
+  #   env:
+  #     OSO_ENV: CI
+  #     RUSTFLAGS: "-C target-feature=-crt-static -C relocation-model=pic"
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: Download static libs
+  #       uses: actions/download-artifact@v1
+  #       with:
+  #         name: oso_static_library
+  #     - name: Copy static library.
+  #       run: |
+  #         mkdir -p languages/python/oso/native
+  #         cp -r oso_static_library/libpolar-musl.a languages/python/oso/native/libpolar.a
+  #         cp -r oso_static_library/polar.h languages/python/oso/native/polar.h
+  #     - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.6-alpine oso/scripts/build_musl.sh
+  #     - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.7-alpine oso/scripts/build_musl.sh
+  #     - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.8-alpine oso/scripts/build_musl.sh
+  #     - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.9-alpine oso/scripts/build_musl.sh
+  #     - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.10-alpine oso/scripts/build_musl.sh
+  #     - uses: actions/upload-artifact@v2
+  #       with:
+  #         name: musl-wheel
+  #         path: languages/python/oso/dist/*.whl
 
   build_js:
     name: Build js.
@@ -728,7 +728,7 @@ jobs:
       - name: Download oso python wheels from package run
         uses: actions/download-artifact@v1
         with:
-          name: musl-wheel
+          name: wheel
       - run: docker run --rm --env OSO_VERSION -v `pwd`:/oso python:${{ matrix.python-version }}-alpine oso/scripts/test_musl.sh
         env:
           OSO_VERSION: ${{ steps.version.outputs.oso_version }}
