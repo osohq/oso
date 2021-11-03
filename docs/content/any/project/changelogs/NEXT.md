@@ -18,12 +18,6 @@ draft: true
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
-### JavaScript
-
-#### Other bugs & improvements
-
-- Fixed an error in JavaScript data filtering documentation (thanks to Ken Fukuyama for the change)
-
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
 #### Breaking changes
