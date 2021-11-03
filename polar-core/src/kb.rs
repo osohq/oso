@@ -209,6 +209,7 @@ impl KnowledgeBase {
         rule_type_instance: &InstanceLiteral,
         index: usize,
     ) -> PolarResult<RuleParamMatch> {
+        // Get the unique ID of the prototype instance pattern class.
         if let Some(Value::ExternalInstance(ExternalInstance { instance_id, .. })) = self
             .constants
             .get(&rule_type_instance.tag)
