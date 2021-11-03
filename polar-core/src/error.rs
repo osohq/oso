@@ -4,6 +4,7 @@ use std::fmt;
 
 use crate::sources::*;
 use crate::terms::*;
+use indoc::formatdoc;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(into = "FormattedPolarError")]
@@ -298,7 +299,10 @@ pub enum RuntimeError {
         var: Symbol,
         term: Term,
     },
-    DataFilteringError(String),
+    DataFilteringFieldMissing {
+        var_type: String,
+        field: String,
+    },
 }
 
 impl RuntimeError {
@@ -358,7 +362,29 @@ The expression is: {expr}
                     expr = term.to_polar(),
                 )
             }
-            Self::DataFilteringError(msg) => write!(f, "Data filtering error: {}", msg),
+            Self::DataFilteringFieldMissing { var_type, field } => {
+                let msg = formatdoc!(
+                    r#"Unregistered field or relation: {}.{}
+                    
+                    Please include `{}` in the `fields` parameter of your
+                    `register_class` call for {}.  For example, in Python:
+
+                        oso.register_class({}, fields={{
+                            {:?}: <type or relation>
+                        }})
+
+                    For more information please refer to our documentation:
+                        https://docs.osohq.com/guides/data_filtering.html
+                    "#,
+                    var_type,
+                    field,
+                    field,
+                    var_type,
+                    var_type,
+                    field
+                );
+                write!(f, "{}", msg)
+            }
         }
     }
 }

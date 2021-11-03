@@ -42,7 +42,7 @@ fn kind(err: &PolarError) -> String {
         Runtime(TypeError { .. }) => "RuntimeError::TypeError",
         Runtime(UnhandledPartial { .. }) => "RuntimeError::UnhandledPartial",
         Runtime(Unsupported { .. }) => "RuntimeError::Unsupported",
-        Runtime(DataFilteringError { .. }) => "RuntimeError::DataFilteringError",
+        Runtime(DataFilteringMissingField { .. }) => "RuntimeError::DataFilteringFieldMissing",
         Operational(Unimplemented { .. }) => "OperationalError::Unimplemented",
         Operational(Unknown) => "OperationalError::Unknown",
         Operational(InvalidState { .. }) => "OperationalError::InvalidState",
