@@ -321,7 +321,9 @@ impl ResourceBlocks {
         declaration: &Term,
         resource_name: &Term,
     ) -> PolarResult<&Declaration> {
-        if let Some(declaration) = self.declarations[resource_name].get(declaration) {
+        let maybe_declarations = self.declarations.get(resource_name);
+        let maybe_declaration = maybe_declarations.and_then(|ds| ds.get(declaration));
+        if let Some(declaration) = maybe_declaration {
             Ok(declaration)
         } else {
             let msg = format!("Undeclared term {} referenced in rule in the '{}' resource block. Did you mean to declare it as a role, permission, or relation?", declaration.to_polar(), resource_name);

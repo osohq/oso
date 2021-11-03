@@ -274,11 +274,9 @@ impl Polar {
             })
             .collect();
 
-        // Generate appropriate rule_type definitions using the types contained
-        // in policy resource blocks
-        if let Err(e) = kb.create_resource_specific_rule_types() {
-            diagnostics.push(Diagnostic::Error(e));
-        }
+        // Generate appropriate rule_type definitions using the types contained in policy resource
+        // blocks.
+        kb.create_resource_specific_rule_types();
 
         // TODO(gj): need to bomb out before rule type validation in case additional rule types
         // were defined later on in the file that encountered the `ParseError`. Those additional

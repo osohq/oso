@@ -727,7 +727,7 @@ impl KnowledgeBase {
         errors
     }
 
-    pub fn create_resource_specific_rule_types(&mut self) -> PolarResult<()> {
+    pub fn create_resource_specific_rule_types(&mut self) {
         let mut rule_types_to_create = HashMap::new();
 
         // TODO @patrickod refactor RuleTypes & split out
@@ -743,14 +743,7 @@ impl KnowledgeBase {
         for (object, declarations) in self.resource_blocks.declarations() {
             for (name, declaration) in declarations.iter() {
                 if let Declaration::Relation(subject) = declaration {
-                    rule_types_to_create.insert(
-                        (
-                            subject.value().as_symbol()?,
-                            name.value().as_string()?,
-                            object.value().as_symbol()?,
-                        ),
-                        false,
-                    );
+                    rule_types_to_create.insert((subject, name, object), false);
                 }
             }
         }
@@ -783,14 +776,7 @@ impl KnowledgeBase {
                             .resource_blocks
                             .get_relation_type_in_resource_block(relation, object)
                         {
-                            rule_types_to_create.insert(
-                                (
-                                    subject.value().as_symbol()?,
-                                    relation.value().as_string()?,
-                                    object.value().as_symbol()?,
-                                ),
-                                true,
-                            );
+                            rule_types_to_create.insert((subject, relation, object), true);
 
                             // Then, if the "implier" term is declared as a relation on `subject`
                             // (as opposed to a permission or role), create required rule type for
@@ -814,14 +800,8 @@ impl KnowledgeBase {
                                 .resource_blocks
                                 .get_relation_type_in_resource_block(implier, subject)
                             {
-                                rule_types_to_create.insert(
-                                    (
-                                        related_subject.value().as_symbol()?,
-                                        implier.value().as_string()?,
-                                        subject.value().as_symbol()?,
-                                    ),
-                                    true,
-                                );
+                                rule_types_to_create
+                                    .insert((related_subject, implier, subject), true);
                             }
                         }
                     }
@@ -836,14 +816,7 @@ impl KnowledgeBase {
                             .resource_blocks
                             .get_relation_type_in_resource_block(implier, object)
                         {
-                            rule_types_to_create.insert(
-                                (
-                                    subject.value().as_symbol()?,
-                                    implier.value().as_string()?,
-                                    object.value().as_symbol()?,
-                                ),
-                                true,
-                            );
+                            rule_types_to_create.insert((subject, implier, object), true);
                         }
                     }
                 }
@@ -851,7 +824,10 @@ impl KnowledgeBase {
         }
 
         let mut rule_types = rule_types_to_create.into_iter().map(|((subject, relation_name, object), required)| {
-            rule!("has_relation", ["_subject"; instance!(&subject.0), value!(relation_name), "_object"; instance!(&object.0)], required)
+            let subject_specializer = pattern!(instance!(&subject.value().as_symbol().expect("must be symbol").0));
+            let relation_name = relation_name.value().as_string().expect("must be string");
+            let object_specializer = pattern!(instance!(&object.value().as_symbol().expect("must be symbol").0));
+            rule!("has_relation", ["_subject"; subject_specializer, relation_name, "_object"; object_specializer], required)
         }).collect::<Vec<_>>();
 
         // If there are any Relation::Role declarations in *any* of our resource
@@ -866,8 +842,6 @@ impl KnowledgeBase {
         for rule_type in rule_types {
             self.add_rule_type(rule_type.clone());
         }
-
-        Ok(())
     }
 
     pub fn is_union(&self, maybe_union: &Term) -> bool {
