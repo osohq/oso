@@ -157,11 +157,12 @@ impl KnowledgeBase {
         // implementation.
         for rule_type in self.rule_types.required_rule_types() {
             if let Some(GenericRule { rules, .. }) = self.rules.get(&rule_type.name) {
-                let found_match = rules.values().any(|rule| {
-                    self.rule_params_match(rule.as_ref(), rule_type)
-                        .map(|r| matches!(r, RuleParamMatch::True))
-                        .unwrap()
-                });
+                let mut found_match = false;
+                for rule in rules.values() {
+                    found_match = self
+                        .rule_params_match(rule.as_ref(), rule_type)
+                        .map(|r| matches!(r, RuleParamMatch::True))?;
+                }
                 if !found_match {
                     return Err(self.set_error_context(
                         &rule_type.body,
