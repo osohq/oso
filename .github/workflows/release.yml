@@ -715,7 +715,7 @@ jobs:
 
   validate_python_musl:
     name: Test python ${{ matrix.python-version }} on Alpine
-    needs: [build_musl_wheels]
+    needs: [build_linux_wheels]
     runs-on: ubuntu-latest
     strategy:
       matrix:
