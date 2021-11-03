@@ -17,14 +17,47 @@ use super::validations::{
     check_singletons,
 };
 use super::vm::*;
-
 use std::sync::{Arc, RwLock};
+
+#[cfg(feature = "tracy")]
+use ::tracy_client;
+#[cfg(feature = "tracy")]
+use ::tracy_client::{Frame, ProfiledAllocator, Span};
+
+#[cfg(feature = "tracy")]
+#[global_allocator]
+static GLOBAL: ProfiledAllocator<std::alloc::System> =
+    ProfiledAllocator::new(std::alloc::System, 100);
+
+pub struct HostSpan {
+    #[cfg(feature = "tracy")]
+    _span: Span,
+}
+
+impl HostSpan {
+    pub fn new(_msg: &str, _text: &str) -> Self {
+        #[cfg(feature = "tracy")]
+        let span = {
+            let span = tracy_client::span!(_msg);
+            span.emit_text(&_text);
+            span.emit_color(0x4e4cc7);
+            span
+        };
+
+        Self {
+            #[cfg(feature = "tracy")]
+            _span: span,
+        }
+    }
+}
 
 pub struct Query {
     runnable_stack: Vec<(Box<dyn Runnable>, u64)>, // Tuple of Runnable + call_id.
     vm: PolarVirtualMachine,
     term: Term,
     done: bool,
+    #[cfg(feature = "tracy")]
+    _frame: Frame,
 }
 
 impl Query {
@@ -34,6 +67,8 @@ impl Query {
             vm,
             term,
             done: false,
+            #[cfg(feature = "tracy")]
+            _frame: tracy_client::start_noncontinuous_frame!("query"),
         }
     }
 
@@ -368,6 +403,14 @@ impl Polar {
     }
 
     pub fn new_query_from_term(&self, mut term: Term, trace: bool) -> Query {
+        #[cfg(feature = "tracy")]
+        let _span = {
+            let span = tracy_client::span!("new query");
+            span.emit_color(0x63b04f);
+            span.emit_text(&format!("{}", term));
+            span
+        };
+
         {
             let mut kb = self.kb.write().unwrap();
             term = rewrite_term(term, &mut kb);

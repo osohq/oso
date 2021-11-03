@@ -259,6 +259,10 @@ pub struct PolarVirtualMachine {
 
     /// Output messages.
     pub messages: MessageQueue,
+
+    // Tracing
+    #[cfg(feature = "tracy")]
+    goal_stack_length: Arc<tracy_client::Plot>,
 }
 
 impl Default for PolarVirtualMachine {
@@ -332,6 +336,8 @@ impl PolarVirtualMachine {
             query_contains_partial: false,
             inverting: false,
             messages,
+            #[cfg(feature = "tracy")]
+            goal_stack_length: Arc::new(tracy_client::create_plot!("goal stack")),
         };
         vm.bind_constants(constants);
         vm.query_contains_partial();
@@ -433,6 +439,15 @@ impl PolarVirtualMachine {
     /// Try to achieve one goal. Return `Some(QueryEvent)` if an external
     /// result is needed to achieve it, or `None` if it can run internally.
     fn next(&mut self, goal: Rc<Goal>) -> PolarResult<QueryEvent> {
+        #[cfg(feature = "tracy")]
+        let _span = {
+            let span = tracy_client::span!("goal");
+            span.emit_color(0xa13567);
+            span.emit_text(&format!("{}", goal));
+            self.goal_stack_length.point(self.goals.len() as f64);
+            span
+        };
+
         if self.log {
             self.print(&format!("{}", goal));
         }
@@ -2846,6 +2861,13 @@ impl Runnable for PolarVirtualMachine {
     /// `QueryEvent` to return. May be called multiple times to restart
     /// the machine.
     fn run(&mut self, _: Option<&mut Counter>) -> PolarResult<QueryEvent> {
+        #[cfg(feature = "tracy")]
+        let _span = {
+            let span = tracy_client::span!("vm: run");
+            span.emit_color(0xe06767);
+            span
+        };
+
         if self.query_start_time.is_none() {
             #[cfg(not(target_arch = "wasm32"))]
             let query_start_time = Some(std::time::Instant::now());

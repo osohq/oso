@@ -331,6 +331,13 @@ impl FilterPlan {
         var: &str,
         class_tag: &str,
     ) -> PolarResult<FilterPlan> {
+        #[cfg(feature = "tracy")]
+        let _span = {
+            let span = tracy_client::span!("build filter plan");
+            span.emit_color(0xbd46b7);
+            span
+        };
+
         // @NOTE(steve): Just reading an env var here sucks (see all the stuff we had to do
         // to get POLAR_LOG to work in all libs, wasm etc...) but that's what I'm doing today.
         // At some point surface this info better.
@@ -463,6 +470,13 @@ impl ResultSet {
     }
 
     fn build(types: &Types, vars: &Vars, this_type: &str) -> PolarResult<Self> {
+        #[cfg(feature = "tracy")]
+        let _span = {
+            let span = tracy_client::span!("build result set");
+            span.emit_color(0xbd46b7);
+            span
+        };
+
         let result_set = ResultSet {
             requests: HashMap::new(),
             resolve_order: vec![],
@@ -555,6 +569,13 @@ impl<'a> ResultSetBuilder<'a> {
     }
 
     fn constrain_var(&mut self, id: Id, var_type: &str) -> PolarResult<&mut Self> {
+        #[cfg(feature = "tracy")]
+        let _span = {
+            let span = tracy_client::span!("constrain var");
+            span.emit_color(0xbd46b7);
+            span
+        };
+
         if self.seen.insert(id) {
             // add a fetch request
             self.result_set.requests.insert(

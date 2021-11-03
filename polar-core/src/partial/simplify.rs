@@ -116,6 +116,14 @@ pub fn simplify_partial(
     output_vars: HashSet<Symbol>,
     track_performance: bool,
 ) -> (Term, Option<PerfCounters>) {
+    #[cfg(feature = "tracy")]
+    let _span = {
+        let span = tracy_client::span!("simplify partial");
+        span.emit_color(0x7d309c);
+        span.emit_text(&format!("{}", term));
+        span
+    };
+
     let mut simplifier = Simplifier::new(output_vars, track_performance);
     simplify_debug!("*** simplify partial {:?}", var);
     simplifier.simplify_partial(&mut term);
@@ -138,6 +146,13 @@ pub fn simplify_bindings(bindings: Bindings) -> Option<Bindings> {
 /// - For partials, simplify the constraint expressions.
 /// - For non-partials, deep deref. TODO(ap/gj): deep deref.
 pub fn simplify_bindings_opt(bindings: Bindings, all: bool) -> PolarResult<Option<Bindings>> {
+    #[cfg(feature = "tracy")]
+    let _span = {
+        let span = tracy_client::span!("simplify bindings");
+        span.emit_color(0x7d309c);
+        span
+    };
+
     let mut perf = PerfCounters::new(TRACK_PERF);
     simplify_debug!("simplify bindings");
 
@@ -149,43 +164,53 @@ pub fn simplify_bindings_opt(bindings: Bindings, all: bool) -> PolarResult<Optio
     }
 
     let mut unsatisfiable = false;
-    let mut simplify_var = |bindings: &Bindings, var: &Symbol, value: &Term| match value.value() {
-        Value::Expression(o) => {
-            assert_eq!(o.operator, Operator::And);
-            let output_vars = if all {
-                let mut hs = HashSet::with_capacity(1);
-                hs.insert(var.clone());
-                hs
-            } else {
-                bindings
-                    .keys()
-                    .filter(|v| !v.is_temporary_var())
-                    .cloned()
-                    .collect::<HashSet<_>>()
-            };
+    let mut simplify_var = |bindings: &Bindings, var: &Symbol, value: &Term| {
+        #[cfg(feature = "tracy")]
+        let _span = {
+            let span = tracy_client::span!("simplify var");
+            span.emit_color(0x7d309c);
+            span.emit_text(&var.0);
+            span
+        };
 
-            let (simplified, p) = simplify_partial(var, value.clone(), output_vars, TRACK_PERF);
-            if let Some(p) = p {
-                perf.merge(p);
-            }
+        match value.value() {
+            Value::Expression(o) => {
+                assert_eq!(o.operator, Operator::And);
+                let output_vars = if all {
+                    let mut hs = HashSet::with_capacity(1);
+                    hs.insert(var.clone());
+                    hs
+                } else {
+                    bindings
+                        .keys()
+                        .filter(|v| !v.is_temporary_var())
+                        .cloned()
+                        .collect::<HashSet<_>>()
+                };
 
-            match simplified.value().as_expression() {
-                Ok(o) if o == &FALSE => unsatisfiable = true,
-                _ => (),
+                let (simplified, p) = simplify_partial(var, value.clone(), output_vars, TRACK_PERF);
+                if let Some(p) = p {
+                    perf.merge(p);
+                }
+
+                match simplified.value().as_expression() {
+                    Ok(o) if o == &FALSE => unsatisfiable = true,
+                    _ => (),
+                }
+                simplified
             }
-            simplified
+            Value::Variable(v) | Value::RestVariable(v)
+                if v.is_temporary_var()
+                    && bindings.contains_key(v)
+                    && matches!(
+                        bindings[v].value(),
+                        Value::Variable(_) | Value::RestVariable(_)
+                    ) =>
+            {
+                bindings[v].clone()
+            }
+            _ => value.clone(),
         }
-        Value::Variable(v) | Value::RestVariable(v)
-            if v.is_temporary_var()
-                && bindings.contains_key(v)
-                && matches!(
-                    bindings[v].value(),
-                    Value::Variable(_) | Value::RestVariable(_)
-                ) =>
-        {
-            bindings[v].clone()
-        }
-        _ => value.clone(),
     };
 
     simplify_debug!("simplify bindings {}", if all { "all" } else { "not all" });

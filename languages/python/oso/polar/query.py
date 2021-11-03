@@ -71,7 +71,9 @@ class Query:
                 trace = data["trace"]
                 yield {"bindings": bindings, "trace": trace}
             elif kind in call_map:
+                span = self.ffi_query.begin_span("handle event", json.dumps(event))
                 call_map[kind](data)
+                self.ffi_query.end_span(span)
             else:
                 raise PolarRuntimeError(f"Unhandled event: {json.dumps(event)}")
 
