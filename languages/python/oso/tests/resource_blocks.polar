@@ -4,19 +4,12 @@ allow(actor, action, resource) if
 actor User {}
 actor Team {}
 
-has_role(actor: Actor, role: String, org: Org) if
-  actor.has_role_for_resource(name: role, resource: org);
+has_role(actor: Actor, role: String, resource: Resource) if
+  actor.has_role_for_resource(name: role, resource: resource);
 
-has_role(actor: Actor, role: String, repo: Repo) if
-  actor.has_role_for_resource(name: role, resource: repo);
-
-has_role(user: User, role: String, repo: Repo) if
+has_role(user: User, role: String, resource: Resource) if
   team in user.teams and
-  has_role(team, role, repo);
-
-has_role(user: User, role: String, org: Org) if
-  team in user.teams and
-  has_role(team, role, org);
+  has_role(team, role, resource);
 
 resource Org {
   roles = ["owner", "member"];
