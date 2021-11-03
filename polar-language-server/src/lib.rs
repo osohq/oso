@@ -269,20 +269,27 @@ impl PolarLanguageServer {
         })
     }
 
+    /// Create a `Diagnostic` from a `PolarError`, filtering out "ignored" errors.
     fn diagnostic_from_polar_error(
         &self,
         e: &PolarError,
     ) -> Option<(TextDocumentItem, Diagnostic)> {
-        self.document_from_polar_error_context(e).map(|doc| {
-            let diagnostic = Diagnostic {
-                range: range_from_polar_error_context(e),
-                severity: Some(DiagnosticSeverity::Error),
-                source: Some("Polar Language Server".to_owned()),
-                message: e.to_string(),
-                ..Default::default()
-            };
-            (doc, diagnostic)
-        })
+        use polar_core::error::{ErrorKind::*, ParseError::*, ValidationError::*};
+        match e.kind {
+            // Ignore errors that depend on app data.
+            Validation(UnregisteredConstant { .. }) | Parse(SingletonVariable { .. }) => None,
+
+            _ => self.document_from_polar_error_context(e).map(|doc| {
+                let diagnostic = Diagnostic {
+                    range: range_from_polar_error_context(e),
+                    severity: Some(DiagnosticSeverity::Error),
+                    source: Some("Polar Language Server".to_owned()),
+                    message: e.to_string(),
+                    ..Default::default()
+                };
+                (doc, diagnostic)
+            }),
+        }
     }
 
     /// Turn tracked documents into a set of Polar `Source` structs for `Polar::diagnostic_load`.
@@ -296,9 +303,13 @@ impl PolarLanguageServer {
             .collect()
     }
 
-    fn load_documents(&self) -> Diagnostics {
+    fn load_documents(&self) -> Vec<PolarDiagnostic> {
         self.polar
             .diagnostic_load(self.documents_to_polar_sources())
+    }
+
+    fn get_diagnostics(&self) -> Diagnostics {
+        self.load_documents()
             .into_iter()
             .filter_map(|d| match d {
                 PolarDiagnostic::Error(e) => self.diagnostic_from_polar_error(&e),
@@ -317,13 +328,12 @@ impl PolarLanguageServer {
     /// Reloads tracked documents into the `KnowledgeBase`, translates `polar-core` diagnostics
     /// into `polar-language-server` diagnostics, and returns a set of diagnostics for publishing.
     ///
-    /// NOTE(gj): we currently only receive a single error (pertaining to a single document) at a
-    /// time from the core, but we republish 'empty' diagnostics for all other documents in order
-    /// to purge stale diagnostics.
+    /// NOTE(gj): we republish 'empty' diagnostics for all documents in order to purge stale
+    /// diagnostics.
     fn reload_kb(&self) -> Diagnostics {
         self.polar.clear_rules();
         let mut diagnostics = self.empty_diagnostics_for_all_documents();
-        diagnostics.extend(self.load_documents());
+        diagnostics.extend(self.get_diagnostics());
         diagnostics
     }
 }
@@ -633,5 +643,72 @@ mod tests {
         assert_eq!(pls.documents.len(), 1);
         assert!(pls.remove_document(&a9.uri).is_some());
         assert!(pls.documents.is_empty());
+    }
+
+    #[wasm_bindgen_test]
+    fn test_ignoring_errors_dependent_on_app_data() {
+        let mut pls = new_pls();
+
+        let resource_block_unregistered_constant = "actor User {}".to_owned();
+        let doc = polar_doc("whatever", resource_block_unregistered_constant);
+        pls.upsert_document(doc.clone());
+
+        // `load_documents()` API performs no filtering.
+        let polar_diagnostics = pls.load_documents();
+        assert_eq!(polar_diagnostics.len(), 1);
+        let polar_diagnostic = polar_diagnostics.get(0).unwrap();
+        let expected_message = format!("Invalid resource block 'User' -- 'User' must be a registered class. at line 1, column 1 in file {uri}", uri=doc.uri);
+        assert_eq!(polar_diagnostic.to_string(), expected_message);
+
+        // `reload_kb()` API filters out diagnostics dependent on app data.
+        let diagnostics = pls.reload_kb();
+        let params = diagnostics.get(&doc.uri).unwrap();
+        assert_eq!(params.uri, doc.uri);
+        assert_eq!(params.version.unwrap(), doc.version);
+        assert!(params.diagnostics.is_empty(), "{:?}", params.diagnostics);
+
+        let rule_type_unregistered_constant = r#"
+            allow(_, _, _);
+            type f(a: A);
+            f(_: B);
+        "#;
+        let doc = polar_doc("whatever", rule_type_unregistered_constant.to_owned());
+        pls.upsert_document(doc.clone());
+
+        // `load_documents()` API performs no filtering.
+        let polar_diagnostics = pls.load_documents();
+        assert_eq!(polar_diagnostics.len(), 2, "{:?}", polar_diagnostics);
+        let unknown_specializer = polar_diagnostics.get(0).unwrap();
+        let expected_message =
+            "Unknown specializer B\n004:             f(_: B);\n                      ^";
+        assert_eq!(unknown_specializer.to_string(), expected_message);
+        let unregistered_constant = polar_diagnostics.get(1).unwrap();
+        let expected_message = "Unregistered constant: A";
+        assert_eq!(unregistered_constant.to_string(), expected_message);
+
+        // `reload_kb()` API filters out diagnostics dependent on app data.
+        let diagnostics = pls.reload_kb();
+        let params = diagnostics.get(&doc.uri).unwrap();
+        assert_eq!(params.uri, doc.uri);
+        assert_eq!(params.version.unwrap(), doc.version);
+        assert!(params.diagnostics.is_empty(), "{:?}", params.diagnostics);
+
+        let singleton_variable = "f(a);".to_owned();
+        let doc = polar_doc("whatever", singleton_variable);
+        pls.upsert_document(doc.clone());
+
+        // `load_documents()` API performs no filtering.
+        let polar_diagnostics = pls.load_documents();
+        assert_eq!(polar_diagnostics.len(), 1, "{:?}", polar_diagnostics);
+        let singleton_variable = polar_diagnostics.get(0).unwrap();
+        let expected_message = "Singleton variable a is unused or undefined; try renaming to _a or _ at line 1, column 3 in file file:///whatever.polar";
+        assert_eq!(singleton_variable.to_string(), expected_message);
+
+        // `reload_kb()` API filters out diagnostics dependent on app data.
+        let diagnostics = pls.reload_kb();
+        let params = diagnostics.get(&doc.uri).unwrap();
+        assert_eq!(params.uri, doc.uri);
+        assert_eq!(params.version.unwrap(), doc.version);
+        assert!(params.diagnostics.is_empty(), "{:?}", params.diagnostics);
     }
 }
