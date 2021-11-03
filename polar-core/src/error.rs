@@ -1,9 +1,8 @@
-use serde::{Deserialize, Serialize};
-
 use std::fmt;
 
-use crate::sources::*;
-use crate::terms::*;
+use serde::{Deserialize, Serialize};
+
+use super::{sources::*, terms::*};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(into = "FormattedPolarError")]
