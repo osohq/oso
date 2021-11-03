@@ -297,13 +297,13 @@ impl KnowledgeBase {
                         }
                         if !success {
                             let mut err = format!("Rule specializer {} on parameter {} must be a member of rule type specializer {}", rule_instance.tag,index, rule_type_instance.tag);
-                            if rule_type_instance.tag == sym!("Actor") {
+                            if rule_type_instance.tag.0 == ACTOR_UNION_NAME {
                                 err.push_str(&format!("
 
 \tPerhaps you meant to add an actor block to the top of your policy, like this:
 
 \t  actor {} {{}}", rule_instance.tag));
-                            } else if rule_type_instance.tag == sym!("Resource") {
+                            } else if rule_type_instance.tag.0 == RESOURCE_UNION_NAME {
                                 err.push_str(&format!("
 
 \tPerhaps you meant to add a resource block to your policy, like this:

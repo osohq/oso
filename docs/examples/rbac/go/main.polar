@@ -4,15 +4,10 @@ allow(actor, action, resource) if
 # docs: end-allow
 
 # docs: begin-has_role
-has_role(user: User, name: String, repo: Repository) if
+has_role(user: User, name: String, resource: Resource) if
   role in user.Roles and
   role.Name = name and
-  role.Resource = repo;
-
-has_role(user: User, name: String, org: Organization) if
-  role in user.Roles and
-  role.Name = name and
-  role.Resource = org;
+  role.Resource = resource;
 # docs: end-has_role
 
 # docs: begin-actor
