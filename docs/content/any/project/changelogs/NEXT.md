@@ -16,6 +16,17 @@ draft: true
 - Fixed a bug where a negated constraint on a dot lookup could cause Polar to crash
   when the underlying variable became bound.
 
+### Python
+
+#### Platform support
+
+We now publish wheels for musl-based Linux distributions (through the `musllinux`
+tag), and for ARM-based MacOS systems (through the `macosx_11_0_arm64` tag).
+
+On those systems, you should now be able to use `pip install oso` to get the
+latest Oso package.
+
+
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
