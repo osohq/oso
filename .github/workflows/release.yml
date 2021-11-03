@@ -376,6 +376,38 @@ jobs:
           name: wheel
           path: languages/python/oso/wheelhouse/*.whl
 
+  build_macos_arm_wheels:
+    name: Build macOS arm wheels
+    runs-on: [self-hosted, m1]
+    needs: [version, macos_libs]
+    env:
+      OSO_ENV: CI
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download static libs
+        uses: actions/download-artifact@v1
+        with:
+          name: oso_static_library
+      - name: Copy static library.
+        run: |
+          mkdir -p languages/python/oso/native
+          cp -r oso_static_library/libpolar-macOS-arm.a languages/python/oso/native/libpolar.a
+          cp -r oso_static_library/polar.h languages/python/oso/native/polar.h
+      - name: Copy in readme
+        run: |
+          rm languages/python/oso/README.md
+          cp README.md languages/python/oso/README.md
+      - name: Build wheels
+        run: |
+          arch -arm64 /opt/homebrew/opt/python@3.8/bin/python3 setup.py sdist bdist_wheel
+          arch -arm64 /opt/homebrew/opt/python@3.9/bin/python3 setup.py sdist bdist_wheel
+          arch -arm64 /opt/homebrew/opt/python@3.10/bin/python3 setup.py sdist bdist_wheel
+        working-directory: languages/python/oso
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheel
+          path: languages/python/oso/dist/*.whl
+
   build_windows_wheels:
     name: Build wheels on Windows
     runs-on: windows-latest
@@ -548,6 +580,9 @@ jobs:
           name: wheel
       - name: "test"
         run: |
+          # first install _only_ the wheel and make sure it's available
+          pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel --no-deps --no-index
+          # then install deps too
           pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
           python test.py
         working-directory: test
@@ -574,6 +609,9 @@ jobs:
           name: wheel
       - name: "test"
         run: |
+          # first install _only_ the wheel and make sure it's available
+          pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel --no-deps --no-index
+          # then install deps too
           pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
           python test.py
         working-directory: test
@@ -601,8 +639,47 @@ jobs:
           name: wheel
       - name: "test"
         run: |
+          # first install _only_ the wheel and make sure it's available
+          pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel --no-deps --no-index
+          # then install deps too
           pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
           python test.py
+        working-directory: test
+
+  validate_python_macos_arm:
+    name: Test python on MacOS M1
+    needs: [build_macos_arm_wheels]
+    runs-on: [self-hosted, m1]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set version env
+        id: version
+        run: echo "::set-output name=oso_version::$(cat VERSION)"
+      - name: Download oso python wheels from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: wheel
+      # 3.8 is the earliest python for M1
+      - name: "test python 3.8"
+        run: |
+          arch -arm64 /opt/homebrew/opt/python@3.8/bin/python3 -m venv venv38
+          arch -arm64 ./venv38/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel --no-deps --no-index
+          arch -arm64 ./venv38/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
+          arch -arm64 ./venv38/bin/python test.py
+        working-directory: test
+      - name: "test python 3.9"
+        run: |
+          arch -arm64 /opt/homebrew/opt/python@3.9/bin/python3 -m venv venv39
+          arch -arm64 ./venv39/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel --no-deps --no-index
+          arch -arm64 ./venv39/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
+          arch -arm64 ./venv39/bin/python test.py
+        working-directory: test
+      - name: "test python 3.10"
+        run: |
+          arch -arm64 /opt/homebrew/opt/python@3.10/bin/python3 -m venv venv310
+          arch -arm64 ./venv310/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel --no-deps --no-index
+          arch -arm64 ./venv310/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
+          arch -arm64 ./venv310/bin/python test.py
         working-directory: test
 
   validate_python_windows:
@@ -627,6 +704,9 @@ jobs:
           name: wheel
       - name: "test"
         run: |
+          # first install _only_ the wheel and make sure it's available
+          pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel --no-deps --no-index
+          # then install deps too
           pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
           python test.py
         working-directory: test
@@ -955,6 +1035,7 @@ jobs:
         validate_python_linux,
         validate_python_macos_old,
         validate_python_macos_11,
+        validate_python_macos_arm,
         validate_python_windows,
         validate_python_musl,
         validate_ruby,
