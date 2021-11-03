@@ -16,7 +16,7 @@ jobs:
       - name: Set version env
         run: echo "oso_version=$(cat VERSION)" >> $GITHUB_ENV
       - name: Check github ref matches
-        if: github.ref != 'refs/heads/main
+        if: github.ref != 'refs/heads/main'
         env:
           github_ref: ${{ github.ref }}
         run: grep "${github_ref/refs\/tags\/v/}" VERSION
