@@ -97,6 +97,7 @@ impl KnowledgeBase {
 
     pub fn validate_rules(&self) -> Vec<Diagnostic> {
         let mut diagnostics = vec![];
+
         if let Err(e) = self.validate_rule_types() {
             diagnostics.push(Diagnostic::Error(e));
         }
@@ -112,6 +113,7 @@ impl KnowledgeBase {
 
     /// Validate that all rules loaded into the knowledge base are valid based on rule types.
     fn validate_rule_types(&self) -> PolarResult<()> {
+        // For every rule, if there *is* a rule type, check that the rule matches the rule type.
         for (rule_name, generic_rule) in &self.rules {
             if let Some(types) = self.rule_types.get(rule_name) {
                 // If a type with the same name exists, then the parameters must match for each rule
@@ -151,8 +153,8 @@ impl KnowledgeBase {
             }
         }
 
-        // Enforce rule type validation for "required" rule types derived from
-        // resource block definitions.
+        // For every rule type that is *required*, see that there is at least one corresponding
+        // implementation.
         for rule_type in self.rule_types.required_rule_types() {
             if let Some(GenericRule { rules, .. }) = self.rules.get(&rule_type.name) {
                 let found_match = rules.values().any(|rule| {
