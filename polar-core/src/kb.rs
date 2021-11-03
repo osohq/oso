@@ -1,25 +1,24 @@
 use std::collections::{HashMap, HashSet};
-
-use crate::error::ParameterError;
-use crate::error::{PolarError, PolarResult};
-use crate::validations::check_undefined_rule_calls;
+use std::sync::Arc;
 
 pub use super::bindings::Bindings;
 use super::counter::Counter;
-use super::resource_block::ResourceBlocks;
-use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
+use super::diagnostic::Diagnostic;
+use super::error::{PolarError, PolarResult};
+use super::resource_block::{ResourceBlocks, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::*;
 use super::terms::*;
-use std::sync::Arc;
+use super::validations::check_undefined_rule_calls;
+use super::visitor::{walk_term, Visitor};
 
 enum RuleParamMatch {
     True,
     False(String),
 }
 
+#[cfg(test)]
 impl RuleParamMatch {
-    #[cfg(test)]
     fn is_true(&self) -> bool {
         matches!(self, RuleParamMatch::True)
     }
@@ -33,10 +32,10 @@ pub struct KnowledgeBase {
     /// Map of class name -> MRO list where the MRO list is a list of class instance IDs
     mro: HashMap<Symbol, Vec<u64>>,
 
-    /// Map from loaded files to the source ID
-    pub loaded_files: HashMap<String, u64>,
-    /// Map from source code loaded to the filename it was loaded as
-    pub loaded_content: HashMap<String, String>,
+    /// Map from filename to source ID for files loaded into the KB.
+    loaded_files: HashMap<String, u64>,
+    /// Map from contents to filename for files loaded into the KB.
+    loaded_content: HashMap<String, String>,
 
     rules: HashMap<Symbol, GenericRule>,
     rule_types: RuleTypes,
@@ -53,19 +52,7 @@ pub struct KnowledgeBase {
 
 impl KnowledgeBase {
     pub fn new() -> Self {
-        Self {
-            constants: HashMap::new(),
-            mro: HashMap::new(),
-            loaded_files: Default::default(),
-            loaded_content: Default::default(),
-            rules: HashMap::new(),
-            rule_types: RuleTypes::default(),
-            sources: Sources::default(),
-            id_counter: Counter::default(),
-            gensym_counter: Counter::default(),
-            inline_queries: vec![],
-            resource_blocks: ResourceBlocks::new(),
-        }
+        Self::default()
     }
 
     /// Return a monotonically increasing integer ID.
@@ -108,17 +95,16 @@ impl KnowledgeBase {
         generic_rule.add_rule(Arc::new(rule));
     }
 
-    pub fn validate_rules(&self) -> PolarResult<()> {
-        self.validate_rule_types()?;
-        self.validate_rule_calls()
+    pub fn validate_rules(&self) -> Vec<Diagnostic> {
+        let mut diagnostics = self.validate_rule_calls();
+        if let Err(e) = self.validate_rule_types() {
+            diagnostics.push(Diagnostic::Error(e));
+        }
+        diagnostics
     }
 
-    fn validate_rule_calls(&self) -> PolarResult<()> {
-        let errors = check_undefined_rule_calls(self);
-        match errors.into_iter().next() {
-            Some(e) => Err(e),
-            None => Ok(()),
-        }
+    fn validate_rule_calls(&self) -> Vec<Diagnostic> {
+        check_undefined_rule_calls(self)
     }
 
     /// Validate that all rules loaded into the knowledge base are valid based on rule types.
@@ -517,6 +503,8 @@ impl KnowledgeBase {
             })
             .collect::<PolarResult<Vec<RuleParamMatch>>>()
             .map(|results| {
+                // TODO(gj): all() is short-circuiting -- do we want to gather up *all* failure
+                // messages instead of just the first one?
                 results.iter().all(|r| {
                     if let RuleParamMatch::False(msg) = r {
                         failure_message = msg.to_owned();
@@ -567,9 +555,10 @@ impl KnowledgeBase {
     /// The `mro` argument is a list of the `instance_id` associated with a registered class.
     pub fn add_mro(&mut self, name: Symbol, mro: Vec<u64>) -> PolarResult<()> {
         // Confirm name is a registered class
-        self.constants.get(&name).ok_or_else(|| {
-            ParameterError(format!("Cannot add MRO for unregistered class {}", name))
-        })?;
+        if !self.is_constant(&name) {
+            let msg = format!("Cannot add MRO for unregistered class {}", name);
+            return Err(error::OperationalError::InvalidState { msg }.into());
+        }
         self.mro.insert(name, mro);
         Ok(())
     }
@@ -599,55 +588,6 @@ impl KnowledgeBase {
         self.loaded_content.clear();
         self.loaded_files.clear();
         self.resource_blocks.clear();
-    }
-
-    /// Removes a file from the knowledge base by finding the associated
-    /// `Source` and removing all rules for that source, and
-    /// removes the file from loaded files.
-    ///
-    /// Optionally return the source for the file, returning `None`
-    /// if the file was not in the loaded files.
-    pub fn remove_file(&mut self, filename: &str) -> Option<String> {
-        self.loaded_files
-            .get(filename)
-            .cloned()
-            .map(|src_id| self.remove_source(src_id))
-    }
-
-    /// Removes a source from the knowledge base by finding the associated
-    /// `Source` and removing all rules for that source. Will
-    /// also remove the loaded files if the source was loaded from a file.
-    pub fn remove_source(&mut self, source_id: u64) -> String {
-        // remove from rules
-        self.rules.retain(|_, gr| {
-            let to_remove: Vec<u64> = gr.rules.iter().filter_map(|(idx, rule)| {
-                matches!(rule.source_info, SourceInfo::Parser { src_id, ..} if src_id == source_id)
-                    .then(||*idx)
-            }).collect();
-
-            for idx in to_remove {
-                gr.remove_rule(idx);
-            }
-            !gr.rules.is_empty()
-        });
-
-        // remove from sources
-        let source = self
-            .sources
-            .remove_source(source_id)
-            .expect("source doesn't exist in KB");
-        let filename = source.filename;
-
-        // remove queries
-        self.inline_queries
-            .retain(|q| q.get_source_id() != Some(source_id));
-
-        // remove from files
-        if let Some(filename) = filename {
-            self.loaded_files.remove(&filename);
-            self.loaded_content.retain(|_, f| f != &filename);
-        }
-        source.src
     }
 
     fn check_file(&self, src: &str, filename: &str) -> PolarResult<()> {
@@ -685,24 +625,48 @@ impl KnowledgeBase {
     }
 
     pub fn set_error_context(&self, term: &Term, error: impl Into<PolarError>) -> PolarError {
-        let source = term
-            .get_source_id()
-            .and_then(|id| self.sources.get_source(id));
+        /// `GetSource` will walk a term and return the _first_ piece of source
+        /// info it finds
+        struct GetSource<'kb> {
+            kb: &'kb KnowledgeBase,
+            source: Option<Source>,
+            term: Option<Term>,
+        }
+
+        impl<'kb> Visitor for GetSource<'kb> {
+            fn visit_term(&mut self, t: &Term) {
+                if self.source.is_none() {
+                    self.source = t
+                        .get_source_id()
+                        .and_then(|id| self.kb.sources.get_source(id));
+
+                    if self.source.is_none() {
+                        walk_term(self, t)
+                    } else {
+                        self.term = Some(t.clone())
+                    }
+                }
+            }
+        }
+
+        let mut source_getter = GetSource {
+            kb: self,
+            source: None,
+            term: None,
+        };
+        source_getter.visit_term(term);
+        let source = source_getter.source;
+        let term = source_getter.term;
         let error: PolarError = error.into();
-        error.set_context(source.as_ref(), Some(term))
+        error.set_context(source.as_ref(), term.as_ref())
     }
 
-    pub fn rewrite_shorthand_rules(&mut self) -> PolarResult<()> {
+    pub fn rewrite_shorthand_rules(&mut self) -> Vec<PolarError> {
         let mut errors = vec![];
 
         errors.append(
             &mut super::resource_block::check_all_relation_types_have_been_registered(self),
         );
-
-        // TODO(gj): Emit all errors instead of just the first.
-        if !errors.is_empty() {
-            return Err(errors[0].clone());
-        }
 
         let mut rules = vec![];
         for (resource_name, shorthand_rules) in &self.resource_blocks.shorthand_rules {
@@ -714,17 +678,14 @@ impl KnowledgeBase {
             }
         }
 
-        // TODO(gj): Emit all errors instead of just the first.
-        if !errors.is_empty() {
-            return Err(errors[0].clone());
+        if errors.is_empty() {
+            // Add the rewritten rules to the KB.
+            for rule in rules {
+                self.add_rule(rule);
+            }
         }
 
-        // Add the rewritten rules to the KB.
-        for rule in rules {
-            self.add_rule(rule);
-        }
-
-        Ok(())
+        errors
     }
 
     pub fn is_union(&self, maybe_union: &Term) -> bool {
@@ -1302,11 +1263,11 @@ mod tests {
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Fruit"))]));
 
         assert!(matches!(
-            kb.validate_rules().err().unwrap(),
-            PolarError {
+            kb.validate_rules().first().unwrap(),
+            Diagnostic::Error(PolarError {
                 kind: ErrorKind::Validation(ValidationError::InvalidRule { .. }),
                 ..
-            }
+            })
         ));
 
         // Rule type does not apply if it doesn't have the same name as a rule
@@ -1315,7 +1276,7 @@ mod tests {
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Orange"))]));
         kb.add_rule(rule!("g", ["x"; instance!(sym!("Fruit"))]));
 
-        kb.validate_rules().unwrap();
+        assert!(kb.validate_rules().is_empty());
 
         // Rule type does apply if it has the same name as a rule even if different arity
         kb.clear_rules();
@@ -1323,11 +1284,11 @@ mod tests {
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Orange"))]));
 
         assert!(matches!(
-            kb.validate_rules().err().unwrap(),
-            PolarError {
+            kb.validate_rules().first().unwrap(),
+            Diagnostic::Error(PolarError {
                 kind: ErrorKind::Validation(ValidationError::InvalidRule { .. }),
                 ..
-            }
+            })
         ));
         // Multiple templates can exist for the same name but only one needs to match
         kb.clear_rules();

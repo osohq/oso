@@ -134,6 +134,11 @@ def bump_oso_version(version):
                              "package.version": version,
                              "dependencies.polar-core.version": f"={version}",
                          })
+    replace_version_toml(BASE / "polar-language-server/Cargo.toml",
+                         {
+                             "package.version": version,
+                             "dependencies.polar-core.version": f"={version}",
+                         })
     replace_version(version,
                     BASE / ".github/workflows/publish-docs.yml",
                     fr'default: "({VERSION_RE})" # oso_version')

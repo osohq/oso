@@ -8,13 +8,15 @@ description: >-
 draft: true
 ---
 
-## `RELEASED_PACKAGE_1` NEW_VERSION
+## `oso` NEW_VERSION
 
-### Go
+### Core
 
 #### Other bugs & improvements
+- Fixed a bug where a negated constraint on a dot lookup could cause Polar to crash
+  when the underlying variable became bound.
 
-- Fixed a bug that caused the Go library to crash when using Go 1.17 on macOS.
+## `RELEASED_PACKAGE_1` NEW_VERSION
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 

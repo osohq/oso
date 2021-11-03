@@ -79,3 +79,5 @@ testUnspecializedRuleOrder(_x, _y: String, z) if z = 2;
 testUnspecializedRuleOrder(_x: String, _y, z) if z = 1;
 
 testIterables() if 1 in new List([3, 2, 1]);
+
+testUnhandledPartial() if x = x and x > 0;

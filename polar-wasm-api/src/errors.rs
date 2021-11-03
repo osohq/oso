@@ -1,8 +1,8 @@
 use wasm_bindgen::JsValue;
 
 use polar_core::error::{
-    ErrorKind, FormattedPolarError, OperationalError, ParameterError, ParseError, PolarError,
-    RuntimeError, ValidationError,
+    ErrorKind, FormattedPolarError, OperationalError, ParseError, PolarError, RuntimeError,
+    ValidationError,
 };
 
 pub struct Error {
@@ -32,7 +32,6 @@ fn kind(err: &PolarError) -> String {
         Parse(WrongValueType { .. }) => "ParseError::WrongValueType",
         Parse(DuplicateKey { .. }) => "ParseError::DuplicateKey",
         Parse(SingletonVariable { .. }) => "ParseError::SingletonVariable",
-        Parse(ResourceBlock { .. }) => "ParseError::ResourceBlock",
         Runtime(Application { .. }) => "RuntimeError::Application",
         Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
         Runtime(FileLoading { .. }) => "RuntimeError::FileLoading",
@@ -41,14 +40,14 @@ fn kind(err: &PolarError) -> String {
         Runtime(Serialization { .. }) => "RuntimeError::Serialization",
         Runtime(StackOverflow { .. }) => "RuntimeError::StackOverflow",
         Runtime(TypeError { .. }) => "RuntimeError::TypeError",
-        Runtime(UnboundVariable { .. }) => "RuntimeError::UnboundVariable",
+        Runtime(UnhandledPartial { .. }) => "RuntimeError::UnhandledPartial",
         Runtime(Unsupported { .. }) => "RuntimeError::Unsupported",
         Operational(Unimplemented { .. }) => "OperationalError::Unimplemented",
         Operational(Unknown) => "OperationalError::Unknown",
         Operational(InvalidState { .. }) => "OperationalError::InvalidState",
-        Parameter(ParameterError(..)) => "ParameterError::ParameterError",
         Validation(InvalidRule { .. }) => "ValidationError::InvalidRule",
         Validation(InvalidRuleType { .. }) => "ValidationError::InvalidRuleType",
+        Validation(ResourceBlock { .. }) => "ValidationError::ResourceBlock",
         Validation(UndefinedRule { .. }) => "ValidationError::UndefinedRule",
     }
     .to_owned()
