@@ -308,7 +308,7 @@ jobs:
           python-version: "3.7"
       - name: Install cibuildwheel
         run: |
-          python -m pip install cibuildwheel==1.6.2
+          python -m pip install cibuildwheel==2.2.2
       - name: Download static libs
         uses: actions/download-artifact@v1
         with:
@@ -316,7 +316,7 @@ jobs:
       - name: Copy static library.
         run: |
           mkdir -p languages/python/oso/native
-          cp -r oso_static_library/libpolar-Linux.a languages/python/oso/native/libpolar.a
+          cp -r oso_static_library/libpolar-musl.a languages/python/oso/native/libpolar.a
           cp -r oso_static_library/polar.h languages/python/oso/native/polar.h
       - name: Copy in readme
         run: |
@@ -353,7 +353,7 @@ jobs:
           python-version: "3.7"
       - name: Install cibuildwheel
         run: |
-          python -m pip install cibuildwheel==1.6.2
+          python -m pip install cibuildwheel==2.2.2
       - name: Download static libs
         uses: actions/download-artifact@v1
         with:
@@ -427,7 +427,7 @@ jobs:
           python-version: "3.7"
       - name: Install cibuildwheel
         run: |
-          python -m pip install cibuildwheel==1.6.2
+          python -m pip install cibuildwheel==2.2.2
       - name: Download static libs
         uses: actions/download-artifact@v1
         with:
