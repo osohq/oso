@@ -4,7 +4,7 @@ on:
     tags:
       - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
     branches:
-      - main
+      - steve/python10
 
 jobs:
   version:
@@ -16,7 +16,7 @@ jobs:
       - name: Set version env
         run: echo "oso_version=$(cat VERSION)" >> $GITHUB_ENV
       - name: Check github ref matches
-        if: github.ref != 'refs/heads/main'
+        if: github.ref != 'refs/heads/steve/python10'
         env:
           github_ref: ${{ github.ref }}
         run: grep "${github_ref/refs\/tags\/v/}" VERSION
@@ -471,6 +471,8 @@ jobs:
       - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.6-alpine oso/scripts/build_musl.sh
       - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.7-alpine oso/scripts/build_musl.sh
       - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.8-alpine oso/scripts/build_musl.sh
+      - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.9-alpine oso/scripts/build_musl.sh
+      - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.10-alpine oso/scripts/build_musl.sh
       - uses: actions/upload-artifact@v2
         with:
           name: musl-wheel
@@ -593,7 +595,7 @@ jobs:
     runs-on: macos-10.15
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.6, 3.7, 3.8, 3.9, 3.10]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -623,7 +625,7 @@ jobs:
     strategy:
       matrix:
         # There is no python 3.6 for macos-11
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9, 3.10]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -688,7 +690,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.6, 3.7, 3.8, 3.9, 3.10]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -717,7 +719,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.6, 3.7, 3.8, 3.9, 3.10]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -880,7 +882,7 @@ jobs:
   release:
     name: Create release
     runs-on: ubuntu-latest
-    if: github.ref != 'refs/heads/main'
+    if: github.ref != 'refs/heads/steve/python10'
     needs:
       [
         build_linux_wheels,
