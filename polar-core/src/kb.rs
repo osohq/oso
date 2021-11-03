@@ -4,7 +4,7 @@ use std::sync::Arc;
 pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::diagnostic::Diagnostic;
-use super::error::{PolarError, PolarResult};
+use super::error::{PolarError, PolarResult, ValidationError};
 use super::resource_block::{ResourceBlocks, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::*;
@@ -179,11 +179,9 @@ impl KnowledgeBase {
         index: usize,
     ) -> PolarResult<RuleParamMatch> {
         // Get the unique ID of the prototype instance pattern class.
-        if let Some(Value::ExternalInstance(ExternalInstance { instance_id, .. })) = self
-            .constants
-            .get(&rule_type_instance.tag)
-            .map(|t| t.value())
-        {
+        // TODO(gj): make actual term available here instead of constructing a fake test one.
+        let term = self.get_registered_constant(&term!(rule_type_instance.tag.clone()))?;
+        if let Value::ExternalInstance(ExternalInstance { instance_id, .. }) = term.value() {
             if let Some(rule_mro) = self.mro.get(&rule_instance.tag) {
                 if !rule_mro.contains(instance_id) {
                     Ok(RuleParamMatch::False(format!(
@@ -204,6 +202,8 @@ impl KnowledgeBase {
                 )}.into())
             }
         } else {
+            // TODO(gj): `rule_type_instance.tag` was registered as something other than an
+            // external instance. What should we do here?
             unreachable!("Unregistered specializer classes should be caught before this point.");
         }
     }
@@ -559,6 +559,18 @@ impl KnowledgeBase {
     /// Getter for `constants` map without exposing it for mutation.
     pub fn get_registered_constants(&self) -> &Bindings {
         &self.constants
+    }
+
+    pub fn get_registered_constant(&self, constant: &Term) -> PolarResult<&Term> {
+        self.constants
+            .get(constant.value().as_symbol()?)
+            .ok_or_else(|| {
+                ValidationError::UnregisteredConstant {
+                    msg: format!("Unregistered constant: {}", constant.to_polar()),
+                    term: constant.clone(),
+                }
+                .into()
+            })
     }
 
     /// Add the Method Resolution Order (MRO) list for a registered class.

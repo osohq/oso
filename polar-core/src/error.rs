@@ -412,6 +412,10 @@ pub enum ValidationError {
         // redeclaration.
     },
     // TODO(lm|gj): add SingletonVariable.
+    UnregisteredConstant {
+        term: Term, // Term<Symbol>
+        msg: String,
+    },
 }
 
 impl fmt::Display for ValidationError {
@@ -427,6 +431,9 @@ impl fmt::Display for ValidationError {
                 write!(f, r#"Call to undefined rule "{}""#, rule_name)
             }
             Self::ResourceBlock { msg, .. } => {
+                write!(f, "{}", msg)
+            }
+            Self::UnregisteredConstant { msg, .. } => {
                 write!(f, "{}", msg)
             }
         }

@@ -54,7 +54,7 @@ fn validate_parsed_declaration((name, term): (Term, Term)) -> PolarResult<Parsed
 
         ("roles", Value::Dictionary(_)) | ("permissions", Value::Dictionary(_)) => {
             let msg = format!("Expected '{}' declaration to be a list of strings; found a dictionary", name.to_polar());
-            Err(ValidationError::ResourceBlock { msg, term}.into())
+            Err(ValidationError::ResourceBlock { msg, term }.into())
         }
         ("relations", Value::List(_)) => Err(ValidationError::ResourceBlock {
             msg: "Expected 'relations' declaration to be a dictionary; found a list".to_owned(),
@@ -637,7 +637,7 @@ fn check_that_block_type_is_not_already_registered(
     let already_registered = is_registered_class(kb, &term!(sym!(union_name)))?;
     if already_registered {
         let msg = format!("Cannot declare '{} {} {{ ... }}'; '{}' already registered as a constant. To resolve this conflict, please register '{}' under a different name.", block_type.to_polar(), resource.to_polar(), union_name, union_name);
-        return Err(ValidationError::ResourceBlock {
+        return Err(ValidationError::UnregisteredConstant {
             msg,
             term: resource.clone(),
         }
@@ -653,8 +653,7 @@ fn check_that_block_resource_is_registered(kb: &KnowledgeBase, resource: &Term) 
             resource.to_polar(),
             resource.to_polar(),
         );
-        // TODO(gj): UnregisteredClassError in the core.
-        return Err(ValidationError::ResourceBlock {
+        return Err(ValidationError::UnregisteredConstant {
             msg,
             term: resource.clone(),
         }
@@ -674,8 +673,7 @@ fn relation_type_is_registered(
             relation.value().as_string()?,
             kind.to_polar(),
         );
-        // TODO(gj): UnregisteredClassError in the core.
-        return Err(ValidationError::ResourceBlock {
+        return Err(ValidationError::UnregisteredConstant {
             msg,
             term: kind.clone(),
         }
@@ -764,6 +762,11 @@ mod tests {
         let msg = match p.load_str(policy).unwrap_err() {
             error::PolarError {
                 kind: error::ErrorKind::Validation(ValidationError::ResourceBlock { msg, .. }),
+                ..
+            }
+            | error::PolarError {
+                kind:
+                    error::ErrorKind::Validation(ValidationError::UnregisteredConstant { msg, .. }),
                 ..
             } => msg,
             e => panic!("{}", e),
