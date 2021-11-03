@@ -141,10 +141,6 @@ WHERE "app_post"."id" IN (
 
 ## Limitations
 
-This feature is still under active development. Not all valid policies are
-currently supported, but more will be supported as we continue working on this
-feature.
-
 There are some operators and features that do not currently work with the
 Django adapter when used **anywhere in the policy**:
 

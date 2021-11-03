@@ -243,10 +243,6 @@ authorization logic over collections.
 
 ## Limitations
 
-This feature is still under active development. Not all policies that work in a
-non-partial setting will currently work with partials. More policies will be
-supported as we continue working on this feature.
-
 There are some operators and features that do not currently work with the
 SQLAlchemy adapter when used **anywhere in the policy**:
 
