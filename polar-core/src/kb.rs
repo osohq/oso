@@ -302,6 +302,12 @@ impl KnowledgeBase {
 \tPerhaps you meant to add an actor block to the top of your policy, like this:
 
 \t  actor {} {{}}", rule_instance.tag));
+                            } else if rule_type_instance.tag == sym!("Resource") {
+                                err.push_str(&format!("
+
+\tPerhaps you meant to add a resource block to your policy, like this:
+
+\t  resource {} {{ .. }}", rule_instance.tag));
                             }
 
                             return Ok(RuleParamMatch::False(err));
