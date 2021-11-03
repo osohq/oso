@@ -61,21 +61,13 @@ fn warn_str(sym: &Symbol, term: &Term, source: &Option<Source>) -> Diagnostic {
         }
         Diagnostic::Warning(msg)
     } else {
-        let verr = error::ValidationError::SingletonVariable {
-            loc: term.offset(),
-            name: sym.0.clone(),
-        };
-        let err = error::PolarError {
-            kind: error::ErrorKind::Validation(verr),
-            context: None,
-        };
-
-        let src = if let Some(ref s) = source {
-            Some(s)
-        } else {
-            None
-        };
-        Diagnostic::Error(err.set_context(src, Some(term)))
+        Diagnostic::Error(
+            error::ValidationError::SingletonVariable {
+                term: term.clone(),
+                name: sym.0.clone(),
+            }
+            .into(),
+        )
     }
 }
 
