@@ -7,6 +7,7 @@ use permute::permute;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
 
+use mock_externals::MockExternal;
 use polar_core::{
     error::*,
     events::*,
@@ -18,8 +19,11 @@ use polar_core::{
     value, values,
 };
 
-type QueryResults = Vec<(HashMap<Symbol, Value>, Option<TraceResult>)>;
-use mock_externals::MockExternal;
+fn polar() -> Polar {
+    let mut p = Polar::new();
+    p.set_ignore_no_allow_warning(true);
+    p
+}
 
 fn no_results(
     _: u64,
@@ -40,6 +44,8 @@ fn no_externals(_: u64, _: Term) {}
 fn no_debug(_: &str) -> String {
     "".to_string()
 }
+
+type QueryResults = Vec<(HashMap<Symbol, Value>, Option<TraceResult>)>;
 
 fn no_error_handler(e: PolarError) -> QueryResults {
     panic!("Query returned error: {}", e.to_string())
@@ -348,7 +354,7 @@ fn _qruntime(p: &mut Polar, query_str: &str) -> ErrorKind {
 
 macro_rules! qruntime {
     ($query:tt, $err:pat $(, $cond:expr)?) => {
-        assert!(matches!(_qruntime(&mut Polar::new(), $query), ErrorKind::Runtime($err) $(if $cond)?));
+        assert!(matches!(_qruntime(&mut polar(), $query), ErrorKind::Runtime($err) $(if $cond)?));
     };
 
     ($polar:expr, $query:tt, $err:pat $(, $cond:expr)?) => {
@@ -359,7 +365,7 @@ macro_rules! qruntime {
 macro_rules! qparse {
     ($query:expr, $err:pat) => {
         assert!(matches!(
-            Polar::new().load_str($query).unwrap_err().kind,
+            polar().load_str($query).unwrap_err().kind,
             ErrorKind::Parse($err)
         ));
     };
@@ -370,7 +376,7 @@ type TestResult = Result<(), PolarError>;
 /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
 #[test]
 fn test_functions() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"f(1);
            f(2);
@@ -389,7 +395,7 @@ fn test_functions() -> TestResult {
 /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
 #[test]
 fn test_jealous() -> TestResult {
-    let p = Polar::new();
+    let p = polar();
     p.load_str(
         r#"loves("vincent", "mia");
            loves("marcellus", "mia");
@@ -416,7 +422,7 @@ fn test_jealous() -> TestResult {
 
 #[test]
 fn test_trace() -> TestResult {
-    let p = Polar::new();
+    let p = polar();
     p.load_str(
         r#"f(x) if x = 1 and x = 1;
            f(y) if y = 1;"#,
@@ -451,7 +457,7 @@ fn test_trace() -> TestResult {
 
 #[test]
 fn test_nested_rule() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"f(x) if g(x);
            g(x) if h(x);
@@ -469,7 +475,7 @@ fn test_nested_rule() -> TestResult {
 /// A functions permutation that is known to fail.
 #[test]
 fn test_bad_functions() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"f(2);
            f(1);
@@ -495,7 +501,7 @@ fn test_functions_reorder() -> TestResult {
     ];
 
     for (i, permutation) in permute(parts).into_iter().enumerate() {
-        let mut p = Polar::new();
+        let mut p = polar();
 
         let mut joined = permutation.join(";");
         joined.push(';');
@@ -525,7 +531,7 @@ fn test_functions_reorder() -> TestResult {
 
 #[test]
 fn test_results() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"foo(1);
            foo(2);
@@ -546,7 +552,7 @@ fn test_result_permutations() -> TestResult {
     ];
     for permutation in permute(parts).into_iter() {
         eprintln!("{:?}", permutation);
-        let mut p = Polar::new();
+        let mut p = polar();
         let (results, rules): (Vec<_>, Vec<_>) = permutation.into_iter().unzip();
         p.load_str(&format!("{};", rules.join(";")))?;
         qvar(
@@ -561,7 +567,7 @@ fn test_result_permutations() -> TestResult {
 
 #[test]
 fn test_multi_arg_method_ordering() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"bar(2, 1);
            bar(1, 1);
@@ -579,7 +585,7 @@ fn test_multi_arg_method_ordering() -> TestResult {
 
 #[test]
 fn test_no_applicable_rules() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     qnull(&mut p, "f()");
     p.load_str("f(_);")?;
     qnull(&mut p, "f()");
@@ -589,7 +595,7 @@ fn test_no_applicable_rules() -> TestResult {
 /// From Aït-Kaci's WAM tutorial (1999), page 34.
 #[test]
 fn test_ait_kaci_34() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"a() if b(x) and c(x);
            b(x) if e(x);
@@ -605,7 +611,7 @@ fn test_ait_kaci_34() -> TestResult {
 
 #[test]
 fn test_constants() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     {
         let mut kb = p.kb.write().unwrap();
         kb.register_constant(sym!("one"), term!(1))?;
@@ -627,7 +633,7 @@ fn test_constants() -> TestResult {
 
 #[test]
 fn test_not() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str("odd(1); even(2);")?;
     qeval(&mut p, "odd(1)");
     qnull(&mut p, "not odd(1)");
@@ -683,7 +689,7 @@ fn test_not() -> TestResult {
 
 #[test]
 fn test_and() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"f(1);
            f(2);"#,
@@ -695,27 +701,27 @@ fn test_and() -> TestResult {
 
 #[test]
 fn test_equality() {
-    let mut p = Polar::new();
+    let mut p = polar();
     qeval(&mut p, "1 = 1");
     qnull(&mut p, "1 = 2");
 }
 
 #[test]
 fn test_lookup() {
-    qeval(&mut Polar::new(), "{x: 1}.x = 1");
+    qeval(&mut polar(), "{x: 1}.x = 1");
 }
 
 #[test]
 fn test_instance_lookup() {
     // Q: Not sure if this should be allowed? I can't get (new a{x: 1}).x to parse, but that might
     // be the only thing we should permit
-    qext(&mut Polar::new(), "new a(x: 1).x = 1", values![1], 1);
+    qext(&mut polar(), "new a(x: 1).x = 1", values![1], 1);
 }
 
 /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
 #[test]
 fn test_retries() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"f(1);
            f(2);
@@ -734,7 +740,7 @@ fn test_retries() -> TestResult {
 
 #[test]
 fn test_two_rule_bodies() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"f(x) if x = y and g(y);
            g(y) if y = 1;"#,
@@ -745,7 +751,7 @@ fn test_two_rule_bodies() -> TestResult {
 
 #[test]
 fn test_two_rule_bodies_not_nested() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"f(x) if a(x);
            f(1);
@@ -757,7 +763,7 @@ fn test_two_rule_bodies_not_nested() -> TestResult {
 
 #[test]
 fn test_two_rule_bodies_nested() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"f(x) if a(x);
            f(1);
@@ -770,7 +776,7 @@ fn test_two_rule_bodies_nested() -> TestResult {
 
 #[test]
 fn test_unify_and() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"f(x, y) if a(x) and y = 2;
            a(1);
@@ -783,14 +789,14 @@ fn test_unify_and() -> TestResult {
 
 #[test]
 fn test_symbol_lookup() {
-    let mut p = Polar::new();
+    let mut p = polar();
     qvar(&mut p, "{x: 1}.x = res", "res", values![1]);
     qvar(&mut p, "{x: 1} = d and d.x = res", "res", values![1]);
 }
 
 #[test]
 fn test_or() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"f(x) if a(x) or b(x);
            a(1);
@@ -819,7 +825,7 @@ fn test_or() -> TestResult {
 
 #[test]
 fn test_dict_specializers() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"f({x: 1});
            g(_: {x: 1});"#,
@@ -851,7 +857,7 @@ fn test_dict_specializers() -> TestResult {
 
 #[test]
 fn test_non_instance_specializers() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str("f(x: 1) if x = 1;")?;
     qeval(&mut p, "f(1)");
     qnull(&mut p, "f(2)");
@@ -873,7 +879,7 @@ fn test_non_instance_specializers() -> TestResult {
 #[test]
 #[allow(clippy::unnecessary_wraps)]
 fn test_bindings() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
 
     // 0-cycle, aka ground.
     qvar(&mut p, "x=1", "x", values![1]);
@@ -964,7 +970,7 @@ fn test_bindings() -> TestResult {
 
 #[test]
 fn test_lookup_derefs() -> TestResult {
-    let p = Polar::new();
+    let p = polar();
     p.load_str(
         r#"f(x) if x = y and g(y);
            g(y) if new Foo().get(y) = y;"#,
@@ -995,7 +1001,7 @@ fn test_lookup_derefs() -> TestResult {
 /// Test that rules are executed in the correct order.
 #[test]
 fn test_rule_order() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"a("foo");
            a("bar");
@@ -1007,7 +1013,7 @@ fn test_rule_order() -> TestResult {
 
 #[test]
 fn test_load_str_with_query() -> TestResult {
-    let p = Polar::new();
+    let p = polar();
     p.load_str(
         r#"f(1);
            f(2);
@@ -1023,7 +1029,7 @@ fn test_load_str_with_query() -> TestResult {
 /// Test using a constructor with positional + kwargs.
 #[test]
 fn test_make_external() -> TestResult {
-    let q = Polar::new().new_query("x = new Bar(1, a: 2, b: 3)", false)?;
+    let q = polar().new_query("x = new Bar(1, a: 2, b: 3)", false)?;
     let mock_make_bar = |_, constructor: Term| match constructor.value() {
         Value::Call(Call {
             name,
@@ -1042,7 +1048,7 @@ fn test_make_external() -> TestResult {
 /// Test external call with positional + kwargs.
 #[test]
 fn test_external_call() -> TestResult {
-    let p = Polar::new();
+    let p = polar();
     p.register_constant(sym!("Foo"), term!(true))?;
     let mut foo_lookups = vec![term!(1)];
 
@@ -1066,14 +1072,14 @@ fn test_external_call() -> TestResult {
 #[ignore] // ignore because this take a LONG time (could consider lowering the goal limit)
 #[should_panic(expected = "Goal count exceeded! MAX_EXECUTED_GOALS = 10000")]
 fn test_infinite_loop() {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str("f(x) if f(x);").unwrap();
     qeval(&mut p, "f(1)");
 }
 
 #[test]
 fn test_comparisons() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
 
     // <
     p.load_str("lt(x, y) if x < y;")?;
@@ -1183,7 +1189,7 @@ fn test_comparisons() -> TestResult {
 
 #[test]
 fn test_modulo_and_remainder() {
-    let mut p = Polar::new();
+    let mut p = polar();
     qeval(&mut p, "1 mod 1 == 0");
     qeval(&mut p, "1 rem 1 == 0");
     qeval(&mut p, "1 mod -1 == 0");
@@ -1224,7 +1230,7 @@ fn test_modulo_and_remainder() {
 
 #[test]
 fn test_arithmetic() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     qeval(&mut p, "1 + 1 == 2");
     qeval(&mut p, "1 + 1 < 3 and 1 + 1 > 1");
     qeval(&mut p, "2 - 1 == 1");
@@ -1273,7 +1279,7 @@ fn test_arithmetic() -> TestResult {
 
 #[test]
 fn test_debug_break_on_error() -> TestResult {
-    let p = Polar::new();
+    let p = polar();
     p.load_str("foo() if debug() and 1 < \"2\" and 1 < 2;")?;
     let mut call_num = 0;
     let debug_handler = |s: &str| {
@@ -1325,7 +1331,7 @@ fn test_debug_break_on_error() -> TestResult {
 
 #[test]
 fn test_debug_temp_var() -> TestResult {
-    let p = Polar::new();
+    let p = polar();
     p.load_str("foo(a, aa) if a < 10 and debug() and aa < a;")?;
     let mut call_num = 0;
     let debug_handler = |s: &str| {
@@ -1363,7 +1369,7 @@ fn test_debug_temp_var() -> TestResult {
 
 #[test]
 fn test_debug() -> TestResult {
-    let p = Polar::new();
+    let p = polar();
     p.load_str(indoc!(
         r#"a() if debug("a") and b() and c() and d();
            b();
@@ -1458,7 +1464,7 @@ fn test_debug() -> TestResult {
     let q = p.new_query("a()", false)?;
     let _results = query_results!(q, no_results, no_externals, debug_handler);
 
-    let p = Polar::new();
+    let p = polar();
     p.load_str(indoc!(
         r#"a() if debug() and b() and c() and d();
            a() if 5 = 5;
@@ -1520,7 +1526,7 @@ fn test_debug() -> TestResult {
 
 #[test]
 fn test_debug_in_inverter() {
-    let polar = Polar::new();
+    let polar = polar();
     polar.load_str("a() if not debug();").unwrap();
     let mut call_num = 0;
     let debug_handler = |s: &str| {
@@ -1548,7 +1554,7 @@ fn test_debug_in_inverter() {
 
 #[test]
 fn test_anonymous_vars() {
-    let mut p = Polar::new();
+    let mut p = polar();
     qeval(&mut p, "[1,2,3] = [_,_,_]");
     qnull(&mut p, "[1,2,3] = [__,__,__]");
 }
@@ -1556,7 +1562,7 @@ fn test_anonymous_vars() {
 #[test]
 fn test_singleton_vars() {
     let pol = "f(x,y,z) if y = z;";
-    let err = Polar::new().load_str(pol).unwrap_err();
+    let err = polar().load_str(pol).unwrap_err();
     assert!(err.context.is_some());
     assert!(matches!(
         err.kind,
@@ -1566,7 +1572,7 @@ fn test_singleton_vars() {
 
 #[test]
 fn test_unknown_specializer_warning() -> TestResult {
-    let p = Polar::new();
+    let p = polar();
     p.load_str("f(_: A);")?;
     let out = p.next_message().unwrap();
     assert!(matches!(&out.kind, MessageKind::Warning));
@@ -1579,7 +1585,7 @@ fn test_unknown_specializer_warning() -> TestResult {
 
 #[test]
 fn test_missing_actor_hint() -> TestResult {
-    let p = Polar::new();
+    let p = polar();
 
     p.register_constant(sym!("Organization"), term!(true))?;
     p.register_constant(sym!("User"), term!(true))?;
@@ -1605,7 +1611,7 @@ has_role(user: User, "owner", organization: Organization) if
 
 #[test]
 fn test_and_or_warning() -> TestResult {
-    let p = Polar::new();
+    let p = polar();
 
     // free-standing OR is fine
     p.load_str("f(x) if x > 1 or x < 3;")?;
@@ -1656,7 +1662,7 @@ fn test_and_or_warning() -> TestResult {
 #[test]
 fn test_print() -> TestResult {
     // TODO: If POLAR_LOG is on this test will fail.
-    let p = Polar::new();
+    let p = polar();
     p.load_str("f(x,y,z) if print(x, y, z);")?;
     let mut messages = vec![];
     let message_handler = |output: &Message| {
@@ -1672,7 +1678,7 @@ fn test_print() -> TestResult {
 
 #[test]
 fn test_unknown_specializer_suggestions() -> TestResult {
-    let p = Polar::new();
+    let p = polar();
     p.load_str("f(s: string) if s;")?;
     let msg = p.next_message().unwrap();
     assert!(matches!(&msg.kind, MessageKind::Warning));
@@ -1688,7 +1694,7 @@ fn test_partial_grounding() -> TestResult {
     let rules = r#"
         f(x, n) if n > 0 and x.n = n;
         g(x, n) if x.n = n and n > 0;"#;
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(rules)?;
 
     qvar(&mut p, "f({n:1},x)", "x", vec![value!(1)]);
@@ -1700,7 +1706,7 @@ fn test_partial_grounding() -> TestResult {
 
 #[test]
 fn test_dict_destructuring() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"
         foo(x, _: {x});
@@ -1732,7 +1738,7 @@ fn test_dict_destructuring() -> TestResult {
 #[ignore]
 #[test]
 fn test_dict_destructuring_broken() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"
         too(a, _: {a, b: a});
@@ -1745,7 +1751,7 @@ fn test_dict_destructuring_broken() -> TestResult {
 
 #[test]
 fn test_rest_vars() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     qvar(&mut p, "[1,2,3] = [*rest]", "rest", vec![value!([1, 2, 3])]);
     qvar(&mut p, "[1,2,3] = [1,*rest]", "rest", vec![value!([2, 3])]);
     qvar(&mut p, "[1,2,3] = [1,2,*rest]", "rest", vec![value!([3])]);
@@ -1787,7 +1793,7 @@ fn test_rest_vars() -> TestResult {
 
 #[test]
 fn test_circular_data() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     qeval(&mut p, "x = [x] and x in x");
     qeval(&mut p, "y = {y:y} and [\"y\", y] in y");
     qruntime!(
@@ -1802,7 +1808,7 @@ fn test_data_filtering_dict_specializers() -> TestResult {
     let pol_a = "allow(x, \"read\", _y: { x: x });";
     let pol_b = "allow(x, \"read\", _y) if x = _y.x;";
     let query = "allow(\"gwen\", \"read\", x)";
-    let p = Polar::new();
+    let p = polar();
     p.load_str(pol_a)?;
     let mut res_a = query_results!(p.new_query(query, false)?);
     p.clear_rules();
@@ -1822,7 +1828,7 @@ fn test_data_filtering_pattern_specializers() -> TestResult {
     let pol_a = "allow(x, \"read\", _y: Dictionary{ x: x });";
     let pol_b = "allow(x, \"read\", _y: Dictionary) if x = _y.x;";
     let query = "allow(\"gwen\", \"read\", x)";
-    let p = Polar::new();
+    let p = polar();
     p.load_str(pol_a)?;
     let mut res_a = query_results!(p.new_query(query, false)?);
     p.clear_rules();
@@ -1839,7 +1845,7 @@ fn test_data_filtering_pattern_specializers() -> TestResult {
 
 #[test]
 fn test_in_op() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str("f(x, y) if x in y;")?;
     qeval(&mut p, "f(1, [1,2,3])");
     qvar(&mut p, "f(x, [1,2,3])", "x", values![1, 2, 3]);
@@ -1895,7 +1901,7 @@ fn test_in_op() -> TestResult {
 
 #[test]
 fn test_head_patterns() -> TestResult {
-    let p = Polar::new();
+    let p = polar();
     p.load_str("f(x: Integer, _: Dictionary{x:x});")?;
     let results = query_results!(p.new_query("f(x, {x:9})", false)?);
     assert_eq!(results[0].0[&sym!("x")], value!(9));
@@ -1904,7 +1910,7 @@ fn test_head_patterns() -> TestResult {
 
 #[test]
 fn test_matches() {
-    let mut p = Polar::new();
+    let mut p = polar();
     qnull(&mut p, "1 matches 2");
     qeval(&mut p, "1 matches 1");
     // This doesn't fail because `y` is parsed as an unknown specializer
@@ -1929,7 +1935,7 @@ fn test_keyword_call() {
 #[test]
 fn test_keyword_dot() -> TestResult {
     // field accesses of reserved words are allowed
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"
         f(a, b) if a.in(b);
@@ -1957,7 +1963,7 @@ fn test_unify_rule_head() -> TestResult {
         ParseError::ReservedWord { .. }
     );
 
-    let p = Polar::new();
+    let p = polar();
     p.register_constant(sym!("Foo"), term!(true))?;
     p.load_str(
         r#"f(_: Foo{a: 1}, x) if x = 1;
@@ -1977,7 +1983,7 @@ fn test_unify_rule_head() -> TestResult {
 /// Test that cut commits to all choice points before the cut, not just the last.
 #[test]
 fn test_cut() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"a(x) if x = 1 or x = 2;
            b(x) if x = 3 or x = 4;
@@ -2027,7 +2033,7 @@ fn test_cut() -> TestResult {
 
 #[test]
 fn test_forall() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str("all_ones(l) if forall(item in l, item = 1);")?;
 
     qnull(&mut p, "all_ones([2])");
@@ -2073,7 +2079,7 @@ fn test_forall() -> TestResult {
 
 #[test]
 fn test_emoji_policy() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"
                     👩‍🔧("👩‍🦰");
@@ -2088,7 +2094,7 @@ fn test_emoji_policy() -> TestResult {
 #[test]
 /// Check that boolean expressions evaluate without requiring "= true".
 fn test_boolean_expression() {
-    let mut p = Polar::new();
+    let mut p = polar();
     qeval(&mut p, "a = {t: true, f: false} and a.t"); // Succeeds because t is true.
     qnull(&mut p, "a = {t: true, f: false} and a.f"); // Fails because `f` is not true.
     qnull(&mut p, "a = {t: true, f: false} and a.f and a.t"); // Fails because `f` is not true.
@@ -2102,7 +2108,7 @@ fn test_boolean_expression() {
 
 #[test]
 fn test_float_parsing() {
-    let mut p = Polar::new();
+    let mut p = polar();
     qvar(&mut p, "x=1+1", "x", values![2]);
     qvar(&mut p, "x=1+1.5", "x", values![2.5]);
     qvar(&mut p, "x=1.e+5", "x", values![1e5]);
@@ -2117,7 +2123,7 @@ fn test_float_parsing() {
 
 #[test]
 fn test_assignment() {
-    let mut p = Polar::new();
+    let mut p = polar();
     qeval(&mut p, "x := 5 and x == 5");
     qruntime!(
         "x := 5 and x := 6",
@@ -2133,7 +2139,7 @@ fn test_assignment() {
 
 #[test]
 fn test_rule_index() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"f(1, 1, "x");
            f(1, 1, "y");
@@ -2154,7 +2160,7 @@ fn test_rule_index() -> TestResult {
 
 #[test]
 fn test_fib() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"fib(0, 1) if cut;
            fib(1, 1) if cut;
@@ -2171,7 +2177,7 @@ fn test_fib() -> TestResult {
 
 #[test]
 fn test_duplicated_rule() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"f(1);
            f(1);"#,
@@ -2182,7 +2188,7 @@ fn test_duplicated_rule() -> TestResult {
 
 #[test]
 fn test_numeric_applicability() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     let eps = f64::EPSILON;
     let nan1 = f64::NAN;
     let nan2 = f64::from_bits(f64::NAN.to_bits() | 1);
@@ -2222,7 +2228,7 @@ fn test_numeric_applicability() -> TestResult {
 
 #[test]
 fn test_external_unify() -> TestResult {
-    let p = Polar::new();
+    let p = polar();
     p.load_str(
         r#"selfEq(x) if eq(x, x);
            eq(x, x);"#,
@@ -2240,7 +2246,7 @@ fn test_external_unify() -> TestResult {
 
 #[test]
 fn test_list_results() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"delete([x, *xs], x, ys) if delete(xs, x, ys);
            delete([x, *xs], z, [x, *ys]) if
@@ -2281,7 +2287,7 @@ fn test_list_results() -> TestResult {
 
 #[test]
 fn test_expressions_in_lists() -> TestResult {
-    let mut p = Polar::new();
+    let mut p = polar();
     p.load_str(
         r#"scope(actor: Dictionary, "read", "Person", filters) if
                filters = ["id", "=", actor.id];"#,
@@ -2310,7 +2316,7 @@ fn test_expressions_in_lists() -> TestResult {
 
 #[test]
 fn test_list_matches() {
-    let mut p = Polar::new();
+    let mut p = polar();
     qeval(&mut p, "[] matches []");
     qnull(&mut p, "[1] matches []");
     qnull(&mut p, "[] matches [1]");
@@ -2345,7 +2351,7 @@ fn test_list_matches() {
 
 #[test]
 fn test_builtin_iterables() {
-    let mut p = Polar::new();
+    let mut p = polar();
 
     qnull(&mut p, r#"x in """#);
     qvar(
@@ -2386,7 +2392,7 @@ fn test_builtin_iterables() {
 /// Regression test for lookups done in rule head: old behavior was for query to succeed
 /// despite argument not matching lookup result
 fn test_lookup_in_rule_head() -> TestResult {
-    let p = Polar::new();
+    let p = polar();
     p.register_constant(sym!("Foo"), term!(true))?;
     p.load_str(r#"test(foo: Foo, foo.bar());"#)?;
 
@@ -2405,45 +2411,21 @@ fn test_lookup_in_rule_head() -> TestResult {
 
 #[test]
 fn test_default_rule_types() -> TestResult {
-    let p = Polar::new();
+    let p = polar();
 
     // This should fail
     let e = p
         .load_str(r#"has_permission("leina", "eat", "food");"#)
         .expect_err("Expected validation error");
     assert!(matches!(e.kind, ErrorKind::Validation(_)));
-    assert!(matches!(
-        p.next_message(),
-        Some(Message {
-            kind: MessageKind::Warning,
-            msg
-        }) if msg.starts_with("Your policy does not contain an allow rule")
-    ));
-
     let e = p
         .load_str(r#"has_role("leina", "eater", "food");"#)
         .expect_err("Expected validation error");
     assert!(matches!(e.kind, ErrorKind::Validation(_)));
-    assert!(matches!(
-        p.next_message(),
-        Some(Message {
-            kind: MessageKind::Warning,
-            msg
-        }) if msg.starts_with("Your policy does not contain an allow rule")
-    ));
-
     let e = p
         .load_str(r#"has_relation("leina", "eater", "food");"#)
         .expect_err("Expected validation error");
     assert!(matches!(e.kind, ErrorKind::Validation(_)));
-    assert!(matches!(
-        p.next_message(),
-        Some(Message {
-            kind: MessageKind::Warning,
-            msg
-        }) if msg.starts_with("Your policy does not contain an allow rule")
-    ));
-
     let e = p
         .load_str(r#"allow("leina", "food");"#)
         .expect_err("Expected validation error");
@@ -2482,7 +2464,7 @@ fn test_default_rule_types() -> TestResult {
 
 #[test]
 fn test_suggested_rule_specializer() -> TestResult {
-    let p = Polar::new();
+    let p = polar();
 
     let repo_instance = ExternalInstance {
         instance_id: 1,
