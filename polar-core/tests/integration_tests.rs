@@ -1604,6 +1604,63 @@ has_role(user: User, "owner", organization: Organization) if
 }
 
 #[test]
+fn test_missing_resource_hint() -> TestResult {
+    let p = Polar::new();
+
+    let repo_instance = ExternalInstance {
+        instance_id: 1,
+        constructor: None,
+        repr: None,
+    };
+    let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
+    let repo_name = sym!("Repository");
+    p.register_constant(repo_name.clone(), repo_term)?;
+    p.register_mro(repo_name, vec![repo_instance.instance_id])?;
+
+    let organization_instance = ExternalInstance {
+        instance_id: 2,
+        constructor: None,
+        repr: None,
+    };
+    let organization_term = term!(Value::ExternalInstance(organization_instance.clone()));
+    let organization_name = sym!("Organization");
+    p.register_constant(organization_name.clone(), organization_term)?;
+    p.register_mro(organization_name, vec![organization_instance.instance_id])?;
+
+    let user_instance = ExternalInstance {
+        instance_id: 3,
+        constructor: None,
+        repr: None,
+    };
+    let user_term = term!(Value::ExternalInstance(user_instance.clone()));
+    let user_name = sym!("User");
+    p.register_constant(user_name.clone(), user_term)?;
+    p.register_mro(user_name, vec![user_instance.instance_id])?;
+
+    let policy = r#"
+actor User {}
+resource Organization {
+    roles = ["owner"];
+    permissions = ["read"];
+
+    "read" if "owner";
+}
+
+has_role(user: User, "owner", organization: Organization) if
+    organization.owner_id = user.id;
+
+has_role(user: User, "owner", repository: Repository) if
+    repository.owner_id = user.id;
+"#;
+    let err = p.load_str(policy).expect_err("Expected validation error");
+    assert!(matches!(&err.kind, ErrorKind::Validation(_)));
+    assert!(format!("{}", err)
+        .contains("Perhaps you meant to add a resource block to your policy, like this:"));
+
+    Ok(())
+}
+
+#[test]
 fn test_and_or_warning() -> TestResult {
     let p = Polar::new();
 
