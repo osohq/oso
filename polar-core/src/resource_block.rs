@@ -389,6 +389,11 @@ impl ResourceBlocks {
     pub fn declarations(&self) -> &HashMap<Term, Declarations> {
         &self.declarations
     }
+
+    pub fn has_roles(&self) -> bool {
+        let mut declarations = self.declarations().values().flat_map(HashMap::values);
+        declarations.any(|d| matches!(d, Declaration::Role))
+    }
 }
 
 pub fn check_all_relation_types_have_been_registered(kb: &KnowledgeBase) -> Vec<PolarError> {

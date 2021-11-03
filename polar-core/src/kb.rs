@@ -759,12 +759,26 @@ impl KnowledgeBase {
         // rule types for each relation which is traversed in the rules.
         for (object, shorthand_rules) in &self.resource_blocks.shorthand_rules {
             for shorthand_rule in shorthand_rules {
-                // We create rule types from shorthand rules in the following scenarios:
-                // 1. when the the third "relation" term points to a related Resource
-                // 2. when the second "implier" term points to a related Resource
-                // 3. when the second "implier" term ponits to a related Actor
+                // We create rule types from shorthand rules in the following scenarios...
                 match &shorthand_rule.body {
+                    // 1. When the the third "relation" term points to a related Resource. E.g.,
+                    //    `"admin" if "admin" on "parent";` where `relations = { parent: Org };`.
                     (implier, Some((_, relation))) => {
+                        // First, create required rule type for relationship between `object` and
+                        // `subject`:
+                        //
+                        // resource Repo {
+                        //   roles = ["writer"];
+                        //   relations = { parent_org: Org };
+                        //
+                        //   "writer" if "admin" on "parent_org";
+                        // }
+                        //
+                        // (required) type has_relation(org: Org, "parent_org", repo: Repo);
+                        //
+                        // resource Org {
+                        //   roles = ["admin"];
+                        // }
                         if let Ok(subject) = self
                             .resource_blocks
                             .get_relation_type_in_resource_block(relation, object)
@@ -778,38 +792,58 @@ impl KnowledgeBase {
                                 true,
                             );
 
-                            if let Some(declarations) =
-                                self.resource_blocks.declarations().get(subject)
-                            {
-                                if let Some(Declaration::Relation(related_subject)) =
-                                    declarations.get(implier)
-                                {
-                                    rule_types_to_create.insert(
-                                        (
-                                            related_subject.value().as_symbol()?,
-                                            implier.value().as_string()?,
-                                            subject.value().as_symbol()?,
-                                        ),
-                                        true,
-                                    );
-                                }
-                            }
-                        }
-                    }
-                    (implier, None) => {
-                        if let Some(declarations) = self.resource_blocks.declarations().get(object)
-                        {
-                            if let Some(Declaration::Relation(subject)) = declarations.get(implier)
+                            // Then, if the "implier" term is declared as a relation on `subject`
+                            // (as opposed to a permission or role), create required rule type for
+                            // relationship between `related_subject` and `subject`:
+                            //
+                            // resource Repo {
+                            //   roles = ["writer"];
+                            //   relations = { parent_org: Org };
+                            //
+                            //   "writer" if "owner" on "parent_org";
+                            // }
+                            //
+                            // (required) type has_relation(org: Org, "parent_org", issue: Issue);
+                            //
+                            // resource Org {
+                            //   relations = { owner: User };
+                            // }
+                            //
+                            // (required) type has_relation(user: User, "owner", org: Org);
+                            if let Ok(related_subject) = self
+                                .resource_blocks
+                                .get_relation_type_in_resource_block(implier, subject)
                             {
                                 rule_types_to_create.insert(
                                     (
-                                        subject.value().as_symbol()?,
+                                        related_subject.value().as_symbol()?,
                                         implier.value().as_string()?,
-                                        object.value().as_symbol()?,
+                                        subject.value().as_symbol()?,
                                     ),
                                     true,
                                 );
                             }
+                        }
+                    }
+
+                    // 2. When the second "implier" term points to a related Actor. E.g., `"admin"
+                    //    if "owner";` where `relations = { owner: User };`. Technically, "implier"
+                    //    could be a related Resource, but that doesn't make much semantic sense.
+                    //    Related resources should be traversed via `"on"` clauses, which are
+                    //    captured in the above match arm.
+                    (implier, None) => {
+                        if let Ok(subject) = self
+                            .resource_blocks
+                            .get_relation_type_in_resource_block(implier, object)
+                        {
+                            rule_types_to_create.insert(
+                                (
+                                    subject.value().as_symbol()?,
+                                    implier.value().as_string()?,
+                                    object.value().as_symbol()?,
+                                ),
+                                true,
+                            );
                         }
                     }
                 }
@@ -822,17 +856,9 @@ impl KnowledgeBase {
 
         // If there are any Relation::Role declarations in *any* of our resource
         // blocks then we want to add the `has_role` rule type.
-        if self
-            .resource_blocks
-            .declarations()
-            .iter()
-            .any(|(_, declarations)| {
-                declarations
-                    .values()
-                    .any(|declaration| matches!(declaration, Declaration::Role))
-            })
-        {
+        if self.resource_blocks.has_roles() {
             rule_types.push(
+                // TODO(gj): "Internal" SourceInfo variant.
                 rule!("has_role", ["_actor"; instance!("Actor"), "_role"; instance!("String"), "_resource"; instance!("Resource")], true)
             );
         }
