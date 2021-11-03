@@ -528,21 +528,18 @@ impl PolarVirtualMachine {
 
     /// Push a goal onto the goal stack.
     pub fn push_goal(&mut self, goal: Goal) -> PolarResult<()> {
-        use VariableState::Unbound;
-        match goal {
-            _ if self.goals.len() >= self.stack_limit =>
-                Err(error::RuntimeError::StackOverflow {
-                    limit: self.stack_limit,
-                }
-                .into()),
-            Goal::LookupExternal { call_id, .. } | Goal::NextExternal { call_id, .. }
-                if self.variable_state(self.get_call_sym(call_id)) != Unbound => {
-                invalid_state("The call_id result variables for LookupExternal and NextExternal goals must be unbound.".to_string())
+        use {Goal::*, VariableState::Unbound};
+        if self.goals.len() >= self.stack_limit {
+            Err(error::RuntimeError::StackOverflow {
+                limit: self.stack_limit,
             }
-            _ => {
-                self.goals.push(Rc::new(goal));
-                Ok(())
-            }
+            .into())
+        } else if matches!(goal, LookupExternal { call_id, ..} | NextExternal { call_id, .. } if self.variable_state(self.get_call_sym(call_id)) != Unbound)
+        {
+            invalid_state("The call_id result variables for LookupExternal and NextExternal goals must be unbound.".to_string())
+        } else {
+            self.goals.push(Rc::new(goal));
+            Ok(())
         }
     }
 
@@ -1792,6 +1789,8 @@ impl PolarVirtualMachine {
             // embedded binary (as opposed to ternary) dot operations. In that case
             // we introduce a new variable, unify it with the dot lookup, then query
             // against the variable instead.
+            //
+            // TODO(gw) take these out after the simplifier/inverter work better ...
             //
             // dot on the left
             (
