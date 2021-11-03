@@ -334,7 +334,7 @@ impl ResourceBlocks {
     }
 
     /// Look up `relation` in `resource` block and return its type.
-    fn get_relation_type_in_resource_block(
+    pub fn get_relation_type_in_resource_block(
         &self,
         relation: &Term,
         resource: &Term,

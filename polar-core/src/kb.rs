@@ -728,7 +728,7 @@ impl KnowledgeBase {
     }
 
     pub fn create_resource_specific_rule_types(&mut self) -> PolarResult<()> {
-        let mut has_relation_rule_types_to_create = HashMap::new();
+        let mut rule_types_to_create = HashMap::new();
 
         // TODO @patrickod refactor RuleTypes & split out
         // RequiredRuleType struct to record the related
@@ -743,7 +743,7 @@ impl KnowledgeBase {
         for (object, declarations) in self.resource_blocks.declarations() {
             for (name, declaration) in declarations.iter() {
                 if let Declaration::Relation(subject) = declaration {
-                    has_relation_rule_types_to_create.insert(
+                    rule_types_to_create.insert(
                         (
                             subject.value().as_symbol()?,
                             name.value().as_string()?,
@@ -765,13 +765,11 @@ impl KnowledgeBase {
                 // 3. when the second "implier" term ponits to a related Actor
                 match &shorthand_rule.body {
                     (implier, Some((_, relation))) => {
-                        if let Some(Declaration::Relation(subject)) = self
+                        if let Ok(subject) = self
                             .resource_blocks
-                            .declarations()
-                            .get(object)
-                            .and_then(|d| d.get(relation))
+                            .get_relation_type_in_resource_block(relation, object)
                         {
-                            has_relation_rule_types_to_create.insert(
+                            rule_types_to_create.insert(
                                 (
                                     subject.value().as_symbol()?,
                                     relation.value().as_string()?,
@@ -786,7 +784,7 @@ impl KnowledgeBase {
                                 if let Some(Declaration::Relation(related_subject)) =
                                     declarations.get(implier)
                                 {
-                                    has_relation_rule_types_to_create.insert(
+                                    rule_types_to_create.insert(
                                         (
                                             related_subject.value().as_symbol()?,
                                             implier.value().as_string()?,
@@ -803,7 +801,7 @@ impl KnowledgeBase {
                         {
                             if let Some(Declaration::Relation(subject)) = declarations.get(implier)
                             {
-                                has_relation_rule_types_to_create.insert(
+                                rule_types_to_create.insert(
                                     (
                                         subject.value().as_symbol()?,
                                         implier.value().as_string()?,
@@ -818,7 +816,7 @@ impl KnowledgeBase {
             }
         }
 
-        let mut rule_types = has_relation_rule_types_to_create.into_iter().map(|((subject, relation_name, object), required)| {
+        let mut rule_types = rule_types_to_create.into_iter().map(|((subject, relation_name, object), required)| {
             rule!("has_relation", ["_subject"; instance!(&subject.0), value!(relation_name), "_object"; instance!(&object.0)], required)
         }).collect::<Vec<_>>();
 
