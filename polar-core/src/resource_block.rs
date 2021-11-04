@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use super::error::{PolarError, PolarResult, RuntimeError, ValidationError};
+use super::error::{OperationalError, PolarError, PolarResult, ValidationError};
 use super::kb::KnowledgeBase;
 use super::rules::*;
 use super::terms::*;
@@ -226,10 +226,8 @@ impl Declaration {
         if let Declaration::Relation(relation) = self {
             Ok(relation)
         } else {
-            // TODO(gj): why isn't this a ResourceBlock error?
-            Err(RuntimeError::TypeError {
+            Err(OperationalError::InvalidState {
                 msg: format!("Expected Relation; got: {:?}", self),
-                stack_trace: None,
             }
             .into())
         }
