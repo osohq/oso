@@ -150,6 +150,13 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           expect(query.to_a).to eq([eden])
         end
 
+        it 'test_scalar_in_list' do
+          subject.load_str 'allow(_, _, _: Sign{ruler}) if ruler in ["sun", "moon"];'
+          query = subject.authzd_query 'gwen', 'read', Sign
+          expected = Sign.all.select { |sign| %w[sun moon].include? sign.ruler }
+          expect(query.to_a).to contain_exactly(*expected)
+        end
+
         it 'test_field_eq' do
           subject.load_str 'allow(_, _, _: Person{name, sign_name: name});'
           query = subject.authzd_query 'gwen', 'read', Person
