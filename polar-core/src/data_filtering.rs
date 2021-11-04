@@ -1549,6 +1549,9 @@ impl QueryInfo {
             Eq | Unify | Assign if part.args.len() == 2 => {
                 self.binary_op(&part.args, SelOp::Eq)
             }
+            In if part.args.len() == 2 => {
+                self.binary_op(&part.args, SelOp::In)
+            }
             Neq if part.args.len() == 2 => {
                 self.binary_op(&part.args, SelOp::Neq)
             }
