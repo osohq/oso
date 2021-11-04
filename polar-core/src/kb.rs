@@ -751,7 +751,6 @@ impl KnowledgeBase {
         // rule or resource definitions.
         for (subject, name, object) in self.resource_blocks.relation_tuples() {
             rule_types_to_create.insert((subject, name, object), false);
-
         }
 
         // Iterate through resource block shorthand rules and create *required*
