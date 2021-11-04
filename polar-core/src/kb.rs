@@ -4,7 +4,7 @@ use std::sync::Arc;
 pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::diagnostic::Diagnostic;
-use super::error::{PolarError, PolarResult, ValidationError};
+use super::error::{OperationalError, PolarError, PolarResult, ValidationError};
 use super::resource_block::{ResourceBlocks, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::*;
@@ -239,15 +239,16 @@ impl KnowledgeBase {
                     Ok(RuleParamMatch::True)
                 }
             } else {
-                Err(error::OperationalError::InvalidState{msg: format!(
-                    "All registered classes must have a registered MRO. Class {} does not have a registered MRO.",
-                    &rule_instance.tag
-                )}.into())
+                // If `rule_instance.tag` were registered as a class, it would have an MRO.
+                Ok(RuleParamMatch::False(format!(
+                    "Rule specializer {} on parameter {} is not registered as a class.",
+                    rule_instance.tag, index
+                )))
             }
         } else {
-            // TODO(gj): `rule_type_instance.tag` was registered as something other than an
-            // external instance. What should we do here?
-            unreachable!("Unregistered specializer classes should be caught before this point.");
+            Err(OperationalError::InvalidState{
+                msg: format!("Expected '{}' to be registered as an ExternalInstance, but it's registered as {:?}", rule_type_instance.tag, term)
+            }.into())
         }
     }
 
@@ -472,10 +473,11 @@ impl KnowledgeBase {
                                     instance!(sym!("Dictionary"), rule_fields.clone().fields)
                                 }
                                 _ => {
-                                    unreachable!(
+                                    let msg = format!(
                                         "Value variant {} cannot be a specializer",
                                         rule_value
-                                    )
+                                    );
+                                    return Err(OperationalError::InvalidState { msg }.into());
                                 }
                             };
                             self.check_pattern_param(
@@ -630,7 +632,7 @@ impl KnowledgeBase {
         // Confirm name is a registered class
         if !self.is_constant(&name) {
             let msg = format!("Cannot add MRO for unregistered class {}", name);
-            return Err(error::OperationalError::InvalidState { msg }.into());
+            return Err(OperationalError::InvalidState { msg }.into());
         }
         self.mro.insert(name, mro);
         Ok(())
