@@ -1645,9 +1645,18 @@ impl QueryInfo {
             And => part.args.iter().fold(Ok(self), |this, c| {
                 this?.constrain(c.value().as_expression().unwrap())
             }),
-            Isa if part.args.len() == 2 => Ok(self),
-            Eq | Unify | Assign if part.args.len() == 2 => self.binary_op(&part.args, SelOp::Eq),
-            Neq if part.args.len() == 2 => self.binary_op(&part.args, SelOp::Neq),
+            Isa if part.args.len() == 2 => {
+                Ok(self)
+            }
+            Eq | Unify | Assign if part.args.len() == 2 => {
+                self.binary_op(&part.args, SelOp::Eq)
+            }
+            In if part.args.len() == 2 => {
+                self.binary_op(&part.args, SelOp::In)
+            }
+            Neq if part.args.len() == 2 => {
+                self.binary_op(&part.args, SelOp::Neq)
+            }
             _ => err_unimplemented(format!("constrain({})", part.to_polar())),
         }
     }
