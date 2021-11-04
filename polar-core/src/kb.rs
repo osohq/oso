@@ -223,7 +223,7 @@ impl KnowledgeBase {
     ) -> PolarResult<RuleParamMatch> {
         // Get the unique ID of the prototype instance pattern class.
         // TODO(gj): make actual term available here instead of constructing a fake test one.
-        let term = self.get_registered_constant(&term!(rule_type_instance.tag.clone()))?;
+        let term = self.get_registered_class(&term!(rule_type_instance.tag.clone()))?;
         if let Value::ExternalInstance(ExternalInstance { instance_id, .. }) = term.value() {
             if let Some(rule_mro) = self.mro.get(&rule_instance.tag) {
                 if !rule_mro.contains(instance_id) {
@@ -584,6 +584,9 @@ impl KnowledgeBase {
     }
 
     /// Define a constant variable.
+    ///
+    /// Error on attempts to register the "union" types (Actor & Resource) since those types have
+    /// special meaning in policies that use resource blocks.
     pub fn register_constant(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
         if name.0 == ACTOR_UNION_NAME || name.0 == RESOURCE_UNION_NAME {
             return Err(error::RuntimeError::TypeError {
@@ -609,15 +612,15 @@ impl KnowledgeBase {
         &self.constants
     }
 
-    pub fn get_registered_constant(&self, constant: &Term) -> PolarResult<&Term> {
+    // TODO(gj): currently no way to distinguish classes from other registered constants in the
+    // core, so it's up to callers to ensure this is only called with terms we expect to be
+    // registered as a _class_.
+    pub fn get_registered_class(&self, class: &Term) -> PolarResult<&Term> {
         self.constants
-            .get(constant.value().as_symbol()?)
+            .get(class.value().as_symbol()?)
             .ok_or_else(|| {
-                ValidationError::UnregisteredConstant {
-                    msg: format!("Unregistered constant: {}", constant.to_polar()),
-                    term: constant.clone(),
-                }
-                .into()
+                let term = class.clone();
+                ValidationError::UnregisteredClass { term }.into()
             })
     }
 
@@ -726,12 +729,20 @@ impl KnowledgeBase {
         error.set_context(source.as_ref(), term.as_ref())
     }
 
+    /// Check that all relations declared across all resource blocks have been registered as
+    /// constants.
+    fn check_that_resource_block_relations_are_registered(&self) -> Vec<PolarError> {
+        self.resource_blocks
+            .relation_tuples()
+            .into_iter()
+            .filter_map(|(relation_type, _, _)| self.get_registered_class(relation_type).err())
+            .collect()
+    }
+
     pub fn rewrite_shorthand_rules(&mut self) -> Vec<PolarError> {
         let mut errors = vec![];
 
-        errors.append(
-            &mut super::resource_block::check_all_relation_types_have_been_registered(self),
-        );
+        errors.append(&mut self.check_that_resource_block_relations_are_registered());
 
         let mut rules = vec![];
         for (resource_name, shorthand_rules) in &self.resource_blocks.shorthand_rules {
