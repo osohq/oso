@@ -396,6 +396,18 @@ impl ResourceBlocks {
         let mut declarations = self.declarations().values().flat_map(HashMap::values);
         declarations.any(|d| matches!(d, Declaration::Role))
     }
+
+    pub fn relation_tuples(&self) -> Vec<(&Term, &Term, &Term)> {
+        let mut tuples = vec![];
+        for (object, declarations) in self.declarations() {
+            for (name, declaration) in declarations {
+                if let Declaration::Relation(subject) = declaration {
+                    tuples.push((subject, name, object));
+                }
+            }
+        }
+        tuples
+    }
 }
 
 pub fn check_all_relation_types_have_been_registered(kb: &KnowledgeBase) -> Vec<PolarError> {

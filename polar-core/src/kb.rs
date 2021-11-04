@@ -5,7 +5,7 @@ pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::diagnostic::Diagnostic;
 use super::error::{PolarError, PolarResult};
-use super::resource_block::{Declaration, ResourceBlocks, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
+use super::resource_block::{ResourceBlocks, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::*;
 use super::terms::*;
@@ -749,12 +749,9 @@ impl KnowledgeBase {
         // We create non-required rule types to gracefully account for the case
         // where users have declared relations ahead of time that are used in
         // rule or resource definitions.
-        for (object, declarations) in self.resource_blocks.declarations() {
-            for (name, declaration) in declarations.iter() {
-                if let Declaration::Relation(subject) = declaration {
-                    rule_types_to_create.insert((subject, name, object), false);
-                }
-            }
+        for (subject, name, object) in self.resource_blocks.relation_tuples() {
+            rule_types_to_create.insert((subject, name, object), false);
+
         }
 
         // Iterate through resource block shorthand rules and create *required*
