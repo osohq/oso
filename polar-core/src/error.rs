@@ -2,7 +2,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use super::{sources::*, terms::*};
+use super::{rules::Rule, sources::*, terms::*};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(into = "FormattedPolarError")]
@@ -378,6 +378,9 @@ impl fmt::Display for OperationalError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationError {
+    MissingRequiredRule {
+        rule: Rule,
+    },
     InvalidRule {
         rule: String,
         msg: String,
@@ -422,6 +425,9 @@ impl fmt::Display for ValidationError {
             }
             Self::UndefinedRule { rule_name } => {
                 write!(f, r#"Call to undefined rule "{}""#, rule_name)
+            }
+            Self::MissingRequiredRule { rule } => {
+                write!(f, "Missing implementation for required rule {}", rule)
             }
             Self::ResourceBlock { msg, .. } => {
                 write!(f, "{}", msg)
