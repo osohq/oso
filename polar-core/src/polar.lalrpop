@@ -656,7 +656,6 @@ Parameter: Parameter = {
         }
     },
     <parameter:Spanned<Variable>> ":" <specializer:Spanned<Pattern>> => {
-        let offset = specializer.offset();
         if let Value::Variable(class_name) = specializer.value() {
             let fields = BTreeMap::new();
             let instance_literal = InstanceLiteral{tag: class_name.clone(), fields: Dictionary{fields}};
