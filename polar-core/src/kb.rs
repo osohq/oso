@@ -832,7 +832,7 @@ impl KnowledgeBase {
             let subject_specializer = pattern!(instance!(&subject.value().as_symbol().expect("must be symbol").0));
             let relation_name = relation_name.value().as_string().expect("must be string");
             let object_specializer = pattern!(instance!(&object.value().as_symbol().expect("must be symbol").0));
-            rule!("has_relation", ["_subject"; subject_specializer, relation_name, "_object"; object_specializer], required)
+            rule!("has_relation", ["subject"; subject_specializer, relation_name, "object"; object_specializer], required)
         }).collect::<Vec<_>>();
 
         // If there are any Relation::Role declarations in *any* of our resource
@@ -840,7 +840,7 @@ impl KnowledgeBase {
         if self.resource_blocks.has_roles() {
             rule_types.push(
                 // TODO(gj): "Internal" SourceInfo variant.
-                rule!("has_role", ["_actor"; instance!("Actor"), "_role"; instance!("String"), "_resource"; instance!("Resource")], true)
+                rule!("has_role", ["actor"; instance!(ACTOR_UNION_NAME), "role"; instance!("String"), "resource"; instance!(RESOURCE_UNION_NAME)], true)
             );
         }
 

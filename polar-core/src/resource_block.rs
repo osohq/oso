@@ -1579,8 +1579,30 @@ mod tests {
     // fieldless union pattern where we create a choicepoint of matches against every union member
     // with the same set of fields.
 
+    // Test creation of resource-specific rule type (for `has_relation`) and general rule type (for
+    // `has_role`):
+    //   - has_relation between (Organization, "parent", Repository)
+    //   - has_role created because at least one resource block has roles declared
     #[test]
     fn test_create_resource_specific_rule_types() -> Result<(), PolarError> {
+        let policy = r#"
+            resource Organization {
+                roles = ["member"];
+            }
+
+            resource Repository {
+                roles = ["reader"];
+                relations = {parent: Organization};
+                "reader" if "member" on "parent";
+            }
+
+            has_relation(organization: Organization, "parent", repository: Repository) if
+                repository.org_id = organization.id;
+
+            has_role(user: Actor, _role: String, organization: Organization) if
+                organization.id in user.org_ids;
+        "#;
+
         let polar = Polar::new();
 
         let repo_instance = ExternalInstance {
@@ -1601,61 +1623,23 @@ mod tests {
         let org_term = term!(Value::ExternalInstance(org_instance.clone()));
         let org_name = sym!("Organization");
         polar.register_constant(org_name.clone(), org_term)?;
-        polar.register_mro(org_name, vec![org_instance.instance_id])?;
-
-        let policy = r#"
-            resource Organization {
-                roles = ["member"];
-            }
-
-            resource Repository {
-                roles = ["reader"];
-                relations = {parent: Organization};
-                "reader" if "member" on "parent";
-            }
-
-            has_relation(organization: Organization, "parent", repository: Repository) if
-                repository.org_id = organization.id;
-
-            has_role(user: Actor, _role: String, organization: Organization) if
-                organization.id in user.org_ids;
-        "#;
+        polar.register_mro(org_name.clone(), vec![org_instance.instance_id])?;
 
         polar.load_str(policy)?;
 
         let kb = polar.kb.read().unwrap();
+
         let has_role_rule_types = kb.get_rule_types(&sym!("has_role")).unwrap();
-        let has_relation_rule_types = kb.get_rule_types(&sym!("has_relation")).unwrap();
-
         // has_role(actor: Actor, role: String, resource: Resource)
+        let expected = rule!("has_role", ["actor"; instance!(ACTOR_UNION_NAME), "role"; instance!("String"), "resource"; instance!(RESOURCE_UNION_NAME)]);
         assert_eq!(1, has_role_rule_types.len());
-        let has_role_rule_type = has_role_rule_types.iter().next().unwrap();
+        assert_eq!(has_role_rule_types[0], expected);
 
-        let actor_param = has_role_rule_type.params[0].clone();
-        let actor_specializer = actor_param.specializer.unwrap();
-        let actor_instance = actor_specializer.value().as_pattern().unwrap();
-        assert!(
-            matches!(actor_instance, Pattern::Instance(InstanceLiteral { tag, .. }) if tag == &sym!("Actor"))
-        );
-
-        let resource_param = has_role_rule_type.params[2].clone();
-        let resource_specializer = resource_param.specializer.unwrap();
-        let resource_instance = resource_specializer.value().as_pattern().unwrap();
-        assert!(
-            matches!(resource_instance, Pattern::Instance(InstanceLiteral { tag, .. }) if tag == &sym!("Resource"))
-        );
-
+        let has_relation_rule_types = kb.get_rule_types(&sym!("has_relation")).unwrap();
         // has_relation(organization: Organization, "parent", repository: Repository)
-        let required_has_relation = has_relation_rule_types.iter().find(|r| r.required).unwrap();
-        let resource_param = &required_has_relation.params[2];
-        let resource_specializer = resource_param.specializer.as_ref().unwrap();
-        let instance = resource_specializer.value().as_pattern().unwrap();
-        let relation_param = &required_has_relation.params[1];
-        let relation = relation_param.parameter.value().as_string().unwrap();
-        assert_eq!(relation, "parent");
-        assert!(
-            matches!(instance, Pattern::Instance(InstanceLiteral { tag, .. }) if tag == &repo_name)
-        );
+        let expected = rule!("has_relation", ["subject"; instance!(org_name), "parent", "object"; instance!(repo_name)]);
+        assert_eq!(1, has_relation_rule_types.len());
+        assert_eq!(has_relation_rule_types[0], expected,);
 
         Ok(())
     }
