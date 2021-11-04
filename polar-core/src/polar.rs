@@ -274,6 +274,10 @@ impl Polar {
             })
             .collect();
 
+        // Generate appropriate rule_type definitions using the types contained in policy resource
+        // blocks.
+        kb.create_resource_specific_rule_types();
+
         // TODO(gj): need to bomb out before rule type validation in case additional rule types
         // were defined later on in the file that encountered the `ParseError`. Those additional
         // rule types might extend the valid shapes for a rule type defined in a different,

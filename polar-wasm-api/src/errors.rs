@@ -49,6 +49,7 @@ fn kind(err: &PolarError) -> String {
         Validation(InvalidRuleType { .. }) => "ValidationError::InvalidRuleType",
         Validation(ResourceBlock { .. }) => "ValidationError::ResourceBlock",
         Validation(UndefinedRule { .. }) => "ValidationError::UndefinedRule",
+        Validation(MissingRequiredRule { .. }) => "ValidationError::MissingRequiredRule",
     }
     .to_owned()
 }

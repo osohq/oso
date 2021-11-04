@@ -321,7 +321,9 @@ impl ResourceBlocks {
         declaration: &Term,
         resource_name: &Term,
     ) -> PolarResult<&Declaration> {
-        if let Some(declaration) = self.declarations[resource_name].get(declaration) {
+        let maybe_declarations = self.declarations.get(resource_name);
+        let maybe_declaration = maybe_declarations.and_then(|ds| ds.get(declaration));
+        if let Some(declaration) = maybe_declaration {
             Ok(declaration)
         } else {
             let msg = format!("Undeclared term {} referenced in rule in the '{}' resource block. Did you mean to declare it as a role, permission, or relation?", declaration.to_polar(), resource_name);
@@ -334,7 +336,7 @@ impl ResourceBlocks {
     }
 
     /// Look up `relation` in `resource` block and return its type.
-    fn get_relation_type_in_resource_block(
+    pub fn get_relation_type_in_resource_block(
         &self,
         relation: &Term,
         resource: &Term,
@@ -384,6 +386,27 @@ impl ResourceBlocks {
             }
             .into())
         }
+    }
+
+    pub fn declarations(&self) -> &HashMap<Term, Declarations> {
+        &self.declarations
+    }
+
+    pub fn has_roles(&self) -> bool {
+        let mut declarations = self.declarations().values().flat_map(HashMap::values);
+        declarations.any(|d| matches!(d, Declaration::Role))
+    }
+
+    pub fn relation_tuples(&self) -> Vec<(&Term, &Term, &Term)> {
+        let mut tuples = vec![];
+        for (object, declarations) in self.declarations() {
+            for (name, declaration) in declarations {
+                if let Declaration::Relation(subject) = declaration {
+                    tuples.push((subject, name, object));
+                }
+            }
+        }
+        tuples
     }
 }
 
@@ -1555,4 +1578,69 @@ mod tests {
     // TODO(gj): add test for union pattern with fields. Behavior will probably be the same as for
     // fieldless union pattern where we create a choicepoint of matches against every union member
     // with the same set of fields.
+
+    // Test creation of resource-specific rule type (for `has_relation`) and general rule type (for
+    // `has_role`):
+    //   - has_relation between (Organization, "parent", Repository)
+    //   - has_role created because at least one resource block has roles declared
+    #[test]
+    fn test_create_resource_specific_rule_types() -> Result<(), PolarError> {
+        let policy = r#"
+            resource Organization {
+                roles = ["member"];
+            }
+
+            resource Repository {
+                roles = ["reader"];
+                relations = {parent: Organization};
+                "reader" if "member" on "parent";
+            }
+
+            has_relation(organization: Organization, "parent", repository: Repository) if
+                repository.org_id = organization.id;
+
+            has_role(user: Actor, _role: String, organization: Organization) if
+                organization.id in user.org_ids;
+        "#;
+
+        let polar = Polar::new();
+
+        let repo_instance = ExternalInstance {
+            instance_id: 1,
+            constructor: None,
+            repr: None,
+        };
+        let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
+        let repo_name = sym!("Repository");
+        polar.register_constant(repo_name.clone(), repo_term)?;
+        polar.register_mro(repo_name.clone(), vec![repo_instance.instance_id])?;
+
+        let org_instance = ExternalInstance {
+            instance_id: 2,
+            constructor: None,
+            repr: None,
+        };
+        let org_term = term!(Value::ExternalInstance(org_instance.clone()));
+        let org_name = sym!("Organization");
+        polar.register_constant(org_name.clone(), org_term)?;
+        polar.register_mro(org_name.clone(), vec![org_instance.instance_id])?;
+
+        polar.load_str(policy)?;
+
+        let kb = polar.kb.read().unwrap();
+
+        let has_role_rule_types = kb.get_rule_types(&sym!("has_role")).unwrap();
+        // has_role(actor: Actor, role: String, resource: Resource)
+        let expected = rule!("has_role", ["actor"; instance!(ACTOR_UNION_NAME), "role"; instance!("String"), "resource"; instance!(RESOURCE_UNION_NAME)]);
+        assert_eq!(1, has_role_rule_types.len());
+        assert_eq!(has_role_rule_types[0], expected);
+
+        let has_relation_rule_types = kb.get_rule_types(&sym!("has_relation")).unwrap();
+        // has_relation(organization: Organization, "parent", repository: Repository)
+        let expected = rule!("has_relation", ["subject"; instance!(org_name), "parent", "object"; instance!(repo_name)]);
+        assert_eq!(1, has_relation_rule_types.len());
+        assert_eq!(has_relation_rule_types[0], expected,);
+
+        Ok(())
+    }
 }

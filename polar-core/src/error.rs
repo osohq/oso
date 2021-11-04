@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use std::fmt;
 
+use crate::rules::Rule;
 use crate::sources::*;
 use crate::terms::*;
 
@@ -391,6 +392,9 @@ impl fmt::Display for OperationalError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationError {
+    MissingRequiredRule {
+        rule: Rule,
+    },
     InvalidRule {
         rule: String,
         msg: String,
@@ -425,6 +429,9 @@ impl fmt::Display for ValidationError {
             }
             Self::UndefinedRule { rule_name } => {
                 write!(f, r#"Call to undefined rule "{}""#, rule_name)
+            }
+            Self::MissingRequiredRule { rule } => {
+                write!(f, "Missing implementation for required rule {}", rule)
             }
             Self::ResourceBlock { msg, .. } => {
                 write!(f, "{}", msg)
