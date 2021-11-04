@@ -1,10 +1,8 @@
-use serde::{Deserialize, Serialize};
-
 use std::fmt;
 
-use crate::rules::Rule;
-use crate::sources::*;
-use crate::terms::*;
+use serde::{Deserialize, Serialize};
+
+use super::{rules::Rule, sources::*, terms::*};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(into = "FormattedPolarError")]
@@ -56,8 +54,7 @@ impl PolarError {
                 | ParseError::ExtraToken { loc, .. }
                 | ParseError::WrongValueType { loc, .. }
                 | ParseError::ReservedWord { loc, .. }
-                | ParseError::DuplicateKey { loc, .. }
-                | ParseError::SingletonVariable { loc, .. } => {
+                | ParseError::DuplicateKey { loc, .. } => {
                     let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
                     self.context.replace(ErrorContext {
                         source: source.clone(),
@@ -187,10 +184,6 @@ pub enum ParseError {
         loc: usize,
         key: String,
     },
-    SingletonVariable {
-        loc: usize,
-        name: String,
-    },
 }
 
 impl fmt::Display for ErrorContext {
@@ -251,13 +244,6 @@ impl fmt::Display for ParseError {
             }
             Self::DuplicateKey { key, .. } => {
                 write!(f, "Duplicate key: {}", key)
-            }
-            Self::SingletonVariable { name, .. } => {
-                write!(
-                    f,
-                    "Singleton variable {} is unused or undefined; try renaming to _{} or _",
-                    name, name
-                )
             }
         }
     }
@@ -415,7 +401,17 @@ pub enum ValidationError {
         // already-declared resource block would be relevant info for the error emitted on
         // redeclaration.
     },
-    // TODO(lm|gj): add SingletonVariable.
+    SingletonVariable {
+        /// Term<Symbol> where the error arose, tracked for lexical context.
+        term: Term,
+        /// Variable name.
+        name: String,
+    },
+    UnregisteredConstant {
+        /// Term<Symbol> where the error arose, tracked for lexical context.
+        term: Term,
+        msg: String,
+    },
 }
 
 impl fmt::Display for ValidationError {
@@ -434,6 +430,16 @@ impl fmt::Display for ValidationError {
                 write!(f, "Missing implementation for required rule {}", rule)
             }
             Self::ResourceBlock { msg, .. } => {
+                write!(f, "{}", msg)
+            }
+            Self::SingletonVariable { name, .. } => {
+                write!(
+                    f,
+                    "Singleton variable {name} is unused or undefined; try renaming to _{name} or _",
+                    name=name
+                )
+            }
+            Self::UnregisteredConstant { msg, .. } => {
                 write!(f, "{}", msg)
             }
         }

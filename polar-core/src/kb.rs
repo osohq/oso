@@ -4,7 +4,7 @@ use std::sync::Arc;
 pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::diagnostic::Diagnostic;
-use super::error::{PolarError, PolarResult};
+use super::error::{PolarError, PolarResult, ValidationError};
 use super::resource_block::{ResourceBlocks, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::*;
@@ -28,7 +28,7 @@ impl RuleParamMatch {
 pub struct KnowledgeBase {
     /// A map of bindings: variable name → value. The VM uses a stack internally,
     /// but can translate to and from this type.
-    pub constants: Bindings,
+    constants: Bindings,
     /// Map of class name -> MRO list where the MRO list is a list of class instance IDs
     mro: HashMap<Symbol, Vec<u64>>,
 
@@ -222,11 +222,9 @@ impl KnowledgeBase {
         index: usize,
     ) -> PolarResult<RuleParamMatch> {
         // Get the unique ID of the prototype instance pattern class.
-        if let Some(Value::ExternalInstance(ExternalInstance { instance_id, .. })) = self
-            .constants
-            .get(&rule_type_instance.tag)
-            .map(|t| t.value())
-        {
+        // TODO(gj): make actual term available here instead of constructing a fake test one.
+        let term = self.get_registered_constant(&term!(rule_type_instance.tag.clone()))?;
+        if let Value::ExternalInstance(ExternalInstance { instance_id, .. }) = term.value() {
             if let Some(rule_mro) = self.mro.get(&rule_instance.tag) {
                 if !rule_mro.contains(instance_id) {
                     Ok(RuleParamMatch::False(format!(
@@ -247,6 +245,8 @@ impl KnowledgeBase {
                 )}.into())
             }
         } else {
+            // TODO(gj): `rule_type_instance.tag` was registered as something other than an
+            // external instance. What should we do here?
             unreachable!("Unregistered specializer classes should be caught before this point.");
         }
     }
@@ -584,7 +584,7 @@ impl KnowledgeBase {
     }
 
     /// Define a constant variable.
-    pub fn constant(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
+    pub fn register_constant(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
         if name.0 == ACTOR_UNION_NAME || name.0 == RESOURCE_UNION_NAME {
             return Err(error::RuntimeError::TypeError {
                 msg: format!(
@@ -599,6 +599,28 @@ impl KnowledgeBase {
         Ok(())
     }
 
+    /// Return true if a constant with the given name has been defined.
+    pub fn is_constant(&self, name: &Symbol) -> bool {
+        self.constants.contains_key(name)
+    }
+
+    /// Getter for `constants` map without exposing it for mutation.
+    pub fn get_registered_constants(&self) -> &Bindings {
+        &self.constants
+    }
+
+    pub fn get_registered_constant(&self, constant: &Term) -> PolarResult<&Term> {
+        self.constants
+            .get(constant.value().as_symbol()?)
+            .ok_or_else(|| {
+                ValidationError::UnregisteredConstant {
+                    msg: format!("Unregistered constant: {}", constant.to_polar()),
+                    term: constant.clone(),
+                }
+                .into()
+            })
+    }
+
     /// Add the Method Resolution Order (MRO) list for a registered class.
     /// The `mro` argument is a list of the `instance_id` associated with a registered class.
     pub fn add_mro(&mut self, name: Symbol, mro: Vec<u64>) -> PolarResult<()> {
@@ -609,11 +631,6 @@ impl KnowledgeBase {
         }
         self.mro.insert(name, mro);
         Ok(())
-    }
-
-    /// Return true if a constant with the given name has been defined.
-    pub fn is_constant(&self, name: &Symbol) -> bool {
-        self.constants.contains_key(name)
     }
 
     pub fn add_source(&mut self, source: Source) -> PolarResult<u64> {
@@ -944,7 +961,7 @@ mod tests {
         let mut kb = KnowledgeBase::new();
 
         let mut constant = |name: &str, instance_id: u64| {
-            kb.constant(
+            kb.register_constant(
                 sym!(name),
                 term!(Value::ExternalInstance(ExternalInstance {
                     instance_id,
@@ -1385,7 +1402,7 @@ mod tests {
     #[test]
     fn test_validate_rules() {
         let mut kb = KnowledgeBase::new();
-        kb.constant(
+        kb.register_constant(
             sym!("Fruit"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 1,
@@ -1394,7 +1411,7 @@ mod tests {
             })),
         )
         .unwrap();
-        kb.constant(
+        kb.register_constant(
             sym!("Citrus"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 2,
@@ -1403,7 +1420,7 @@ mod tests {
             })),
         )
         .unwrap();
-        kb.constant(
+        kb.register_constant(
             sym!("Orange"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 3,

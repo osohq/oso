@@ -1303,16 +1303,6 @@ type ParseErrorDuplicateKey struct {
 
 func (ParseErrorDuplicateKey) isParseError() {}
 
-// ParseErrorSingletonVariable struct
-type ParseErrorSingletonVariable struct {
-	// Loc
-	Loc uint64 `json:"loc"`
-	// Name
-	Name string `json:"name"`
-}
-
-func (ParseErrorSingletonVariable) isParseError() {}
-
 // ParseError enum
 type ParseErrorVariant interface {
 	isParseError()
@@ -1455,17 +1445,6 @@ func (result *ParseError) UnmarshalJSON(b []byte) error {
 		*result = ParseError{variant}
 		return nil
 
-	case "SingletonVariable":
-		var variant ParseErrorSingletonVariable
-		if variantValue != nil {
-			err := json.Unmarshal(*variantValue, &variant)
-			if err != nil {
-				return err
-			}
-		}
-		*result = ParseError{variant}
-		return nil
-
 	}
 
 	return fmt.Errorf("Cannot deserialize ParseError: %s", string(b))
@@ -1522,11 +1501,6 @@ func (variant ParseError) MarshalJSON() ([]byte, error) {
 	case ParseErrorDuplicateKey:
 		return json.Marshal(map[string]ParseErrorDuplicateKey{
 			"DuplicateKey": inner,
-		})
-
-	case ParseErrorSingletonVariable:
-		return json.Marshal(map[string]ParseErrorSingletonVariable{
-			"SingletonVariable": inner,
 		})
 
 	}
@@ -2393,6 +2367,26 @@ type ValidationErrorResourceBlock struct {
 
 func (ValidationErrorResourceBlock) isValidationError() {}
 
+// ValidationErrorSingletonVariable struct
+type ValidationErrorSingletonVariable struct {
+	// Term
+	Term Term `json:"term"`
+	// Name
+	Name string `json:"name"`
+}
+
+func (ValidationErrorSingletonVariable) isValidationError() {}
+
+// ValidationErrorUnregisteredConstant struct
+type ValidationErrorUnregisteredConstant struct {
+	// Term
+	Term Term `json:"term"`
+	// Msg
+	Msg string `json:"msg"`
+}
+
+func (ValidationErrorUnregisteredConstant) isValidationError() {}
+
 // ValidationError enum
 type ValidationErrorVariant interface {
 	isValidationError()
@@ -2469,6 +2463,28 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		*result = ValidationError{variant}
 		return nil
 
+	case "SingletonVariable":
+		var variant ValidationErrorSingletonVariable
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ValidationError{variant}
+		return nil
+
+	case "UnregisteredConstant":
+		var variant ValidationErrorUnregisteredConstant
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ValidationError{variant}
+		return nil
+
 	}
 
 	return fmt.Errorf("Cannot deserialize ValidationError: %s", string(b))
@@ -2495,6 +2511,16 @@ func (variant ValidationError) MarshalJSON() ([]byte, error) {
 	case ValidationErrorResourceBlock:
 		return json.Marshal(map[string]ValidationErrorResourceBlock{
 			"ResourceBlock": inner,
+		})
+
+	case ValidationErrorSingletonVariable:
+		return json.Marshal(map[string]ValidationErrorSingletonVariable{
+			"SingletonVariable": inner,
+		})
+
+	case ValidationErrorUnregisteredConstant:
+		return json.Marshal(map[string]ValidationErrorUnregisteredConstant{
+			"UnregisteredConstant": inner,
 		})
 
 	}
