@@ -8,6 +8,14 @@ description: >-
 draft: true
 ---
 
+## `oso` NEW_VERSION
+
+### Core
+
+#### Other bugs & improvements
+- Fixed a bug where a negated constraint on a dot lookup could cause Polar to crash
+  when the underlying variable became bound.
+
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
