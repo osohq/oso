@@ -162,6 +162,9 @@ impl KnowledgeBase {
                     found_match = self
                         .rule_params_match(rule.as_ref(), rule_type)
                         .map(|r| matches!(r, RuleParamMatch::True))?;
+                    if found_match {
+                        break;
+                    }
                 }
                 if !found_match {
                     return Err(self.set_error_context(
