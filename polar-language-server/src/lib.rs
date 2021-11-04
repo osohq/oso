@@ -277,7 +277,7 @@ impl PolarLanguageServer {
         use polar_core::error::{ErrorKind::Validation, ValidationError::*};
         match e.kind {
             // Ignore errors that depend on app data.
-            Validation(UnregisteredConstant { .. }) | Validation(SingletonVariable { .. }) => None,
+            Validation(UnregisteredClass { .. }) | Validation(SingletonVariable { .. }) => None,
 
             _ => self.document_from_polar_error_context(e).map(|doc| {
                 let diagnostic = Diagnostic {
@@ -657,7 +657,10 @@ mod tests {
         let polar_diagnostics = pls.load_documents();
         assert_eq!(polar_diagnostics.len(), 1);
         let polar_diagnostic = polar_diagnostics.get(0).unwrap();
-        let expected_message = format!("Invalid resource block 'User' -- 'User' must be a registered class. at line 1, column 1 in file {uri}", uri=doc.uri);
+        let expected_message = format!(
+            "Unregistered class: User at line 1, column 1 in file {uri}",
+            uri = doc.uri
+        );
         assert_eq!(polar_diagnostic.to_string(), expected_message);
 
         // `reload_kb()` API filters out diagnostics dependent on app data.
@@ -683,7 +686,7 @@ mod tests {
             "Unknown specializer B\n004:             f(_: B);\n                      ^";
         assert_eq!(unknown_specializer.to_string(), expected_message);
         let unregistered_constant = polar_diagnostics.get(1).unwrap();
-        let expected_message = "Unregistered constant: A";
+        let expected_message = "Unregistered class: A";
         assert_eq!(unregistered_constant.to_string(), expected_message);
 
         // `reload_kb()` API filters out diagnostics dependent on app data.

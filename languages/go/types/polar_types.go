@@ -1992,6 +1992,8 @@ type Rule struct {
 	Params []Parameter `json:"params"`
 	// Body
 	Body Term `json:"body"`
+	// Required
+	Required bool `json:"required"`
 }
 
 // RuntimeErrorArithmeticError struct
@@ -2329,6 +2331,14 @@ type TraceResult struct {
 	Formatted string `json:"formatted"`
 }
 
+// ValidationErrorMissingRequiredRule struct
+type ValidationErrorMissingRequiredRule struct {
+	// Rule
+	Rule Rule `json:"rule"`
+}
+
+func (ValidationErrorMissingRequiredRule) isValidationError() {}
+
 // ValidationErrorInvalidRule struct
 type ValidationErrorInvalidRule struct {
 	// Rule
@@ -2377,15 +2387,13 @@ type ValidationErrorSingletonVariable struct {
 
 func (ValidationErrorSingletonVariable) isValidationError() {}
 
-// ValidationErrorUnregisteredConstant struct
-type ValidationErrorUnregisteredConstant struct {
+// ValidationErrorUnregisteredClass struct
+type ValidationErrorUnregisteredClass struct {
 	// Term
 	Term Term `json:"term"`
-	// Msg
-	Msg string `json:"msg"`
 }
 
-func (ValidationErrorUnregisteredConstant) isValidationError() {}
+func (ValidationErrorUnregisteredClass) isValidationError() {}
 
 // ValidationError enum
 type ValidationErrorVariant interface {
@@ -2418,6 +2426,17 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		}
 	}
 	switch variantName {
+
+	case "MissingRequiredRule":
+		var variant ValidationErrorMissingRequiredRule
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ValidationError{variant}
+		return nil
 
 	case "InvalidRule":
 		var variant ValidationErrorInvalidRule
@@ -2474,8 +2493,8 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		*result = ValidationError{variant}
 		return nil
 
-	case "UnregisteredConstant":
-		var variant ValidationErrorUnregisteredConstant
+	case "UnregisteredClass":
+		var variant ValidationErrorUnregisteredClass
 		if variantValue != nil {
 			err := json.Unmarshal(*variantValue, &variant)
 			if err != nil {
@@ -2492,6 +2511,11 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 
 func (variant ValidationError) MarshalJSON() ([]byte, error) {
 	switch inner := variant.ValidationErrorVariant.(type) {
+
+	case ValidationErrorMissingRequiredRule:
+		return json.Marshal(map[string]ValidationErrorMissingRequiredRule{
+			"MissingRequiredRule": inner,
+		})
 
 	case ValidationErrorInvalidRule:
 		return json.Marshal(map[string]ValidationErrorInvalidRule{
@@ -2518,9 +2542,9 @@ func (variant ValidationError) MarshalJSON() ([]byte, error) {
 			"SingletonVariable": inner,
 		})
 
-	case ValidationErrorUnregisteredConstant:
-		return json.Marshal(map[string]ValidationErrorUnregisteredConstant{
-			"UnregisteredConstant": inner,
+	case ValidationErrorUnregisteredClass:
+		return json.Marshal(map[string]ValidationErrorUnregisteredClass{
+			"UnregisteredClass": inner,
 		})
 
 	}

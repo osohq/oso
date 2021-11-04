@@ -407,10 +407,9 @@ pub enum ValidationError {
         /// Variable name.
         name: String,
     },
-    UnregisteredConstant {
+    UnregisteredClass {
         /// Term<Symbol> where the error arose, tracked for lexical context.
         term: Term,
-        msg: String,
     },
 }
 
@@ -439,8 +438,8 @@ impl fmt::Display for ValidationError {
                     name=name
                 )
             }
-            Self::UnregisteredConstant { msg, .. } => {
-                write!(f, "{}", msg)
+            Self::UnregisteredClass { term } => {
+                write!(f, "Unregistered class: {}", term)
             }
         }
     }

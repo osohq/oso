@@ -409,18 +409,6 @@ impl ResourceBlocks {
     }
 }
 
-pub fn check_all_relation_types_have_been_registered(kb: &KnowledgeBase) -> Vec<PolarError> {
-    let mut errors = vec![];
-    for declarations in kb.resource_blocks.declarations.values() {
-        for (declaration, kind) in declarations {
-            if let Declaration::Relation(relation_type) = kind {
-                errors.extend(relation_type_is_registered(kb, (declaration, relation_type)).err());
-            }
-        }
-    }
-    errors
-}
-
 fn index_declarations(
     roles: Option<Term>,
     permissions: Option<Term>,
@@ -642,68 +630,6 @@ fn check_for_duplicate_resource_blocks(
     Ok(())
 }
 
-// TODO(gj): no way to know in the core if `term` was registered as a class or a constant.
-fn is_registered_class(kb: &KnowledgeBase, term: &Term) -> PolarResult<bool> {
-    Ok(kb.is_constant(term.value().as_symbol()?))
-}
-
-fn check_that_block_type_is_not_already_registered(
-    kb: &KnowledgeBase,
-    block_type: &BlockType,
-    resource: &Term,
-) -> PolarResult<()> {
-    let union_name = match block_type {
-        BlockType::Actor => ACTOR_UNION_NAME,
-        BlockType::Resource => RESOURCE_UNION_NAME,
-    };
-    let already_registered = is_registered_class(kb, &term!(sym!(union_name)))?;
-    if already_registered {
-        let msg = format!("Cannot declare '{} {} {{ ... }}'; '{}' already registered as a constant. To resolve this conflict, please register '{}' under a different name.", block_type.to_polar(), resource.to_polar(), union_name, union_name);
-        return Err(ValidationError::UnregisteredConstant {
-            msg,
-            term: resource.clone(),
-        }
-        .into());
-    }
-    Ok(())
-}
-
-fn check_that_block_resource_is_registered(kb: &KnowledgeBase, resource: &Term) -> PolarResult<()> {
-    if !is_registered_class(kb, resource)? {
-        let msg = format!(
-            "Invalid resource block '{}' -- '{}' must be a registered class.",
-            resource.to_polar(),
-            resource.to_polar(),
-        );
-        return Err(ValidationError::UnregisteredConstant {
-            msg,
-            term: resource.clone(),
-        }
-        .into());
-    }
-    Ok(())
-}
-
-fn relation_type_is_registered(
-    kb: &KnowledgeBase,
-    (relation, kind): (&Term, &Term),
-) -> PolarResult<()> {
-    if !is_registered_class(kb, kind)? {
-        let msg = format!(
-            "Type '{}' in relation '{}: {}' must be registered as a class.",
-            kind.to_polar(),
-            relation.value().as_string()?,
-            kind.to_polar(),
-        );
-        return Err(ValidationError::UnregisteredConstant {
-            msg,
-            term: kind.clone(),
-        }
-        .into());
-    }
-    Ok(())
-}
-
 fn check_that_shorthand_rule_heads_are_declared_locally(
     shorthand_rules: &[ShorthandRule],
     declarations: &Declarations,
@@ -731,11 +657,8 @@ fn check_that_shorthand_rule_heads_are_declared_locally(
 impl ResourceBlock {
     pub fn add_to_kb(self, kb: &mut KnowledgeBase) -> Vec<PolarError> {
         let mut errors = vec![];
-        errors.extend(
-            check_that_block_type_is_not_already_registered(kb, &self.block_type, &self.resource)
-                .err(),
-        );
-        errors.extend(check_that_block_resource_is_registered(kb, &self.resource).err());
+        // Check that resource block's resource has been registered as a class.
+        errors.extend(kb.get_registered_class(&self.resource).err());
         errors
             .extend(check_for_duplicate_resource_blocks(&kb.resource_blocks, &self.resource).err());
 
@@ -781,17 +704,12 @@ mod tests {
 
     #[track_caller]
     fn expect_error(p: &Polar, policy: &str, expected: &str) {
-        let msg = match p.load_str(policy).unwrap_err() {
-            error::PolarError {
-                kind: error::ErrorKind::Validation(ValidationError::ResourceBlock { msg, .. }),
-                ..
-            }
-            | error::PolarError {
-                kind:
-                    error::ErrorKind::Validation(ValidationError::UnregisteredConstant { msg, .. }),
-                ..
-            } => msg,
-            e => panic!("{}", e),
+        use error::{ErrorKind::*, ValidationError::*};
+        let error = p.load_str(policy).unwrap_err();
+        let msg = match error.kind {
+            Validation(ResourceBlock { msg, .. }) => msg,
+            Validation(UnregisteredClass { .. }) => error.to_string(),
+            _ => panic!("Unexpected error: {}", error),
         };
 
         assert!(msg.contains(expected));
@@ -947,11 +865,7 @@ mod tests {
     fn test_resource_block_resource_must_be_registered() {
         let p = Polar::new();
         let valid_policy = "resource Org{}";
-        expect_error(
-            &p,
-            valid_policy,
-            "Invalid resource block 'Org' -- 'Org' must be a registered class.",
-        );
+        expect_error(&p, valid_policy, "Unregistered class: Org");
         p.register_constant(sym!("Org"), term!("unimportant"))
             .unwrap();
         assert!(p.load_str(valid_policy).is_ok());
@@ -1094,11 +1008,7 @@ mod tests {
         p.register_constant(sym!("Repo"), term!("unimportant"))
             .unwrap();
         let policy = r#"resource Repo { relations = { parent: Org }; }"#;
-        expect_error(
-            &p,
-            policy,
-            "Type 'Org' in relation 'parent: Org' must be registered as a class.",
-        );
+        expect_error(&p, policy, "Unregistered class: Org");
         p.register_constant(sym!("Org"), term!("unimportant"))
             .unwrap();
         p.load_str(policy).unwrap();

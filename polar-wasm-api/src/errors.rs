@@ -49,7 +49,7 @@ fn kind(err: &PolarError) -> String {
         Validation(ResourceBlock { .. }) => "ValidationError::ResourceBlock",
         Validation(UndefinedRule { .. }) => "ValidationError::UndefinedRule",
         Validation(SingletonVariable { .. }) => "ValidationError::SingletonVariable",
-        Validation(UnregisteredConstant { .. }) => "ValidationError::UnregisteredConstant",
+        Validation(UnregisteredClass { .. }) => "ValidationError::UnregisteredClass",
         Validation(MissingRequiredRule { .. }) => "ValidationError::MissingRequiredRule",
     }
     .to_owned()

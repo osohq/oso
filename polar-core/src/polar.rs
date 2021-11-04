@@ -255,7 +255,7 @@ impl Polar {
                 .collect(),
         );
 
-        // Attach context to ResourceBlock, SingletonVariable, and UnregisteredConstant errors.
+        // Attach context to ResourceBlock, SingletonVariable, and UnregisteredClass errors.
         //
         // TODO(gj): can we attach context to *all* errors here since all errors will be parse-time
         // errors and so will have some source context to attach?
@@ -265,7 +265,7 @@ impl Polar {
                 match e.kind {
                     Validation(ResourceBlock { ref term, .. })
                     | Validation(SingletonVariable { ref term, .. })
-                    | Validation(UnregisteredConstant { ref term, .. }) => {
+                    | Validation(UnregisteredClass { ref term, .. }) => {
                         *e = kb.set_error_context(term, e.clone());
                     }
                     _ => (),
