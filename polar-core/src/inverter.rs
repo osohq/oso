@@ -1,6 +1,4 @@
-use std::cell::RefCell;
 use std::collections::hash_map::Entry;
-use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::bindings::{BindingManager, Bsp, FollowerId, VariableState};
@@ -30,10 +28,10 @@ pub struct Inverter {
     bsp: Bsp,
 
     /// Acculumates new bindings from VM.
-    results: Vec<BindingManager>,
+    intermediates: Vec<BindingManager>,
 
-    /// Constraints to return to parent VM.
-    add_constraints: Rc<RefCell<Bindings>>,
+    /// Stores the computed results
+    results: Option<Vec<Bindings>>,
 
     /// The ID of the current binding manager follower. Initialized in `run`.
     follower: Option<FollowerId>,
@@ -46,19 +44,14 @@ pub struct Inverter {
 static ID: AtomicU64 = AtomicU64::new(0);
 
 impl Inverter {
-    pub fn new(
-        vm: &PolarVirtualMachine,
-        goals: Goals,
-        add_constraints: Rc<RefCell<Bindings>>,
-        bsp: Bsp,
-    ) -> Self {
+    pub fn new(vm: &PolarVirtualMachine, goals: Goals, bsp: Bsp) -> Self {
         let mut vm = vm.clone_with_goals(goals);
         vm.inverting = true;
         Self {
             vm,
             bsp,
-            add_constraints,
-            results: vec![],
+            intermediates: vec![],
+            results: None,
             follower: None,
             _debug_id: ID.fetch_add(1, Ordering::AcqRel),
         }
@@ -200,27 +193,43 @@ impl Runnable for Inverter {
             // Pass most events through, but collect results and invert them.
             match self.vm.run(None)? {
                 QueryEvent::Done { .. } => {
-                    let result = self.results.is_empty();
-                    if !result {
+                    if self.intermediates.is_empty() && self.results.is_none() {
+                        // no bindings
+                        return Ok(QueryEvent::Done { result: true });
+                    }
+
+                    if !self.intermediates.is_empty() {
                         // If there are results, the inversion should usually fail. However,
                         // if those results have constraints we collect them and pass them
                         // out to the parent VM.
-                        let constraints =
-                            results_to_constraints(self.results.drain(..).collect::<Vec<_>>());
+                        let constraints = results_to_constraints(
+                            self.intermediates.drain(..).collect::<Vec<_>>(),
+                        );
                         let mut bsp = Bsp::default();
                         // Use mem swap to avoid cloning bsps.
                         std::mem::swap(&mut self.bsp, &mut bsp);
                         let constraints = filter_inverted_constraints(constraints, &self.vm, bsp);
-
-                        if !constraints.is_empty() {
-                            // Return inverted constraints to parent VM.
-                            // TODO (dhatch): Would be nice to come up with a better way of doing this.
-                            self.add_constraints.borrow_mut().extend(constraints);
-
-                            return Ok(QueryEvent::Done { result: true });
+                        // TODO: actually insert results
+                        if constraints.is_empty() {
+                            // no constraints came back from inversion
+                            // so the solution is fully bound => negation failed
+                            return Ok(QueryEvent::Done { result: false });
                         }
+                        let _ = self.results.insert(vec![constraints]);
                     }
-                    return Ok(QueryEvent::Done { result });
+
+                    if let Some(bindings) =
+                        self.results.as_mut().and_then(|bindings| bindings.pop())
+                    {
+                        return Ok(QueryEvent::Result {
+                            bindings,
+                            trace: None,
+                        });
+                    }
+
+                    // if we reach this point, it means that we had some results
+                    // so negation fails
+                    return Ok(QueryEvent::Done { result: false });
                 }
                 QueryEvent::Result { .. } => {
                     // Retrieve new bindings made when running inverted query.
@@ -228,7 +237,7 @@ impl Runnable for Inverter {
                         .vm
                         .remove_binding_follower(&self.follower.unwrap())
                         .unwrap();
-                    self.results.push(binding_follower);
+                    self.intermediates.push(binding_follower);
                     self.follower = Some(self.vm.add_binding_follower());
                 }
                 event => return Ok(event),
@@ -254,5 +263,13 @@ impl Runnable for Inverter {
 
     fn handle_error(&mut self, error: PolarError) -> PolarResult<QueryEvent> {
         self.vm.handle_error(error)
+    }
+
+    fn handle_vm_result(
+        &mut self,
+        result: Bindings,
+        runnable: Box<dyn Runnable>,
+    ) -> PolarResult<()> {
+        self.vm.handle_vm_result(result, runnable)
     }
 }

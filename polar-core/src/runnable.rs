@@ -1,3 +1,4 @@
+use crate::bindings::Bindings;
 use crate::counter::Counter;
 use crate::error::{OperationalError, PolarError, PolarResult};
 use crate::events::QueryEvent;
@@ -43,6 +44,18 @@ pub trait Runnable {
     /// Create a new runnable that when run will perform the same operation as
     /// this one.
     fn clone_runnable(&self) -> Box<dyn Runnable>;
+
+    /// Handle a `result` from the `runnable`.
+    fn handle_vm_result(
+        &mut self,
+        _result: Bindings,
+        _runnable: Box<dyn Runnable>,
+    ) -> PolarResult<()> {
+        Err(OperationalError::InvalidState {
+            msg: "Unexpected VM result".to_string(),
+        }
+        .into())
+    }
 }
 
 impl Clone for Box<dyn Runnable> {

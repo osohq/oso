@@ -347,7 +347,12 @@ mod test {
 
     macro_rules! assert_query_done {
         ($query:expr) => {
-            assert!(matches!($query.next_event()?, QueryEvent::Done { .. }));
+            let ev = $query.next_event()?;
+            assert!(
+                matches!(ev, QueryEvent::Done { .. }),
+                "expected QueryEventDone, got: {:#?}",
+                ev
+            );
         };
     }
 
@@ -363,6 +368,7 @@ mod test {
         }};
     }
 
+    #[track_caller]
     fn next_binding(query: &mut Query) -> Result<Bindings, PolarError> {
         let event = query.next_event()?;
         if let QueryEvent::Result { bindings, .. } = event {
@@ -1524,7 +1530,7 @@ mod test {
                 And,
                 term!(op!(
                     Neq,
-                    var!("__y_17"),
+                    var!("__y_18"),
                     term!(op!(
                         Dot,
                         term!(op!(Dot, var!("_this"), str!("foo"))),

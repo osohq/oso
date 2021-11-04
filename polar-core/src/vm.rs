@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
@@ -125,12 +124,6 @@ pub enum Goal {
     /// Add a new constraint
     AddConstraint {
         term: Term,
-    },
-
-    /// TODO hack.
-    /// Add a new constraint
-    AddConstraintsBatch {
-        add_constraints: Rc<RefCell<Bindings>>,
     },
 }
 
@@ -516,11 +509,6 @@ impl PolarVirtualMachine {
             }
             Goal::Unify { left, right } => self.unify(left, right)?,
             Goal::AddConstraint { term } => self.add_constraint(term)?,
-            Goal::AddConstraintsBatch { add_constraints } => {
-                add_constraints.borrow_mut().drain().try_for_each(
-                    |(_, constraint)| -> PolarResult<()> { self.add_constraint(&constraint) },
-                )?
-            }
             Goal::Run { runnable } => return self.run_runnable(runnable.clone_runnable()),
         }
         Ok(QueryEvent::None)
@@ -881,6 +869,18 @@ impl PolarVirtualMachine {
                 ),
             }
             .into());
+        }
+        Ok(())
+    }
+
+    pub fn handle_vm_result(
+        &mut self,
+        result: Bindings,
+        runnable: Box<dyn Runnable>,
+    ) -> PolarResult<()> {
+        self.push_choice(vec![vec![Goal::Run { runnable }]])?;
+        for (_var, value) in result {
+            self.add_constraint(&value)?;
         }
         Ok(())
     }
@@ -1559,18 +1559,9 @@ impl PolarVirtualMachine {
                 }
 
                 let term = args.pop().unwrap();
-                let add_constraints = Rc::new(RefCell::new(Bindings::new()));
-                let inverter = Box::new(Inverter::new(
-                    self,
-                    vec![Goal::Query { term }],
-                    add_constraints.clone(),
-                    self.bsp(),
-                ));
-                self.choose_conditional(
-                    vec![Goal::Run { runnable: inverter }],
-                    vec![Goal::AddConstraintsBatch { add_constraints }],
-                    vec![Goal::Backtrack],
-                )?;
+                let inverter =
+                    Box::new(Inverter::new(self, vec![Goal::Query { term }], self.bsp()));
+                self.push_goal(Goal::Run { runnable: inverter })?;
             }
             Operator::Assign => {
                 if args.len() != 2 {
@@ -3014,6 +3005,14 @@ impl Runnable for PolarVirtualMachine {
 
     fn clone_runnable(&self) -> Box<dyn Runnable> {
         Box::new(self.clone())
+    }
+
+    fn handle_vm_result(
+        &mut self,
+        result: Bindings,
+        runnable: Box<dyn Runnable>,
+    ) -> PolarResult<()> {
+        PolarVirtualMachine::handle_vm_result(self, result, runnable)
     }
 }
 

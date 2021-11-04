@@ -61,6 +61,20 @@ impl Query {
     fn recv_event(&mut self, qe: QueryEvent) -> PolarResult<QueryEvent> {
         match qe {
             QueryEvent::None => self.next_event(),
+            QueryEvent::Result { bindings, trace } => {
+                // if this result is coming from a runnable, then
+                // bind the bindings we get back
+                if let Some((runnable, result_call_id)) = self.pop_runnable() {
+                    self.top_runnable().handle_vm_result(bindings, runnable)?;
+                    self.top_runnable()
+                        .external_question_result(result_call_id, true)?;
+                    self.next_event()
+                } else {
+                    // Result is from the VM
+                    assert!(self.runnable_stack.is_empty());
+                    Ok(QueryEvent::Result { bindings, trace })
+                }
+            }
             QueryEvent::Run { runnable, call_id } => {
                 self.push_runnable(runnable, call_id);
                 self.next_event()
