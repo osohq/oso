@@ -872,7 +872,6 @@ impl KnowledgeBase {
 mod tests {
     use super::*;
     use crate::error::*;
-    use crate::terms::InstanceLiteral;
 
     #[test]
     /// Test validation implemented in `check_file()`.
