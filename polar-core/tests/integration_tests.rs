@@ -1663,7 +1663,8 @@ has_role(user: User, "owner", repository: Repository) if
         &err.kind,
         ErrorKind::Validation(ValidationError::InvalidRule { .. })
     ));
-    assert!(format!("{}", err)
+    assert!(err
+        .to_string()
         .contains("Perhaps you meant to add a resource block to your policy, like this:"));
 
     Ok(())
@@ -2562,6 +2563,9 @@ has_role(actor: User, role_name, repository: Repository) if
     Ok(())
 }
 
+// If you declare a relation & a shorthand rule that references the relationship but don't
+// implement a corresponding has_relation linking the two resources, you'll see a
+// `MissingRequiredRule` error.
 #[test]
 fn test_missing_required_rule_type() -> TestResult {
     let p = Polar::new();
@@ -2612,7 +2616,12 @@ allow(actor, action, resource) if has_permission(actor, action, resource);
 "#;
 
     let err = p.load_str(policy).expect_err("Expected validation error");
-    assert!(matches!(&err.kind, ErrorKind::Validation(_)));
-    assert!(format!("{}", err).contains("Missing implementation for required rule has_relation("));
+    assert!(matches!(
+        &err.kind,
+        ErrorKind::Validation(ValidationError::MissingRequiredRule { .. })
+    ));
+    assert!(err
+        .to_string()
+        .contains("Missing implementation for required rule has_relation("));
     Ok(())
 }
