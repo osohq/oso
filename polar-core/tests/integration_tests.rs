@@ -1659,7 +1659,10 @@ has_role(user: User, "owner", repository: Repository) if
     repository.owner_id = user.id;
 "#;
     let err = p.load_str(policy).expect_err("Expected validation error");
-    assert!(matches!(&err.kind, ErrorKind::Validation(_)));
+    assert!(matches!(
+        &err.kind,
+        ErrorKind::Validation(ValidationError::InvalidRule { .. })
+    ));
     assert!(format!("{}", err)
         .contains("Perhaps you meant to add a resource block to your policy, like this:"));
 
