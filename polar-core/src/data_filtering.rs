@@ -1224,10 +1224,7 @@ mod test {
     }
 }
 
-// OLD DATA FILTERING
-// ~ 1000 loc
 // NEW DATA FILTERING
-// ~ 300 loc
 #[derive(PartialEq, Debug, Serialize, Clone)]
 pub struct Proj(Rc<DataFilter>, String);
 #[derive(Debug)]
