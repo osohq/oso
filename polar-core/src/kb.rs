@@ -96,6 +96,12 @@ impl KnowledgeBase {
     }
 
     pub fn validate_rules(&self) -> Vec<Diagnostic> {
+        // Prior to #1310 these validations were not order dependent due to the
+        // use of static default rule types.
+        // Now that rule types are dynamically generated based on policy
+        // contents we validate types first to surface missing required rule
+        // implementations which would otherwise raise opaque "call to undefined rule"
+        // errors
         let mut diagnostics = vec![];
 
         if let Err(e) = self.validate_rule_types() {
