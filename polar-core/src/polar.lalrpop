@@ -648,15 +648,7 @@ Parameter: Parameter = {
     <parameter:ExpectValue<Exp6<"Term">>> => {
         Parameter{parameter, specializer: None}
     },
-    // parenthesized specializers do not have symbol translation to class names applied
-    <parameter:Spanned<Variable>> ":" "(" <specializer:Spanned<Pattern>> ")" => {
-        Parameter {
-            parameter,
-            specializer: Some(specializer),
-        }
-    },
     <parameter:Spanned<Variable>> ":" <specializer:Spanned<Pattern>> => {
-        let offset = specializer.offset();
         if let Value::Variable(class_name) = specializer.value() {
             let fields = BTreeMap::new();
             let instance_literal = InstanceLiteral{tag: class_name.clone(), fields: Dictionary{fields}};

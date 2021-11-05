@@ -13,8 +13,11 @@ draft: true
 ### Core
 
 #### Other bugs & improvements
+
 - Fixed a bug where a negated constraint on a dot lookup could cause Polar to crash
   when the underlying variable became bound.
+- Removed syntax for parenthesized specializers like `f(_: (x));`, which don't
+  currently achieve anything.
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
