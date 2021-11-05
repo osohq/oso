@@ -1567,7 +1567,7 @@ mod tests {
         let diagnostics = kb.validate_rules();
         assert_eq!(diagnostics.len(), 1);
         let diagnostic = diagnostics.first().unwrap().to_string();
-        let expected = "Rule type specializer String1 on parameter 1 should be a registered class, but instead it's registered as: \"not an external instance\"";
+        let expected = "Rule type specializer String1 on parameter 1 should be a registered class, but instead it's registered as a constant with value: \"not an external instance\"";
         assert!(diagnostic.contains(expected), "{}", diagnostic);
 
         // Same specializer registered as an external instance without an MRO.
@@ -1621,7 +1621,7 @@ mod tests {
         let diagnostics = kb.validate_rules();
         assert_eq!(diagnostics.len(), 1);
         let diagnostic = diagnostics.first().unwrap().to_string();
-        let expected = "Rule type specializer String1 on parameter 1 should be a registered class, but instead it's registered as: \"not an external instance\"";
+        let expected = "Rule type specializer String1 on parameter 1 should be a registered class, but instead it's registered as a constant with value: \"not an external instance\"";
         assert!(diagnostic.contains(expected), "{}", diagnostic);
 
         // Rule type specializer: external instance w/o MRO
