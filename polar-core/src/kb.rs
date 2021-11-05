@@ -247,7 +247,7 @@ impl KnowledgeBase {
             }
         } else {
             Ok(RuleParamMatch::False(format!(
-                "Rule type specializer {} on parameter {} should be a registered class, but instead it's registered as: {}",
+                "Rule type specializer {} on parameter {} should be a registered class, but instead it's registered as a constant with value: {}",
                 rule_type_instance.tag, index, term
             )))
         }
