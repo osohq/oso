@@ -19,6 +19,12 @@ draft: true
 - Removed syntax for parenthesized specializers like `f(_: (x));`, which don't
   currently achieve anything.
 
+### Python
+
+#### Other bugs & improvements
+- Thanks to [Clara McCreery](https://github.com/chmccreery) for a correction to our
+  Python data filtering docs!
+
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
 ### Node.js

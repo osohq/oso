@@ -96,10 +96,10 @@ def build_query_cls(cls):
             assert filter.kind in ["Eq", "In"]
             if filter.field is None:
                 field = cls.id
-                if fil.kind != 'Nin':
-                    value = fil.value.id
+                if filter.kind != 'Nin':
+                    value = filter.value.id
                 else:
-                    value = [value.id for value in fil.value]
+                    value = [value.id for value in filter.value]
             elif isinstance(filter.field, list):
                 field = [cls.id if fld is None else getattr(cls, fld)]
                 value = filter.value
