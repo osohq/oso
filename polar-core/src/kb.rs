@@ -1453,8 +1453,10 @@ mod tests {
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Orange"))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Fruit"))]));
 
+        let diagnostics = kb.validate_rules();
+        assert_eq!(diagnostics.len(), 1);
         assert!(matches!(
-            kb.validate_rules().first().unwrap(),
+            diagnostics.first().unwrap(),
             Diagnostic::Error(PolarError {
                 kind: ErrorKind::Validation(ValidationError::InvalidRule { .. }),
                 ..
@@ -1466,7 +1468,6 @@ mod tests {
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!("Orange"))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Orange"))]));
         kb.add_rule(rule!("g", ["x"; instance!(sym!("Fruit"))]));
-
         assert!(kb.validate_rules().is_empty());
 
         // Rule type does apply if it has the same name as a rule even if different arity
@@ -1481,11 +1482,13 @@ mod tests {
                 ..
             })
         ));
+
         // Multiple templates can exist for the same name but only one needs to match
         kb.clear_rules();
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!("Orange"))]));
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!("Orange")), value!(1)]));
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!("Fruit"))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Fruit"))]));
+        assert!(kb.validate_rules().is_empty());
     }
 }
