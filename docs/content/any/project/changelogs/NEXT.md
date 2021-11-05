@@ -16,6 +16,12 @@ draft: true
 - Fixed a bug where a negated constraint on a dot lookup could cause Polar to crash
   when the underlying variable became bound.
 
+### Python
+
+#### Other bugs & improvements
+- Thanks to [Clara McCreery](https://github.com/chmccreery) for a correction to our
+  Python data filtering docs!
+
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
