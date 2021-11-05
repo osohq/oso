@@ -86,6 +86,11 @@ impl Query {
                     right_class_tag,
                 ),
                 QueryEvent::Debug { message } => self.handle_debug(message),
+                QueryEvent::ExternalIsSubclass {
+                    call_id,
+                    left_class_tag,
+                    right_class_tag,
+                } => self.handle_external_is_subclass(call_id, left_class_tag, right_class_tag),
                 event => unimplemented!("Unhandled event {:?}", event),
             };
 
@@ -241,6 +246,17 @@ impl Query {
         let res = self
             .host
             .is_subspecializer(instance_id, &left_class_tag.0, &right_class_tag.0);
+        self.question_result(call_id, res)?;
+        Ok(())
+    }
+
+    fn handle_external_is_subclass(
+        &mut self,
+        call_id: u64,
+        left_class_tag: Symbol,
+        right_class_tag: Symbol,
+    ) -> crate::Result<()> {
+        let res = left_class_tag == right_class_tag;
         self.question_result(call_id, res)?;
         Ok(())
     }
