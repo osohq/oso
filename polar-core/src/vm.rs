@@ -297,7 +297,7 @@ impl PolarVirtualMachine {
         let constants = kb
             .read()
             .expect("cannot acquire KB read lock")
-            .constants
+            .get_registered_constants()
             .clone();
         // get all comma-delimited POLAR_LOG variables
         let polar_log = std::env::var("POLAR_LOG");
