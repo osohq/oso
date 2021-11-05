@@ -80,10 +80,10 @@ def build_query(filters):
         # are we directly comparing the base object?
         if filter.field is None:
             field = cls.id
-            if fil.kind != 'Nin':
-                value = fil.value.id
+            if filter.kind != 'Nin':
+                value = filter.value.id
             else:
-                value = [value.id for value in fil.value]
+                value = [value.id for value in filter.value]
 
         # do we have simultaneous field conditions?
         elif isinstance(filter.field, list):
