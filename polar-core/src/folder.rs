@@ -92,6 +92,7 @@ pub fn fold_rule<T: Folder>(
         params,
         body,
         source_info,
+        required,
     }: Rule,
     fld: &mut T,
 ) -> Rule {
@@ -100,6 +101,7 @@ pub fn fold_rule<T: Folder>(
         params: params.into_iter().map(|p| fld.fold_param(p)).collect(),
         body: fld.fold_term(body),
         source_info,
+        required,
     }
 }
 

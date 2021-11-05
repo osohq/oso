@@ -255,24 +255,30 @@ impl Polar {
                 .collect(),
         );
 
-        // Attach context to ResourceBlock errors.
+        // Attach context to ResourceBlock, SingletonVariable, and UnregisteredClass errors.
         //
         // TODO(gj): can we attach context to *all* errors here since all errors will be parse-time
         // errors and so will have some source context to attach?
-        diagnostics = diagnostics
-            .into_iter()
-            .map(|d| {
-                if let Diagnostic::Error(ref e) = d {
-                    if let ErrorKind::Validation(
-                        ref e @ ValidationError::ResourceBlock { ref term, .. },
-                    ) = e.kind
-                    {
-                        return Diagnostic::Error(kb.set_error_context(term, e.clone()));
+        for diagnostic in &mut diagnostics {
+            if let Diagnostic::Error(e) = diagnostic {
+                use {ErrorKind::Validation, ValidationError::*};
+                match e.kind {
+                    Validation(ResourceBlock { ref term, .. })
+                    | Validation(SingletonVariable { ref term, .. })
+                    | Validation(UnregisteredClass { ref term, .. }) => {
+                        *e = kb.set_error_context(term, e.clone());
                     }
+                    _ => (),
                 }
-                d
-            })
-            .collect();
+            }
+        }
+
+        // TODO(gj): the below check is actually too eager to bomb out now -- I think we only need
+        // to bomb out if we encountered a ParseError. ValidationErrors should be fine to continue.
+
+        // Generate appropriate rule_type definitions using the types contained in policy resource
+        // blocks.
+        kb.create_resource_specific_rule_types();
 
         // TODO(gj): need to bomb out before rule type validation in case additional rule types
         // were defined later on in the file that encountered the `ParseError`. Those additional
@@ -385,7 +391,7 @@ impl Polar {
     }
 
     pub fn register_constant(&self, name: Symbol, value: Term) -> PolarResult<()> {
-        self.kb.write().unwrap().constant(name, value)
+        self.kb.write().unwrap().register_constant(name, value)
     }
 
     /// Register MRO for `name` with `mro`.

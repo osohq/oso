@@ -614,9 +614,9 @@ fn test_constants() -> TestResult {
     let mut p = polar();
     {
         let mut kb = p.kb.write().unwrap();
-        kb.constant(sym!("one"), term!(1))?;
-        kb.constant(sym!("two"), term!(2))?;
-        kb.constant(sym!("three"), term!(3))?;
+        kb.register_constant(sym!("one"), term!(1))?;
+        kb.register_constant(sym!("two"), term!(2))?;
+        kb.register_constant(sym!("three"), term!(3))?;
     }
     p.load_str(
         r#"one(x) if one = one and one = x and x < two;
@@ -1566,7 +1566,7 @@ fn test_singleton_vars() {
     assert!(err.context.is_some());
     assert!(matches!(
         err.kind,
-        ErrorKind::Parse(ParseError::SingletonVariable { .. })
+        ErrorKind::Validation(ValidationError::SingletonVariable { .. })
     ))
 }
 
@@ -1605,6 +1605,67 @@ has_role(user: User, "owner", organization: Organization) if
     assert!(matches!(&err.kind, ErrorKind::Validation(_)));
     assert!(format!("{}", err)
         .contains("Perhaps you meant to add an actor block to the top of your policy, like this:"));
+
+    Ok(())
+}
+
+#[test]
+fn test_missing_resource_hint() -> TestResult {
+    let p = Polar::new();
+
+    let repo_instance = ExternalInstance {
+        instance_id: 1,
+        constructor: None,
+        repr: None,
+    };
+    let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
+    let repo_name = sym!("Repository");
+    p.register_constant(repo_name.clone(), repo_term)?;
+    p.register_mro(repo_name, vec![repo_instance.instance_id])?;
+
+    let organization_instance = ExternalInstance {
+        instance_id: 2,
+        constructor: None,
+        repr: None,
+    };
+    let organization_term = term!(Value::ExternalInstance(organization_instance.clone()));
+    let organization_name = sym!("Organization");
+    p.register_constant(organization_name.clone(), organization_term)?;
+    p.register_mro(organization_name, vec![organization_instance.instance_id])?;
+
+    let user_instance = ExternalInstance {
+        instance_id: 3,
+        constructor: None,
+        repr: None,
+    };
+    let user_term = term!(Value::ExternalInstance(user_instance.clone()));
+    let user_name = sym!("User");
+    p.register_constant(user_name.clone(), user_term)?;
+    p.register_mro(user_name, vec![user_instance.instance_id])?;
+
+    let policy = r#"
+actor User {}
+resource Organization {
+    roles = ["owner"];
+    permissions = ["read"];
+
+    "read" if "owner";
+}
+
+has_role(user: User, "owner", organization: Organization) if
+    organization.owner_id = user.id;
+
+has_role(user: User, "owner", repository: Repository) if
+    repository.owner_id = user.id;
+"#;
+    let err = p.load_str(policy).expect_err("Expected validation error");
+    assert!(matches!(
+        &err.kind,
+        ErrorKind::Validation(ValidationError::InvalidRule { .. })
+    ));
+    assert!(err
+        .to_string()
+        .contains("Perhaps you meant to add a resource block to your policy, like this:"));
 
     Ok(())
 }
@@ -2419,14 +2480,6 @@ fn test_default_rule_types() -> TestResult {
         .expect_err("Expected validation error");
     assert!(matches!(e.kind, ErrorKind::Validation(_)));
     let e = p
-        .load_str(r#"has_role("leina", "eater", "food");"#)
-        .expect_err("Expected validation error");
-    assert!(matches!(e.kind, ErrorKind::Validation(_)));
-    let e = p
-        .load_str(r#"has_relation("leina", "eater", "food");"#)
-        .expect_err("Expected validation error");
-    assert!(matches!(e.kind, ErrorKind::Validation(_)));
-    let e = p
         .load_str(r#"allow("leina", "food");"#)
         .expect_err("Expected validation error");
     assert!(matches!(e.kind, ErrorKind::Validation(_)));
@@ -2507,5 +2560,68 @@ has_role(actor: User, role_name, repository: Repository) if
         "Failed to match because: Parameter `role_name` expects a String type constraint."
     ));
 
+    Ok(())
+}
+
+// If you declare a relation & a shorthand rule that references the relationship but don't
+// implement a corresponding has_relation linking the two resources, you'll see a
+// `MissingRequiredRule` error.
+#[test]
+fn test_missing_required_rule_type() -> TestResult {
+    let p = Polar::new();
+
+    let repo_instance = ExternalInstance {
+        instance_id: 1,
+        constructor: None,
+        repr: None,
+    };
+    let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
+    let repo_name = sym!("Repository");
+    p.register_constant(repo_name.clone(), repo_term)?;
+    p.register_mro(repo_name, vec![repo_instance.instance_id])?;
+
+    let issue_instance = ExternalInstance {
+        instance_id: 2,
+        constructor: None,
+        repr: None,
+    };
+    let issue_term = term!(Value::ExternalInstance(issue_instance.clone()));
+    let issue_name = sym!("Issue");
+    p.register_constant(issue_name.clone(), issue_term)?;
+    p.register_mro(issue_name, vec![issue_instance.instance_id])?;
+
+    let user_instance = ExternalInstance {
+        instance_id: 3,
+        constructor: None,
+        repr: None,
+    };
+    let user_term = term!(Value::ExternalInstance(user_instance.clone()));
+    let user_name = sym!("User");
+    p.register_constant(user_name.clone(), user_term)?;
+    p.register_mro(user_name, vec![user_instance.instance_id])?;
+
+    let policy = r#"
+actor User {}
+resource Repository {
+    relations = {owner: User};
+}
+
+resource Issue {
+    roles = ["write"];
+    relations = {repo: Repository};
+    "write" if "owner" on "repo";
+}
+
+allow(actor, action, resource) if has_permission(actor, action, resource);
+"#;
+
+    let err = p.load_str(policy).expect_err("Expected validation error");
+    assert!(matches!(
+        &err.kind,
+        ErrorKind::Validation(ValidationError::MissingRequiredRule { .. })
+    ));
+    assert!(err
+        .to_string()
+        .contains("Missing implementation for required rule has_relation("));
     Ok(())
 }

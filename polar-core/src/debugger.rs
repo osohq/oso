@@ -65,6 +65,7 @@ enum Step {
 /// [`Goal::Query`](../vm/enum.Goal.html). When either breakpoint is hit, we check the
 /// [`Debugger`](struct.Debugger.html)'s internal [`step`](struct.Debugger.html#structfield.step)
 /// field to determine how evaluation should proceed.
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug)]
 pub enum DebugEvent {
     Goal(Rc<Goal>),
