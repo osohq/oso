@@ -76,8 +76,15 @@ Value will be a list.
 if the field is a list.
 
 The condition described by a `Filter` applies to the data stored in the attribute
-`field` of a resource.  The `field` of a `Filter` may be `{{< exampleGet "none" >}}`,
-in which case the condition applies to the resource directly.
+`field` of a resource.
+
+The `field` of a `Filter` may be `{{< exampleGet "none" >}}`, in which case the
+condition applies to the resource directly. It may also be a list, in which case each
+element of the list will be a string or `{{< exampleGet "none" >}}`, and `value` will
+be a list of lists where each element is the value of the corresponding field on a
+resource. For example, if `field` is `['foo', 'bar', 'baz']`, then `value` will contain
+the triple `[resource.foo, resource.bar, resource.baz]` for each `resource` in the
+input set. `kind` will be `In` or `Nin`.
 
 #### Execute a Query
 

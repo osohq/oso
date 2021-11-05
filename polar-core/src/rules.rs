@@ -2,8 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
 
-use crate::sources::SourceInfo;
-
+use super::sources::SourceInfo;
 use super::terms::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -25,6 +24,9 @@ pub struct Rule {
     pub body: Term,
     #[serde(skip, default = "SourceInfo::ffi")]
     pub source_info: SourceInfo,
+    // TODO @patrickod: refactor Rule into Rule & RuleType structs
+    // `required` is used exclusively with rule *types* and not normal rules.
+    pub required: bool,
 }
 
 impl PartialEq for Rule {
@@ -55,6 +57,7 @@ impl Rule {
             params,
             body,
             source_info: SourceInfo::Test,
+            required: false,
         }
     }
 
@@ -76,6 +79,7 @@ impl Rule {
                 left,
                 right,
             },
+            required: false,
         }
     }
 }
@@ -97,21 +101,6 @@ impl RuleTypes {
         self.add(rule!("has_permission", ["actor"; instance!(sym!("Actor")), "_permission"; instance!(sym!("String")), "resource"; instance!(sym!("Resource"))]));
         // type has_permission(actor: Actor, permission: String, resource: Actor);
         self.add(rule!("has_permission", ["actor"; instance!(sym!("Actor")), "_permission"; instance!(sym!("String")), "resource"; instance!(sym!("Actor"))]));
-        // type has_role(actor: Actor, role: String, resource: Resource);
-        self.add(rule!("has_role", ["actor"; instance!(sym!("Actor")), "_role"; instance!(sym!("String")), "resource"; instance!(sym!("Resource"))]));
-        // type has_role(actor: Actor, role: String, resource: Actor);
-        self.add(rule!("has_role", ["actor"; instance!(sym!("Actor")), "_role"; instance!(sym!("String")), "resource"; instance!(sym!("Actor"))]));
-
-        // TODO: revisit this when working on extension guides. This rule currently lets users define any relation they would like, but we may want to restrict that a bit more.
-        // type has_relation(_subject: Resource, relation: String, _object: Resource);
-        self.add(rule!("has_relation", ["_subject"; instance!(sym!("Resource")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Resource"))]));
-        // type has_relation(_subject: Resource, relation: String, _object: Actor);
-        self.add(rule!("has_relation", ["_subject"; instance!(sym!("Resource")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Actor"))]));
-        // type has_relation(_subject: Actor, relation: String, _object: Actor);
-        self.add(rule!("has_relation", ["_subject"; instance!(sym!("Actor")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Actor"))]));
-        // type has_relation(_subject: Actor, relation: String, _object: Resource);
-        self.add(rule!("has_relation", ["_subject"; instance!(sym!("Actor")), "_relation"; instance!(sym!("String")), "_object"; instance!(sym!("Resource"))]));
-
         // type allow(actor, action, resource);
         self.add(rule!(
             "allow",
@@ -146,6 +135,14 @@ impl RuleTypes {
         self.0.clear();
         self.add_default_rule_types()
     }
+
+    pub fn required_rule_types(&self) -> Vec<&Rule> {
+        self.0
+            .values()
+            .flatten()
+            .filter(|rule_type| rule_type.required)
+            .collect()
+    }
 }
 
 pub type Rules = Vec<Arc<Rule>>;
@@ -174,13 +171,6 @@ impl RuleIndex {
         } else {
             self.rules.insert(rule_id);
         }
-    }
-
-    pub fn remove_rule(&mut self, rule_id: u64) {
-        self.rules.remove(&rule_id);
-        self.index
-            .iter_mut()
-            .for_each(|(_, index)| index.remove_rule(rule_id));
     }
 
     #[allow(clippy::comparison_chain)]
@@ -252,11 +242,6 @@ impl GenericRule {
             "Rule id already used."
         );
         self.index.index_rule(rule_id, &rule.params[..], 0);
-    }
-
-    pub fn remove_rule(&mut self, rule_id: u64) {
-        self.rules.remove(&rule_id);
-        self.index.remove_rule(rule_id);
     }
 
     #[allow(clippy::ptr_arg)]

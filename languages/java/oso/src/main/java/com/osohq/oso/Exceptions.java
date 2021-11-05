@@ -38,8 +38,6 @@ public class Exceptions {
         return runtimeError(subkind, msg, details);
       case "Operational":
         return operationalError(subkind, msg, details);
-      case "Parameter":
-        return apiError(subkind, msg, details);
       case "Validation":
         return validationError(subkind, msg, details);
       default:
@@ -89,15 +87,6 @@ public class Exceptions {
         return new UnknownError(msg, details);
       default:
         return new OperationalError(msg, details);
-    }
-  }
-
-  private static ApiError apiError(String kind, String msg, Map<String, Object> details) {
-    switch (kind) {
-      case "Parameter":
-        return new ParameterError(msg, details);
-      default:
-        return new ApiError(msg, details);
     }
   }
 
@@ -378,19 +367,6 @@ public class Exceptions {
 
   public static class UnrecognizedToken extends ParseError {
     public UnrecognizedToken(String msg, Map<String, Object> details) {
-      super(msg, details);
-    }
-  }
-
-  /** Generic Polar API exception. */
-  public static class ApiError extends OsoException {
-    public ApiError(String msg, Map<String, Object> details) {
-      super(msg, details);
-    }
-  }
-
-  public static class ParameterError extends ApiError {
-    public ParameterError(String msg, Map<String, Object> details) {
       super(msg, details);
     }
   }

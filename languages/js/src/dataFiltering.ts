@@ -153,14 +153,25 @@ function groundFilters(results: SetResults, filters: Filter[]): Filter[] {
     { refs: yrefs, kind: 'In' },
     { refs: nrefs, kind: 'Nin' },
   ])
-    for (const [rid, fils] of groupBy(refs, f => (f.value as Ref).resultId))
-      rest.push({
-        kind: kind as FilterKind,
-        field: fils.map(f => f.field),
-        value: results // eslint-disable-line @typescript-eslint/no-non-null-assertion
-          .get(rid)!
-          .map(r => fils.map(f => getattr(r as obj, (f.value as Ref).field))),
-      });
+    for (const [rid, fils] of groupBy(refs, f => (f.value as Ref).resultId)) {
+      const result = results.get(rid)!; // eslint-disable-line @typescript-eslint/no-non-null-assertion
+      if (fils.length > 1)
+        rest.push({
+          kind: kind as FilterKind,
+          field: fils.map(f => f.field),
+          value: result.map(r =>
+            fils.map(f => getattr(r as obj, (f.value as Ref).field))
+          ),
+        });
+      else
+        rest.push({
+          kind: kind as FilterKind,
+          field: fils[0].field,
+          value: result.map(r =>
+            getattr(r as obj, (fils[0].value as Ref).field)
+          ),
+        });
+    }
   return rest;
 }
 

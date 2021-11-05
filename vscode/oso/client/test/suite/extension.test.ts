@@ -1,27 +1,38 @@
 import * as assert from 'assert';
 
-import { Diagnostic, languages, Position, Range, Uri } from 'vscode';
+import { Diagnostic, languages, Uri, workspace } from 'vscode';
 
-// TODO(gj): This is temporary and will be replaced when we have real
-// diagnostics.
-function check([uri, diagnostics]: [Uri, Diagnostic[]], expected: string) {
-  const filename = [...uri.toString().split('/')].pop();
-  assert.strictEqual(filename, expected);
-
-  assert.strictEqual(diagnostics.length, 1);
-  assert.strictEqual(diagnostics[0].message, filename);
-  assert(
-    diagnostics[0].range.isEqual(
-      new Range(new Position(0, 0), new Position(0, filename.length))
-    )
-  );
+// Helper that waits for `n` diagnostics to appear and then returns them.
+async function getDiagnostics(n: number): Promise<[Uri, Diagnostic[]][]> {
+  let diagnostics: [Uri, Diagnostic[]][] = [];
+  for (;;) {
+    diagnostics = languages.getDiagnostics();
+    if (diagnostics.length === n) break;
+    if (diagnostics.length > n) throw new Error('too many diagnostics');
+    await new Promise(r => setTimeout(r, 0));
+  }
+  return diagnostics;
 }
 
 suite('Diagnostics', () => {
-  test('We receive a diagnostic for each Polar file in the workspace', () => {
-    const diagnostics = languages.getDiagnostics();
-    assert.strictEqual(diagnostics.length, 2);
-    check(diagnostics[0], 'apple.polar');
-    check(diagnostics[1], 'banana.polar');
+  test('We receive a diagnostic for each Polar file in the workspace', async () => {
+    const files = (await workspace.findFiles('*.polar'))
+      .map(f => f.toString())
+      .sort();
+    const diagnostics = (await getDiagnostics(files.length)).sort();
+
+    let [uri, [diagnostic]] = diagnostics[0];
+    assert.strictEqual(uri.toString(), files[0]);
+    assert.strictEqual(diagnostic, undefined);
+
+    [uri, [diagnostic]] = diagnostics[1];
+    assert.strictEqual(uri.toString(), files[1]);
+    const { line, character } = diagnostic.range.start;
+    assert.strictEqual(
+      diagnostic.message,
+      `hit the end of the file unexpectedly. Did you forget a semi-colon at line ${
+        line + 1
+      }, column ${character + 1} in file ${uri.toString()}`
+    );
   });
 });
