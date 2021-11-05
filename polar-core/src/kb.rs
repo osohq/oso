@@ -246,9 +246,10 @@ impl KnowledgeBase {
                 )))
             }
         } else {
-            Err(OperationalError::InvalidState{
-                msg: format!("Expected '{}' to be registered as an ExternalInstance, but it's registered as {:?}", rule_type_instance.tag, term)
-            }.into())
+            Ok(RuleParamMatch::False(format!(
+                "Rule type specializer {} on parameter {} should be a registered class, but instead it's registered as: {}",
+                rule_type_instance.tag, index, term
+            )))
         }
     }
 
@@ -1490,5 +1491,159 @@ mod tests {
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!("Fruit"))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Fruit"))]));
         assert!(kb.validate_rules().is_empty());
+    }
+
+    #[test]
+    fn test_rule_type_validation_errors_for_non_class_specializers() {
+        let mut kb = KnowledgeBase::new();
+
+        kb.register_constant(sym!("String1"), term!("not an external instance"))
+            .unwrap();
+        kb.register_constant(sym!("String2"), term!("also not an external instance"))
+            .unwrap();
+        kb.register_constant(
+            sym!("ExternalInstanceWithoutMRO1"),
+            term!(Value::ExternalInstance(ExternalInstance {
+                instance_id: 1,
+                constructor: None,
+                repr: None
+            })),
+        )
+        .unwrap();
+        kb.register_constant(
+            sym!("ExternalInstanceWithoutMRO2"),
+            term!(Value::ExternalInstance(ExternalInstance {
+                instance_id: 2,
+                constructor: None,
+                repr: None
+            })),
+        )
+        .unwrap();
+        kb.register_constant(
+            sym!("Class1"),
+            term!(Value::ExternalInstance(ExternalInstance {
+                instance_id: 3,
+                constructor: None,
+                repr: None
+            })),
+        )
+        .unwrap();
+        kb.add_mro(sym!("Class1"), vec![3]).unwrap();
+        kb.register_constant(
+            sym!("Class2"),
+            term!(Value::ExternalInstance(ExternalInstance {
+                instance_id: 4,
+                constructor: None,
+                repr: None
+            })),
+        )
+        .unwrap();
+        kb.add_mro(sym!("Class2"), vec![4]).unwrap();
+
+        // Same unregistered specializer.
+        kb.add_rule_type(rule!("f", ["_"; instance!("Unregistered")]));
+        kb.add_rule(rule!("f", ["_"; instance!("Unregistered")]));
+        assert!(kb.validate_rules().is_empty());
+
+        // Different unregistered specializers.
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("Unregistered1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("Unregistered2")]));
+        let diagnostics = kb.validate_rules();
+        assert_eq!(diagnostics.len(), 1);
+        let diagnostic = diagnostics.first().unwrap().to_string();
+        assert_eq!(diagnostic, "Unregistered class: Unregistered1");
+
+        // Same specializer registered as a non-instance constant.
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("String1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("String1")]));
+        assert!(kb.validate_rules().is_empty());
+
+        // Different specializers registered as non-instance constants.
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("String1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("String2")]));
+        let diagnostics = kb.validate_rules();
+        assert_eq!(diagnostics.len(), 1);
+        let diagnostic = diagnostics.first().unwrap().to_string();
+        let expected = "Rule type specializer String1 on parameter 1 should be a registered class, but instead it's registered as: \"not an external instance\"";
+        assert!(diagnostic.contains(expected), "{}", diagnostic);
+
+        // Same specializer registered as an external instance without an MRO.
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("ExternalInstanceWithoutMRO1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("ExternalInstanceWithoutMRO1")]));
+        assert!(kb.validate_rules().is_empty());
+
+        // Different specializers registered as external instances without MROs.
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("ExternalInstanceWithoutMRO1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("ExternalInstanceWithoutMRO2")]));
+        let diagnostics = kb.validate_rules();
+        assert_eq!(diagnostics.len(), 1);
+        let diagnostic = diagnostics.first().unwrap().to_string();
+        let expected = "Rule specializer ExternalInstanceWithoutMRO2 on parameter 1 is not registered as a class.";
+        assert!(diagnostic.contains(expected), "{}", diagnostic);
+
+        // Same specializer registered as a class.
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("Class1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("Class1")]));
+        assert!(kb.validate_rules().is_empty());
+
+        // Different specializers registered as classes.
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("Class1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("Class2")]));
+        let diagnostics = kb.validate_rules();
+        assert_eq!(diagnostics.len(), 1);
+        let diagnostic = diagnostics.first().unwrap().to_string();
+        let expected =
+            "Rule specializer Class2 on parameter 1 must match rule type specializer Class1";
+        assert!(diagnostic.contains(expected), "{}", diagnostic);
+
+        // Rule type specializer: unregistered
+        // Rule specializer: non-instance constant
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("Unregistered")]));
+        kb.add_rule(rule!("f", ["_"; instance!("String1")]));
+        let diagnostics = kb.validate_rules();
+        assert_eq!(diagnostics.len(), 1);
+        let diagnostic = diagnostics.first().unwrap().to_string();
+        assert_eq!(diagnostic, "Unregistered class: Unregistered");
+
+        // Rule type specializer: non-instance constant
+        // Rule specializer: unregistered
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("String1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("Unregistered")]));
+        let diagnostics = kb.validate_rules();
+        assert_eq!(diagnostics.len(), 1);
+        let diagnostic = diagnostics.first().unwrap().to_string();
+        let expected = "Rule type specializer String1 on parameter 1 should be a registered class, but instead it's registered as: \"not an external instance\"";
+        assert!(diagnostic.contains(expected), "{}", diagnostic);
+
+        // Rule type specializer: external instance w/o MRO
+        // Rule specializer: unregistered
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("ExternalInstanceWithoutMRO1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("Unregistered")]));
+        let diagnostics = kb.validate_rules();
+        assert_eq!(diagnostics.len(), 1);
+        let diagnostic = diagnostics.first().unwrap().to_string();
+        let expected = "Rule specializer Unregistered on parameter 1 is not registered as a class.";
+        assert!(diagnostic.contains(expected), "{}", diagnostic);
+
+        // Rule type specializer: external instance w/o MRO
+        // Rule specializer: class
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("ExternalInstanceWithoutMRO1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("Class1")]));
+        let diagnostics = kb.validate_rules();
+        assert_eq!(diagnostics.len(), 1);
+        let diagnostic = diagnostics.first().unwrap().to_string();
+        let expected = "Rule specializer Class1 on parameter 1 must match rule type specializer ExternalInstanceWithoutMRO1";
+        assert!(diagnostic.contains(expected), "{}", diagnostic);
     }
 }
