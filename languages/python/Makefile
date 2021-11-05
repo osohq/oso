@@ -13,7 +13,7 @@ endif
 	touch $@
 
 clean:
-	find ./ -name ".make.*" -exec rm -rf {} \;
+	find ./ -name ".make.*" -exec rm -f {} \;
 
 lint: lint-oso lint-django-oso lint-flask-oso lint-sqlalchemy-oso typecheck
 
