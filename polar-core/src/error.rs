@@ -351,24 +351,20 @@ The expression is: {expr}
             }
             Self::DataFilteringFieldMissing { var_type, field } => {
                 let msg = formatdoc!(
-                    r#"Unregistered field or relation: {}.{}
+                    r#"Unregistered field or relation: {var_type}.{field}
                     
-                    Please include `{}` in the `fields` parameter of your
-                    `register_class` call for {}.  For example, in Python:
+                    Please include `{field}` in the `fields` parameter of your
+                    `register_class` call for {var_type}.  For example, in Python:
 
-                        oso.register_class({}, fields={{
-                            {:?}: <type or relation>
+                        oso.register_class({var_type}, fields={{
+                            "{field}": <type or relation>
                         }})
 
                     For more information please refer to our documentation:
                         https://docs.osohq.com/guides/data_filtering.html
                     "#,
-                    var_type,
-                    field,
-                    field,
-                    var_type,
-                    var_type,
-                    field
+                    var_type = var_type,
+                    field = field
                 );
                 write!(f, "{}", msg)
             }
