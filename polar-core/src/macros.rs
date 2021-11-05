@@ -188,6 +188,7 @@ macro_rules! rule {
             params,
             body: term!(op!(And, $(term!($body)),+)),
             source_info: $crate::sources::SourceInfo::Test,
+            required: false,
         }}
     };
     ($name:expr, [$($args:tt)*]) => {{
@@ -198,6 +199,20 @@ macro_rules! rule {
             params,
             body: term!(op!(And)),
             source_info: $crate::sources::SourceInfo::Test,
+            required: false,
+        }
+    }};
+    // this macro variant is used exclusively to create rule *types*
+    // TODO: @patrickod break into specific-purpose rule_type! macro and RuleType struct
+    ($name:expr, [$($args:tt)*], $required:expr) => {{
+        let mut params = args!($($args)*);
+        params.reverse();
+        Rule {
+            name: sym!($name),
+            params,
+            body: term!(op!(And)),
+            source_info: $crate::sources::SourceInfo::Test,
+            required: $required,
         }
     }};
 }

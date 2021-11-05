@@ -1,23 +1,12 @@
 use std::collections::{HashMap, HashSet};
-use std::ops::Range;
 
-use lalrpop_util::ParseError as LalrpopError;
-
-use super::diagnostic::Diagnostic;
-use super::error::{ParseError, PolarError, PolarResult, RuntimeError};
+use super::error::{OperationalError, PolarError, PolarResult, ValidationError};
 use super::kb::KnowledgeBase;
-use super::lexer::Token;
 use super::rules::*;
 use super::terms::*;
 
 pub const ACTOR_UNION_NAME: &str = "Actor";
 pub const RESOURCE_UNION_NAME: &str = "Resource";
-
-// TODO(gj): if a user imports the built-in rule types, we should emit an error if the user
-// hasn't registered at least a single Actor and Resource type by the time loading is complete.
-// Maybe only if they've defined at least one rule matching one of the rule types? Otherwise,
-// the rule types will always trigger. But maybe their error message will be descriptive
-// enough as-is?
 
 // TODO(gj): round up longhand `has_permission/3` and `has_role/3` rules to incorporate their
 // referenced permissions & roles (implied & implier side) into the exhaustiveness checks.
@@ -29,148 +18,160 @@ pub const RESOURCE_UNION_NAME: &str = "Resource";
 // This'll come into play for "owner"-style actor relationships.
 
 // This type is used as a pre-validation bridge between LALRPOP & Rust.
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Production {
-    Roles(Term),                               // List<String>
-    Permissions(Term),                         // List<String>
-    Relations(Term),                           // Dict<Symbol, Symbol>
-    ShorthandRule(Term, (Term, Option<Term>)), // (String, (String, Option<String>))
+    Declaration((Term, Term)), // (Symbol, List<String> | Dict<Symbol, Symbol>)
+    ShorthandRule(Term, (Term, Option<(Term, Term)>)), // (String, (String, Option<(Symbol, String)>))
 }
 
-pub fn validate_relation_keyword(
-    (keyword, relation): (Term, Term),
-) -> Result<Term, LalrpopError<usize, Token, error::ParseError>> {
-    if keyword.value().as_symbol().unwrap().0 == "on" {
-        Ok(relation)
-    } else {
-        let (loc, ranges) = (keyword.offset(), vec![]);
+fn validate_relation_keyword(keyword: &Term) -> PolarResult<()> {
+    if keyword.value().as_symbol().unwrap().0 != "on" {
         let msg = format!(
             "Unexpected relation keyword '{}'. Did you mean 'on'?",
             keyword
         );
-        Err(LalrpopError::User {
-            error: ParseError::ResourceBlock { loc, msg, ranges },
-        })
+        return Err(ValidationError::ResourceBlock {
+            msg,
+            term: keyword.to_owned(),
+        }
+        .into());
     }
+    Ok(())
 }
 
-// TODO(gj): Create a Parsed<Term> or something that _always_ has source info.
-fn term_source_range(term: &Term) -> Range<usize> {
-    let (start, end) = term.span().unwrap();
-    start..end
+#[derive(Debug)]
+enum ParsedDeclaration {
+    Roles(Term),       // List<String>
+    Permissions(Term), // List<String>
+    Relations(Term),   // Dict<Symbol, Symbol>
 }
 
-pub fn validate_parsed_declaration(
-    (name, term): (Symbol, Term),
-) -> Result<Production, LalrpopError<usize, Token, error::ParseError>> {
-    match (name.0.as_ref(), term.value()) {
-        ("roles", Value::List(_)) => Ok(Production::Roles(term)),
-        ("permissions", Value::List(_)) => Ok(Production::Permissions(term)),
-        ("relations", Value::Dictionary(_)) => Ok(Production::Relations(term)),
+fn validate_parsed_declaration((name, term): (Term, Term)) -> PolarResult<ParsedDeclaration> {
+    match (name.value().as_symbol()?.0.as_ref(), term.value()) {
+        ("roles", Value::List(_)) => Ok(ParsedDeclaration::Roles(term)),
+        ("permissions", Value::List(_)) => Ok(ParsedDeclaration::Permissions(term)),
+        ("relations", Value::Dictionary(_)) => Ok(ParsedDeclaration::Relations(term)),
 
         ("roles", Value::Dictionary(_)) | ("permissions", Value::Dictionary(_)) => {
-            let (loc, ranges) = (term.offset(), vec![term_source_range(&term)]);
-            let msg = format!("Expected '{}' declaration to be a list of strings; found a dictionary:\n", name);
-            Err(LalrpopError::User { error: ParseError::ResourceBlock { loc, msg, ranges } })
+            let msg = format!("Expected '{}' declaration to be a list of strings; found a dictionary", name.to_polar());
+            Err(ValidationError::ResourceBlock { msg, term }.into())
         }
-        ("relations", Value::List(_)) => Err(LalrpopError::User {
-            error: ParseError::ResourceBlock {
-                loc: term.offset(),
-                msg: "Expected 'relations' declaration to be a dictionary; found a list:\n".to_owned(),
-                ranges: vec![term_source_range(&term)],
-            },
-        }),
+        ("relations", Value::List(_)) => Err(ValidationError::ResourceBlock {
+            msg: "Expected 'relations' declaration to be a dictionary; found a list".to_owned(),
+            term
+        }.into()),
 
-        (_, Value::List(_)) => Err(LalrpopError::User {
-            error: ParseError::ResourceBlock {
-                loc: term.offset(),
-                msg: format!(
-                    "Unexpected declaration '{}'. Did you mean for this to be 'roles = [ ... ];' or 'permissions = [ ... ];'?\n", name
-                ),
-                ranges: vec![term_source_range(&term)],
-            },
-        }),
-        (_, Value::Dictionary(_)) => Err(LalrpopError::User {
-            error: ParseError::ResourceBlock {
-                loc: term.offset(),
-                msg: format!(
-                    "Unexpected declaration '{}'. Did you mean for this to be 'relations = {{ ... }};'?\n", name
-                ),
-                ranges: vec![term_source_range(&term)],
-            },
-        }),
+        (_, Value::List(_)) => Err(ValidationError::ResourceBlock {
+            msg: format!(
+                "Unexpected declaration '{}'. Did you mean for this to be 'roles = [ ... ];' or 'permissions = [ ... ];'?", name.to_polar()
+            ),
+            term
+        }.into()),
+        (_, Value::Dictionary(_)) => Err(ValidationError::ResourceBlock {
+            msg: format!(
+                "Unexpected declaration '{}'. Did you mean for this to be 'relations = {{ ... }};'?", name.to_polar()
+            ),
+            term
+        }.into()),
         _ => unreachable!(),
     }
 }
 
-pub fn turn_productions_into_resource_block(
+fn block_type_from_keyword(keyword: Option<Term>, resource: &Term) -> PolarResult<BlockType> {
+    if let Some(keyword) = keyword {
+        match keyword.value().as_symbol().unwrap().0.as_ref() {
+            "actor" => Ok(BlockType::Actor),
+            "resource" => Ok(BlockType::Resource),
+            other => {
+                let msg = format!("Expected 'actor' or 'resource' but found '{}'.", other);
+                Err(ValidationError::ResourceBlock {
+                    msg,
+                    term: keyword.clone(),
+                }
+                .into())
+            }
+        }
+    } else {
+        // TODO(gj): add `resource` into this message -- e.g., ("Expected `actor {resource}` or
+        // `resource {resource}` ...", resource=resource).
+        let msg = "Expected 'actor' or 'resource' but found nothing.".to_owned();
+        Err(ValidationError::ResourceBlock {
+            msg,
+            term: resource.clone(),
+        }
+        .into())
+    }
+}
+
+pub fn resource_block_from_productions(
     keyword: Option<Term>,
     resource: Term,
     productions: Vec<Production>,
-) -> Result<ResourceBlock, LalrpopError<usize, Token, error::ParseError>> {
-    if let Some(keyword) = keyword {
-        let block_type = match keyword.value().as_symbol().unwrap().0.as_ref() {
-            "actor" => BlockType::Actor,
-            "resource" => BlockType::Resource,
-            _ => {
-                let (loc, ranges) = (keyword.offset(), vec![]);
-                let msg = format!(
-                    "Expected 'actor' or 'resource' but found '{}'.",
-                    keyword.to_polar()
-                );
-                let error = ParseError::ResourceBlock { loc, msg, ranges };
-                return Err(LalrpopError::User { error });
+) -> Result<ResourceBlock, Vec<PolarError>> {
+    let mut errors = vec![];
+
+    let block_type = match block_type_from_keyword(keyword, &resource) {
+        Ok(block_type) => Some(block_type),
+        Err(e) => {
+            errors.push(e);
+            None
+        }
+    };
+
+    let mut roles: Option<Term> = None;
+    let mut permissions: Option<Term> = None;
+    let mut relations: Option<Term> = None;
+    let mut shorthand_rules = vec![];
+
+    // TODO(gj): attach 'previous' to error via `related_info` section.
+    let make_error = |name: &str, _previous: &Term, new: &Term| {
+        let msg = format!(
+            "Multiple '{}' declarations in '{}' resource block.",
+            name,
+            resource.to_polar()
+        );
+        ValidationError::ResourceBlock {
+            msg,
+            term: new.clone(),
+        }
+        .into()
+    };
+
+    for production in productions {
+        match production {
+            Production::Declaration(declaration) => {
+                match validate_parsed_declaration(declaration) {
+                    Ok(ParsedDeclaration::Roles(new)) => {
+                        if let Some(previous) = roles {
+                            errors.push(make_error("roles", &previous, &new));
+                        }
+                        roles = Some(new);
+                    }
+                    Ok(ParsedDeclaration::Permissions(new)) => {
+                        if let Some(previous) = permissions {
+                            errors.push(make_error("permissions", &previous, &new));
+                        }
+                        permissions = Some(new);
+                    }
+                    Ok(ParsedDeclaration::Relations(new)) => {
+                        if let Some(previous) = relations {
+                            errors.push(make_error("relations", &previous, &new));
+                        }
+                        relations = Some(new);
+                    }
+                    Err(e) => errors.push(e),
+                }
             }
-        };
-
-        let mut roles: Option<Term> = None;
-        let mut permissions: Option<Term> = None;
-        let mut relations: Option<Term> = None;
-        let mut shorthand_rules = vec![];
-
-        let make_error = |name: &str, previous: &Term, new: &Term| {
-            let loc = new.offset();
-            let ranges = vec![term_source_range(previous), term_source_range(new)];
-            let msg = format!(
-                "Multiple '{}' declarations in '{}' resource block.\n",
-                name,
-                resource.to_polar()
-            );
-            ParseError::ResourceBlock { loc, msg, ranges }
-        };
-
-        for production in productions {
-            match production {
-                Production::Roles(new) => {
-                    if let Some(previous) = roles {
-                        let error = make_error("roles", &previous, &new);
-                        return Err(LalrpopError::User { error });
-                    }
-                    roles = Some(new);
-                }
-                Production::Permissions(new) => {
-                    if let Some(previous) = permissions {
-                        let error = make_error("permissions", &previous, &new);
-                        return Err(LalrpopError::User { error });
-                    }
-                    permissions = Some(new);
-                }
-                Production::Relations(new) => {
-                    if let Some(previous) = relations {
-                        let error = make_error("relations", &previous, &new);
-                        return Err(LalrpopError::User { error });
-                    }
-                    relations = Some(new);
-                }
-                Production::ShorthandRule(head, body) => {
-                    // TODO(gj): Warn the user on duplicate rule definitions.
-                    shorthand_rules.push(ShorthandRule { head, body });
-                }
+            Production::ShorthandRule(head, body) => {
+                // TODO(gj): Warn the user on duplicate rule definitions.
+                shorthand_rules.push(ShorthandRule { head, body });
             }
         }
+    }
 
+    if errors.is_empty() {
         Ok(ResourceBlock {
-            block_type,
+            block_type: block_type.expect("must exist if there are no errors"),
             resource,
             roles,
             permissions,
@@ -178,10 +179,7 @@ pub fn turn_productions_into_resource_block(
             shorthand_rules,
         })
     } else {
-        let (loc, ranges) = (resource.offset(), vec![]);
-        let msg = "Expected 'actor' or 'resource' but found nothing.".to_owned();
-        let error = ParseError::ResourceBlock { loc, msg, ranges };
-        Err(LalrpopError::User { error })
+        Err(errors)
     }
 }
 
@@ -197,9 +195,10 @@ pub enum Declaration {
 pub struct ShorthandRule {
     /// `Term` is a `String`. E.g., `"member"` in `"member" if "owner";`.
     pub head: Term,
-    /// Both terms are strings. The former is the 'implier' and the latter is the 'relation', e.g.,
-    /// `"owner"` and `"parent"`, respectively, in `"writer" if "owner" on "parent";`.
-    pub body: (Term, Option<Term>),
+    /// The first `Term` is the 'implier' `String`, e.g., `"owner"` in `"member" if "owner";`. The
+    /// `Option` is the optional 'relation' `Symbol` and `String`, e.g., `on "parent"` in `"member"
+    /// if "owner" on "parent";`.
+    pub body: (Term, Option<(Term, Term)>),
 }
 
 impl ShorthandRule {
@@ -227,9 +226,8 @@ impl Declaration {
         if let Declaration::Relation(relation) = self {
             Ok(relation)
         } else {
-            Err(RuntimeError::TypeError {
+            Err(OperationalError::InvalidState {
                 msg: format!("Expected Relation; got: {:?}", self),
-                stack_trace: None,
             }
             .into())
         }
@@ -322,17 +320,22 @@ impl ResourceBlocks {
         declaration: &Term,
         resource_name: &Term,
     ) -> PolarResult<&Declaration> {
-        if let Some(declaration) = self.declarations[resource_name].get(declaration) {
+        let maybe_declarations = self.declarations.get(resource_name);
+        let maybe_declaration = maybe_declarations.and_then(|ds| ds.get(declaration));
+        if let Some(declaration) = maybe_declaration {
             Ok(declaration)
         } else {
-            let (loc, ranges) = (declaration.offset(), vec![]);
             let msg = format!("Undeclared term {} referenced in rule in the '{}' resource block. Did you mean to declare it as a role, permission, or relation?", declaration.to_polar(), resource_name);
-            Err(ParseError::ResourceBlock { loc, msg, ranges }.into())
+            Err(ValidationError::ResourceBlock {
+                msg,
+                term: declaration.clone(),
+            }
+            .into())
         }
     }
 
     /// Look up `relation` in `resource` block and return its type.
-    fn get_relation_type_in_resource_block(
+    pub fn get_relation_type_in_resource_block(
         &self,
         relation: &Term,
         resource: &Term,
@@ -367,28 +370,43 @@ impl ResourceBlocks {
             if let Some(declaration) = declarations.get(declaration) {
                 Ok(declaration.as_rule_name())
             } else {
-                let (loc, ranges) = (declaration.offset(), vec![]);
                 let msg = format!("{}: Term {} not declared in related resource block '{}'. Did you mean to declare it as a role, permission, or relation in the '{}' resource block?", resource.to_polar(), declaration.to_polar(), related_block.to_polar(), related_block.to_polar());
-                Err(ParseError::ResourceBlock { loc, msg, ranges }.into())
+                Err(ValidationError::ResourceBlock {
+                    msg,
+                    term: declaration.clone(),
+                }
+                .into())
             }
         } else {
-            let (loc, ranges) = (related_block.offset(), vec![]);
             let msg = format!("{}: Relation {} in rule body `{} on {}` has type '{}', but no such resource block exists. Try declaring one: `resource {} {{}}`", resource.to_polar(), relation.to_polar(), declaration.to_polar(), relation.to_polar(), related_block.to_polar(), related_block.to_polar());
-            Err(ParseError::ResourceBlock { loc, msg, ranges }.into())
+            Err(ValidationError::ResourceBlock {
+                msg,
+                term: related_block.clone(),
+            }
+            .into())
         }
     }
-}
 
-pub fn check_all_relation_types_have_been_registered(kb: &KnowledgeBase) -> Vec<PolarError> {
-    let mut errors = vec![];
-    for declarations in kb.resource_blocks.declarations.values() {
-        for (declaration, kind) in declarations {
-            if let Declaration::Relation(relation_type) = kind {
-                errors.extend(relation_type_is_registered(kb, (declaration, relation_type)).err());
+    pub fn declarations(&self) -> &HashMap<Term, Declarations> {
+        &self.declarations
+    }
+
+    pub fn has_roles(&self) -> bool {
+        let mut declarations = self.declarations().values().flat_map(HashMap::values);
+        declarations.any(|d| matches!(d, Declaration::Role))
+    }
+
+    pub fn relation_tuples(&self) -> Vec<(&Term, &Term, &Term)> {
+        let mut tuples = vec![];
+        for (object, declarations) in self.declarations() {
+            for (name, declaration) in declarations {
+                if let Declaration::Relation(subject) = declaration {
+                    tuples.push((subject, name, object));
+                }
             }
         }
+        tuples
     }
-    errors
 }
 
 fn index_declarations(
@@ -405,13 +423,16 @@ fn index_declarations(
                 .insert(role.clone(), Declaration::Role)
                 .is_some()
             {
-                let (loc, ranges) = (role.offset(), vec![]);
                 let msg = format!(
                     "{}: Duplicate declaration of {} in the roles list.",
                     resource.to_polar(),
                     role.to_polar()
                 );
-                return Err(ParseError::ResourceBlock { loc, msg, ranges }.into());
+                return Err(ValidationError::ResourceBlock {
+                    msg,
+                    term: role.clone(),
+                }
+                .into());
             }
         }
     }
@@ -433,8 +454,11 @@ fn index_declarations(
                         permission.to_polar()
                     )
                 };
-                let (loc, ranges) = (permission.offset(), vec![]);
-                return Err(ParseError::ResourceBlock { loc, msg, ranges }.into());
+                return Err(ValidationError::ResourceBlock {
+                    msg,
+                    term: permission.clone(),
+                }
+                .into());
             }
         }
     }
@@ -462,8 +486,11 @@ fn index_declarations(
                     ),
                     _ => unreachable!("duplicate dict keys aren't parseable"),
                 };
-                let (loc, ranges) = (relation_type.offset(), vec![]);
-                return Err(ParseError::ResourceBlock { loc, msg, ranges }.into());
+                return Err(ValidationError::ResourceBlock {
+                    msg,
+                    term: relation_type.clone(),
+                }
+                .into());
             }
         }
     }
@@ -494,7 +521,7 @@ fn resource_name_as_var(resource_name: &Term, related: bool) -> Value {
 /// Turn a shorthand rule body into an `And`-wrapped call (for a local rule) or pair of calls (for
 /// a cross-resource rule).
 fn shorthand_rule_body_to_rule_body(
-    (implier, relation): &(Term, Option<Term>),
+    (implier, relation): &(Term, Option<(Term, Term)>),
     resource_name: &Term,
     blocks: &ResourceBlocks,
 ) -> PolarResult<Term> {
@@ -505,11 +532,14 @@ fn shorthand_rule_body_to_rule_body(
     // The actor variable will always be named `actor`.
     let actor_var = implier.clone_with_value(value!(sym!("actor")));
 
-    // If there's a relation, e.g., `if <implier> on <relation>`...
-    if let Some(relation) = relation {
-        // ...then we need to link the rewritten `<implier>` and `<relation>` rules via a shared
-        // variable. To be clever, we'll name the variable according to the type of the relation,
-        // e.g., if the declared relation is `parent: Org` we'll name the variable `org`.
+    // If there's a relation, e.g., `if <implier> <keyword> <relation>`...
+    if let Some((keyword, relation)) = relation {
+        // ...then we need to validate the keyword...
+        validate_relation_keyword(keyword)?;
+
+        // ...and then link the rewritten `<implier>` and `<relation>` rules via a shared variable.
+        // To be clever, we'll name the variable according to the type of the relation, e.g., if
+        // the declared relation is `parent: Org` we'll name the variable `org`.
         let relation_type = blocks.get_relation_type_in_resource_block(relation, resource_name)?;
         let relation_type_var =
             relation.clone_with_value(resource_name_as_var(relation_type, true));
@@ -590,65 +620,12 @@ fn check_for_duplicate_resource_blocks(
     resource: &Term,
 ) -> PolarResult<()> {
     if blocks.exists(resource) {
-        let (loc, ranges) = (resource.offset(), vec![]);
         let msg = format!("Duplicate declaration of '{}' resource block.", resource);
-        return Err(ParseError::ResourceBlock { loc, msg, ranges }.into());
-    }
-    Ok(())
-}
-
-// TODO(gj): no way to know in the core if `term` was registered as a class or a constant.
-fn is_registered_class(kb: &KnowledgeBase, term: &Term) -> PolarResult<bool> {
-    Ok(kb.is_constant(term.value().as_symbol()?))
-}
-
-fn check_that_block_type_is_not_already_registered(
-    kb: &KnowledgeBase,
-    block_type: &BlockType,
-    resource: &Term,
-) -> PolarResult<()> {
-    let union_name = match block_type {
-        BlockType::Actor => ACTOR_UNION_NAME,
-        BlockType::Resource => RESOURCE_UNION_NAME,
-    };
-    let already_registered = is_registered_class(kb, &term!(sym!(union_name)))?;
-    if already_registered {
-        let msg = format!("Cannot declare '{} {} {{ ... }}'; '{}' already registered as a constant. To resolve this conflict, please register '{}' under a different name.", block_type.to_polar(), resource.to_polar(), union_name, union_name);
-        let (loc, ranges) = (resource.offset(), vec![]);
-        return Err(ParseError::ResourceBlock { loc, msg, ranges }.into());
-    }
-    Ok(())
-}
-
-fn check_that_block_resource_is_registered(kb: &KnowledgeBase, resource: &Term) -> PolarResult<()> {
-    if !is_registered_class(kb, resource)? {
-        // TODO(gj): better error message
-        let msg = format!(
-            "Invalid resource block '{}' -- '{}' must be a registered class.",
-            resource.to_polar(),
-            resource.to_polar(),
-        );
-        let (loc, ranges) = (resource.offset(), vec![]);
-        // TODO(gj): UnregisteredClassError in the core.
-        return Err(ParseError::ResourceBlock { loc, msg, ranges }.into());
-    }
-    Ok(())
-}
-
-fn relation_type_is_registered(
-    kb: &KnowledgeBase,
-    (relation, kind): (&Term, &Term),
-) -> PolarResult<()> {
-    if !is_registered_class(kb, kind)? {
-        let msg = format!(
-            "Type '{}' in relation '{}: {}' must be registered as a class.",
-            kind.to_polar(),
-            relation.value().as_string()?,
-            kind.to_polar(),
-        );
-        let (loc, ranges) = (relation.offset(), vec![]);
-        // TODO(gj): UnregisteredClassError in the core.
-        return Err(ParseError::ResourceBlock { loc, msg, ranges }.into());
+        return Err(ValidationError::ResourceBlock {
+            msg,
+            term: resource.clone(),
+        }
+        .into());
     }
     Ok(())
 }
@@ -667,8 +644,10 @@ fn check_that_shorthand_rule_heads_are_declared_locally(
                 head.to_polar(),
                 resource
             );
-            let (loc, ranges) = (head.offset(), vec![]);
-            let error = ParseError::ResourceBlock { loc, msg, ranges };
+            let error = ValidationError::ResourceBlock {
+                msg,
+                term: head.clone(),
+            };
             errors.push(error.into());
         }
     }
@@ -676,13 +655,10 @@ fn check_that_shorthand_rule_heads_are_declared_locally(
 }
 
 impl ResourceBlock {
-    pub fn add_to_kb(self, kb: &mut KnowledgeBase) -> Vec<Diagnostic> {
+    pub fn add_to_kb(self, kb: &mut KnowledgeBase) -> Vec<PolarError> {
         let mut errors = vec![];
-        errors.extend(
-            check_that_block_type_is_not_already_registered(kb, &self.block_type, &self.resource)
-                .err(),
-        );
-        errors.extend(check_that_block_resource_is_registered(kb, &self.resource).err());
+        // Check that resource block's resource has been registered as a class.
+        errors.extend(kb.get_registered_class(&self.resource).err());
         errors
             .extend(check_for_duplicate_resource_blocks(&kb.resource_blocks, &self.resource).err());
 
@@ -710,7 +686,7 @@ impl ResourceBlock {
             Err(e) => errors.push(e),
         }
 
-        errors.into_iter().map(Diagnostic::Error).collect()
+        errors
     }
 }
 
@@ -721,18 +697,19 @@ mod tests {
     use std::collections::HashSet;
 
     use super::*;
+    use crate::diagnostic::Diagnostic;
     use crate::events::QueryEvent;
     use crate::parser::{parse_lines, Line};
     use crate::polar::Polar;
 
     #[track_caller]
     fn expect_error(p: &Polar, policy: &str, expected: &str) {
-        let msg = match p.load_str(policy).unwrap_err() {
-            error::PolarError {
-                kind: error::ErrorKind::Parse(error::ParseError::ResourceBlock { msg, .. }),
-                ..
-            } => msg,
-            e => panic!("{}", e),
+        use error::{ErrorKind::*, ValidationError::*};
+        let error = p.load_str(policy).unwrap_err();
+        let msg = match error.kind {
+            Validation(ResourceBlock { msg, .. }) => msg,
+            Validation(UnregisteredClass { .. }) => error.to_string(),
+            _ => panic!("Unexpected error: {}", error),
         };
 
         assert!(msg.contains(expected));
@@ -765,7 +742,7 @@ mod tests {
         );
         let shorthand_rule = ShorthandRule {
             head: term!("reader"),
-            body: (term!("member"), Some(term!("parent"))),
+            body: (term!("member"), Some((term!(sym!("on")), term!("parent")))),
         };
         let rewritten_role_role = shorthand_rule
             .as_rule(&term!(sym!("repo")), &blocks)
@@ -793,7 +770,7 @@ mod tests {
 
         let shorthand_rule = ShorthandRule {
             head: term!("read"),
-            body: (term!("read"), Some(term!("parent"))),
+            body: (term!("read"), Some((term!(sym!("on")), term!("parent")))),
         };
         let rewritten_role_role = shorthand_rule.as_rule(&resource, &blocks).unwrap();
 
@@ -873,7 +850,7 @@ mod tests {
         );
         let shorthand_rule = ShorthandRule {
             head: term!("reader"),
-            body: (term!("member"), Some(term!("parent"))),
+            body: (term!("member"), Some((term!(sym!("on")), term!("parent")))),
         };
         let rewritten_role_role = shorthand_rule
             .as_rule(&term!(sym!("Repo")), &blocks)
@@ -888,11 +865,7 @@ mod tests {
     fn test_resource_block_resource_must_be_registered() {
         let p = Polar::new();
         let valid_policy = "resource Org{}";
-        expect_error(
-            &p,
-            valid_policy,
-            "Invalid resource block 'Org' -- 'Org' must be a registered class.",
-        );
+        expect_error(&p, valid_policy, "Unregistered class: Org");
         p.register_constant(sym!("Org"), term!("unimportant"))
             .unwrap();
         assert!(p.load_str(valid_policy).is_ok());
@@ -986,6 +959,22 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "outside scope of current task; leaving test here to be implemented later"]
+    fn test_resource_block_resource_relations_are_the_only_thing_that_can_appear_after_on() {
+        let p = Polar::new();
+        p.register_constant(sym!("Repo"), term!("unimportant"))
+            .unwrap();
+        expect_error(
+            &p,
+            r#"resource Repo {
+                roles = ["writer"];
+                "writer" if "owner" on "parent";
+            }"#,
+            r#"Repo: term "parent" must be declared as a relation: `relations = { parent: <SomeResource> };`"#,
+        );
+    }
+
+    #[test]
     #[ignore = "not yet implemented"]
     fn test_resource_block_with_circular_shorthand_rules() {
         let p = Polar::new();
@@ -1019,11 +1008,7 @@ mod tests {
         p.register_constant(sym!("Repo"), term!("unimportant"))
             .unwrap();
         let policy = r#"resource Repo { relations = { parent: Org }; }"#;
-        expect_error(
-            &p,
-            policy,
-            "Type 'Org' in relation 'parent: Org' must be registered as a class.",
-        );
+        expect_error(&p, policy, "Unregistered class: Org");
         p.register_constant(sym!("Org"), term!("unimportant"))
             .unwrap();
         p.load_str(policy).unwrap();
@@ -1105,7 +1090,7 @@ mod tests {
                 },
                 ShorthandRule {
                     head: term!("reader"),
-                    body: (term!("member"), Some(term!("parent"))),
+                    body: (term!("member"), Some((term!(sym!("on")), term!("parent")))),
                 },
             ],
         };
@@ -1113,7 +1098,17 @@ mod tests {
         // Helpers
 
         let equal = |line: &Line, expected: &ResourceBlock| match line {
-            Line::ResourceBlock(parsed) => {
+            Line::ResourceBlock {
+                keyword,
+                resource,
+                productions,
+            } => {
+                let parsed = resource_block_from_productions(
+                    keyword.clone(),
+                    resource.clone(),
+                    productions.clone(),
+                )
+                .unwrap();
                 let parsed_shorthand_rules: HashSet<&ShorthandRule> =
                     HashSet::from_iter(&parsed.shorthand_rules);
                 let expected_shorthand_rules = HashSet::from_iter(&expected.shorthand_rules);
@@ -1214,12 +1209,12 @@ mod tests {
         expect_error(
             &p,
             r#"resource Org{roles={};}"#,
-            r#"Expected 'roles' declaration to be a list of strings; found a dictionary:"#,
+            r#"Expected 'roles' declaration to be a list of strings; found a dictionary"#,
         );
         expect_error(
             &p,
             r#"resource Org{relations=[];}"#,
-            r#"Expected 'relations' declaration to be a dictionary; found a list:"#,
+            r#"Expected 'relations' declaration to be a dictionary; found a list"#,
         );
         expect_error(
             &p,
@@ -1231,10 +1226,21 @@ mod tests {
             r#"resource Org{foo={};}"#,
             r#"Unexpected declaration 'foo'. Did you mean for this to be 'relations = { ... };'?"#,
         );
+    }
+
+    #[test]
+    fn test_resource_block_relation_keywords() {
+        let p = Polar::new();
+        p.register_constant(sym!("Org"), term!("unimportant"))
+            .unwrap();
         expect_error(
             &p,
-            r#"resource Org{"foo" if "bar" onn "baz";}"#,
-            r#"Unexpected relation keyword 'onn'. Did you mean 'on'?"#,
+            r#"resource Org {
+              roles = ["foo", "bar"];
+              relations = { baz: Org };
+              "foo" if "bar" onn "baz";
+            }"#,
+            "Unexpected relation keyword 'onn'. Did you mean 'on'?",
         );
     }
 
@@ -1274,7 +1280,7 @@ mod tests {
         let q = p.new_query(&format!("new {}()", ACTOR_UNION_NAME), false);
         let msg = match q {
             Err(error::PolarError {
-                kind: error::ErrorKind::Parse(error::ParseError::ResourceBlock { msg, .. }),
+                kind: error::ErrorKind::Validation(ValidationError::ResourceBlock { msg, .. }),
                 ..
             }) => msg,
             Err(e) => panic!("{}", e),
@@ -1331,7 +1337,7 @@ mod tests {
     #[test]
     fn test_validate_rules_with_union_type_specializers() {
         let mut kb = KnowledgeBase::new();
-        kb.constant(
+        kb.register_constant(
             sym!("Fruit"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 1,
@@ -1340,7 +1346,7 @@ mod tests {
             })),
         )
         .unwrap();
-        kb.constant(
+        kb.register_constant(
             sym!("Citrus"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 2,
@@ -1349,7 +1355,7 @@ mod tests {
             })),
         )
         .unwrap();
-        kb.constant(
+        kb.register_constant(
             sym!("Orange"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 3,
@@ -1364,7 +1370,7 @@ mod tests {
         // Orange is a subclass of Citrus
         kb.add_mro(sym!("Orange"), vec![3, 2, 1]).unwrap();
 
-        kb.constant(
+        kb.register_constant(
             sym!("User"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 4,
@@ -1484,4 +1490,69 @@ mod tests {
     // TODO(gj): add test for union pattern with fields. Behavior will probably be the same as for
     // fieldless union pattern where we create a choicepoint of matches against every union member
     // with the same set of fields.
+
+    // Test creation of resource-specific rule type (for `has_relation`) and general rule type (for
+    // `has_role`):
+    //   - has_relation between (Organization, "parent", Repository)
+    //   - has_role created because at least one resource block has roles declared
+    #[test]
+    fn test_create_resource_specific_rule_types() -> Result<(), PolarError> {
+        let policy = r#"
+            resource Organization {
+                roles = ["member"];
+            }
+
+            resource Repository {
+                roles = ["reader"];
+                relations = {parent: Organization};
+                "reader" if "member" on "parent";
+            }
+
+            has_relation(organization: Organization, "parent", repository: Repository) if
+                repository.org_id = organization.id;
+
+            has_role(user: Actor, _role: String, organization: Organization) if
+                organization.id in user.org_ids;
+        "#;
+
+        let polar = Polar::new();
+
+        let repo_instance = ExternalInstance {
+            instance_id: 1,
+            constructor: None,
+            repr: None,
+        };
+        let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
+        let repo_name = sym!("Repository");
+        polar.register_constant(repo_name.clone(), repo_term)?;
+        polar.register_mro(repo_name.clone(), vec![repo_instance.instance_id])?;
+
+        let org_instance = ExternalInstance {
+            instance_id: 2,
+            constructor: None,
+            repr: None,
+        };
+        let org_term = term!(Value::ExternalInstance(org_instance.clone()));
+        let org_name = sym!("Organization");
+        polar.register_constant(org_name.clone(), org_term)?;
+        polar.register_mro(org_name.clone(), vec![org_instance.instance_id])?;
+
+        polar.load_str(policy)?;
+
+        let kb = polar.kb.read().unwrap();
+
+        let has_role_rule_types = kb.get_rule_types(&sym!("has_role")).unwrap();
+        // has_role(actor: Actor, role: String, resource: Resource)
+        let expected = rule!("has_role", ["actor"; instance!(ACTOR_UNION_NAME), "role"; instance!("String"), "resource"; instance!(RESOURCE_UNION_NAME)]);
+        assert_eq!(1, has_role_rule_types.len());
+        assert_eq!(has_role_rule_types[0], expected);
+
+        let has_relation_rule_types = kb.get_rule_types(&sym!("has_relation")).unwrap();
+        // has_relation(organization: Organization, "parent", repository: Repository)
+        let expected = rule!("has_relation", ["subject"; instance!(org_name), "parent", "object"; instance!(repo_name)]);
+        assert_eq!(1, has_relation_rule_types.len());
+        assert_eq!(has_relation_rule_types[0], expected,);
+
+        Ok(())
+    }
 }

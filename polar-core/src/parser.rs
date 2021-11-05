@@ -15,7 +15,7 @@ lalrpop_mod!(
 
 use super::error::{self, PolarResult};
 use super::lexer::{self, Lexer};
-use super::resource_block::ResourceBlock;
+use super::resource_block::Production;
 use super::rules::*;
 use super::terms::*;
 
@@ -24,7 +24,11 @@ pub enum Line {
     Rule(Rule),
     RuleType(Rule),
     Query(Term),
-    ResourceBlock(ResourceBlock),
+    ResourceBlock {
+        keyword: Option<Term>,
+        resource: Term,
+        productions: Vec<Production>,
+    },
 }
 
 fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> error::ParseError {
