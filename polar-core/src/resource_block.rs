@@ -868,6 +868,13 @@ mod tests {
         expect_error(
             &p,
             invalid_policy,
+            // TODO(gj): maybe outside the scope of this PR, but we might think about doing an even
+            // more helpful error message here that notes that `"reader"` is declared in a
+            // different block for the same resource. So maybe this should actually be a warning
+            // instead of an error? I haven't fully thought through the problem space -- is there a
+            // legit reason for someone to want to declare roles/permissions in one resource block
+            // and then declare shorthand rules referencing those roles/permissions in a different
+            // resource block for the same resource?
             r#"Undeclared term "reader" referenced in rule in 'Repo' resource block. Did you mean to declare it as a role, permission, or relation?"#,
         );
 
