@@ -1,6 +1,9 @@
-use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
+
+use serde::{Deserialize, Serialize};
+
+use super::warning::Warning;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MessageKind {
@@ -15,10 +18,10 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn warning(msg: String) -> Message {
+    pub fn warning(warning: Warning) -> Message {
         Self {
             kind: MessageKind::Warning,
-            msg,
+            msg: warning.to_string(),
         }
     }
 }
