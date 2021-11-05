@@ -12,36 +12,12 @@ draft: true
 
 ### Core
 
-#### Breaking changes
-
-{{% callout "Warning" "orange" %}}
-  This release contains breaking changes. Be sure to follow migration steps
-  before upgrading.
-{{% /callout %}}
-
-##### Parenthesized variable dereferencing in specializer position is no longer permitted
-
-Previously, Oso would treat parenthesized specializers as variables. This made
-it possible to write rules with parameters that referenced each other, like so:
-
-```polar
-isa(x, y, x: (y));
-```
-
-Now, that parenthesized `(y)` will be a parse error. The same logic can be
-written in the body of the rule with the `matches` operator:
-
-```polar
-isa(x, y) if x matches y;
-```
-
-If you discovered this feature and were using it, please get in touch. We'd
-love to hear about your use case!
-
 #### Other bugs & improvements
 
 - Fixed a bug where a negated constraint on a dot lookup could cause Polar to crash
   when the underlying variable became bound.
+- Removed syntax for parenthesized specializers like `f(_: (x));`, which don't
+  currently achieve anything.
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
