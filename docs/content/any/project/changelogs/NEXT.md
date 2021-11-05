@@ -28,7 +28,12 @@ it possible to write rules with parameters that referenced each other, like so:
 isa(x, y, x: (y));
 ```
 
-Now, that parenthesized `(y)` will be a parse error.
+Now, that parenthesized `(y)` will be a parse error. The same logic can be
+written in the body of the rule with the `matches` operator:
+
+```polar
+isa(x, y) if x matches y;
+```
 
 If you discovered this feature and were using it, please get in touch. We'd
 love to hear about your use case!
