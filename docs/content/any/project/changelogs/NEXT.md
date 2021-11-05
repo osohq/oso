@@ -21,6 +21,12 @@ draft: true
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
+### Node.js
+
+#### Other bugs & improvements
+- The `Class` type for representing abstract resources for data filtering is
+  now a top-level export.
+
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
 #### Breaking changes
