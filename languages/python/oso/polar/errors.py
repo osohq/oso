@@ -5,7 +5,6 @@ from polar.exceptions import (
     IntegerOverflow,
     InvalidToken,
     UnrecognizedToken,
-    SerializationError,
     PolarTypeError,
     StackOverflowError,
     FileLoadingError,
@@ -68,7 +67,6 @@ def _parse_error(subkind, message, details):
 
 def _runtime_error(subkind, message, details):
     runtime_errors = {
-        "Serialization": SerializationError(message, details),
         "Unsupported": UnsupportedError(message, details),
         "TypeError": PolarTypeError(message, details),
         "StackOverflow": StackOverflowError(message, details),

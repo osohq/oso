@@ -92,8 +92,6 @@ module Oso
         # @return [::Oso::Polar::PolarRuntimeError] the object converted into the expected format.
         private_class_method def self.runtime_error(kind, msg:, details:) # rubocop:disable Metrics/MethodLength
           case kind
-          when 'Serialization'
-            ::Oso::Polar::SerializationError.new(msg, details: details)
           when 'Unsupported'
             ::Oso::Polar::UnsupportedError.new(msg, details: details)
           when 'TypeError'
