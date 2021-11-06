@@ -11,7 +11,6 @@ from sqlalchemy.sql import expression as expr
 
 from oso import Oso
 
-from sqlalchemy_oso.auth import authorize_model
 from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 
 LOG_ON = os.getenv("SQLALCHEMY_OSO_LOG_Q", None) == "1"
@@ -284,6 +283,7 @@ try:
 
     @event.listens_for(Session, "do_orm_execute")
     def do_orm_execute(execute_state):
+        from sqlalchemy_oso.auth import authorize_model
         if not execute_state.is_select:
             return
 
@@ -341,6 +341,7 @@ except ImportError:
         """Authorize an existing query with an Oso instance, user, and a
         permissions map indicating which actions to check for which SQLAlchemy
         models."""
+        from sqlalchemy_oso.auth import authorize_model
         session = query.session
 
         # Early return if this isn't an authorized session.

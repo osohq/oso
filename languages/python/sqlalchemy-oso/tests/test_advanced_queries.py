@@ -4,7 +4,7 @@ and subquery.
 import pytest
 
 import sqlalchemy
-from sqlalchemy import Column, ForeignKey, Integer, select, String
+from sqlalchemy import Column, ForeignKey, Integer, select, String, create_engine
 from sqlalchemy.orm import (
     declarative_base,
     joinedload,
@@ -14,6 +14,7 @@ from sqlalchemy.orm import (
     contains_eager,
     with_loader_criteria,
     Load,
+    Session,
     relationship)
 
 from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
@@ -23,6 +24,7 @@ from sqlalchemy_oso.sqlalchemy_utils import (
     get_joinedload_entities,
     to_class
 )
+from oso import Oso
 
 
 pytestmark = pytest.mark.skipif(USING_SQLAlchemy_v1_3,
@@ -43,7 +45,7 @@ class A(Base):
 
     id = Column(Integer, primary_key=True)
     data = Column(String)
-    bs = relationship("B")
+    bs = relationship("B", backref="a")
     a1s = relationship("A1")
 
 
@@ -80,6 +82,8 @@ def test_get_column_entities(stmt, o):
     assert get_column_entities(stmt) == o
 
 
+# TODO errors for wildcard, String.
+
 @pytest.mark.parametrize('stmt,o', (
     (select(A), set()),
     (select(A).options(joinedload(A.bs)), {B}),
@@ -99,7 +103,7 @@ def test_get_joinedload_entities(stmt, o):
 def test_get_joinedload_entities_str(stmt, o):
     assert set(map(to_class, get_joinedload_entities(stmt))) == o
 
-
+# TODO test with lazy = "subquery", etc.
 def test_default_loader_strategies():
     Base2 = declarative_base()
     class D(Base2):
@@ -135,47 +139,27 @@ def test_subquery_joined():
 
     assert all_entities_in_statement(query_for_c) == {A, B, A1}
 
-# Filter on B not applied as expected
-def test_with_loader_criteria_subquery():
-    subquery = select(A, B).join(B).subquery(name='sub')
-    subquery_aliased = sqlalchemy.orm.aliased(A, alias=subquery, flat=True, adapt_on_names=True)
-    query_for_c = select(subquery_aliased, A1).outerjoin(A1).options(
-        contains_eager(subquery_aliased.bs, alias=subquery),
-        with_loader_criteria(B, B.id == 1, include_aliases=True),
-    )
 
-    print(str(query_for_c))
-    assert ' b.id =' in str(query_for_c)
-
-# Throws
-def test_with_loader_criteria_simple_subquery_alias():
-    subquery = select(A).subquery(name='sub')
-    subquery_aliased = sqlalchemy.orm.aliased(A, alias=subquery, flat=True, adapt_on_names=True)
-    query_for_c = select(subquery_aliased).options(
-        with_loader_criteria(A, A.id == 1, include_aliases=True),
-    )
-
-    assert ' a.id = ' in str(query_for_c)
-
-# Works
 def test_with_loader_criteria_simple_alias():
     aliased = sqlalchemy.orm.aliased(A)
-    query_for_c = select(aliased).options(
+    query_for_a = select(aliased).options(
         with_loader_criteria(A, A.id == 1, include_aliases=True),
     )
 
-    print(str(query_for_c))
-    assert str(query_for_c) == 0
+    assert all_entities_in_statement(query_for_a) == {A}
+    # Crude way of detecting filter on a.id in the generated query.
+    assert 'a_1.id =' in str(query_for_a)
 
-# Works
+
 def test_with_loader_criteria_simple_subquery_no_alias():
     subquery = select(A).subquery(name='sub')
-    query_for_c = select(subquery).options(
+    query_for_a = select(subquery).options(
         with_loader_criteria(A, A.id == 1, include_aliases=True),
     )
 
-    print(str(query_for_c))
-    assert str(query_for_c) == 0
+    assert all_entities_in_statement(query_for_a) == {A}
+    # Crude way of detecting filter on a.id in the generated query.
+    assert 'a.id =' in str(query_for_a)
 
 
 # TODO test subquery, selectin. These are okay I believe because the
@@ -188,6 +172,7 @@ def test_with_loader_criteria_simple_subquery_no_alias():
 def test_subquery(stmt, o):
     assert all_entities_in_statement(stmt) == o
 
+
 @pytest.mark.xfail(reason="idk how to test selectin yet")
 @pytest.mark.parametrize('stmt,o', (
     (select(A).options(selectinload(A.bs)), {A, B}),
@@ -195,5 +180,28 @@ def test_subquery(stmt, o):
 def test_selectinload(stmt, o):
     assert all_entities_in_statement(stmt) == o
 
-# TODO test m2m
-# TODO test lazy load over joinedload
+
+def test_lazy_load():
+    from sqlalchemy_oso.session import AuthorizedSession
+    oso = Oso()
+    oso.register_class(A)
+    oso.register_class(B)
+
+    # Allow 1.
+    oso.load_str('allow(_, _, a: A) if a.id = 0; allow(_, _, b: B) if b.id = 0;')
+
+    # Ensure that running a lazy load properly applies authorization.
+    engine = create_engine('sqlite://')
+    Base.metadata.create_all(engine)
+
+    with Session(bind=engine) as s, s.begin():
+        a0 = A(id=0, data="0")
+        b0 = B(id=0, a=a0)
+        b1 = B(id=1, a=a0)
+        s.add_all([a0, b0, b1])
+
+    session = AuthorizedSession(bind=engine, oso=oso, user='u', checked_permissions={A: 'a', B: 'a'})
+    with session.begin():
+        a = session.query(A).one()
+        bs = a.bs
+        assert len(bs) == 1
