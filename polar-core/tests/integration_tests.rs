@@ -9,13 +9,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use mock_externals::MockExternal;
 use polar_core::{
-    error::*,
-    events::*,
-    messages::*,
-    polar::{Polar, Query},
-    sym, term,
-    terms::*,
-    traces::*,
+    error::*, events::*, messages::*, polar::Polar, query::Query, sym, term, terms::*, traces::*,
     value, values,
 };
 
