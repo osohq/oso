@@ -790,8 +790,7 @@ impl PolarVirtualMachine {
     }
 
     pub fn source(&self, term: &Term) -> Option<Source> {
-        term.get_source_id()
-            .and_then(|id| self.kb.read().unwrap().sources.get_source(id))
+        self.kb.read().unwrap().get_term_source(term)
     }
 
     /// Get the query stack as a string for printing in error messages.

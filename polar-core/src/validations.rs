@@ -80,10 +80,8 @@ impl<'kb> SingletonVisitor<'kb> {
         singletons
             .into_iter()
             .map(|term| {
-                let src = term
-                    .get_source_id()
-                    .and_then(|id| self.kb.sources.get_source(id));
-                diagnostic_from_singleton(term, src)
+                let source = self.kb.get_term_source(&term);
+                diagnostic_from_singleton(term, source)
             })
             .collect()
     }
@@ -159,10 +157,7 @@ impl<'kb> Visitor for AndOrPrecendenceCheck<'kb> {
                 )
             }) {
                 let span = term.span().unwrap();
-                let source = term
-                    .get_source_id()
-                    .and_then(|src_id| self.kb.sources.get_source(src_id))
-                    .unwrap();
+                let source = self.kb.get_term_source(term).unwrap();
 
                 // check if source _before_ the term contains an opening
                 // parenthesis
