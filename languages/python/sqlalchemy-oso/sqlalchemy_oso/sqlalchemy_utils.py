@@ -115,8 +115,6 @@ try:
                 # (which I'm realizing might be added by ourselves)
                 pass
 
-    # End POC code.
-
 except ImportError:
     # This code should not be called for SQLAlchemy 1.4.
     def all_entities_in_statement(_):
