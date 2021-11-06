@@ -43,6 +43,13 @@ macro_rules! term {
 }
 
 #[macro_export]
+macro_rules! list {
+    ($($args:expr),*) => {
+        Value::List(vec![$(term!($args)),*])
+    };
+}
+
+#[macro_export]
 macro_rules! pattern {
     ($arg:expr) => {
         $crate::macros::TestHelper::<Pattern>::from($arg).0

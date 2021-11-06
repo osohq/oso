@@ -11,6 +11,7 @@ use mock_externals::MockExternal;
 use polar_core::{
     error::*,
     events::*,
+    list,
     messages::*,
     polar::{Polar, Query},
     sym, term,
@@ -2615,5 +2616,447 @@ allow(actor, action, resource) if has_permission(actor, action, resource);
     assert!(err
         .to_string()
         .contains("Missing implementation for required rule has_relation("));
+    Ok(())
+}
+
+// https://sites.google.com/site/prologsite/prolog-problems/
+
+#[test]
+// 1.01 (*) Find the last element of a list.
+fn problem_1_01() -> TestResult {
+    let p = polar();
+    p.load_str(
+        r#"my_last(X,[X]);
+           my_last(X,[_,*L]) if my_last(X,L);"#,
+    )?;
+    qvar(&p, r#"my_last(x, ["a", "b", "c", "d"])"#, "x", values!["d"]);
+    Ok(())
+}
+
+#[test]
+// 1.02 (*) Find the last but one element of a list.
+fn problem_1_02() -> TestResult {
+    let p = polar();
+    p.load_str(
+        r#"last_but_one(X,[X,_]);
+           last_but_one(X,[_,Y,*Ys]) if last_but_one(X,[Y,*Ys]);"#,
+    )?;
+    qvar(
+        &p,
+        r#"last_but_one(x, ["a", "b", "c", "d"])"#,
+        "x",
+        values!["c"],
+    );
+    Ok(())
+}
+
+#[test]
+// 1.03 (*) Find the K'th element of a list.
+fn problem_1_03() -> TestResult {
+    let p = polar();
+    p.load_str(
+        r#"element_at(X,[X,*_],1);
+           element_at(X,[_,*L],K) if K > 1 and K1 = K - 1 and element_at(X,L,K1);"#,
+    )?;
+    qvar(
+        &p,
+        r#"element_at(x, ["a", "b", "c", "d", "e"], 3)"#,
+        "x",
+        values!["c"],
+    );
+    Ok(())
+}
+
+const MY_LENGTH: &str = r#"my_length([],0);
+                           my_length([_,*L],N) if my_length(L,N1) and N = N1 + 1;"#;
+
+#[test]
+// 1.04 (*) Find the number of elements of a list.
+fn problem_1_04() -> TestResult {
+    let p = polar();
+    p.load_str(MY_LENGTH)?;
+    qvar(
+        &p,
+        r#"my_length(["a", "b", "c", "d", "e"], x)"#,
+        "x",
+        values![5],
+    );
+    Ok(())
+}
+
+#[test]
+// 1.05 (*) Reverse a list.
+fn problem_1_05() -> TestResult {
+    let p = polar();
+    p.load_str(
+        r#"my_reverse(L1,L2) if my_rev(L1,L2,[]);
+
+           my_rev([],L2,L2) if cut;
+           my_rev([X,*Xs],L2,Acc) if my_rev(Xs,L2,[X,*Acc]);"#,
+    )?;
+    qvar(
+        &p,
+        r#"my_reverse(["a", "b", "c", "d", "e"], x)"#,
+        "x",
+        vec![value!(["e", "d", "c", "b", "a"])],
+    );
+    Ok(())
+}
+
+// https://www.swi-prolog.org/pldoc/doc/_SWI_/library/lists.pl?show=src#reverse/2
+const SWIPL_REVERSE_2: &str = r#"reverse(Xs, Ys) if
+                                 reverse(Xs, [], Ys, Ys);
+
+                                 reverse([], Ys, Ys, []);
+                                 reverse([X,*Xs], Rs, Ys, [_,*Bound]) if
+                                     reverse(Xs, [X,*Rs], Ys, Bound);"#;
+
+#[test]
+// 1.06 (*) Find out whether a list is a palindrome.
+fn problem_1_06() -> TestResult {
+    let p = polar();
+    let is_palindrome = "is_palindrome(L) if reverse(L,L);";
+    p.load_str(&(SWIPL_REVERSE_2.to_owned() + is_palindrome))?;
+    qnull(&p, r#"is_palindrome(["a", "b", "c", "d", "e"])"#);
+    qeval(&p, r#"is_palindrome(["a", "b", "c", "b", "a"])"#);
+    Ok(())
+}
+
+// https://www.swi-prolog.org/pldoc/doc/_SWI_/library/lists.pl?show=src#append/3
+const SWIPL_APPEND_3: &str = r#"append([], L, L);
+                                append([H,*T], L, [H,*R]) if
+                                    append(T, L, R);"#;
+
+#[test]
+// 1.07 (**) Flatten a nested list structure.
+fn problem_1_07() -> TestResult {
+    let p = polar();
+    let my_flatten = r#"my_flatten(X,[X]) if not X matches [*_];
+                        my_flatten([],[]);
+                        my_flatten([X,*Xs],Zs) if my_flatten(X,Y) and my_flatten(Xs,Ys) and append(Y,Ys,Zs);"#;
+    p.load_str(&(SWIPL_APPEND_3.to_owned() + my_flatten))?;
+    qvar(
+        &p,
+        r#"my_flatten(["a", ["b", ["c", "d"], "e"]], x)"#,
+        "x",
+        vec![value!(["a", "b", "c", "d", "e"])],
+    );
+    Ok(())
+}
+
+#[test]
+// 1.08 (**) Eliminate consecutive duplicates of list elements.
+fn problem_1_08() -> TestResult {
+    let p = polar();
+    p.load_str(
+        r#"compress([],[]);
+           compress([X],[X]);
+           compress([X,X,*Xs],Zs) if compress([X,*Xs],Zs);
+           compress([X,Y,*Ys],[X,*Zs]) if not X = Y and compress([Y,*Ys],Zs);"#,
+    )?;
+    qvar(
+        &p,
+        r#"compress(["a","a","a","a","b","c","c","a","a","d","e","e","e","e"],x)"#,
+        "x",
+        vec![value!(["a", "b", "c", "a", "d", "e"])],
+    );
+    Ok(())
+}
+
+const PROBLEM_1_09: &str = r#"pack([],[]);
+                              pack([X,*Xs],[Z,*Zs]) if transfer(X,Xs,Ys,Z) and pack(Ys,Zs);
+
+                              transfer(X,[],[],[X]);
+                              transfer(X,[Y,*Ys],[Y,*Ys],[X]) if not X = Y;
+                              transfer(X,[X,*Xs],Ys,[X,*Zs]) if transfer(X,Xs,Ys,Zs);"#;
+
+#[test]
+// 1.09 (**) Pack consecutive duplicates of list elements into sublists.
+fn problem_1_09() -> TestResult {
+    let p = polar();
+    p.load_str(PROBLEM_1_09)?;
+    qvar(
+        &p,
+        r#"pack(["a","a","a","a","b","c","c","a","a","d","e","e","e","e"],X)"#,
+        "X",
+        vec![Value::List(vec![
+            term!(["a", "a", "a", "a"]),
+            term!(["b"]),
+            term!(["c", "c"]),
+            term!(["a", "a"]),
+            term!(["d"]),
+            term!(["e", "e", "e", "e"]),
+        ])],
+    );
+    Ok(())
+}
+
+const PROBLEM_1_10: &str = r#"encode(L1,L2) if pack(L1,L) and transform(L,L2);
+
+                              transform([],[]);
+                              transform([[X,*Xs],*Ys],[[N,X],*Zs]) if my_length([X,*Xs],N) and transform(Ys,Zs);"#;
+
+#[test]
+// 1.10 (*) Run-length encoding of a list.
+fn problem_1_10() -> TestResult {
+    let p = polar();
+    p.load_str(&(PROBLEM_1_09.to_owned() + MY_LENGTH + PROBLEM_1_10))?;
+    qvar(
+        &p,
+        r#"encode(["a","a","a","a","b","c","c","a","a","d","e","e","e","e"],X)"#,
+        "X",
+        vec![Value::List(vec![
+            term!([4, "a"]),
+            term!([1, "b"]),
+            term!([2, "c"]),
+            term!([2, "a"]),
+            term!([1, "d"]),
+            term!([4, "e"]),
+        ])],
+    );
+    Ok(())
+}
+
+#[test]
+// 1.11 (*) Modified run-length encoding.
+fn problem_1_11() -> TestResult {
+    let p = polar();
+    let encode_modified = r#"encode_modified(L1,L2) if encode(L1,L) and strip(L,L2);
+
+                             strip([],[]);
+                             strip([[1,X],*Ys],[X,*Zs]) if strip(Ys,Zs);
+                             strip([[N,X],*Ys],[[N,X],*Zs]) if N > 1 and strip(Ys,Zs);"#;
+    p.load_str(&(PROBLEM_1_09.to_owned() + MY_LENGTH + PROBLEM_1_10 + encode_modified))?;
+    qvar(
+        &p,
+        r#"encode_modified(["a","a","a","a","b","c","c","a","a","d","e","e","e","e"],X)"#,
+        "X",
+        vec![Value::List(vec![
+            term!([4, "a"]),
+            term!("b"),
+            term!([2, "c"]),
+            term!([2, "a"]),
+            term!("d"),
+            term!([4, "e"]),
+        ])],
+    );
+    Ok(())
+}
+
+#[test]
+// 1.12 (**) Decode a run-length encoded list.
+fn problem_1_12() -> TestResult {
+    let p = polar();
+    p.load_str(
+        r#"decode([],[]);
+           decode([X,*Ys],[X,*Zs]) if not X matches [*_] and decode(Ys,Zs);
+           decode([[1,X],*Ys],[X,*Zs]) if decode(Ys,Zs);
+           decode([[N,X],*Ys],[X,*Zs]) if N > 1 and N1 = N - 1 and decode([[N1,X],*Ys],Zs);"#,
+    )?;
+    qvar(
+        &p,
+        r#"decode([[4,"a"],"b",[2,"c"],[2,"a"],"d",[4,"e"]],X)"#,
+        "X",
+        vec![list![
+            "a", "a", "a", "a", "b", "c", "c", "a", "a", "d", "e", "e", "e", "e"
+        ]],
+    );
+    Ok(())
+}
+
+#[test]
+// 1.13 (**) Run-length encoding of a list (direct solution).
+fn problem_1_13() -> TestResult {
+    let p = polar();
+    p.load_str(
+        r#"encode_direct([],[]);
+           encode_direct([X,*Xs],[Z,*Zs]) if count(X,Xs,Ys,1,Z) and encode_direct(Ys,Zs);
+
+           count(X,[],[],1,X);
+           count(X,[],[],N,[N,X]) if N > 1;
+           count(X,[Y,*Ys],[Y,*Ys],1,X) if not X = Y;
+           count(X,[Y,*Ys],[Y,*Ys],N,[N,X]) if N > 1 and not X = Y;
+           count(X,[X,*Xs],Ys,K,T) if K1 = K + 1 and count(X,Xs,Ys,K1,T);"#,
+    )?;
+    qvar(
+        &p,
+        r#"encode_direct(["a","a","a","a","b","c","c","a","a","d","e","e","e","e"],X)"#,
+        "X",
+        vec![Value::List(vec![
+            term!([4, "a"]),
+            term!("b"),
+            term!([2, "c"]),
+            term!([2, "a"]),
+            term!("d"),
+            term!([4, "e"]),
+        ])],
+    );
+    Ok(())
+}
+
+#[test]
+// 1.14 (*) Duplicate the elements of a list.
+fn problem_1_14() -> TestResult {
+    let p = polar();
+    p.load_str(
+        r#"dupli([],[]);
+           dupli([X,*Xs],[X,X,*Ys]) if dupli(Xs,Ys);"#,
+    )?;
+    qvar(
+        &p,
+        r#"dupli(["a","b","c","c","d"],X)"#,
+        "X",
+        vec![list!["a", "a", "b", "b", "c", "c", "c", "c", "d", "d"]],
+    );
+    Ok(())
+}
+
+#[test]
+// 1.15 (**) Duplicate the elements of a list a given number of times.
+fn problem_1_15() -> TestResult {
+    let p = polar();
+    p.load_str(
+        r#"dupli(L1,N,L2) if dupli(L1,N,L2,N);
+
+           dupli([],_,[],_);
+           dupli([_,*Xs],N,Ys,0) if dupli(Xs,N,Ys,N);
+           dupli([X,*Xs],N,[X,*Ys],K) if K > 0 and K1 = K - 1 and dupli([X,*Xs],N,Ys,K1);"#,
+    )?;
+    qvar(
+        &p,
+        r#"dupli(["a","b","c"],3,X)"#,
+        "X",
+        vec![list!["a", "a", "a", "b", "b", "b", "c", "c", "c"]],
+    );
+    // This is the result returned in SWI Prolog. Polar currently times out.
+    // qvars(&p, "dupli(X,3,Y)", &["X", "Y"], vec![values![sym!("Y"), []]]);
+    Ok(())
+}
+
+#[test]
+// 1.16 (**) Drop every N'th element from a list.
+fn problem_1_16() -> TestResult {
+    let p = polar();
+    p.load_str(
+        r#"drop(L1,N,L2) if drop(L1,N,L2,N);
+
+           drop([],_,[],_);
+           drop([_,*Xs],N,Ys,1) if drop(Xs,N,Ys,N);
+           drop([X,*Xs],N,[X,*Ys],K) if K > 1 and K1 = K - 1 and drop(Xs,N,Ys,K1);"#,
+    )?;
+    qvar(
+        &p,
+        r#"drop(["a","b","c","d","e","f","g","h","i","k"],3,X)"#,
+        "X",
+        vec![list!["a", "b", "d", "e", "g", "h", "k"]],
+    );
+    Ok(())
+}
+
+const PROBLEM_1_17: &str = r#"split(L,0,[],L);
+                              split([X,*Xs],N,[X,*Ys],Zs) if N > 0 and N1 = N - 1 and split(Xs,N1,Ys,Zs);"#;
+
+#[test]
+// 1.17 (*) Split a list into two parts; the length of the first part is given.
+fn problem_1_17() -> TestResult {
+    let p = polar();
+    p.load_str(PROBLEM_1_17)?;
+    qvars(
+        &p,
+        r#"split(["a","b","c","d","e","f","g","h","i","k"],3,L1,L2)"#,
+        &["L1", "L2"],
+        vec![vec![
+            list!["a", "b", "c"],
+            list!["d", "e", "f", "g", "h", "i", "k"],
+        ]],
+    );
+    Ok(())
+}
+
+#[test]
+// 1.18 (**) Extract a slice from a list.
+fn problem_1_18() -> TestResult {
+    let p = polar();
+    p.load_str(
+        r#"slice([X,*_],1,1,[X]);
+           slice([X,*Xs],1,K,[X,*Ys]) if K > 1 and
+               K1 = K - 1 and slice(Xs,1,K1,Ys);
+           slice([_,*Xs],I,K,Ys) if I > 1 and
+               I1 = I - 1 and K1 = K - 1 and slice(Xs,I1,K1,Ys);"#,
+    )?;
+    qvar(
+        &p,
+        r#"slice(["a","b","c","d","e","f","g","h","i","k"],3,7,L)"#,
+        "L",
+        vec![list!["c", "d", "e", "f", "g"]],
+    );
+    Ok(())
+}
+
+#[test]
+// 1.19 (**) Rotate a list N places to the left.
+fn problem_1_19() -> TestResult {
+    let p = polar();
+    let rotate = r#"rotate([],_,[]) if cut;
+                    rotate(L1,N,L2) if
+                        my_length(L1,NL1) and N1 = N mod NL1 and split(L1,N1,S1,S2) and append(S2,S1,L2);"#;
+    p.load_str(&(PROBLEM_1_17.to_owned() + SWIPL_APPEND_3 + MY_LENGTH + rotate))?;
+    qvar(
+        &p,
+        r#"rotate(["a","b","c","d","e","f","g","h"],3,X)"#,
+        "X",
+        vec![list!["d", "e", "f", "g", "h", "a", "b", "c"]],
+    );
+    qvar(
+        &p,
+        r#"rotate(["a","b","c","d","e","f","g","h"],-2,X)"#,
+        "X",
+        vec![list!["g", "h", "a", "b", "c", "d", "e", "f"]],
+    );
+    Ok(())
+}
+
+const PROBLEM_1_20: &str = r#"remove_at(X,[X,*Xs],1,Xs);
+                              remove_at(X,[Y,*Xs],K,[Y,*Ys]) if K > 1 and
+                                  K1 = K - 1 and remove_at(X,Xs,K1,Ys);"#;
+
+#[test]
+// 1.20 (*) Remove the K'th element from a list.
+fn problem_1_20() -> TestResult {
+    let p = polar();
+    p.load_str(PROBLEM_1_20)?;
+    qvars(
+        &p,
+        r#"remove_at(X,["a","b","c","d"],2,R)"#,
+        &["X", "R"],
+        values![["b", list!["a", "c", "d"]]],
+    );
+    Ok(())
+}
+
+#[test]
+// 1.21 (*) Insert an element at a given position into a list.
+fn problem_1_21() -> TestResult {
+    let p = polar();
+    let insert_at = "insert_at(X,L,K,R) if remove_at(X,R,K,L);";
+    p.load_str(&(PROBLEM_1_20.to_owned() + insert_at))?;
+    qvar(
+        &p,
+        r#"insert_at("alfa",["a","b","c","d"],2,L)"#,
+        "L",
+        vec![list!["a", "alfa", "b", "c", "d"]],
+    );
+    Ok(())
+}
+
+#[test]
+// 1.22 (*) Create a list containing all integers within a given range.
+fn problem_1_22() -> TestResult {
+    let p = polar();
+    p.load_str(
+        r#"range(I,I,[I]);
+           range(I,K,[I,*L]) if I < K and I1 = I + 1 and range(I1,K,L);"#,
+    )?;
+    qvar(&p, r#"range(4,9,L)"#, "L", vec![list![4, 5, 6, 7, 8, 9]]);
     Ok(())
 }
