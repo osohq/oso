@@ -1,5 +1,7 @@
 use std::fmt;
 
+use indoc::indoc;
+
 use super::terms::{InstanceLiteral, Pattern, Term, Value};
 
 #[derive(Debug)]
@@ -14,44 +16,44 @@ pub enum Warning {
     UnknownSpecializer { term: Term },
 }
 
-// TODO(gj): move to formatting.rs?
+const AMBIGUOUS_PRECEDENCE_MSG: &str = indoc! {"
+    Expression without parentheses could be ambiguous.
+    Prior to 0.20, `x and y or z` would parse as `x and (y or z)`.
+    As of 0.20, it parses as `(x and y) or z`, matching other languages.
+"};
+
+const MISSING_ALLOW_RULE_MSG: &str = indoc! {"
+    Your policy does not contain an allow rule, which usually means
+    that no actions are allowed. Did you mean to add an allow rule to
+    the top of your policy?
+
+      allow(actor, action, resource) if ...
+
+    You can also suppress this warning by adding an allow_field or allow_request
+    rule. For more information about allow rules, see:
+
+      https://docs.osohq.com/reference/polar/builtin_rule_types.html#allow
+"};
+
+const MISSING_HAS_PERMISSION_RULE_MSG: &str = indoc! {"
+    Warning: your policy uses resource blocks but does not call the
+    has_permission rule. This means that permissions you define in a
+    resource block will not have any effect. Did you mean to include a
+    call to has_permission in a top-level allow rule?
+
+      allow(actor, action, resource) if
+          has_permission(actor, action, resource);
+
+    For more information about resource blocks, see https://docs.osohq.com/any/reference/polar/polar-syntax.html#actor-and-resource-blocks
+"};
+
 impl fmt::Display for Warning {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use Warning::*;
         match self {
-            AmbiguousPrecedence { .. } => write!(
-                f,
-                "Expression without parentheses could be ambiguous. \n\
-                    Prior to 0.20, `x and y or z` would parse as `x and (y or z)`. \n\
-                    As of 0.20, it parses as `(x and y) or z`, matching other languages. \n\
-                \n\n"
-            )?,
-
-            // TODO(gj): indoc or something
-            MissingAllowRule => write!(f,
-                "Your policy does not contain an allow rule, which usually means \
-that no actions are allowed. Did you mean to add an allow rule to \
-the top of your policy?
-
-  allow(actor, action, resource) if ...
-
-You can also suppress this warning by adding an allow_field or allow_request \
-rule. For more information about allow rules, see:
-
-  https://docs.osohq.com/reference/polar/builtin_rule_types.html#allow")?,
-
-            MissingHasPermissionRule => write!(f,
-                "Warning: your policy uses resource blocks but does not call the \
-                has_permission rule. This means that permissions you define in a \
-                resource block will not have any effect. Did you mean to include a \
-                call to has_permission in a top-level allow rule?
-
-                  allow(actor, action, resource) if
-                      has_permission(actor, action, resource);
-
-                For more information about resource blocks, see https://docs.osohq.com/any/reference/polar/polar-syntax.html#actor-and-resource-blocks"
-            )?,
-
+            AmbiguousPrecedence { .. } => write!(f, "{}", AMBIGUOUS_PRECEDENCE_MSG)?,
+            MissingAllowRule => write!(f, "{}", MISSING_ALLOW_RULE_MSG)?,
+            MissingHasPermissionRule => write!(f, "{}", MISSING_HAS_PERMISSION_RULE_MSG)?,
             UnknownSpecializer { term } => {
                 write!(f, "Unknown specializer {}", term)?;
                 if let Some(suggestion) = common_specializer_misspellings(term) {
