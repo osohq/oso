@@ -1,4 +1,5 @@
 use super::diagnostic::Diagnostic;
+use super::error::ValidationError;
 use super::formatting::source_lines;
 use super::kb::*;
 use super::rules::*;
@@ -267,34 +268,27 @@ pub fn check_resource_blocks_missing_has_permission(kb: &KnowledgeBase) -> Optio
 }
 
 struct UndefinedRuleVisitor<'kb> {
-    kb: &'kb KnowledgeBase,
     call_terms: Vec<Term>,
     defined_rules: HashSet<&'kb Symbol>,
 }
 
 impl<'kb> UndefinedRuleVisitor<'kb> {
-    fn new(kb: &'kb KnowledgeBase, defined_rules: HashSet<&'kb Symbol>) -> Self {
+    fn new(defined_rules: HashSet<&'kb Symbol>) -> Self {
         Self {
-            kb,
             defined_rules,
             call_terms: Vec::new(),
         }
     }
 
-    fn errors(&mut self) -> Vec<Diagnostic> {
-        let mut errors = vec![];
-        for term in &self.call_terms {
-            let call = term.value().as_call().unwrap();
-            if !self.defined_rules.contains(&call.name) {
-                errors.push(Diagnostic::Error(self.kb.set_error_context(
-                    term,
-                    error::ValidationError::UndefinedRule {
-                        rule_name: call.name.0.clone(),
-                    },
-                )));
-            }
-        }
-        errors
+    fn errors(self) -> Vec<Diagnostic> {
+        self.call_terms
+            .into_iter()
+            .filter(|term| {
+                let call = term.value().as_call().unwrap();
+                !self.defined_rules.contains(&call.name)
+            })
+            .map(|term| Diagnostic::Error(ValidationError::UndefinedRule { term }.into()))
+            .collect()
     }
 }
 
@@ -314,11 +308,10 @@ impl<'kb> Visitor for UndefinedRuleVisitor<'kb> {
 }
 
 pub fn check_undefined_rule_calls(kb: &KnowledgeBase) -> Vec<Diagnostic> {
-    let mut visitor = UndefinedRuleVisitor::new(kb, kb.get_rules().keys().collect());
+    let mut visitor = UndefinedRuleVisitor::new(kb.get_rules().keys().collect());
     for rule in kb.get_rules().values() {
         visitor.visit_generic_rule(rule);
     }
-
     visitor.errors()
 }
 
@@ -399,7 +392,7 @@ mod tests {
         let errors = check_undefined_rule_calls(&kb);
         assert_eq!(errors.len(), 1);
         assert!(format!("{}", errors.first().unwrap())
-            .contains(r#"Call to undefined rule "no_such_rule""#));
+            .contains("Call to undefined rule: no_such_rule(y)"));
     }
 
     #[test]

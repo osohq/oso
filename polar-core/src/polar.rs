@@ -364,7 +364,7 @@ mod tests {
         let next = diagnostics.next().unwrap();
         assert!(matches!(next, Diagnostic::Error(_)));
         assert!(
-            next.to_string().starts_with("Call to undefined rule \"g\""),
+            next.to_string().starts_with("Call to undefined rule: g()"),
             "{}",
             next
         );
