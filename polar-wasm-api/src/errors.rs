@@ -11,7 +11,7 @@ pub struct Error {
 }
 
 pub fn serialization_error(msg: String) -> JsValue {
-    Error::from(PolarError::from(RuntimeError::Serialization { msg })).into()
+    Error::from(PolarError::from(OperationalError::Serialization { msg })).into()
 }
 
 fn kind(err: &PolarError) -> String {
@@ -36,11 +36,11 @@ fn kind(err: &PolarError) -> String {
         Runtime(FileLoading { .. }) => "RuntimeError::FileLoading",
         Runtime(IncompatibleBindings { .. }) => "RuntimeError::IncompatibleBindings",
         Runtime(QueryTimeout { .. }) => "RuntimeError::QueryTimeout",
-        Runtime(Serialization { .. }) => "RuntimeError::Serialization",
         Runtime(StackOverflow { .. }) => "RuntimeError::StackOverflow",
         Runtime(TypeError { .. }) => "RuntimeError::TypeError",
         Runtime(UnhandledPartial { .. }) => "RuntimeError::UnhandledPartial",
         Runtime(Unsupported { .. }) => "RuntimeError::Unsupported",
+        Operational(Serialization { .. }) => "OperationalError::Serialization",
         Operational(Unimplemented { .. }) => "OperationalError::Unimplemented",
         Operational(Unknown) => "OperationalError::Unknown",
         Operational(InvalidState { .. }) => "OperationalError::InvalidState",
