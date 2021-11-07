@@ -4,7 +4,7 @@ use std::sync::Arc;
 pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::diagnostic::Diagnostic;
-use super::error::{PolarError, PolarResult};
+use super::error::{OperationalError, PolarError, PolarResult, ValidationError};
 use super::resource_block::{ResourceBlocks, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::*;
@@ -28,7 +28,7 @@ impl RuleParamMatch {
 pub struct KnowledgeBase {
     /// A map of bindings: variable name → value. The VM uses a stack internally,
     /// but can translate to and from this type.
-    pub constants: Bindings,
+    constants: Bindings,
     /// Map of class name -> MRO list where the MRO list is a list of class instance IDs
     mro: HashMap<Symbol, Vec<u64>>,
 
@@ -96,10 +96,20 @@ impl KnowledgeBase {
     }
 
     pub fn validate_rules(&self) -> Vec<Diagnostic> {
-        let mut diagnostics = self.validate_rule_calls();
+        // Prior to #1310 these validations were not order dependent due to the
+        // use of static default rule types.
+        // Now that rule types are dynamically generated based on policy
+        // contents we validate types first to surface missing required rule
+        // implementations which would otherwise raise opaque "call to undefined rule"
+        // errors
+        let mut diagnostics = vec![];
+
         if let Err(e) = self.validate_rule_types() {
             diagnostics.push(Diagnostic::Error(e));
         }
+
+        diagnostics.append(&mut self.validate_rule_calls());
+
         diagnostics
     }
 
@@ -109,6 +119,7 @@ impl KnowledgeBase {
 
     /// Validate that all rules loaded into the knowledge base are valid based on rule types.
     fn validate_rule_types(&self) -> PolarResult<()> {
+        // For every rule, if there *is* a rule type, check that the rule matches the rule type.
         for (rule_name, generic_rule) in &self.rules {
             if let Some(types) = self.rule_types.get(rule_name) {
                 // If a type with the same name exists, then the parameters must match for each rule
@@ -147,6 +158,38 @@ impl KnowledgeBase {
                 }
             }
         }
+
+        // For every rule type that is *required*, see that there is at least one corresponding
+        // implementation.
+        for rule_type in self.rule_types.required_rule_types() {
+            if let Some(GenericRule { rules, .. }) = self.rules.get(&rule_type.name) {
+                let mut found_match = false;
+                for rule in rules.values() {
+                    found_match = self
+                        .rule_params_match(rule.as_ref(), rule_type)
+                        .map(|r| matches!(r, RuleParamMatch::True))?;
+                    if found_match {
+                        break;
+                    }
+                }
+                if !found_match {
+                    return Err(self.set_error_context(
+                        &rule_type.body,
+                        error::ValidationError::MissingRequiredRule {
+                            rule: rule_type.clone(),
+                        },
+                    ));
+                }
+            } else {
+                return Err(self.set_error_context(
+                    &rule_type.body,
+                    error::ValidationError::MissingRequiredRule {
+                        rule: rule_type.clone(),
+                    },
+                ));
+            }
+        }
+
         Ok(())
     }
 
@@ -179,11 +222,9 @@ impl KnowledgeBase {
         index: usize,
     ) -> PolarResult<RuleParamMatch> {
         // Get the unique ID of the prototype instance pattern class.
-        if let Some(Value::ExternalInstance(ExternalInstance { instance_id, .. })) = self
-            .constants
-            .get(&rule_type_instance.tag)
-            .map(|t| t.value())
-        {
+        // TODO(gj): make actual term available here instead of constructing a fake test one.
+        let term = self.get_registered_class(&term!(rule_type_instance.tag.clone()))?;
+        if let Value::ExternalInstance(ExternalInstance { instance_id, .. }) = term.value() {
             if let Some(rule_mro) = self.mro.get(&rule_instance.tag) {
                 if !rule_mro.contains(instance_id) {
                     Ok(RuleParamMatch::False(format!(
@@ -198,13 +239,17 @@ impl KnowledgeBase {
                     Ok(RuleParamMatch::True)
                 }
             } else {
-                Err(error::OperationalError::InvalidState{msg: format!(
-                    "All registered classes must have a registered MRO. Class {} does not have a registered MRO.",
-                    &rule_instance.tag
-                )}.into())
+                // If `rule_instance.tag` were registered as a class, it would have an MRO.
+                Ok(RuleParamMatch::False(format!(
+                    "Rule specializer {} on parameter {} is not registered as a class.",
+                    rule_instance.tag, index
+                )))
             }
         } else {
-            unreachable!("Unregistered specializer classes should be caught before this point.");
+            Ok(RuleParamMatch::False(format!(
+                "Rule type specializer {} on parameter {} should be a registered class, but instead it's registered as a constant with value: {}",
+                rule_type_instance.tag, index, term
+            )))
         }
     }
 
@@ -266,12 +311,18 @@ impl KnowledgeBase {
                         }
                         if !success {
                             let mut err = format!("Rule specializer {} on parameter {} must be a member of rule type specializer {}", rule_instance.tag,index, rule_type_instance.tag);
-                            if rule_type_instance.tag == sym!("Actor") {
+                            if rule_type_instance.tag.0 == ACTOR_UNION_NAME {
                                 err.push_str(&format!("
 
 \tPerhaps you meant to add an actor block to the top of your policy, like this:
 
 \t  actor {} {{}}", rule_instance.tag));
+                            } else if rule_type_instance.tag.0 == RESOURCE_UNION_NAME {
+                                err.push_str(&format!("
+
+\tPerhaps you meant to add a resource block to your policy, like this:
+
+\t  resource {} {{ .. }}", rule_instance.tag));
                             }
 
                             return Ok(RuleParamMatch::False(err));
@@ -288,13 +339,7 @@ impl KnowledgeBase {
                 }
             }
             (Pattern::Dictionary(rule_type_fields), Pattern::Dictionary(rule_fields))
-            | (
-                Pattern::Dictionary(rule_type_fields),
-                Pattern::Instance(InstanceLiteral {
-                    tag: _,
-                    fields: rule_fields,
-                }),
-            ) => {
+            | (Pattern::Dictionary(rule_type_fields), Pattern::Instance(InstanceLiteral { fields: rule_fields, .. })) => {
                 if self.param_fields_match(rule_type_fields, rule_fields) {
                     RuleParamMatch::True
                 } else {
@@ -429,10 +474,11 @@ impl KnowledgeBase {
                                     instance!(sym!("Dictionary"), rule_fields.clone().fields)
                                 }
                                 _ => {
-                                    unreachable!(
+                                    let msg = format!(
                                         "Value variant {} cannot be a specializer",
                                         rule_value
-                                    )
+                                    );
+                                    return Err(OperationalError::InvalidState { msg }.into());
                                 }
                             };
                             self.check_pattern_param(
@@ -527,6 +573,11 @@ impl KnowledgeBase {
         &self.rules
     }
 
+    #[cfg(test)]
+    pub fn get_rule_types(&self, name: &Symbol) -> Option<&Vec<Rule>> {
+        self.rule_types.get(name)
+    }
+
     pub fn get_generic_rule(&self, name: &Symbol) -> Option<&GenericRule> {
         self.rules.get(name)
     }
@@ -536,7 +587,10 @@ impl KnowledgeBase {
     }
 
     /// Define a constant variable.
-    pub fn constant(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
+    ///
+    /// Error on attempts to register the "union" types (Actor & Resource) since those types have
+    /// special meaning in policies that use resource blocks.
+    pub fn register_constant(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
         if name.0 == ACTOR_UNION_NAME || name.0 == RESOURCE_UNION_NAME {
             return Err(error::RuntimeError::TypeError {
                 msg: format!(
@@ -551,21 +605,38 @@ impl KnowledgeBase {
         Ok(())
     }
 
+    /// Return true if a constant with the given name has been defined.
+    pub fn is_constant(&self, name: &Symbol) -> bool {
+        self.constants.contains_key(name)
+    }
+
+    /// Getter for `constants` map without exposing it for mutation.
+    pub fn get_registered_constants(&self) -> &Bindings {
+        &self.constants
+    }
+
+    // TODO(gj): currently no way to distinguish classes from other registered constants in the
+    // core, so it's up to callers to ensure this is only called with terms we expect to be
+    // registered as a _class_.
+    pub fn get_registered_class(&self, class: &Term) -> PolarResult<&Term> {
+        self.constants
+            .get(class.value().as_symbol()?)
+            .ok_or_else(|| {
+                let term = class.clone();
+                ValidationError::UnregisteredClass { term }.into()
+            })
+    }
+
     /// Add the Method Resolution Order (MRO) list for a registered class.
     /// The `mro` argument is a list of the `instance_id` associated with a registered class.
     pub fn add_mro(&mut self, name: Symbol, mro: Vec<u64>) -> PolarResult<()> {
         // Confirm name is a registered class
         if !self.is_constant(&name) {
             let msg = format!("Cannot add MRO for unregistered class {}", name);
-            return Err(error::OperationalError::InvalidState { msg }.into());
+            return Err(OperationalError::InvalidState { msg }.into());
         }
         self.mro.insert(name, mro);
         Ok(())
-    }
-
-    /// Return true if a constant with the given name has been defined.
-    pub fn is_constant(&self, name: &Symbol) -> bool {
-        self.constants.contains_key(name)
     }
 
     pub fn add_source(&mut self, source: Source) -> PolarResult<u64> {
@@ -661,12 +732,20 @@ impl KnowledgeBase {
         error.set_context(source.as_ref(), term.as_ref())
     }
 
+    /// Check that all relations declared across all resource blocks have been registered as
+    /// constants.
+    fn check_that_resource_block_relations_are_registered(&self) -> Vec<PolarError> {
+        self.resource_blocks
+            .relation_tuples()
+            .into_iter()
+            .filter_map(|(relation_type, _, _)| self.get_registered_class(relation_type).err())
+            .collect()
+    }
+
     pub fn rewrite_shorthand_rules(&mut self) -> Vec<PolarError> {
         let mut errors = vec![];
 
-        errors.append(
-            &mut super::resource_block::check_all_relation_types_have_been_registered(self),
-        );
+        errors.append(&mut self.check_that_resource_block_relations_are_registered());
 
         let mut rules = vec![];
         for (resource_name, shorthand_rules) in &self.resource_blocks.shorthand_rules {
@@ -686,6 +765,119 @@ impl KnowledgeBase {
         }
 
         errors
+    }
+
+    pub fn create_resource_specific_rule_types(&mut self) {
+        let mut rule_types_to_create = HashMap::new();
+
+        // TODO @patrickod refactor RuleTypes & split out
+        // RequiredRuleType struct to record the related
+        // shorthand rule and relation terms.
+
+        // Iterate through all resource block declarations and create
+        // non-required rule types for each relation declaration we observe.
+        //
+        // We create non-required rule types to gracefully account for the case
+        // where users have declared relations ahead of time that are used in
+        // rule or resource definitions.
+        for (subject, name, object) in self.resource_blocks.relation_tuples() {
+            rule_types_to_create.insert((subject, name, object), false);
+        }
+
+        // Iterate through resource block shorthand rules and create *required*
+        // rule types for each relation which is traversed in the rules.
+        for (object, shorthand_rules) in &self.resource_blocks.shorthand_rules {
+            for shorthand_rule in shorthand_rules {
+                // We create rule types from shorthand rules in the following scenarios...
+                match &shorthand_rule.body {
+                    // 1. When the the third "relation" term points to a related Resource. E.g.,
+                    //    `"admin" if "admin" on "parent";` where `relations = { parent: Org };`.
+                    (implier, Some((_, relation))) => {
+                        // First, create required rule type for relationship between `object` and
+                        // `subject`:
+                        //
+                        // resource Repo {
+                        //   roles = ["writer"];
+                        //   relations = { parent_org: Org };
+                        //
+                        //   "writer" if "admin" on "parent_org";
+                        // }
+                        //
+                        // (required) type has_relation(org: Org, "parent_org", repo: Repo);
+                        //
+                        // resource Org {
+                        //   roles = ["admin"];
+                        // }
+                        if let Ok(subject) = self
+                            .resource_blocks
+                            .get_relation_type_in_resource_block(relation, object)
+                        {
+                            rule_types_to_create.insert((subject, relation, object), true);
+
+                            // Then, if the "implier" term is declared as a relation on `subject`
+                            // (as opposed to a permission or role), create required rule type for
+                            // relationship between `related_subject` and `subject`:
+                            //
+                            // resource Repo {
+                            //   roles = ["writer"];
+                            //   relations = { parent_org: Org };
+                            //
+                            //   "writer" if "owner" on "parent_org";
+                            // }
+                            //
+                            // (required) type has_relation(org: Org, "parent_org", issue: Issue);
+                            //
+                            // resource Org {
+                            //   relations = { owner: User };
+                            // }
+                            //
+                            // (required) type has_relation(user: User, "owner", org: Org);
+                            if let Ok(related_subject) = self
+                                .resource_blocks
+                                .get_relation_type_in_resource_block(implier, subject)
+                            {
+                                rule_types_to_create
+                                    .insert((related_subject, implier, subject), true);
+                            }
+                        }
+                    }
+
+                    // 2. When the second "implier" term points to a related Actor. E.g., `"admin"
+                    //    if "owner";` where `relations = { owner: User };`. Technically, "implier"
+                    //    could be a related Resource, but that doesn't make much semantic sense.
+                    //    Related resources should be traversed via `"on"` clauses, which are
+                    //    captured in the above match arm.
+                    (implier, None) => {
+                        if let Ok(subject) = self
+                            .resource_blocks
+                            .get_relation_type_in_resource_block(implier, object)
+                        {
+                            rule_types_to_create.insert((subject, implier, object), true);
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut rule_types = rule_types_to_create.into_iter().map(|((subject, relation_name, object), required)| {
+            let subject_specializer = pattern!(instance!(&subject.value().as_symbol().expect("must be symbol").0));
+            let relation_name = relation_name.value().as_string().expect("must be string");
+            let object_specializer = pattern!(instance!(&object.value().as_symbol().expect("must be symbol").0));
+            rule!("has_relation", ["subject"; subject_specializer, relation_name, "object"; object_specializer], required)
+        }).collect::<Vec<_>>();
+
+        // If there are any Relation::Role declarations in *any* of our resource
+        // blocks then we want to add the `has_role` rule type.
+        if self.resource_blocks.has_roles() {
+            rule_types.push(
+                // TODO(gj): "Internal" SourceInfo variant.
+                rule!("has_role", ["actor"; instance!(ACTOR_UNION_NAME), "role"; instance!("String"), "resource"; instance!(RESOURCE_UNION_NAME)], true)
+            );
+        }
+
+        for rule_type in rule_types {
+            self.add_rule_type(rule_type.clone());
+        }
     }
 
     pub fn is_union(&self, maybe_union: &Term) -> bool {
@@ -783,7 +975,7 @@ mod tests {
         let mut kb = KnowledgeBase::new();
 
         let mut constant = |name: &str, instance_id: u64| {
-            kb.constant(
+            kb.register_constant(
                 sym!(name),
                 term!(Value::ExternalInstance(ExternalInstance {
                     instance_id,
@@ -1224,7 +1416,7 @@ mod tests {
     #[test]
     fn test_validate_rules() {
         let mut kb = KnowledgeBase::new();
-        kb.constant(
+        kb.register_constant(
             sym!("Fruit"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 1,
@@ -1233,7 +1425,7 @@ mod tests {
             })),
         )
         .unwrap();
-        kb.constant(
+        kb.register_constant(
             sym!("Citrus"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 2,
@@ -1242,7 +1434,7 @@ mod tests {
             })),
         )
         .unwrap();
-        kb.constant(
+        kb.register_constant(
             sym!("Orange"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 3,
@@ -1262,8 +1454,10 @@ mod tests {
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Orange"))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Fruit"))]));
 
+        let diagnostics = kb.validate_rules();
+        assert_eq!(diagnostics.len(), 1);
         assert!(matches!(
-            kb.validate_rules().first().unwrap(),
+            diagnostics.first().unwrap(),
             Diagnostic::Error(PolarError {
                 kind: ErrorKind::Validation(ValidationError::InvalidRule { .. }),
                 ..
@@ -1275,7 +1469,6 @@ mod tests {
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!("Orange"))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Orange"))]));
         kb.add_rule(rule!("g", ["x"; instance!(sym!("Fruit"))]));
-
         assert!(kb.validate_rules().is_empty());
 
         // Rule type does apply if it has the same name as a rule even if different arity
@@ -1290,11 +1483,167 @@ mod tests {
                 ..
             })
         ));
+
         // Multiple templates can exist for the same name but only one needs to match
         kb.clear_rules();
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!("Orange"))]));
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!("Orange")), value!(1)]));
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!("Fruit"))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Fruit"))]));
+        assert!(kb.validate_rules().is_empty());
+    }
+
+    #[test]
+    fn test_rule_type_validation_errors_for_non_class_specializers() {
+        let mut kb = KnowledgeBase::new();
+
+        kb.register_constant(sym!("String1"), term!("not an external instance"))
+            .unwrap();
+        kb.register_constant(sym!("String2"), term!("also not an external instance"))
+            .unwrap();
+        kb.register_constant(
+            sym!("ExternalInstanceWithoutMRO1"),
+            term!(Value::ExternalInstance(ExternalInstance {
+                instance_id: 1,
+                constructor: None,
+                repr: None
+            })),
+        )
+        .unwrap();
+        kb.register_constant(
+            sym!("ExternalInstanceWithoutMRO2"),
+            term!(Value::ExternalInstance(ExternalInstance {
+                instance_id: 2,
+                constructor: None,
+                repr: None
+            })),
+        )
+        .unwrap();
+        kb.register_constant(
+            sym!("Class1"),
+            term!(Value::ExternalInstance(ExternalInstance {
+                instance_id: 3,
+                constructor: None,
+                repr: None
+            })),
+        )
+        .unwrap();
+        kb.add_mro(sym!("Class1"), vec![3]).unwrap();
+        kb.register_constant(
+            sym!("Class2"),
+            term!(Value::ExternalInstance(ExternalInstance {
+                instance_id: 4,
+                constructor: None,
+                repr: None
+            })),
+        )
+        .unwrap();
+        kb.add_mro(sym!("Class2"), vec![4]).unwrap();
+
+        // Same unregistered specializer.
+        kb.add_rule_type(rule!("f", ["_"; instance!("Unregistered")]));
+        kb.add_rule(rule!("f", ["_"; instance!("Unregistered")]));
+        assert!(kb.validate_rules().is_empty());
+
+        // Different unregistered specializers.
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("Unregistered1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("Unregistered2")]));
+        let diagnostics = kb.validate_rules();
+        assert_eq!(diagnostics.len(), 1);
+        let diagnostic = diagnostics.first().unwrap().to_string();
+        assert_eq!(diagnostic, "Unregistered class: Unregistered1");
+
+        // Same specializer registered as a non-instance constant.
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("String1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("String1")]));
+        assert!(kb.validate_rules().is_empty());
+
+        // Different specializers registered as non-instance constants.
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("String1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("String2")]));
+        let diagnostics = kb.validate_rules();
+        assert_eq!(diagnostics.len(), 1);
+        let diagnostic = diagnostics.first().unwrap().to_string();
+        let expected = "Rule type specializer String1 on parameter 1 should be a registered class, but instead it's registered as a constant with value: \"not an external instance\"";
+        assert!(diagnostic.contains(expected), "{}", diagnostic);
+
+        // Same specializer registered as an external instance without an MRO.
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("ExternalInstanceWithoutMRO1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("ExternalInstanceWithoutMRO1")]));
+        assert!(kb.validate_rules().is_empty());
+
+        // Different specializers registered as external instances without MROs.
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("ExternalInstanceWithoutMRO1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("ExternalInstanceWithoutMRO2")]));
+        let diagnostics = kb.validate_rules();
+        assert_eq!(diagnostics.len(), 1);
+        let diagnostic = diagnostics.first().unwrap().to_string();
+        let expected = "Rule specializer ExternalInstanceWithoutMRO2 on parameter 1 is not registered as a class.";
+        assert!(diagnostic.contains(expected), "{}", diagnostic);
+
+        // Same specializer registered as a class.
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("Class1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("Class1")]));
+        assert!(kb.validate_rules().is_empty());
+
+        // Different specializers registered as classes.
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("Class1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("Class2")]));
+        let diagnostics = kb.validate_rules();
+        assert_eq!(diagnostics.len(), 1);
+        let diagnostic = diagnostics.first().unwrap().to_string();
+        let expected =
+            "Rule specializer Class2 on parameter 1 must match rule type specializer Class1";
+        assert!(diagnostic.contains(expected), "{}", diagnostic);
+
+        // Rule type specializer: unregistered
+        // Rule specializer: non-instance constant
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("Unregistered")]));
+        kb.add_rule(rule!("f", ["_"; instance!("String1")]));
+        let diagnostics = kb.validate_rules();
+        assert_eq!(diagnostics.len(), 1);
+        let diagnostic = diagnostics.first().unwrap().to_string();
+        assert_eq!(diagnostic, "Unregistered class: Unregistered");
+
+        // Rule type specializer: non-instance constant
+        // Rule specializer: unregistered
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("String1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("Unregistered")]));
+        let diagnostics = kb.validate_rules();
+        assert_eq!(diagnostics.len(), 1);
+        let diagnostic = diagnostics.first().unwrap().to_string();
+        let expected = "Rule type specializer String1 on parameter 1 should be a registered class, but instead it's registered as a constant with value: \"not an external instance\"";
+        assert!(diagnostic.contains(expected), "{}", diagnostic);
+
+        // Rule type specializer: external instance w/o MRO
+        // Rule specializer: unregistered
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("ExternalInstanceWithoutMRO1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("Unregistered")]));
+        let diagnostics = kb.validate_rules();
+        assert_eq!(diagnostics.len(), 1);
+        let diagnostic = diagnostics.first().unwrap().to_string();
+        let expected = "Rule specializer Unregistered on parameter 1 is not registered as a class.";
+        assert!(diagnostic.contains(expected), "{}", diagnostic);
+
+        // Rule type specializer: external instance w/o MRO
+        // Rule specializer: class
+        kb.clear_rules();
+        kb.add_rule_type(rule!("f", ["_"; instance!("ExternalInstanceWithoutMRO1")]));
+        kb.add_rule(rule!("f", ["_"; instance!("Class1")]));
+        let diagnostics = kb.validate_rules();
+        assert_eq!(diagnostics.len(), 1);
+        let diagnostic = diagnostics.first().unwrap().to_string();
+        let expected = "Rule specializer Class1 on parameter 1 must match rule type specializer ExternalInstanceWithoutMRO1";
+        assert!(diagnostic.contains(expected), "{}", diagnostic);
     }
 }

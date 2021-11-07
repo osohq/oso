@@ -1,5 +1,5 @@
 use polar_core::parser;
-use polar_core::{events::*, kb::Bindings, polar::Polar, polar::Query};
+use polar_core::{events::*, kb::Bindings, polar::Polar, query::Query};
 
 pub fn runner_from_query(q: &str) -> Runner {
     let polar = Polar::new();

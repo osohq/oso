@@ -11,7 +11,7 @@ pub struct Error {
 }
 
 pub fn serialization_error(msg: String) -> JsValue {
-    Error::from(PolarError::from(RuntimeError::Serialization { msg })).into()
+    Error::from(PolarError::from(OperationalError::Serialization { msg })).into()
 }
 
 fn kind(err: &PolarError) -> String {
@@ -31,17 +31,16 @@ fn kind(err: &PolarError) -> String {
         Parse(InvalidFloat { .. }) => "ParseError::InvalidFloat",
         Parse(WrongValueType { .. }) => "ParseError::WrongValueType",
         Parse(DuplicateKey { .. }) => "ParseError::DuplicateKey",
-        Parse(SingletonVariable { .. }) => "ParseError::SingletonVariable",
         Runtime(Application { .. }) => "RuntimeError::Application",
         Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
         Runtime(FileLoading { .. }) => "RuntimeError::FileLoading",
         Runtime(IncompatibleBindings { .. }) => "RuntimeError::IncompatibleBindings",
         Runtime(QueryTimeout { .. }) => "RuntimeError::QueryTimeout",
-        Runtime(Serialization { .. }) => "RuntimeError::Serialization",
         Runtime(StackOverflow { .. }) => "RuntimeError::StackOverflow",
         Runtime(TypeError { .. }) => "RuntimeError::TypeError",
         Runtime(UnhandledPartial { .. }) => "RuntimeError::UnhandledPartial",
         Runtime(Unsupported { .. }) => "RuntimeError::Unsupported",
+        Operational(Serialization { .. }) => "OperationalError::Serialization",
         Operational(Unimplemented { .. }) => "OperationalError::Unimplemented",
         Operational(Unknown) => "OperationalError::Unknown",
         Operational(InvalidState { .. }) => "OperationalError::InvalidState",
@@ -49,6 +48,9 @@ fn kind(err: &PolarError) -> String {
         Validation(InvalidRuleType { .. }) => "ValidationError::InvalidRuleType",
         Validation(ResourceBlock { .. }) => "ValidationError::ResourceBlock",
         Validation(UndefinedRule { .. }) => "ValidationError::UndefinedRule",
+        Validation(SingletonVariable { .. }) => "ValidationError::SingletonVariable",
+        Validation(UnregisteredClass { .. }) => "ValidationError::UnregisteredClass",
+        Validation(MissingRequiredRule { .. }) => "ValidationError::MissingRequiredRule",
     }
     .to_owned()
 }

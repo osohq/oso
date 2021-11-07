@@ -537,6 +537,14 @@ type Operation struct {
 	Args []Term `json:"args"`
 }
 
+// OperationalErrorSerialization struct
+type OperationalErrorSerialization struct {
+	// Msg
+	Msg string `json:"msg"`
+}
+
+func (OperationalErrorSerialization) isOperationalError() {}
+
 // OperationalErrorUnimplemented struct
 type OperationalErrorUnimplemented struct {
 	// Msg
@@ -589,6 +597,17 @@ func (result *OperationalError) UnmarshalJSON(b []byte) error {
 	}
 	switch variantName {
 
+	case "Serialization":
+		var variant OperationalErrorSerialization
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = OperationalError{variant}
+		return nil
+
 	case "Unimplemented":
 		var variant OperationalErrorUnimplemented
 		if variantValue != nil {
@@ -629,6 +648,11 @@ func (result *OperationalError) UnmarshalJSON(b []byte) error {
 
 func (variant OperationalError) MarshalJSON() ([]byte, error) {
 	switch inner := variant.OperationalErrorVariant.(type) {
+
+	case OperationalErrorSerialization:
+		return json.Marshal(map[string]OperationalErrorSerialization{
+			"Serialization": inner,
+		})
 
 	case OperationalErrorUnimplemented:
 		return json.Marshal(map[string]OperationalErrorUnimplemented{
@@ -1303,16 +1327,6 @@ type ParseErrorDuplicateKey struct {
 
 func (ParseErrorDuplicateKey) isParseError() {}
 
-// ParseErrorSingletonVariable struct
-type ParseErrorSingletonVariable struct {
-	// Loc
-	Loc uint64 `json:"loc"`
-	// Name
-	Name string `json:"name"`
-}
-
-func (ParseErrorSingletonVariable) isParseError() {}
-
 // ParseError enum
 type ParseErrorVariant interface {
 	isParseError()
@@ -1455,17 +1469,6 @@ func (result *ParseError) UnmarshalJSON(b []byte) error {
 		*result = ParseError{variant}
 		return nil
 
-	case "SingletonVariable":
-		var variant ParseErrorSingletonVariable
-		if variantValue != nil {
-			err := json.Unmarshal(*variantValue, &variant)
-			if err != nil {
-				return err
-			}
-		}
-		*result = ParseError{variant}
-		return nil
-
 	}
 
 	return fmt.Errorf("Cannot deserialize ParseError: %s", string(b))
@@ -1522,11 +1525,6 @@ func (variant ParseError) MarshalJSON() ([]byte, error) {
 	case ParseErrorDuplicateKey:
 		return json.Marshal(map[string]ParseErrorDuplicateKey{
 			"DuplicateKey": inner,
-		})
-
-	case ParseErrorSingletonVariable:
-		return json.Marshal(map[string]ParseErrorSingletonVariable{
-			"SingletonVariable": inner,
 		})
 
 	}
@@ -2018,6 +2016,8 @@ type Rule struct {
 	Params []Parameter `json:"params"`
 	// Body
 	Body Term `json:"body"`
+	// Required
+	Required bool `json:"required"`
 }
 
 // RuntimeErrorArithmeticError struct
@@ -2027,14 +2027,6 @@ type RuntimeErrorArithmeticError struct {
 }
 
 func (RuntimeErrorArithmeticError) isRuntimeError() {}
-
-// RuntimeErrorSerialization struct
-type RuntimeErrorSerialization struct {
-	// Msg
-	Msg string `json:"msg"`
-}
-
-func (RuntimeErrorSerialization) isRuntimeError() {}
 
 // RuntimeErrorUnsupported struct
 type RuntimeErrorUnsupported struct {
@@ -2149,17 +2141,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		*result = RuntimeError{variant}
 		return nil
 
-	case "Serialization":
-		var variant RuntimeErrorSerialization
-		if variantValue != nil {
-			err := json.Unmarshal(*variantValue, &variant)
-			if err != nil {
-				return err
-			}
-		}
-		*result = RuntimeError{variant}
-		return nil
-
 	case "Unsupported":
 		var variant RuntimeErrorUnsupported
 		if variantValue != nil {
@@ -2261,11 +2242,6 @@ func (variant RuntimeError) MarshalJSON() ([]byte, error) {
 			"ArithmeticError": inner,
 		})
 
-	case RuntimeErrorSerialization:
-		return json.Marshal(map[string]RuntimeErrorSerialization{
-			"Serialization": inner,
-		})
-
 	case RuntimeErrorUnsupported:
 		return json.Marshal(map[string]RuntimeErrorUnsupported{
 			"Unsupported": inner,
@@ -2355,6 +2331,14 @@ type TraceResult struct {
 	Formatted string `json:"formatted"`
 }
 
+// ValidationErrorMissingRequiredRule struct
+type ValidationErrorMissingRequiredRule struct {
+	// Rule
+	Rule Rule `json:"rule"`
+}
+
+func (ValidationErrorMissingRequiredRule) isValidationError() {}
+
 // ValidationErrorInvalidRule struct
 type ValidationErrorInvalidRule struct {
 	// Rule
@@ -2393,6 +2377,24 @@ type ValidationErrorResourceBlock struct {
 
 func (ValidationErrorResourceBlock) isValidationError() {}
 
+// ValidationErrorSingletonVariable struct
+type ValidationErrorSingletonVariable struct {
+	// Term
+	Term Term `json:"term"`
+	// Name
+	Name string `json:"name"`
+}
+
+func (ValidationErrorSingletonVariable) isValidationError() {}
+
+// ValidationErrorUnregisteredClass struct
+type ValidationErrorUnregisteredClass struct {
+	// Term
+	Term Term `json:"term"`
+}
+
+func (ValidationErrorUnregisteredClass) isValidationError() {}
+
 // ValidationError enum
 type ValidationErrorVariant interface {
 	isValidationError()
@@ -2424,6 +2426,17 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		}
 	}
 	switch variantName {
+
+	case "MissingRequiredRule":
+		var variant ValidationErrorMissingRequiredRule
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ValidationError{variant}
+		return nil
 
 	case "InvalidRule":
 		var variant ValidationErrorInvalidRule
@@ -2469,6 +2482,28 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		*result = ValidationError{variant}
 		return nil
 
+	case "SingletonVariable":
+		var variant ValidationErrorSingletonVariable
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ValidationError{variant}
+		return nil
+
+	case "UnregisteredClass":
+		var variant ValidationErrorUnregisteredClass
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ValidationError{variant}
+		return nil
+
 	}
 
 	return fmt.Errorf("Cannot deserialize ValidationError: %s", string(b))
@@ -2476,6 +2511,11 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 
 func (variant ValidationError) MarshalJSON() ([]byte, error) {
 	switch inner := variant.ValidationErrorVariant.(type) {
+
+	case ValidationErrorMissingRequiredRule:
+		return json.Marshal(map[string]ValidationErrorMissingRequiredRule{
+			"MissingRequiredRule": inner,
+		})
 
 	case ValidationErrorInvalidRule:
 		return json.Marshal(map[string]ValidationErrorInvalidRule{
@@ -2495,6 +2535,16 @@ func (variant ValidationError) MarshalJSON() ([]byte, error) {
 	case ValidationErrorResourceBlock:
 		return json.Marshal(map[string]ValidationErrorResourceBlock{
 			"ResourceBlock": inner,
+		})
+
+	case ValidationErrorSingletonVariable:
+		return json.Marshal(map[string]ValidationErrorSingletonVariable{
+			"SingletonVariable": inner,
+		})
+
+	case ValidationErrorUnregisteredClass:
+		return json.Marshal(map[string]ValidationErrorUnregisteredClass{
+			"UnregisteredClass": inner,
 		})
 
 	}

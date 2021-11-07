@@ -308,7 +308,7 @@ jobs:
           python-version: "3.7"
       - name: Install cibuildwheel
         run: |
-          python -m pip install cibuildwheel==1.6.2
+          python -m pip install cibuildwheel==2.2.2
       - name: Download static libs
         uses: actions/download-artifact@v1
         with:
@@ -316,7 +316,7 @@ jobs:
       - name: Copy static library.
         run: |
           mkdir -p languages/python/oso/native
-          cp -r oso_static_library/libpolar-Linux.a languages/python/oso/native/libpolar.a
+          cp -r oso_static_library/libpolar-musl.a languages/python/oso/native/libpolar.a
           cp -r oso_static_library/polar.h languages/python/oso/native/polar.h
       - name: Copy in readme
         run: |
@@ -340,7 +340,9 @@ jobs:
     needs: [version, macos_libs]
     env:
       # Skip Python 2.7 and Python 3.5
-      CIBW_SKIP: "cp27-* cp35-* pp27-*"
+      # Skip 3.10 due to a broken python link.
+      # Turn back on after this is resolved https://github.com/pypa/cibuildwheel/issues/902
+      CIBW_SKIP: "cp27-* cp35-* pp27-* cp310-*"
       # 64-bit builds only
       CIBW_BUILD: "*64"
       # Used in build.py to find right files
@@ -353,7 +355,7 @@ jobs:
           python-version: "3.7"
       - name: Install cibuildwheel
         run: |
-          python -m pip install cibuildwheel==1.6.2
+          python -m pip install cibuildwheel==2.2.2
       - name: Download static libs
         uses: actions/download-artifact@v1
         with:
@@ -376,6 +378,38 @@ jobs:
           name: wheel
           path: languages/python/oso/wheelhouse/*.whl
 
+  build_macos_arm_wheels:
+    name: Build macOS arm wheels
+    runs-on: [self-hosted, m1]
+    needs: [version, macos_libs]
+    env:
+      OSO_ENV: CI
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download static libs
+        uses: actions/download-artifact@v1
+        with:
+          name: oso_static_library
+      - name: Copy static library.
+        run: |
+          mkdir -p languages/python/oso/native
+          cp -r oso_static_library/libpolar-macOS-arm.a languages/python/oso/native/libpolar.a
+          cp -r oso_static_library/polar.h languages/python/oso/native/polar.h
+      - name: Copy in readme
+        run: |
+          rm languages/python/oso/README.md
+          cp README.md languages/python/oso/README.md
+      - name: Build wheels
+        run: |
+          arch -arm64 /opt/homebrew/opt/python@3.8/bin/python3 setup.py sdist bdist_wheel
+          arch -arm64 /opt/homebrew/opt/python@3.9/bin/python3 setup.py sdist bdist_wheel
+          arch -arm64 /opt/homebrew/opt/python@3.10/bin/python3 setup.py sdist bdist_wheel
+        working-directory: languages/python/oso
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheel
+          path: languages/python/oso/dist/*.whl
+
   build_windows_wheels:
     name: Build wheels on Windows
     runs-on: windows-latest
@@ -395,7 +429,7 @@ jobs:
           python-version: "3.7"
       - name: Install cibuildwheel
         run: |
-          python -m pip install cibuildwheel==1.6.2
+          python -m pip install cibuildwheel==2.2.2
       - name: Download static libs
         uses: actions/download-artifact@v1
         with:
@@ -417,32 +451,6 @@ jobs:
         with:
           name: wheel
           path: languages/python/oso/wheelhouse/*.whl
-
-  build_musl_wheels:
-    name: Build musl wheels
-    runs-on: ubuntu-latest
-    needs: [version, linux_libs]
-    env:
-      OSO_ENV: CI
-      RUSTFLAGS: "-C target-feature=-crt-static -C relocation-model=pic"
-    steps:
-      - uses: actions/checkout@v2
-      - name: Download static libs
-        uses: actions/download-artifact@v1
-        with:
-          name: oso_static_library
-      - name: Copy static library.
-        run: |
-          mkdir -p languages/python/oso/native
-          cp -r oso_static_library/libpolar-musl.a languages/python/oso/native/libpolar.a
-          cp -r oso_static_library/polar.h languages/python/oso/native/polar.h
-      - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.6-alpine oso/scripts/build_musl.sh
-      - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.7-alpine oso/scripts/build_musl.sh
-      - run: docker run --rm --env OSO_ENV -v `pwd`:/oso python:3.8-alpine oso/scripts/build_musl.sh
-      - uses: actions/upload-artifact@v2
-        with:
-          name: musl-wheel
-          path: languages/python/oso/dist/*.whl
 
   build_js:
     name: Build js.
@@ -532,7 +540,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -561,7 +569,9 @@ jobs:
     runs-on: macos-10.15
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        # Skip 3.10 due to a broken python link.
+        # Turn back on after this is resolved https://github.com/pypa/cibuildwheel/issues/902
+        python-version: ["3.6", "3.7", "3.8", "3.9"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -591,7 +601,9 @@ jobs:
     strategy:
       matrix:
         # There is no python 3.6 for macos-11
-        python-version: [3.7, 3.8, 3.9]
+        # Skip 3.10 due to a broken python link.
+        # Turn back on after this is resolved https://github.com/pypa/cibuildwheel/issues/902
+        python-version: ["3.7", "3.8", "3.9"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -614,13 +626,49 @@ jobs:
           python test.py
         working-directory: test
 
+  validate_python_macos_arm:
+    name: Test python on MacOS M1
+    needs: [build_macos_arm_wheels]
+    runs-on: [self-hosted, m1]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set version env
+        id: version
+        run: echo "::set-output name=oso_version::$(cat VERSION)"
+      - name: Download oso python wheels from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: wheel
+      # 3.8 is the earliest python for M1
+      - name: "test python 3.8"
+        run: |
+          arch -arm64 /opt/homebrew/opt/python@3.8/bin/python3 -m venv venv38
+          arch -arm64 ./venv38/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel --no-deps --no-index
+          arch -arm64 ./venv38/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
+          arch -arm64 ./venv38/bin/python test.py
+        working-directory: test
+      - name: "test python 3.9"
+        run: |
+          arch -arm64 /opt/homebrew/opt/python@3.9/bin/python3 -m venv venv39
+          arch -arm64 ./venv39/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel --no-deps --no-index
+          arch -arm64 ./venv39/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
+          arch -arm64 ./venv39/bin/python test.py
+        working-directory: test
+      - name: "test python 3.10"
+        run: |
+          arch -arm64 /opt/homebrew/opt/python@3.10/bin/python3 -m venv venv310
+          arch -arm64 ./venv310/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel --no-deps --no-index
+          arch -arm64 ./venv310/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
+          arch -arm64 ./venv310/bin/python test.py
+        working-directory: test
+
   validate_python_windows:
     name: Test python ${{ matrix.python-version }} on Windows
     needs: [build_windows_wheels]
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -645,11 +693,11 @@ jobs:
 
   validate_python_musl:
     name: Test python ${{ matrix.python-version }} on Alpine
-    needs: [build_musl_wheels]
+    needs: [build_linux_wheels]
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -658,7 +706,7 @@ jobs:
       - name: Download oso python wheels from package run
         uses: actions/download-artifact@v1
         with:
-          name: musl-wheel
+          name: wheel
       - run: docker run --rm --env OSO_VERSION -v `pwd`:/oso python:${{ matrix.python-version }}-alpine oso/scripts/test_musl.sh
         env:
           OSO_VERSION: ${{ steps.version.outputs.oso_version }}
@@ -781,7 +829,7 @@ jobs:
       - name: Use Python 3.6
         uses: actions/setup-python@v1
         with:
-          python-version: 3.6
+          python-version: "3.6"
       - name: Use Ruby 2.4
         uses: ruby/setup-ruby@v1
         with:
@@ -818,7 +866,6 @@ jobs:
         build_linux_wheels,
         build_macos_wheels,
         build_windows_wheels,
-        build_musl_wheels,
         build_jar,
         build_gem,
         build_go,
@@ -967,6 +1014,7 @@ jobs:
         validate_python_linux,
         validate_python_macos_old,
         validate_python_macos_11,
+        validate_python_macos_arm,
         validate_python_windows,
         validate_python_musl,
         validate_ruby,

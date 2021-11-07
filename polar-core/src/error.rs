@@ -1,9 +1,8 @@
-use serde::{Deserialize, Serialize};
-
 use std::fmt;
 
-use crate::sources::*;
-use crate::terms::*;
+use serde::{Deserialize, Serialize};
+
+use super::{rules::Rule, sources::*, terms::*};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(into = "FormattedPolarError")]
@@ -55,8 +54,7 @@ impl PolarError {
                 | ParseError::ExtraToken { loc, .. }
                 | ParseError::WrongValueType { loc, .. }
                 | ParseError::ReservedWord { loc, .. }
-                | ParseError::DuplicateKey { loc, .. }
-                | ParseError::SingletonVariable { loc, .. } => {
+                | ParseError::DuplicateKey { loc, .. } => {
                     let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
                     self.context.replace(ErrorContext {
                         source: source.clone(),
@@ -186,10 +184,6 @@ pub enum ParseError {
         loc: usize,
         key: String,
     },
-    SingletonVariable {
-        loc: usize,
-        name: String,
-    },
 }
 
 impl fmt::Display for ErrorContext {
@@ -251,13 +245,6 @@ impl fmt::Display for ParseError {
             Self::DuplicateKey { key, .. } => {
                 write!(f, "Duplicate key: {}", key)
             }
-            Self::SingletonVariable { name, .. } => {
-                write!(
-                    f,
-                    "Singleton variable {} is unused or undefined; try renaming to _{} or _",
-                    name, name
-                )
-            }
         }
     }
 }
@@ -266,9 +253,6 @@ impl fmt::Display for ParseError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RuntimeError {
     ArithmeticError {
-        msg: String,
-    },
-    Serialization {
         msg: String,
     },
     Unsupported {
@@ -315,7 +299,6 @@ impl fmt::Display for RuntimeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::ArithmeticError { msg } => write!(f, "Arithmetic error: {}", msg),
-            Self::Serialization { msg } => write!(f, "Serialization error: {}", msg),
             Self::Unsupported { msg } => write!(f, "Not supported: {}", msg),
             Self::TypeError { msg, stack_trace } => {
                 if let Some(stack_trace) = stack_trace {
@@ -363,6 +346,9 @@ The expression is: {expr}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OperationalError {
+    Serialization {
+        msg: String,
+    },
     Unimplemented {
         msg: String,
     },
@@ -378,6 +364,7 @@ pub enum OperationalError {
 impl fmt::Display for OperationalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Self::Serialization { msg } => write!(f, "Serialization error: {}", msg),
             Self::Unimplemented { msg } => write!(f, "{} is not yet implemented", msg),
             Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
             Self::Unknown => write!(
@@ -391,6 +378,9 @@ impl fmt::Display for OperationalError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationError {
+    MissingRequiredRule {
+        rule: Rule,
+    },
     InvalidRule {
         rule: String,
         msg: String,
@@ -411,7 +401,16 @@ pub enum ValidationError {
         // already-declared resource block would be relevant info for the error emitted on
         // redeclaration.
     },
-    // TODO(lm|gj): add SingletonVariable.
+    SingletonVariable {
+        /// Term<Symbol> where the error arose, tracked for lexical context.
+        term: Term,
+        /// Variable name.
+        name: String,
+    },
+    UnregisteredClass {
+        /// Term<Symbol> where the error arose, tracked for lexical context.
+        term: Term,
+    },
 }
 
 impl fmt::Display for ValidationError {
@@ -426,8 +425,21 @@ impl fmt::Display for ValidationError {
             Self::UndefinedRule { rule_name } => {
                 write!(f, r#"Call to undefined rule "{}""#, rule_name)
             }
+            Self::MissingRequiredRule { rule } => {
+                write!(f, "Missing implementation for required rule {}", rule)
+            }
             Self::ResourceBlock { msg, .. } => {
                 write!(f, "{}", msg)
+            }
+            Self::SingletonVariable { name, .. } => {
+                write!(
+                    f,
+                    "Singleton variable {name} is unused or undefined; try renaming to _{name} or _",
+                    name=name
+                )
+            }
+            Self::UnregisteredClass { term } => {
+                write!(f, "Unregistered class: {}", term)
             }
         }
     }
