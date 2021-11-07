@@ -67,8 +67,6 @@ public class Exceptions {
   private static PolarRuntimeException runtimeError(
       String kind, String msg, Map<String, Object> details) {
     switch (kind) {
-      case "Serialization":
-        return new SerializationError(msg, details);
       case "Unsupported":
         return new UnsupportedError(msg, details);
       case "TypeError":
@@ -159,12 +157,6 @@ public class Exceptions {
   }
 
   // Errors from across the FFI boundary.
-
-  public static class SerializationError extends PolarRuntimeException {
-    public SerializationError(String msg, Map<String, Object> details) {
-      super(msg, details);
-    }
-  }
 
   public static class UnsupportedError extends PolarRuntimeException {
     public UnsupportedError(String msg, Map<String, Object> details) {
