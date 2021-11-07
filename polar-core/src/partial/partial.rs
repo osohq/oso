@@ -302,7 +302,8 @@ mod test {
     use crate::error::{ErrorKind, PolarError, RuntimeError};
     use crate::events::QueryEvent;
     use crate::formatting::ToPolarString;
-    use crate::polar::{Polar, Query};
+    use crate::polar::Polar;
+    use crate::query::Query;
     use crate::terms::{Call, Dictionary, InstanceLiteral, Pattern};
 
     macro_rules! assert_partial_expression {
