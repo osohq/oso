@@ -1,4 +1,5 @@
-pub use polar_core::polar::{Polar, Query};
+pub use polar_core::polar::Polar;
+pub use polar_core::query::Query;
 use polar_core::{error, terms};
 
 use std::cell::RefCell;

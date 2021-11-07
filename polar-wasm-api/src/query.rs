@@ -1,14 +1,14 @@
-use polar_core::{polar, terms::Symbol};
+use polar_core::{query, terms::Symbol};
 use wasm_bindgen::prelude::*;
 
 use crate::errors::{serialization_error, Error};
 use crate::JsResult;
 
 #[wasm_bindgen]
-pub struct Query(polar::Query);
+pub struct Query(query::Query);
 
-impl From<polar::Query> for Query {
-    fn from(q: polar::Query) -> Self {
+impl From<query::Query> for Query {
+    fn from(q: query::Query) -> Self {
         Self(q)
     }
 }
