@@ -1,7 +1,6 @@
 """SQLAlchemy session classes and factories for oso."""
 from typing import Any, Callable, Dict, Optional, Type
-import os
-import sys
+import logging
 
 from sqlalchemy import event, inspect
 from sqlalchemy.orm import sessionmaker, Session
@@ -13,13 +12,8 @@ from oso import Oso
 
 from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 
-LOG_ON = os.getenv("SQLALCHEMY_OSO_LOG_Q", None) == "1"
+logger = logging.getLogger(__name__)
 
-def log(msg):
-    if LOG_ON:
-        print(msg, file=sys.stderr)
-
-log("Logging on")
 
 class _OsoSession:
     set = False
@@ -302,24 +296,24 @@ try:
             return
 
         entities = all_entities_in_statement(execute_state.statement)
-        log(f"Authorizing entities: {entities}")
+        logger.info(f"Authorizing entities: {entities}")
         for entity in entities:
             action = checked_permissions.get(entity)
 
             # If permissions map does not specify an action to authorize for entity
             # or if the specified action is `None`, deny access.
             if action is None:
-                log(f"No allowed action for entity {entity}")
+                logger.warning(f"No allowed action for entity {entity}")
                 where = with_loader_criteria(entity, expr.false(), include_aliases=True)
                 execute_state.statement = execute_state.statement.options(where)
             else:
                 filter = authorize_model(oso, user, action, session, entity)
                 if filter is not None:
-                    log(f"Applying filter {filter} to entity {entity}")
+                    logger.info(f"Applying filter {filter} to entity {entity}")
                     where = with_loader_criteria(entity, filter, include_aliases=True)
                     execute_state.statement = execute_state.statement.options(where)
                 else:
-                    log(f"Policy did not return filter for entity {entity}")
+                    logger.warning(f"Policy did not return filter for entity {entity}")
 
 
 except ImportError:
