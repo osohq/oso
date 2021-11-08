@@ -229,7 +229,10 @@ impl VarInfo {
                 self.types.push((lhs, i.tag.0.clone()));
                 Ok(self)
             }
-            _ => err_unimplemented(format!("Unsupported specializer: {}", rhs.to_polar())),
+            _ => unsupported_op_error(Operation {
+                operator: Operator::Isa,
+                args: vec![lhs.clone(), rhs.clone()],
+            }),
         }
     }
 
@@ -247,11 +250,10 @@ impl VarInfo {
             // 1 = 1 is irrelevant for data filtering, other stuff seems like an error.
             // @NOTE(steve): Going with the same not yet supported message but if this is
             // coming through it's probably a bug in the simplifier.
-            _ => err_unimplemented(format!(
-                "Unsupported unification: {} = {}",
-                left.to_polar(),
-                right.to_polar()
-            )),
+            _ => unsupported_op_error(Operation {
+                operator: Operator::Unify,
+                args: vec![left.clone(), right.clone()],
+            }),
         }
     }
 
@@ -271,11 +273,10 @@ impl VarInfo {
                 self.uncycles.push((l, r));
                 Ok(self)
             }
-            _ => err_unimplemented(format!(
-                "Unsupported comparison: {} != {}",
-                left.to_polar(),
-                right.to_polar()
-            )),
+            _ => unsupported_op_error(Operation {
+                operator: Operator::Neq,
+                args: vec![left.clone(), right.clone()],
+            }),
         }
     }
 
@@ -289,11 +290,10 @@ impl VarInfo {
                 self.contained_values.push((Term::from(val), var));
                 Ok(self)
             }
-            _ => err_unimplemented(format!(
-                "Unsupported `in` check: {} in {}",
-                left.to_polar(),
-                right.to_polar()
-            )),
+            _ => unsupported_op_error(Operation {
+                operator: Operator::In,
+                args: vec![left.clone(), right.clone()],
+            }),
         }
     }
 
@@ -308,13 +308,14 @@ impl VarInfo {
             Neq if args.len() == 2 => self.do_neq(&args[0], &args[1]),
             In if args.len() == 2 => self.do_in(&args[0], &args[1]),
             Unify | Eq | Assign if args.len() == 2 => self.do_unify(&args[0], &args[1]),
-            _ => err_unimplemented(format!(
-                "the expression {:?}/{} is not supported for data filtering",
-                exp.operator,
-                exp.args.len()
-            )),
+            _ => unsupported_op_error(exp.clone()),
         }
     }
+}
+
+
+fn unsupported_op_error<A>(operation: Operation) -> PolarResult<A> {
+    Err(RuntimeError::DataFilteringUnsupportedOp { operation }.into())
 }
 
 fn unregistered_field_error<A>(var_type: &str, field: &str) -> PolarResult<A> {
@@ -1045,7 +1046,7 @@ mod test {
     use super::*;
     use crate::{
         bindings::Bindings,
-        error::{ErrorKind::*, OperationalError::Unimplemented, PolarError},
+        error::{ErrorKind::*, RuntimeError::*, PolarError},
     };
     type TestResult = PolarResult<()>;
 
@@ -1254,12 +1255,11 @@ mod test {
         let err = Vars::from_op(&op!(Dot)).expect_err("should've failed");
         match err {
             PolarError {
-                kind: Operational(Unimplemented { msg }),
+                kind: Runtime(DataFilteringUnsupportedOp {
+                    operation: Operation { operator: Operator::Dot, args },
+                }),
                 ..
-            } => assert_eq!(
-                &msg,
-                "the expression Dot/0 is not supported for data filtering"
-            ),
+            } if args.is_empty() => (),
             _ => panic!("unexpected"),
         }
     }
@@ -1300,6 +1300,10 @@ pub enum DataFilter {
         lcol: Proj,
         rcol: Proj,
         right: Rc<DataFilter>,
+    },
+    Union {
+        left: Rc<DataFilter>,
+        right: Rc<DataFilter>
     },
 }
 
@@ -1376,6 +1380,7 @@ impl DataSources for DataFilter {
                         set.insert(src);
                     }
                 }
+                Union { left, right } |
                 Join { left, right, .. } => {
                     set = collect_sources(collect_sources(set, left.as_ref()), right.as_ref())
                 }
@@ -1443,7 +1448,12 @@ impl QueryInfo {
     ) -> PolarResult<Rc<DataFilter>> {
         use DataFilter::*;
         let left_sources = left.sources();
-        assert!(left_sources.contains(&left_type));
+
+        // FIXME a mess
+        if !left_sources.contains(&left_type) {
+            return err_invalid(format!("{} not in {:?}", left_type, left_sources))
+        }
+
         for field in path {
             match types.get(&left_type).and_then(|m| m.get(&field)) {
                 Some(Type::Relation {
@@ -1556,6 +1566,7 @@ impl QueryInfo {
                         source,
                     }))
                 }
+                // FIXME
                 _ => err_invalid("QueryInfo::into_filter()".to_string()),
             })?;
         Ok((*rc).clone())
@@ -1671,7 +1682,7 @@ impl QueryInfo {
             Isa if part.args.len() == 2 => {
                 Ok(self)
             }
-            Eq | Unify | Assign if part.args.len() == 2 => {
+            Unify if part.args.len() == 2 => {
                 self.binary_op(&part.args, SelOp::Eq)
             }
             In if part.args.len() == 2 => {
@@ -1680,7 +1691,7 @@ impl QueryInfo {
             Neq if part.args.len() == 2 => {
                 self.binary_op(&part.args, SelOp::Neq)
             }
-            _ => err_unimplemented(format!("constrain({})", part.to_polar())),
+            _ => unsupported_op_error(part.clone()),
         }
     }
 }

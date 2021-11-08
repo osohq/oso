@@ -41,6 +41,7 @@ fn kind(err: &PolarError) -> String {
         Runtime(UnhandledPartial { .. }) => "RuntimeError::UnhandledPartial",
         Runtime(Unsupported { .. }) => "RuntimeError::Unsupported",
         Runtime(DataFilteringFieldMissing { .. }) => "RuntimeError::DataFilteringFieldMissing",
+        Runtime(DataFilteringUnsupportedOp { .. }) => "RuntimeError::DataFilteringUnsupportedOp",
         Operational(Serialization { .. }) => "OperationalError::Serialization",
         Operational(Unimplemented { .. }) => "OperationalError::Unimplemented",
         Operational(Unknown) => "OperationalError::Unknown",

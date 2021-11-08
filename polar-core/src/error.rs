@@ -287,6 +287,9 @@ pub enum RuntimeError {
         var_type: String,
         field: String,
     },
+    DataFilteringUnsupportedOp {
+        operation: Operation,
+    },
 }
 
 impl RuntimeError {
@@ -361,6 +364,19 @@ The expression is: {expr}
                     "#,
                     var_type = var_type,
                     field = field
+                );
+                write!(f, "{}", msg)
+            }
+
+            Self::DataFilteringUnsupportedOp { operation } => {
+                let msg = formatdoc!(
+                    r#"Unsupported operation: {}
+
+                    This operation is not supported for data filtering.
+                    For more information please refer to our documentation:
+                        https://docs.osohq.com/guides/data_filtering.html
+                    "#,
+                    operation.to_polar()
                 );
                 write!(f, "{}", msg)
             }
