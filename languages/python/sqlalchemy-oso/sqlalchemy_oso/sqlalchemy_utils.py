@@ -111,6 +111,8 @@ try:
         # aren't covering that here, which is legacy form.  you can if you want
         # raise an exception if you detect that form here.
 
+        entities = set()
+
         for opt in stmt._with_options:
             if hasattr(opt, "_to_bind"):
                 # these options are called _UnboundLoad
@@ -121,7 +123,7 @@ try:
 
                         # TODO check for wild card.
                         # TODO: Check whether entity is a string.
-                        yield b.path[-1].entity
+                        entities.add(b.path[-1].entity)
             elif hasattr(opt, "context"):
                 # these options are called Load
                 for key, loadopt in opt.context.items():
@@ -132,7 +134,9 @@ try:
                         # TODO: Check for of_type.
                         # TODO: Check whether entity is a string, unsupported.
                         # TODO check for wild card.
-                        yield key[1][-1].entity
+                        entities.add(key[1][-1].entity)
+
+        return entities
 
 
 except ImportError:
