@@ -304,14 +304,7 @@ try:
         entities = all_entities_in_statement(execute_state.statement)
         log(f"Authorizing entities: {entities}")
         for entity in entities:
-            # If entity is an alias, get the action for the underlying class.
-            if isinstance(entity, AliasedClass):
-                action = checked_permissions.get(inspect(entity).class_)  # type: ignore
-            elif inspect(entity, False) is not None:
-                entity = inspect(entity).class_
-                action = checked_permissions.get(inspect(entity).class_)
-            else:
-                action = checked_permissions.get(entity)
+            action = checked_permissions.get(entity)
 
             # If permissions map does not specify an action to authorize for entity
             # or if the specified action is `None`, deny access.
