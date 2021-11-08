@@ -67,7 +67,7 @@ export class UserType<Type extends Class<T>, T = any, Query = any> {
     buildQuery,
     execQuery,
     combineQuery,
-    isaCheck
+    isaCheck,
   }: UserTypeParams<Type>) {
     this.name = name;
     this.cls = cls;
@@ -224,7 +224,7 @@ export class Host implements Required<DataFilteringQueryParams> {
       execQuery: execQuery || this.execQuery,
       combineQuery: combineQuery || this.combineQuery,
       id: this.cacheInstance(cls),
-      isaCheck: params.isaCheck || defaultCheck
+      isaCheck: params.isaCheck || defaultCheck,
     });
     this.types.set(cls, userType);
     this.types.set(clsName, userType);
@@ -362,9 +362,9 @@ export class Host implements Required<DataFilteringQueryParams> {
 
     const userType = this.types.get(name);
     if (userType !== undefined) {
-      return userType.isaCheck(instance)
+      return userType.isaCheck(instance);
     } else {
-      const cls = this.getClass(name)
+      const cls = this.getClass(name);
       return instance instanceof cls || instance?.constructor === cls;
     }
   }

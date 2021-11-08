@@ -512,16 +512,16 @@ export enum QueryEventKind {
 export interface QueryEvent {
   kind: QueryEventKind;
   data?:
-  | Debug
-  | ExternalCall
-  | ExternalIsa
-  | ExternalIsaWithPath
-  | ExternalIsSubspecializer
-  | ExternalIsSubclass
-  | ExternalOp
-  | MakeExternal
-  | NextExternal
-  | Result;
+    | Debug
+    | ExternalCall
+    | ExternalIsa
+    | ExternalIsaWithPath
+    | ExternalIsSubspecializer
+    | ExternalIsSubclass
+    | ExternalOp
+    | MakeExternal
+    | NextExternal
+    | Result;
 }
 
 /**
@@ -710,7 +710,7 @@ export interface UserTypeParams<Type extends Class>
    */
   id: number;
 
-  isaCheck: IsaCheck
+  isaCheck: IsaCheck;
 }
 
 /**
