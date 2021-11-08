@@ -470,52 +470,10 @@ mod test {
         p.clear_rules();
 
         // Test permutations of variable states in isa.
-        p.load_str(
-            r#"h(_x: (_y));
-               i(_x: (y), y: (_z));
-               j(x: (x), _y: (x));
-               k(x, y: (y), y: (x));
-               l(x: (x), x: (x));
-               m(x) if [_y] matches [x];
-               n(x: (x)) if [_y] matches [x];"#,
-        )?;
-        let mut q = p.new_query_from_term(term!(call!("h", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "_this matches __y_34");
-        assert_query_done!(q);
-
-        let mut q = p.new_query_from_term(term!(call!("i", [sym!("x"), sym!("y")])), false);
-        assert_partial_expressions!(next_binding(&mut q)?,
-            "x" => "_this matches y and y matches __z_40",
-            "y" => "x matches _this and _this matches __z_40");
-        assert_query_done!(q);
-
-        let mut q = p.new_query_from_term(term!(call!("j", [sym!("x"), sym!("y")])), false);
-        assert_partial_expressions!(next_binding(&mut q)?,
-            "x" => "_this matches _this and y matches _this",
-            "y" => "x matches x and _this matches x");
-        assert_query_done!(q);
-
-        let mut q =
-            p.new_query_from_term(term!(call!("k", [sym!("x"), sym!("y"), sym!("y")])), false);
-        assert_partial_expressions!(next_binding(&mut q)?,
-            "x" => "y matches y and y matches _this",
-            "y" => "_this matches _this and _this matches x");
-        assert_query_done!(q);
-
-        let mut q = p.new_query_from_term(term!(call!("l", [sym!("x"), sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "_this matches _this");
-        assert_query_done!(q);
-
+        // NOTE(gj): only one permutation remains parse-able.
+        p.load_str("m(x) if [_y] matches [x];")?;
         let mut q = p.new_query_from_term(term!(call!("m", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "__y_54 matches _this");
-        assert_query_done!(q);
-
-        let mut q = p.new_query_from_term(term!(call!("n", [sym!("x")])), false);
-        assert_partial_expression!(
-            next_binding(&mut q)?,
-            "x",
-            "_this matches _this and __y_58 matches _this"
-        );
+        assert_partial_expression!(next_binding(&mut q)?, "x", "__y_34 matches _this");
         assert_query_done!(q);
 
         // TODO(gj): Make the below work.
