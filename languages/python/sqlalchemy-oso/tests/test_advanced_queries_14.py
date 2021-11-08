@@ -112,9 +112,7 @@ def test_get_column_entities(stmt, o):
     assert get_column_entities(stmt) == o
 
 
-# TODO errors for wildcard, String.
-
-
+# TODO better errors for wildcard, String.
 @pytest.mark.parametrize(
     "stmt,o",
     (
@@ -152,8 +150,8 @@ def test_get_joinedload_entities_str(stmt, o):
     assert set(map(to_class, get_joinedload_entities(stmt))) == o
 
 
-# TODO test with lazy = "subquery", etc.
-def test_default_loader_strategies():
+def test_default_loader_strategies_all_entities_in_statement():
+    """Test that all_entitites_in_statement finds default "joined" entities."""
     Base2 = declarative_base()
 
     class D(Base2):
@@ -181,6 +179,7 @@ def test_default_loader_strategies():
 
 @pytest.mark.parametrize("strategy", ("joined", "subquery", "selectin", "select"))
 def test_default_loader_strategies(engine, strategy):
+    """Test that deafult loader strategies are authorized correctly by running a query."""
     Base2 = declarative_base()
 
     class A1(Base2):
