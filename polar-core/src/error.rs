@@ -329,7 +329,7 @@ The unhandled partial is for variable {var}.
 The expression is: {expr}
 ",
                     var = var,
-                    expr = term.to_polar(),
+                    expr = term,
                 )
             }
             Self::DataFilteringFieldMissing { var_type, field } => {
