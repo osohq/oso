@@ -135,7 +135,7 @@ def test_authorize_query_joined_load(engine, oso, fixture_data):
     authorized = session.query(User).options(joinedload(User.posts))
     print_query(authorized)
     print(authorized[0].posts)
-    assert len(authorized[0].posts) == 1  # Test will fail, len will be all posts
+    assert len(authorized[0].posts) == 1
 
 
 def test_alias(engine, oso, fixture_data):
