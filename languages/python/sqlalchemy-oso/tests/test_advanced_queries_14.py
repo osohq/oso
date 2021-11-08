@@ -14,7 +14,6 @@ from sqlalchemy import Column, ForeignKey, Integer, select, String, create_engin
 from sqlalchemy.orm import (
     declarative_base,
     joinedload,
-    lazyload,
     selectinload,
     subqueryload,
     contains_eager,
