@@ -20,18 +20,9 @@ $ pip install oso=={{< version >}}
 
 - Python version 3.6 or greater
 - Supported platforms:
-  - Linux
-  - macOS
-  - Windows
-
-{{% minicallout %}}
-  **Note**: The standard Python package is known to work on glibc-based
-  distributions but not on musl-based ones like Alpine Linux. Wheels built
-  against musl that you can use on Alpine Linux can be downloaded from [the
-  releases page on GitHub][releases].
-{{% /minicallout %}}
-
-[releases]: https://github.com/osohq/oso/releases/latest
+  - Linux (x64)
+  - macOS (x64 and M1)
+  - Windows (x64)
 
 ## Framework & ORM Integrations
 

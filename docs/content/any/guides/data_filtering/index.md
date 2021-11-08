@@ -70,12 +70,21 @@ Filters have a `kind`, a `field` and a `value`. Their meaning depends on the
 - `Neq` means that the field must not be equal to the value.
 - `In` means that the field must be equal to one of the values in value.
 Value will be a list.
+- `Nin` means that the field must not be equal to one of the values in value.
+Value will be a list.
 - `Contains` means that the field must contain the value. This only applies
 if the field is a list.
 
 The condition described by a `Filter` applies to the data stored in the attribute
-`field` of a resource.  The `field` of a `Filter` may be `{{< exampleGet "none" >}}`,
-in which case the condition applies to the resource directly.
+`field` of a resource.
+
+The `field` of a `Filter` may be `{{< exampleGet "none" >}}`, in which case the
+condition applies to the resource directly. It may also be a list, in which case each
+element of the list will be a string or `{{< exampleGet "none" >}}`, and `value` will
+be a list of lists where each element is the value of the corresponding field on a
+resource. For example, if `field` is `['foo', 'bar', 'baz']`, then `value` will contain
+the triple `[resource.foo, resource.bar, resource.baz]` for each `resource` in the
+input set. `kind` will be `In` or `Nin`.
 
 #### Execute a Query
 
@@ -93,12 +102,12 @@ You can define functions that apply to all types with
 `{{% exampleGet "setDataFilteringQueryDefaults" %}}`. Or you can pass type
 specific ones when you register a class.
 
-### Types
+### Fields
 
 The other thing you have to provide to use data filtering is type information
 for registered classes. This lets Oso know what the types of an object's fields
 are. Oso needs this information to handle specializers and other things in the
-policy when we don't have a concrete resource. The types are a 
+policy when we don't have a concrete resource. The fields are a 
 {{% exampleGet "map" %}} from field name to type.
 
 ## Example

@@ -155,7 +155,7 @@ We’ll start by making an `authorized_sessionmaker()`:
 >>> AuthorizedSession = authorized_sessionmaker(bind=engine,
 ...                                             get_oso=lambda: oso,
 ...                                             get_user=lambda: user,
-...                                             get_action=lambda: "read")
+...                                             get_checked_permissions=lambda: { Post: "read" })
 >>> session = AuthorizedSession()
 ```
 
@@ -182,7 +182,7 @@ new authorized session with user set to `manager`:
 >>> AuthorizedSession = authorized_sessionmaker(bind=engine,
 ...                                             get_oso=lambda: oso,
 ...                                             get_user=lambda: manager,
-...                                             get_action=lambda: "read")
+...                                             get_checked_permissions=lambda: { Post: "read" })
 >>> manager_session = AuthorizedSession()
 ```
 
@@ -242,12 +242,6 @@ This translation makes the policy an effective abstraction for expressing
 authorization logic over collections.
 
 ## Limitations
-
-This feature is still under active development. Not all policies that work in a
-non-partial setting will currently work with partials. More policies will be
-supported as we continue working on this feature. The SQLAlchemy adapter is
-ready for evaluation and testing. However, we recommend getting in touch with
-us on [Slack](https://join-slack.osohq.com/) before using it in production.
 
 There are some operators and features that do not currently work with the
 SQLAlchemy adapter when used **anywhere in the policy**:

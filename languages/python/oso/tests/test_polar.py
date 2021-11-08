@@ -14,6 +14,8 @@ from polar import (
 )
 from polar.partial import TypeConstraint
 from polar.errors import ValidationError
+from dataclasses import dataclass
+from typing import List
 
 import pytest
 
@@ -992,6 +994,33 @@ def test_lookup_in_head(polar, is_allowed):
     assert is_allowed("leina", "read", r)
 
 
+def test_isa_with_path(polar, query):
+    @dataclass
+    class Foo:
+        num: int
+
+    @dataclass
+    class Bar:
+        foo: Foo
+
+    @dataclass
+    class Baz:
+        bar: Bar
+
+    polar.register_class(Foo, fields={"num": int})
+    polar.register_class(Bar, fields={"foo": Foo})
+    polar.register_class(Baz, fields={"bar": Bar})
+
+    polar.load_str(
+        "f(x: Integer) if x = 0; g(x: Baz) if f(x.bar.foo.num); h(x: Bar) if f(x.num);"
+    )
+    results = query("g(x)", accept_expression=True)
+    assert len(results) == 1
+
+    with pytest.raises(exceptions.PolarRuntimeError):
+        query("h(x)")
+
+
 def test_rule_types_with_subclass_check(polar):
     class Foo:
         pass
@@ -1050,3 +1079,48 @@ def test_rule_types_with_subclass_check(polar):
     """
     with pytest.raises(ValidationError):
         polar.load_str(p)
+
+
+def test_unbound_dot_lookups(polar, is_allowed):
+    """Port of GK's JS dot lookup test to Python"""
+
+    @dataclass
+    class Repo:
+        id: int
+        org_id: int
+
+    @dataclass
+    class Org:
+        id: int
+
+    @dataclass
+    class Role:
+        org_id: int
+
+    @dataclass
+    class User:
+        roles: List[Role]
+
+    repo1 = Repo(id=1, org_id=1)
+    repo2 = Repo(id=2, org_id=2)
+    user = User([Role(org_id=1)])
+
+    for cls in [Repo, Org, Role, User]:
+        polar.register_class(cls)
+
+    polar.load_str(
+        """
+        user_in_role(user: User, "reader", org: Org) if
+            role in user.roles and
+            role.org_id = org.id;
+        allow(user: User, "read", repo: Repo) if
+            user_in_role(user, "reader", org) and
+            repo.org_id = org.id;
+    """
+    )
+
+    with pytest.raises(exceptions.PolarRuntimeError):
+        assert is_allowed(user, "read", repo1)
+
+    with pytest.raises(exceptions.PolarRuntimeError):
+        assert not is_allowed(user, "read", repo2)

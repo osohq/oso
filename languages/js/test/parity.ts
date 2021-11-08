@@ -193,5 +193,21 @@ void (async function () {
   if (((await result.next()).value as Map<string, unknown>).get('z') !== 3)
     throw new Error();
 
+  // Test that a custom error type is thrown.
+  exceptionThrown = false;
+  try {
+    await oso.query('testUnhandledPartial()').next();
+  } catch (e) {
+    const expectedName = 'RuntimeError::UnhandledPartial';
+    const { name, message } = e as Error;
+    if (
+      name === expectedName &&
+      message.startsWith('Found an unhandled partial')
+    )
+      exceptionThrown = true;
+  } finally {
+    if (!exceptionThrown) throw new Error(); // eslint-disable-line no-unsafe-finally
+  }
+
   console.log('tests pass');
 })();

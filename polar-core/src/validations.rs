@@ -1,12 +1,13 @@
-use super::error::*;
+use std::collections::{HashMap, HashSet};
+
+use super::diagnostic::Diagnostic;
+use super::error::ValidationError;
 use super::formatting::source_lines;
 use super::kb::*;
 use super::rules::*;
 use super::sources::Source;
 use super::terms::*;
 use super::visitor::{walk_call, walk_rule, walk_term, Visitor};
-
-use std::collections::{hash_map::Entry, HashMap, HashSet};
 
 fn common_misspellings(t: &str) -> Option<String> {
     let misspelled_type = match t {
@@ -49,29 +50,19 @@ struct SingletonVisitor<'kb> {
     singletons: HashMap<Symbol, Option<Term>>,
 }
 
-fn warn_str(sym: &Symbol, term: &Term, source: &Option<Source>) -> PolarResult<String> {
-    if let Value::Pattern(..) = term.value() {
-        let mut msg = format!("Unknown specializer {}", sym);
-        if let Some(t) = common_misspellings(&sym.0) {
+fn diagnostic_from_singleton(term: Term, source: Option<Source>) -> Diagnostic {
+    if let Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) = term.value() {
+        let mut msg = format!("Unknown specializer {}", tag);
+        if let Some(t) = common_misspellings(&tag.0) {
             msg.push_str(&format!(", did you mean {}?", t));
         }
-        Ok(msg)
+        if let Some(ref source) = source {
+            msg.push('\n');
+            msg.push_str(&source_lines(source, term.offset(), 0));
+        }
+        Diagnostic::Warning(msg)
     } else {
-        let perr = error::ParseError::SingletonVariable {
-            loc: term.offset(),
-            name: sym.0.clone(),
-        };
-        let err = error::PolarError {
-            kind: error::ErrorKind::Parse(perr),
-            context: None,
-        };
-
-        let src = if let Some(ref s) = source {
-            Some(s)
-        } else {
-            None
-        };
-        Err(err.set_context(src, Some(term)))
+        Diagnostic::Error(ValidationError::SingletonVariable { term }.into())
     }
 }
 
@@ -83,27 +74,16 @@ impl<'kb> SingletonVisitor<'kb> {
         }
     }
 
-    fn warnings(&mut self) -> PolarResult<Vec<String>> {
-        let mut singletons = self
-            .singletons
-            .drain()
-            .filter_map(|(sym, singleton)| singleton.map(|term| (sym.clone(), term)))
-            .collect::<Vec<(Symbol, Term)>>();
-        singletons.sort_by_key(|(_sym, term)| term.offset());
+    fn warnings(self) -> Vec<Diagnostic> {
+        let mut singletons = self.singletons.into_values().flatten().collect::<Vec<_>>();
+        singletons.sort_by_key(Term::offset);
         singletons
-            .iter()
-            .map(|(sym, term)| {
-                let src = term
-                    .get_source_id()
-                    .and_then(|id| self.kb.sources.get_source(id));
-                let mut msg = warn_str(sym, term, &src)?;
-                if let Some(ref source) = src {
-                    msg.push('\n');
-                    msg.push_str(&source_lines(source, term.offset(), 0));
-                }
-                Ok(msg)
+            .into_iter()
+            .map(|term| {
+                let source = self.kb.get_term_source(&term);
+                diagnostic_from_singleton(term, source)
             })
-            .collect::<PolarResult<Vec<String>>>()
+            .collect()
     }
 }
 
@@ -118,14 +98,10 @@ impl<'kb> Visitor for SingletonVisitor<'kb> {
                     && !self.kb.is_constant(v)
                     && !self.kb.is_union(t) =>
             {
-                match self.singletons.entry(v.clone()) {
-                    Entry::Occupied(mut o) => {
-                        o.insert(None);
-                    }
-                    Entry::Vacant(v) => {
-                        v.insert(Some(t.clone()));
-                    }
-                }
+                self.singletons
+                    .entry(v.clone())
+                    .and_modify(|o| *o = None)
+                    .or_insert_with(|| Some(t.clone()));
             }
             _ => (),
         }
@@ -133,7 +109,7 @@ impl<'kb> Visitor for SingletonVisitor<'kb> {
     }
 }
 
-pub fn check_singletons(rule: &Rule, kb: &KnowledgeBase) -> PolarResult<Vec<String>> {
+pub fn check_singletons(rule: &Rule, kb: &KnowledgeBase) -> Vec<Diagnostic> {
     let mut visitor = SingletonVisitor::new(kb);
     walk_rule(&mut visitor, rule);
     visitor.warnings()
@@ -152,7 +128,7 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
         }
     }
 
-    fn warnings(&mut self) -> Vec<String> {
+    fn warnings(&mut self) -> Vec<Diagnostic> {
         self.unparenthesized_expr
             .iter()
             .map(|(source, or_term)| {
@@ -162,7 +138,7 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
                 \n\n"
                     .to_string();
                 msg.push_str(&source_lines(source, or_term.offset(), 0));
-                msg
+                Diagnostic::Warning(msg)
             })
             .collect()
     }
@@ -181,10 +157,7 @@ impl<'kb> Visitor for AndOrPrecendenceCheck<'kb> {
                 )
             }) {
                 let span = term.span().unwrap();
-                let source = term
-                    .get_source_id()
-                    .and_then(|src_id| self.kb.sources.get_source(src_id))
-                    .unwrap();
+                let source = self.kb.get_term_source(term).unwrap();
 
                 // check if source _before_ the term contains an opening
                 // parenthesis
@@ -197,20 +170,20 @@ impl<'kb> Visitor for AndOrPrecendenceCheck<'kb> {
     }
 }
 
-pub fn check_ambiguous_precedence(rule: &Rule, kb: &KnowledgeBase) -> Vec<String> {
+pub fn check_ambiguous_precedence(rule: &Rule, kb: &KnowledgeBase) -> Vec<Diagnostic> {
     let mut visitor = AndOrPrecendenceCheck::new(kb);
     walk_rule(&mut visitor, rule);
     visitor.warnings()
 }
 
-pub fn check_no_allow_rule(kb: &KnowledgeBase) -> Vec<String> {
+pub fn check_no_allow_rule(kb: &KnowledgeBase) -> Option<Diagnostic> {
     let has_allow = kb.get_rules().contains_key(&sym!("allow"));
     let has_allow_field = kb.get_rules().contains_key(&sym!("allow_field"));
     let has_allow_request = kb.get_rules().contains_key(&sym!("allow_request"));
     if has_allow || has_allow_field || has_allow_request {
-        vec![]
+        None
     } else {
-        vec![
+        Some(Diagnostic::Warning(
             "Your policy does not contain an allow rule, which usually means \
 that no actions are allowed. Did you mean to add an allow rule to \
 the top of your policy?
@@ -222,7 +195,7 @@ rule. For more information about allow rules, see:
 
   https://docs.osohq.com/reference/polar/builtin_rule_types.html#allow"
                 .to_string(),
-        ]
+        ))
     }
 }
 
@@ -246,9 +219,9 @@ impl ResourceBlocksMissingHasPermissionVisitor {
         }
     }
 
-    fn warnings(&mut self) -> Vec<String> {
+    fn warnings(&mut self) -> Option<Diagnostic> {
         if !self.calls_has_permission {
-            return vec!["Warning: your policy uses resource blocks but does not call the \
+            return Some(Diagnostic::Warning("Warning: your policy uses resource blocks but does not call the \
 has_permission rule. This means that permissions you define in a \
 resource block will not have any effect. Did you mean to include a \
 call to has_permission in a top-level allow rule?
@@ -256,17 +229,16 @@ call to has_permission in a top-level allow rule?
   allow(actor, action, resource) if
       has_permission(actor, action, resource);
 
-For more information about resource blocks, see https://docs.osohq.com/any/reference/polar/polar-syntax.html#actor-and-resource-blocks".to_string(),
-
-            ];
+For more information about resource blocks, see https://docs.osohq.com/any/reference/polar/polar-syntax.html#actor-and-resource-blocks".to_string()
+            ));
         }
-        vec![]
+        None
     }
 }
 
-pub fn check_resource_blocks_missing_has_permission(kb: &KnowledgeBase) -> Vec<String> {
+pub fn check_resource_blocks_missing_has_permission(kb: &KnowledgeBase) -> Option<Diagnostic> {
     if kb.resource_blocks.resources.is_empty() {
-        return vec![];
+        return None;
     }
 
     let mut visitor = ResourceBlocksMissingHasPermissionVisitor::new();
@@ -277,34 +249,27 @@ pub fn check_resource_blocks_missing_has_permission(kb: &KnowledgeBase) -> Vec<S
 }
 
 struct UndefinedRuleVisitor<'kb> {
-    kb: &'kb KnowledgeBase,
     call_terms: Vec<Term>,
     defined_rules: HashSet<&'kb Symbol>,
 }
 
 impl<'kb> UndefinedRuleVisitor<'kb> {
-    fn new(kb: &'kb KnowledgeBase, defined_rules: HashSet<&'kb Symbol>) -> Self {
+    fn new(defined_rules: HashSet<&'kb Symbol>) -> Self {
         Self {
-            kb,
             defined_rules,
             call_terms: Vec::new(),
         }
     }
 
-    fn errors(&mut self) -> Vec<PolarError> {
-        let mut errors = vec![];
-        for term in &self.call_terms {
-            let call = term.value().as_call().unwrap();
-            if !self.defined_rules.contains(&call.name) {
-                errors.push(self.kb.set_error_context(
-                    term,
-                    error::ValidationError::UndefinedRule {
-                        rule_name: call.name.0.clone(),
-                    },
-                ));
-            }
-        }
-        errors
+    fn errors(self) -> Vec<Diagnostic> {
+        self.call_terms
+            .into_iter()
+            .filter(|term| {
+                let call = term.value().as_call().unwrap();
+                !self.defined_rules.contains(&call.name)
+            })
+            .map(|term| Diagnostic::Error(ValidationError::UndefinedRule { term }.into()))
+            .collect()
     }
 }
 
@@ -323,12 +288,11 @@ impl<'kb> Visitor for UndefinedRuleVisitor<'kb> {
     }
 }
 
-pub fn check_undefined_rule_calls(kb: &KnowledgeBase) -> Vec<PolarError> {
-    let mut visitor = UndefinedRuleVisitor::new(kb, kb.get_rules().keys().collect());
+pub fn check_undefined_rule_calls(kb: &KnowledgeBase) -> Vec<Diagnostic> {
+    let mut visitor = UndefinedRuleVisitor::new(kb.get_rules().keys().collect());
     for rule in kb.get_rules().values() {
         visitor.visit_generic_rule(rule);
     }
-
     visitor.errors()
 }
 
@@ -342,7 +306,7 @@ mod tests {
         let mut kb = KnowledgeBase::new();
         kb.add_rule(rule!("f", [sym!("x")]));
         kb.add_rule(rule!("g", [sym!("x")]));
-        assert_eq!(check_no_allow_rule(&kb).len(), 1);
+        assert!(check_no_allow_rule(&kb).is_some());
     }
 
     #[test]
@@ -354,7 +318,7 @@ mod tests {
             [sym!("actor"), sym!("action"), sym!("resource")]
         ));
         kb.add_rule(rule!("g", [sym!("x")]));
-        assert_eq!(check_no_allow_rule(&kb).len(), 0);
+        assert!(check_no_allow_rule(&kb).is_none());
     }
 
     #[test]
@@ -371,7 +335,7 @@ mod tests {
             ]
         ));
         kb.add_rule(rule!("g", [sym!("x")]));
-        assert_eq!(check_no_allow_rule(&kb).len(), 0);
+        assert!(check_no_allow_rule(&kb).is_none());
     }
 
     #[test]
@@ -380,28 +344,26 @@ mod tests {
         kb.add_rule(rule!("f", [sym!("x")]));
         kb.add_rule(rule!("allow_request", [sym!("actor"), sym!("request")]));
         kb.add_rule(rule!("g", [sym!("x")]));
-        assert_eq!(check_no_allow_rule(&kb).len(), 0);
+        assert!(check_no_allow_rule(&kb).is_none());
     }
 
     #[test]
-    fn test_resource_blocks_missing_has_permission_warning() {
+    fn test_check_resource_blocks_missing_has_permission_warning() {
         let mut kb = KnowledgeBase::new();
         kb.resource_blocks
             .resources
             .insert(term!(sym!("Organization")));
-        assert_eq!(check_resource_blocks_missing_has_permission(&kb).len(), 1);
+        assert!(check_resource_blocks_missing_has_permission(&kb).is_some());
     }
 
     #[test]
-    fn test_resource_blocks_missing_has_permission_clean() {
+    fn test_check_resource_blocks_missing_has_permission_clean() {
         let mut kb = KnowledgeBase::new();
         kb.resource_blocks
             .resources
             .insert(term!(sym!("Organization")));
         kb.add_rule(rule!("f", [sym!("x")] => call!("has_permission", [sym!("y")])));
-        let warnings = check_resource_blocks_missing_has_permission(&kb);
-
-        assert_eq!(warnings.len(), 0);
+        assert!(check_resource_blocks_missing_has_permission(&kb).is_none());
     }
 
     #[test]
@@ -411,7 +373,7 @@ mod tests {
         let errors = check_undefined_rule_calls(&kb);
         assert_eq!(errors.len(), 1);
         assert!(format!("{}", errors.first().unwrap())
-            .contains(r#"Call to undefined rule "no_such_rule""#));
+            .contains("Call to undefined rule: no_such_rule(y)"));
     }
 
     #[test]
@@ -419,7 +381,6 @@ mod tests {
         let mut kb = KnowledgeBase::new();
         kb.add_rule(rule!("f", [sym!("x")] => call!("defined_rule", [sym!("y")])));
         kb.add_rule(rule!("defined_rule", [sym!("x")]));
-        let errors = check_undefined_rule_calls(&kb);
-        assert_eq!(errors.len(), 0);
+        assert!(check_undefined_rule_calls(&kb).is_empty());
     }
 }

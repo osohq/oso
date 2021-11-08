@@ -230,7 +230,7 @@ class Polar:
         cls,
         *,
         name=None,
-        types=None,
+        fields=None,
         build_query=None,
         exec_query=None,
         combine_query=None
@@ -241,7 +241,7 @@ class Polar:
         :param name:
             Optionally specify the name for the class inside of Polar. Defaults
             to `cls.__name__`
-        :param types:
+        :param fields:
             Optional dict mapping field names to types or Relation objects for
             data filtering.
         :param build_query:
@@ -256,7 +256,7 @@ class Polar:
         cls_name = self.host.cache_class(
             cls,
             name=name,
-            fields=types,
+            fields=fields,
             build_query=build_query,
             exec_query=exec_query,
             combine_query=combine_query,
@@ -264,7 +264,14 @@ class Polar:
         self.register_constant(cls, cls_name)
 
     def register_constant(self, value, name):
-        """Register `value` as a Polar constant variable called `name`."""
+        """
+        Register `value` as a Polar constant variable called `name`.
+
+        :param value:
+            The value to register as a constant.
+        :param name:
+            The name under which the constant will be visible in Polar.
+        """
         self.ffi_polar.register_constant(self.host.to_polar(value), name)
 
     def get_class(self, name):

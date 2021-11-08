@@ -3,7 +3,8 @@ module.exports = {
   extends: ['./node_modules/gts/'],
   ignorePatterns: [
     'node_modules', // Self-explanatory.
-    'client/out', // Don't lint built library.
+    'client/out', // Don't lint built client library.
+    'server/out', // Don't lint built server library.
   ],
   overrides: [
     {

@@ -15,7 +15,7 @@ lalrpop_mod!(
 
 use super::error::{self, PolarResult};
 use super::lexer::{self, Lexer};
-use super::resource_block::ResourceBlock;
+use super::resource_block::Production;
 use super::rules::*;
 use super::terms::*;
 
@@ -24,7 +24,11 @@ pub enum Line {
     Rule(Rule),
     RuleType(Rule),
     Query(Term),
-    ResourceBlock(ResourceBlock),
+    ResourceBlock {
+        keyword: Option<Term>,
+        resource: Term,
+        productions: Vec<Production>,
+    },
 }
 
 fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> error::ParseError {
@@ -182,11 +186,7 @@ mod tests {
             rule!("f", ["x" ; 1 , "y" ; value!([sym!("x")])] => op!(Unify, term!(sym!("y")), term!(2)))
         );
 
-        // parenthesized => parse as a symbol
-        let rule = parse_rule(r#"f(x: (y));"#);
-        assert_eq!(rule, rule!("f", ["x"; value!(sym!("y"))]));
-
-        // not parenthesized => parse as a type
+        // parse specializer as a type
         let rule = parse_rule(r#"f(x: y);"#);
         assert_eq!(rule, rule!("f", ["x"; value!(instance!("y"))]));
     }

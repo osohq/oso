@@ -1,9 +1,8 @@
 use std::str::FromStr;
 use std::collections::BTreeMap;
-use std::iter::FromIterator;
 
 use crate::lexer::{self, Token};
-use crate::parser::{Line, ResourceBlock};
+use crate::parser::Line;
 use crate::error;
 use crate::terms::*;
 use crate::rules::*;
@@ -649,15 +648,7 @@ Parameter: Parameter = {
     <parameter:ExpectValue<Exp6<"Term">>> => {
         Parameter{parameter, specializer: None}
     },
-    // parenthesized specializers do not have symbol translation to class names applied
-    <parameter:Spanned<Variable>> ":" "(" <specializer:Spanned<Pattern>> ")" => {
-        Parameter {
-            parameter,
-            specializer: Some(specializer),
-        }
-    },
     <parameter:Spanned<Variable>> ":" <specializer:Spanned<Pattern>> => {
-        let offset = specializer.offset();
         if let Value::Variable(class_name) = specializer.value() {
             let fields = BTreeMap::new();
             let instance_literal = InstanceLiteral{tag: class_name.clone(), fields: Dictionary{fields}};
@@ -683,13 +674,15 @@ RuleHead: (Symbol, Vec<Parameter>) = {
 
 Define = {"if"};
 
+BodilessRule: Rule = <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";" => {
+    let (name, params) = head;
+    let op = Operation{operator: Operator::And, args: vec![]};
+    let body = Term::new_from_parser(src_id, start, end, Value::Expression(op));
+    Rule::new_from_parser(src_id, start_head, start, name, params, body)
+};
+
 Rule: Rule = {
-    <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";" => {
-        let (name, params) = head;
-        let op = Operation{operator: Operator::And, args: vec![]};
-        let body = Term::new_from_parser(src_id, start, end, Value::Expression(op));
-        Rule::new_from_parser(src_id, start_head, start, name, params, body)
-    },
+    <BodilessRule>,
     <start_head:@L> <head:RuleHead> <end_head:@R> Define <body:TermExp> ";" => {
         let (name, params) = head;
         let body = match body.value() {
@@ -705,14 +698,7 @@ Rule: Rule = {
     }
 }
 
-RuleType: Rule = {
-    "type" <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";" => {
-        let (name, params) = head;
-        let op = Operation{operator: Operator::And, args: vec![]};
-        let body = Term::new_from_parser(src_id, start, end, Value::Expression(op));
-        Rule::new_from_parser(src_id, start_head, start, name, params, body)
-    }
-}
+RuleType: Rule = "type" <BodilessRule>;
 
 pub(crate) Rules: Vec<Rule> = <Rule*>;
 
@@ -730,20 +716,14 @@ StringList: Value = {
     "[" "]" => Value::List(vec![]),
     "[" <StringListTerms> "]" => Value::List(<>),
 }
-RelationsDict: Value = <Object<Spanned<Variable>>> => Value::Dictionary(<>);
-Declaration: resource_block::Production = {
-    <start:@L> <keyword:Name> "=" <value:StringList> <end:@R> ";" =>? {
-        let term = Term::new_from_parser(src_id, start, end, value);
-        return resource_block::validate_parsed_declaration((keyword, term));
-    },
-    <start:@L> <keyword:Name> "=" <value:RelationsDict> <end:@R> ";" =>? {
-        let term = Term::new_from_parser(src_id, start, end, value);
-        return resource_block::validate_parsed_declaration((keyword, term));
-    },
-}
+DeclarationValue: Value = {
+    <StringList> => <>,
+    <Object<Spanned<Variable>>> => Value::Dictionary(<>),
+};
+Declaration: resource_block::Production = <Spanned<Variable>> "=" <Spanned<DeclarationValue>> ";" => resource_block::Production::Declaration((<>));
 
-OnRelation: Term = <Spanned<Variable>> <Spanned<PolarString>> =>? resource_block::validate_relation_keyword((<>));
-ShorthandRuleBody: (Term, Option<Term>) = <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => (<>);
+OnRelation: (Term, Term) = <Spanned<Variable>> <Spanned<PolarString>> => (<>);
+ShorthandRuleBody: (Term, Option<(Term, Term)>) = <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => (<>);
 ShorthandRule: resource_block::Production = <head:Spanned<PolarString>> Define <body:ShorthandRuleBody> => resource_block::Production::ShorthandRule(<>);
 
 ResourceBlockProduction: resource_block::Production = {
@@ -758,9 +738,9 @@ Line: Line = {
     <RuleType> => Line::RuleType(<>),
     "?=" <TermExp> ";" => Line::Query(<>),
 
-    <start:@L> <keyword:Spanned<Variable>?> <resource:Variable> "{" <productions:ResourceBlockProductions> "}" <end:@R> =>? {
+    <start:@L> <keyword:Spanned<Variable>?> <resource:Variable> "{" <productions:ResourceBlockProductions> "}" <end:@R> => {
         let resource = Term::new_from_parser(src_id, start, end, resource);
-        resource_block::turn_productions_into_resource_block(keyword, resource, productions).map(|ns| Line::ResourceBlock(ns))
+        Line::ResourceBlock { keyword, resource, productions }
     }
 }
 

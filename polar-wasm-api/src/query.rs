@@ -1,14 +1,14 @@
-use polar_core::{polar, terms::Symbol};
+use polar_core::{query, terms::Symbol};
 use wasm_bindgen::prelude::*;
 
 use crate::errors::{serialization_error, Error};
 use crate::JsResult;
 
 #[wasm_bindgen]
-pub struct Query(polar::Query);
+pub struct Query(query::Query);
 
-impl From<polar::Query> for Query {
-    fn from(q: polar::Query) -> Self {
+impl From<query::Query> for Query {
+    fn from(q: query::Query) -> Self {
         Self(q)
     }
 }
@@ -27,8 +27,8 @@ impl Query {
     }
 
     #[wasm_bindgen(js_class = Query, js_name = callResult)]
-    pub fn wasm_call_result(&mut self, call_id: f64, value: JsValue) -> JsResult<()> {
-        let term = serde_wasm_bindgen::from_value(value)?;
+    pub fn wasm_call_result(&mut self, call_id: f64, term: JsValue) -> JsResult<()> {
+        let term = serde_wasm_bindgen::from_value(term)?;
         self.0
             .call_result(call_id as u64, term)
             .map_err(Error::from)
@@ -71,8 +71,8 @@ impl Query {
     }
 
     #[wasm_bindgen(js_class = Query, js_name = bind)]
-    pub fn wasm_bind(&mut self, name: &str, value: JsValue) -> JsResult<()> {
-        let term = serde_wasm_bindgen::from_value(value)?;
+    pub fn wasm_bind(&mut self, name: &str, term: JsValue) -> JsResult<()> {
+        let term = serde_wasm_bindgen::from_value(term)?;
         self.0
             .bind(Symbol::new(name), term)
             .map_err(Error::from)

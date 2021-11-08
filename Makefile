@@ -46,11 +46,12 @@ python-sqlalchemy-test: python-build
 ruby-test:
 	$(MAKE) -C languages/ruby test
 
+OSO_VERSION :=$(shell cat VERSION)
 java-test:
 	$(MAKE) -C languages/java package
 	cd test && \
-		javac -classpath "../languages/java/oso/target/*:." Test.java && \
-		java -classpath "../languages/java/oso/target/*:." -enableassertions Test
+		javac -classpath "../languages/java/oso/target/oso-$(OSO_VERSION).jar:." Test.java && \
+		java -classpath "../languages/java/oso/target/oso-$(OSO_VERSION).jar:." -enableassertions Test
 
 go-test: rust-build
 	$(MAKE) -C languages/go test
@@ -118,7 +119,7 @@ js-test:
 	$(MAKE) -C languages/js parity
 	$(MAKE) -C languages/js test
 
-clean: clean-docs clean-rust clean-go clean-java clean-js clean-polar-wasm-api
+clean: clean-docs clean-rust clean-go clean-java clean-js clean-polar-wasm-api clean-python
 
 clean-docs:
 	$(MAKE) -C docs clean
@@ -137,3 +138,6 @@ clean-js:
 
 clean-polar-wasm-api:
 	$(MAKE) -C polar-wasm-api clean
+
+clean-python:
+	$(MAKE) -C languages/python clean

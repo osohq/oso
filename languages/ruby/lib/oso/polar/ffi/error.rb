@@ -54,8 +54,6 @@ module Oso
             runtime_error(subkind, msg: msg, details: details)
           when 'Operational'
             operational_error(subkind, msg: msg, details: details)
-          when 'Parameter'
-            api_error(subkind, msg: msg, details: details)
           when 'Validation'
             validation_error(msg, details: details)
           end
@@ -94,8 +92,6 @@ module Oso
         # @return [::Oso::Polar::PolarRuntimeError] the object converted into the expected format.
         private_class_method def self.runtime_error(kind, msg:, details:) # rubocop:disable Metrics/MethodLength
           case kind
-          when 'Serialization'
-            ::Oso::Polar::SerializationError.new(msg, details: details)
           when 'Unsupported'
             ::Oso::Polar::UnsupportedError.new(msg, details: details)
           when 'TypeError'
@@ -121,21 +117,6 @@ module Oso
             ::Oso::Polar::UnknownError.new(msg, details: details)
           else
             ::Oso::Polar::OperationalError.new(msg, details: details)
-          end
-        end
-
-        # Map FFI API errors into Ruby exceptions.
-        #
-        # @param kind [String]
-        # @param msg [String]
-        # @param details [Hash<String, Object>]
-        # @return [::Oso::Polar::ApiError] the object converted into the expected format.
-        private_class_method def self.api_error(kind, msg:, details:)
-          case kind
-          when 'Parameter'
-            ::Oso::Polar::ParameterError.new(msg, details: details)
-          else
-            ::Oso::Polar::ApiError.new(msg, details: details)
           end
         end
 

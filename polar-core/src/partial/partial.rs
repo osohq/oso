@@ -302,7 +302,8 @@ mod test {
     use crate::error::{ErrorKind, PolarError, RuntimeError};
     use crate::events::QueryEvent;
     use crate::formatting::ToPolarString;
-    use crate::polar::{Polar, Query};
+    use crate::polar::Polar;
+    use crate::query::Query;
     use crate::terms::{Call, Dictionary, InstanceLiteral, Pattern};
 
     macro_rules! assert_partial_expression {
@@ -470,52 +471,10 @@ mod test {
         p.clear_rules();
 
         // Test permutations of variable states in isa.
-        p.load_str(
-            r#"h(_x: (_y));
-               i(_x: (y), y: (_z));
-               j(x: (x), _y: (x));
-               k(x, y: (y), y: (x));
-               l(x: (x), x: (x));
-               m(x) if [_y] matches [x];
-               n(x: (x)) if [_y] matches [x];"#,
-        )?;
-        let mut q = p.new_query_from_term(term!(call!("h", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "_this matches __y_34");
-        assert_query_done!(q);
-
-        let mut q = p.new_query_from_term(term!(call!("i", [sym!("x"), sym!("y")])), false);
-        assert_partial_expressions!(next_binding(&mut q)?,
-            "x" => "_this matches y and y matches __z_40",
-            "y" => "x matches _this and _this matches __z_40");
-        assert_query_done!(q);
-
-        let mut q = p.new_query_from_term(term!(call!("j", [sym!("x"), sym!("y")])), false);
-        assert_partial_expressions!(next_binding(&mut q)?,
-            "x" => "_this matches _this and y matches _this",
-            "y" => "x matches x and _this matches x");
-        assert_query_done!(q);
-
-        let mut q =
-            p.new_query_from_term(term!(call!("k", [sym!("x"), sym!("y"), sym!("y")])), false);
-        assert_partial_expressions!(next_binding(&mut q)?,
-            "x" => "y matches y and y matches _this",
-            "y" => "_this matches _this and _this matches x");
-        assert_query_done!(q);
-
-        let mut q = p.new_query_from_term(term!(call!("l", [sym!("x"), sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "_this matches _this");
-        assert_query_done!(q);
-
+        // NOTE(gj): only one permutation remains parse-able.
+        p.load_str("m(x) if [_y] matches [x];")?;
         let mut q = p.new_query_from_term(term!(call!("m", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "__y_54 matches _this");
-        assert_query_done!(q);
-
-        let mut q = p.new_query_from_term(term!(call!("n", [sym!("x")])), false);
-        assert_partial_expression!(
-            next_binding(&mut q)?,
-            "x",
-            "_this matches _this and __y_58 matches _this"
-        );
+        assert_partial_expression!(next_binding(&mut q)?, "x", "__y_34 matches _this");
         assert_query_done!(q);
 
         // TODO(gj): Make the below work.
@@ -1046,7 +1005,14 @@ mod test {
 
                h(y: A{foo: 1}) if i(y.b);
                i(y: C) if y.c > 0;
-               i(y: B{bar: 2}) if y.b > 0;"#,
+               i(y: B{bar: 2}) if y.b > 0;
+
+               # the rebinding here sometimes trips up the simplifier
+               # PR: https://github.com/osohq/oso/pull/1289
+               a(x: A) if y = x.b and b(y);
+               b(b: B) if b.z = 1;
+               b(c: C) if c.z = 2;
+               "#,
         )?;
 
         let next_binding = |q: &mut Query| loop {
@@ -1096,6 +1062,14 @@ mod test {
             next_binding(&mut q),
             "y",
             "_this matches A{} and _this.foo = 1 and _this.b matches B{} and _this.b.bar = 2 and _this.b.b > 0"
+        );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("a", [sym!("x")])), false);
+        assert_partial_expression!(
+            next_binding(&mut q),
+            "x",
+            "_this matches A{} and _this.b matches B{} and 1 = _this.b.z"
         );
         assert_query_done!(q);
         Ok(())
@@ -1621,8 +1595,6 @@ mod test {
             r#"f(x) if _y in x.values;
                g(x, y) if y in x.values;
                h(x) if y in x.values and (y.bar = 1 and y.baz = 2 or y.bar = 3);
-               i() if _x in _y;
-               j() if _x in [];
                k(x) if x > 1 and x in [2, 3];
                l(x) if _y in x;
                m(x) if 1 in y and y = x;"#,
@@ -1652,20 +1624,13 @@ mod test {
         );
         assert_query_done!(q);
 
-        let mut q = p.new_query_from_term(term!(call!("i")), false);
-        assert!(next_binding(&mut q)?.is_empty());
-        assert_query_done!(q);
-
-        let mut q = p.new_query_from_term(term!(call!("j")), false);
-        assert_query_done!(q);
-
         let mut q = p.new_query_from_term(term!(call!("k", [sym!("x")])), false);
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(2));
         assert_eq!(next_binding(&mut q)?[&sym!("x")], term!(3));
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("l", [sym!("x")])), false);
-        assert_partial_expressions!(next_binding(&mut q)?, "x" => "__y_39 in _this");
+        assert_partial_expressions!(next_binding(&mut q)?, "x" => "__y_36 in _this");
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("m", [sym!("x")])), false);
@@ -2214,6 +2179,89 @@ mod test {
             }
         }
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_grounded_negated_dot_comparison() -> TestResult {
+        let p = Polar::new();
+
+        let mut q = p.new_query("x in _ and not x.a = q and x = {}", false)?;
+        assert_query_done!(q);
+
+        let mut q = p.new_query("x in _ and not q = x.a and x = {}", false)?;
+        assert_query_done!(q);
+
+        let mut q = p.new_query("x in _ and not q = x.a and x = {a: q}", false)?;
+        let bindings = next_binding(&mut q)?;
+        let expd = term!(Value::Dictionary(dict!(
+            btreemap! { sym!("a") => var!("q") }
+        )));
+        assert_eq!(bindings.get(&sym!("x")).unwrap(), &expd);
+
+        let mut q = p.new_query("x in _ and not x.a = q and x = {a: q}", false)?;
+        let bindings = next_binding(&mut q)?;
+        let expd = term!(Value::Dictionary(dict!(
+            btreemap! { sym!("a") => var!("q") }
+        )));
+        assert_eq!(bindings.get(&sym!("x")).unwrap(), &expd);
+        Ok(())
+    }
+
+    // Tests that if a policy constructs any partials that aren't tied to
+    // the result variables, that we will get an error
+    #[test]
+    fn test_for_unhandled_partial() -> TestResult {
+        let p = Polar::new();
+        p.load_str(
+            r#"
+            # All of these should error
+            f(x) if y = y and y > 0 and x = 1;
+            g() if x = x and y = y and x in y;
+            h() if x = x and x > 0;
+            i() if x.a = 1 and x.b = 2;
+            j() if x.a = 1 and x.a = 2;
+
+            # Cases that look similar but work
+            a(x) if y.foo = x and y.bar = 1;
+            b() if _x_dot_a = 1 and _x_dot_b = 2;
+        "#,
+        )?;
+
+        // all the failing cases
+        let query_terms = vec![
+            term!(call!("f", [sym!("x")])),
+            term!(call!("g", [])),
+            term!(call!("h", [])),
+            term!(call!("i", [])),
+            term!(call!("j", [])),
+        ];
+        for query in query_terms {
+            let mut q = p.new_query_from_term(query.clone(), false);
+            let res = q.next_event();
+            assert!(
+                matches!(
+                    res,
+                    Err(PolarError {
+                        kind: ErrorKind::Runtime(RuntimeError::UnhandledPartial { .. }),
+                        ..
+                    })
+                ),
+                "unexpected result: {:#?} for {}",
+                res,
+                query.to_polar()
+            );
+        }
+
+        // successful cases
+        let mut q = p.new_query_from_term(term!(call!("a", [sym!("x")])), false);
+        // well, this is semi-successful!
+        assert_partial_expressions!(
+            next_binding(&mut q)?,
+            "x" => "_this = _y_26.foo and 1 = _y_26.bar"
+        );
+
+        assert_query_done!(q);
         Ok(())
     }
 }

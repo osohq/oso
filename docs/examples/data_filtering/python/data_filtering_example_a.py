@@ -65,14 +65,43 @@ session.commit()
 # docs: begin-a2
 # build_query takes a list of filters and returns a query
 def build_query(filters):
+    handlers = {
+        'Eq': lambda a, b: a == b,
+        'Neq': lambda a, b: a != b,
+        'In': lambda a, b: a.in_(b),
+        'Nin': lambda a, b: not_(a.in_(b)),
+    }
+
     query = session.query(Repository)
+
     for filter in filters:
-        assert filter.kind in ["Eq", "In"]
-        field = getattr(Repository, filter.field)
-        if filter.kind == "Eq":
-            query = query.filter(field == filter.value)
-        elif filter.kind == "In":
-            query = query.filter(field.in_(filter.value))
+        assert filter.kind in ["Eq", "In", "Neq", "Nin"]
+
+        # are we directly comparing the base object?
+        if filter.field is None:
+            field = cls.id
+            if filter.kind != 'Nin':
+                value = filter.value.id
+            else:
+                value = [value.id for value in filter.value]
+
+        # do we have simultaneous field conditions?
+        elif isinstance(filter.field, list):
+            field = [cls.id if fld is None else getattr(cls, fld)]
+            value = filter.value
+        else:
+            field = getattr(Repository, filter.field)
+            value = filter.value
+
+        if not isinstance(field, list):
+            cond = handlers[filter.kind](field, value)
+        else:
+            combine = handlers['Eq' if filter.kind == 'In' else 'Neq']
+            conds = [and_(*[co(*fv) for fv in zip(field, val)]) for val in value]
+            cond = or_(*conds) if conds else false()
+
+        query = query.filter(cond)
+
     return query
 
 
@@ -92,7 +121,7 @@ oso = Oso()
 
 oso.register_class(
     Repository,
-    types={
+    fields={
         "id": str,
     },
     build_query=build_query,
@@ -100,10 +129,10 @@ oso.register_class(
     combine_query=combine_query,
 )
 
-oso.register_class(User, types={"id": str, "repo_roles": list})
+oso.register_class(User, fields={"id": str, "repo_roles": list})
 # docs: end-a2
 
-with open("../policy_a.polar") as f:
+with open("policy_a.polar") as f:
     policy_a = f.read()
 
 # docs: begin-a3

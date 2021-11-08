@@ -5,7 +5,6 @@ from polar.exceptions import (
     IntegerOverflow,
     InvalidToken,
     UnrecognizedToken,
-    SerializationError,
     PolarTypeError,
     StackOverflowError,
     FileLoadingError,
@@ -16,8 +15,6 @@ from polar.exceptions import (
     UnrecognizedEOF,
     ParserError,
     UnsupportedError,
-    ParameterError,
-    PolarApiError,
     ValidationError,
 )
 
@@ -51,9 +48,6 @@ def get_python_error(err_str, enrich_message=None):
         return _runtime_error(subkind, message, details)
     elif kind == "Operational":
         return _operational_error(subkind, message, details)
-    elif kind == "Parameter":
-        # TODO(gj): this is wrong -- method has arity 3.
-        return _api_error(message, details)
     elif kind == "Validation":
         return _validation_error(message, details)
 
@@ -73,7 +67,6 @@ def _parse_error(subkind, message, details):
 
 def _runtime_error(subkind, message, details):
     runtime_errors = {
-        "Serialization": SerializationError(message, details),
         "Unsupported": UnsupportedError(message, details),
         "TypeError": PolarTypeError(message, details),
         "StackOverflow": StackOverflowError(message, details),
@@ -91,10 +84,3 @@ def _operational_error(subkind, message, details):
 
 def _validation_error(message, details):
     return ValidationError(message, details)
-
-
-def _api_error(subkind, message, details):
-    if subkind == "Parameter":
-        return ParameterError(message, details)
-    else:
-        return PolarApiError(message, details)
