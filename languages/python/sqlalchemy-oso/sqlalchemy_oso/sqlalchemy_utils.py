@@ -24,7 +24,7 @@ try:
         loading: https://docs.sqlalchemy.org/en/14/orm/loading_relationships.html#relationship-loading-with-loader-options
         """
         entities = get_column_entities(statement)
-        entities |= set(get_joinedload_entities(statement))
+        entities |= get_joinedload_entities(statement)
         entities |= default_load_entities(entities)
 
         return set(map(to_class, entities))
