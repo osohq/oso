@@ -1,8 +1,12 @@
+# type: ignore
 """Test advanced SQLAlchemy queries using features like joinedload, contains_eager,
 and subquery.
 
 See: https://docs.sqlalchemy.org/en/14/orm/loading_relationships.html
 """
+# Unfortunately we ignore types in this module because `sqlalchemy-stubs` is not
+# yet updated for 1.4.
+
 # N.B: This test only runs on SQLAlchemy 1.4. Loading it on 1.3 is disabled in
 # conftest.py because even running the imports requires SQLAlchemy 1.4.
 
