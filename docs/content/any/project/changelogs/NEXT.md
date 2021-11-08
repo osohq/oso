@@ -51,6 +51,17 @@ This change *only* affects data filtering. Other Oso APIs require no new configu
 - Thanks to [Clara McCreery](https://github.com/chmccreery) for a correction to our
   Python data filtering docs!
 
+### Python
+
+#### Platform support
+
+We now publish wheels for musl-based Linux distributions (through the `musllinux`
+tag), and for ARM-based MacOS systems (through the `macosx_11_0_arm64` tag).
+
+On those systems, you should now be able to use `pip install oso` to get the
+latest Oso package.
+
+
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
 ### Node.js

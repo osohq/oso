@@ -537,6 +537,14 @@ type Operation struct {
 	Args []Term `json:"args"`
 }
 
+// OperationalErrorSerialization struct
+type OperationalErrorSerialization struct {
+	// Msg
+	Msg string `json:"msg"`
+}
+
+func (OperationalErrorSerialization) isOperationalError() {}
+
 // OperationalErrorUnimplemented struct
 type OperationalErrorUnimplemented struct {
 	// Msg
@@ -589,6 +597,17 @@ func (result *OperationalError) UnmarshalJSON(b []byte) error {
 	}
 	switch variantName {
 
+	case "Serialization":
+		var variant OperationalErrorSerialization
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = OperationalError{variant}
+		return nil
+
 	case "Unimplemented":
 		var variant OperationalErrorUnimplemented
 		if variantValue != nil {
@@ -629,6 +648,11 @@ func (result *OperationalError) UnmarshalJSON(b []byte) error {
 
 func (variant OperationalError) MarshalJSON() ([]byte, error) {
 	switch inner := variant.OperationalErrorVariant.(type) {
+
+	case OperationalErrorSerialization:
+		return json.Marshal(map[string]OperationalErrorSerialization{
+			"Serialization": inner,
+		})
 
 	case OperationalErrorUnimplemented:
 		return json.Marshal(map[string]OperationalErrorUnimplemented{
@@ -2004,14 +2028,6 @@ type RuntimeErrorArithmeticError struct {
 
 func (RuntimeErrorArithmeticError) isRuntimeError() {}
 
-// RuntimeErrorSerialization struct
-type RuntimeErrorSerialization struct {
-	// Msg
-	Msg string `json:"msg"`
-}
-
-func (RuntimeErrorSerialization) isRuntimeError() {}
-
 // RuntimeErrorUnsupported struct
 type RuntimeErrorUnsupported struct {
 	// Msg
@@ -2135,17 +2151,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		*result = RuntimeError{variant}
 		return nil
 
-	case "Serialization":
-		var variant RuntimeErrorSerialization
-		if variantValue != nil {
-			err := json.Unmarshal(*variantValue, &variant)
-			if err != nil {
-				return err
-			}
-		}
-		*result = RuntimeError{variant}
-		return nil
-
 	case "Unsupported":
 		var variant RuntimeErrorUnsupported
 		if variantValue != nil {
@@ -2256,11 +2261,6 @@ func (variant RuntimeError) MarshalJSON() ([]byte, error) {
 	case RuntimeErrorArithmeticError:
 		return json.Marshal(map[string]RuntimeErrorArithmeticError{
 			"ArithmeticError": inner,
-		})
-
-	case RuntimeErrorSerialization:
-		return json.Marshal(map[string]RuntimeErrorSerialization{
-			"Serialization": inner,
 		})
 
 	case RuntimeErrorUnsupported:
