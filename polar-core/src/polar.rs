@@ -1,8 +1,8 @@
 use std::sync::{Arc, RwLock};
 
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
-use super::diagnostic::Diagnostic;
-use super::error::{ErrorKind, PolarResult, ValidationError};
+use super::diagnostic::{set_context_for_diagnostics, Diagnostic};
+use super::error::PolarResult;
 use super::kb::*;
 use super::messages::*;
 use super::parser;
@@ -131,41 +131,22 @@ impl Polar {
                 .collect(),
         );
 
-        // Attach context to ResourceBlock, SingletonVariable, and UnregisteredClass errors.
-        //
-        // TODO(gj): can we attach context to *all* errors here since all errors will be parse-time
-        // errors and so will have some source context to attach?
-        for diagnostic in &mut diagnostics {
-            if let Diagnostic::Error(e) = diagnostic {
-                use {ErrorKind::Validation, ValidationError::*};
-                match e.kind {
-                    Validation(ResourceBlock { ref term, .. })
-                    | Validation(SingletonVariable { ref term, .. })
-                    | Validation(UnregisteredClass { ref term, .. }) => {
-                        *e = kb.set_error_context(term, e.clone());
-                    }
-                    _ => (),
-                }
-            }
-        }
-
-        // TODO(gj): the below check is actually too eager to bomb out now -- I think we only need
-        // to bomb out if we encountered a ParseError. ValidationErrors should be fine to continue.
-
-        // Generate appropriate rule_type definitions using the types contained in policy resource
-        // blocks.
-        kb.create_resource_specific_rule_types();
-
         // TODO(gj): need to bomb out before rule type validation in case additional rule types
         // were defined later on in the file that encountered the `ParseError`. Those additional
         // rule types might extend the valid shapes for a rule type defined in a different,
         // well-parsed file that also contains rules that don't conform to the shapes laid out in
         // the well-parsed file but *would have* conformed to the shapes laid out in the file that
         // failed to parse.
-        if diagnostics.iter().any(Diagnostic::is_error) {
+        if diagnostics.iter().any(Diagnostic::is_parse_error) {
+            // NOTE(gj): need to set context _before_ clearing the KB so we still have source info.
+            set_context_for_diagnostics(&kb, &mut diagnostics);
             kb.clear_rules();
             return diagnostics;
         }
+
+        // Generate appropriate rule_type definitions using the types contained in policy resource
+        // blocks.
+        kb.create_resource_specific_rule_types();
 
         // check rules are valid against rule types
         diagnostics.append(&mut kb.validate_rules());
@@ -181,6 +162,9 @@ impl Polar {
         if let Some(w) = check_resource_blocks_missing_has_permission(&kb) {
             diagnostics.push(w)
         };
+
+        // NOTE(gj): need to set context _before_ clearing the KB so we still have source info.
+        set_context_for_diagnostics(&kb, &mut diagnostics);
 
         // If we've encountered any errors, clear the KB.
         if diagnostics.iter().any(Diagnostic::is_error) {
