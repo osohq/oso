@@ -335,7 +335,7 @@ The expression is: {expr}
             Self::DataFilteringFieldMissing { var_type, field } => {
                 let msg = formatdoc!(
                     r#"Unregistered field or relation: {var_type}.{field}
-                    
+
                     Please include `{field}` in the `fields` parameter of your
                     `register_class` call for {var_type}.  For example, in Python:
 
