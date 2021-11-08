@@ -336,8 +336,7 @@ public class Ffi {
         System.err.printf("[warning] %s\n", msg);
       }
     } catch (JSONException ignored) {
-      throw new Exceptions.SerializationError(
-          String.format("Invalid JSON Message: %s", msgStr), null);
+      throw new Exceptions.OsoException(String.format("Invalid JSON Message: %s", msgStr), null);
     }
   }
 }

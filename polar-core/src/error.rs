@@ -255,9 +255,6 @@ pub enum RuntimeError {
     ArithmeticError {
         msg: String,
     },
-    Serialization {
-        msg: String,
-    },
     Unsupported {
         msg: String,
     },
@@ -302,7 +299,6 @@ impl fmt::Display for RuntimeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::ArithmeticError { msg } => write!(f, "Arithmetic error: {}", msg),
-            Self::Serialization { msg } => write!(f, "Serialization error: {}", msg),
             Self::Unsupported { msg } => write!(f, "Not supported: {}", msg),
             Self::TypeError { msg, stack_trace } => {
                 if let Some(stack_trace) = stack_trace {
@@ -350,6 +346,9 @@ The expression is: {expr}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OperationalError {
+    Serialization {
+        msg: String,
+    },
     Unimplemented {
         msg: String,
     },
@@ -365,6 +364,7 @@ pub enum OperationalError {
 impl fmt::Display for OperationalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Self::Serialization { msg } => write!(f, "Serialization error: {}", msg),
             Self::Unimplemented { msg } => write!(f, "{} is not yet implemented", msg),
             Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
             Self::Unknown => write!(

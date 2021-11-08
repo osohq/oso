@@ -13,10 +13,36 @@ draft: true
 ### Core
 
 #### Other bugs & improvements
+
 - Fixed a bug where a negated constraint on a dot lookup could cause Polar to crash
   when the underlying variable became bound.
+- Removed syntax for parenthesized specializers like `f(_: (x));`, which don't
+  currently achieve anything.
+
+### Python
+
+#### Other bugs & improvements
+- Thanks to [Clara McCreery](https://github.com/chmccreery) for a correction to our
+  Python data filtering docs!
+
+### Python
+
+#### Platform support
+
+We now publish wheels for musl-based Linux distributions (through the `musllinux`
+tag), and for ARM-based MacOS systems (through the `macosx_11_0_arm64` tag).
+
+On those systems, you should now be able to use `pip install oso` to get the
+latest Oso package.
+
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
+
+### Node.js
+
+#### Other bugs & improvements
+- The `Class` type for representing abstract resources for data filtering is
+  now a top-level export.
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
