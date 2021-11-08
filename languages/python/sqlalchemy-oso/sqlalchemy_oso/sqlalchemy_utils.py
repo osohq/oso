@@ -70,7 +70,7 @@ try:
         return default_entities
 
     # Start POC code from @zzzeek (Mike Bayer)
-    # Still needs to be generalized & support other options.
+    # TODO: Still needs to be generalized & support other options.
 
     # the structure we're dealing with is essentially:
 
@@ -95,7 +95,8 @@ try:
                         # the "path" is a tuple showing the entity/relationships
                         # being targeted
 
-                        # NOTE: I am not checking "of_type()" here yet
+                        # TODO check for wild card.
+                        # TODO: Check whether entity is a string.
                         yield b.path[-1].entity
             elif hasattr(opt, "context"):
                 # these options are called Load
@@ -107,13 +108,10 @@ try:
                         # the "path" is a tuple showing the entity/relationships
                         # being targeted
 
-                        # NOTE: I am not checking "of_type()" here yet
+                        # TODO: Check for of_type.
+                        # TODO: Check whether entity is a string, unsupported.
+                        # TODO check for wild card.
                         yield key[1][-1].entity
-            elif isinstance(opt, sqlalchemy.orm.util.LoaderCriteriaOption):
-                # TODO: check these other types of options?
-                # one example is sqlalchemy.orm.util.LoaderCriteriaOption
-                # (which I'm realizing might be added by ourselves)
-                pass
 
 except ImportError:
     # This code should not be called for SQLAlchemy 1.4.
