@@ -665,6 +665,7 @@ export interface DataFilteringQueryParams<Query = any, ReturnType = any> {
   combineQuery?: CombineQueryFn<Query>;
 }
 
+/* eslint-disable  @typescript-eslint/no-explicit-any */
 export type IsaCheck = (instance: any) => boolean;
 
 /**
