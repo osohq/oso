@@ -120,3 +120,14 @@ raise if oso.query_rule('testIterables').first.nil?
 # Test unspecialized rule ordering
 result = oso.query_rule('testUnspecializedRuleOrder', 'foo', 'bar', Oso::Polar::Variable.new('z'))
 raise unless result.map { |res| res['z'] }.to_a == [1, 2, 3]
+
+# Test that unhandled partials error correctly
+exception_thrown = false
+begin
+  oso.query_rule('testUnhandledPartial').first
+rescue Oso::Polar::PolarRuntimeError => e
+  raise unless e.to_s.start_with? 'Found an unhandled partial'
+
+  exception_thrown = true
+end
+raise unless exception_thrown

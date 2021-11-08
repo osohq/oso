@@ -1,8 +1,8 @@
 use wasm_bindgen::JsValue;
 
 use polar_core::error::{
-    ErrorKind, FormattedPolarError, OperationalError, ParameterError, ParseError, PolarError,
-    RuntimeError, ValidationError,
+    ErrorKind, FormattedPolarError, OperationalError, ParseError, PolarError, RuntimeError,
+    ValidationError,
 };
 
 pub struct Error {
@@ -11,7 +11,7 @@ pub struct Error {
 }
 
 pub fn serialization_error(msg: String) -> JsValue {
-    Error::from(PolarError::from(RuntimeError::Serialization { msg })).into()
+    Error::from(PolarError::from(OperationalError::Serialization { msg })).into()
 }
 
 fn kind(err: &PolarError) -> String {
@@ -31,26 +31,27 @@ fn kind(err: &PolarError) -> String {
         Parse(InvalidFloat { .. }) => "ParseError::InvalidFloat",
         Parse(WrongValueType { .. }) => "ParseError::WrongValueType",
         Parse(DuplicateKey { .. }) => "ParseError::DuplicateKey",
-        Parse(SingletonVariable { .. }) => "ParseError::SingletonVariable",
-        Parse(ResourceBlock { .. }) => "ParseError::ResourceBlock",
         Runtime(Application { .. }) => "RuntimeError::Application",
         Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
         Runtime(FileLoading { .. }) => "RuntimeError::FileLoading",
         Runtime(IncompatibleBindings { .. }) => "RuntimeError::IncompatibleBindings",
         Runtime(QueryTimeout { .. }) => "RuntimeError::QueryTimeout",
-        Runtime(Serialization { .. }) => "RuntimeError::Serialization",
         Runtime(StackOverflow { .. }) => "RuntimeError::StackOverflow",
         Runtime(TypeError { .. }) => "RuntimeError::TypeError",
-        Runtime(UnboundVariable { .. }) => "RuntimeError::UnboundVariable",
         Runtime(UnhandledPartial { .. }) => "RuntimeError::UnhandledPartial",
         Runtime(Unsupported { .. }) => "RuntimeError::Unsupported",
+        Runtime(DataFilteringFieldMissing { .. }) => "RuntimeError::DataFilteringFieldMissing",
+        Operational(Serialization { .. }) => "OperationalError::Serialization",
         Operational(Unimplemented { .. }) => "OperationalError::Unimplemented",
         Operational(Unknown) => "OperationalError::Unknown",
         Operational(InvalidState { .. }) => "OperationalError::InvalidState",
-        Parameter(ParameterError(..)) => "ParameterError::ParameterError",
         Validation(InvalidRule { .. }) => "ValidationError::InvalidRule",
         Validation(InvalidRuleType { .. }) => "ValidationError::InvalidRuleType",
+        Validation(ResourceBlock { .. }) => "ValidationError::ResourceBlock",
         Validation(UndefinedRule { .. }) => "ValidationError::UndefinedRule",
+        Validation(SingletonVariable { .. }) => "ValidationError::SingletonVariable",
+        Validation(UnregisteredClass { .. }) => "ValidationError::UnregisteredClass",
+        Validation(MissingRequiredRule { .. }) => "ValidationError::MissingRequiredRule",
     }
     .to_owned()
 }

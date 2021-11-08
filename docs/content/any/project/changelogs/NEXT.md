@@ -8,13 +8,67 @@ description: >-
 draft: true
 ---
 
-## `RELEASED_PACKAGE_1` NEW_VERSION
+## `oso` NEW_VERSION
 
-### Go
+### Core
+
+#### Breaking changes
+
+{{% callout "Warning" "orange" %}}
+  This release contains breaking changes. Be sure to follow migration steps
+  before upgrading.
+{{% /callout %}}
+
+Data filtering now treats accessing an undeclared field as an error. All fields
+used in data filtering queries must now be registered ahead of time by including
+them in the `fields` parameter of the `register_class` Oso API function, which
+previously was only necessary for data relations. For example, to use data filtering
+with the rule
+
+```
+allow(user, _, foo: Foo) if foo.user_name = user.name;
+```
+
+`user_name` must be included in the `register_class` call for `Foo`
+
+```
+# an example in Python
+oso.register_class(Foo, fields={'user_name': str })
+```
+
+This change *only* affects data filtering. Other Oso APIs require no new configuration.
 
 #### Other bugs & improvements
 
-- Fixed a bug that caused the Go library to crash when using Go 1.17 on macOS.
+- Fixed a bug where a negated constraint on a dot lookup could cause Polar to crash
+  when the underlying variable became bound.
+- Removed syntax for parenthesized specializers like `f(_: (x));`, which don't
+  currently achieve anything.
+
+### Python
+
+#### Other bugs & improvements
+- Thanks to [Clara McCreery](https://github.com/chmccreery) for a correction to our
+  Python data filtering docs!
+
+### Python
+
+#### Platform support
+
+We now publish wheels for musl-based Linux distributions (through the `musllinux`
+tag), and for ARM-based MacOS systems (through the `macosx_11_0_arm64` tag).
+
+On those systems, you should now be able to use `pip install oso` to get the
+latest Oso package.
+
+
+## `RELEASED_PACKAGE_1` NEW_VERSION
+
+### Node.js
+
+#### Other bugs & improvements
+- The `Class` type for representing abstract resources for data filtering is
+  now a top-level export.
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 

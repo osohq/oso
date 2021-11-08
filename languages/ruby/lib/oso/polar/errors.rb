@@ -23,7 +23,6 @@ module Oso
 
     # Errors from across the FFI boundary.
 
-    class SerializationError < PolarRuntimeError; end
     class UnsupportedError < PolarRuntimeError; end
     class PolarTypeError < PolarRuntimeError; end
     class StackOverflowError < PolarRuntimeError; end
@@ -95,10 +94,6 @@ module Oso
       class UnrecognizedEOF < ParseError; end
       class UnrecognizedToken < ParseError; end
     end
-
-    # Generic Polar API exception.
-    class ApiError < Error; end
-    class ParameterError < ApiError; end
 
     class ValidationError < Error; end
 

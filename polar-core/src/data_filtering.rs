@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     counter::Counter,
-    error::{OperationalError, PolarResult},
+    error::{OperationalError, PolarResult, RuntimeError},
     events::ResultEvent,
     terms::*,
 };
@@ -315,6 +315,14 @@ impl VarInfo {
             )),
         }
     }
+}
+
+fn unregistered_field_error<A>(var_type: &str, field: &str) -> PolarResult<A> {
+    Err(RuntimeError::DataFilteringFieldMissing {
+        var_type: var_type.to_string(),
+        field: field.to_string(),
+    }
+    .into())
 }
 
 fn err_invalid<A>(msg: String) -> PolarResult<A> {
@@ -833,6 +841,7 @@ impl<'a> ResultSetBuilder<'a> {
             Some(fs) => fs.iter().fold(Ok(self), |this, (field, child)| {
                 let this = this?;
                 match this.types.get(var_type).and_then(|m| m.get(field)) {
+                    None => unregistered_field_error(var_type, field),
                     Some(Type::Relation {
                         other_class_tag,
                         my_field,
@@ -1034,7 +1043,10 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::bindings::Bindings;
+    use crate::{
+        bindings::Bindings,
+        error::{ErrorKind::*, OperationalError::Unimplemented, PolarError},
+    };
     type TestResult = PolarResult<()>;
 
     impl From<Bindings> for ResultEvent {
@@ -1166,7 +1178,7 @@ mod test {
                 }
             }
         };
-        build_filter_plan(types, vec![bindings], "resource", "something")?;
+        build_filter_plan(types, vec![bindings], "resource", "A")?;
         Ok(())
     }
 
@@ -1177,7 +1189,38 @@ mod test {
             sym!("resource") => partial
         });
 
-        build_filter_plan(hashmap! {}, vec![bindings], "resource", "something")?;
+        build_filter_plan(hashmap! {}, vec![bindings], "resource", "SomeClass")?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_unregistered_field() -> TestResult {
+        let pat_a = term!(pattern!(instance!("A")));
+        let partial = term!(op!(
+            And,
+            term!(op!(Isa, var!("_this"), pat_a)),
+            term!(op!(
+                Unify,
+                term!(op!(Dot, var!("_this"), str!("field"))),
+                str!("nope")
+            ))
+        ));
+
+        let bindings = ResultEvent::from(hashmap! {
+            sym!("resource") => partial
+        });
+        let types = hashmap! {
+            "A".to_owned() => hashmap! { },
+        };
+
+        let err = build_filter_plan(types, vec![bindings], "resource", "A").unwrap_err();
+        match err {
+            PolarError {
+                kind: Runtime(RuntimeError::DataFilteringFieldMissing { var_type, field }),
+                ..
+            } if var_type == "A" && field == "field" => (),
+            _ => panic!("unexpected {:?}", err),
+        }
         Ok(())
     }
 
@@ -1208,8 +1251,6 @@ mod test {
 
     #[test]
     fn test_unsupported_op_msgs() {
-        use crate::error::{ErrorKind::Operational, OperationalError::Unimplemented, PolarError};
-
         let err = Vars::from_op(&op!(Dot)).expect_err("should've failed");
         match err {
             PolarError {
@@ -1532,21 +1573,6 @@ impl QueryInfo {
                 Ok(p)
             }
             Value::Variable(Symbol(s)) => Ok(vec![s.clone()]),
-            Value::ExternalInstance(ExternalInstance {
-                repr: Some(repr), ..
-            }) => {
-                eprintln!("{}", repr);
-                // FIXME hack for Ruby, obviously wrong
-                let re = regex::Regex::new(r"^#<([^:]+):.*").unwrap();
-                match re
-                    .captures(repr)
-                    .and_then(|cap| cap.get(1))
-                    .map(|c| c.as_str().to_owned())
-                {
-                    Some(tag) => Ok(vec![tag]),
-                    None => err_unimplemented(format!("QueryInfo::path_disasm({})", t.to_polar())),
-                }
-            }
             _ => err_unimplemented(format!("QueryInfo::path_disasm({})", t.to_polar())),
         }
     }

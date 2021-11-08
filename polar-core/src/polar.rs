@@ -1,143 +1,20 @@
-use super::data_filtering::{
-    build_filter, build_filter_plan, DataFilter, FilterPlan, PartialResults, Types,
-};
-use super::error::PolarResult;
-use super::events::*;
-use super::kb::*;
-use super::messages::*;
-use super::parser;
-use super::rewrites::*;
-use super::runnable::Runnable;
-use super::sources::*;
-use super::terms::*;
-use super::validations::{
-    check_ambiguous_precedence, check_no_allow_rule, check_resource_blocks_missing_has_permission,
-    check_singletons,
-};
-use super::vm::*;
-
 use std::sync::{Arc, RwLock};
+use super::{
+    data_filtering::{build_filter, build_filter_plan, DataFilter, FilterPlan, PartialResults, Types},
+    diagnostic::{set_context_for_diagnostics, Diagnostic},
+    error::PolarResult,
+    kb::*,
+    messages::*,
+    parser,
+    query::Query,
+    resource_block::resource_block_from_productions,
+    rewrites::*,
+    sources::*,
+    terms::*,
+    validations::{check_ambiguous_precedence, check_no_allow_rule, check_resource_blocks_missing_has_permission, check_singletons},
+    vm::*
+};
 
-pub struct Query {
-    runnable_stack: Vec<(Box<dyn Runnable>, u64)>, // Tuple of Runnable + call_id.
-    vm: PolarVirtualMachine,
-    term: Term,
-    done: bool,
-}
-
-impl Query {
-    pub fn new(vm: PolarVirtualMachine, term: Term) -> Self {
-        Self {
-            runnable_stack: vec![],
-            vm,
-            term,
-            done: false,
-        }
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    pub fn set_logging_options(&mut self, rust_log: Option<String>, polar_log: Option<String>) {
-        self.vm.set_logging_options(rust_log, polar_log);
-    }
-
-    /// Runnable lifecycle
-    ///
-    /// 1. Get Runnable A from the top of the Runnable stack, defaulting to the VM.
-    /// 2. If Runnable A emits a Run event containing Runnable B, push Runnable B onto the stack.
-    /// 3. Immediately request the next event, which will execute Runnable B.
-    /// 4. When Runnable B emits a Done event, pop Runnable B off the stack and return its result as
-    ///    an answer to Runnable A.
-    pub fn next_event(&mut self) -> PolarResult<QueryEvent> {
-        let mut counter = self.vm.id_counter();
-        let qe = match self.top_runnable().run(Some(&mut counter)) {
-            Ok(e) => e,
-            Err(e) => self.top_runnable().handle_error(e)?,
-        };
-        self.recv_event(qe)
-    }
-
-    fn recv_event(&mut self, qe: QueryEvent) -> PolarResult<QueryEvent> {
-        match qe {
-            QueryEvent::None => self.next_event(),
-            QueryEvent::Run { runnable, call_id } => {
-                self.push_runnable(runnable, call_id);
-                self.next_event()
-            }
-            QueryEvent::Done { result } => {
-                if let Some((_, result_call_id)) = self.pop_runnable() {
-                    self.top_runnable()
-                        .external_question_result(result_call_id, result)?;
-                    self.next_event()
-                } else {
-                    // VM is done.
-                    assert!(self.runnable_stack.is_empty());
-                    Ok(QueryEvent::Done { result })
-                }
-            }
-            ev => Ok(ev),
-        }
-    }
-
-    fn top_runnable(&mut self) -> &mut (dyn Runnable) {
-        self.runnable_stack
-            .last_mut()
-            .map(|b| b.0.as_mut())
-            .unwrap_or(&mut self.vm)
-    }
-
-    fn push_runnable(&mut self, runnable: Box<dyn Runnable>, call_id: u64) {
-        self.runnable_stack.push((runnable, call_id));
-    }
-
-    fn pop_runnable(&mut self) -> Option<(Box<dyn Runnable>, u64)> {
-        self.runnable_stack.pop()
-    }
-
-    pub fn call_result(&mut self, call_id: u64, value: Option<Term>) -> PolarResult<()> {
-        self.top_runnable().external_call_result(call_id, value)
-    }
-
-    pub fn question_result(&mut self, call_id: u64, result: bool) -> PolarResult<()> {
-        self.top_runnable()
-            .external_question_result(call_id, result)
-    }
-
-    pub fn application_error(&mut self, message: String) -> PolarResult<()> {
-        self.vm.external_error(message)
-    }
-
-    pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {
-        self.top_runnable().debug_command(command)
-    }
-
-    pub fn next_message(&self) -> Option<Message> {
-        self.vm.messages.next()
-    }
-
-    pub fn source_info(&self) -> String {
-        self.vm.term_source(&self.term, true)
-    }
-
-    pub fn bind(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
-        self.vm.bind(&name, value)
-    }
-}
-
-// Query as an iterator returns `None` after the first time `Done` is seen
-impl Iterator for Query {
-    type Item = PolarResult<QueryEvent>;
-
-    fn next(&mut self) -> Option<PolarResult<QueryEvent>> {
-        if self.done {
-            return None;
-        }
-        let event = self.next_event();
-        if let Ok(QueryEvent::Done { .. }) = event {
-            self.done = true;
-        }
-        Some(event)
-    }
-}
 
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
@@ -169,29 +46,25 @@ impl Polar {
         }
     }
 
-    /// Load `Source`s into the KB.
-    pub fn load(&self, sources: Vec<Source>) -> PolarResult<()> {
-        if self.kb.read().unwrap().has_rules() {
-            let msg = MULTIPLE_LOAD_ERROR_MSG.to_owned();
-            return Err(error::RuntimeError::FileLoading { msg }.into());
-        }
-
+    /// Load `sources` into the KB, returning compile-time diagnostics accumulated during the load.
+    pub fn diagnostic_load(&self, sources: Vec<Source>) -> Vec<Diagnostic> {
         // we extract this into a separate function
         // so that any errors returned with `?` are captured
         fn load_source(
             source_id: u64,
             source: &Source,
             kb: &mut KnowledgeBase,
-        ) -> PolarResult<Vec<String>> {
+        ) -> PolarResult<Vec<Diagnostic>> {
             let mut lines = parser::parse_lines(source_id, &source.src)
+                // TODO(gj): we still bomb out at the first ParseError.
                 .map_err(|e| e.set_context(Some(source), None))?;
             lines.reverse();
-            let mut warnings = vec![];
+            let mut diagnostics = vec![];
             while let Some(line) = lines.pop() {
                 match line {
                     parser::Line::Rule(rule) => {
-                        warnings.append(&mut check_singletons(&rule, kb)?);
-                        warnings.append(&mut check_ambiguous_precedence(&rule, kb));
+                        diagnostics.append(&mut check_singletons(&rule, kb));
+                        diagnostics.append(&mut check_ambiguous_precedence(&rule, kb));
                         let rule = rewrite_rule(rule, kb);
                         kb.add_rule(rule);
                     }
@@ -210,67 +83,117 @@ impl Polar {
                                 }
                             ) if args.is_empty()
                         ) {
-                            return Err(kb.set_error_context(
+                            diagnostics.push(Diagnostic::Error(kb.set_error_context(
                                 &rule_type.body,
                                 error::ValidationError::InvalidRuleType {
                                     rule_type: rule_type.to_polar(),
                                     msg: "\nRule types cannot contain dot lookups.".to_owned(),
                                 },
-                            ));
+                            )));
+                        } else {
+                            kb.add_rule_type(rule_type);
                         }
-                        kb.add_rule_type(rule_type);
                     }
-                    parser::Line::ResourceBlock(block) => {
-                        block.add_to_kb(kb)?;
-                    }
+                    parser::Line::ResourceBlock {
+                        keyword,
+                        resource,
+                        productions,
+                    } => match resource_block_from_productions(keyword, resource, productions)
+                        .map(|block| block.add_to_kb(kb))
+                    {
+                        Ok(errors) | Err(errors) => diagnostics
+                            .append(&mut errors.into_iter().map(Diagnostic::Error).collect()),
+                    },
                 }
             }
-            Ok(warnings)
+            Ok(diagnostics)
         }
 
         let mut kb = self.kb.write().unwrap();
+        let mut diagnostics = vec![];
+
         for source in &sources {
             let result = kb.add_source(source.clone());
             let result = result.and_then(|source_id| load_source(source_id, source, &mut kb));
             match result {
-                Ok(warnings) => {
-                    self.messages
-                        .extend(warnings.into_iter().map(Message::warning));
-                }
-                Err(e) => {
-                    // If any source fails to load, clear the KB.
-                    kb.clear_rules();
-                    return Err(e);
-                }
+                Ok(mut ds) => diagnostics.append(&mut ds),
+                Err(e) => diagnostics.push(Diagnostic::Error(e)),
             }
         }
 
         // Rewrite shorthand rules in resource blocks before validating rule types.
-        if let Err(e) = kb.rewrite_shorthand_rules() {
-            // If rewriting shorthand rules fails, clear the KB.
+        diagnostics.append(
+            &mut kb
+                .rewrite_shorthand_rules()
+                .into_iter()
+                .map(Diagnostic::Error)
+                .collect(),
+        );
+
+        // TODO(gj): need to bomb out before rule type validation in case additional rule types
+        // were defined later on in the file that encountered the `ParseError`. Those additional
+        // rule types might extend the valid shapes for a rule type defined in a different,
+        // well-parsed file that also contains rules that don't conform to the shapes laid out in
+        // the well-parsed file but *would have* conformed to the shapes laid out in the file that
+        // failed to parse.
+        if diagnostics.iter().any(Diagnostic::is_parse_error) {
+            // NOTE(gj): need to set context _before_ clearing the KB so we still have source info.
+            set_context_for_diagnostics(&kb, &mut diagnostics);
             kb.clear_rules();
-            return Err(e);
+            return diagnostics;
         }
+
+        // Generate appropriate rule_type definitions using the types contained in policy resource
+        // blocks.
+        kb.create_resource_specific_rule_types();
 
         // check rules are valid against rule types
-        if let Err(e) = kb.validate_rules() {
-            // If rule type validation fails, clear the KB.
-            kb.clear_rules();
-            return Err(e);
-        }
+        diagnostics.append(&mut kb.validate_rules());
 
         // Perform validation checks against the whole policy
-        let mut warnings = vec![];
         if !self.ignore_no_allow_warning {
-            warnings.append(&mut check_no_allow_rule(&kb));
+            if let Some(w) = check_no_allow_rule(&kb) {
+                diagnostics.push(w)
+            }
         }
 
         // Check for has_permission calls alongside resource block definitions
-        warnings.append(&mut check_resource_blocks_missing_has_permission(&kb));
+        if let Some(w) = check_resource_blocks_missing_has_permission(&kb) {
+            diagnostics.push(w)
+        };
+
+        // NOTE(gj): need to set context _before_ clearing the KB so we still have source info.
+        set_context_for_diagnostics(&kb, &mut diagnostics);
+
+        // If we've encountered any errors, clear the KB.
+        if diagnostics.iter().any(Diagnostic::is_error) {
+            kb.clear_rules();
+        }
+
+        diagnostics
+    }
+
+    /// Load `Source`s into the KB.
+    pub fn load(&self, sources: Vec<Source>) -> PolarResult<()> {
+        if self.kb.read().unwrap().has_rules() {
+            let msg = MULTIPLE_LOAD_ERROR_MSG.to_owned();
+            return Err(error::RuntimeError::FileLoading { msg }.into());
+        }
+
+        let (mut errors, mut warnings) = (vec![], vec![]);
+        for diagnostic in self.diagnostic_load(sources) {
+            match diagnostic {
+                Diagnostic::Error(e) => errors.push(e),
+                Diagnostic::Warning(w) => warnings.push(w),
+            }
+        }
 
         self.messages
             .extend(warnings.into_iter().map(Message::warning));
 
+        if let Some(e) = errors.into_iter().next() {
+            return Err(e);
+        }
         Ok(())
     }
 
@@ -280,12 +203,6 @@ impl Polar {
             src: src.to_owned(),
             filename: None,
         }])
-    }
-
-    // TODO(gj): ask Sam if we still need this.
-    pub fn remove_file(&self, filename: &str) -> Option<String> {
-        let mut kb = self.kb.write().unwrap();
-        kb.remove_file(filename)
     }
 
     /// Clear rules from the knowledge base
@@ -333,7 +250,7 @@ impl Polar {
     }
 
     pub fn register_constant(&self, name: Symbol, value: Term) -> PolarResult<()> {
-        self.kb.write().unwrap().constant(name, value)
+        self.kb.write().unwrap().register_constant(name, value)
     }
 
     /// Register MRO for `name` with `mro`.
@@ -390,31 +307,6 @@ mod tests {
     }
 
     #[test]
-    fn load_remove_files() {
-        let polar = Polar::new();
-        let valid = Source {
-            src: "f(x) if x = 1;".to_owned(),
-            filename: Some("test.polar".to_string()),
-        };
-        polar.load(vec![valid.clone()]).unwrap();
-        polar.remove_file("test.polar");
-
-        // loading works after removing
-        polar.load(vec![valid.clone()]).unwrap();
-        polar.remove_file("test.polar");
-
-        // load a broken file
-        let invalid = Source {
-            src: "f(x) if x".to_owned(),
-            filename: Some("test.polar".to_string()),
-        };
-        polar.load(vec![invalid]).unwrap_err();
-
-        // can still load files again
-        polar.load(vec![valid]).unwrap();
-    }
-
-    #[test]
     fn loading_a_second_time_fails() {
         let polar = Polar::new();
         let src = "f();";
@@ -448,7 +340,7 @@ mod tests {
     }
 
     #[test]
-    fn loading_duplicate_files_clears_the_kb() {
+    fn loading_duplicate_files_errors_and_leaves_the_kb_empty() {
         let polar = Polar::new();
         let source = Source {
             src: "f();".to_owned(),
@@ -464,6 +356,35 @@ mod tests {
         };
         assert_eq!(msg, "File file has already been loaded.");
 
+        assert!(!polar.kb.read().unwrap().has_rules());
+    }
+
+    #[test]
+    fn diagnostic_load_returns_multiple_diagnostics() {
+        let polar = Polar::new();
+        let source = Source {
+            src: "f() if g();".to_owned(),
+            filename: Some("file".to_owned()),
+        };
+
+        let diagnostics = polar.diagnostic_load(vec![source]);
+        assert_eq!(diagnostics.len(), 2);
+        let mut diagnostics = diagnostics.into_iter();
+        let next = diagnostics.next().unwrap();
+        assert!(matches!(next, Diagnostic::Error(_)));
+        assert!(
+            next.to_string().starts_with("Call to undefined rule: g()"),
+            "{}",
+            next
+        );
+        let next = diagnostics.next().unwrap();
+        assert!(matches!(next, Diagnostic::Warning(_)));
+        assert!(
+            next.to_string()
+                .starts_with("Your policy does not contain an allow rule"),
+            "{}",
+            next
+        );
         assert!(!polar.kb.read().unwrap().has_rules());
     }
 }

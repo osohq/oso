@@ -11,9 +11,7 @@ use lsp_types::{
     VersionedTextDocumentIdentifier,
 };
 use polar_core::{
-    error::{PolarError, PolarResult},
-    polar::Polar,
-    sources::Source,
+    diagnostic::Diagnostic as PolarDiagnostic, error::PolarError, polar::Polar, sources::Source,
 };
 use serde_wasm_bindgen::{from_value, to_value};
 use wasm_bindgen::prelude::*;
@@ -255,10 +253,10 @@ impl PolarLanguageServer {
             .collect()
     }
 
-    fn document_from_polar_error_context(&self, e: &PolarError) -> Option<&TextDocumentItem> {
+    fn document_from_polar_error_context(&self, e: &PolarError) -> Option<TextDocumentItem> {
         uri_from_polar_error_context(e).and_then(|uri| {
             if let Some(document) = self.documents.get(&uri) {
-                Some(document)
+                Some(document.clone())
             } else {
                 let tracked_docs = self.documents.keys().map(ToString::to_string);
                 let tracked_docs = tracked_docs.collect::<Vec<_>>().join(", ");
@@ -271,24 +269,30 @@ impl PolarLanguageServer {
         })
     }
 
-    fn diagnostic_from_polar_error(&self, e: &PolarError) -> Option<PublishDiagnosticsParams> {
-        self.document_from_polar_error_context(e).map(|d| {
-            let diagnostic = Diagnostic {
-                range: range_from_polar_error_context(e),
-                severity: Some(DiagnosticSeverity::Error),
-                source: Some("polar-language-server".to_owned()),
-                message: e.to_string(),
-                ..Default::default()
-            };
-            PublishDiagnosticsParams {
-                uri: d.uri.clone(),
-                version: Some(d.version),
-                diagnostics: vec![diagnostic],
-            }
-        })
+    /// Create a `Diagnostic` from a `PolarError`, filtering out "ignored" errors.
+    fn diagnostic_from_polar_error(
+        &self,
+        e: &PolarError,
+    ) -> Option<(TextDocumentItem, Diagnostic)> {
+        use polar_core::error::{ErrorKind::Validation, ValidationError::*};
+        match e.kind {
+            // Ignore errors that depend on app data.
+            Validation(UnregisteredClass { .. }) | Validation(SingletonVariable { .. }) => None,
+
+            _ => self.document_from_polar_error_context(e).map(|doc| {
+                let diagnostic = Diagnostic {
+                    range: range_from_polar_error_context(e),
+                    severity: Some(DiagnosticSeverity::Error),
+                    source: Some("Polar Language Server".to_owned()),
+                    message: e.to_string(),
+                    ..Default::default()
+                };
+                (doc, diagnostic)
+            }),
+        }
     }
 
-    /// Turn tracked documents into a set of Polar `Source` structs for `Polar::load`.
+    /// Turn tracked documents into a set of Polar `Source` structs for `Polar::diagnostic_load`.
     fn documents_to_polar_sources(&self) -> Vec<Source> {
         self.documents
             .values()
@@ -299,27 +303,37 @@ impl PolarLanguageServer {
             .collect()
     }
 
-    fn load_documents(&self) -> PolarResult<()> {
-        self.polar.load(self.documents_to_polar_sources())
+    fn load_documents(&self) -> Vec<PolarDiagnostic> {
+        self.polar
+            .diagnostic_load(self.documents_to_polar_sources())
     }
 
-    /// Reloads tracked documents into the `KnowledgeBase`, translates errors from `Polar::load`
-    /// into diagnostics, and returns a set of diagnostics for publishing.
+    fn get_diagnostics(&self) -> Diagnostics {
+        self.load_documents()
+            .into_iter()
+            .filter_map(|d| match d {
+                PolarDiagnostic::Error(e) => self.diagnostic_from_polar_error(&e),
+                // TODO(gj): handle warnings
+                PolarDiagnostic::Warning(_) => None,
+            })
+            .fold(Diagnostics::new(), |mut acc, (doc, diagnostic)| {
+                let params = acc.entry(doc.uri.clone()).or_insert_with(|| {
+                    PublishDiagnosticsParams::new(doc.uri, vec![], Some(doc.version))
+                });
+                params.diagnostics.push(diagnostic);
+                acc
+            })
+    }
+
+    /// Reloads tracked documents into the `KnowledgeBase`, translates `polar-core` diagnostics
+    /// into `polar-language-server` diagnostics, and returns a set of diagnostics for publishing.
     ///
-    /// NOTE(gj): we currently only receive a single error (pertaining to a single document) at a
-    /// time from the core, but we republish 'empty' diagnostics for all other documents in order
-    /// to purge stale diagnostics.
+    /// NOTE(gj): we republish 'empty' diagnostics for all documents in order to purge stale
+    /// diagnostics.
     fn reload_kb(&self) -> Diagnostics {
         self.polar.clear_rules();
         let mut diagnostics = self.empty_diagnostics_for_all_documents();
-        if let Err(e) = self.load_documents() {
-            if let Some(d) = self.diagnostic_from_polar_error(&e) {
-                // NOTE(gj): this assertion should never fail b/c we should only get Polar errors
-                // for documents we load into the KB and this `diagnostics` map contains an (empty)
-                // entry for every document we load into the KB.
-                assert!(diagnostics.insert(d.uri.clone(), d).is_some());
-            }
-        }
+        diagnostics.extend(self.get_diagnostics());
         diagnostics
     }
 }
@@ -435,18 +449,14 @@ mod tests {
         // Load a fourth doc w/ errors.
         let diagnostics = pls.on_did_open_text_document(d.clone());
         assert_eq!(diagnostics.len(), 4);
-        // NOTE(gj): we currently surface at most one error per `Polar::load` call, so even if two
-        // documents have semicolon errors we'll only publish a single diagnostic.
-        assert_no_errors(&diagnostics, vec![&a, &b, &d]);
-        assert_missing_semicolon_error(&diagnostics, vec![&c]);
+        assert_no_errors(&diagnostics, vec![&a, &b]);
+        assert_missing_semicolon_error(&diagnostics, vec![&c, &d]);
 
         // Load a fifth doc w/ no errors.
         let diagnostics = pls.on_did_open_text_document(e.clone());
         assert_eq!(diagnostics.len(), 5);
-        // NOTE(gj): we currently surface at most one error per `Polar::load` call, so even if two
-        // documents have semicolon errors we'll only publish a single diagnostic.
-        assert_no_errors(&diagnostics, vec![&a, &b, &d, &e]);
-        assert_missing_semicolon_error(&diagnostics, vec![&c]);
+        assert_no_errors(&diagnostics, vec![&a, &b, &e]);
+        assert_missing_semicolon_error(&diagnostics, vec![&c, &d]);
     }
 
     #[wasm_bindgen_test]
@@ -475,10 +485,7 @@ mod tests {
         let b3 = doc_with_missing_semicolon("banana");
         let diagnostics3 = pls.on_did_change_text_document(b3.clone());
         assert_eq!(diagnostics3.len(), 2);
-        // NOTE(gj): we currently surface at most one error per `Polar::load` call, so even if two
-        // documents have semicolon errors we'll only publish a single diagnostic.
-        assert_missing_semicolon_error(&diagnostics3, vec![&a2]);
-        assert_no_errors(&diagnostics3, vec![&b3]);
+        assert_missing_semicolon_error(&diagnostics3, vec![&a2, &b3]);
 
         // Change tracked doc, fixing an error.
         let a4 = update_text(a2, "pie();");
@@ -636,5 +643,78 @@ mod tests {
         assert_eq!(pls.documents.len(), 1);
         assert!(pls.remove_document(&a9.uri).is_some());
         assert!(pls.documents.is_empty());
+    }
+
+    #[wasm_bindgen_test]
+    fn test_ignoring_errors_dependent_on_app_data() {
+        let mut pls = new_pls();
+
+        let resource_block_unregistered_constant = r#"
+            allow(_, _, _);
+            actor User {}
+        "#;
+        let doc = polar_doc("whatever", resource_block_unregistered_constant.to_owned());
+        pls.upsert_document(doc.clone());
+
+        // `load_documents()` API performs no filtering.
+        let polar_diagnostics = pls.load_documents();
+        assert_eq!(polar_diagnostics.len(), 1, "{:?}", polar_diagnostics);
+        let polar_diagnostic = polar_diagnostics.get(0).unwrap();
+        let expected_message = format!(
+            "Unregistered class: User at line 3, column 13 in file {uri}",
+            uri = doc.uri
+        );
+        assert_eq!(polar_diagnostic.to_string(), expected_message);
+
+        // `reload_kb()` API filters out diagnostics dependent on app data.
+        let diagnostics = pls.reload_kb();
+        let params = diagnostics.get(&doc.uri).unwrap();
+        assert_eq!(params.uri, doc.uri);
+        assert_eq!(params.version.unwrap(), doc.version);
+        assert!(params.diagnostics.is_empty(), "{:?}", params.diagnostics);
+
+        let rule_type_unregistered_constant = r#"
+            allow(_, _, _);
+            type f(a: A);
+            f(_: B);
+        "#;
+        let doc = polar_doc("whatever", rule_type_unregistered_constant.to_owned());
+        pls.upsert_document(doc.clone());
+
+        // `load_documents()` API performs no filtering.
+        let polar_diagnostics = pls.load_documents();
+        assert_eq!(polar_diagnostics.len(), 2, "{:?}", polar_diagnostics);
+        let unknown_specializer = polar_diagnostics.get(0).unwrap();
+        let expected_message =
+            "Unknown specializer B\n004:             f(_: B);\n                      ^";
+        assert_eq!(unknown_specializer.to_string(), expected_message);
+        let unregistered_constant = polar_diagnostics.get(1).unwrap();
+        let expected_message = "Unregistered class: A";
+        assert_eq!(unregistered_constant.to_string(), expected_message);
+
+        // `reload_kb()` API filters out diagnostics dependent on app data.
+        let diagnostics = pls.reload_kb();
+        let params = diagnostics.get(&doc.uri).unwrap();
+        assert_eq!(params.uri, doc.uri);
+        assert_eq!(params.version.unwrap(), doc.version);
+        assert!(params.diagnostics.is_empty(), "{:?}", params.diagnostics);
+
+        let singleton_variable = "allow(a, _, _);".to_owned();
+        let doc = polar_doc("whatever", singleton_variable);
+        pls.upsert_document(doc.clone());
+
+        // `load_documents()` API performs no filtering.
+        let polar_diagnostics = pls.load_documents();
+        assert_eq!(polar_diagnostics.len(), 1, "{:?}", polar_diagnostics);
+        let singleton_variable = polar_diagnostics.get(0).unwrap();
+        let expected_message = "Singleton variable a is unused or undefined; try renaming to _a or _ at line 1, column 7 in file file:///whatever.polar";
+        assert_eq!(singleton_variable.to_string(), expected_message);
+
+        // `reload_kb()` API filters out diagnostics dependent on app data.
+        let diagnostics = pls.reload_kb();
+        let params = diagnostics.get(&doc.uri).unwrap();
+        assert_eq!(params.uri, doc.uri);
+        assert_eq!(params.version.unwrap(), doc.version);
+        assert!(params.diagnostics.is_empty(), "{:?}", params.diagnostics);
     }
 }
