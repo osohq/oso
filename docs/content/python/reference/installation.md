@@ -24,15 +24,6 @@ $ pip install oso=={{< version >}}
   - macOS (x64 and M1)
   - Windows (x64)
 
-{{% minicallout %}}
-  **Note**: The standard Python package is known to work on glibc-based
-  distributions but not on musl-based ones like Alpine Linux. Wheels built
-  against musl that you can use on Alpine Linux can be downloaded from [the
-  releases page on GitHub][releases].
-{{% /minicallout %}}
-
-[releases]: https://github.com/osohq/oso/releases/latest
-
 ## Framework & ORM Integrations
 
 Oso also provides [libraries](frameworks) to integrate with popular Python

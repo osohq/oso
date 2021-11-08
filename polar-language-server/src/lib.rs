@@ -649,16 +649,19 @@ mod tests {
     fn test_ignoring_errors_dependent_on_app_data() {
         let mut pls = new_pls();
 
-        let resource_block_unregistered_constant = "actor User {}".to_owned();
-        let doc = polar_doc("whatever", resource_block_unregistered_constant);
+        let resource_block_unregistered_constant = r#"
+            allow(_, _, _);
+            actor User {}
+        "#;
+        let doc = polar_doc("whatever", resource_block_unregistered_constant.to_owned());
         pls.upsert_document(doc.clone());
 
         // `load_documents()` API performs no filtering.
         let polar_diagnostics = pls.load_documents();
-        assert_eq!(polar_diagnostics.len(), 1);
+        assert_eq!(polar_diagnostics.len(), 1, "{:?}", polar_diagnostics);
         let polar_diagnostic = polar_diagnostics.get(0).unwrap();
         let expected_message = format!(
-            "Unregistered class: User at line 1, column 1 in file {uri}",
+            "Unregistered class: User at line 3, column 13 in file {uri}",
             uri = doc.uri
         );
         assert_eq!(polar_diagnostic.to_string(), expected_message);
@@ -696,7 +699,7 @@ mod tests {
         assert_eq!(params.version.unwrap(), doc.version);
         assert!(params.diagnostics.is_empty(), "{:?}", params.diagnostics);
 
-        let singleton_variable = "f(a);".to_owned();
+        let singleton_variable = "allow(a, _, _);".to_owned();
         let doc = polar_doc("whatever", singleton_variable);
         pls.upsert_document(doc.clone());
 
@@ -704,7 +707,7 @@ mod tests {
         let polar_diagnostics = pls.load_documents();
         assert_eq!(polar_diagnostics.len(), 1, "{:?}", polar_diagnostics);
         let singleton_variable = polar_diagnostics.get(0).unwrap();
-        let expected_message = "Singleton variable a is unused or undefined; try renaming to _a or _ at line 1, column 3 in file file:///whatever.polar";
+        let expected_message = "Singleton variable a is unused or undefined; try renaming to _a or _ at line 1, column 7 in file file:///whatever.polar";
         assert_eq!(singleton_variable.to_string(), expected_message);
 
         // `reload_kb()` API filters out diagnostics dependent on app data.
