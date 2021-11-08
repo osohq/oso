@@ -5,9 +5,12 @@ from sqlalchemy.orm.session import Session
 
 from oso import Oso
 from sqlalchemy_oso.auth import register_models
+from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 
 from .models import ModelBase, Post, User
 
+if USING_SQLAlchemy_v1_3:
+    collect_ignore = ['test_advanced_queries_14.py']
 
 def print_query(query):
     print(query.statement.compile(), query.statement.compile().params)

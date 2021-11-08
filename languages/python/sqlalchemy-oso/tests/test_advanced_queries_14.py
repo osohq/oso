@@ -3,28 +3,26 @@ and subquery.
 
 See: https://docs.sqlalchemy.org/en/14/orm/loading_relationships.html
 """
+# N.B: This test only runs on SQLAlchemy 1.4. Loading it on 1.3 is disabled in
+# conftest.py because even running the imports requires SQLAlchemy 1.4.
+
 import pytest
 
 import sqlalchemy
 from sqlalchemy import Column, ForeignKey, Integer, select, String, create_engine
 
-try:
-    from sqlalchemy.orm import (
-        declarative_base,
-        joinedload,
-        lazyload,
-        selectinload,
-        subqueryload,
-        contains_eager,
-        with_loader_criteria,
-        Load,
-        Session,
-        relationship,
-    )
-except ImportError:
-    # Some of these imports are only available on sqlalchemy 1.4.
-    # All tests in this module are skipped in SQLAlchemy 1.3
-    pass
+from sqlalchemy.orm import (
+    declarative_base,
+    joinedload,
+    lazyload,
+    selectinload,
+    subqueryload,
+    contains_eager,
+    with_loader_criteria,
+    Load,
+    Session,
+    relationship,
+)
 
 from oso import Oso
 

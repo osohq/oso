@@ -122,6 +122,7 @@ def test_authorize_query_multiple_types(engine, oso, fixture_data):
     # TODO (dhatch): What happens for aggregations?
 
 
+@pytest.mark.xfail(USING_SQLAlchemy_v1_3, reason="Not supported by 1.3 events API.")
 def test_authorize_query_joined_load(engine, oso, fixture_data):
     """Test a query involving multiple models."""
     oso.load_str(
