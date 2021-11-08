@@ -17,6 +17,9 @@ from sqlalchemy.orm import (
     Session,
     relationship)
 
+from oso import Oso
+
+from sqlalchemy_oso.session import AuthorizedSession
 from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 from sqlalchemy_oso.sqlalchemy_utils import (
     all_entities_in_statement,
@@ -24,7 +27,6 @@ from sqlalchemy_oso.sqlalchemy_utils import (
     get_joinedload_entities,
     to_class
 )
-from oso import Oso
 
 
 pytestmark = pytest.mark.skipif(USING_SQLAlchemy_v1_3,
@@ -69,6 +71,23 @@ class A1(Base):
     id = Column(Integer, primary_key=True)
     data = Column(String)
     a_id = Column(ForeignKey("a.id"))
+
+
+@pytest.fixture
+def engine():
+    engine = create_engine('sqlite://')
+    Base.metadata.create_all(engine)
+    return engine
+
+
+@pytest.fixture
+def test_data(engine):
+    with Session(bind=engine) as s, s.begin():
+        a0 = A(id=0, data="0")
+        b0 = B(id=0, a=a0)
+        b1 = B(id=1, a=a0)
+        s.add_all([a0, b0, b1])
+
 
 
 @pytest.mark.parametrize('stmt,o', (
@@ -162,27 +181,8 @@ def test_with_loader_criteria_simple_subquery_no_alias():
     assert 'a.id =' in str(query_for_a)
 
 
-# TODO test subquery, selectin. These are okay I believe because the
-# compiles of the select in & subquery trigger separate with orm execute
-# events, so we can't really test this way.
-@pytest.mark.xfail(reason="idk how to test subquery yet")
-@pytest.mark.parametrize('stmt,o', (
-    (select(A).options(subqueryload(A.bs)), {A, B}),
-))
-def test_subquery(stmt, o):
-    assert all_entities_in_statement(stmt) == o
-
-
-@pytest.mark.xfail(reason="idk how to test selectin yet")
-@pytest.mark.parametrize('stmt,o', (
-    (select(A).options(selectinload(A.bs)), {A, B}),
-))
-def test_selectinload(stmt, o):
-    assert all_entities_in_statement(stmt) == o
-
-
-def test_lazy_load():
-    from sqlalchemy_oso.session import AuthorizedSession
+@pytest.fixture
+def test_oso():
     oso = Oso()
     oso.register_class(A)
     oso.register_class(B)
@@ -190,18 +190,40 @@ def test_lazy_load():
     # Allow 1.
     oso.load_str('allow(_, _, a: A) if a.id = 0; allow(_, _, b: B) if b.id = 0;')
 
-    # Ensure that running a lazy load properly applies authorization.
-    engine = create_engine('sqlite://')
-    Base.metadata.create_all(engine)
+    return oso
 
-    with Session(bind=engine) as s, s.begin():
-        a0 = A(id=0, data="0")
-        b0 = B(id=0, a=a0)
-        b1 = B(id=1, a=a0)
-        s.add_all([a0, b0, b1])
 
-    session = AuthorizedSession(bind=engine, oso=oso, user='u', checked_permissions={A: 'a', B: 'a'})
+@pytest.fixture
+def authorized_session(engine, test_oso):
+    session = AuthorizedSession(bind=engine, oso=test_oso, user='u', checked_permissions={A: 'a', B: 'a'})
     with session.begin():
-        a = session.query(A).one()
-        bs = a.bs
-        assert len(bs) == 1
+        yield session
+
+
+@pytest.mark.parametrize('query_options', (
+    (),
+    (joinedload(A.bs),),
+    (subqueryload(A.bs),),
+    (selectinload(A.bs),),
+))
+def test_loads_relationship(test_data, authorized_session, query_options):
+    """Confirm that relation is properly filtered.
+
+    The policy (see fixture ``test_oso``) only allows one B, but there are two Bs
+    on A with Id 0.
+
+    We confirm that only 1 is returned to ensure the policy works properly.
+    """
+    a = authorized_session.query(A).options(*query_options).one()
+    bs = a.bs
+    assert a.id == 0
+    assert len(bs) == 1
+    assert bs[0].id == 0
+
+
+def test_loads_relationship_no_auth(test_data, engine):
+    """Sanity test that ``test_loads_relationship`` is actually testing authorization."""
+    with Session(bind=engine) as s, s.begin():
+        a = s.query(A).get(0)
+        assert a.id == 0
+        assert len(a.bs) == 2
