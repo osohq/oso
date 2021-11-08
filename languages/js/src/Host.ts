@@ -212,8 +212,7 @@ export class Host implements Required<DataFilteringQueryParams> {
       });
     }
 
-    /* eslint-disable  @typescript-eslint/no-explicit-any */
-    function defaultCheck(instance: any): boolean {
+    function defaultCheck(instance: NullishOrHasConstructor): boolean {
       return instance instanceof cls || instance?.constructor === cls;
     }
 

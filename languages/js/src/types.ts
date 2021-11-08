@@ -665,8 +665,7 @@ export interface DataFilteringQueryParams<Query = any, ReturnType = any> {
   combineQuery?: CombineQueryFn<Query>;
 }
 
-/* eslint-disable  @typescript-eslint/no-explicit-any */
-export type IsaCheck = (instance: any) => boolean;
+export type IsaCheck = (instance: NullishOrHasConstructor) => boolean;
 
 /**
  * Optional parameters for [[`Polar.registerClass`]] and [[`Host.cacheClass`]].
