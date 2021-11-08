@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet};
+
 use super::diagnostic::Diagnostic;
 use super::error::ValidationError;
 use super::formatting::source_lines;
@@ -6,8 +8,6 @@ use super::rules::*;
 use super::sources::Source;
 use super::terms::*;
 use super::visitor::{walk_call, walk_rule, walk_term, Visitor};
-
-use std::collections::{hash_map::Entry, HashMap, HashSet};
 
 fn common_misspellings(t: &str) -> Option<String> {
     let misspelled_type = match t {
@@ -50,10 +50,10 @@ struct SingletonVisitor<'kb> {
     singletons: HashMap<Symbol, Option<Term>>,
 }
 
-fn warn_str(sym: &Symbol, term: &Term, source: &Option<Source>) -> Diagnostic {
-    if let Value::Pattern(..) = term.value() {
-        let mut msg = format!("Unknown specializer {}", sym);
-        if let Some(t) = common_misspellings(&sym.0) {
+fn diagnostic_from_singleton(term: Term, source: Option<Source>) -> Diagnostic {
+    if let Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) = term.value() {
+        let mut msg = format!("Unknown specializer {}", tag);
+        if let Some(t) = common_misspellings(&tag.0) {
             msg.push_str(&format!(", did you mean {}?", t));
         }
         if let Some(ref source) = source {
@@ -62,13 +62,7 @@ fn warn_str(sym: &Symbol, term: &Term, source: &Option<Source>) -> Diagnostic {
         }
         Diagnostic::Warning(msg)
     } else {
-        Diagnostic::Error(
-            error::ValidationError::SingletonVariable {
-                term: term.clone(),
-                name: sym.0.clone(),
-            }
-            .into(),
-        )
+        Diagnostic::Error(ValidationError::SingletonVariable { term }.into())
     }
 }
 
@@ -80,20 +74,14 @@ impl<'kb> SingletonVisitor<'kb> {
         }
     }
 
-    fn warnings(&mut self) -> Vec<Diagnostic> {
-        let mut singletons = self
-            .singletons
-            .drain()
-            .filter_map(|(sym, singleton)| singleton.map(|term| (sym.clone(), term)))
-            .collect::<Vec<(Symbol, Term)>>();
-        singletons.sort_by_key(|(_sym, term)| term.offset());
+    fn warnings(self) -> Vec<Diagnostic> {
+        let mut singletons = self.singletons.into_values().flatten().collect::<Vec<_>>();
+        singletons.sort_by_key(Term::offset);
         singletons
-            .iter()
-            .map(|(sym, term)| {
-                let src = term
-                    .get_source_id()
-                    .and_then(|id| self.kb.sources.get_source(id));
-                warn_str(sym, term, &src)
+            .into_iter()
+            .map(|term| {
+                let source = self.kb.get_term_source(&term);
+                diagnostic_from_singleton(term, source)
             })
             .collect()
     }
@@ -110,14 +98,10 @@ impl<'kb> Visitor for SingletonVisitor<'kb> {
                     && !self.kb.is_constant(v)
                     && !self.kb.is_union(t) =>
             {
-                match self.singletons.entry(v.clone()) {
-                    Entry::Occupied(mut o) => {
-                        o.insert(None);
-                    }
-                    Entry::Vacant(v) => {
-                        v.insert(Some(t.clone()));
-                    }
-                }
+                self.singletons
+                    .entry(v.clone())
+                    .and_modify(|o| *o = None)
+                    .or_insert_with(|| Some(t.clone()));
             }
             _ => (),
         }
@@ -173,10 +157,7 @@ impl<'kb> Visitor for AndOrPrecendenceCheck<'kb> {
                 )
             }) {
                 let span = term.span().unwrap();
-                let source = term
-                    .get_source_id()
-                    .and_then(|src_id| self.kb.sources.get_source(src_id))
-                    .unwrap();
+                let source = self.kb.get_term_source(term).unwrap();
 
                 // check if source _before_ the term contains an opening
                 // parenthesis

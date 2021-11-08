@@ -429,8 +429,6 @@ pub enum ValidationError {
     SingletonVariable {
         /// Term<Symbol> where the error arose, tracked for lexical context.
         term: Term,
-        /// Variable name.
-        name: String,
     },
     UnregisteredClass {
         /// Term<Symbol> where the error arose, tracked for lexical context.
@@ -456,12 +454,8 @@ impl fmt::Display for ValidationError {
             Self::ResourceBlock { msg, .. } => {
                 write!(f, "{}", msg)
             }
-            Self::SingletonVariable { name, .. } => {
-                write!(
-                    f,
-                    "Singleton variable {name} is unused or undefined; try renaming to _{name} or _",
-                    name=name
-                )
+            Self::SingletonVariable { term } => {
+                write!(f, "Singleton variable {term} is unused or undefined; try renaming to _{term} or _", term=term)
             }
             Self::UnregisteredClass { term } => {
                 write!(f, "Unregistered class: {}", term)
