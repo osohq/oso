@@ -7,18 +7,24 @@ import pytest
 
 import sqlalchemy
 from sqlalchemy import Column, ForeignKey, Integer, select, String, create_engine
-from sqlalchemy.orm import (
-    declarative_base,
-    joinedload,
-    lazyload,
-    selectinload,
-    subqueryload,
-    contains_eager,
-    with_loader_criteria,
-    Load,
-    Session,
-    relationship,
-)
+
+try:
+    from sqlalchemy.orm import (
+        declarative_base,
+        joinedload,
+        lazyload,
+        selectinload,
+        subqueryload,
+        contains_eager,
+        with_loader_criteria,
+        Load,
+        Session,
+        relationship,
+    )
+except ImportError:
+    # Some of these imports are only available on sqlalchemy 1.4.
+    # All tests in this module are skipped in SQLAlchemy 1.3
+    pass
 
 from oso import Oso
 
