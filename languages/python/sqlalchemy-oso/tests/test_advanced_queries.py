@@ -175,14 +175,10 @@ def test_default_loader_strategies():
     assert all_entities_in_statement(select(E)) == {E, F}
 
 
-@pytest.mark.parametrize('strategy', (
-    'joined',
-    'subquery',
-    'selectin',
-    'select'
-))
+@pytest.mark.parametrize("strategy", ("joined", "subquery", "selectin", "select"))
 def test_default_loader_strategies(engine, strategy):
     Base2 = declarative_base()
+
     class A1(Base2):
         __tablename__ = "a1"
         id = Column(Integer, primary_key=True)
@@ -207,25 +203,20 @@ def test_default_loader_strategies(engine, strategy):
     oso.register_class(B1)
     oso.load_str("allow(_, _, a: A1) if a.id = 0; allow(_, _, b: B1) if b.id = 0;")
 
-    with AuthorizedSession(bind=engine,
-                           oso=oso,
-                           checked_permissions={A1: "read", B1: "read"},
-                           user="u") as auth_session, \
-            auth_session.begin():
+    with AuthorizedSession(
+        bind=engine, oso=oso, checked_permissions={A1: "read", B1: "read"}, user="u"
+    ) as auth_session, auth_session.begin():
         a = auth_session.query(A1).one()
         assert a.id == 0
         assert len(a.bs) == 1
         assert a.bs[0].id == 0
 
-@pytest.mark.parametrize('strategy', (
-    'joined',
-    'subquery',
-    'selectin',
-    'select'
-))
+
+@pytest.mark.parametrize("strategy", ("joined", "subquery", "selectin", "select"))
 def test_default_loader_strategies_no_auth(engine, strategy):
     """Sanity check of above."""
     Base2 = declarative_base()
+
     class A1(Base2):
         __tablename__ = "a1"
         id = Column(Integer, primary_key=True)
@@ -250,6 +241,7 @@ def test_default_loader_strategies_no_auth(engine, strategy):
         assert a.id == 0
         assert len(a.bs) == 2
         assert a.bs[0].id == 0
+
 
 def test_subquery_joined():
     subquery = select(A).join(B).subquery(name="sub")
