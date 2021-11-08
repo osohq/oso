@@ -2098,6 +2098,16 @@ type RuntimeErrorUnhandledPartial struct {
 
 func (RuntimeErrorUnhandledPartial) isRuntimeError() {}
 
+// RuntimeErrorDataFilteringFieldMissing struct
+type RuntimeErrorDataFilteringFieldMissing struct {
+	// VarType
+	VarType string `json:"var_type"`
+	// Field
+	Field string `json:"field"`
+}
+
+func (RuntimeErrorDataFilteringFieldMissing) isRuntimeError() {}
+
 // RuntimeError enum
 type RuntimeErrorVariant interface {
 	isRuntimeError()
@@ -2229,6 +2239,17 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		*result = RuntimeError{variant}
 		return nil
 
+	case "DataFilteringFieldMissing":
+		var variant RuntimeErrorDataFilteringFieldMissing
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = RuntimeError{variant}
+		return nil
+
 	}
 
 	return fmt.Errorf("Cannot deserialize RuntimeError: %s", string(b))
@@ -2280,6 +2301,11 @@ func (variant RuntimeError) MarshalJSON() ([]byte, error) {
 	case RuntimeErrorUnhandledPartial:
 		return json.Marshal(map[string]RuntimeErrorUnhandledPartial{
 			"UnhandledPartial": inner,
+		})
+
+	case RuntimeErrorDataFilteringFieldMissing:
+		return json.Marshal(map[string]RuntimeErrorDataFilteringFieldMissing{
+			"DataFilteringFieldMissing": inner,
 		})
 
 	}
