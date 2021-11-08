@@ -73,6 +73,16 @@ func (o *Oso) SetNotFoundError(notFoundError func() error) {
 }
 
 /*
+Set whether the Host accepts Expression types from Polar, or raises an error.
+
+	o, _ = oso.NewOso()
+	o.SetAcceptExpression(true)
+*/
+func (o *Oso) SetAcceptExpression(acceptExpression bool) {
+	(o.p.host).SetAcceptExpression(acceptExpression)
+}
+
+/*
 Load Polar policy from ".polar" files, checking that all inline queries succeed.
 */
 func (o Oso) LoadFiles(files []string) error {
