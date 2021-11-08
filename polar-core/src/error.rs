@@ -1,5 +1,6 @@
 use std::fmt;
 
+use indoc::formatdoc;
 use serde::{Deserialize, Serialize};
 
 use super::{rules::Rule, sources::*, terms::*};
@@ -282,6 +283,10 @@ pub enum RuntimeError {
         var: Symbol,
         term: Term,
     },
+    DataFilteringFieldMissing {
+        var_type: String,
+        field: String,
+    },
 }
 
 impl RuntimeError {
@@ -339,6 +344,25 @@ The expression is: {expr}
                     var = var,
                     expr = term.to_polar(),
                 )
+            }
+            Self::DataFilteringFieldMissing { var_type, field } => {
+                let msg = formatdoc!(
+                    r#"Unregistered field or relation: {var_type}.{field}
+                    
+                    Please include `{field}` in the `fields` parameter of your
+                    `register_class` call for {var_type}.  For example, in Python:
+
+                        oso.register_class({var_type}, fields={{
+                            "{field}": <type or relation>
+                        }})
+
+                    For more information please refer to our documentation:
+                        https://docs.osohq.com/guides/data_filtering.html
+                    "#,
+                    var_type = var_type,
+                    field = field
+                );
+                write!(f, "{}", msg)
             }
         }
     }
