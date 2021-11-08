@@ -1,5 +1,7 @@
 """Test advanced SQLAlchemy queries using features like joinedload, contains_eager,
 and subquery.
+
+See: https://docs.sqlalchemy.org/en/14/orm/loading_relationships.html
 """
 import pytest
 
@@ -172,6 +174,82 @@ def test_default_loader_strategies():
     assert all_entities_in_statement(select(D, E)) == {D, E, F}
     assert all_entities_in_statement(select(E)) == {E, F}
 
+
+@pytest.mark.parametrize('strategy', (
+    'joined',
+    'subquery',
+    'selectin',
+    'select'
+))
+def test_default_loader_strategies(engine, strategy):
+    Base2 = declarative_base()
+    class A1(Base2):
+        __tablename__ = "a1"
+        id = Column(Integer, primary_key=True)
+        bs = relationship("B1", lazy=strategy, backref="a")
+
+    class B1(Base2):
+        __tablename__ = "b1"
+        id = Column(Integer, primary_key=True)
+        a_id = Column(ForeignKey("a1.id"))
+
+    Base2.metadata.create_all(bind=engine)
+
+    with Session(bind=engine) as s, s.begin():
+        a0 = A1(id=0)
+        a1 = A1(id=1)
+        b0 = B1(id=0, a=a0)
+        b1 = B1(id=1, a=a0)
+        s.add_all([a0, a1, b0, b1])
+
+    oso = Oso()
+    oso.register_class(A1)
+    oso.register_class(B1)
+    oso.load_str("allow(_, _, a: A1) if a.id = 0; allow(_, _, b: B1) if b.id = 0;")
+
+    with AuthorizedSession(bind=engine,
+                           oso=oso,
+                           checked_permissions={A1: "read", B1: "read"},
+                           user="u") as auth_session, \
+            auth_session.begin():
+        a = auth_session.query(A1).one()
+        assert a.id == 0
+        assert len(a.bs) == 1
+        assert a.bs[0].id == 0
+
+@pytest.mark.parametrize('strategy', (
+    'joined',
+    'subquery',
+    'selectin',
+    'select'
+))
+def test_default_loader_strategies_no_auth(engine, strategy):
+    """Sanity check of above."""
+    Base2 = declarative_base()
+    class A1(Base2):
+        __tablename__ = "a1"
+        id = Column(Integer, primary_key=True)
+        bs = relationship("B1", lazy=strategy, backref="a")
+
+    class B1(Base2):
+        __tablename__ = "b1"
+        id = Column(Integer, primary_key=True)
+        a_id = Column(ForeignKey("a1.id"))
+
+    Base2.metadata.create_all(bind=engine)
+
+    with Session(bind=engine) as s, s.begin():
+        a0 = A1(id=0)
+        a1 = A1(id=1)
+        b0 = B1(id=0, a=a0)
+        b1 = B1(id=1, a=a0)
+        s.add_all([a0, a1, b0, b1])
+
+    with Session(bind=engine) as session, session.begin():
+        a = session.query(A1).first()
+        assert a.id == 0
+        assert len(a.bs) == 2
+        assert a.bs[0].id == 0
 
 def test_subquery_joined():
     subquery = select(A).join(B).subquery(name="sub")
