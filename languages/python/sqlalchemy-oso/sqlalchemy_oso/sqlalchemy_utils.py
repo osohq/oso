@@ -30,9 +30,15 @@ try:
         return set(map(to_class, entities))
 
     def get_column_entities(statement):
-        """Get entities in statement that are loaded directly in the FROM clause.
+        """Get entities in statement that referenced as columns.
 
-        Does not include eager loaded or pre-populated entities.
+        Examples::
+
+            >> get_column_entities(query(A)) == {A}
+            >> get_column_entities(query(A.field)) == {A}
+            >> get_column_entities(query(A, B)) == {A, B})
+
+        Does not include eager loaded entities.
         """
 
         def _entities_in_statement(statement):
@@ -53,8 +59,17 @@ try:
         return entities
 
     def default_load_entities(entities):
-        """Find relationships that will have entities loaded due to the default
-        loader strategy."""
+        """Find entities that will be loaded due to the default loader strategy.
+
+        For example::
+
+            class A(Base):
+                bs = relationship(B, lazy="joined")
+
+        The relationship ``bs`` would be loaded eagerly whenever ``A`` is queried.
+
+        :param entities: The entities to lookup default load entities for.
+        """
         default_entities = set()
 
         for entity in entities:
@@ -84,6 +99,12 @@ try:
     # some of them apply to relationships and others to column attributes
     # then "options" is extra stuff like "innerjoin=True"
     def get_joinedload_entities(stmt):
+        """Get entities that are returned from a ``stmt`` due to eager load options.
+
+        For example::
+
+            get_joinedload_entities(query(A).options(joinedload(A.bs))) == {A, B}
+        """
         # there are two kinds of options that both represent the same information,
         # just in different ways.  This is largely a product of legacy options
         # that have things like strings, i.e. joinedload("addresses").  note we
