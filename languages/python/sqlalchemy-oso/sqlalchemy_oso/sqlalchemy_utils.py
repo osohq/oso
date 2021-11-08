@@ -1,4 +1,10 @@
-"""Utilities for interacting with SQLAlchemy types."""
+"""Utilities for interacting with SQLAlchemy types.
+
+This module mostly deals with detecting which entities are involved in a query
+that is about to be executed.
+
+We must detect all entities properly to apply authorization.
+"""
 import sqlalchemy
 from sqlalchemy import inspect
 from sqlalchemy.orm.util import AliasedClass
@@ -20,8 +26,10 @@ try:
         """
         Get all ORM entities that will be loaded in a select statement.
 
-        The includes entities that will be loaded eagerly through relationship
-        loading: https://docs.sqlalchemy.org/en/14/orm/loading_relationships.html#relationship-loading-with-loader-options
+        The includes entities that will be loaded eagerly through relationships either specified in
+        the query options or as default loader strategies on the model definition.
+
+        https://docs.sqlalchemy.org/en/14/orm/loading_relationships.html#relationship-loading-with-loader-options
         """
         entities = get_column_entities(statement)
         entities |= get_joinedload_entities(statement)
@@ -30,7 +38,7 @@ try:
         return set(map(to_class, entities))
 
     def get_column_entities(statement):
-        """Get entities in statement that referenced as columns.
+        """Get entities in statement that are referenced as columns.
 
         Examples::
 
@@ -59,14 +67,16 @@ try:
         return entities
 
     def default_load_entities(entities):
-        """Find entities that will be loaded due to the default loader strategy.
+        """Find related entities that will be loaded on all queries to ``entities``
+           due to the default loader strategy.
 
         For example::
 
             class A(Base):
                 bs = relationship(B, lazy="joined")
 
-        The relationship ``bs`` would be loaded eagerly whenever ``A`` is queried.
+        The relationship ``bs`` would be loaded eagerly whenever ``A`` is queried because
+        `lazy="joined"`.
 
         :param entities: The entities to lookup default load entities for.
         """
@@ -80,7 +90,9 @@ try:
 
             relationships = mapper.relationships
             for rel in relationships.values():
-                # TODO: other lazy values?
+                # We only detect `"joined"` here because `"selectin"` and `"subquery"`
+                # issue multiple queries that we capture in the `do_orm_execute` event
+                # handler.
                 if rel.lazy == "joined":
                     default_entities |= default_load_entities([rel.mapper])
                     default_entities.add(rel.mapper)
@@ -99,7 +111,11 @@ try:
     # some of them apply to relationships and others to column attributes
     # then "options" is extra stuff like "innerjoin=True"
     def get_joinedload_entities(stmt):
-        """Get entities that are returned from a ``stmt`` due to eager load options.
+        """Get extra entities that are loaded from a ``stmt`` due to joinedload
+        options specified in the statement options.
+
+        These entities will not be returned directly by the query, but will prepopulate
+        relationships in the returned data.
 
         For example::
 
