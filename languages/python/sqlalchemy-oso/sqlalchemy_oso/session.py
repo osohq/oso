@@ -15,6 +15,7 @@ from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 
 logger = logging.getLogger(__name__)
 
+
 class _OsoSession:
     set = False
 
@@ -57,7 +58,7 @@ def authorized_sessionmaker(
     get_user: Callable[[], Any],
     get_checked_permissions: Callable[[], Permissions],
     class_: Type[Session] = None,
-    **kwargs
+    **kwargs,
 ):
     """Session factory for sessions with Oso authorization applied.
 
@@ -126,7 +127,7 @@ def scoped_session(
     get_user: Callable[[], Any],
     get_checked_permissions: Callable[[], Permissions],
     scopefunc: Optional[Callable[..., Any]] = None,
-    **kwargs
+    **kwargs,
 ):
     """Return a scoped session maker that uses the Oso instance, user, and
     checked permissions (resource-action pairs) as part of the scope function.

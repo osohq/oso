@@ -13,7 +13,9 @@ def to_class(entity):
     else:
         return entity
 
+
 try:
+
     def all_entities_in_statement(statement):
         """
         Get all ORM entities that will be loaded in a select statement.
@@ -32,6 +34,7 @@ try:
 
         Does not include eager loaded or pre-populated entities.
         """
+
         def _entities_in_statement(statement):
             try:
                 entities = (cd["entity"] for cd in statement.column_descriptions)
@@ -101,10 +104,7 @@ try:
             elif hasattr(opt, "context"):
                 # these options are called Load
                 for key, loadopt in opt.context.items():
-                    if (
-                        key[0] == "loader"
-                        and ("lazy", "joined") in loadopt.strategy
-                    ):
+                    if key[0] == "loader" and ("lazy", "joined") in loadopt.strategy:
                         # the "path" is a tuple showing the entity/relationships
                         # being targeted
 
@@ -112,6 +112,7 @@ try:
                         # TODO: Check whether entity is a string, unsupported.
                         # TODO check for wild card.
                         yield key[1][-1].entity
+
 
 except ImportError:
     # This code should not be called for SQLAlchemy 1.4.
