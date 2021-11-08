@@ -414,7 +414,8 @@ pub enum ValidationError {
         msg: String,
     },
     UndefinedRule {
-        rule_name: String,
+        /// Term<Call> where the error arose, tracked for lexical context.
+        term: Term,
     },
     ResourceBlock {
         /// Term where the error arose, tracked for lexical context.
@@ -444,8 +445,8 @@ impl fmt::Display for ValidationError {
             Self::InvalidRuleType { rule_type, msg } => {
                 write!(f, "Invalid rule type: {} {}", rule_type, msg)
             }
-            Self::UndefinedRule { rule_name } => {
-                write!(f, r#"Call to undefined rule "{}""#, rule_name)
+            Self::UndefinedRule { term } => {
+                write!(f, "Call to undefined rule: {}", term)
             }
             Self::MissingRequiredRule { rule } => {
                 write!(f, "Missing implementation for required rule {}", rule)
