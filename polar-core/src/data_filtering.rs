@@ -6,7 +6,6 @@ use std::{
 use crate::{
     counter::Counter,
     error::{invalid_state_error, RuntimeError},
-    events::ResultEvent,
     filter::singleton,
     terms::*,
 };
@@ -23,7 +22,7 @@ type VarName = Symbol;
 type Map<A, B> = HashMap<A, B>;
 type Set<A> = HashSet<A>;
 pub type Types = Map<TypeName, Map<FieldName, Type>>;
-pub type PartialResults = Vec<ResultEvent>;
+pub type PartialResults = Vec<crate::ResultEvent>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum Type {
@@ -1028,7 +1027,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{bindings::Bindings, error::RuntimeError::*};
+    use crate::{error::RuntimeError::*, Bindings, ResultEvent};
 
     type TestResult = Result<()>;
 

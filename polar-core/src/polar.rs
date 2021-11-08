@@ -1,5 +1,7 @@
 use std::sync::{Arc, RwLock};
 
+use crate::Query;
+
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
 use super::diagnostic::Diagnostic;
 use super::error::{PolarResult, RuntimeError, ValidationError};
@@ -7,9 +9,7 @@ use super::filter::Filter;
 use super::kb::*;
 use super::messages::*;
 use super::parser;
-use super::query::Query;
 use super::resource_block::resource_block_from_productions;
-use super::rewrites::*;
 use super::sources::*;
 use super::terms::*;
 use super::validations::{
@@ -60,10 +60,10 @@ impl Polar {
             let mut diagnostics = vec![];
             while let Some(line) = lines.pop() {
                 match line {
-                    parser::Line::Rule(rule) => {
+                    parser::Line::Rule(mut rule) => {
                         diagnostics.append(&mut check_singletons(&rule, kb));
                         diagnostics.append(&mut check_ambiguous_precedence(&rule, kb));
-                        let rule = rewrite_rule(rule, kb);
+                        // rule = rewrite_rule(rule, kb);
                         kb.add_rule(rule);
                     }
                     parser::Line::Query(term) => {
@@ -71,7 +71,7 @@ impl Polar {
                     }
                     parser::Line::RuleType(rule_type) => {
                         // make sure rule_type doesn't have anything that needs to be rewritten in the head
-                        let rule_type = rewrite_rule(rule_type, kb);
+                        // let rule_type = rewrite_rule(rule_type, kb);
                         if !matches!(
                             rule_type.body.value(),
                             Value::Expression(
@@ -233,16 +233,13 @@ impl Polar {
         Ok(self.new_query_from_term(term, trace))
     }
 
-    pub fn new_query_from_term(&self, mut term: Term, trace: bool) -> Query {
-        use crate::vm::{Goal, PolarVirtualMachine};
-        {
-            let mut kb = self.kb.write().unwrap();
-            term = rewrite_term(term, &mut kb);
-        }
-        let query = Goal::Query { term: term.clone() };
-        let vm =
-            PolarVirtualMachine::new(self.kb.clone(), trace, vec![query], self.messages.clone());
-        Query::new(vm, term)
+    pub fn new_query_from_term(&self, term: Term, _trace: bool) -> Query {
+        // todo!()
+        Query { term }
+        // let query = Goal::Query { term: term.clone() };
+        // let vm =
+        //     PolarVirtualMachine::new(self.kb.clone(), trace, vec![query], self.messages.clone());
+        // Query::new(vm, term)
     }
 
     // @TODO: Direct load_rules endpoint.

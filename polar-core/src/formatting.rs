@@ -13,47 +13,6 @@ use super::{lexer::loc_to_pos, rules::*, sources::*, terms::*, traces::*};
 pub use display::*;
 pub use to_polar::*;
 
-impl Trace {
-    /// Return the string representation of this `Trace`
-    pub fn draw(&self, vm: &crate::vm::PolarVirtualMachine) -> String {
-        let mut res = String::new();
-        self.draw_trace(vm, 0, &mut res);
-        res
-    }
-
-    fn draw_trace(&self, vm: &crate::vm::PolarVirtualMachine, nest: usize, res: &mut String) {
-        if matches!(&self.node, Node::Term(term)
-            if matches!(term.value(), Value::Expression(Operation { operator: Operator::And, ..})))
-        {
-            for c in &self.children {
-                c.draw_trace(vm, nest + 1, res);
-            }
-        } else {
-            let polar_str = match self.node {
-                Node::Rule(ref r) => vm.rule_source(r),
-                Node::Term(ref t) => vm.term_source(t, false),
-            };
-            let indented = polar_str
-                .split('\n')
-                .map(|s| "  ".repeat(nest) + s)
-                .collect::<Vec<String>>()
-                .join("\n");
-            res.push_str(&indented);
-            res.push_str(" [");
-            if !self.children.is_empty() {
-                res.push('\n');
-                for c in &self.children {
-                    c.draw_trace(vm, nest + 1, res);
-                }
-                for _ in 0..nest {
-                    res.push_str("  ");
-                }
-            }
-            res.push_str("]\n");
-        }
-    }
-}
-
 /// Traverse a [`Source`](../types/struct.Source.html) line by line until `offset` is reached and
 /// return the source line containing the `offset` character as well as `context_lines` lines above
 /// and below it.
@@ -176,18 +135,10 @@ pub mod display {
     use std::sync::Arc;
 
     use super::ToPolarString;
-    use crate::bindings::Binding;
     use crate::numerics::Numeric;
     use crate::resource_block::Declaration;
     use crate::rules::Rule;
     use crate::terms::{Call, Operator, Symbol, Term};
-    use crate::vm::*;
-
-    impl fmt::Display for Binding {
-        fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(fmt, "{} = {}", self.0.to_polar(), self.1.to_polar())
-        }
-    }
 
     impl fmt::Display for Symbol {
         fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -213,116 +164,6 @@ pub mod display {
         }
     }
 
-    impl fmt::Display for Choice {
-        fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(
-                fmt,
-                "[{}] ++ [{}]",
-                self.goals
-                    .iter()
-                    .map(|g| g.to_string())
-                    .collect::<Vec<String>>()
-                    .join(", "),
-                self.alternatives
-                    .iter()
-                    .map(|alt| format!(
-                        "[{}]",
-                        alt.iter()
-                            .map(|g| g.to_string())
-                            .collect::<Vec<String>>()
-                            .join(",")
-                    ))
-                    .collect::<Vec<String>>()
-                    .join(", ")
-            )
-        }
-    }
-
-    impl fmt::Display for Goal {
-        fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-            fn fmt_rules(rules: &[Arc<Rule>]) -> String {
-                rules
-                    .iter()
-                    .map(|rule| rule.to_polar())
-                    .collect::<Vec<String>>()
-                    .join(" ")
-            }
-
-            match self {
-                Goal::Isa { left, right } => {
-                    write!(fmt, "Isa({}, {})", left.to_polar(), right.to_polar())
-                }
-                Goal::IsMoreSpecific { left, right, args } => write!(
-                    fmt,
-                    "IsMoreSpecific({} {} ({}))",
-                    left.to_polar(),
-                    right.to_polar(),
-                    args.iter()
-                        .map(|a| a.to_polar())
-                        .collect::<Vec<String>>()
-                        .join(", ")
-                ),
-                Goal::IsSubspecializer {
-                    left, right, arg, ..
-                } => write!(
-                    fmt,
-                    "IsSubspecializer({}, {}, {})",
-                    left.to_polar(),
-                    right.to_polar(),
-                    arg.to_polar()
-                ),
-                Goal::Lookup { dict, field, value } => write!(
-                    fmt,
-                    "Lookup({}.{} = {})",
-                    dict.to_polar(),
-                    field.to_polar(),
-                    value.to_polar()
-                ),
-                Goal::LookupExternal {
-                    instance, field, ..
-                } => write!(
-                    fmt,
-                    "LookupExternal({}.{})",
-                    instance.to_polar(),
-                    field.to_polar(),
-                ),
-                Goal::PopQuery { term } => write!(fmt, "PopQuery({})", term.to_polar()),
-                Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
-                Goal::Run { .. } => write!(fmt, "Run(...)"),
-                Goal::FilterRules {
-                    applicable_rules,
-                    unfiltered_rules,
-                    ..
-                } => write!(
-                    fmt,
-                    "FilterRules([{}], [{}])",
-                    fmt_rules(applicable_rules),
-                    fmt_rules(unfiltered_rules),
-                ),
-                Goal::SortRules {
-                    rules,
-                    outer,
-                    inner,
-                    ..
-                } => write!(
-                    fmt,
-                    "SortRules([{}], outer={}, inner={})",
-                    fmt_rules(rules),
-                    outer,
-                    inner,
-                ),
-                Goal::TraceRule { trace: _ } => write!(
-                    fmt,
-                    "TraceRule(...)" // FIXME: draw trace?
-                ),
-                Goal::Unify { left, right } => {
-                    write!(fmt, "Unify({}, {})", left.to_polar(), right.to_polar())
-                }
-                g => write!(fmt, "{:?}", g),
-            }
-        }
-    }
-
     impl fmt::Display for Rule {
         fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
             write!(fmt, "{}", self.to_polar())
@@ -344,16 +185,6 @@ pub mod display {
                 Self::Role => write!(f, "role"),
                 Self::Permission => write!(f, "permission"),
                 Self::Relation(_) => write!(f, "relation"),
-            }
-        }
-    }
-
-    impl fmt::Display for LogLevel {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            match self {
-                Self::Trace => write!(f, "trace"),
-                Self::Debug => write!(f, "debug"),
-                Self::Info => write!(f, "info"),
             }
         }
     }

@@ -9,8 +9,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use mock_externals::MockExternal;
 use polar_core::{
-    error::*, events::*, messages::*, polar::Polar, query::Query, sym, term, terms::*, traces::*,
-    value, values,
+    error::*, messages::*, polar::Polar, sym, term, terms::*, traces::*, value, values, Query,
 };
 
 fn polar() -> Polar {
@@ -73,80 +72,9 @@ where
     K: FnMut(&Message),
     L: FnMut(PolarError) -> QueryResults,
 {
-    let mut results = vec![];
-    loop {
-        let event = match query.next_event() {
-            Err(e) => return error_handler(e),
-            Ok(e) => e,
-        };
+    let mut results = query.run(Default::default());
 
-        while let Some(msg) = query.next_message() {
-            message_handler(&msg)
-        }
-        match event {
-            QueryEvent::Done { .. } => break,
-            QueryEvent::Result { bindings, trace } => {
-                results.push((
-                    bindings
-                        .into_iter()
-                        .map(|(k, v)| (k, v.value().clone()))
-                        .collect(),
-                    trace,
-                ));
-            }
-            QueryEvent::ExternalCall {
-                call_id,
-                instance,
-                attribute,
-                args,
-                kwargs,
-            } => {
-                query
-                    .call_result(
-                        call_id,
-                        external_call_handler(call_id, instance, attribute, args, kwargs),
-                    )
-                    .unwrap();
-            }
-            QueryEvent::MakeExternal {
-                instance_id,
-                constructor,
-            } => make_external_handler(instance_id, constructor),
-            QueryEvent::ExternalIsa {
-                call_id,
-                instance,
-                class_tag,
-            } => query
-                .question_result(call_id, external_isa_handler(instance, class_tag))
-                .unwrap(),
-            QueryEvent::ExternalIsSubSpecializer {
-                call_id,
-                instance_id,
-                left_class_tag,
-                right_class_tag,
-            } => query
-                .question_result(
-                    call_id,
-                    external_is_subspecializer_handler(
-                        instance_id,
-                        left_class_tag,
-                        right_class_tag,
-                    ),
-                )
-                .unwrap(),
-            QueryEvent::Debug { ref message } => {
-                query.debug_command(&debug_handler(message)).unwrap();
-            }
-            QueryEvent::ExternalOp {
-                operator: Operator::Eq,
-                call_id,
-                args,
-                ..
-            } => query.question_result(call_id, args[0] == args[1]).unwrap(),
-            _ => {}
-        }
-    }
-    results
+    results.map(|b| (b.bindings(), None)).collect()
 }
 
 macro_rules! query_results {
@@ -339,11 +267,12 @@ fn qvars(p: &Polar, query_str: &str, variables: &[&str], expected: Vec<Vec<Value
 
 #[track_caller]
 fn _qruntime(p: &Polar, query_str: &str) -> ErrorKind {
-    p.new_query(query_str, false)
-        .unwrap()
-        .next_event()
-        .unwrap_err()
-        .kind
+    todo!()
+    // p.new_query(query_str, false)
+    //     .unwrap()
+    //     .next_event()
+    //     .unwrap_err()
+    //     .kind
 }
 
 macro_rules! qruntime {
@@ -366,6 +295,13 @@ macro_rules! qparse {
 }
 
 type TestResult = Result<(), PolarError>;
+
+#[test]
+fn test_it_works() -> TestResult {
+    let p = polar();
+    qeval(&p, "1 == 1");
+    Ok(())
+}
 
 /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
 #[test]

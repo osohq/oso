@@ -39,4 +39,5 @@ js-sys = "0.3.46"
 wasm-bindgen = "0.2.69"
 
 [features]
-default = []
+default = ["v2"]
+v2 = []

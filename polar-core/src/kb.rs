@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::diagnostic::Diagnostic;
 use super::error::{PolarResult, RuntimeError, ValidationError};
@@ -29,7 +28,7 @@ impl RuleParamMatch {
 pub struct KnowledgeBase {
     /// A map of bindings: variable name → value. The VM uses a stack internally,
     /// but can translate to and from this type.
-    constants: Bindings,
+    constants: crate::Bindings,
     /// Map of class name -> MRO list where the MRO list is a list of class instance IDs
     mro: HashMap<Symbol, Vec<u64>>,
 
@@ -604,7 +603,7 @@ impl KnowledgeBase {
     }
 
     /// Getter for `constants` map without exposing it for mutation.
-    pub fn get_registered_constants(&self) -> &Bindings {
+    pub fn get_registered_constants(&self) -> &crate::Bindings {
         &self.constants
     }
 

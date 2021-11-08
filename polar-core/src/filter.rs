@@ -594,7 +594,7 @@ fn vec_of_ands(t: Term) -> Vec<Term> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::events::ResultEvent;
+    use crate::ResultEvent;
 
     type TestResult = Result<(), RuntimeError>;
 
