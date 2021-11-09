@@ -393,6 +393,8 @@ func (h Host) ToGo(v types.Term) (interface{}, error) {
 		if !h.acceptExpression {
 			return nil, &errors.UnexpectedExpressionError{}
 		}
+
+		return inner, nil
 	}
 
 	return nil, fmt.Errorf("Unexpected Polar type %v", v)
