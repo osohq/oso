@@ -73,7 +73,7 @@ pub fn set_context_for_diagnostics(kb: &KnowledgeBase, diagnostics: &mut Vec<Dia
 
                 Validation(ResourceBlock { ref term, .. })
                 | Validation(SingletonVariable { ref term, .. })
-                | Validation(UndefinedRule { ref term })
+                | Validation(UndefinedRuleCall { ref term })
                 | Validation(UnregisteredClass { ref term, .. }) => {
                     term.span().zip(term.get_source_id())
                 }
