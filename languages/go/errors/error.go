@@ -217,6 +217,6 @@ func (e *UnexpectedExpressionError) Error() string {
 	return "Received Expression from Polar VM. The Expression type is only supported when " +
 		"using data filtering features. Did you perform an operation over an unbound variable " +  
 		"in your policy?\n\n" + 
-		"To silence this error and receive an Expression result, pass acceptExpression as true to Oso.query" 
+		"To silence this error and receive an Expression result, call Oso.SetAcceptExpression(true)" 
 
 }
