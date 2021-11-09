@@ -275,6 +275,24 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 	case string:
 		inner := ValueString(v)
 		return &Value{inner}, nil
+	case Variable:
+		return &Value{ValueVariable(v)}, nil
+	case Expression:
+		// Make a new array of values
+		args := make([]types.Term, len(v.Args))
+		for i, arg := range v.Args {
+			// call toPolar on each element
+			converted, err := h.ToPolar(arg)
+			if err != nil {
+				return nil, err
+			}
+			args[i] = Term{*converted}
+		}
+		inner := ValueExpression{
+			Operator: v.Operator,
+			Args:     args,
+		}
+		return &Value{inner}, nil
 	case Value:
 		return &v, nil
 	case ValueVariant:
@@ -388,13 +406,27 @@ func (h Host) ToGo(v types.Term) (interface{}, error) {
 		}
 		return (*instance).Interface(), nil
 	case ValueVariable:
-		return inner, nil
+		return Variable(inner), nil
 	case ValueExpression:
 		if !h.acceptExpression {
 			return nil, &errors.UnexpectedExpressionError{}
 		}
 
-		return inner, nil
+		// Make a new array of values
+		args := make([]interface{}, len(inner.Args))
+		for i, arg := range inner.Args {
+			// call toPolar on each element
+			converted, err := h.ToGo(arg)
+			if err != nil {
+				return nil, err
+			}
+			args[i] = converted
+		}
+		converted := Expression{
+			Operator: inner.Operator,
+			Args:     args,
+		}
+		return converted, nil
 	}
 
 	return nil, fmt.Errorf("Unexpected Polar type %v", v)

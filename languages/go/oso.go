@@ -330,7 +330,7 @@ by the policy.
 */
 func (o Oso) AuthorizedActions(actor interface{}, resource interface{}, allowWildcard bool) (map[interface{}]struct{}, error) {
 	results := make(map[interface{}]struct{})
-	query, err := (*o.p).queryRule("allow", actor, types.ValueVariable("action"), resource)
+	query, err := (*o.p).queryRule("allow", actor, types.Variable("action"), resource)
 	if err != nil {
 		return nil, err
 	}
@@ -342,7 +342,7 @@ func (o Oso) AuthorizedActions(actor interface{}, resource interface{}, allowWil
 			break
 		} else if action, ok := (*v)["action"].(interface{}); ok {
 			switch val := (action).(type) {
-			case types.ValueVariable:
+			case types.Variable:
 				if allowWildcard {
 					results["*"] = struct{}{}
 				} else {
@@ -368,7 +368,7 @@ Uses `allow_field` rules in the policy to find all allowed fields.
 */
 func (o Oso) AuthorizedFields(actor interface{}, action interface{}, resource interface{}, allowWildcard bool) (map[interface{}]struct{}, error) {
 	results := make(map[interface{}]struct{})
-	query, err := (*o.p).queryRule("allow_field", actor, action, resource, types.ValueVariable("field"))
+	query, err := (*o.p).queryRule("allow_field", actor, action, resource, types.Variable("field"))
 	if err != nil {
 		return nil, err
 	}
@@ -380,7 +380,7 @@ func (o Oso) AuthorizedFields(actor interface{}, action interface{}, resource in
 			break
 		} else if field, ok := (*v)["field"].(interface{}); ok {
 			switch val := (field).(type) {
-			case types.ValueVariable:
+			case types.Variable:
 				if allowWildcard {
 					results["*"] = struct{}{}
 				} else {
