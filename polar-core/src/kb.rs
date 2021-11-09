@@ -651,6 +651,10 @@ impl KnowledgeBase {
         Ok(src_id)
     }
 
+    pub(crate) fn get_term_source(&self, t: &Term) -> Option<Source> {
+        t.get_source_id().and_then(|id| self.sources.get_source(id))
+    }
+
     pub fn clear_rules(&mut self) {
         self.rules.clear();
         self.rule_types.reset();
@@ -707,9 +711,7 @@ impl KnowledgeBase {
         impl<'kb> Visitor for GetSource<'kb> {
             fn visit_term(&mut self, t: &Term) {
                 if self.source.is_none() {
-                    self.source = t
-                        .get_source_id()
-                        .and_then(|id| self.kb.sources.get_source(id));
+                    self.source = self.kb.get_term_source(t);
 
                     if self.source.is_none() {
                         walk_term(self, t)
