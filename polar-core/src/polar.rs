@@ -56,9 +56,8 @@ impl Polar {
             source: &Source,
             kb: &mut KnowledgeBase,
         ) -> PolarResult<Vec<Diagnostic>> {
-            let mut lines = parser::parse_lines(source_id, &source.src)
-                // TODO(gj): we still bomb out at the first ParseError.
-                .map_err(|e| e.set_context(Some(source), None))?;
+            // TODO(gj): we still bomb out at the first ParseError.
+            let mut lines = parser::parse_lines(source_id, &source.src)?;
             lines.reverse();
             let mut diagnostics = vec![];
             while let Some(line) = lines.pop() {
