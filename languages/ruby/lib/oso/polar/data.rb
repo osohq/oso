@@ -39,6 +39,9 @@ module Oso
               Proj.new(parse(p, j['rcol'][0]), j['rcol'][1]),
               parse(p, j['right']),
             )
+          'Union' => ->(p, j) do
+            ArelUnion.new(parse(p, j['left']), parse(p, j['right']))
+          end
           end,
           'Imm' => -> (p, j) do
             Value.new(p.host.to_ruby({
@@ -82,6 +85,15 @@ module Oso
           @lhs = lhs
           @rhs = rhs
           @kind = kind
+        end
+      end
+
+      # Abstract union / or between two filters
+      class Union < DataFilter
+        attr_reader :left, :right
+        def initialize(left, right)
+          @left = left
+          @right = right
         end
       end
 
@@ -161,6 +173,12 @@ module Oso
       class ArelSource < Source
         def to_query
           @model.all
+        end
+      end
+
+      class ArelUnion < Union
+        def to_query
+          @left.to_query.or @right.to_query
         end
       end
 

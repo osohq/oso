@@ -1404,6 +1404,7 @@ impl Value {
     }
 }
 
+
 impl DataFilter {
     fn build(
         types: Types,
@@ -1411,29 +1412,33 @@ impl DataFilter {
         var: &str,
         _class: &str,
     ) -> PolarResult<Vec<Self>> {
+        use {Operator::*, RuntimeError::*};
+        fn unsupported<A>(p: String) -> PolarResult<A> {
+            let msg = format!("DataFilter::build : unexpected partial : {}", p);
+            Err(Unsupported { msg }.into())
+        }
+
         let var = Symbol(var.to_string());
         partials
-            .iter()
-            .filter_map(|result| {
-                result
-                    .bindings
+            .into_iter()
+            .map(|part| {
+                part.bindings
                     .get(&var)
-                    .and_then(|term| match term.value().as_expression() {
-                        Ok(Operation {
-                            operator: Operator::And,
-                            args,
-                        }) => Some({
+                    .ok_or_else(|| IncompatibleBindings { msg: var.0.clone() }.into())
+                    .and_then(|p| match p.value().as_expression() {
+                        Ok(Operation { operator: And, args }) => {
                             args.iter()
                                 .map(|arg| match arg.value().as_expression() {
                                     Ok(x) => Ok(x.clone()),
-                                    Err(e) => Err(e.into()),
+                                    _ => unsupported(arg.to_polar()),
                                 })
                                 .collect::<PolarResult<Vec<Operation>>>()
                                 .and_then(|args| QueryInfo::new(types.clone(), args))
                                 .and_then(|qi| qi.into_filter())
-                        }),
-                        _ => None,
+                        }
+                        _ => unsupported(p.to_polar()),
                     })
+
             })
             .collect()
     }
@@ -1627,8 +1632,28 @@ impl QueryInfo {
         }
     }
 
+    // 
     fn new(types: Types, parts: Vec<Operation>) -> PolarResult<Self> {
         use Operator::*;
+        // 
+        // we're making a QueryInfo, which transforms user input into a
+        // DataFilter. super~
+        //
+        // user input consists of user-supplied type information and a list
+        //
+        //
+        // ideally the input consists of a list (conjunction) of boolean-valued binary
+        // operations, for example: `x matches Integer` `_this.bar.baz = 1`. at least
+        // one side of each expression must be a "path variable", which is a variable
+        // with zero or more extra strings representing dot lookups, expressed like:
+        // `foo.bar.baz`, `foo.bar`, `foo`, etc.
+        //
+        // what does a "dot lookup" mean in this context? how do we know?
+        // there are two cases:
+        // - it may
+        // a "relation", which represents something like an ORM mapping, or a regular
+        // data access on an objector a 
+        //
         let (isas, othas): (Vec<_>, Vec<_>) = parts
             .into_iter()
             .partition(|x| matches!(x, Operation { operator: Isa, args } if args.len() == 2));
