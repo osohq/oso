@@ -1,6 +1,7 @@
-use std::sync::{Arc, RwLock};
 use super::{
-    data_filtering::{build_filter, build_filter_plan, DataFilter, FilterPlan, PartialResults, Types},
+    data_filtering::{
+        build_filter, build_filter_plan, DataFilter, FilterPlan, PartialResults, Types,
+    },
     diagnostic::{set_context_for_diagnostics, Diagnostic},
     error::PolarResult,
     kb::*,
@@ -11,10 +12,13 @@ use super::{
     rewrites::*,
     sources::*,
     terms::*,
-    validations::{check_ambiguous_precedence, check_no_allow_rule, check_resource_blocks_missing_has_permission, check_singletons},
-    vm::*
+    validations::{
+        check_ambiguous_precedence, check_no_allow_rule,
+        check_resource_blocks_missing_has_permission, check_singletons,
+    },
+    vm::*,
 };
-
+use std::sync::{Arc, RwLock};
 
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,

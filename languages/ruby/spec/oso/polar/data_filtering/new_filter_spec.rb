@@ -93,7 +93,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         it 'test_authorize_scalar_attribute_condition' do
           subject.load_str <<~POL
             # signs ruled by jupiter can read their own people
-            allow(_: Sign{name, ruler:"jupiter"}, "read", _: Person{sign_name:name});
+            allow(sign: Sign{ruler:"jupiter"}, "read", _: Person{sign});
             # every sign can read a pisces named sam
             allow(_: Sign, "read", _: Person {sign: s, name: "sam"}) if s.name = "pisces";
             # earth signs can read people with air signs
@@ -117,8 +117,8 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         it 'test_partial_isa_with_path' do
           subject.load_str <<~POL
             allow(_, _, _: Person{sign}) if check(sign);
-            check(sign: Sign) if sign.name = "cancer";
-            check(person: Person) if person.sign.name = "leo";
+            check(_: Sign{ name: "cancer" });
+            check(_: Person{sign}) if sign.name = "leo";
           POL
           query = subject.authzd_query 'gwen', 'read', Person
           expected = Person.all.select { |person| person.sign.name == 'cancer' }

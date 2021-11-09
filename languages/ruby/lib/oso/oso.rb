@@ -227,7 +227,8 @@ module Oso
           partials,
           'resource',
           get_class_name(resource_cls))
-      ::Oso::Polar::Data::DataFilter.parse(self, filter).to_query
+      ::Oso::Polar::Data::DataFilter.parse(self, filter).to_query.tap do |query|
+      end
     end
 
     # Determine the resources of type +resource_cls+ that +actor+
