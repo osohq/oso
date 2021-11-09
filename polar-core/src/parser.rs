@@ -94,7 +94,7 @@ mod tests {
 
     #[track_caller]
     fn parse_rule(src: &str) -> Rule {
-        super::parse_rules(0, src).unwrap().pop().unwrap()
+        parse_rules(0, src).unwrap().pop().unwrap()
     }
 
     #[track_caller]
