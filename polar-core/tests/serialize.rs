@@ -60,12 +60,13 @@ mod tests {
         fields.insert(Symbol::new("foo"), list_of);
         let dict = Term::new_from_test(Value::Dictionary(Dictionary { fields }));
         eprintln!("{}", serde_json::to_string(&dict).unwrap());
-        let e = error::ParseError::InvalidTokenCharacter {
+        let kind = ParseErrorKind::InvalidTokenCharacter {
             token: "Integer".to_owned(),
             c: 'x',
             loc: 99,
         };
-        let err: PolarError = e.into();
+        let err = ParseError { src_id: 0, kind };
+        let err: PolarError = err.into();
         eprintln!("{}", serde_json::to_string(&err).unwrap());
         let rule = Rule::new_from_test(
             Symbol::new("foo"),

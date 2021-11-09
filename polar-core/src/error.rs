@@ -45,18 +45,20 @@ pub struct ErrorContext {
 
 impl PolarError {
     pub fn set_context(mut self, source: Option<&Source>, term: Option<&Term>) -> Self {
+        use ParseErrorKind::*;
+
         match (&self.kind, source, term) {
-            (ErrorKind::Parse(e), Some(source), _) => match e {
-                ParseError::IntegerOverflow { loc, .. }
-                | ParseError::InvalidTokenCharacter { loc, .. }
-                | ParseError::InvalidToken { loc, .. }
-                | ParseError::UnrecognizedEOF { loc }
-                | ParseError::UnrecognizedToken { loc, .. }
-                | ParseError::ExtraToken { loc, .. }
-                | ParseError::WrongValueType { loc, .. }
-                | ParseError::ReservedWord { loc, .. }
-                | ParseError::DuplicateKey { loc, .. } => {
-                    let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
+            (ErrorKind::Parse(e), Some(source), _) => match e.kind {
+                IntegerOverflow { loc, .. }
+                | InvalidTokenCharacter { loc, .. }
+                | InvalidToken { loc, .. }
+                | UnrecognizedEOF { loc }
+                | UnrecognizedToken { loc, .. }
+                | ExtraToken { loc, .. }
+                | WrongValueType { loc, .. }
+                | ReservedWord { loc, .. }
+                | DuplicateKey { loc, .. } => {
+                    let (row, column) = crate::lexer::loc_to_pos(&source.src, loc);
                     self.context.replace(ErrorContext {
                         source: source.clone(),
                         row,
@@ -142,8 +144,14 @@ impl fmt::Display for PolarError {
     }
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ParseError {
+    pub src_id: u64,
+    pub kind: ParseErrorKind,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ParseError {
+pub enum ParseErrorKind {
     IntegerOverflow {
         token: String,
         loc: usize,
@@ -205,45 +213,47 @@ impl fmt::Display for ErrorContext {
 
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::IntegerOverflow { token, .. } => {
+        use ParseErrorKind::*;
+
+        match &self.kind {
+            IntegerOverflow { token, .. } => {
                 write!(f, "'{}' caused an integer overflow", token.escape_debug())
             }
-            Self::InvalidTokenCharacter { token, c, .. } => write!(
+            InvalidTokenCharacter { token, c, .. } => write!(
                 f,
                 "'{}' is not a valid character. Found in {}",
                 c.escape_debug(),
                 token.escape_debug()
             ),
-            Self::InvalidToken { .. } => write!(f, "found an unexpected sequence of characters"),
-            Self::UnrecognizedEOF { .. } => write!(
+            InvalidToken { .. } => write!(f, "found an unexpected sequence of characters"),
+            UnrecognizedEOF { .. } => write!(
                 f,
                 "hit the end of the file unexpectedly. Did you forget a semi-colon"
             ),
-            Self::UnrecognizedToken { token, .. } => write!(
+            UnrecognizedToken { token, .. } => write!(
                 f,
                 "did not expect to find the token '{}'",
                 token.escape_debug()
             ),
-            Self::ExtraToken { token, .. } => write!(
+            ExtraToken { token, .. } => write!(
                 f,
                 "did not expect to find the token '{}'",
                 token.escape_debug()
             ),
-            Self::ReservedWord { token, .. } => write!(
+            ReservedWord { token, .. } => write!(
                 f,
                 "{} is a reserved Polar word and cannot be used here",
                 token.escape_debug()
             ),
-            Self::InvalidFloat { token, .. } => write!(
+            InvalidFloat { token, .. } => write!(
                 f,
                 "{} was parsed as a float, but is invalid",
                 token.escape_debug()
             ),
-            Self::WrongValueType { term, expected, .. } => {
+            WrongValueType { term, expected, .. } => {
                 write!(f, "Wrong value type: {}. Expected a {}", term, expected)
             }
-            Self::DuplicateKey { key, .. } => {
+            DuplicateKey { key, .. } => {
                 write!(f, "Duplicate key: {}", key)
             }
         }
