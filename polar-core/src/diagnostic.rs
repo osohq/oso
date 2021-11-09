@@ -22,9 +22,11 @@ impl Diagnostic {
     // TODO(gj): ErrorContext -> generic DiagnosticContext type once we add structure to warnings.
     pub fn add_context(&mut self, context: ErrorContext) {
         match self {
-            Diagnostic::Error(e) => e.context.replace(context),
-            Diagnostic::Warning(_) => todo!(),
-        };
+            Diagnostic::Error(e) => {
+                e.context.replace(context);
+            }
+            Diagnostic::Warning(_) => (),
+        }
     }
 }
 
