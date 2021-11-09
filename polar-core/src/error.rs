@@ -45,29 +45,7 @@ pub struct ErrorContext {
 
 impl PolarError {
     pub fn set_context(mut self, source: Option<&Source>, term: Option<&Term>) -> Self {
-        use ParseErrorKind::*;
-
         match (&self.kind, source, term) {
-            (ErrorKind::Parse(e), Some(source), _) => match e.kind {
-                IntegerOverflow { loc, .. }
-                | InvalidTokenCharacter { loc, .. }
-                | InvalidToken { loc, .. }
-                | UnrecognizedEOF { loc }
-                | UnrecognizedToken { loc, .. }
-                | ExtraToken { loc, .. }
-                | WrongValueType { loc, .. }
-                | ReservedWord { loc, .. }
-                | DuplicateKey { loc, .. } => {
-                    let (row, column) = crate::lexer::loc_to_pos(&source.src, loc);
-                    self.context.replace(ErrorContext {
-                        source: source.clone(),
-                        row,
-                        column,
-                        include_location: false,
-                    });
-                }
-                _ => {}
-            },
             (e, Some(source), Some(term)) => {
                 let (row, column) = crate::lexer::loc_to_pos(&source.src, term.offset());
                 self.context.replace(ErrorContext {
