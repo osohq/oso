@@ -1148,12 +1148,12 @@ mod test {
         let expected = Select {
             source: Rc::new(Join {
                 left: src_a.clone(),
-                lcol: Proj(src_a.clone(), s("b_id")),
-                rcol: Proj(src_b.clone(), s("id")),
+                lcol: Proj(src_a.clone(), Some(s("b_id"))),
+                rcol: Proj(src_b.clone(), Some(s("id"))),
                 right: src_b.clone(),
             }),
-            lhs: Proj(src_b, s("x")),
-            rhs: Field(Proj(src_a, s("attr_x"))),
+            lhs: Field(Proj(src_b, Some(s("x")))),
+            rhs: Field(Proj(src_a, Some(s("attr_x")))),
             kind: SelOp::Eq,
         };
         assert_eq!(r1, expected);
@@ -1267,7 +1267,7 @@ mod test {
 
 // NEW DATA FILTERING
 #[derive(PartialEq, Debug, Serialize, Clone)]
-pub struct Proj(Rc<DataFilter>, String);
+pub struct Proj(Rc<DataFilter>, Option<String>);
 #[derive(Debug)]
 pub enum PreDatum {
     Field(Proj, DataSource),
@@ -1291,7 +1291,7 @@ pub enum DataFilter {
     Source(String),
     Select {
         source: Rc<DataFilter>,
-        lhs: Proj,
+        lhs: Datum,
         rhs: Datum,
         kind: SelOp,
     },
@@ -1372,7 +1372,9 @@ impl DataSources for DataFilter {
                 Select {
                     source, lhs, rhs, ..
                 } => {
-                    set = collect_sources(set, &lhs.0);
+                    if let Datum::Field(lhs) = lhs {
+                        set = collect_sources(set, &lhs.0);
+                    }
                     for src in source.sources() {
                         set.insert(src);
                     }
@@ -1399,7 +1401,10 @@ impl Value {
             {
                 Ok(tag.0.clone())
             }
-            _ => err_unimplemented(format!("Unsupported pattern: {}", self.to_polar())),
+            _ => {
+                let msg = format!("Unsupported pattern: {}", self.to_polar());
+                Err(RuntimeError::Unsupported { msg }.into())
+            }
         }
     }
 }
@@ -1413,8 +1418,8 @@ impl DataFilter {
         _class: &str,
     ) -> PolarResult<Self> {
         use {Operator::*, RuntimeError::*, DataFilter::*};
-        fn unsupported<A>(p: String) -> PolarResult<A> {
-            let msg = format!("DataFilter::build : unexpected partial : {}", p);
+        fn input_error<A>(p: String) -> PolarResult<A> {
+            let msg = format!("DataFilter::build : unexpected partial result : {}", p);
             Err(Unsupported { msg }.into())
         }
 
@@ -1424,24 +1429,27 @@ impl DataFilter {
             .map(|part| {
                 part.bindings
                     .get(&var)
+                    // this should never happen
                     .ok_or_else(|| IncompatibleBindings { msg: var.0.clone() }.into())
                     .and_then(|p| match p.value().as_expression() {
                         Ok(Operation { operator: And, args }) => {
                             args.iter()
                                 .map(|arg| match arg.value().as_expression() {
                                     Ok(x) => Ok(x.clone()),
-                                    _ => unsupported(arg.to_polar()),
+                                    _ => input_error(arg.to_polar()),
                                 })
                                 .collect::<PolarResult<Vec<Operation>>>()
                                 .and_then(|args| QueryInfo::new(types.clone(), args))
                                 .and_then(|qi| qi.into_filter())
                         }
-                        _ => unsupported(p.to_polar()),
+                        // this should also never happen
+                        _ => input_error(p.to_polar()),
                     })
 
             })
             .reduce(|l, r| Ok(Union { left: Rc::new(l?), right: Rc::new(r?) }))
-            .expect("no filters!")
+            // this should definitely never happen
+            .expect("input produced no filters!")
     }
 }
 
@@ -1470,9 +1478,9 @@ impl QueryInfo {
                 }) => {
                     if !left.sources().contains(other_class_tag) {
                         let lcol =
-                            Proj(Rc::new(Source(left_type.to_string())), my_field.to_string());
+                            Proj(Rc::new(Source(left_type.to_string())), Some(my_field.to_string()));
                         let right = Rc::new(Source(other_class_tag.to_string()));
-                        let rcol = Proj(right.clone(), other_field.to_string());
+                        let rcol = Proj(right.clone(), Some(other_field.to_string()));
                         // the only place a Join is constructed
                         left = Rc::new(Join {
                             left,
@@ -1504,8 +1512,8 @@ impl QueryInfo {
                 // the only place Self::joins is called
                 match (lhs, rhs) {
                     (
-                        PreDatum::Field(Proj(lss, _lf), lds),
-                        PreDatum::Field(Proj(rss, _rf), rds),
+                        PreDatum::Field(Proj(lss, Some(_lf)), lds),
+                        PreDatum::Field(Proj(rss, Some(_rf)), rds),
                     ) => {
                         let mut source = source?;
                         // omg lol // this isn't very robust
@@ -1564,7 +1572,7 @@ impl QueryInfo {
             .fold(Ok(source), |source, con| match con {
                 (PreDatum::Field(lhs, _), kind, rhs) | (rhs, kind, PreDatum::Field(lhs, _)) => {
                     let source = source?;
-                    let rhs = rhs.into();
+                    let (lhs, rhs) = (Datum::Field(lhs), rhs.into());
                     Ok(Rc::new(Select {
                         kind,
                         lhs,
@@ -1590,7 +1598,7 @@ impl QueryInfo {
                 Ok(p)
             }
             Value::Variable(Symbol(s)) => Ok(vec![s.clone()]),
-            _ => err_unimplemented(format!("QueryInfo::path_disasm({})", t.to_polar())),
+            _ => err_invalid(format!("QueryInfo::path_disasm({})", t.to_polar())),
         }
     }
 
@@ -1603,11 +1611,15 @@ impl QueryInfo {
     fn datum(&mut self, t: &Term) -> PolarResult<PreDatum> {
         use {Operator::*, PreDatum::*};
         match t.value() {
-            Value::Number(_) | Value::String(_) => Ok(Imm(t.value().clone())),
+            Value::Number(_) |
+            Value::String(_) |
+            Value::Boolean(_) |
+            Value::ExternalInstance(_) =>
+                Ok(Imm(t.value().clone())),
             Value::Expression(Operation { operator: Dot, args, }) => Ok(Field(
                 Proj(
                     self.source(&args[0])?,
-                    args[1].value().as_string()?.to_string(),
+                    Some(args[1].value().as_string()?.to_string()),
                 ),
                 self.data_source(Self::path_disasm(&args[0])?),
             )),

@@ -93,7 +93,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         it 'test_authorize_scalar_attribute_condition' do
           subject.load_str <<~POL
             # signs ruled by jupiter can read their own people
-            allow(_: Sign{name, ruler:"jupiter"}, "read", _: Person{sign_name: name});
+            allow(_: Sign{name, ruler:"jupiter"}, "read", _: Person{sign_name:name});
             # every sign can read a pisces named sam
             allow(_: Sign, "read", _: Person {sign: s, name: "sam"}) if s.name = "pisces";
             # earth signs can read people with air signs
@@ -158,13 +158,13 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         end
 
         it 'test_field_eq' do
-          subject.load_str 'allow(_, _, _: Person{name, sign_name: name});'
+          subject.load_str 'allow(_, _, _: Person{name, sign}) if name = sign.name;'
           query = subject.authzd_query 'gwen', 'read', Person
           expect(query.to_a).to eq([leo])
         end
 
         it 'test_field_neq' do
-          subject.load_str 'allow(_, _, _: Person{name, sign_name}) if name != sign_name;'
+          subject.load_str 'allow(_, _, _: Person{name, sign}) if name != sign.name;'
           query = subject.authzd_query 'gwen', 'read', Person
           expect(query.to_a).to contain_exactly(*Person.where.not(name: 'leo'))
         end

@@ -22,7 +22,7 @@ module Oso
           'Select' => ->(p, j) do
             ArelSelect.new(
               parse(p, j['source']), 
-              Proj.new(parse(p, j['lhs'][0]), j['lhs'][1]),
+              parse(p, j['lhs']),
               parse(p, j['rhs']),
               kind: j['kind'] || 'Eq'
             )
@@ -61,6 +61,10 @@ module Oso
           def parse(polar, json)
             key = json.keys.first
             PARSERS[key][polar, json[key]]
+          rescue => e
+#            require 'pry'
+#            binding.pry
+            raise e
           end
         end
       end
@@ -128,6 +132,10 @@ module Oso
         def initialize(source, field)
           @source = source
           @field = field
+        end
+
+        def to_query
+          @source.to_query
         end
       end
 
@@ -200,7 +208,14 @@ module Oso
       module ArelColumnizer
         private
         def columnize(proj)
-          "#{proj.source.to_query.table_name}.#{proj.field}"
+          query = proj.to_query
+          field = proj.field || query.primary_key
+          col = "#{query.table_name}.#{field}"
+          col
+        rescue => e
+          require 'pry'
+          binding.pry
+          raise e
         end
       end
 
@@ -213,9 +228,9 @@ module Oso
 
         def to_query
           query = source.to_query
-          left = "#{columnize(lhs)} #{OPS[kind]}"
+          left = "#{columnize lhs} #{OPS[kind]}"
           case rhs
-          when Proj then query.where("#{left} #{columnize(rhs)}")
+          when Proj then query.where("#{left} #{columnize rhs}")
           when Value then query.where("#{left} ?", rhs.value)
           else raise TypeError, rhs
           end
@@ -227,7 +242,7 @@ module Oso
         def to_query
           lhs = left.to_query
           rhs = right.to_query
-          lhs.joins "INNER JOIN #{rhs.table_name} ON #{columnize(lcol)} = #{columnize(rcol)}"
+          lhs.joins "INNER JOIN #{rhs.table_name} ON #{columnize lcol} = #{columnize rcol}"
         end
       end
     end
