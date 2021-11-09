@@ -221,25 +221,13 @@ module Oso
         end
       end
 
-      queries = ffi
+      filter = ffi
         .build_filter(
           host.serialize_types,
           partials,
           'resource',
           get_class_name(resource_cls))
-        .map { |filter| ::Oso::Polar::Data::DataFilter.parse(self, filter).to_query }
-
-      joins = queries.map(&:joins_values).flatten.uniq
-      queries.map! do |q|
-        joins.reduce(q) do |q, j|
-          q.joins_values.include?(j) ? q : q.joins(j)
-        end
-      end
-      if queries.nil?
-        resource_cls.none
-      else
-        queries.reduce(:or)
-      end
+      ::Oso::Polar::Data::DataFilter.parse(self, filter).to_query
     end
 
     # Determine the resources of type +resource_cls+ that +actor+

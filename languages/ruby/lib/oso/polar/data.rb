@@ -39,9 +39,9 @@ module Oso
               Proj.new(parse(p, j['rcol'][0]), j['rcol'][1]),
               parse(p, j['right']),
             )
+          end,
           'Union' => ->(p, j) do
             ArelUnion.new(parse(p, j['left']), parse(p, j['right']))
-          end
           end,
           'Imm' => -> (p, j) do
             Value.new(p.host.to_ruby({
@@ -178,7 +178,19 @@ module Oso
 
       class ArelUnion < Union
         def to_query
-          @left.to_query.or @right.to_query
+          left, right = @left.to_query, @right.to_query
+          left.or right
+        rescue ArgumentError
+          (left.joins_values + right.joins_values).each do |j|
+            left = extend_joins left, j
+            right = extend_joins right, j
+          end
+          left.or right
+        end
+
+        private
+        def extend_joins(q, j)
+          q.joins_values.include?(j) ? q : q.joins(j)
         end
       end
 

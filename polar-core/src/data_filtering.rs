@@ -1145,7 +1145,7 @@ mod test {
         )?;
         use {DataFilter::*, Datum::*};
         let (src_a, src_b) = (Rc::new(Source(s("A"))), Rc::new(Source(s("B"))));
-        let expected = vec![Select {
+        let expected = Select {
             source: Rc::new(Join {
                 left: src_a.clone(),
                 lcol: Proj(src_a.clone(), s("b_id")),
@@ -1155,7 +1155,7 @@ mod test {
             lhs: Proj(src_b, s("x")),
             rhs: Field(Proj(src_a, s("attr_x"))),
             kind: SelOp::Eq,
-        }];
+        };
         assert_eq!(r1, expected);
         Ok(())
     }
@@ -1411,8 +1411,8 @@ impl DataFilter {
         partials: PartialResults,
         var: &str,
         _class: &str,
-    ) -> PolarResult<Vec<Self>> {
-        use {Operator::*, RuntimeError::*};
+    ) -> PolarResult<Self> {
+        use {Operator::*, RuntimeError::*, DataFilter::*};
         fn unsupported<A>(p: String) -> PolarResult<A> {
             let msg = format!("DataFilter::build : unexpected partial : {}", p);
             Err(Unsupported { msg }.into())
@@ -1440,7 +1440,8 @@ impl DataFilter {
                     })
 
             })
-            .collect()
+            .reduce(|l, r| Ok(Union { left: Rc::new(l?), right: Rc::new(r?) }))
+            .expect("no filters!")
     }
 }
 
@@ -1603,10 +1604,7 @@ impl QueryInfo {
         use {Operator::*, PreDatum::*};
         match t.value() {
             Value::Number(_) | Value::String(_) => Ok(Imm(t.value().clone())),
-            Value::Expression(Operation {
-                operator: Dot,
-                args,
-            }) if args.len() == 2 && args[1].value().as_string().is_ok() => Ok(Field(
+            Value::Expression(Operation { operator: Dot, args, }) => Ok(Field(
                 Proj(
                     self.source(&args[0])?,
                     args[1].value().as_string()?.to_string(),
@@ -1624,11 +1622,10 @@ impl QueryInfo {
     }
 
     fn source(&mut self, t: &Term) -> PolarResult<Rc<DataFilter>> {
-        use DataFilter::Source;
         let path = Self::path_disasm(t)?;
         match self.entities.get(&path) {
-            Some(src) => Ok(Rc::new(Source(src.clone()))),
-            _ => err_invalid(format!("No entity for {:?}", path)),
+            Some(src) => Ok(Rc::new(DataFilter::Source(src.clone()))),
+            _ => err_invalid(format!("No entity info for {:?}", path)),
         }
     }
 
@@ -1650,9 +1647,10 @@ impl QueryInfo {
         //
         // what does a "dot lookup" mean in this context? how do we know?
         // there are two cases:
-        // - it may
-        // a "relation", which represents something like an ORM mapping, or a regular
-        // data access on an objector a 
+        // - it may be a "relation", which represents something like an ORM mapping
+        // - it may be a regular data access on an object in application memory
+        //
+        // we can tell the difference by consulting the types map.
         //
         let (isas, othas): (Vec<_>, Vec<_>) = parts
             .into_iter()
@@ -1726,6 +1724,6 @@ pub fn build_filter(
     partials: PartialResults,
     var: &str,
     class: &str,
-) -> PolarResult<Vec<DataFilter>> {
+) -> PolarResult<DataFilter> {
     DataFilter::build(types, partials, var, class)
 }
