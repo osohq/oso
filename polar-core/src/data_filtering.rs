@@ -1431,19 +1431,31 @@ impl DataFilter {
                     .get(&var)
                     // this should never happen
                     .ok_or_else(|| IncompatibleBindings { msg: var.0.clone() }.into())
-                    .and_then(|p| match p.value().as_expression() {
-                        Ok(Operation { operator: And, args }) => {
+                    .and_then(|p| match p.value() {
+                        Value::Expression(Operation { operator: And, args }) => {
                             args.iter()
                                 .map(|arg| match arg.value().as_expression() {
                                     Ok(x) => Ok(x.clone()),
-                                    _ => input_error(arg.to_polar()),
+                                    _ => {
+                                        eprintln!("args {:?}", args);
+                                        input_error(arg.to_polar())
+                                    }
                                 })
                                 .collect::<PolarResult<Vec<Operation>>>()
                                 .and_then(|args| QueryInfo::new(types.clone(), args))
                                 .and_then(|qi| qi.into_filter())
                         }
-                        // this should also never happen
-                        _ => input_error(p.to_polar()),
+
+                        Value::ExternalInstance(_) => {
+                            let source = Rc::new(Source(_class.to_string()));
+                            let lhs = Datum::Field(Proj(source.clone(), None));
+                            let rhs = Datum::Imm(p.value().clone());
+                            Ok(Select { source, lhs, rhs, kind: SelOp::Eq })
+                        }
+                        _ => {
+                            eprintln!("part {:?}", part);
+                            input_error(p.to_polar())
+                        }
                     })
 
             })

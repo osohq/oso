@@ -83,7 +83,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         it 'test_authorize_scalar_attribute_eq' do
           subject.load_str <<~POL
             allow(_: Person, "read", _: Sign{element: "fire"});
-            allow(_: Person{sign_name}, "read", _: Sign{name: sign_name});
+            allow(_: Person{sign}, "read", sign);
           POL
           query = subject.authzd_query(Person.find('sam'), 'read', Sign)
           expected_signs = %w[pisces aries sagittarius leo].map { |n| Sign.find n }
