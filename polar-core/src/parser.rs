@@ -57,12 +57,6 @@ fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> erro
     }
 }
 
-pub fn parse_term(src: &str) -> PolarResult<Term> {
-    polar::TermParser::new()
-        .parse(0, Lexer::new(src))
-        .map_err(|e| to_parse_error(e).into())
-}
-
 pub fn parse_lines(src_id: u64, src: &str) -> PolarResult<Vec<Line>> {
     polar::LinesParser::new()
         .parse(src_id, Lexer::new(src))
@@ -90,7 +84,7 @@ mod tests {
 
     #[track_caller]
     fn parse_term(src: &str) -> Term {
-        super::parse_term(src).unwrap()
+        polar::TermParser::new().parse(0, Lexer::new(src)).unwrap()
     }
 
     #[track_caller]
