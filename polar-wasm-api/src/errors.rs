@@ -48,7 +48,7 @@ fn kind(err: &PolarError) -> String {
         Validation(InvalidRule { .. }) => "ValidationError::InvalidRule",
         Validation(InvalidRuleType { .. }) => "ValidationError::InvalidRuleType",
         Validation(ResourceBlock { .. }) => "ValidationError::ResourceBlock",
-        Validation(UndefinedRule { .. }) => "ValidationError::UndefinedRule",
+        Validation(UndefinedRuleCall { .. }) => "ValidationError::UndefinedRuleCall",
         Validation(SingletonVariable { .. }) => "ValidationError::SingletonVariable",
         Validation(UnregisteredClass { .. }) => "ValidationError::UnregisteredClass",
         Validation(MissingRequiredRule { .. }) => "ValidationError::MissingRequiredRule",

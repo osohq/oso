@@ -3,7 +3,12 @@ use std::fmt;
 use indoc::formatdoc;
 use serde::{Deserialize, Serialize};
 
-use super::{rules::Rule, sources::*, terms::*};
+use super::{
+    kb::KnowledgeBase,
+    rules::Rule,
+    sources::Source,
+    terms::{Symbol, Term},
+};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(into = "FormattedPolarError")]
@@ -44,65 +49,83 @@ pub struct ErrorContext {
 }
 
 impl PolarError {
-    pub fn set_context(mut self, source: Option<&Source>, term: Option<&Term>) -> Self {
-        match (&self.kind, source, term) {
-            (ErrorKind::Parse(e), Some(source), _) => match e {
-                ParseError::IntegerOverflow { loc, .. }
-                | ParseError::InvalidTokenCharacter { loc, .. }
-                | ParseError::InvalidToken { loc, .. }
-                | ParseError::UnrecognizedEOF { loc }
-                | ParseError::UnrecognizedToken { loc, .. }
-                | ParseError::ExtraToken { loc, .. }
-                | ParseError::WrongValueType { loc, .. }
-                | ParseError::ReservedWord { loc, .. }
-                | ParseError::DuplicateKey { loc, .. } => {
-                    let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
-                    self.context.replace(ErrorContext {
-                        source: source.clone(),
-                        row,
-                        column,
-                        include_location: false,
-                    });
-                }
-                _ => {}
-            },
-            (ErrorKind::Runtime(e), Some(source), None) => {
-                let offset = match e {
-                    RuntimeError::Application { term, .. } => term.as_ref().map(|t| t.offset()),
-                    RuntimeError::ArithmeticError { term }
-                    | RuntimeError::TypeError { term, .. }
-                    | RuntimeError::UnhandledPartial { term, .. }
-                    | RuntimeError::Unsupported { term, .. } => Some(term.offset()),
-                    _ => None,
-                };
-                if let Some(offset) = offset {
-                    let (row, column) = crate::lexer::loc_to_pos(&source.src, offset);
-                    self.context.replace(ErrorContext {
-                        source: source.clone(),
-                        row,
-                        column,
-                        include_location: false,
-                    });
-                }
-            }
-            (e, Some(source), Some(term)) => {
-                let (row, column) = crate::lexer::loc_to_pos(&source.src, term.offset());
-                self.context.replace(ErrorContext {
-                    source: source.clone(),
-                    row,
-                    column,
-                    // @TODO(Sam): find a better way to include this info
-                    // TODO(gj|sam): this bool can probably be removed -- we should include
-                    // location unconditionally for errors that have the available context.
-                    include_location: matches!(
-                        e,
-                        ErrorKind::Runtime(RuntimeError::UnhandledPartial { .. })
-                    ),
-                });
-            }
-            _ => {}
+    pub fn set_context(&mut self, source: Option<&Source>, term: Option<&Term>) {
+        let span = if let Some(term) = term {
+            term.span()
+        } else {
+            self.span()
+        };
+
+        if let (Some(source), Some((left, _right))) = (source, span) {
+            let (row, column) = crate::lexer::loc_to_pos(&source.src, left);
+            self.context.replace(ErrorContext {
+                source: source.clone(),
+                row,
+                column,
+                // @TODO(Sam): find a better way to include this info
+                // TODO(gj|sam): this bool can probably be removed -- we should include
+                // location unconditionally for errors that have the available context.
+                include_location: matches!(
+                    self.kind,
+                    ErrorKind::Runtime(RuntimeError::UnhandledPartial { .. })
+                ),
+            });
         }
-        self
+    }
+
+    /// Get `(left, right)` span from errors that carry source context.
+    fn span(&self) -> Option<(usize, usize)> {
+        use {ErrorKind::*, ParseError::*, RuntimeError::*, ValidationError::*};
+
+        match &self.kind {
+            Parse(e) => match e {
+                DuplicateKey { key: token, loc }
+                | ExtraToken { token, loc }
+                | IntegerOverflow { token, loc }
+                | InvalidFloat { token, loc }
+                | ReservedWord { token, loc }
+                | UnrecognizedToken { token, loc } => Some((*loc, loc + token.len())),
+
+                InvalidTokenCharacter { loc, .. }
+                | InvalidToken { loc }
+                | UnrecognizedEOF { loc } => Some((*loc, *loc)),
+
+                WrongValueType { term, .. } => term.span(),
+            },
+
+            Validation(e) => match e {
+                ResourceBlock { ref term, .. }
+                | SingletonVariable { ref term, .. }
+                | UndefinedRuleCall { ref term }
+                | UnregisteredClass { ref term, .. } => term.span(),
+
+                InvalidRule { rule, .. }
+                | InvalidRuleType {
+                    rule_type: rule, ..
+                } => rule.span(),
+
+                MissingRequiredRule { rule_type } => {
+                    if rule_type.name.0 == "has_relation" {
+                        rule_type.span()
+                    } else {
+                        // TODO(gj): copy source info from the appropriate resource block term for
+                        // `has_role()` rule type we create.
+                        None
+                    }
+                }
+            },
+
+            Runtime(e) => match e {
+                Application { term, .. } => term.as_ref().and_then(Term::span),
+                ArithmeticError { term }
+                | TypeError { term, .. }
+                | UnhandledPartial { term, .. }
+                | Unsupported { term, .. } => term.span(),
+                _ => None,
+            },
+
+            Operational(_) => None,
+        }
     }
 }
 
@@ -431,17 +454,19 @@ impl fmt::Display for OperationalError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationError {
     MissingRequiredRule {
-        rule: Rule,
+        rule_type: Rule,
     },
     InvalidRule {
-        rule: String,
+        /// Rule where the error arose, tracked for lexical context.
+        rule: Rule,
         msg: String,
     },
     InvalidRuleType {
-        rule_type: String,
+        /// Rule type where the error arose, tracked for lexical context.
+        rule_type: Rule,
         msg: String,
     },
-    UndefinedRule {
+    UndefinedRuleCall {
         /// Term<Call> where the error arose, tracked for lexical context.
         term: Term,
     },
@@ -471,13 +496,13 @@ impl fmt::Display for ValidationError {
                 write!(f, "Invalid rule: {} {}", rule, msg)
             }
             Self::InvalidRuleType { rule_type, msg } => {
-                write!(f, "Invalid rule type: {} {}", rule_type, msg)
+                write!(f, "Invalid rule type: {}\n\t{}", rule_type, msg)
             }
-            Self::UndefinedRule { term } => {
+            Self::UndefinedRuleCall { term } => {
                 write!(f, "Call to undefined rule: {}", term)
             }
-            Self::MissingRequiredRule { rule } => {
-                write!(f, "Missing implementation for required rule {}", rule)
+            Self::MissingRequiredRule { rule_type } => {
+                write!(f, "Missing implementation for required rule {}", rule_type)
             }
             Self::ResourceBlock { msg, .. } => {
                 write!(f, "{}", msg)
@@ -489,5 +514,35 @@ impl fmt::Display for ValidationError {
                 write!(f, "Unregistered class: {}", term)
             }
         }
+    }
+}
+
+impl ValidationError {
+    pub fn get_source(&self, kb: &KnowledgeBase) -> Option<Source> {
+        use ValidationError::*;
+
+        let src_id = match self {
+            ResourceBlock { term, .. }
+            | SingletonVariable { term, .. }
+            | UndefinedRuleCall { term }
+            | UnregisteredClass { term, .. } => term.get_source_id(),
+
+            InvalidRule { rule, .. }
+            | InvalidRuleType {
+                rule_type: rule, ..
+            } => rule.get_source_id(),
+
+            MissingRequiredRule { rule_type } => {
+                if rule_type.name.0 == "has_relation" {
+                    rule_type.get_source_id()
+                } else {
+                    // TODO(gj): copy source info from the appropriate resource block term for
+                    // `has_role()` rule type we create.
+                    None
+                }
+            }
+        };
+
+        src_id.and_then(|id| kb.sources.get_source(id))
     }
 }

@@ -248,12 +248,12 @@ pub fn check_resource_blocks_missing_has_permission(kb: &KnowledgeBase) -> Optio
     visitor.warnings()
 }
 
-struct UndefinedRuleVisitor<'kb> {
+struct UndefinedRuleCallVisitor<'kb> {
     call_terms: Vec<Term>,
     defined_rules: HashSet<&'kb Symbol>,
 }
 
-impl<'kb> UndefinedRuleVisitor<'kb> {
+impl<'kb> UndefinedRuleCallVisitor<'kb> {
     fn new(defined_rules: HashSet<&'kb Symbol>) -> Self {
         Self {
             defined_rules,
@@ -268,12 +268,12 @@ impl<'kb> UndefinedRuleVisitor<'kb> {
                 let call = term.value().as_call().unwrap();
                 !self.defined_rules.contains(&call.name)
             })
-            .map(|term| Diagnostic::Error(ValidationError::UndefinedRule { term }.into()))
+            .map(|term| Diagnostic::Error(ValidationError::UndefinedRuleCall { term }.into()))
             .collect()
     }
 }
 
-impl<'kb> Visitor for UndefinedRuleVisitor<'kb> {
+impl<'kb> Visitor for UndefinedRuleCallVisitor<'kb> {
     fn visit_term(&mut self, term: &Term) {
         match term.value() {
             Value::Expression(op) => {
@@ -289,7 +289,7 @@ impl<'kb> Visitor for UndefinedRuleVisitor<'kb> {
 }
 
 pub fn check_undefined_rule_calls(kb: &KnowledgeBase) -> Vec<Diagnostic> {
-    let mut visitor = UndefinedRuleVisitor::new(kb.get_rules().keys().collect());
+    let mut visitor = UndefinedRuleCallVisitor::new(kb.get_rules().keys().collect());
     for rule in kb.get_rules().values() {
         visitor.visit_generic_rule(rule);
     }

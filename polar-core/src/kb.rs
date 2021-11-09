@@ -147,13 +147,11 @@ impl KnowledgeBase {
                             })
                         })?;
                     if !found_match {
-                        return Err(self.set_error_context(
-                            &rule.body,
-                            ValidationError::InvalidRule {
-                                rule: rule.to_polar(),
-                                msg,
-                            },
-                        ));
+                        return Err(ValidationError::InvalidRule {
+                            rule: Rule::clone(rule),
+                            msg,
+                        }
+                        .into());
                     }
                 }
             }
@@ -173,20 +171,12 @@ impl KnowledgeBase {
                     }
                 }
                 if !found_match {
-                    return Err(self.set_error_context(
-                        &rule_type.body,
-                        ValidationError::MissingRequiredRule {
-                            rule: rule_type.clone(),
-                        },
-                    ));
+                    let rule_type = rule_type.clone();
+                    return Err(ValidationError::MissingRequiredRule { rule_type }.into());
                 }
             } else {
-                return Err(self.set_error_context(
-                    &rule_type.body,
-                    ValidationError::MissingRequiredRule {
-                        rule: rule_type.clone(),
-                    },
-                ));
+                let rule_type = rule_type.clone();
+                return Err(ValidationError::MissingRequiredRule { rule_type }.into());
             }
         }
 
@@ -378,7 +368,7 @@ impl KnowledgeBase {
             (Value::List(rule_type_list), Value::List(rule_list)) => {
                 if has_rest_var(rule_type_list) {
                     return Err(ValidationError::InvalidRuleType {
-                        rule_type: rule_type.to_polar(),
+                        rule_type: rule_type.clone(),
                         msg: "Rule types cannot contain *rest variables.".to_string(),
                     }
                     .into());
@@ -731,8 +721,9 @@ impl KnowledgeBase {
         source_getter.visit_term(term);
         let source = source_getter.source;
         let term = source_getter.term;
-        let error: PolarError = error.into();
-        error.set_context(source.as_ref(), term.as_ref())
+        let mut error: PolarError = error.into();
+        error.set_context(source.as_ref(), term.as_ref());
+        error
     }
 
     /// Check that all relations declared across all resource blocks have been registered as

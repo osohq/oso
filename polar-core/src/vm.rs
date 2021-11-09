@@ -2810,7 +2810,9 @@ impl PolarVirtualMachine {
         };
 
         let source = term.and_then(|t| self.kb().get_term_source(t));
-        PolarError::from(error).set_context(source.as_ref(), None)
+        let mut error: PolarError = error.into();
+        error.set_context(source.as_ref(), None);
+        error
     }
 
     fn type_error(&self, term: &Term, msg: String) -> error::PolarError {

@@ -1,8 +1,8 @@
 use std::sync::{Arc, RwLock};
 
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
-use super::diagnostic::{set_context_for_diagnostics, Diagnostic};
-use super::error::{PolarResult, RuntimeError, ValidationError};
+use super::diagnostic::Diagnostic;
+use super::error::{ErrorKind, PolarResult, RuntimeError, ValidationError};
 use super::kb::*;
 use super::messages::*;
 use super::parser;
@@ -58,7 +58,10 @@ impl Polar {
         ) -> PolarResult<Vec<Diagnostic>> {
             let mut lines = parser::parse_lines(source_id, &source.src)
                 // TODO(gj): we still bomb out at the first ParseError.
-                .map_err(|e| e.set_context(Some(source), None))?;
+                .map_err(|mut e| {
+                    e.set_context(Some(source), None);
+                    e
+                })?;
             lines.reverse();
             let mut diagnostics = vec![];
             while let Some(line) = lines.pop() {
@@ -84,13 +87,13 @@ impl Polar {
                                 }
                             ) if args.is_empty()
                         ) {
-                            diagnostics.push(Diagnostic::Error(kb.set_error_context(
-                                &rule_type.body,
+                            diagnostics.push(Diagnostic::Error(
                                 ValidationError::InvalidRuleType {
-                                    rule_type: rule_type.to_polar(),
-                                    msg: "\nRule types cannot contain dot lookups.".to_owned(),
-                                },
-                            )));
+                                    rule_type,
+                                    msg: "Rule types cannot contain dot lookups.".to_owned(),
+                                }
+                                .into(),
+                            ));
                         } else {
                             kb.add_rule_type(rule_type);
                         }
@@ -131,6 +134,24 @@ impl Polar {
                 .collect(),
         );
 
+        // Attach context to (compile-time) validation errors.
+        //
+        // NOTE(gj): at present, context is still attached to parse errors in the `load_source`
+        // function inside `KnowledgeBase::diagnostic_load`.
+        //
+        // NOTE(gj): some compile-time diagnostics won't ever have source context (e.g., the
+        // absence of an `allow()` rule).
+        fn set_context_for_validation_errors(kb: &KnowledgeBase, ds: &mut Vec<Diagnostic>) {
+            for diagnostic in ds {
+                if let Diagnostic::Error(polar_error) = diagnostic {
+                    if let ErrorKind::Validation(validation_error) = &polar_error.kind {
+                        let source = validation_error.get_source(kb);
+                        polar_error.set_context(source.as_ref(), None);
+                    }
+                }
+            }
+        }
+
         // TODO(gj): need to bomb out before rule type validation in case additional rule types
         // were defined later on in the file that encountered the `ParseError`. Those additional
         // rule types might extend the valid shapes for a rule type defined in a different,
@@ -139,7 +160,7 @@ impl Polar {
         // failed to parse.
         if diagnostics.iter().any(Diagnostic::is_parse_error) {
             // NOTE(gj): need to set context _before_ clearing the KB so we still have source info.
-            set_context_for_diagnostics(&kb, &mut diagnostics);
+            set_context_for_validation_errors(&kb, &mut diagnostics);
             kb.clear_rules();
             return diagnostics;
         }
@@ -164,7 +185,7 @@ impl Polar {
         };
 
         // NOTE(gj): need to set context _before_ clearing the KB so we still have source info.
-        set_context_for_diagnostics(&kb, &mut diagnostics);
+        set_context_for_validation_errors(&kb, &mut diagnostics);
 
         // If we've encountered any errors, clear the KB.
         if diagnostics.iter().any(Diagnostic::is_error) {
@@ -225,8 +246,10 @@ impl Polar {
         let term = {
             let mut kb = self.kb.write().unwrap();
             let src_id = kb.new_id();
-            let term =
-                parser::parse_query(src_id, src).map_err(|e| e.set_context(Some(&source), None))?;
+            let term = parser::parse_query(src_id, src).map_err(|mut e| {
+                e.set_context(Some(&source), None);
+                e
+            })?;
             kb.sources.add_source(source, src_id);
             term
         };
