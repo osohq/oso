@@ -3,7 +3,8 @@ on:
   push:
     tags:
       - "flask-v*" # Push events to matching v*, i.e. v1.0, v20.15.10
-
+    branches:
+      - "gkaemmer/*"
 jobs:
   version:
     name: Compute and verify the version number
@@ -50,6 +51,9 @@ jobs:
         run: |
           rm languages/python/flask-oso/README.md
           cp README.md languages/python/flask-oso/README.md
+      - name: Upgrade pip
+        run: |
+          pip install --upgrade pip
       - name: Build wheels
         run: |
           python -m cibuildwheel --output-dir wheelhouse
