@@ -720,8 +720,9 @@ impl KnowledgeBase {
         source_getter.visit_term(term);
         let source = source_getter.source;
         let term = source_getter.term;
-        let error: PolarError = error.into();
-        error.set_context(source.as_ref(), term.as_ref())
+        let mut error: PolarError = error.into();
+        error.set_context(source.as_ref(), term.as_ref());
+        error
     }
 
     /// Check that all relations declared across all resource blocks have been registered as

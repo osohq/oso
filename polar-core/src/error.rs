@@ -44,9 +44,15 @@ pub struct ErrorContext {
 }
 
 impl PolarError {
-    pub fn set_context(mut self, source: Option<&Source>, term: Option<&Term>) -> Self {
-        if let (Some(source), Some(term)) = (source, term) {
-            let (row, column) = crate::lexer::loc_to_pos(&source.src, term.offset());
+    pub fn set_context(&mut self, source: Option<&Source>, term: Option<&Term>) {
+        let span = if let Some(term) = term {
+            term.span()
+        } else {
+            self.span()
+        };
+
+        if let (Some(source), Some((left, _right))) = (source, span) {
+            let (row, column) = crate::lexer::loc_to_pos(&source.src, left);
             self.context.replace(ErrorContext {
                 source: source.clone(),
                 row,
@@ -60,7 +66,81 @@ impl PolarError {
                 ),
             });
         }
-        self
+    }
+
+    pub fn get_source_id(&self) -> Option<u64> {
+        use {ErrorKind::*, ValidationError::*};
+
+        match &self.kind {
+            Validation(e) => match e {
+                ResourceBlock { term, .. }
+                | SingletonVariable { term, .. }
+                | UndefinedRuleCall { term }
+                | UnregisteredClass { term, .. } => term.get_source_id(),
+
+                InvalidRule { rule, .. }
+                | InvalidRuleType {
+                    rule_type: rule, ..
+                } => rule.get_source_id(),
+
+                MissingRequiredRule { rule_type } => {
+                    if rule_type.name.0 == "has_relation" {
+                        rule_type.get_source_id()
+                    } else {
+                        // TODO(gj): copy source info from the appropriate resource block term for
+                        // `has_role()` rule type we create.
+                        None
+                    }
+                }
+            },
+            Operational(_) | Parse(_) | Runtime(_) => None,
+        }
+    }
+
+    /// Get `(left, right)` span from errors that carry source context.
+    fn span(&self) -> Option<(usize, usize)> {
+        use {ErrorKind::*, ParseError::*, ValidationError::*};
+
+        match &self.kind {
+            Parse(e) => match e {
+                DuplicateKey { key: token, loc }
+                | ExtraToken { token, loc }
+                | IntegerOverflow { token, loc }
+                | InvalidFloat { token, loc }
+                | ReservedWord { token, loc }
+                | UnrecognizedToken { token, loc } => Some((*loc, loc + token.len())),
+
+                InvalidTokenCharacter { loc, .. }
+                | InvalidToken { loc }
+                | UnrecognizedEOF { loc } => Some((*loc, *loc)),
+
+                WrongValueType { term, .. } => term.span(),
+            },
+
+            Validation(e) => match e {
+                ResourceBlock { ref term, .. }
+                | SingletonVariable { ref term, .. }
+                | UndefinedRuleCall { ref term }
+                | UnregisteredClass { ref term, .. } => term.span(),
+
+                InvalidRule { rule, .. }
+                | InvalidRuleType {
+                    rule_type: rule, ..
+                } => rule.span(),
+
+                MissingRequiredRule { rule_type } => {
+                    if rule_type.name.0 == "has_relation" {
+                        rule_type.span()
+                    } else {
+                        // TODO(gj): copy source info from the appropriate resource block term for
+                        // `has_role()` rule type we create.
+                        None
+                    }
+                }
+            },
+
+            Runtime(_) | Operational(_) => None,
+        }
     }
 }
 
@@ -122,53 +202,43 @@ impl fmt::Display for PolarError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ParseError {
     IntegerOverflow {
-        src_id: u64,
         token: String,
         loc: usize,
     },
     InvalidTokenCharacter {
-        src_id: u64,
         token: String,
         c: char,
         loc: usize,
     },
     InvalidToken {
-        src_id: u64,
         loc: usize,
     },
     #[allow(clippy::upper_case_acronyms)]
     UnrecognizedEOF {
-        src_id: u64,
         loc: usize,
     },
     UnrecognizedToken {
-        src_id: u64,
         token: String,
         loc: usize,
     },
     ExtraToken {
-        src_id: u64,
         token: String,
         loc: usize,
     },
     ReservedWord {
-        src_id: u64,
         token: String,
         loc: usize,
     },
     InvalidFloat {
-        src_id: u64,
         token: String,
         loc: usize,
     },
     WrongValueType {
-        src_id: u64,
         loc: usize,
         term: Term,
         expected: String,
     },
     DuplicateKey {
-        src_id: u64,
         loc: usize,
         key: String,
     },

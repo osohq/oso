@@ -1229,8 +1229,6 @@ type Parameter struct {
 
 // ParseErrorIntegerOverflow struct
 type ParseErrorIntegerOverflow struct {
-	// SrcId
-	SrcId uint64 `json:"src_id"`
 	// Token
 	Token string `json:"token"`
 	// Loc
@@ -1241,8 +1239,6 @@ func (ParseErrorIntegerOverflow) isParseError() {}
 
 // ParseErrorInvalidTokenCharacter struct
 type ParseErrorInvalidTokenCharacter struct {
-	// SrcId
-	SrcId uint64 `json:"src_id"`
 	// Token
 	Token string `json:"token"`
 	// C
@@ -1255,8 +1251,6 @@ func (ParseErrorInvalidTokenCharacter) isParseError() {}
 
 // ParseErrorInvalidToken struct
 type ParseErrorInvalidToken struct {
-	// SrcId
-	SrcId uint64 `json:"src_id"`
 	// Loc
 	Loc uint64 `json:"loc"`
 }
@@ -1265,8 +1259,6 @@ func (ParseErrorInvalidToken) isParseError() {}
 
 // ParseErrorUnrecognizedEOF struct
 type ParseErrorUnrecognizedEOF struct {
-	// SrcId
-	SrcId uint64 `json:"src_id"`
 	// Loc
 	Loc uint64 `json:"loc"`
 }
@@ -1275,8 +1267,6 @@ func (ParseErrorUnrecognizedEOF) isParseError() {}
 
 // ParseErrorUnrecognizedToken struct
 type ParseErrorUnrecognizedToken struct {
-	// SrcId
-	SrcId uint64 `json:"src_id"`
 	// Token
 	Token string `json:"token"`
 	// Loc
@@ -1287,8 +1277,6 @@ func (ParseErrorUnrecognizedToken) isParseError() {}
 
 // ParseErrorExtraToken struct
 type ParseErrorExtraToken struct {
-	// SrcId
-	SrcId uint64 `json:"src_id"`
 	// Token
 	Token string `json:"token"`
 	// Loc
@@ -1299,8 +1287,6 @@ func (ParseErrorExtraToken) isParseError() {}
 
 // ParseErrorReservedWord struct
 type ParseErrorReservedWord struct {
-	// SrcId
-	SrcId uint64 `json:"src_id"`
 	// Token
 	Token string `json:"token"`
 	// Loc
@@ -1311,8 +1297,6 @@ func (ParseErrorReservedWord) isParseError() {}
 
 // ParseErrorInvalidFloat struct
 type ParseErrorInvalidFloat struct {
-	// SrcId
-	SrcId uint64 `json:"src_id"`
 	// Token
 	Token string `json:"token"`
 	// Loc
@@ -1323,8 +1307,6 @@ func (ParseErrorInvalidFloat) isParseError() {}
 
 // ParseErrorWrongValueType struct
 type ParseErrorWrongValueType struct {
-	// SrcId
-	SrcId uint64 `json:"src_id"`
 	// Loc
 	Loc uint64 `json:"loc"`
 	// Term
@@ -1337,8 +1319,6 @@ func (ParseErrorWrongValueType) isParseError() {}
 
 // ParseErrorDuplicateKey struct
 type ParseErrorDuplicateKey struct {
-	// SrcId
-	SrcId uint64 `json:"src_id"`
 	// Loc
 	Loc uint64 `json:"loc"`
 	// Key

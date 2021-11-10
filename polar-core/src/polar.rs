@@ -56,8 +56,12 @@ impl Polar {
             source: &Source,
             kb: &mut KnowledgeBase,
         ) -> PolarResult<Vec<Diagnostic>> {
-            // TODO(gj): we still bomb out at the first ParseError.
-            let mut lines = parser::parse_lines(source_id, &source.src)?;
+            let mut lines = parser::parse_lines(source_id, &source.src)
+                // TODO(gj): we still bomb out at the first ParseError.
+                .map_err(|mut e| {
+                    e.set_context(Some(source), None);
+                    e
+                })?;
             lines.reverse();
             let mut diagnostics = vec![];
             while let Some(line) = lines.pop() {
@@ -224,8 +228,10 @@ impl Polar {
         let term = {
             let mut kb = self.kb.write().unwrap();
             let src_id = kb.new_id();
-            let term =
-                parser::parse_query(src_id, src).map_err(|e| e.set_context(Some(&source), None))?;
+            let term = parser::parse_query(src_id, src).map_err(|mut e| {
+                e.set_context(Some(&source), None);
+                e
+            })?;
             kb.sources.add_source(source, src_id);
             term
         };

@@ -43,14 +43,17 @@ impl Rule {
         self.params.iter().all(|p| p.is_ground())
     }
 
-    pub fn parsed_context(&self) -> Option<((usize, usize), u64)> {
-        if let SourceInfo::Parser {
-            left,
-            right,
-            src_id,
-        } = self.source_info
-        {
-            Some(((left, right), src_id))
+    pub fn span(&self) -> Option<(usize, usize)> {
+        if let SourceInfo::Parser { left, right, .. } = self.source_info {
+            Some((left, right))
+        } else {
+            None
+        }
+    }
+
+    pub fn get_source_id(&self) -> Option<u64> {
+        if let SourceInfo::Parser { src_id, .. } = self.source_info {
+            Some(src_id)
         } else {
             None
         }

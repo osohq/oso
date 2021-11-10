@@ -31,33 +31,27 @@ pub enum Line {
     },
 }
 
-fn to_parse_error(
-    e: ParseError<usize, lexer::Token, error::ParseError>,
-    src_id: u64,
-) -> error::ParseError {
+fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> error::ParseError {
     use error::ParseError::*;
 
     match e {
-        ParseError::InvalidToken { location: loc } => InvalidToken { src_id, loc },
-        ParseError::UnrecognizedEOF { location: loc, .. } => UnrecognizedEOF { src_id, loc },
+        ParseError::InvalidToken { location: loc } => InvalidToken { loc },
+        ParseError::UnrecognizedEOF { location: loc, .. } => UnrecognizedEOF { loc },
         ParseError::UnrecognizedToken {
             token: (loc, t, _), ..
         } => match t {
             Token::Debug | Token::Cut | Token::In | Token::New => ReservedWord {
                 token: t.to_string(),
                 loc,
-                src_id,
             },
             _ => UnrecognizedToken {
                 token: t.to_string(),
                 loc,
-                src_id,
             },
         },
         ParseError::ExtraToken { token: (loc, t, _) } => ExtraToken {
             token: t.to_string(),
             loc,
-            src_id,
         },
         ParseError::User { error } => error,
     }
@@ -65,21 +59,21 @@ fn to_parse_error(
 
 pub fn parse_lines(src_id: u64, src: &str) -> PolarResult<Vec<Line>> {
     polar::LinesParser::new()
-        .parse(src_id, Lexer::new(src_id, src))
-        .map_err(|e| to_parse_error(e, src_id).into())
+        .parse(src_id, Lexer::new(src))
+        .map_err(|e| to_parse_error(e).into())
 }
 
 pub fn parse_query(src_id: u64, src: &str) -> PolarResult<Term> {
     polar::TermParser::new()
-        .parse(src_id, Lexer::new(src_id, src))
-        .map_err(|e| to_parse_error(e, src_id).into())
+        .parse(src_id, Lexer::new(src))
+        .map_err(|e| to_parse_error(e).into())
 }
 
 #[cfg(test)]
 pub fn parse_rules(src_id: u64, src: &str) -> PolarResult<Vec<Rule>> {
     polar::RulesParser::new()
-        .parse(src_id, Lexer::new(src_id, src))
-        .map_err(|e| to_parse_error(e, src_id).into())
+        .parse(src_id, Lexer::new(src))
+        .map_err(|e| to_parse_error(e).into())
 }
 
 #[cfg(test)]
@@ -91,9 +85,7 @@ mod tests {
 
     #[track_caller]
     fn parse_term(src: &str) -> Term {
-        polar::TermParser::new()
-            .parse(0, Lexer::new(0, src))
-            .unwrap()
+        polar::TermParser::new().parse(0, Lexer::new(src)).unwrap()
     }
 
     #[track_caller]
