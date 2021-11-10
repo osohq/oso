@@ -1,6 +1,6 @@
 #![allow(clippy::upper_case_acronyms)]
 
-use super::error::ParseErrorKind;
+use super::error::ParseError;
 use super::terms::Symbol;
 use std::iter::Peekable;
 use std::str::{CharIndices, FromStr};
@@ -27,17 +27,23 @@ pub fn loc_to_pos(src: &str, loc: usize) -> SrcPos {
 }
 
 pub struct Lexer<'input> {
+    src_id: u64,
     c: Option<(usize, char)>,
     chars: Peekable<CharIndices<'input>>,
     buf: String,
 }
 
 impl<'input> Lexer<'input> {
-    pub fn new(input: &'input str) -> Self {
+    pub fn new(src_id: u64, input: &'input str) -> Self {
         let mut chars = input.char_indices().peekable();
         let c = chars.next();
         let buf = String::new();
-        Lexer { c, chars, buf }
+        Lexer {
+            src_id,
+            c,
+            chars,
+            buf,
+        }
     }
 }
 
@@ -172,11 +178,7 @@ impl<'input> Lexer<'input> {
 
     #[inline]
     #[allow(clippy::unnecessary_wraps)]
-    fn scan_symbol(
-        &mut self,
-        i: usize,
-        chr: char,
-    ) -> Option<Spanned<Token, usize, ParseErrorKind>> {
+    fn scan_symbol(&mut self, i: usize, chr: char) -> Option<Spanned<Token, usize, ParseError>> {
         let start = i;
         let mut last = i;
         self.buf.clear();
@@ -211,7 +213,8 @@ impl<'input> Lexer<'input> {
         }
         if let Some((i, _)) = &self.buf.char_indices().rev().nth(1) {
             if &self.buf[*i..] == "::" {
-                return Some(Err(ParseErrorKind::InvalidTokenCharacter {
+                return Some(Err(ParseError::InvalidTokenCharacter {
+                    src_id: self.src_id,
                     token: self.buf.clone(),
                     c: ':',
                     loc: last,
@@ -246,7 +249,7 @@ impl<'input> Lexer<'input> {
 
     #[inline]
     #[allow(clippy::unnecessary_wraps)]
-    fn scan_string(&mut self, i: usize) -> Option<Spanned<Token, usize, ParseErrorKind>> {
+    fn scan_string(&mut self, i: usize) -> Option<Spanned<Token, usize, ParseError>> {
         let start = i;
         let last;
         self.buf.clear();
@@ -255,7 +258,8 @@ impl<'input> Lexer<'input> {
             if let Some((i, char)) = self.c {
                 match char {
                     '\n' => {
-                        return Some(Err(ParseErrorKind::InvalidTokenCharacter {
+                        return Some(Err(ParseError::InvalidTokenCharacter {
+                            src_id: self.src_id,
                             token: self.buf.clone(),
                             c: char,
                             loc: i,
@@ -278,7 +282,8 @@ impl<'input> Lexer<'input> {
                             };
                             self.buf.push(escaped_char);
                         } else {
-                            return Some(Err(ParseErrorKind::InvalidTokenCharacter {
+                            return Some(Err(ParseError::InvalidTokenCharacter {
+                                src_id: self.src_id,
                                 token: self.buf.clone(),
                                 c: '\0',
                                 loc: i,
@@ -292,7 +297,8 @@ impl<'input> Lexer<'input> {
                     }
                 }
             } else {
-                return Some(Err(ParseErrorKind::InvalidTokenCharacter {
+                return Some(Err(ParseError::InvalidTokenCharacter {
+                    src_id: self.src_id,
                     token: self.buf.clone(),
                     c: '\0',
                     loc: i,
@@ -324,11 +330,7 @@ impl<'input> Lexer<'input> {
 
     #[inline]
     #[allow(clippy::unnecessary_wraps)]
-    fn scan_number(
-        &mut self,
-        i: usize,
-        chr: char,
-    ) -> Option<Spanned<Token, usize, ParseErrorKind>> {
+    fn scan_number(&mut self, i: usize, chr: char) -> Option<Spanned<Token, usize, ParseError>> {
         let start = i;
         let mut last = i;
         self.buf.clear();
@@ -375,7 +377,8 @@ impl<'input> Lexer<'input> {
             if let Ok(f) = f64::from_str(&self.buf) {
                 Some(Ok((start, Token::Float(f), last + 1)))
             } else {
-                Some(Err(ParseErrorKind::InvalidFloat {
+                Some(Err(ParseError::InvalidFloat {
+                    src_id: self.src_id,
                     token: self.buf.clone(),
                     loc: start,
                 }))
@@ -383,7 +386,8 @@ impl<'input> Lexer<'input> {
         } else if let Ok(int) = i64::from_str(&self.buf) {
             Some(Ok((start, Token::Integer(int), last + 1)))
         } else {
-            Some(Err(ParseErrorKind::IntegerOverflow {
+            Some(Err(ParseError::IntegerOverflow {
+                src_id: self.src_id,
                 token: self.buf.clone(),
                 loc: start,
             }))
@@ -393,11 +397,7 @@ impl<'input> Lexer<'input> {
     /// Scan a one character operator to token.
     #[inline]
     #[allow(clippy::unnecessary_wraps)]
-    fn scan_1c_op(
-        &mut self,
-        i: usize,
-        token: Token,
-    ) -> Option<Spanned<Token, usize, ParseErrorKind>> {
+    fn scan_1c_op(&mut self, i: usize, token: Token) -> Option<Spanned<Token, usize, ParseError>> {
         self.c = self.chars.next();
         Some(Ok((i, token, i + 1)))
     }
@@ -410,7 +410,7 @@ impl<'input> Lexer<'input> {
         i: usize,
         next_char: char,
         token: Token,
-    ) -> Option<Spanned<Token, usize, ParseErrorKind>> {
+    ) -> Option<Spanned<Token, usize, ParseError>> {
         let start = i;
         self.c = self.chars.next();
         match self.c {
@@ -418,12 +418,14 @@ impl<'input> Lexer<'input> {
                 self.c = self.chars.next();
                 Some(Ok((start, token, start + 2)))
             }
-            Some((i, chr)) => Some(Err(ParseErrorKind::InvalidTokenCharacter {
+            Some((i, chr)) => Some(Err(ParseError::InvalidTokenCharacter {
+                src_id: self.src_id,
                 token: token.to_string(),
                 c: chr,
                 loc: i,
             })),
-            _ => Some(Err(ParseErrorKind::InvalidTokenCharacter {
+            _ => Some(Err(ParseError::InvalidTokenCharacter {
+                src_id: self.src_id,
                 token: token.to_string(),
                 c: '\0',
                 loc: start + 1,
@@ -440,7 +442,7 @@ impl<'input> Lexer<'input> {
         token: Token,
         next_char: char,
         next_token: Token,
-    ) -> Option<Spanned<Token, usize, ParseErrorKind>> {
+    ) -> Option<Spanned<Token, usize, ParseError>> {
         let start = i;
         self.c = self.chars.next();
         match self.c {
@@ -454,7 +456,7 @@ impl<'input> Lexer<'input> {
 }
 
 impl<'input> Iterator for Lexer<'input> {
-    type Item = Spanned<Token, usize, ParseErrorKind>;
+    type Item = Spanned<Token, usize, ParseError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.skip_whitespace();
@@ -486,7 +488,8 @@ impl<'input> Iterator for Lexer<'input> {
                 '*' => self.scan_1c_op(i, Token::Mul),
                 '/' => self.scan_1c_op(i, Token::Div),
                 ';' => self.scan_1c_op(i, Token::SemiColon),
-                _ => Some(Err(ParseErrorKind::InvalidTokenCharacter {
+                _ => Some(Err(ParseError::InvalidTokenCharacter {
+                    src_id: self.src_id,
                     token: "".to_owned(),
                     c: char,
                     loc: i,
@@ -511,14 +514,14 @@ mod tests {
     #[test]
     fn lex_infinite_loop_bugs() {
         let f = " 123";
-        let mut lexer = Lexer::new(f);
+        let mut lexer = Lexer::new(0, f);
         assert!(matches!(
             lexer.next(),
             Some(Ok((_, Token::Integer(123), _)))
         ));
         assert!(matches!(lexer.next(), None));
         let s = "123 #comment";
-        let mut lexer = Lexer::new(s);
+        let mut lexer = Lexer::new(0, s);
         assert!(matches!(
             lexer.next(),
             Some(Ok((_, Token::Integer(123), _)))
@@ -529,7 +532,7 @@ mod tests {
     #[test]
     fn test_line_endings() {
         let f = "foo\nbar\rbaz\r\n#comment\n#windowscomment\r\n123";
-        let mut lexer = Lexer::new(f);
+        let mut lexer = Lexer::new(0, f);
         assert!(matches!(lexer.next(), Some(Ok((_, Token::Symbol(_), _)))));
         assert!(matches!(lexer.next(), Some(Ok((_, Token::Symbol(_), _)))));
         assert!(matches!(lexer.next(), Some(Ok((_, Token::Symbol(_), _)))));
@@ -544,7 +547,7 @@ mod tests {
         let s = r#"
             "this is a \"sub\" string"
         "#;
-        let mut lexer = Lexer::new(s);
+        let mut lexer = Lexer::new(0, s);
         let tok = lexer.next();
         assert!(
             matches!(tok, Some(Ok((_, Token::String(s), _))) if &s == r#"this is a "sub" string"#)
@@ -556,7 +559,7 @@ mod tests {
         let s = r#"
             "💯" 💯
         "#;
-        let mut lexer = Lexer::new(s);
+        let mut lexer = Lexer::new(0, s);
         assert!(
             matches!(lexer.next(), Some(Ok((13, Token::String(hunnid), 19))) if hunnid == "💯")
         );
@@ -568,20 +571,21 @@ mod tests {
     #[test]
     fn test_symbol_with_trailing_question_mark() {
         let s = "foo?";
-        let mut lexer = Lexer::new(s);
+        let mut lexer = Lexer::new(0, s);
         assert!(
             matches!(lexer.next(), Some(Ok((0, Token::Symbol(question), 4))) if question == Symbol::new("foo?"))
         );
 
         let s = "foo??";
-        let mut lexer = Lexer::new(s);
+        let mut lexer = Lexer::new(0, s);
         lexer.next();
         assert!(matches!(
             lexer.next(),
-            Some(Err(ParseErrorKind::InvalidTokenCharacter {
+            Some(Err(ParseError::InvalidTokenCharacter {
                 token: t,
                 c: '\u{0}',
                 loc: 5,
+                ..
             })) if &t == "?="
         ));
     }
@@ -589,7 +593,7 @@ mod tests {
     #[test]
     fn test_symbol_colons() {
         let s = "foo:bar";
-        let mut lexer = Lexer::new(s);
+        let mut lexer = Lexer::new(0, s);
         assert!(
             matches!(lexer.next(), Some(Ok((0, Token::Symbol(x), 3))) if x == Symbol::new("foo"))
         );
@@ -600,20 +604,21 @@ mod tests {
         assert!(matches!(lexer.next(), None));
 
         let s = "foo::bar";
-        let mut lexer = Lexer::new(s);
+        let mut lexer = Lexer::new(0, s);
         assert!(
             matches!(lexer.next(), Some(Ok((0, Token::Symbol(x), 8))) if x == Symbol::new("foo::bar"))
         );
         assert!(matches!(lexer.next(), None));
 
         let s = "foo:::bar";
-        let mut lexer = Lexer::new(s);
+        let mut lexer = Lexer::new(0, s);
         assert!(matches!(
             lexer.next(),
-            Some(Err(ParseErrorKind::InvalidTokenCharacter {
+            Some(Err(ParseError::InvalidTokenCharacter {
                 token: x,
                 c: ':',
                 loc: 4,
+                ..
             })) if &x == "foo::"
         ));
     }
@@ -621,16 +626,17 @@ mod tests {
     #[test]
     fn test_symbol_question_marks() {
         let s = "foo??";
-        let mut lexer = Lexer::new(s);
+        let mut lexer = Lexer::new(0, s);
         assert!(
             matches!(lexer.next(), Some(Ok((0, Token::Symbol(x), 4))) if x == Symbol::new("foo?"))
         );
         assert!(matches!(
             lexer.next(),
-            Some(Err(ParseErrorKind::InvalidTokenCharacter {
+            Some(Err(ParseError::InvalidTokenCharacter {
                 token: x,
                 c: '\u{0}',
                 loc: 5,
+                ..
             })) if &x == "?="
         ));
     }
@@ -640,7 +646,7 @@ mod tests {
     fn test_lexer() {
         let f = r#"hello "world" 12345 < + <= { ] =99 #comment
             more; in; Ruby::Namespace"#;
-        let mut lexer = Lexer::new(f);
+        let mut lexer = Lexer::new(0, f);
         assert!(
             matches!(lexer.next(), Some(Ok((0, Token::Symbol(hello), 5))) if hello == Symbol::new("hello"))
         );
@@ -677,39 +683,39 @@ mod tests {
     #[allow(clippy::float_cmp)]
     fn test_numbers() {
         let f = "1+2";
-        let mut lexer = Lexer::new(f);
+        let mut lexer = Lexer::new(0, f);
         assert!(matches!(lexer.next(), Some(Ok((0, Token::Integer(1), 1)))));
         assert!(matches!(lexer.next(), Some(Ok((1, Token::Add, 2)))));
         assert!(matches!(lexer.next(), Some(Ok((2, Token::Integer(2), 3)))));
 
         let f = "0123";
-        let mut lexer = Lexer::new(f);
+        let mut lexer = Lexer::new(0, f);
         assert!(matches!(
             lexer.next(),
             Some(Ok((0, Token::Integer(123), 4)))
         ));
 
         let f = "1.ee1";
-        let mut lexer = Lexer::new(f);
+        let mut lexer = Lexer::new(0, f);
         assert!(matches!(
             lexer.next(),
-            Some(Err(ParseErrorKind::InvalidFloat { .. }))
+            Some(Err(ParseError::InvalidFloat { .. }))
         ));
 
         let f = "1.1";
-        let mut lexer = Lexer::new(f);
+        let mut lexer = Lexer::new(0, f);
         assert!(matches!(lexer.next(), Some(Ok((_, Token::Float(f), _))) if f == 1.1));
 
         let f = "1e1";
-        let mut lexer = Lexer::new(f);
+        let mut lexer = Lexer::new(0, f);
         assert!(matches!(lexer.next(), Some(Ok((_, Token::Float(f), _))) if f == 1e1));
 
         let f = "1e-1";
-        let mut lexer = Lexer::new(f);
+        let mut lexer = Lexer::new(0, f);
         assert!(matches!(lexer.next(), Some(Ok((_, Token::Float(f), _))) if f == 1e-1));
 
         let f = "1.1e-1";
-        let mut lexer = Lexer::new(f);
+        let mut lexer = Lexer::new(0, f);
         assert!(matches!(lexer.next(), Some(Ok((_, Token::Float(f), _))) if f == 1.1e-1));
     }
 }

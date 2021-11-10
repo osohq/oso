@@ -122,52 +122,56 @@ impl fmt::Display for PolarError {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct ParseError {
-    pub src_id: u64,
-    pub kind: ParseErrorKind,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ParseErrorKind {
+pub enum ParseError {
     IntegerOverflow {
+        src_id: u64,
         token: String,
         loc: usize,
     },
     InvalidTokenCharacter {
+        src_id: u64,
         token: String,
         c: char,
         loc: usize,
     },
     InvalidToken {
+        src_id: u64,
         loc: usize,
     },
     #[allow(clippy::upper_case_acronyms)]
     UnrecognizedEOF {
+        src_id: u64,
         loc: usize,
     },
     UnrecognizedToken {
+        src_id: u64,
         token: String,
         loc: usize,
     },
     ExtraToken {
+        src_id: u64,
         token: String,
         loc: usize,
     },
     ReservedWord {
+        src_id: u64,
         token: String,
         loc: usize,
     },
     InvalidFloat {
+        src_id: u64,
         token: String,
         loc: usize,
     },
     WrongValueType {
+        src_id: u64,
         loc: usize,
         term: Term,
         expected: String,
     },
     DuplicateKey {
+        src_id: u64,
         loc: usize,
         key: String,
     },
@@ -191,47 +195,45 @@ impl fmt::Display for ErrorContext {
 
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use ParseErrorKind::*;
-
-        match &self.kind {
-            IntegerOverflow { token, .. } => {
+        match self {
+            Self::IntegerOverflow { token, .. } => {
                 write!(f, "'{}' caused an integer overflow", token.escape_debug())
             }
-            InvalidTokenCharacter { token, c, .. } => write!(
+            Self::InvalidTokenCharacter { token, c, .. } => write!(
                 f,
                 "'{}' is not a valid character. Found in {}",
                 c.escape_debug(),
                 token.escape_debug()
             ),
-            InvalidToken { .. } => write!(f, "found an unexpected sequence of characters"),
-            UnrecognizedEOF { .. } => write!(
+            Self::InvalidToken { .. } => write!(f, "found an unexpected sequence of characters"),
+            Self::UnrecognizedEOF { .. } => write!(
                 f,
                 "hit the end of the file unexpectedly. Did you forget a semi-colon"
             ),
-            UnrecognizedToken { token, .. } => write!(
+            Self::UnrecognizedToken { token, .. } => write!(
                 f,
                 "did not expect to find the token '{}'",
                 token.escape_debug()
             ),
-            ExtraToken { token, .. } => write!(
+            Self::ExtraToken { token, .. } => write!(
                 f,
                 "did not expect to find the token '{}'",
                 token.escape_debug()
             ),
-            ReservedWord { token, .. } => write!(
+            Self::ReservedWord { token, .. } => write!(
                 f,
                 "{} is a reserved Polar word and cannot be used here",
                 token.escape_debug()
             ),
-            InvalidFloat { token, .. } => write!(
+            Self::InvalidFloat { token, .. } => write!(
                 f,
                 "{} was parsed as a float, but is invalid",
                 token.escape_debug()
             ),
-            WrongValueType { term, expected, .. } => {
+            Self::WrongValueType { term, expected, .. } => {
                 write!(f, "Wrong value type: {}. Expected a {}", term, expected)
             }
-            DuplicateKey { key, .. } => {
+            Self::DuplicateKey { key, .. } => {
                 write!(f, "Duplicate key: {}", key)
             }
         }

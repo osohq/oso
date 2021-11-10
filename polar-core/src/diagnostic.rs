@@ -47,23 +47,29 @@ impl fmt::Display for Diagnostic {
 // like the absence of an allow rule don't pertain to a particular file or location
 // therein.
 pub fn set_context_for_diagnostics(kb: &KnowledgeBase, diagnostics: &mut Vec<Diagnostic>) {
-    use super::error::{ErrorKind::*, ParseError, ParseErrorKind::*, ValidationError::*};
+    use super::error::{ErrorKind::*, ParseError::*, ValidationError::*};
 
     for diagnostic in diagnostics {
         let context = match diagnostic {
-            Diagnostic::Error(e) => match e.kind {
-                Parse(ParseError { ref kind, src_id }) => match kind {
-                    DuplicateKey { key: token, loc }
-                    | ExtraToken { token, loc }
-                    | IntegerOverflow { token, loc }
-                    | InvalidFloat { token, loc }
-                    | ReservedWord { token, loc }
-                    | UnrecognizedToken { token, loc } => Some(((*loc, loc + token.len()), src_id)),
-                    InvalidTokenCharacter { loc, .. }
-                    | InvalidToken { loc }
-                    | UnrecognizedEOF { loc } => Some(((*loc, *loc), src_id)),
-                    WrongValueType { term, .. } => term.span().map(|span| (span, src_id)),
-                },
+            Diagnostic::Error(e) => match &e.kind {
+                Parse(DuplicateKey {
+                    src_id,
+                    key: token,
+                    loc,
+                })
+                | Parse(ExtraToken { src_id, token, loc })
+                | Parse(IntegerOverflow { src_id, token, loc })
+                | Parse(InvalidFloat { src_id, token, loc })
+                | Parse(ReservedWord { src_id, token, loc })
+                | Parse(UnrecognizedToken { src_id, token, loc }) => {
+                    Some(((*loc, loc + token.len()), *src_id))
+                }
+                Parse(InvalidTokenCharacter { src_id, loc, .. })
+                | Parse(InvalidToken { src_id, loc })
+                | Parse(UnrecognizedEOF { src_id, loc }) => Some(((*loc, *loc), *src_id)),
+                Parse(WrongValueType { src_id, term, .. }) => {
+                    term.span().map(|span| (span, *src_id))
+                }
 
                 Validation(ResourceBlock { ref term, .. })
                 | Validation(SingletonVariable { ref term, .. })

@@ -1,7 +1,7 @@
 use wasm_bindgen::JsValue;
 
 use polar_core::error::{
-    ErrorKind, FormattedPolarError, OperationalError, ParseErrorKind, PolarError, RuntimeError,
+    ErrorKind, FormattedPolarError, OperationalError, ParseError, PolarError, RuntimeError,
     ValidationError,
 };
 
@@ -17,22 +17,20 @@ pub fn serialization_error(msg: String) -> JsValue {
 fn kind(err: &PolarError) -> String {
     use ErrorKind::*;
     use OperationalError::*;
-    use ParseErrorKind::*;
+    use ParseError::*;
     use RuntimeError::*;
     use ValidationError::*;
     match err.kind {
-        Parse(ref p) => match p.kind {
-            IntegerOverflow { .. } => "ParseError::IntegerOverflow",
-            InvalidTokenCharacter { .. } => "ParseError::InvalidTokenCharacter",
-            InvalidToken { .. } => "ParseError::InvalidToken",
-            UnrecognizedEOF { .. } => "ParseError::UnrecognizedEOF",
-            UnrecognizedToken { .. } => "ParseError::UnrecognizedToken",
-            ExtraToken { .. } => "ParseError::ExtraToken",
-            ReservedWord { .. } => "ParseError::ReservedWord",
-            InvalidFloat { .. } => "ParseError::InvalidFloat",
-            WrongValueType { .. } => "ParseError::WrongValueType",
-            DuplicateKey { .. } => "ParseError::DuplicateKey",
-        },
+        Parse(IntegerOverflow { .. }) => "ParseError::IntegerOverflow",
+        Parse(InvalidTokenCharacter { .. }) => "ParseError::InvalidTokenCharacter",
+        Parse(InvalidToken { .. }) => "ParseError::InvalidToken",
+        Parse(UnrecognizedEOF { .. }) => "ParseError::UnrecognizedEOF",
+        Parse(UnrecognizedToken { .. }) => "ParseError::UnrecognizedToken",
+        Parse(ExtraToken { .. }) => "ParseError::ExtraToken",
+        Parse(ReservedWord { .. }) => "ParseError::ReservedWord",
+        Parse(InvalidFloat { .. }) => "ParseError::InvalidFloat",
+        Parse(WrongValueType { .. }) => "ParseError::WrongValueType",
+        Parse(DuplicateKey { .. }) => "ParseError::DuplicateKey",
         Runtime(Application { .. }) => "RuntimeError::Application",
         Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
         Runtime(FileLoading { .. }) => "RuntimeError::FileLoading",

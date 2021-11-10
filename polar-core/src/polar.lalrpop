@@ -17,7 +17,7 @@ grammar(src_id: u64);
 
 extern {
     type Location = usize;
-    type Error = error::ParseErrorKind;
+    type Error = error::ParseError;
 
     enum Token {
         "Integer" => lexer::Token::Integer(<i64>),
@@ -192,7 +192,7 @@ Fields<T>: BTreeMap<Symbol, Term> = {
         Some((name, value)) => {
             let existing = fields.insert(name.clone(), value);
             if existing.is_some() {
-                return Err(ParseError::User { error: error::ParseErrorKind::DuplicateKey { loc, key: name.0 } })
+                return Err(ParseError::User { error: error::ParseError::DuplicateKey { src_id, loc, key: name.0 } })
             }
             Ok(fields)
         }
@@ -215,7 +215,7 @@ Kwargs<T>: BTreeMap<Symbol, Term> = {
         Some((name, value)) => {
             let existing = fields.insert(name.clone(), value);
             if existing.is_some() {
-                return Err(ParseError::User { error: error::ParseErrorKind::DuplicateKey { loc, key: name.0 } })
+                return Err(ParseError::User { error: error::ParseError::DuplicateKey { src_id, loc, key: name.0 } })
             }
             Ok(fields)
         }
@@ -349,7 +349,7 @@ ExpectValue<T>: Term = {
     <loc:@L> <term:T> =>? {
         match term {
             ValueOrLogical::Logical(term) => {
-                Err(ParseError::User { error: error::ParseErrorKind::WrongValueType { loc, term, expected: "value".to_string() } })
+                Err(ParseError::User { error: error::ParseError::WrongValueType { src_id, loc, term, expected: "value".to_string() } })
             },
             ValueOrLogical::Value(t) | ValueOrLogical::Either(t) => Ok(t)
         }
@@ -360,7 +360,7 @@ ExpectLogical<T>: Term = {
     <loc:@L> <term:T> =>? {
         match term {
             ValueOrLogical::Value(term) => {
-                Err(ParseError::User { error: error::ParseErrorKind::WrongValueType { loc, term, expected: "logical expression".to_string() } })
+                Err(ParseError::User { error: error::ParseError::WrongValueType { src_id, loc, term, expected: "logical expression".to_string() } })
             },
             ValueOrLogical::Logical(t) | ValueOrLogical::Either(t) => Ok(t)
         }
