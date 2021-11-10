@@ -45,7 +45,7 @@ jobs:
 
       - name: Install cibuildwheel
         run: |
-          python -m pip install cibuildwheel==1.4.2
+          python -m pip install cibuildwheel==2.2.2
       - name: Copy in readme
         run: |
           rm languages/python/django-oso/README.md
