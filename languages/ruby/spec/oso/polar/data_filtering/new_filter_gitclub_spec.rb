@@ -260,7 +260,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           }
         )
 
-        policy_file = File.join(__dir__, 'dumb_gitclub.polar')
+        policy_file = File.join(__dir__, 'gitclub.polar')
         subject.load_files [policy_file]
       end
       let(:apple) { Org.find 'apple' }

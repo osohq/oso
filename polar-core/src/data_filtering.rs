@@ -1341,7 +1341,10 @@ impl DataSources for DataFilter {
                 set
             }
             Select {
-                source, left, right, ..
+                source,
+                left,
+                right,
+                ..
             } => {
                 let mut set = source.sources();
                 set.extend(left.sources());
@@ -1543,39 +1546,9 @@ impl QueryInfo {
             .and_then(|pv| self.translate_dots(pv).ok())
     }
 
-    fn maybe_relate(&self, my_cls: &str, my_fld: &str, other_cls: &str, other_fld: &str) -> Option<Relation> {
-        self.types.get(my_cls).and_then(|typs| {
-            typs.iter().find_map(|(k, v)| match v {
-                Type::Relation {
-                    other_class_tag,
-                    my_field,
-                    other_field,
-                    ..
-                } if my_field == my_fld
-                    && other_field == other_fld
-                    && other_class_tag == other_cls =>
-                {
-                    Some((my_cls.to_string(), k.to_string(), other_cls.to_string()))
-                }
-                _ => None,
-            })
-        })
-    }
-
     fn constrain(&mut self, op: Operation) -> PolarResult<()> {
-        use Datum::*;
-        let (l, sel, r) = self.op2cond(op)?;
-        if let (Field(Proj(ls, Some(lf))), SelOp::Eq, Field(Proj(rs, Some(rf)))) = (&l, sel, &r) {
-            // FIXME(gw) ungly
-            let (lsrc, rsrc) = (
-                ls.sources().into_iter().next().unwrap(),
-                rs.sources().into_iter().next().unwrap(),
-            );
-            if let Some(rel) = self.maybe_relate(&lsrc, lf, &rsrc, rf).or_else(|| self.maybe_relate(&rsrc, rf, &lsrc, lf)) {
-                self.relations.insert(rel);
-            }
-        }
-        self.constraints.insert((l, sel, r));
+        let con = self.op2cond(op)?;
+        self.constraints.insert(con);
         Ok(())
     }
 
@@ -1615,7 +1588,12 @@ impl QueryInfo {
             .map(|isa| match isa.args[1].value() {
                 Value::Pattern(Pattern::Instance(InstanceLiteral { tag, fields }))
                     if fields.is_empty() =>
-                        Ok((Self::term2path(&isa.args[0])?, tag.0.clone())),
+                {
+                    match Self::term2path(&isa.args[0]) {
+                        Ok(p) => Ok((p, tag.0.clone())),
+                        _ => Ok((vec![], String::new())),
+                    }
+                }
                 _ => unsupported_op_error(isa),
             })
             .collect::<PolarResult<Map<_, _>>>()?;
