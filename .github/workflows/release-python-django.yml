@@ -50,9 +50,13 @@ jobs:
         run: |
           rm languages/python/django-oso/README.md
           cp README.md languages/python/django-oso/README.md
+      - name: Upgrade pip and install wheel
+        run: |
+          pip install --upgrade pip
+          pip install wheel
       - name: Build wheels
         run: |
-          python -m cibuildwheel --output-dir wheelhouse
+          python -m pip wheel -w wheelhouse .
         working-directory: languages/python/django-oso
       - uses: actions/upload-artifact@v2
         with:

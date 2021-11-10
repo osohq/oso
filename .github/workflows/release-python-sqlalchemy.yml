@@ -51,9 +51,13 @@ jobs:
         run: |
           rm languages/python/sqlalchemy-oso/README.md
           cp README.md languages/python/sqlalchemy-oso/README.md
+      - name: Upgrade pip and install wheel
+        run: |
+          pip install --upgrade pip
+          pip install wheel
       - name: Build wheels
         run: |
-          python -m cibuildwheel --output-dir wheelhouse
+          python -m pip wheel -w wheelhouse .
         working-directory: languages/python/sqlalchemy-oso
       - uses: actions/upload-artifact@v2
         with:
