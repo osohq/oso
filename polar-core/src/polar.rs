@@ -83,13 +83,13 @@ impl Polar {
                                 }
                             ) if args.is_empty()
                         ) {
-                            diagnostics.push(Diagnostic::Error(kb.set_error_context(
-                                &rule_type.body,
+                            diagnostics.push(Diagnostic::Error(
                                 error::ValidationError::InvalidRuleType {
-                                    rule_type: rule_type.to_polar(),
-                                    msg: "\nRule types cannot contain dot lookups.".to_owned(),
-                                },
-                            )));
+                                    rule_type,
+                                    msg: "Rule types cannot contain dot lookups.".to_owned(),
+                                }
+                                .into(),
+                            ));
                         } else {
                             kb.add_rule_type(rule_type);
                         }

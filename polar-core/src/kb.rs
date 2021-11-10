@@ -147,13 +147,11 @@ impl KnowledgeBase {
                             })
                         })?;
                     if !found_match {
-                        return Err(self.set_error_context(
-                            &rule.body,
-                            error::ValidationError::InvalidRule {
-                                rule: rule.to_polar(),
-                                msg,
-                            },
-                        ));
+                        return Err(ValidationError::InvalidRule {
+                            rule: Rule::clone(rule),
+                            msg,
+                        }
+                        .into());
                     }
                 }
             }

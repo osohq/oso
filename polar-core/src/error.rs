@@ -393,11 +393,13 @@ pub enum ValidationError {
         rule: Rule,
     },
     InvalidRule {
-        rule: String,
+        /// Rule where the error arose, tracked for lexical context.
+        rule: Rule,
         msg: String,
     },
     InvalidRuleType {
-        rule_type: String,
+        /// Rule type where the error arose, tracked for lexical context.
+        rule_type: Rule,
         msg: String,
     },
     UndefinedRuleCall {
@@ -430,7 +432,7 @@ impl fmt::Display for ValidationError {
                 write!(f, "Invalid rule: {} {}", rule, msg)
             }
             Self::InvalidRuleType { rule_type, msg } => {
-                write!(f, "Invalid rule type: {} {}", rule_type, msg)
+                write!(f, "Invalid rule type: {}\n\t{}", rule_type, msg)
             }
             Self::UndefinedRuleCall { term } => {
                 write!(f, "Call to undefined rule: {}", term)

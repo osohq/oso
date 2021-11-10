@@ -52,36 +52,40 @@ pub fn set_context_for_diagnostics(kb: &KnowledgeBase, diagnostics: &mut Vec<Dia
     for diagnostic in diagnostics {
         let context = match diagnostic {
             Diagnostic::Error(e) => match &e.kind {
-                Parse(DuplicateKey {
-                    src_id,
-                    key: token,
-                    loc,
-                })
-                | Parse(ExtraToken { src_id, token, loc })
-                | Parse(IntegerOverflow { src_id, token, loc })
-                | Parse(InvalidFloat { src_id, token, loc })
-                | Parse(ReservedWord { src_id, token, loc })
-                | Parse(UnrecognizedToken { src_id, token, loc }) => {
-                    Some(((*loc, loc + token.len()), *src_id))
-                }
-                Parse(InvalidTokenCharacter { src_id, loc, .. })
-                | Parse(InvalidToken { src_id, loc })
-                | Parse(UnrecognizedEOF { src_id, loc }) => Some(((*loc, *loc), *src_id)),
-                Parse(WrongValueType { src_id, term, .. }) => {
-                    term.span().map(|span| (span, *src_id))
-                }
+                Parse(e) => match e {
+                    DuplicateKey {
+                        src_id,
+                        key: token,
+                        loc,
+                    }
+                    | ExtraToken { src_id, token, loc }
+                    | IntegerOverflow { src_id, token, loc }
+                    | InvalidFloat { src_id, token, loc }
+                    | ReservedWord { src_id, token, loc }
+                    | UnrecognizedToken { src_id, token, loc } => {
+                        Some(((*loc, loc + token.len()), *src_id))
+                    }
 
-                Validation(ResourceBlock { ref term, .. })
-                | Validation(SingletonVariable { ref term, .. })
-                | Validation(UndefinedRuleCall { ref term })
-                | Validation(UnregisteredClass { ref term, .. }) => {
-                    term.span().zip(term.get_source_id())
-                }
+                    InvalidTokenCharacter { src_id, loc, .. }
+                    | InvalidToken { src_id, loc }
+                    | UnrecognizedEOF { src_id, loc } => Some(((*loc, *loc), *src_id)),
 
-                // TODO(gj): Track source for all three of these.
-                Validation(InvalidRule { .. })
-                | Validation(InvalidRuleType { .. })
-                | Validation(MissingRequiredRule { .. }) => None,
+                    WrongValueType { src_id, term, .. } => term.span().map(|span| (span, *src_id)),
+                },
+
+                Validation(e) => match e {
+                    ResourceBlock { ref term, .. }
+                    | SingletonVariable { ref term, .. }
+                    | UndefinedRuleCall { ref term }
+                    | UnregisteredClass { ref term, .. } => term.span().zip(term.get_source_id()),
+
+                    InvalidRule { rule, .. }
+                    | InvalidRuleType {
+                        rule_type: rule, ..
+                    } => rule.parsed_context(),
+
+                    MissingRequiredRule { .. } => None,
+                },
 
                 Runtime(_) | Operational(_) => None,
             },
