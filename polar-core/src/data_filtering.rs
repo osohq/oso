@@ -1313,7 +1313,7 @@ type Condition = (Datum, SelOp, Datum);
 #[derive(Debug)]
 struct QueryInfo {
     types: Types,
-    entities: Map<Vec<String>, String>,
+    entities: Map<PathVar, TypeName>,
     constraints: Set<Condition>,
     relations: Set<Relation>,
 }
@@ -1425,54 +1425,52 @@ impl QueryInfo {
         let mut set = HashSet::new();
         let PathVar { var, mut path } = pv;
         // what type is the base variable?
-        let src = match self.entities.get(&vec![var.clone()]) {
+        let typ = match self.entities.get(&PathVar { var: var.clone(), path: vec![]}) {
             Some(c) => c,
             None => &var, // FIXME(gw) hack, happens to make it work
         };
 
         // the last part of the path is always allowed not to be a relation.
         // pop it off for now & deal with it in a minute.
-        let last = path.pop();
+        let field = path.pop();
 
-        // all the remaining parts have to be relations, so if we can't find one
+        // all the middle parts have to be relations, so if we can't find one
         // then we fail here.
-        let src = path.iter().fold(Ok(src), |src, dot| {
-            let src = src?;
-            match self.types.get(src).and_then(|m| m.get(dot)) {
+        let typ = path.iter().fold(Ok(typ), |typ, dot| {
+            let typ = typ?;
+            match self.types.get(typ).and_then(|m| m.get(dot)) {
                 Some(Type::Relation {
                     other_class_tag, ..
                 }) => {
-                    set.insert((src.clone(), dot.clone(), other_class_tag.clone()));
+                    set.insert((typ.clone(), dot.clone(), other_class_tag.clone()));
                     Ok(other_class_tag)
                 }
-                _ => unregistered_field_error(src, dot),
+                _ => unregistered_field_error(typ, dot),
             }
         })?;
 
-        // src may not be the final source!
-        // if the last path component names a relation from src to dst
-        // then dst is the new source and the last is None. otherwise,
-        // src & last stay the same.
-        let (src, last) = match last {
-            Some(ref dot) => match self.types.get(src).and_then(|m| m.get(dot)) {
+        // typ may not be the final type.
+        // if the last path component names a relation from typ to typ'
+        // then typ' is the new type and field is None. otherwise,
+        // typ & field stay the same.
+        let (typ, field) = match field {
+            None => (typ, None),
+            Some(dot) => match self.types.get(typ).and_then(|m| m.get(&dot)) {
                 Some(Type::Relation {
                     other_class_tag, ..
                 }) => {
-                    set.insert((src.clone(), dot.clone(), other_class_tag.clone()));
+                    set.insert((typ.clone(), dot, other_class_tag.clone()));
                     (other_class_tag, None)
                 }
-                _ => (src, last),
+                _ => (typ, Some(dot)),
             },
-            _ => (src, last),
         };
 
-        Ok((
-            Proj(Rc::new(DataFilter::Source(src.to_string())), last),
-            set,
-        ))
+        let proj = Proj(Rc::new(DataFilter::Source(typ.to_string())), field);
+        Ok((proj, set))
     }
 
-    fn rels2joins(&mut self, mut src: DataFilter) -> PolarResult<DataFilter> {
+    fn rels2joins(&mut self, src: DataFilter) -> PolarResult<DataFilter> {
         use DataFilter::*;
         let srcs = src.sources();
         let (ok, no): (Set<_>, Set<_>) = self
@@ -1488,7 +1486,8 @@ impl QueryInfo {
                 err_invalid("can't close join set".to_string())
             }
         } else {
-            for (l, nom, r) in ok {
+            let src = ok.into_iter().fold(Ok(src), |src, (l, nom, r)| {
+                let src = src?;
                 if let Some(Type::Relation {
                     my_field,
                     other_field,
@@ -1499,16 +1498,12 @@ impl QueryInfo {
                     let right = Rc::new(Source(r.to_string()));
                     let lcol = Proj(Rc::new(Source(l.to_string())), Some(my_field.to_string()));
                     let rcol = Proj(right.clone(), Some(other_field.to_string()));
-                    src = Join {
-                        left,
-                        lcol,
-                        rcol,
-                        right,
-                    }
+                    Ok(Join { left, lcol, rcol, right, })
                 } else {
-                    return err_invalid("not a relation!".to_string());
+                    err_invalid("not a relation!".to_string())
                 }
-            }
+
+            })?;
             self.relations = no.into_iter().cloned().collect();
             self.rels2joins(src)
         }
@@ -1532,12 +1527,6 @@ impl QueryInfo {
             }),
             _ => err_invalid(format!("QueryInfo::term2pathvar({})", t.to_polar())),
         }
-    }
-
-    fn term2path(t: &Term) -> PolarResult<Vec<String>> {
-        let PathVar { mut path, var } = Self::term2pathvar(t)?;
-        path.insert(0, var);
-        Ok(path)
     }
 
     fn maybe_translate_dots(&self, t: &Term) -> Option<(Proj, Set<Relation>)> {
@@ -1589,9 +1578,9 @@ impl QueryInfo {
                 Value::Pattern(Pattern::Instance(InstanceLiteral { tag, fields }))
                     if fields.is_empty() =>
                 {
-                    match Self::term2path(&isa.args[0]) {
+                    match Self::term2pathvar(&isa.args[0]) {
                         Ok(p) => Ok((p, tag.0.clone())),
-                        _ => Ok((vec![], String::new())),
+                        _ => Ok((PathVar { var: String::new(), path: vec![] }, String::new())),
                     }
                 }
                 _ => unsupported_op_error(isa),
