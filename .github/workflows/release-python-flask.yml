@@ -3,8 +3,7 @@ on:
   push:
     tags:
       - "flask-v*" # Push events to matching v*, i.e. v1.0, v20.15.10
-    branches:
-      - "gkaemmer/*"
+
 jobs:
   version:
     name: Compute and verify the version number
