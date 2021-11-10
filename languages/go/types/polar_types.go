@@ -1229,6 +1229,8 @@ type Parameter struct {
 
 // ParseErrorIntegerOverflow struct
 type ParseErrorIntegerOverflow struct {
+	// SrcId
+	SrcId uint64 `json:"src_id"`
 	// Token
 	Token string `json:"token"`
 	// Loc
@@ -1239,6 +1241,8 @@ func (ParseErrorIntegerOverflow) isParseError() {}
 
 // ParseErrorInvalidTokenCharacter struct
 type ParseErrorInvalidTokenCharacter struct {
+	// SrcId
+	SrcId uint64 `json:"src_id"`
 	// Token
 	Token string `json:"token"`
 	// C
@@ -1251,6 +1255,8 @@ func (ParseErrorInvalidTokenCharacter) isParseError() {}
 
 // ParseErrorInvalidToken struct
 type ParseErrorInvalidToken struct {
+	// SrcId
+	SrcId uint64 `json:"src_id"`
 	// Loc
 	Loc uint64 `json:"loc"`
 }
@@ -1259,6 +1265,8 @@ func (ParseErrorInvalidToken) isParseError() {}
 
 // ParseErrorUnrecognizedEOF struct
 type ParseErrorUnrecognizedEOF struct {
+	// SrcId
+	SrcId uint64 `json:"src_id"`
 	// Loc
 	Loc uint64 `json:"loc"`
 }
@@ -1267,6 +1275,8 @@ func (ParseErrorUnrecognizedEOF) isParseError() {}
 
 // ParseErrorUnrecognizedToken struct
 type ParseErrorUnrecognizedToken struct {
+	// SrcId
+	SrcId uint64 `json:"src_id"`
 	// Token
 	Token string `json:"token"`
 	// Loc
@@ -1277,6 +1287,8 @@ func (ParseErrorUnrecognizedToken) isParseError() {}
 
 // ParseErrorExtraToken struct
 type ParseErrorExtraToken struct {
+	// SrcId
+	SrcId uint64 `json:"src_id"`
 	// Token
 	Token string `json:"token"`
 	// Loc
@@ -1287,6 +1299,8 @@ func (ParseErrorExtraToken) isParseError() {}
 
 // ParseErrorReservedWord struct
 type ParseErrorReservedWord struct {
+	// SrcId
+	SrcId uint64 `json:"src_id"`
 	// Token
 	Token string `json:"token"`
 	// Loc
@@ -1297,6 +1311,8 @@ func (ParseErrorReservedWord) isParseError() {}
 
 // ParseErrorInvalidFloat struct
 type ParseErrorInvalidFloat struct {
+	// SrcId
+	SrcId uint64 `json:"src_id"`
 	// Token
 	Token string `json:"token"`
 	// Loc
@@ -1307,6 +1323,8 @@ func (ParseErrorInvalidFloat) isParseError() {}
 
 // ParseErrorWrongValueType struct
 type ParseErrorWrongValueType struct {
+	// SrcId
+	SrcId uint64 `json:"src_id"`
 	// Loc
 	Loc uint64 `json:"loc"`
 	// Term
@@ -1319,6 +1337,8 @@ func (ParseErrorWrongValueType) isParseError() {}
 
 // ParseErrorDuplicateKey struct
 type ParseErrorDuplicateKey struct {
+	// SrcId
+	SrcId uint64 `json:"src_id"`
 	// Loc
 	Loc uint64 `json:"loc"`
 	// Key
@@ -2359,8 +2379,8 @@ type TraceResult struct {
 
 // ValidationErrorMissingRequiredRule struct
 type ValidationErrorMissingRequiredRule struct {
-	// Rule
-	Rule Rule `json:"rule"`
+	// RuleType
+	RuleType Rule `json:"rule_type"`
 }
 
 func (ValidationErrorMissingRequiredRule) isValidationError() {}
@@ -2368,7 +2388,7 @@ func (ValidationErrorMissingRequiredRule) isValidationError() {}
 // ValidationErrorInvalidRule struct
 type ValidationErrorInvalidRule struct {
 	// Rule
-	Rule string `json:"rule"`
+	Rule Rule `json:"rule"`
 	// Msg
 	Msg string `json:"msg"`
 }
@@ -2378,20 +2398,20 @@ func (ValidationErrorInvalidRule) isValidationError() {}
 // ValidationErrorInvalidRuleType struct
 type ValidationErrorInvalidRuleType struct {
 	// RuleType
-	RuleType string `json:"rule_type"`
+	RuleType Rule `json:"rule_type"`
 	// Msg
 	Msg string `json:"msg"`
 }
 
 func (ValidationErrorInvalidRuleType) isValidationError() {}
 
-// ValidationErrorUndefinedRule struct
-type ValidationErrorUndefinedRule struct {
-	// RuleName
-	RuleName string `json:"rule_name"`
+// ValidationErrorUndefinedRuleCall struct
+type ValidationErrorUndefinedRuleCall struct {
+	// Term
+	Term Term `json:"term"`
 }
 
-func (ValidationErrorUndefinedRule) isValidationError() {}
+func (ValidationErrorUndefinedRuleCall) isValidationError() {}
 
 // ValidationErrorResourceBlock struct
 type ValidationErrorResourceBlock struct {
@@ -2407,8 +2427,6 @@ func (ValidationErrorResourceBlock) isValidationError() {}
 type ValidationErrorSingletonVariable struct {
 	// Term
 	Term Term `json:"term"`
-	// Name
-	Name string `json:"name"`
 }
 
 func (ValidationErrorSingletonVariable) isValidationError() {}
@@ -2486,8 +2504,8 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		*result = ValidationError{variant}
 		return nil
 
-	case "UndefinedRule":
-		var variant ValidationErrorUndefinedRule
+	case "UndefinedRuleCall":
+		var variant ValidationErrorUndefinedRuleCall
 		if variantValue != nil {
 			err := json.Unmarshal(*variantValue, &variant)
 			if err != nil {
@@ -2553,9 +2571,9 @@ func (variant ValidationError) MarshalJSON() ([]byte, error) {
 			"InvalidRuleType": inner,
 		})
 
-	case ValidationErrorUndefinedRule:
-		return json.Marshal(map[string]ValidationErrorUndefinedRule{
-			"UndefinedRule": inner,
+	case ValidationErrorUndefinedRuleCall:
+		return json.Marshal(map[string]ValidationErrorUndefinedRuleCall{
+			"UndefinedRuleCall": inner,
 		})
 
 	case ValidationErrorResourceBlock:
