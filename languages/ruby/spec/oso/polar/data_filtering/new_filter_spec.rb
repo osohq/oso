@@ -11,7 +11,26 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
   Select = D::ArelSelect
   Field = D::Proj
   Value = D::Value
+
   context 'new filters' do
+    class Sign < ActiveRecord::Base
+      include DFH::ActiveRecordFetcher
+      self.primary_key = :name
+      has_many :people, foreign_key: :sign_name
+      belongs_to :planet, foreign_key: :planet_name
+    end
+
+    class Person < ActiveRecord::Base
+      include DFH::ActiveRecordFetcher
+      self.primary_key = :name
+      belongs_to :sign, foreign_key: :sign_name
+    end
+
+    class Planet < ActiveRecord::Base
+      include DFH::ActiveRecordFetcher
+      self.primary_key = :name
+    end
+
     persons = Src[Person]
     signs = Src[Sign]
     person_name = Field[persons, :name]
@@ -66,11 +85,28 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
             }
           )
           subject.register_class(
+            Planet,
+            fields: {
+              name: String,
+              signs: Relation.new(
+                kind: 'many',
+                other_type: 'Sign',
+                my_field: 'name',
+                other_field: 'planet_name',
+              )
+            }
+          )
+          subject.register_class(
             Sign,
             fields: {
               name: String,
               element: String,
-              ruler: String,
+              planet: Relation.new(
+                kind: 'one',
+                other_type: 'Planet',
+                my_field: 'planet_name',
+                other_field: 'name',
+              ),
               people: Relation.new(
                 kind: 'many',
                 other_type: 'Person',
@@ -94,7 +130,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           subject.load_str <<~POL
             # signs ruled by jupiter can read their own people
             # this rule relies on direct object comparison (aka `field == None`) working correctly :)
-            allow(sign: Sign{ruler:"jupiter"}, "read", _: Person{sign});
+            allow(sign: Sign{planet}, "read", _: Person{sign}) if planet.name = "jupiter";
             # every sign can read a pisces named sam
             allow(_: Sign, "read", _: Person {sign, name: "sam"}) if sign.name = "pisces";
             # earth signs can read people with air signs
@@ -102,7 +138,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           POL
 
           test = lambda do |person, sign|
-            (person.sign == sign && sign.ruler == 'jupiter') ||
+            (person.sign == sign && sign.planet.name == 'jupiter') ||
               (person.name == 'sam' && person.sign.name == 'pisces') ||
               (sign.element == 'earth' && person.sign.element == 'air')
           end
@@ -149,9 +185,9 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         end
 
         it 'test_scalar_in_list' do
-          subject.load_str 'allow(_, _, _: Sign{ruler}) if ruler in ["sun", "moon"];'
+          subject.load_str 'allow(_, _, _: Sign{planet}) if planet.name in ["sun", "moon"];'
           query = subject.authzd_query 'gwen', 'read', Sign
-          expected = Sign.all.select { |sign| %w[sun moon].include? sign.ruler }
+          expected = Sign.all.select { |sign| %w[sun moon].include? sign.planet.name }
           expect(query.to_a).to contain_exactly(*expected)
         end
 
@@ -168,17 +204,25 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         end
 
         it 'test_param_field' do
-          subject.load_str 'allow(ruler, element, _: Sign{ruler, element});'
+          subject.load_str 'allow(planet, element, _: Sign{planet, element});'
           Sign.all.each do |sign|
-            query = subject.authzd_query sign.ruler, sign.element, Sign
-            expect(query.to_a).to eq([sign])
+            query = subject.authzd_query sign.planet, sign.element, Sign
+            expect(query.to_a).to eq [sign]
           end
         end
 
         it 'test_field_cmp_rel_field' do
           subject.load_str 'allow(_, _, _: Person{name, sign}) if name = sign.name;'
           query = subject.authzd_query 'gwen', 'read', Person
-          expect(query.to_a).to eq([leo])
+          expect(query.to_a).to eq [leo]
+        end
+
+        it 'test_field_cmp_rel_rel_field' do
+          subject.load_str <<~POL
+            allow(_, _, _: Person{name, sign}) if name = sign.planet.name;
+          POL
+          query = subject.authzd_query 'gwen', 'read', Person
+          expect(query.to_a).to eq [mercury]
         end
       end
 
@@ -192,7 +236,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           create table signs (
             name varchar(16) not null primary key,
             element varchar(8) not null,
-            ruler varchar(8) not null
+            planet_name varchar(8) not null
           );
         SQL
 
@@ -200,6 +244,12 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           create table people (
             name varchar(32) not null primary key,
             sign_name varchar(16) not null
+          );
+        SQL
+
+        db.execute <<~SQL
+          create table planets (
+            name varchar(8) not null primary key
           );
         SQL
 
@@ -219,13 +269,14 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
          %w[sagittarius fire jupiter],
          %w[capricorn earth saturn],
          %w[aquarius air saturn],
-         %w[pisces water jupiter]].each do |name, element, ruler|
-          Sign.create(name: name, element: element, ruler: ruler)
+         %w[pisces water jupiter]].each do |name, element, planet|
+           Planet.create(name: planet) unless Planet.where(name: planet).any?
+           Sign.create(name: name, element: element, planet: Planet.find(planet))
         end
 
         [%w[robin scorpio],
          %w[pat taurus],
-         %w[dylan virgo],
+         %w[mercury virgo],
          %w[terry libra],
          %w[chris aquarius],
          %w[leo leo],
@@ -241,60 +292,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
 
       let(:eden) { Person.find 'eden' }
       let(:leo) { Person.find 'leo' }
+      let(:mercury) { Person.find 'mercury' }
     end
-  end
-
-  class Sign < ActiveRecord::Base
-    include DFH::ActiveRecordFetcher
-    self.primary_key = 'name'
-    has_many :people, foreign_key: :sign_name
-  end
-
-  class Person < ActiveRecord::Base
-    include DFH::ActiveRecordFetcher
-    self.primary_key = 'name'
-    belongs_to :sign, foreign_key: :sign_name
-  end
-
-  class User < ActiveRecord::Base
-    include DFH::ActiveRecordFetcher
-    self.primary_key = :name
-    belongs_to :org, foreign_key: :org_name
-    has_many :org_roles, foreign_key: :user_name
-    has_many :repo_roles, foreign_key: :user_name
-  end
-
-  class Repo < ActiveRecord::Base
-    include DFH::ActiveRecordFetcher
-    self.primary_key = :name
-    belongs_to :org, foreign_key: :org_name
-    has_many :issues, foreign_key: :repo_name
-    has_many :repo_roles, foreign_key: :repo_name
-  end
-
-  class Org < ActiveRecord::Base
-    include DFH::ActiveRecordFetcher
-    self.primary_key = :name
-    has_many :users, foreign_key: :org_name
-    has_many :repos, foreign_key: :org_name
-    has_many :org_roles, foreign_key: :org_name
-  end
-
-  class Issue < ActiveRecord::Base
-    include DFH::ActiveRecordFetcher
-    self.primary_key = :name
-    belongs_to :repo, foreign_key: :repo_name
-  end
-
-  class RepoRole < ActiveRecord::Base
-    include DFH::ActiveRecordFetcher
-    belongs_to :user, foreign_key: :user_name
-    belongs_to :repo, foreign_key: :repo_name
-  end
-
-  class OrgRole < ActiveRecord::Base
-    include DFH::ActiveRecordFetcher
-    belongs_to :user, foreign_key: :user_name
-    belongs_to :org, foreign_key: :org_name
   end
 end
