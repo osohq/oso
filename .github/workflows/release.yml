@@ -940,15 +940,6 @@ jobs:
           asset_path: ./oso-lib.zip
           asset_name: oso-lib-${{ steps.version.outputs.oso_version }}.zip
           asset_content_type: application/zip
-      - name: Upload Python Musl Package
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./oso-python-musl.zip
-          asset_name: oso-python-musl-${{ steps.version.outputs.oso_version }}.zip
-          asset_content_type: application/zip
       - name: Upload Python Package
         uses: actions/upload-release-asset@v1
         env:
