@@ -1,5 +1,6 @@
 ---
 title: Build Role-Based Access Control (RBAC)
+metaTitle: Build Role-Based Access Control (RBAC) - LANG
 weight: -1
 description: |
   Build role-based access control (RBAC) with Oso's built-in authorization
@@ -9,7 +10,7 @@ aliases:
   - /guides/roles/sqlalchemy/index.html
 ---
 
-# Build Role-Based Access Control (RBAC)
+# Build Role-Based Access Control (RBAC) - {{% lang %}}
 
 Role-based access control (RBAC) is so ubiquitous that Oso provides
 syntax for modeling RBAC. This syntax makes it easy to create a role-based

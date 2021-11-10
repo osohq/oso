@@ -1,5 +1,6 @@
 ---
 title: Quickstart
+metaTitle: Quickstart for LANG
 description: |
   Ready to get started? See Oso in action, and walk through a quick
   change to an Oso policy in a simple web server.
@@ -19,7 +20,7 @@ This guide uses Python.
 {{< /ifLang >}}
 
 
-# Quickstart
+# Quickstart for {{% lang %}}
 
 This guide will walk you through your first change to an Oso policy file. There
 are three steps:
