@@ -851,11 +851,20 @@ impl KnowledgeBase {
             }
         }
 
-        let mut rule_types = rule_types_to_create.into_iter().map(|((subject, relation_name, object), required)| {
+        let mut rule_types = rule_types_to_create.into_iter().map(|((subject, relation, object), required)| {
             let subject_specializer = pattern!(instance!(&subject.value().as_symbol().expect("must be symbol").0));
-            let relation_name = relation_name.value().as_string().expect("must be string");
+            let relation_name = relation.value().as_string().expect("must be string");
             let object_specializer = pattern!(instance!(&object.value().as_symbol().expect("must be symbol").0));
-            rule!("has_relation", ["subject"; subject_specializer, relation_name, "object"; object_specializer], required)
+
+            let src_id = relation.get_source_id().expect("must be parsed");
+            let (left, right) = relation.span().expect("must be parsed");
+
+            let mut params = args!("subject"; subject_specializer, relation_name, "object"; object_specializer);
+            params.reverse();
+            let body = term!(op!(And));
+            let mut rule = Rule::new_from_parser(src_id, left, right, sym!("has_relation"), params, body);
+            rule.required = required;
+            rule
         }).collect::<Vec<_>>();
 
         // If there are any Relation::Role declarations in *any* of our resource
@@ -863,6 +872,9 @@ impl KnowledgeBase {
         if self.resource_blocks.has_roles() {
             rule_types.push(
                 // TODO(gj): "Internal" SourceInfo variant.
+                // TODO(gj): Figure out if it's worth setting SourceInfo::Parser context for this
+                // `has_role` rule type we create. Best we could probably do at the moment is fetch
+                // a random role from self.resource_blocks.declarations and borrow its context.
                 rule!("has_role", ["actor"; instance!(ACTOR_UNION_NAME), "role"; instance!("String"), "resource"; instance!(RESOURCE_UNION_NAME)], true)
             );
         }
