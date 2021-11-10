@@ -22,8 +22,8 @@ module Oso
           'Select' => ->(p, j) do
             CLASSES[:select].new(
               parse(p, j['source']), 
-              parse(p, j['lhs']),
-              parse(p, j['rhs']),
+              parse(p, j['left']),
+              parse(p, j['right']),
               kind: j['kind'] || 'Eq'
             )
           end,
@@ -219,7 +219,6 @@ module Oso
         include ArelColumnizer
         OPS = {
           'Eq' => '=', 'In' => 'IN', 'Nin' => 'NOT IN', 'Neq' => '!=',
-          eq: '=', in: 'IN', nin: 'NOT IN', neq: '!=',
         }
 
         def to_query

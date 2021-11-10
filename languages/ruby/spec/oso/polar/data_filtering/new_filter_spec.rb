@@ -25,7 +25,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         expect(result).to eq [eden]
 
         # person.name != 'eden'
-        result = Select[persons, person_name, Value['eden'], kind: :neq].to_a
+        result = Select[persons, person_name, Value['eden'], kind: 'Neq'].to_a
         expect(result.length).to be 11
         expect(result).not_to include eden
       end
@@ -35,7 +35,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         result = Select[persons_signs, sign_name, Value['cancer']].to_a
         expect(result).to eq [eden]
         # person.sign.name != 'cancer'
-        result = Select[persons_signs, sign_name, Value['cancer'], kind: :neq].to_a
+        result = Select[persons_signs, sign_name, Value['cancer'], kind: 'Neq'].to_a
         expect(result.length).to be 11
         expect(result).not_to include eden
       end
@@ -46,7 +46,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         expect(result).to eq [leo]
 
         # person.name != person.sign.name
-        result = Select[persons_signs, person_name, sign_name, kind: :neq].to_a
+        result = Select[persons_signs, person_name, sign_name, kind: 'Neq'].to_a
         expect(result.length).to be 11
         expect(result).not_to include leo
       end
@@ -93,9 +93,10 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         it 'test_authorize_scalar_attribute_condition' do
           subject.load_str <<~POL
             # signs ruled by jupiter can read their own people
+            # this rule relies on direct object comparison (aka `field == None`) working correctly :)
             allow(sign: Sign{ruler:"jupiter"}, "read", _: Person{sign});
             # every sign can read a pisces named sam
-            allow(_, "read", _: Person {sign, name: "sam"}) if sign.name = "pisces";
+            allow(_: Sign, "read", _: Person {sign, name: "sam"}) if sign.name = "pisces";
             # earth signs can read people with air signs
             allow(_: Sign{element: "earth"}, "read", _: Person{sign}) if sign.element = "air";
           POL

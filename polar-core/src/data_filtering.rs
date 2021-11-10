@@ -1147,8 +1147,8 @@ mod test {
                 rcol: Proj(src_b.clone(), Some(s("id"))),
                 right: src_b.clone(),
             }),
-            lhs: Field(Proj(src_b, Some(s("x")))),
-            rhs: Field(Proj(src_a, Some(s("attr_x")))),
+            left: Field(Proj(src_b, Some(s("x")))),
+            right: Field(Proj(src_a, Some(s("attr_x")))),
             kind: SelOp::Eq,
         };
         assert_eq!(r1, expected);
@@ -1285,8 +1285,8 @@ pub enum DataFilter {
     Source(String),
     Select {
         source: Rc<DataFilter>,
-        lhs: Datum,
-        rhs: Datum,
+        left: Datum,
+        right: Datum,
         kind: SelOp,
     },
     Join {
@@ -1308,26 +1308,18 @@ pub struct PathVar {
 }
 
 type Relation = (TypeName, FieldName, TypeName);
+type Condition = (Datum, SelOp, Datum);
 
 #[derive(Debug)]
 struct QueryInfo {
     types: Types,
     entities: Map<Vec<String>, String>,
-    constraints: Set<(Datum, SelOp, Datum)>,
+    constraints: Set<Condition>,
     relations: Set<Relation>,
 }
 
 trait DataSources {
     fn sources(&self) -> Set<String>;
-}
-
-impl DataSources for QueryInfo {
-    fn sources(&self) -> Set<String> {
-        self.constraints
-            .iter()
-            .flat_map(|(l, _, r)| l.sources().into_iter().chain(r.sources().into_iter()))
-            .collect()
-    }
 }
 
 impl DataSources for Datum {
@@ -1342,45 +1334,24 @@ impl DataSources for Datum {
 impl DataSources for DataFilter {
     fn sources(&self) -> Set<String> {
         use DataFilter::*;
-        fn collect_sources(mut set: Set<String>, df: &DataFilter) -> Set<String> {
-            match df {
-                Source(x) => {
-                    set.insert(x.clone());
-                }
-                Select {
-                    source, lhs, rhs, ..
-                } => {
-                    if let Datum::Field(lhs) = lhs {
-                        set = collect_sources(set, &lhs.0);
-                    }
-                    for src in source.sources() {
-                        set.insert(src);
-                    }
-                    for src in rhs.sources() {
-                        set.insert(src);
-                    }
-                }
-                Union { left, right } | Join { left, right, .. } => {
-                    set = collect_sources(collect_sources(set, left.as_ref()), right.as_ref())
-                }
-            }
-            set
-        }
-        collect_sources(HashSet::new(), self)
-    }
-}
-
-impl Value {
-    fn to_class_tag(&self) -> PolarResult<String> {
         match self {
-            Value::Pattern(Pattern::Instance(InstanceLiteral { tag, fields }))
-                if fields.is_empty() =>
-            {
-                Ok(tag.0.clone())
+            Source(x) => {
+                let mut set = HashSet::new();
+                set.insert(x.clone());
+                set
             }
-            _ => {
-                let msg = format!("Unsupported pattern: {}", self.to_polar());
-                Err(RuntimeError::Unsupported { msg }.into())
+            Select {
+                source, left, right, ..
+            } => {
+                let mut set = source.sources();
+                set.extend(left.sources());
+                set.extend(right.sources());
+                set
+            }
+            Union { left, right } | Join { left, right, .. } => {
+                let mut set = left.sources();
+                set.extend(right.sources());
+                set
             }
         }
     }
@@ -1414,9 +1385,9 @@ impl DataFilter {
                 i @ Value::ExternalInstance(_) => {
                     let source = Rc::new(Source(class.to_string()));
                     Ok(Select {
-                        lhs: Datum::Field(Proj(source.clone(), None)),
+                        left: Datum::Field(Proj(source.clone(), None)),
                         kind: SelOp::Eq,
-                        rhs: Datum::Imm(i.clone()),
+                        right: Datum::Imm(i.clone()),
                         source,
                     })
                 }
@@ -1447,15 +1418,21 @@ impl DataFilter {
 }
 
 impl QueryInfo {
-    fn do_dots(&self, pv: PathVar) -> PolarResult<(Proj, Set<Relation>)> {
+    fn translate_dots(&self, pv: PathVar) -> PolarResult<(Proj, Set<Relation>)> {
         let mut set = HashSet::new();
         let PathVar { var, mut path } = pv;
+        // what type is the base variable?
         let src = match self.entities.get(&vec![var.clone()]) {
             Some(c) => c,
             None => &var, // FIXME(gw) hack, happens to make it work
         };
 
+        // the last part of the path is always allowed not to be a relation.
+        // pop it off for now & deal with it in a minute.
         let last = path.pop();
+
+        // all the remaining parts have to be relations, so if we can't find one
+        // then we fail here.
         let src = path.iter().fold(Ok(src), |src, dot| {
             let src = src?;
             match self.types.get(src).and_then(|m| m.get(dot)) {
@@ -1468,6 +1445,11 @@ impl QueryInfo {
                 _ => unregistered_field_error(src, dot),
             }
         })?;
+
+        // src may not be the final source!
+        // if the last path component names a relation from src to dst
+        // then dst is the new source and the last is None. otherwise,
+        // src & last stay the same.
         let (src, last) = match last {
             Some(ref dot) => match self.types.get(src).and_then(|m| m.get(dot)) {
                 Some(Type::Relation {
@@ -1481,15 +1463,17 @@ impl QueryInfo {
             _ => (src, last),
         };
 
-        Ok((Proj(Rc::new(DataFilter::Source(src.to_string())), last), set))
-
+        Ok((
+            Proj(Rc::new(DataFilter::Source(src.to_string())), last),
+            set,
+        ))
     }
-
 
     fn rels2joins(&mut self, mut src: DataFilter) -> PolarResult<DataFilter> {
         use DataFilter::*;
         let srcs = src.sources();
-        let (ok, no): (Set<_>, Set<_>) = self.relations
+        let (ok, no): (Set<_>, Set<_>) = self
+            .relations
             .iter()
             .filter(|(_, _, r)| !srcs.contains(r))
             .partition(|(l, _, _)| srcs.contains(l));
@@ -1502,14 +1486,24 @@ impl QueryInfo {
             }
         } else {
             for (l, nom, r) in ok {
-                if let Some(Type::Relation { my_field, other_field, .. }) = self.types.get(l).and_then(|m| m.get(nom)) {
+                if let Some(Type::Relation {
+                    my_field,
+                    other_field,
+                    ..
+                }) = self.types.get(l).and_then(|m| m.get(nom))
+                {
                     let left = Rc::new(src);
                     let right = Rc::new(Source(r.to_string()));
                     let lcol = Proj(Rc::new(Source(l.to_string())), Some(my_field.to_string()));
                     let rcol = Proj(right.clone(), Some(other_field.to_string()));
-                    src = Join { left, lcol, rcol, right }
+                    src = Join {
+                        left,
+                        lcol,
+                        rcol,
+                        right,
+                    }
                 } else {
-                    return err_invalid("not a relation!".to_string())
+                    return err_invalid("not a relation!".to_string());
                 }
             }
             self.relations = no.into_iter().cloned().collect();
@@ -1518,18 +1512,21 @@ impl QueryInfo {
     }
 
     fn term2pathvar(t: &Term) -> PolarResult<PathVar> {
-        use {Value::*, Operator::*};
+        use {Operator::*, Value::*};
         match t.value() {
             Expression(Operation {
                 operator: Dot,
                 args,
             }) => {
                 let mut pv = Self::term2pathvar(&args[0])?;
-                pv.path.push(args[1].value().as_string().unwrap().to_string());
+                pv.path
+                    .push(args[1].value().as_string().unwrap().to_string());
                 Ok(pv)
             }
-            Variable(Symbol(var)) =>
-                Ok(PathVar { var: var.clone(), path: vec![] }),
+            Variable(Symbol(var)) => Ok(PathVar {
+                var: var.clone(),
+                path: vec![],
+            }),
             _ => err_invalid(format!("QueryInfo::term2pathvar({})", t.to_polar())),
         }
     }
@@ -1540,38 +1537,51 @@ impl QueryInfo {
         Ok(path)
     }
 
-    fn maybe_dots(&self, t: &Term) -> Option<(Proj, Set<Relation>)> {
-        Self::term2pathvar(t).ok().and_then(|pv| self.do_dots(pv).ok())
+    fn maybe_translate_dots(&self, t: &Term) -> Option<(Proj, Set<Relation>)> {
+        Self::term2pathvar(t)
+            .ok()
+            .and_then(|pv| self.translate_dots(pv).ok())
     }
 
-    fn add_constraint(&mut self, op: Operation) -> PolarResult<()> {
+    fn maybe_relate(&self, my_cls: &str, my_fld: &str, other_cls: &str, other_fld: &str) -> Option<Relation> {
+        self.types.get(my_cls).and_then(|typs| {
+            typs.iter().find_map(|(k, v)| match v {
+                Type::Relation {
+                    other_class_tag,
+                    my_field,
+                    other_field,
+                    ..
+                } if my_field == my_fld
+                    && other_field == other_fld
+                    && other_class_tag == other_cls =>
+                {
+                    Some((my_cls.to_string(), k.to_string(), other_cls.to_string()))
+                }
+                _ => None,
+            })
+        })
+    }
+
+    fn constrain(&mut self, op: Operation) -> PolarResult<()> {
         use Datum::*;
-        let (l, sel, r) = self.op2con(op)?;
-
+        let (l, sel, r) = self.op2cond(op)?;
         if let (Field(Proj(ls, Some(lf))), SelOp::Eq, Field(Proj(rs, Some(rf)))) = (&l, sel, &r) {
-            let look = |my_cls: &str, my_fld: &str, other_cls: &str, other_fld: &str| self.types.get(my_cls).and_then(|typs| {
-                typs.iter().find_map(|(k, v)| match v {
-                    Type::Relation { other_class_tag, my_field, other_field, .. }
-                        if my_field == my_fld && other_field == other_fld && other_class_tag == other_cls => {
-                            Some((my_cls.to_string(), k.to_string(), other_cls.to_string()))
-                    }
-                    _ => None,
-                })
-            });
-
-            let (lsrc, rsrc) = (ls.sources().into_iter().next().unwrap(), rs.sources().into_iter().next().unwrap());
-            if let Some(rel) = look(&lsrc, lf, &rsrc, rf).or_else(|| look(&rsrc, rf, &lsrc, lf)) {
+            // FIXME(gw) ungly
+            let (lsrc, rsrc) = (
+                ls.sources().into_iter().next().unwrap(),
+                rs.sources().into_iter().next().unwrap(),
+            );
+            if let Some(rel) = self.maybe_relate(&lsrc, lf, &rsrc, rf).or_else(|| self.maybe_relate(&rsrc, rf, &lsrc, lf)) {
                 self.relations.insert(rel);
             }
         }
-
         self.constraints.insert((l, sel, r));
         Ok(())
     }
 
-    fn do_side(&mut self, x: &Term) -> Datum {
+    fn term2datum(&mut self, x: &Term) -> Datum {
         use Datum::*;
-        if let Some((p, r)) = self.maybe_dots(x) {
+        if let Some((p, r)) = self.maybe_translate_dots(x) {
             self.relations.extend(r);
             Field(p)
         } else {
@@ -1579,7 +1589,7 @@ impl QueryInfo {
         }
     }
 
-    fn op2con(&mut self, op: Operation) -> PolarResult<(Datum, SelOp, Datum)> {
+    fn op2cond(&mut self, op: Operation) -> PolarResult<Condition> {
         use Operator::*;
         let Operation { operator, args } = op;
         let sel = match operator {
@@ -1589,33 +1599,55 @@ impl QueryInfo {
             _ => return unsupported_op_error(Operation { operator, args }),
         };
 
-        Ok((self.do_side(&args[0]), sel, self.do_side(&args[1])))
+        Ok((self.term2datum(&args[0]), sel, self.term2datum(&args[1])))
     }
 
-    fn new_filter(types: Types, pass1: Vec<Operation>, class: &str) -> PolarResult<DataFilter> {
+    fn new_filter(types: Types, parts: Vec<Operation>, class: &str) -> PolarResult<DataFilter> {
         use DataFilter::*;
-        let (isas, othas): (Vec<_>, Vec<_>) =
-            pass1.into_iter().partition(|op| op.operator == Operator::Isa);
-        let entities: Map<_, _> = isas.into_iter().map(|isa| {
-            Ok((Self::term2path(&isa.args[0])?, isa.args[1].value().to_class_tag()?))
-        }).collect::<PolarResult<Map<_, _>>>()?;
+        // we use isa constraints to initialize the entities map
+        let (isas, othas): (Vec<_>, Vec<_>) = parts
+            .into_iter()
+            .partition(|op| op.operator == Operator::Isa);
 
+        // entities maps variable paths to types
+        let entities: Map<_, _> = isas
+            .into_iter()
+            .map(|isa| match isa.args[1].value() {
+                Value::Pattern(Pattern::Instance(InstanceLiteral { tag, fields }))
+                    if fields.is_empty() =>
+                        Ok((Self::term2path(&isa.args[0])?, tag.0.clone())),
+                _ => unsupported_op_error(isa),
+            })
+            .collect::<PolarResult<Map<_, _>>>()?;
+
+        // start with types & entities
         let mut this = Self {
             types,
             entities,
             constraints: Default::default(),
             relations: Default::default(),
         };
-        for op in othas {
-            this.add_constraint(op)?;
+
+        // each partial adds a constraint and may add relations
+        for partial in othas {
+            this.constrain(partial)?;
         }
 
+        // relations are now collected, so "build a join" out of the relations set
+        // to get the source
         let source = this.rels2joins(DataFilter::Source(class.to_string()))?;
-        Ok(this.constraints.into_iter().fold(source, |source, (lhs, kind, rhs)| {
-            Select { source: Rc::new(source), lhs, rhs, kind }
-        }))
-    }
 
+        // apply each constraint to the source
+        Ok(this
+            .constraints
+            .into_iter()
+            .fold(source, |source, (left, kind, right)| Select {
+                source: Rc::new(source),
+                right,
+                left,
+                kind,
+            }))
+    }
 }
 
 pub fn build_filter(

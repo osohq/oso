@@ -51,7 +51,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         result = query.to_a
         expect(result).to eq [bug]
         # issue.repo.name != issue.repo.org.name
-        result = Select[issues_repos_orgs, repo_name, org_name, kind: :neq].to_a
+        result = Select[issues_repos_orgs, repo_name, org_name, kind: 'Neq'].to_a
         expect(result).to contain_exactly(*[laggy, endings])
       end
 
@@ -61,7 +61,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         expect(result).to eq [steve]
 
         # user.name != 'steve'
-        result = Select[users, user_name, Value['steve'], kind: :neq].to_a
+        result = Select[users, user_name, Value['steve'], kind: 'Neq'].to_a
         expect(result).to contain_exactly(*[leina, gabe, graham])
       end
 
@@ -71,7 +71,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         expect(result).to eq [oso]
 
         # repo.name != repo.org_name
-        result = Select[repos, repo_name, repo_org_name, kind: :neq].to_a
+        result = Select[repos, repo_name, repo_org_name, kind: 'Neq'].to_a
         expect(result).to contain_exactly(*[demo, ios])
       end
 
@@ -81,7 +81,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         expect(result).to contain_exactly(*[oso, demo])
 
         # repo.org.name != 'oso'
-        result = Select[repos_orgs, org_name, Value['oso'], kind: :neq].to_a
+        result = Select[repos_orgs, org_name, Value['oso'], kind: 'Neq'].to_a
         expect(result).to contain_exactly(*[ios])
       end
 
@@ -91,7 +91,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         expect(result).to contain_exactly(*[oso]) # osoroboroso
 
         # repo.name != repo.org.name
-        result = Select[repos_orgs, repo_name, org_name, kind: :neq].to_a
+        result = Select[repos_orgs, repo_name, org_name, kind: 'Neq'].to_a
         expect(result).to contain_exactly(*[demo, ios]) # aneponymous
       end
 
@@ -101,7 +101,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         expect(result).to eq [laggy]
 
         # issue.repo.org.name != 'apple'
-        result = Select[issues_repos_orgs, org_name, Value['apple'], kind: :neq].to_a
+        result = Select[issues_repos_orgs, org_name, Value['apple'], kind: 'Neq'].to_a
         expect(result).to contain_exactly(*[bug, endings])
       end
 
