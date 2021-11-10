@@ -45,23 +45,20 @@ pub struct ErrorContext {
 
 impl PolarError {
     pub fn set_context(mut self, source: Option<&Source>, term: Option<&Term>) -> Self {
-        match (&self.kind, source, term) {
-            (e, Some(source), Some(term)) => {
-                let (row, column) = crate::lexer::loc_to_pos(&source.src, term.offset());
-                self.context.replace(ErrorContext {
-                    source: source.clone(),
-                    row,
-                    column,
-                    // @TODO(Sam): find a better way to include this info
-                    // TODO(gj|sam): this bool can probably be removed -- we should include
-                    // location unconditionally for errors that have the available context.
-                    include_location: matches!(
-                        e,
-                        ErrorKind::Runtime(RuntimeError::UnhandledPartial { .. })
-                    ),
-                });
-            }
-            _ => {}
+        if let (Some(source), Some(term)) = (source, term) {
+            let (row, column) = crate::lexer::loc_to_pos(&source.src, term.offset());
+            self.context.replace(ErrorContext {
+                source: source.clone(),
+                row,
+                column,
+                // @TODO(Sam): find a better way to include this info
+                // TODO(gj|sam): this bool can probably be removed -- we should include
+                // location unconditionally for errors that have the available context.
+                include_location: matches!(
+                    self.kind,
+                    ErrorKind::Runtime(RuntimeError::UnhandledPartial { .. })
+                ),
+            });
         }
         self
     }
