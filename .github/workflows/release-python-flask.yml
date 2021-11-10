@@ -51,9 +51,10 @@ jobs:
         run: |
           rm languages/python/flask-oso/README.md
           cp README.md languages/python/flask-oso/README.md
-      - name: Upgrade pip
+      - name: Upgrade pip and install wheel
         run: |
           pip install --upgrade pip
+          pip install wheel
       - name: Build wheels
         run: |
           python -m pip wheel -w wheelhouse .
