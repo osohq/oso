@@ -171,20 +171,12 @@ impl KnowledgeBase {
                     }
                 }
                 if !found_match {
-                    return Err(self.set_error_context(
-                        &rule_type.body,
-                        error::ValidationError::MissingRequiredRule {
-                            rule: rule_type.clone(),
-                        },
-                    ));
+                    let rule_type = rule_type.clone();
+                    return Err(ValidationError::MissingRequiredRule { rule_type }.into());
                 }
             } else {
-                return Err(self.set_error_context(
-                    &rule_type.body,
-                    error::ValidationError::MissingRequiredRule {
-                        rule: rule_type.clone(),
-                    },
-                ));
+                let rule_type = rule_type.clone();
+                return Err(ValidationError::MissingRequiredRule { rule_type }.into());
             }
         }
 

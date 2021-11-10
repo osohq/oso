@@ -84,6 +84,8 @@ pub fn set_context_for_diagnostics(kb: &KnowledgeBase, diagnostics: &mut Vec<Dia
                         rule_type: rule, ..
                     } => rule.parsed_context(),
 
+                    // TODO(gj): copy source info from the appropriate resource block term for
+                    // resource-specific rule types we create.
                     MissingRequiredRule { .. } => None,
                 },
 

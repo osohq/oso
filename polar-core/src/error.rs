@@ -390,7 +390,7 @@ impl fmt::Display for OperationalError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationError {
     MissingRequiredRule {
-        rule: Rule,
+        rule_type: Rule,
     },
     InvalidRule {
         /// Rule where the error arose, tracked for lexical context.
@@ -437,8 +437,8 @@ impl fmt::Display for ValidationError {
             Self::UndefinedRuleCall { term } => {
                 write!(f, "Call to undefined rule: {}", term)
             }
-            Self::MissingRequiredRule { rule } => {
-                write!(f, "Missing implementation for required rule {}", rule)
+            Self::MissingRequiredRule { rule_type } => {
+                write!(f, "Missing implementation for required rule {}", rule_type)
             }
             Self::ResourceBlock { msg, .. } => {
                 write!(f, "{}", msg)
