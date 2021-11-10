@@ -894,12 +894,6 @@ jobs:
           name: wheel
       - name: Zip wheels
         run: zip --junk-paths -r oso-python.zip wheel/
-      - name: Download oso python musl wheels from package run
-        uses: actions/download-artifact@v1
-        with:
-          name: musl-wheel
-      - name: Zip musl wheels
-        run: zip --junk-paths -r oso-python-musl.zip musl-wheel/
       - name: Download oso gem from package run
         uses: actions/download-artifact@v1
         with:
