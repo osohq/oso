@@ -25,4 +25,4 @@ jobs:
         with:
           python-version: "3.7"
       - run: pip install twine
-      - run: twine upload flask-oso-python-${{ github.event.inputs.version }}/*.whl --non-interactive
+      - run: twine upload flask-oso-python-${{ github.event.inputs.version }}/flask_oso*.whl --non-interactive
