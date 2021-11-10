@@ -1,6 +1,6 @@
 ---
 title: Enforce authorization
-metaTitle: Enforce authorization in LANG
+metaTitle: Enforce authorization in $LANG
 description: |
     Add authorization enforcement throughout your application using the
     authorize API to reject or accept requests that users make.

@@ -1,6 +1,6 @@
 ---
 title: Quickstart
-metaTitle: Quickstart for LANG
+metaTitle: Quickstart for $LANG
 description: |
   Ready to get started? See Oso in action, and walk through a quick
   change to an Oso policy in a simple web server.

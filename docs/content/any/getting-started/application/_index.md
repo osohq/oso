@@ -1,6 +1,6 @@
 ---
 title: Add Oso to Your App
-metaTitle: Add Oso to Your LANG App
+metaTitle: Add Oso to Your $LANG App
 weight: 2
 description: |
     In this guide, we'll cover how to add Oso to your application.

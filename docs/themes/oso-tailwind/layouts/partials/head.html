@@ -3,13 +3,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ block "title" . }}
         {{- if .Params.metaTitle -}}
-        {{- replace .Params.metaTitle "LANG" .Page.Language.LanguageName }} - {{ .Site.Title -}}
-        {{- else -}}
-        {{- if .Title -}}
+        {{- replace .Params.metaTitle "$LANG" .Page.Language.LanguageName }} - {{ .Site.Title -}}
+        {{- else if .Title -}}
         {{- .Title }} - {{ .Site.Title -}}
         {{- else -}}
         {{ .Site.Title }}
-        {{- end -}}
         {{- end -}}
         {{- end -}}</title>
     {{- if .Description }}
