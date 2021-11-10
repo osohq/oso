@@ -228,6 +228,7 @@ module Oso
           'resource',
           get_class_name(resource_cls))
       ::Oso::Polar::Data::DataFilter.parse(self, filter).to_query.tap do |query|
+#        puts query.to_sql
       end
     end
 

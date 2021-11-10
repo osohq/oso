@@ -20,7 +20,7 @@ module Oso
       class DataFilter
         PARSERS = {
           'Select' => ->(p, j) do
-            ArelSelect.new(
+            CLASSES[:select].new(
               parse(p, j['source']), 
               parse(p, j['lhs']),
               parse(p, j['rhs']),
@@ -28,12 +28,12 @@ module Oso
             )
           end,
           'Source' => -> (p, j) do
-            ArelSource.new(
+            CLASSES[:source].new(
               p.host.types[j].klass.get
             )
           end,
           'Join' => ->(p, j) do
-            ArelJoin.new(
+            CLASSES[:join].new(
               parse(p, j['left']),
               Proj.new(parse(p, j['lcol'][0]), j['lcol'][1]),
               Proj.new(parse(p, j['rcol'][0]), j['rcol'][1]),
@@ -41,30 +41,30 @@ module Oso
             )
           end,
           'Union' => ->(p, j) do
-            ArelUnion.new(parse(p, j['left']), parse(p, j['right']))
+            CLASSES[:union].new(parse(p, j['left']), parse(p, j['right']))
           end,
           'Imm' => -> (p, j) do
+            CLASSES[:value]
             Value.new(p.host.to_ruby({
               'value' => [[j.keys.first, j.values.first]]
             }))
           end,
           'Field' => -> (p, j) do
-            Proj.new(parse(p, j[0]), j[1])
+            CLASSES[:field].new(parse(p, j[0]), j[1])
           end
         }
 
         def to_a
           to_query.to_a
         end
+        def to_query
+          raise "`to_query` not implemented for #{self}"
+        end
         class << self
           alias [] new
           def parse(polar, json)
             key = json.keys.first
             PARSERS[key][polar, json[key]]
-          rescue => e
-#            require 'pry'
-#            binding.pry
-            raise e
           end
         end
       end
@@ -84,7 +84,7 @@ module Oso
         # lhs : proj
         # rhs : proj | value
         # kind : { :eq, :neq, :in, :nin }
-        def initialize(source, lhs, rhs, kind: :eq)
+        def initialize(source, lhs, rhs, kind: 'Eq')
           @source = source
           @lhs = lhs
           @rhs = rhs
@@ -208,14 +208,10 @@ module Oso
       module ArelColumnizer
         private
         def columnize(proj)
+          return "?" if proj.is_a? Value
           query = proj.to_query
           field = proj.field || query.primary_key
-          col = "#{query.table_name}.#{field}"
-          col
-        rescue => e
-          require 'pry'
-          binding.pry
-          raise e
+          "#{query.table_name}.#{field}"
         end
       end
 
@@ -227,13 +223,10 @@ module Oso
         }
 
         def to_query
-          query = source.to_query
-          left = "#{columnize lhs} #{OPS[kind]}"
-          case rhs
-          when Proj then query.where("#{left} #{columnize rhs}")
-          when Value then query.where("#{left} ?", rhs.value)
-          else raise TypeError, rhs
-          end
+          args = [lhs, rhs].select { |s| s.is_a? Value }.map(&:value)
+          source.to_query.where(
+            "#{columnize lhs} #{OPS[kind]} #{columnize rhs}",
+            *args)
         end
       end
 
@@ -244,6 +237,17 @@ module Oso
           rhs = right.to_query
           lhs.joins "INNER JOIN #{rhs.table_name} ON #{columnize lcol} = #{columnize rcol}"
         end
+      end
+
+      class DataFilter
+        CLASSES = {
+          select: ArelSelect,
+          source: ArelSource,
+          join:   ArelJoin,
+          union:  ArelUnion,
+          imm:    Value,
+          field:  Proj,
+        }
       end
     end
   end

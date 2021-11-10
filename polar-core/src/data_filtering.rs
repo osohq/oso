@@ -37,11 +37,6 @@ pub enum Type {
     },
 }
 
-struct PathVar {
-    var: String,
-    path: Vec<String>,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Ref {
     field: Option<FieldName>, // An optional field to map over the result objects with.
@@ -332,10 +327,6 @@ fn unregistered_field_error<A>(var_type: &str, field: &str) -> PolarResult<A> {
 
 fn err_invalid<A>(msg: String) -> PolarResult<A> {
     Err(OperationalError::InvalidState { msg }.into())
-}
-
-fn err_unimplemented<A>(msg: String) -> PolarResult<A> {
-    Err(OperationalError::Unimplemented { msg }.into())
 }
 
 impl FilterPlan {
@@ -1145,7 +1136,7 @@ mod test {
             types,
             vec![ResultEvent::from(hashmap! { sym!("resource") => input })],
             "resource",
-            "something",
+            "A",
         )?;
         use {DataFilter::*, Datum::*};
         let (src_a, src_b) = (Rc::new(Source(s("A"))), Rc::new(Source(s("B"))));
@@ -1274,20 +1265,14 @@ mod test {
     }
 }
 
-// NEW DATA FILTERING
-#[derive(PartialEq, Debug, Serialize, Clone)]
+#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
 pub struct Proj(Rc<DataFilter>, Option<String>);
-#[derive(Debug, Clone)]
-pub enum PreDatum {
-    Field(Proj, DataSource),
-    Imm(Value),
-}
-#[derive(PartialEq, Debug, Serialize, Clone)]
+#[derive(PartialEq, Debug, Serialize, Clone, Hash, Eq)]
 pub enum Datum {
     Field(Proj),
     Imm(Value),
 }
-#[derive(PartialEq, Debug, Serialize, Copy, Clone)]
+#[derive(PartialEq, Debug, Serialize, Copy, Clone, Eq, Hash)]
 pub enum SelOp {
     Eq,
     Neq,
@@ -1295,7 +1280,7 @@ pub enum SelOp {
     Nin,
 }
 
-#[derive(Clone, PartialEq, Debug, Serialize)]
+#[derive(Clone, Eq, Debug, Serialize, Hash, PartialEq)]
 pub enum DataFilter {
     Source(String),
     Select {
@@ -1316,26 +1301,20 @@ pub enum DataFilter {
     },
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-pub struct DataSource {
-    base: String,
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, Hash)]
+pub struct PathVar {
+    var: String,
     path: Vec<String>,
 }
 
-impl DataSource {
-    fn into_path(self) -> Vec<String> {
-        let mut path = vec![self.base];
-        path.extend(self.path);
-        path
-    }
-}
+type Relation = (TypeName, FieldName, TypeName);
 
 #[derive(Debug)]
 struct QueryInfo {
-    entities: Map<Vec<String>, String>,
-    constraints: Vec<(PreDatum, SelOp, PreDatum)>,
     types: Types,
-    source: DataFilter,
+    entities: Map<Vec<String>, String>,
+    constraints: Set<(Datum, SelOp, Datum)>,
+    relations: Set<Relation>,
 }
 
 trait DataSources {
@@ -1351,29 +1330,11 @@ impl DataSources for QueryInfo {
     }
 }
 
-impl DataSources for PreDatum {
-    fn sources(&self) -> Set<String> {
-        match self {
-            Self::Field(p, _) => p.0.sources(),
-            _ => HashSet::new(),
-        }
-    }
-}
-
 impl DataSources for Datum {
     fn sources(&self) -> Set<String> {
         match self {
             Self::Field(p) => p.0.sources(),
             _ => HashSet::new(),
-        }
-    }
-}
-
-impl From<PreDatum> for Datum {
-    fn from(other: PreDatum) -> Self {
-        match other {
-            PreDatum::Field(x, _) => Self::Field(x),
-            PreDatum::Imm(x) => Self::Imm(x),
         }
     }
 }
@@ -1425,385 +1386,243 @@ impl Value {
     }
 }
 
+fn input_error<A>(msg: String) -> PolarResult<A> {
+    Err(RuntimeError::Unsupported { msg }.into())
+}
+
 impl DataFilter {
-    fn build(types: Types, partials: PartialResults, var: &str, class: &str) -> PolarResult<Self> {
-        use {DataFilter::*, Operator::*, RuntimeError::*};
-        fn input_error<A>(p: String) -> PolarResult<A> {
-            let msg = format!("DataFilter::build : unexpected partial result : {}", p);
-            Err(Unsupported { msg }.into())
-        }
+    fn build(types: Types, disjuncts: PartialResults, var: &str, class: &str) -> PolarResult<Self> {
+        use {DataFilter::*, Operator::*, RuntimeError::IncompatibleBindings};
+        let partial_to_filter = |term: &Term| {
+            match term.value() {
+                // most of the time we're dealing with expressions from the
+                // simplifier.
+                Value::Expression(Operation {
+                    operator: And,
+                    args: conjuncts,
+                }) => conjuncts
+                    .iter()
+                    .map(|arg| match arg.value().as_expression() {
+                        Ok(x) => Ok(x.clone()),
+                        _ => input_error(arg.to_polar()),
+                    })
+                    .collect::<PolarResult<Vec<Operation>>>()
+                    .and_then(|args| Self::new(types.clone(), args, class)),
+
+                // sometimes we get an instance back. that means the variable
+                // is exactly this instance, so return a filter that matches it.
+                i @ Value::ExternalInstance(_) => {
+                    let source = Rc::new(Source(class.to_string()));
+                    Ok(Select {
+                        lhs: Datum::Field(Proj(source.clone(), None)),
+                        kind: SelOp::Eq,
+                        rhs: Datum::Imm(i.clone()),
+                        source,
+                    })
+                }
+                // oops, we don't know how to handle this!
+                _ => input_error(term.to_polar()),
+            }
+        };
 
         let var = Symbol(var.to_string());
-        partials
+        disjuncts
             .into_iter()
             .map(|part| {
                 part.bindings
                     .get(&var)
                     .ok_or_else(|| IncompatibleBindings { msg: var.0.clone() }.into())
-                    .and_then(|term: &Term| match term.value() {
-                        // we should usually get expressions from the simplifier
-                        Value::Expression(Operation {
-                            operator: And,
-                            args,
-                        }) => args
-                            .iter()
-                            .map(|arg| match arg.value().as_expression() {
-                                Ok(x) => Ok(x.clone()),
-                                _ => input_error(arg.to_polar()),
-                            })
-                            .collect::<PolarResult<Vec<Operation>>>()
-                            .and_then(|args| QueryInfo::new(types.clone(), args))
-                            .and_then(|qi| qi.into_filter()),
-
-                        // we got an exact answer back!  turn it into a filter ...
-                        i @ Value::ExternalInstance(_) => {
-                            let source = Rc::new(Source(class.to_string()));
-                            let lhs = Datum::Field(Proj(source.clone(), None));
-                            let rhs = Datum::Imm(i.clone());
-                            Ok(Select {
-                                source,
-                                lhs,
-                                rhs,
-                                kind: SelOp::Eq,
-                            })
-                        }
-                        // oops we don't know how to handle this!
-                        val => input_error(val.to_polar()),
-                    })
+                    .and_then(partial_to_filter)
             })
             .reduce(|left, right| {
                 let (left, right) = (Rc::new(left?), Rc::new(right?));
                 Ok(Union { left, right })
             })
-            // this should definitely never happen
-            .expect("input produced no filters!")
+            .unwrap_or_else(|| input_error("empty input".to_string()))
+    }
+
+    fn new(types: Types, args: Vec<Operation>, cls: &str) -> PolarResult<Self> {
+        QueryInfo::new_filter(types, args, cls)
     }
 }
 
 impl QueryInfo {
-    fn joins(
-        types: &Types,
-        mut left: Rc<DataFilter>,
-        mut left_type: String,
-        path: Vec<String>,
-    ) -> PolarResult<Rc<DataFilter>> {
-        use DataFilter::*;
-        let left_sources = left.sources();
-
-        // FIXME a mess
-        if !left_sources.contains(&left_type) {
-            return err_invalid(format!("{} not in {:?}", left_type, left_sources));
-        }
-
-        for field in path {
-            match types.get(&left_type).and_then(|m| m.get(&field)) {
-                Some(Type::Relation {
-                    my_field,
-                    other_field,
-                    other_class_tag,
-                    ..
-                }) => {
-                    if !left.sources().contains(other_class_tag) {
-                        let lcol = Proj(
-                            Rc::new(Source(left_type.to_string())),
-                            Some(my_field.to_string()),
-                        );
-                        let right = Rc::new(Source(other_class_tag.to_string()));
-                        let rcol = Proj(right.clone(), Some(other_field.to_string()));
-                        // the only place a Join is constructed
-                        left = Rc::new(Join {
-                            left, lcol,
-                            rcol,
-                            right,
-                        });
-                    }
-                    left_type = other_class_tag.to_string();
-                }
-                _ => return err_invalid(format!("Undefined relation: {}.{}", left_type, field)),
-            }
-        }
-        Ok(left)
-    }
-
-    fn path2proj(&self, mut path: Vec<String>) -> PolarResult<Proj> {
-        let var = path.remove(0);
+    fn do_dots(&self, pv: PathVar) -> PolarResult<(Proj, Set<Relation>)> {
+        let mut set = HashSet::new();
+        let PathVar { var, mut path } = pv;
         let src = match self.entities.get(&vec![var.clone()]) {
             Some(c) => c,
-            None => &var,
+            None => &var, // FIXME(gw) hack, happens to make it work
         };
 
         let last = path.pop();
-        let src = path.into_iter().fold(Ok(src), |src, dot| {
+        let src = path.iter().fold(Ok(src), |src, dot| {
             let src = src?;
-            match self.types.get(src).and_then(|m| m.get(&dot)) {
-                Some(Type::Relation { other_class_tag, ..  }) => 
-                    Ok(other_class_tag),
-                _ => unregistered_field_error(src, &dot),
+            match self.types.get(src).and_then(|m| m.get(dot)) {
+                Some(Type::Relation {
+                    other_class_tag, ..
+                }) => {
+                    set.insert((src.clone(), dot.clone(), other_class_tag.clone()));
+                    Ok(other_class_tag)
+                }
+                _ => unregistered_field_error(src, dot),
             }
         })?;
-
         let (src, last) = match last {
             Some(ref dot) => match self.types.get(src).and_then(|m| m.get(dot)) {
-                Some(Type::Relation { other_class_tag, ..  }) => 
-                    (other_class_tag, None),
+                Some(Type::Relation {
+                    other_class_tag, ..
+                }) => {
+                    set.insert((src.clone(), dot.clone(), other_class_tag.clone()));
+                    (other_class_tag, None)
+                }
                 _ => (src, last),
-            }
+            },
             _ => (src, last),
         };
 
-        Ok(Proj(Rc::new(DataFilter::Source(src.to_string())), last))
+        Ok((Proj(Rc::new(DataFilter::Source(src.to_string())), last), set))
+
     }
 
 
-    fn into_filter(self) -> PolarResult<DataFilter> {
+    fn rels2joins(&mut self, mut src: DataFilter) -> PolarResult<DataFilter> {
         use DataFilter::*;
-        let source_tag = self.entities
-            .get(&vec!["_this".to_string()])
-            .expect("unknown data type")
-            .clone();
-        let source = Rc::new(Source(source_tag));
-        let source = self.constraints.iter().fold(
-            Ok(source),
-            |source: PolarResult<Rc<DataFilter>>, (lhs, _, rhs)| {
-                // FIXME a mess
-                // the only place Self::joins is called
-                match (lhs, rhs) {
-                    (
-                        PreDatum::Field(Proj(lss, Some(_lf)), lds),
-                        PreDatum::Field(Proj(rss, Some(_rf)), rds),
-                    ) => {
-                        let mut source = source?;
-                        // omg lol // this isn't very robust
-                        for (k, v) in self.types.get(&lds.base).unwrap().iter() {
-                            match v {
-                                Type::Relation {
-                                    other_class_tag,
-                                    other_field,
-                                    my_field,
-                                    ..
-                                } if other_class_tag == &rds.base
-                                    && my_field == _lf
-                                    && other_field == _rf =>
-                                {
-                                    source = Self::joins(
-                                        &self.types,
-                                        source,
-                                        lds.base.clone(),
-                                        vec![k.clone()],
-                                    )?;
-                                }
-                                _ => {}
-                            }
-                        }
-                        source =
-                            Self::joins(&self.types, source, lds.base.clone(), lds.path.clone())?;
-                        source =
-                            Self::joins(&self.types, source, rds.base.clone(), rds.path.clone())?;
-                        if let Source(lps) = &**lss {
-                            source = Self::joins(&self.types, source, lps.clone(), vec![])?;
-                        }
-                        if let Source(rps) = &**rss {
-                            source = Self::joins(&self.types, source, rps.clone(), vec![])?;
-                        }
-
-                        Ok(source)
-                    }
-
-                    (PreDatum::Field(Proj(lss, _), lds), _)
-                    | (_, PreDatum::Field(Proj(lss, _), lds)) => {
-                        let mut source = source?;
-                        source =
-                            Self::joins(&self.types, source, lds.base.clone(), lds.path.clone())?;
-                        if let Source(lps) = &**lss {
-                            source = Self::joins(&self.types, source, lps.clone(), vec![])?;
-                        }
-                        Ok(source)
-                    }
-                    _ => source,
-                }
-            },
-        )?;
-        let rc = self
-            .constraints
+        let srcs = src.sources();
+        let (ok, no): (Set<_>, Set<_>) = self.relations
             .iter()
-            .fold(Ok(source), |source, con| match con {
-                // FIXME(gw) only right for commutative ops
-                (PreDatum::Field(Proj(_, lf), lpv), kind, rhs) |
-                (rhs, kind, PreDatum::Field(Proj(_, lf), lpv)) => {
-                    let source = source?;
-                    let mut lpv = lpv.clone().into_path();
-                    if let Some(dot) = lf {
-                        lpv.push(dot.to_string())
+            .filter(|(_, _, r)| !srcs.contains(r))
+            .partition(|(l, _, _)| srcs.contains(l));
+
+        if ok.is_empty() {
+            if no.is_empty() {
+                Ok(src)
+            } else {
+                err_invalid("can't close join set".to_string())
+            }
+        } else {
+            for (l, nom, r) in ok {
+                if let Some(Type::Relation { my_field, other_field, .. }) = self.types.get(l).and_then(|m| m.get(nom)) {
+                    let left = Rc::new(src);
+                    let right = Rc::new(Source(r.to_string()));
+                    let lcol = Proj(Rc::new(Source(l.to_string())), Some(my_field.to_string()));
+                    let rcol = Proj(right.clone(), Some(other_field.to_string()));
+                    src = Join { left, lcol, rcol, right }
+                } else {
+                    return err_invalid("not a relation!".to_string())
+                }
+            }
+            self.relations = no.into_iter().cloned().collect();
+            self.rels2joins(src)
+        }
+    }
+
+    fn term2pathvar(t: &Term) -> PolarResult<PathVar> {
+        use {Value::*, Operator::*};
+        match t.value() {
+            Expression(Operation {
+                operator: Dot,
+                args,
+            }) => {
+                let mut pv = Self::term2pathvar(&args[0])?;
+                pv.path.push(args[1].value().as_string().unwrap().to_string());
+                Ok(pv)
+            }
+            Variable(Symbol(var)) =>
+                Ok(PathVar { var: var.clone(), path: vec![] }),
+            _ => err_invalid(format!("QueryInfo::term2pathvar({})", t.to_polar())),
+        }
+    }
+
+    fn term2path(t: &Term) -> PolarResult<Vec<String>> {
+        let PathVar { mut path, var } = Self::term2pathvar(t)?;
+        path.insert(0, var);
+        Ok(path)
+    }
+
+    fn maybe_dots(&self, t: &Term) -> Option<(Proj, Set<Relation>)> {
+        Self::term2pathvar(t).ok().and_then(|pv| self.do_dots(pv).ok())
+    }
+
+    fn add_constraint(&mut self, op: Operation) -> PolarResult<()> {
+        use Datum::*;
+        let (l, sel, r) = self.op2con(op)?;
+
+        if let (Field(Proj(ls, Some(lf))), SelOp::Eq, Field(Proj(rs, Some(rf)))) = (&l, sel, &r) {
+            let look = |my_cls: &str, my_fld: &str, other_cls: &str, other_fld: &str| self.types.get(my_cls).and_then(|typs| {
+                typs.iter().find_map(|(k, v)| match v {
+                    Type::Relation { other_class_tag, my_field, other_field, .. }
+                        if my_field == my_fld && other_field == other_fld && other_class_tag == other_cls => {
+                            Some((my_cls.to_string(), k.to_string(), other_cls.to_string()))
                     }
-                    let lhs = Datum::Field(self.path2proj(lpv)?);
-                    let rhs = match rhs.clone() {
-                        PreDatum::Field(Proj(_, rf), rpv) => {
-                            let mut rpv = rpv.clone().into_path();
-                            if let Some(dot) = rf {
-                                rpv.push(dot.to_string())
-                            }
-                            Datum::Field(self.path2proj(rpv)?)
-                        }
-                        PreDatum::Imm(val) => Datum::Imm(val),
-                    };
+                    _ => None,
+                })
+            });
 
-                    Ok(Rc::new(Select {
-                        kind: *kind,
-                        lhs,
-                        rhs,
-                        source,
-                    }))
-                }
-                // FIXME
-                _ => err_invalid("QueryInfo::into_filter()".to_string()),
-            })?;
-        Ok((*rc).clone())
-    }
-
-    fn path_disasm(t: &Term) -> PolarResult<Vec<String>> {
-        use Operator::*;
-        match t.value() {
-            Value::Expression(Operation {
-                operator: Dot,
-                args,
-            }) if args.len() == 2 && args[1].value().as_string().is_ok() => {
-                let mut p = Self::path_disasm(&args[0])?;
-                p.push(args[1].value().as_string().unwrap().to_string());
-                Ok(p)
-            }
-            Value::Variable(Symbol(s)) => Ok(vec![s.clone()]),
-            _ => err_invalid(format!("QueryInfo::path_disasm({})", t.to_polar())),
-        }
-    }
-
-    fn data_source(&self, mut path: Vec<String>) -> DataSource {
-        let base = path.remove(0);
-        let base = self.entities.get(&vec![base]).unwrap().clone();
-        DataSource { base, path }
-    }
-
-    fn datum(&mut self, t: &Term) -> PolarResult<PreDatum> {
-        use {Operator::*, PreDatum::*};
-        match t.value() {
-            Value::Number(_)
-            | Value::String(_)
-            | Value::Boolean(_)
-            | Value::ExternalInstance(_) => Ok(Imm(t.value().clone())),
-            Value::Expression(Operation {
-                operator: Dot,
-                args,
-            }) => Ok(Field(
-                Proj(
-                    self.source(&args[0])?,
-                    Some(args[1].value().as_string()?.to_string()),
-                ),
-                self.data_source(Self::path_disasm(&args[0])?),
-            )),
-            _ => err_unimplemented(format!("datum({})", t.to_polar())),
-        }
-    }
-
-    fn binary_op(mut self, args: &[Term], op: SelOp) -> PolarResult<Self> {
-        let (l, r) = (self.datum(&args[0])?, self.datum(&args[1])?);
-        self.constraints.push((l, op, r));
-        Ok(self)
-    }
-
-    fn source(&mut self, t: &Term) -> PolarResult<Rc<DataFilter>> {
-        let path = Self::path_disasm(t)?;
-        match self.entities.get(&path) {
-            Some(src) => Ok(Rc::new(DataFilter::Source(src.clone()))),
-            _ => err_invalid(format!("No entity info for {:?}", path)),
-        }
-    }
-
-    //
-    fn new(types: Types, parts: Vec<Operation>) -> PolarResult<Self> {
-        use Operator::*;
-        //
-        // we're making a QueryInfo, which transforms user input into a
-        // DataFilter. super~
-        //
-        // user input consists of user-supplied type information and a list
-        //
-        //
-        // ideally the input consists of a list (conjunction) of boolean-valued binary
-        // operations, for example: `x matches Integer` `_this.bar.baz = 1`. at least
-        // one side of each expression must be a "path variable", which is a variable
-        // with zero or more extra strings representing dot lookups, expressed like:
-        // `foo.bar.baz`, `foo.bar`, `foo`, etc.
-        //
-        // what does a "dot lookup" mean in this context? how do we know?
-        // there are two cases:
-        // - it may be a "relation", which represents something like an ORM mapping
-        // - it may be a regular data access on an object in application memory
-        //
-        // we can tell the difference by consulting the types map.
-        //
-        let (isas, othas): (Vec<_>, Vec<_>) = parts
-            .into_iter()
-            .partition(|x| matches!(x, Operation { operator: Isa, args } if args.len() == 2));
-        let mut entities = isas
-            .into_iter()
-            .map(|Operation { args, .. }| {
-                Ok((
-                    Self::path_disasm(&args[0])?,
-                    args[1].value().to_class_tag()?,
-                ))
-            })
-            .collect::<PolarResult<HashMap<Vec<String>, String>>>()?;
-        let source_tag = entities
-            .get(&vec!["_this".to_string()])
-            .unwrap()
-            .to_string();
-
-        if let Some(fields) = types.get(&source_tag) {
-            for (field, typ) in fields {
-                if let Type::Relation {
-                    other_class_tag, ..
-                } = typ
-                {
-                    entities.insert(
-                        vec!["_this".to_string(), field.clone()],
-                        other_class_tag.clone(),
-                    );
-                }
+            let (lsrc, rsrc) = (ls.sources().into_iter().next().unwrap(), rs.sources().into_iter().next().unwrap());
+            if let Some(rel) = look(&lsrc, lf, &rsrc, rf).or_else(|| look(&rsrc, rf, &lsrc, lf)) {
+                self.relations.insert(rel);
             }
         }
 
-        let source = DataFilter::Source(source_tag);
-        let constraints = vec![];
-        let this = Self {
-            source,
+        self.constraints.insert((l, sel, r));
+        Ok(())
+    }
+
+    fn do_side(&mut self, x: &Term) -> Datum {
+        use Datum::*;
+        if let Some((p, r)) = self.maybe_dots(x) {
+            self.relations.extend(r);
+            Field(p)
+        } else {
+            Imm(x.value().clone())
+        }
+    }
+
+    fn op2con(&mut self, op: Operation) -> PolarResult<(Datum, SelOp, Datum)> {
+        use Operator::*;
+        let Operation { operator, args } = op;
+        let sel = match operator {
+            Unify => SelOp::Eq,
+            Neq => SelOp::Neq,
+            In => SelOp::In,
+            _ => return unsupported_op_error(Operation { operator, args }),
+        };
+
+        Ok((self.do_side(&args[0]), sel, self.do_side(&args[1])))
+    }
+
+    fn new_filter(types: Types, pass1: Vec<Operation>, class: &str) -> PolarResult<DataFilter> {
+        use DataFilter::*;
+        let (isas, othas): (Vec<_>, Vec<_>) =
+            pass1.into_iter().partition(|op| op.operator == Operator::Isa);
+        let entities: Map<_, _> = isas.into_iter().map(|isa| {
+            Ok((Self::term2path(&isa.args[0])?, isa.args[1].value().to_class_tag()?))
+        }).collect::<PolarResult<Map<_, _>>>()?;
+
+        let mut this = Self {
             types,
             entities,
-            constraints,
+            constraints: Default::default(),
+            relations: Default::default(),
         };
-        othas
-            .into_iter()
-            .fold(Ok(this), |this, opn| this?.constrain(&opn))
+        for op in othas {
+            this.add_constraint(op)?;
+        }
+
+        let source = this.rels2joins(DataFilter::Source(class.to_string()))?;
+        Ok(this.constraints.into_iter().fold(source, |source, (lhs, kind, rhs)| {
+            Select { source: Rc::new(source), lhs, rhs, kind }
+        }))
     }
 
-    fn constrain(self, part: &Operation) -> PolarResult<Self> {
-        use Operator::*;
-        match part.operator {
-            And => part.args.iter().fold(Ok(self), |this, c| {
-                this?.constrain(c.value().as_expression().unwrap())
-            }),
-            Isa if part.args.len() == 2 => Ok(self),
-            Unify if part.args.len() == 2 => self.binary_op(&part.args, SelOp::Eq),
-            In if part.args.len() == 2 => self.binary_op(&part.args, SelOp::In),
-            Neq if part.args.len() == 2 => self.binary_op(&part.args, SelOp::Neq),
-            _ => unsupported_op_error(part.clone()),
-        }
-    }
 }
 
 pub fn build_filter(
     types: Types,
-    partials: PartialResults,
+    disjuncts: PartialResults,
     var: &str,
     class: &str,
 ) -> PolarResult<DataFilter> {
-    DataFilter::build(types, partials, var, class)
+    DataFilter::build(types, disjuncts, var, class)
 }

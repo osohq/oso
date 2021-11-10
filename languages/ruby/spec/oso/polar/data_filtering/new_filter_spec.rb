@@ -95,9 +95,9 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
             # signs ruled by jupiter can read their own people
             allow(sign: Sign{ruler:"jupiter"}, "read", _: Person{sign});
             # every sign can read a pisces named sam
-            allow(_: Sign, "read", _: Person {sign: s, name: "sam"}) if s.name = "pisces";
+            allow(_, "read", _: Person {sign, name: "sam"}) if sign.name = "pisces";
             # earth signs can read people with air signs
-            allow(_: Sign{element: "earth"}, "read", person: Person) if person.sign.element = "air";
+            allow(_: Sign{element: "earth"}, "read", _: Person{sign}) if sign.element = "air";
           POL
 
           test = lambda do |person, sign|
@@ -140,10 +140,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
 
         it 'test_relationship' do
           subject.load_str <<~POL
-            allow(_, _, person: Person) if
-              sign = person.sign and
-              sign.name = "cancer" and
-              person.name = "eden";
+            allow(_, _, _: Person{ name: "eden", sign }) if sign.name = "cancer";
           POL
 
           query = subject.authzd_query 'gwen', 'read', Person
@@ -178,7 +175,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         end
 
         it 'test_field_cmp_rel_field' do
-          subject.load_str 'allow(_, _, person: Person) if person.name = person.sign.name;'
+          subject.load_str 'allow(_, _, _: Person{name, sign}) if name = sign.name;'
           query = subject.authzd_query 'gwen', 'read', Person
           expect(query.to_a).to eq([leo])
         end
