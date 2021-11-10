@@ -1412,7 +1412,14 @@ impl DataFilter {
                 let (left, right) = (Rc::new(left?), Rc::new(right?));
                 Ok(Union { left, right })
             })
-            .unwrap_or_else(|| input_error("empty input".to_string()))
+            .unwrap_or_else(|| {
+                // if we're here it's because we got empty input.
+                // that's ok, just return an empty filter.
+                let source = Rc::new(Source(class.to_string()));
+                let left = Datum::Imm(Value::Boolean(true));
+                let right = Datum::Imm(Value::Boolean(false));
+                Ok(Select { source, left, right, kind: SelOp::Eq, })
+            })
     }
 
     fn new(types: Types, args: Vec<Operation>, cls: &str) -> PolarResult<Self> {
