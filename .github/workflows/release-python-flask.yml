@@ -56,7 +56,7 @@ jobs:
           pip install --upgrade pip
       - name: Build wheels
         run: |
-          python -m cibuildwheel --output-dir wheelhouse
+          python -m pip wheel -w wheelhouse .
         working-directory: languages/python/flask-oso
       - uses: actions/upload-artifact@v2
         with:
