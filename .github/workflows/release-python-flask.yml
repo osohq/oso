@@ -23,18 +23,7 @@ jobs:
     needs: version
     strategy:
       matrix:
-        # Q: Is there any benefit to building on multiple platforms?
         os: [ubuntu-latest]
-    env:
-      # Skip Python 2.7 and Python 3.5
-      CIBW_SKIP: "cp27-* cp35-* pp27-*"
-      # 64-bit builds only
-      CIBW_BUILD: "*64"
-      # Used in build.py to find right files
-      CIBW_ENVIRONMENT: OSO_ENV=CI
-
-      CIBW_BEFORE_TEST: make -B test-requirements
-      CIBW_TEST_COMMAND: make -C {project} test
 
     steps:
       - uses: actions/checkout@v2
@@ -43,9 +32,6 @@ jobs:
         with:
           python-version: "3.7"
 
-      - name: Install cibuildwheel
-        run: |
-          python -m pip install cibuildwheel==2.2.2
       - name: Copy in readme
         run: |
           rm languages/python/flask-oso/README.md
