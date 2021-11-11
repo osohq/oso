@@ -25,4 +25,4 @@ jobs:
         with:
           python-version: "3.7"
       - run: pip install twine
-      - run: twine upload django-oso-python-${{ github.event.inputs.version }}/django_oso*.whl --non-interactive
+      - run: twine upload django-oso-python-${{ github.event.inputs.version }}/*.whl --non-interactive
