@@ -665,6 +665,8 @@ export interface DataFilteringQueryParams<Query = any, ReturnType = any> {
   combineQuery?: CombineQueryFn<Query>;
 }
 
+export type IsaCheck = (instance: NullishOrHasConstructor) => boolean;
+
 /**
  * Optional parameters for [[`Polar.registerClass`]] and [[`Host.cacheClass`]].
  */
@@ -679,6 +681,8 @@ export interface ClassParams extends DataFilteringQueryParams {
    * data filtering.
    */
   fields?: obj<Class | Relation> | Map<string, Class | Relation>;
+
+  isaCheck?: IsaCheck;
 }
 
 /**
@@ -705,6 +709,8 @@ export interface UserTypeParams<Type extends Class>
    * @internal
    */
   id: number;
+
+  isaCheck: IsaCheck;
 }
 
 /**
