@@ -34,7 +34,7 @@ oso-derive = { path = "../oso-derive", version = "=0.23.0", optional = true }
 polar-core = { path = "../../../polar-core", version = "=0.23.0" }
 thiserror = "1.0.30"
 tracing = { version = "0.1.29", features = ["log"] }
-tracing-subscriber = { version = "0.2.25", default-features = false, features = [
+tracing-subscriber = { version = "0.3.1", default-features = false, features = [
     "fmt",
 ] }
 
