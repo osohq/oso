@@ -3,7 +3,7 @@ use std::fmt;
 use indoc::formatdoc;
 use serde::{Deserialize, Serialize};
 
-use super::{rules::Rule, sources::*, terms::*};
+use super::{formatting::source_lines, rules::Rule, sources::*, terms::*};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(into = "FormattedPolarError")]
@@ -40,7 +40,6 @@ pub struct ErrorContext {
     pub source: Source,
     pub row: usize,
     pub column: usize,
-    pub include_location: bool,
 }
 
 impl PolarError {
@@ -57,13 +56,6 @@ impl PolarError {
                 source: source.clone(),
                 row,
                 column,
-                // @TODO(Sam): find a better way to include this info
-                // TODO(gj|sam): this bool can probably be removed -- we should include
-                // location unconditionally for errors that have the available context.
-                include_location: matches!(
-                    self.kind,
-                    ErrorKind::Runtime(RuntimeError::UnhandledPartial { .. })
-                ),
             });
         }
     }
@@ -184,14 +176,21 @@ pub type PolarResult<T> = std::result::Result<T, PolarError>;
 
 impl std::error::Error for PolarError {}
 
-impl fmt::Display for PolarError {
+impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self.kind {
+        match self {
             ErrorKind::Parse(e) => write!(f, "{}", e)?,
             ErrorKind::Runtime(e) => write!(f, "{}", e)?,
             ErrorKind::Operational(e) => write!(f, "{}", e)?,
             ErrorKind::Validation(e) => write!(f, "{}", e)?,
         }
+        Ok(())
+    }
+}
+
+impl fmt::Display for PolarError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.kind)?;
         if let Some(ref context) = self.context {
             write!(f, "{}", context)?;
         }
@@ -244,18 +243,21 @@ pub enum ParseError {
     },
 }
 
+// TODO(gj): temporary hack
+fn pos_to_loc(src: &str, row: usize, column: usize) -> usize {
+    let chars_before_row = src.split('\n').take(row).flat_map(|r| r.chars()).count();
+    row + chars_before_row + column
+}
+
 impl fmt::Display for ErrorContext {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // @TODO(Sam): find a better way to incorporate this info
-        if self.include_location {
-            writeln!(f, "found in:")?;
-            write!(f, "{}", self.source.src.split('\n').nth(self.row).unwrap())?;
-            write!(f, "\n{}^", " ".repeat(self.column))?;
-        }
         write!(f, " at line {}, column {}", self.row + 1, self.column + 1)?;
         if let Some(ref filename) = self.source.filename {
-            write!(f, " in file {}", filename)?;
+            write!(f, " of file {}", filename)?;
         }
+        let loc = pos_to_loc(&self.source.src, self.row, self.column);
+        let lines = source_lines(&self.source, loc, 0).replace('\n', "\n\t");
+        writeln!(f, ":\n\t{}", lines)?;
         Ok(())
     }
 }
