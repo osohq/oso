@@ -74,6 +74,11 @@ pub fn source_lines(source: &Source, offset: usize, num_lines: usize) -> String 
     let mut lines = Vec::new();
     let mut target = None;
     let prefix_len = "123: ".len();
+    // TODO(gj): test that this line walking code below works for terms/rules parsed from a file
+    // with \r\n line endings. Worried the term/rule's offset might take the extra \r character
+    // into account whereas str::lines makes no distinction between \r\n and \n.
+    //
+    // TODO(gj): There's probably a better way to rewrite this by walking `source.src.chars()`.
     for (lineno, line) in source.src.lines().enumerate() {
         push_line(&mut lines, format!("{:03}: {}", lineno + 1, line));
         let end = index + line.len() + 1; // Adding one to account for new line byte.
