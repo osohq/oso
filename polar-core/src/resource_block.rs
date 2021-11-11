@@ -955,63 +955,73 @@ mod tests {
         "#;
 
         p.load_str(&valid_policy).unwrap();
-        let blocks = &p.kb.read().unwrap().resource_blocks;
-        let declarations = blocks.declarations.get(&term!(sym!("Repo"))).unwrap();
-        assert_eq!(declarations.len(), 6);
-        // let shorthand_rules = blocks.shorthand_rules.get(&term!(sym!("Repo"))).unwrap();
-        // assert_eq!(shorthand_rules.len(), 4);
-
+        // Create explicit scope to allow the RWLock obtained from kb.read() to
+        // be dropped explicitly and independently of the function scope.
+        {
+            let blocks = &p.kb.read().unwrap().resource_blocks;
+            let declarations = blocks.declarations.get(&term!(sym!("Repo"))).unwrap();
+            assert_eq!(declarations.len(), 6);
+            let shorthand_rules = blocks.shorthand_rules.get(&term!(sym!("Repo"))).unwrap();
+            assert_eq!(shorthand_rules.len(), 4);
+        }
         p.clear_rules();
 
-        // // Duplicate declarations are fine if they're used in multiple blocks.
-        // let valid_policy = r#"
-        //     resource Repo {
-        //       relations = { readable_parent: Repo, writable_parent: Repo };
-        //       roles = ["reader", "writer"];
-        //       permissions = ["read", "write"];
+        // Duplicate declarations are fine if they're used in multiple blocks.
+        let valid_policy = r#"
+            resource Repo {
+              relations = { readable_parent: Repo, writable_parent: Repo };
+              roles = ["reader", "writer"];
+              permissions = ["read", "write"];
 
-        //       "read" if "reader";
-        //       "write" if "writer";
+              "read" if "reader";
+              "write" if "writer";
 
-        //       "read" if "read" on "readable_parent";
-        //       "write" if "write" on "writable_parent";
-        //     }
+              "read" if "read" on "readable_parent";
+              "write" if "write" on "writable_parent";
+            }
 
-        //     resource Repo {
-        //       relations = { readable_parent: Repo, writable_parent: Repo };
-        //       roles = ["reader", "writer"];
-        //       permissions = ["read", "write"];
+            resource Repo {
+              relations = { readable_parent: Repo, writable_parent: Repo };
+              roles = ["reader", "writer"];
+              permissions = ["read", "write"];
 
-        //       "reader" if "writer";
+              "reader" if "writer";
 
-        //       "read" if "reader" on "readable_parent";
-        //       "write" if "writer" on "writable_parent";
-        //     }
+              "read" if "reader" on "readable_parent";
+              "write" if "writer" on "writable_parent";
+            }
 
-        //     has_relation(_: Resource, _: String, _: Resource);
-        // "#;
-        // p.load_str(valid_policy).unwrap();
-        // let blocks = &p.kb.read().unwrap().resource_blocks;
-        // let declarations = blocks.declarations.get(&term!(sym!("Repo"))).unwrap();
-        // assert_eq!(declarations.len(), 6);
-        // let shorthand_rules = blocks.shorthand_rules.get(&term!(sym!("Repo"))).unwrap();
-        // assert_eq!(shorthand_rules.len(), 7);
+            has_role(_: Actor, _: String, _: Resource);
+            has_relation(subject: Repo, "writable_parent", object: Repo) if
+                object.parent_id = subject.id;
+            has_relation(subject: Repo, "readable_parent", object: Repo) if
+                object.parent_id = subject.id;
+        "#;
+        p.load_str(valid_policy).unwrap();
+        {
+            let blocks = &p.kb.read().unwrap().resource_blocks;
+            let declarations = blocks.declarations.get(&term!(sym!("Repo"))).unwrap();
+            assert_eq!(declarations.len(), 6);
+            let shorthand_rules = blocks.shorthand_rules.get(&term!(sym!("Repo"))).unwrap();
+            assert_eq!(shorthand_rules.len(), 7);
+        }
+        p.clear_rules();
 
-        // // There's no reason to declare an identical rule in two different blocks.
-        // let invalid_policy = r#"
-        //     resource Repo {
-        //       roles = ["reader", "writer"];
+        // There's no reason to declare an identical rule in two different blocks.
+        let invalid_policy = r#"
+            resource Repo {
+              roles = ["reader", "writer"];
 
-        //       "reader" if "writer";
-        //     }
+              "reader" if "writer";
+            }
 
-        //     resource Repo {
-        //       roles = ["reader", "writer"];
+            resource Repo {
+              roles = ["reader", "writer"];
 
-        //       "reader" if "writer";
-        //     }
-        // "#;
-        // expect_error(&p, invalid_policy, "todo!");
+              "reader" if "writer";
+            }
+        "#;
+        expect_error(&p, invalid_policy, "duplicate rule");
     }
 
     #[test]
