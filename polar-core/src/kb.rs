@@ -464,6 +464,8 @@ impl KnowledgeBase {
                                     instance!(sym!("Dictionary"), rule_fields.clone().fields)
                                 }
                                 _ => {
+                                    // TODO(gj): what type of value could this be? Should this be a
+                                    // parse error?
                                     let msg = format!(
                                         "Value variant {} cannot be a specializer",
                                         rule_value

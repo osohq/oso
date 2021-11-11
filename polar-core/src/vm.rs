@@ -565,6 +565,7 @@ impl PolarVirtualMachine {
             .map(GoalStack::new_reversed)
             .collect();
         if self.choices.len() >= self.stack_limit {
+            // TODO(gj): why isn't this a StackOverflow error?
             invalid_state("Too many choices.".to_string())
         } else {
             self.choices.push(Choice {
