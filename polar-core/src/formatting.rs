@@ -78,7 +78,7 @@ pub fn source_lines(source: &Source, offset: usize, num_lines: usize) -> String 
     // with \r\n line endings. Worried the term/rule's offset might take the extra \r character
     // into account whereas str::lines makes no distinction between \r\n and \n.
     //
-    // TODO(gj): There's probably a better way to rewrite this by walking `source.src.chars()`.
+    // TODO(gj): There's probably a better way to rewrite this by walking `source.src.char_indices()`.
     for (lineno, line) in source.src.lines().enumerate() {
         push_line(&mut lines, format!("{:03}: {}", lineno + 1, line));
         let end = index + line.len() + 1; // Adding one to account for new line byte.
