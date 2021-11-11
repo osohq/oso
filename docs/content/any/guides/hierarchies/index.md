@@ -1,10 +1,11 @@
 ---
 title: "Build Authorization for Resource Hierarchies"
+metaTitle: Build Authorization for Resource Hierarchies in $LANG
 weight: 4
 showContentForAnyLanguage: true
 ---
 
-# Build Authorization for Resource Hierarchies
+# Build Authorization for Resource Hierarchies in {{% lang %}}
 
 A **resource hierarchy** refers to a model with nested resources, where a user's permissions and roles on a resource depend on the resource's parent.
 

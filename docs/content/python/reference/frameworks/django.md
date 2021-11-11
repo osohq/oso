@@ -20,7 +20,7 @@ The Oso Django integration is available on [PyPI](https://pypi.org/project/djang
 `pip`:
 
 ```console
-$ pip install django-oso=={{< version >}}
+$ pip install django-oso
 ```
 
 ## Usage

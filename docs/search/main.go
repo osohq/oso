@@ -186,6 +186,12 @@ func ProcessRecordWeight(vals map[string]interface{}) int64 {
 		return 1
 	}
 
+	if vals["content"].(string) == "" {
+		// Content is empty, don't index this page (happens for pages in language X
+		// when hugo is building the search index for language Y)
+		return 0
+	}
+
 	kind := vals["kind"].(string)
 	section := vals["section"].(string)
 
@@ -193,8 +199,8 @@ func ProcessRecordWeight(vals map[string]interface{}) int64 {
 
 	switch kind {
 	case "home":
-		// this is the main home page and we will include it
-		return 10 // this means it isn't weighted - default is 10
+		// We don't want to index the homepage
+		return 0
 	case "taxonomy":
 		// this is a taxonomy page, like https://docs.osohq.com/node/tags.html, so we ignore it
 		return 0

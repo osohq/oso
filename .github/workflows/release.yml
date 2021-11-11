@@ -340,9 +340,7 @@ jobs:
     needs: [version, macos_libs]
     env:
       # Skip Python 2.7 and Python 3.5
-      # Skip 3.10 due to a broken python link.
-      # Turn back on after this is resolved https://github.com/pypa/cibuildwheel/issues/902
-      CIBW_SKIP: "cp27-* cp35-* pp27-* cp310-*"
+      CIBW_SKIP: "cp27-* cp35-* pp27-*"
       # 64-bit builds only
       CIBW_BUILD: "*64"
       # Used in build.py to find right files
@@ -601,9 +599,7 @@ jobs:
     strategy:
       matrix:
         # There is no python 3.6 for macos-11
-        # Skip 3.10 due to a broken python link.
-        # Turn back on after this is resolved https://github.com/pypa/cibuildwheel/issues/902
-        python-version: ["3.7", "3.8", "3.9"]
+        python-version: ["3.7", "3.8", "3.9", "3.10"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -898,12 +894,6 @@ jobs:
           name: wheel
       - name: Zip wheels
         run: zip --junk-paths -r oso-python.zip wheel/
-      - name: Download oso python musl wheels from package run
-        uses: actions/download-artifact@v1
-        with:
-          name: musl-wheel
-      - name: Zip musl wheels
-        run: zip --junk-paths -r oso-python-musl.zip musl-wheel/
       - name: Download oso gem from package run
         uses: actions/download-artifact@v1
         with:
@@ -949,15 +939,6 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./oso-lib.zip
           asset_name: oso-lib-${{ steps.version.outputs.oso_version }}.zip
-          asset_content_type: application/zip
-      - name: Upload Python Musl Package
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./oso-python-musl.zip
-          asset_name: oso-python-musl-${{ steps.version.outputs.oso_version }}.zip
           asset_content_type: application/zip
       - name: Upload Python Package
         uses: actions/upload-release-asset@v1
