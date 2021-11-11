@@ -2,21 +2,21 @@ use std::fmt;
 
 use indoc::indoc;
 
-use super::error::{ErrorContext, Range};
+use super::diagnostic::{Context, Range};
 use super::sources::Source;
 use super::terms::{InstanceLiteral, Pattern, Symbol, Term, Value};
 
 #[derive(Debug)]
 pub struct Warning {
     pub kind: WarningKind,
-    pub context: Option<ErrorContext>,
+    pub context: Option<Context>,
 }
 
 impl Warning {
     pub fn set_context(&mut self, source: Option<&Source>) {
         if let (Some(source), Some(span)) = (source, self.span()) {
             let range = Range::from_span(&source.src, span);
-            self.context.replace(ErrorContext {
+            self.context.replace(Context {
                 source: source.clone(),
                 range,
             });

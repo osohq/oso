@@ -11,8 +11,8 @@ use lsp_types::{
     VersionedTextDocumentIdentifier,
 };
 use polar_core::{
-    diagnostic::Diagnostic as PolarDiagnostic,
-    error::{PolarError, Range as PolarRange},
+    diagnostic::{Diagnostic as PolarDiagnostic, Range as PolarRange},
+    error::PolarError,
     polar::Polar,
     sources::Source,
 };

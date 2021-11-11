@@ -1,3 +1,7 @@
+mod context;
+
+pub use context::{Context, Range};
+
 use std::fmt;
 
 use super::error::PolarError;
