@@ -11,7 +11,10 @@ use lsp_types::{
     VersionedTextDocumentIdentifier,
 };
 use polar_core::{
-    diagnostic::Diagnostic as PolarDiagnostic, error::PolarError, polar::Polar, sources::Source,
+    diagnostic::Diagnostic as PolarDiagnostic,
+    error::{PolarError, Range as PolarRange},
+    polar::Polar,
+    sources::Source,
 };
 use serde_wasm_bindgen::{from_value, to_value};
 use wasm_bindgen::prelude::*;
@@ -44,10 +47,18 @@ pub struct PolarLanguageServer {
 }
 
 fn range_from_polar_error_context(PolarError { context: c, .. }: &PolarError) -> Range {
-    let (line, character) = c.as_ref().map_or((0, 0), |c| (c.row as _, c.column as _));
-    Range {
-        start: Position { line, character },
-        end: Position { line, character },
+    if let Some(PolarRange { start, end }) = c.as_ref().map(|c| c.range) {
+        let start = Position {
+            line: start.row as _,
+            character: start.column as _,
+        };
+        let end = Position {
+            line: end.row as _,
+            character: end.column as _,
+        };
+        Range { start, end }
+    } else {
+        Range::default()
     }
 }
 
@@ -717,5 +728,25 @@ mod tests {
         assert_eq!(params.uri, doc.uri);
         assert_eq!(params.version.unwrap(), doc.version);
         assert!(params.diagnostics.is_empty(), "{:?}", params.diagnostics);
+    }
+
+    #[wasm_bindgen_test]
+    fn test_diagnostic_range() {
+        let mut pls = new_pls();
+        let debug = "debug";
+        let doc = polar_doc("whatever", debug.to_owned());
+        pls.upsert_document(doc.clone());
+        let diagnostics = pls.reload_kb();
+        let params = diagnostics.get(&doc.uri).unwrap();
+        assert_eq!(params.uri, doc.uri);
+        assert_eq!(params.version.unwrap(), doc.version);
+        assert_eq!(params.diagnostics.len(), 1);
+        let diagnostic = params.diagnostics.get(0).unwrap();
+        assert_eq!(
+            diagnostic.message,
+            "debug is a reserved Polar word and cannot be used here"
+        );
+        assert_eq!(diagnostic.range.start, Position::new(0, 0));
+        assert_eq!(diagnostic.range.end, Position::new(0, 5));
     }
 }
