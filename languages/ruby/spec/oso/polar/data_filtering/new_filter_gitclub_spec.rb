@@ -26,27 +26,12 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     repo_name = Field[repos, :name]
     repo_org_name = Field[repos, :org_name]
     issue_repo_name = Field[issues, :repo_name]
-    repos_orgs = Join[repos, repo_org_name, org_name, orgs]
-    issues_repos = Join[issues, issue_repo_name, repo_name, repos]
-    issues_repos_orgs = Join[issues_repos, repo_org_name, org_name, orgs]
+    repos_orgs = Join[repos, repo_org_name, org_name]
+    issues_repos = Join[issues, issue_repo_name, repo_name]
+    issues_repos_orgs = Join[issues_repos, repo_org_name, org_name]
 
     context 'gitclub' do
       it 'field field two joins' do
-        # query = Select[
-        #   Join[
-        #     Join[
-        #       Src[Issue],
-        #       Field[Src[Issue], :repo_name],
-        #       Field[Src[Repo], :name],
-        #       Src[Repo]
-        #     ],
-        #     Field[Src[Repo], :org_name],
-        #     Field[Src[Org], :name],
-        #     Src[Org]
-        #   ],
-        #   Field[Src[Repo], :name],
-        #   Field[Src[Org], :name],
-        # ]
         query = Select[issues_repos_orgs, repo_name, org_name]
         result = query.to_a
         expect(result).to eq [bug]

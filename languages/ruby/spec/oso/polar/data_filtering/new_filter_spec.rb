@@ -36,7 +36,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     person_name = Field[persons, :name]
     person_sign_name = Field[persons, :sign_name]
     sign_name = Field[signs, :name]
-    persons_signs = Join[persons, person_sign_name, sign_name, signs]
+    persons_signs = Join[persons, person_sign_name, sign_name]
     context 'astrology' do
       it 'field value no join' do
         # person.name = 'eden'

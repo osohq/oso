@@ -4,6 +4,7 @@ module Oso
   module Polar
     # Data filtering interface for Ruby
     module Data
+
       # Data filtering configuration now consists of:
       #
       # 1. Subclass the abstract query classes and implement `to_query` for each one.
@@ -33,11 +34,11 @@ module Oso
             )
           end,
           'Join' => ->(p, j) do
+            parse_field = PARSERS['Field']
             CLASSES[:join].new(
               parse(p, j['left']),
-              Proj.new(parse(p, j['lcol'][0]), j['lcol'][1]),
-              Proj.new(parse(p, j['rcol'][0]), j['rcol'][1]),
-              parse(p, j['right']),
+              parse_field[p, j['lcol']],
+              parse_field[p, j['rcol']],
             )
           end,
           'Union' => ->(p, j) do
@@ -50,16 +51,19 @@ module Oso
             }))
           end,
           'Field' => -> (p, j) do
-            CLASSES[:field].new(parse(p, j[0]), j[1])
+            src = CLASSES[:source].new(p.host.types[j[0]].klass.get)
+            CLASSES[:field].new(src, j[1])
           end
         }
 
         def to_a
           to_query.to_a
         end
+
         def to_query
           raise "`to_query` not implemented for #{self}"
         end
+
         class << self
           alias [] new
           def parse(polar, json)
@@ -115,11 +119,10 @@ module Oso
         # rcol: proj
         # right: filter
         # kind : { :inner, :outer } ( currently ignored )
-        def initialize(left, lcol, rcol, right, kind: :inner)
+        def initialize(left, lcol, rcol, kind: :inner)
           @left = left
           @lcol = lcol
           @rcol = rcol
-          @right = right
           @kind = kind
         end
       end
@@ -232,9 +235,10 @@ module Oso
       class ArelJoin < Join
         include ArelColumnizer
         def to_query
-          lhs = left.to_query
-          rhs = right.to_query
-          lhs.joins "INNER JOIN #{rhs.table_name} ON #{columnize lcol} = #{columnize rcol}"
+          left.to_query.joins(
+            "INNER JOIN #{rcol.source.model.table_name} ON " +
+            "#{columnize lcol} = #{columnize rcol}"
+          )
         end
       end
 

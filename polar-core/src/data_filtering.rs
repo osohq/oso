@@ -999,9 +999,7 @@ fn seek_var_id(vars: &HashMap<Id, HashSet<VarName>>, var: &VarName) -> Option<Id
 fn get_var_id(vars: &mut HashMap<Id, HashSet<VarName>>, var: VarName, counter: &Counter) -> Id {
     seek_var_id(vars, &var).unwrap_or_else(|| {
         let new_id = counter.next();
-        let mut new_set = HashSet::new();
-        new_set.insert(var);
-        vars.insert(new_id, new_set);
+        vars.insert(new_id, singleton(var));
         new_id
     })
 }
@@ -1139,16 +1137,14 @@ mod test {
             "A",
         )?;
         use {DataFilter::*, Datum::*};
-        let (src_a, src_b) = (Rc::new(Source(s("A"))), Rc::new(Source(s("B"))));
         let expected = Select {
             source: Rc::new(Join {
-                left: src_a.clone(),
-                lcol: Proj(src_a.clone(), Some(s("b_id"))),
-                rcol: Proj(src_b.clone(), Some(s("id"))),
-                right: src_b.clone(),
+                left: Rc::new(Source(s("A"))),
+                lcol: Proj(s("A"), Some(s("b_id"))),
+                rcol: Proj(s("B"), Some(s("id"))),
             }),
-            left: Field(Proj(src_b, Some(s("x")))),
-            right: Field(Proj(src_a, Some(s("attr_x")))),
+            left: Field(Proj(s("B"), Some(s("x")))),
+            right: Field(Proj(s("A"), Some(s("attr_x")))),
             kind: SelOp::Eq,
         };
         assert_eq!(r1, expected);
@@ -1266,8 +1262,8 @@ mod test {
 }
 
 #[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
-pub struct Proj(Rc<DataFilter>, Option<String>);
-#[derive(PartialEq, Debug, Serialize, Clone, Hash, Eq)]
+pub struct Proj(TypeName, Option<FieldName>);
+#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
 pub enum Datum {
     Field(Proj),
     Imm(Value),
@@ -1280,7 +1276,14 @@ pub enum SelOp {
     Nin,
 }
 
-#[derive(Clone, Eq, Debug, Serialize, Hash, PartialEq)]
+#[derive(Clone, Debug, Serialize, PartialEq)]
+pub struct Filter {
+    root: TypeName,
+    relations: Set<Relation>,
+    conditions: Set<Condition>,
+}
+
+#[derive(Clone, Debug, Serialize, PartialEq)]
 pub enum DataFilter {
     Source(String),
     Select {
@@ -1293,7 +1296,6 @@ pub enum DataFilter {
         left: Rc<DataFilter>,
         lcol: Proj,
         rcol: Proj,
-        right: Rc<DataFilter>,
     },
     Union {
         left: Rc<DataFilter>,
@@ -1318,28 +1320,36 @@ struct QueryInfo {
     relations: Set<Relation>,
 }
 
-trait DataSources {
+fn singleton<X>(x: X) -> Set<X> where X: Hash + Eq {
+    let mut set = HashSet::new();
+    set.insert(x);
+    set
+}
+
+trait Sources {
     fn sources(&self) -> Set<String>;
 }
 
-impl DataSources for Datum {
+impl Sources for Proj {
+    fn sources(&self) -> Set<TypeName> {
+        singleton(self.0.clone())
+    }
+}
+
+impl Sources for Datum {
     fn sources(&self) -> Set<String> {
         match self {
-            Self::Field(p) => p.0.sources(),
+            Self::Field(proj) => proj.sources(),
             _ => HashSet::new(),
         }
     }
 }
 
-impl DataSources for DataFilter {
+impl Sources for DataFilter {
     fn sources(&self) -> Set<String> {
         use DataFilter::*;
         match self {
-            Source(x) => {
-                let mut set = HashSet::new();
-                set.insert(x.clone());
-                set
-            }
+            Source(src) => singleton(src.clone()),
             Select {
                 source,
                 left,
@@ -1351,7 +1361,12 @@ impl DataSources for DataFilter {
                 set.extend(right.sources());
                 set
             }
-            Union { left, right } | Join { left, right, .. } => {
+            Join { left, rcol, .. } => {
+                let mut set = left.sources();
+                set.extend(rcol.sources());
+                set
+            }
+            Union { left, right } => {
                 let mut set = left.sources();
                 set.extend(right.sources());
                 set
@@ -1365,40 +1380,42 @@ fn input_error<A>(msg: String) -> PolarResult<A> {
 }
 
 impl DataFilter {
-    fn build(types: Types, disjuncts: PartialResults, var: &str, class: &str) -> PolarResult<Self> {
-        use {DataFilter::*, Operator::*, RuntimeError::IncompatibleBindings};
-        let partial_to_filter = |term: &Term| {
-            match term.value() {
-                // most of the time we're dealing with expressions from the
-                // simplifier.
-                Value::Expression(Operation {
-                    operator: And,
-                    args: conjuncts,
-                }) => conjuncts
-                    .iter()
-                    .map(|arg| match arg.value().as_expression() {
-                        Ok(x) => Ok(x.clone()),
-                        _ => input_error(arg.to_polar()),
-                    })
-                    .collect::<PolarResult<Vec<Operation>>>()
-                    .and_then(|args| Self::new(types.clone(), args, class)),
 
-                // sometimes we get an instance back. that means the variable
-                // is exactly this instance, so return a filter that matches it.
-                i @ Value::ExternalInstance(_) => {
-                    let source = Rc::new(Source(class.to_string()));
-                    Ok(Select {
-                        left: Datum::Field(Proj(source.clone(), None)),
-                        kind: SelOp::Eq,
-                        right: Datum::Imm(i.clone()),
-                        source,
-                    })
-                }
-                // oops, we don't know how to handle this!
-                _ => input_error(term.to_polar()),
+    fn partial_to_filter(types: &Types, term: &Term, class: &str) -> PolarResult<Self> {
+        use {Operator::*, DataFilter::*, Value::*};
+        match term.value() {
+            // most of the time we're dealing with expressions from the
+            // simplifier.
+            Expression(Operation {
+                operator: And,
+                args: conjuncts,
+            }) => conjuncts
+                .iter()
+                .map(|arg| match arg.value().as_expression() {
+                    Ok(x) => Ok(x.clone()),
+                    _ => input_error(arg.to_polar()),
+                })
+                .collect::<PolarResult<Vec<Operation>>>()
+                .and_then(|args| Self::new(types.clone(), args, class)),
+
+            // sometimes we get an instance back. that means the variable
+            // is exactly this instance, so return a filter that matches it.
+            i @ ExternalInstance(_) => {
+                let source = Rc::new(Source(class.to_string()));
+                Ok(Select {
+                    left: Datum::Field(Proj(class.to_string(), None)),
+                    kind: SelOp::Eq,
+                    right: Datum::Imm(i.clone()),
+                    source,
+                })
             }
-        };
+            // oops, we don't know how to handle this!
+            _ => input_error(term.to_polar()),
+        }
+    }
 
+    fn build(types: Types, disjuncts: PartialResults, var: &str, class: &str) -> PolarResult<Self> {
+        use {DataFilter::*,RuntimeError::IncompatibleBindings};
         let var = Symbol(var.to_string());
         disjuncts
             .into_iter()
@@ -1406,7 +1423,7 @@ impl DataFilter {
                 part.bindings
                     .get(&var)
                     .ok_or_else(|| IncompatibleBindings { msg: var.0.clone() }.into())
-                    .and_then(partial_to_filter)
+                    .and_then(|part| Self::partial_to_filter(&types, part, class))
             })
             .reduce(|left, right| {
                 let (left, right) = (Rc::new(left?), Rc::new(right?));
@@ -1473,7 +1490,7 @@ impl QueryInfo {
             },
         };
 
-        let proj = Proj(Rc::new(DataFilter::Source(typ.to_string())), field);
+        let proj = Proj(typ.to_string(), field);
         Ok((proj, set))
     }
 
@@ -1502,10 +1519,9 @@ impl QueryInfo {
                 }) = self.types.get(l).and_then(|m| m.get(nom))
                 {
                     let left = Rc::new(src);
-                    let right = Rc::new(Source(r.to_string()));
-                    let lcol = Proj(Rc::new(Source(l.to_string())), Some(my_field.to_string()));
-                    let rcol = Proj(right.clone(), Some(other_field.to_string()));
-                    Ok(Join { left, lcol, rcol, right, })
+                    let lcol = Proj(l.to_string(), Some(my_field.to_string()));
+                    let rcol = Proj(r.to_string(), Some(other_field.to_string()));
+                    Ok(Join { left, lcol, rcol })
                 } else {
                     err_invalid("not a relation!".to_string())
                 }
