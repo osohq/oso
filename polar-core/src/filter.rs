@@ -19,9 +19,9 @@ type Set<A> = HashSet<A>;
 
 #[derive(Clone, Eq, Debug, Serialize, PartialEq)]
 pub struct Filter {
-    root: TypeName, // the host already has this, so we could leave it off
+    root: TypeName,                  // the host already has this, so we could leave it off
+    conditions: Vec<Set<Condition>>, // disjunctive normal form
     relations: Set<Relation>,
-    conditions: Vec<Set<Condition>>,
 }
 
 #[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
@@ -182,7 +182,7 @@ impl Filter {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 struct QueryInfo {
     types: Types,
     entities: Map<PathVar, TypeName>,
@@ -236,16 +236,16 @@ impl QueryInfo {
         // if the last path component names a relation from typ to typ'
         // then typ' is the new type and field is None. otherwise,
         // typ & field stay the same.
-        Ok(
-            match field.as_ref().and_then(|dot| self.get_relation(&typ, dot)) {
-                None => Proj(typ, field),
-                Some(rel) => {
-                    typ = rel.2.clone();
-                    self.relations.insert(rel);
-                    Proj(typ, None)
-                }
-            },
-        )
+        let (typ, field) = match field.as_ref().and_then(|dot| self.get_relation(&typ, dot)) {
+            None => (typ, field),
+            Some(rel) => {
+                let tag = rel.2.clone();
+                self.relations.insert(rel);
+                (tag, None)
+            }
+        };
+
+        Ok(Proj(typ, field))
     }
 
     fn term2datum(&mut self, x: &Term) -> Datum {
@@ -298,6 +298,7 @@ impl QueryInfo {
             relations,
             ..
         } = this;
+
         Ok(Filter {
             relations,
             conditions: vec![conditions],
