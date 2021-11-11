@@ -1,7 +1,8 @@
 use super::{
-    data_filtering::{build_filter_plan, Filter, FilterPlan, PartialResults, Types},
+    data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types},
     diagnostic::{set_context_for_diagnostics, Diagnostic},
     error::PolarResult,
+    filter::Filter,
     kb::*,
     messages::*,
     parser,
