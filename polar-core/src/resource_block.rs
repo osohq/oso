@@ -299,9 +299,21 @@ impl ResourceBlocks {
         declarations: Declarations,
         shorthand_rules: Vec<ShorthandRule>,
     ) {
-        self.declarations.insert(resource.clone(), declarations);
-        self.shorthand_rules
-            .insert(resource.clone(), shorthand_rules);
+        // Merge existing declarations if we are reopening a resource block, otherwise add new
+        if let Some(existing) = self.declarations.get_mut(&resource) {
+            existing.extend(declarations.into_iter());
+        } else {
+            self.declarations.insert(resource.clone(), declarations);
+        }
+
+        // Merge existing shorthand rules if we are reopening a resource block, otherwise add new
+        if let Some(existing) = self.shorthand_rules.get_mut(&resource) {
+            existing.extend(shorthand_rules.into_iter());
+        } else {
+            self.shorthand_rules
+                .insert(resource.clone(), shorthand_rules);
+        }
+
         match block_type {
             BlockType::Actor => self.actors.insert(resource),
             BlockType::Resource => self.resources.insert(resource),
@@ -853,8 +865,8 @@ mod tests {
         p.register_constant(sym!("Repo"), term!("unimportant"))
             .unwrap();
 
-        // Roles in shorthand rules must be declared in the same block as the rule.
-        let invalid_policy = r#"
+        // Allow splitting roles used in shorthand rules across multiple resource blocks.
+        let valid_policy = r#"
             resource Repo {
               roles = ["reader"];
             }
@@ -864,22 +876,14 @@ mod tests {
 
               "read" if "reader";
             }
+            has_role(actor: Actor, _role: String, repo: Repo) if
+               repo in actor.repos;
         "#;
-        expect_error(
-            &p,
-            invalid_policy,
-            // TODO(gj): maybe outside the scope of this PR, but we might think about doing an even
-            // more helpful error message here that notes that `"reader"` is declared in a
-            // different block for the same resource. So maybe this should actually be a warning
-            // instead of an error? I haven't fully thought through the problem space -- is there a
-            // legit reason for someone to want to declare roles/permissions in one resource block
-            // and then declare shorthand rules referencing those roles/permissions in a different
-            // resource block for the same resource?
-            r#"Undeclared term "reader" referenced in rule in 'Repo' resource block. Did you mean to declare it as a role, permission, or relation?"#,
-        );
+        assert!(p.load_str(&valid_policy).is_ok());
+        p.clear_rules();
 
-        // Permissions in shorthand rules must be declared in the same block as the rule.
-        let invalid_policy = r#"
+        // Allow splitting permissions used in shorthand rules across multiple resource blocks.
+        let valid_policy = r#"
             resource Repo {
               permissions = ["read"];
             }
@@ -889,12 +893,17 @@ mod tests {
 
               "read" if "reader";
             }
+
+            has_role(actor: Actor, _role: String, repo: Repo) if
+               repo in actor.repos;
         "#;
-        expect_error(
-            &p,
-            invalid_policy,
-            r#"Undeclared term "read" referenced in rule in 'Repo' resource block. Did you mean to declare it as a role, permission, or relation?"#,
-        );
+        match p.load_str(&valid_policy) {
+            Ok(_) => (),
+            Err(e) => {
+                panic!("{}", e)
+            }
+        }
+        assert!(p.load_str(&valid_policy).is_ok());
 
         // Relations in shorthand rules must be declared in the same block as the rule.
         let invalid_policy = r#"
