@@ -28,6 +28,7 @@ suite('Diagnostics', () => {
     [uri, [diagnostic]] = diagnostics[1];
     assert.strictEqual(uri.toString(), files[1]);
     assert(diagnostic.range.start.isEqual(new Position(0, 6)));
+    assert(diagnostic.range.end.isEqual(new Position(0, 6)));
     assert.strictEqual(
       diagnostic.message,
       'hit the end of the file unexpectedly. Did you forget a semi-colon'
