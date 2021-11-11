@@ -284,7 +284,7 @@ impl PolarLanguageServer {
                     range: range_from_polar_error_context(e),
                     severity: Some(DiagnosticSeverity::Error),
                     source: Some("Polar Language Server".to_owned()),
-                    message: e.to_string(),
+                    message: e.kind.to_string(),
                     ..Default::default()
                 };
                 (doc, diagnostic)
@@ -404,8 +404,10 @@ mod tests {
             assert_eq!(params.version.unwrap(), doc.version);
             assert_eq!(params.diagnostics.len(), 1, "{}", doc.uri.to_string());
             let diagnostic = params.diagnostics.get(0).unwrap();
-            let expected_message = format!("hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column {column} in file {uri}", column=doc.text.len() + 1, uri=doc.uri);
-            assert_eq!(diagnostic.message, expected_message);
+            assert_eq!(
+                diagnostic.message,
+                "hit the end of the file unexpectedly. Did you forget a semi-colon"
+            );
         }
     }
 
@@ -660,11 +662,9 @@ mod tests {
         let polar_diagnostics = pls.load_documents();
         assert_eq!(polar_diagnostics.len(), 1, "{:?}", polar_diagnostics);
         let polar_diagnostic = polar_diagnostics.get(0).unwrap();
-        let expected_message = format!(
-            "Unregistered class: User at line 3, column 13 in file {uri}",
-            uri = doc.uri
-        );
-        assert_eq!(polar_diagnostic.to_string(), expected_message);
+        assert!(polar_diagnostic
+            .to_string()
+            .starts_with("Unregistered class: User"));
 
         // `reload_kb()` API filters out diagnostics dependent on app data.
         let diagnostics = pls.reload_kb();
@@ -707,8 +707,9 @@ mod tests {
         let polar_diagnostics = pls.load_documents();
         assert_eq!(polar_diagnostics.len(), 1, "{:?}", polar_diagnostics);
         let singleton_variable = polar_diagnostics.get(0).unwrap();
-        let expected_message = "Singleton variable a is unused or undefined; try renaming to _a or _ at line 1, column 7 in file file:///whatever.polar";
-        assert_eq!(singleton_variable.to_string(), expected_message);
+        assert!(singleton_variable
+            .to_string()
+            .starts_with("Singleton variable a is unused or undefined; try renaming to _a or _"));
 
         // `reload_kb()` API filters out diagnostics dependent on app data.
         let diagnostics = pls.reload_kb();

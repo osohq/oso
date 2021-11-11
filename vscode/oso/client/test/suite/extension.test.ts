@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 
-import { Diagnostic, languages, Uri, workspace } from 'vscode';
+import { Diagnostic, languages, Position, Uri, workspace } from 'vscode';
 
 // Helper that waits for `n` diagnostics to appear and then returns them.
 async function getDiagnostics(n: number): Promise<[Uri, Diagnostic[]][]> {
@@ -27,12 +27,10 @@ suite('Diagnostics', () => {
 
     [uri, [diagnostic]] = diagnostics[1];
     assert.strictEqual(uri.toString(), files[1]);
-    const { line, character } = diagnostic.range.start;
+    assert(diagnostic.range.start.isEqual(new Position(0, 6)));
     assert.strictEqual(
       diagnostic.message,
-      `hit the end of the file unexpectedly. Did you forget a semi-colon at line ${
-        line + 1
-      }, column ${character + 1} in file ${uri.toString()}`
+      'hit the end of the file unexpectedly. Did you forget a semi-colon'
     );
   });
 });
