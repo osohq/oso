@@ -31,8 +31,8 @@ module Oso
             :string
           )
           attach_function(
-            :build_filter,
-            :polar_build_filter,
+            :build_data_filter,
+            :polar_build_data_filter,
             [FFI::Polar, :string, :string, :string, :string],
             :string
           )
@@ -58,10 +58,10 @@ module Oso
           JSON.parse plan
         end
 
-        def build_filter(types, partials, variable, class_tag)
+        def build_data_filter(types, partials, variable, class_tag)
           types = JSON.dump(types)
           partials = JSON.dump(partials)
-          plan = Rust.build_filter(self, types, partials, variable, class_tag)
+          plan = Rust.build_data_filter(self, types, partials, variable, class_tag)
           process_messages
           handle_error if plan.nil?
           # TODO(gw) more error checking?

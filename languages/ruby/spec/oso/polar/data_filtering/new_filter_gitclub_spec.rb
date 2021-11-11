@@ -4,92 +4,11 @@ require_relative './helpers'
 require 'sqlite3'
 require 'active_record'
 
-D = Oso::Polar::Data
 RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
 
   context 'new filters' do
-    # These names are to make it easy to write new filters for tests.
-    # But in actual use we'll never need to manually construct these,
-    # they'll be deserialized from the output of `build_filter_plan`
-    Join = D::ArelJoin
-    Src = D::ArelSource
-    Select = D::ArelSelect
-    Field = D::Proj
-    Value = D::Value
-
-    repos = Src[Repo]
-    users = Src[User]
-    issues = Src[Issue]
-    orgs = Src[Org]
-    user_name = Field[users, :name]
-    org_name = Field[orgs, :name]
-    repo_name = Field[repos, :name]
-    repo_org_name = Field[repos, :org_name]
-    issue_repo_name = Field[issues, :repo_name]
-    repos_orgs = Join[repos, repo_org_name, org_name]
-    issues_repos = Join[issues, issue_repo_name, repo_name]
-    issues_repos_orgs = Join[issues_repos, repo_org_name, org_name]
 
     context 'gitclub' do
-      it 'field field two joins' do
-        query = Select[issues_repos_orgs, repo_name, org_name]
-        result = query.to_a
-        expect(result).to eq [bug]
-        # issue.repo.name != issue.repo.org.name
-        result = Select[issues_repos_orgs, repo_name, org_name, kind: 'Neq'].to_a
-        expect(result).to contain_exactly(*[laggy, endings])
-      end
-
-      it 'field value no join' do
-        # user.name = 'steve'
-        result = Select[users, user_name, Value['steve']].to_a
-        expect(result).to eq [steve]
-
-        # user.name != 'steve'
-        result = Select[users, user_name, Value['steve'], kind: 'Neq'].to_a
-        expect(result).to contain_exactly(*[leina, gabe, graham])
-      end
-
-      it 'field field no join' do
-        # repo.name = repo.org_name
-        result = Select[repos, repo_name, repo_org_name].to_a
-        expect(result).to eq [oso]
-
-        # repo.name != repo.org_name
-        result = Select[repos, repo_name, repo_org_name, kind: 'Neq'].to_a
-        expect(result).to contain_exactly(*[demo, ios])
-      end
-
-      it 'field value one join' do
-        # repo.org.name = 'oso'
-        result = Select[repos_orgs, org_name, Value['oso']].to_a
-        expect(result).to contain_exactly(*[oso, demo])
-
-        # repo.org.name != 'oso'
-        result = Select[repos_orgs, org_name, Value['oso'], kind: 'Neq'].to_a
-        expect(result).to contain_exactly(*[ios])
-      end
-
-      it 'field field one join' do
-        # repo.name = repo.org.name
-        result = Select[repos_orgs, repo_name, org_name].to_a
-        expect(result).to contain_exactly(*[oso]) # osoroboroso
-
-        # repo.name != repo.org.name
-        result = Select[repos_orgs, repo_name, org_name, kind: 'Neq'].to_a
-        expect(result).to contain_exactly(*[demo, ios]) # aneponymous
-      end
-
-      it 'field value two joins' do
-        # issue.repo.org.name = 'apple'
-        result = Select[issues_repos_orgs, org_name, Value['apple']].to_a
-        expect(result).to eq [laggy]
-
-        # issue.repo.org.name != 'apple'
-        result = Select[issues_repos_orgs, org_name, Value['apple'], kind: 'Neq'].to_a
-        expect(result).to contain_exactly(*[bug, endings])
-      end
-
       it 'pls' do
         filter = subject.authzd_query gabe, 'read', Repo
         expect(filter.to_a).to eq [oso]

@@ -1,7 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
-    rc::Rc,
 };
 
 use crate::{
@@ -1085,72 +1084,6 @@ mod test {
         ))
     }
 
-    fn test_input_2() -> Term {
-        let pat_a = term!(pattern!(instance!("A")));
-        let pat_b = term!(pattern!(instance!("B")));
-        term!(op!(
-            And,
-            term!(op!(Isa, var!("_this"), pat_a)),
-            term!(op!(
-                Isa,
-                term!(op!(Dot, var!("_this"), str!("attr"))),
-                pat_b
-            )),
-            term!(op!(
-                Unify,
-                term!(op!(
-                    Dot,
-                    term!(op!(Dot, var!("_this"), str!("attr"))),
-                    str!("x")
-                )),
-                term!(op!(Dot, var!("_this"), str!("attr_x")))
-            ))
-        ))
-    }
-
-    #[test]
-    fn test_data_filter() -> TestResult {
-        let s = |s: &str| s.to_string();
-        let types = hashmap! {
-            s("A") => hashmap! {
-                s("field") => Type::Base {
-                    class_tag: s("B")
-                },
-                s("attr") => Type::Relation {
-                    my_field: s("b_id"),
-                    other_field: s("id"),
-                    kind: s("one"),
-                    other_class_tag: s("B"),
-                },
-            },
-            s("B") => hashmap! {
-                s("field") => Type::Base {
-                    class_tag: s("A")
-                }
-            }
-        };
-        let input = test_input_2();
-        let r1 = DataFilter::build(
-            types,
-            vec![ResultEvent::from(hashmap! { sym!("resource") => input })],
-            "resource",
-            "A",
-        )?;
-        use {DataFilter::*, Datum::*};
-        let expected = Select {
-            source: Rc::new(Join {
-                left: Rc::new(Source(s("A"))),
-                lcol: Proj(s("A"), Some(s("b_id"))),
-                rcol: Proj(s("B"), Some(s("id"))),
-            }),
-            left: Field(Proj(s("B"), Some(s("x")))),
-            right: Field(Proj(s("A"), Some(s("attr_x")))),
-            kind: SelOp::Eq,
-        };
-        assert_eq!(r1, expected);
-        Ok(())
-    }
-
     #[test]
     fn test_dot_plan() -> TestResult {
         let partial = test_input_0();
@@ -1268,44 +1201,24 @@ pub enum Datum {
     Field(Proj),
     Imm(Value),
 }
-#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
-pub struct Condition(Datum, SelOp, Datum);
-#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
-pub struct Relation(TypeName, FieldName, TypeName);
 
 #[derive(PartialEq, Debug, Serialize, Copy, Clone, Eq, Hash)]
-pub enum SelOp {
+pub enum Compare {
     Eq,
     Neq,
     In,
-    Nin,
 }
 
-#[derive(Clone, Debug, Serialize, PartialEq)]
+#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
+pub struct Condition(Datum, Compare, Datum);
+#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
+pub struct Relation(TypeName, FieldName, TypeName);
+
+#[derive(Clone, Eq, Debug, Serialize, PartialEq)]
 pub struct Filter {
-    root: TypeName,
+    root: TypeName, // the host already has this, so we could leave it off
     relations: Set<Relation>,
-    conditions: Set<Condition>,
-}
-
-#[derive(Clone, Debug, Serialize, PartialEq)]
-pub enum DataFilter {
-    Source(String),
-    Select {
-        source: Rc<DataFilter>,
-        left: Datum,
-        kind: SelOp,
-        right: Datum,
-    },
-    Join {
-        left: Rc<DataFilter>,
-        lcol: Proj,
-        rcol: Proj,
-    },
-    Union {
-        left: Rc<DataFilter>,
-        right: Rc<DataFilter>,
-    },
+    conditions: Vec<Set<Condition>>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq, Hash)]
@@ -1358,23 +1271,6 @@ impl Sources for Datum {
     }
 }
 
-impl Sources for DataFilter {
-    fn sources(&self) -> Set<String> {
-        use DataFilter::*;
-        match self {
-            Source(src) => singleton(src.clone()),
-            Join { left, rcol, .. } => union(left.sources(), rcol.sources()),
-            Union { left, right } => union(left.sources(), right.sources()),
-            Select {
-                source,
-                left,
-                right,
-                ..
-            } => union(source.sources(), union(left.sources(), right.sources())),
-        }
-    }
-}
-
 impl Operation {
     /// turn an isa from the partial results into a pathvar -> type pair
     fn into_entity(self) -> Option<PolarResult<(PathVar, TypeName)>> {
@@ -1398,7 +1294,7 @@ impl Operation {
     }
 }
 
-impl DataFilter {
+impl Filter {
     pub fn build(
         types: Types,
         disjuncts: PartialResults,
@@ -1427,7 +1323,7 @@ impl DataFilter {
     }
 
     fn from_partial(types: &Types, term: &Term, class: &str) -> PolarResult<Self> {
-        use {DataFilter::*, Datum::*, Operator::*, Value::*};
+        use {Datum::*, Operator::*, Value::*};
         match term.value() {
             // most of the time we're dealing with expressions from the
             // simplifier.
@@ -1441,17 +1337,19 @@ impl DataFilter {
                     Err(_) => input_error(arg.to_polar()),
                 })
                 .collect::<PolarResult<Vec<Operation>>>()
-                .and_then(|args| DataFilterBuilder::build_filter(types.clone(), args, class)),
+                .and_then(|args| QueryInfo::build_filter(types.clone(), args, class)),
 
             // sometimes we get an instance back. that means the variable
             // is exactly this instance, so return a filter that matches it.
             i @ ExternalInstance(_) => {
-                let source = Rc::new(Source(class.to_string()));
-                Ok(Select {
-                    source,
-                    left: Field(Proj(class.to_string(), None)),
-                    kind: SelOp::Eq,
-                    right: Imm(i.clone()),
+                Ok(Filter {
+                    root: class.to_string(),
+                    relations: HashSet::new(),
+                    conditions: vec![singleton(Condition(
+                        Field(Proj(class.to_string(), None)),
+                        Compare::Eq,
+                        Imm(i.clone()),
+                    ))],
                 })
             }
 
@@ -1461,31 +1359,34 @@ impl DataFilter {
     }
 
     fn empty(class: &str) -> Self {
-        Self::Select {
-            source: Rc::new(Self::Source(class.to_string())),
-            left: Datum::Imm(Value::Boolean(true)),
-            kind: SelOp::Eq,
-            right: Datum::Imm(Value::Boolean(false)),
+        use {Datum::Imm, Value::Boolean};
+        Self {
+            root: class.to_string(),
+            relations: HashSet::new(),
+            conditions: vec![singleton(Condition(
+                Imm(Boolean(true)),
+                Compare::Eq,
+                Imm(Boolean(false)),
+            ))],
         }
     }
 
-    fn union(self, other: Self) -> Self {
-        Self::Union {
-            left: Rc::new(self),
-            right: Rc::new(other),
-        }
+    fn union(self, mut other: Self) -> Self {
+        other.conditions.extend(self.conditions);
+        other.relations.extend(self.relations);
+        other
     }
 }
 
-#[derive(Debug)]
-struct DataFilterBuilder {
+#[derive(Debug, Default)]
+struct QueryInfo {
     types: Types,
     entities: Map<PathVar, TypeName>,
-    constraints: Set<Condition>,
+    conditions: Set<Condition>,
     relations: Set<Relation>,
 }
 
-impl DataFilterBuilder {
+impl QueryInfo {
     /// try to match a type and a field name with a relation
     fn get_relation(&mut self, typ: &str, dot: &str) -> Option<Relation> {
         if let Some(Type::Relation {
@@ -1543,48 +1444,6 @@ impl DataFilterBuilder {
         )
     }
 
-    /// extend a source with a relation
-    fn extend_source(&self, src: DataFilter, rel: &Relation) -> PolarResult<DataFilter> {
-        let Relation(l, nom, r) = rel;
-        if let Some(Type::Relation {
-            my_field,
-            other_field,
-            ..
-        }) = self.types.get(l).and_then(|m| m.get(nom))
-        {
-            Ok(DataFilter::Join {
-                left: Rc::new(src),
-                lcol: Proj(l.to_string(), Some(my_field.to_string())),
-                rcol: Proj(r.to_string(), Some(other_field.to_string())),
-            })
-        } else {
-            unregistered_field_error(l, nom)
-        }
-    }
-
-    /// turn the relation set into a source filter that includes all necessary
-    /// joins
-    fn close_relations(&mut self, mut src: DataFilter) -> PolarResult<DataFilter> {
-        let srcs = src.sources();
-        let (ok, no): (Set<_>, Set<_>) = self
-            .relations
-            .iter()
-            .filter(|Relation(_, _, r)| !srcs.contains(r))
-            .partition(|Relation(l, _, _)| srcs.contains(l));
-
-        match (ok.is_empty(), no.is_empty()) {
-            (true, true) => Ok(src),
-            (true, false) => err_invalid("can't close relation set".to_string()),
-            _ => {
-                // recur on the orphan relations with an updated source
-                for rel in ok {
-                    src = self.extend_source(src, rel)?;
-                }
-                self.relations = no.into_iter().cloned().collect();
-                self.close_relations(src)
-            }
-        }
-    }
 
     fn term2datum(&mut self, x: &Term) -> Datum {
         PathVar::from_term(x)
@@ -1594,21 +1453,20 @@ impl DataFilterBuilder {
 
     /// digest a conjunct from the partial results & add a new constraint.
     fn add_constraint(&mut self, op: Operation) -> PolarResult<()> {
-        let sel = match op.operator {
-            Operator::Unify => SelOp::Eq,
-            Operator::Neq => SelOp::Neq,
-            Operator::In => SelOp::In,
+        let cmp = match op.operator {
+            Operator::Unify => Compare::Eq,
+            Operator::Neq => Compare::Neq,
+            Operator::In => Compare::In,
             _ => return unsupported_op_error(op),
         };
 
         let (left, right) = (self.term2datum(&op.args[0]), self.term2datum(&op.args[1]));
 
-        self.constraints.insert(Condition(left, sel, right));
+        self.conditions.insert(Condition(left, cmp, right));
         Ok(())
     }
 
-    fn build_filter(types: Types, parts: Vec<Operation>, class: &str) -> PolarResult<DataFilter> {
-        use DataFilter::*;
+    fn build_filter(types: Types, parts: Vec<Operation>, class: &str) -> PolarResult<Filter> {
         // we use isa constraints to initialize the entities map
         let (isas, othas): (Set<_>, Set<_>) = parts
             .into_iter()
@@ -1624,8 +1482,7 @@ impl DataFilterBuilder {
         let mut this = Self {
             types,
             entities,
-            constraints: Default::default(),
-            relations: Default::default(),
+            ..Default::default()
         };
 
         // each partial adds a constraint and may add relations
@@ -1633,22 +1490,12 @@ impl DataFilterBuilder {
             this.add_constraint(op)?;
         }
 
-        // relations are now collected, so "build a join" out of the relations set
-        // to get the source
-        let source = DataFilter::Source(class.to_string());
-        let mut source = this.close_relations(source)?;
-
-        // apply each constraint to the source
-        for Condition(left, kind, right) in this.constraints {
-            source = Select {
-                source: Rc::new(source),
-                right,
-                left,
-                kind,
-            };
-        }
-
-        Ok(source)
+        let Self { conditions, relations, .. } = this;
+        Ok(Filter {
+            relations,
+            conditions: vec![conditions],
+            root: class.to_string(),
+        })
     }
 }
 
@@ -1663,12 +1510,4 @@ where
     let mut set = HashSet::new();
     set.insert(x);
     set
-}
-
-fn union<X>(mut l: Set<X>, r: Set<X>) -> Set<X>
-where
-    X: Hash + Eq,
-{
-    l.extend(r);
-    l
 }

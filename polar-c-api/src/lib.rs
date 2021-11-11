@@ -434,7 +434,7 @@ pub extern "C" fn query_free(query: *mut Query) -> i32 {
 }
 
 #[no_mangle]
-pub extern "C" fn polar_build_filter(
+pub extern "C" fn polar_build_data_filter(
     polar_ptr: *mut Polar,
     types: *const c_char,
     results: *const c_char,
@@ -468,7 +468,7 @@ pub extern "C" fn polar_build_filter(
         let variable = unsafe { ffi_string!(variable) };
         let class_tag = unsafe { ffi_string!(class_tag) };
 
-        let filter = polar.build_filter(types, partial_results, &variable, &class_tag);
+        let filter = polar.build_data_filter(types, partial_results, &variable, &class_tag);
         match filter {
             Ok(filter) => {
                 let json = serde_json::to_string(&filter).unwrap();

@@ -84,6 +84,10 @@ module Oso
         @ffi_polar
       end
 
+      def get_class(class_name)
+        host.types[class_name].klass.get
+      end
+
       # get the (maybe user-supplied) name of a class.
       # kind of a hack because of class autoreloading.
       def get_class_name(klass) # rubocop:disable Metrics/AbcSize

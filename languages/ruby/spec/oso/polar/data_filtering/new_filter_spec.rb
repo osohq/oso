@@ -5,12 +5,6 @@ require 'sqlite3'
 require 'active_record'
 
 RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
-  D = Oso::Polar::Data
-  Join = D::ArelJoin
-  Src = D::ArelSource
-  Select = D::ArelSelect
-  Field = D::Proj
-  Value = D::Value
 
   context 'new filters' do
     class Sign < ActiveRecord::Base
@@ -31,44 +25,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       self.primary_key = :name
     end
 
-    persons = Src[Person]
-    signs = Src[Sign]
-    person_name = Field[persons, :name]
-    person_sign_name = Field[persons, :sign_name]
-    sign_name = Field[signs, :name]
-    persons_signs = Join[persons, person_sign_name, sign_name]
     context 'astrology' do
-      it 'field value no join' do
-        # person.name = 'eden'
-        result = Select[persons, person_name, Value['eden']].to_a
-        expect(result).to eq [eden]
-
-        # person.name != 'eden'
-        result = Select[persons, person_name, Value['eden'], kind: 'Neq'].to_a
-        expect(result.length).to be 11
-        expect(result).not_to include eden
-      end
-
-      it 'field value one join' do
-        # person.sign.name = 'cancer'
-        result = Select[persons_signs, sign_name, Value['cancer']].to_a
-        expect(result).to eq [eden]
-        # person.sign.name != 'cancer'
-        result = Select[persons_signs, sign_name, Value['cancer'], kind: 'Neq'].to_a
-        expect(result.length).to be 11
-        expect(result).not_to include eden
-      end
-
-      it 'field field one join' do
-        # person.name = person.sign.name
-        result = Select[persons_signs, person_name, sign_name].to_a
-        expect(result).to eq [leo]
-
-        # person.name != person.sign.name
-        result = Select[persons_signs, person_name, sign_name, kind: 'Neq'].to_a
-        expect(result.length).to be 11
-        expect(result).not_to include leo
-      end
       context '#authzd_query parity' do
         before do
           subject.register_class(

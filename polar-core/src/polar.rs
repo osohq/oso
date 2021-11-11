@@ -1,5 +1,5 @@
 use super::{
-    data_filtering::{build_filter_plan, DataFilter, FilterPlan, PartialResults, Types},
+    data_filtering::{build_filter_plan, Filter, FilterPlan, PartialResults, Types},
     diagnostic::{set_context_for_diagnostics, Diagnostic},
     error::PolarResult,
     kb::*,
@@ -279,14 +279,14 @@ impl Polar {
         build_filter_plan(types, partial_results, variable, class_tag)
     }
 
-    pub fn build_filter(
+    pub fn build_data_filter(
         &self,
         types: Types,
         partial_results: PartialResults,
         variable: &str,
         class_tag: &str,
-    ) -> PolarResult<DataFilter> {
-        DataFilter::build(types, partial_results, variable, class_tag)
+    ) -> PolarResult<Filter> {
+        Filter::build(types, partial_results, variable, class_tag)
     }
 
     // TODO(@gkaemmer): this is a hack and should not be used for similar cases.

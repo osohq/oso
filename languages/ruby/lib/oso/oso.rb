@@ -205,14 +205,15 @@ module Oso
     end
 
     def authzd_query(actor, action, resource_cls) # rubocop:disable Metrics/MethodLength
-      resource = Polar::Variable.new 'resource'
+      var_name = 'resource'
+      resource = Polar::Variable.new var_name
 
       partials = query_rule(
         'allow',
         actor,
         action,
         resource,
-        bindings: { 'resource' => type_constraint(resource, resource_cls) },
+        bindings: { var_name => type_constraint(resource, resource_cls) },
         accept_expression: true
       )
       partials = partials.each_with_object([]) do |result, out|
@@ -221,14 +222,12 @@ module Oso
         end
       end
 
-      filter = ffi
-        .build_filter(
-          host.serialize_types,
-          partials,
-          'resource',
-          get_class_name(resource_cls))
-      ::Oso::Polar::Data::DataFilter.parse(self, filter).to_query.tap do |query|
-      end
+      types = host.serialize_types
+      class_name = get_class_name resource_cls
+
+      data_filter = ffi.build_data_filter(types, partials, var_name, class_name)
+      data_filter = ::Oso::Polar::Data::Filter.parse(self, data_filter)
+      data_filter.to_query(host.types)
     end
 
     # Determine the resources of type +resource_cls+ that +actor+
