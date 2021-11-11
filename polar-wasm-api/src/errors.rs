@@ -52,6 +52,7 @@ fn kind(err: &PolarError) -> String {
         Validation(SingletonVariable { .. }) => "ValidationError::SingletonVariable",
         Validation(UnregisteredClass { .. }) => "ValidationError::UnregisteredClass",
         Validation(MissingRequiredRule { .. }) => "ValidationError::MissingRequiredRule",
+        Validation(DuplicateShorthandRule { .. }) => "ValidationError::DuplicateShorthandRule",
     }
     .to_owned()
 }

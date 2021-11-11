@@ -3,7 +3,7 @@ use std::fmt;
 use indoc::formatdoc;
 use serde::{Deserialize, Serialize};
 
-use super::{rules::Rule, sources::*, terms::*};
+use super::{resource_block::ShorthandRule, rules::Rule, sources::*, terms::*};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(into = "FormattedPolarError")]
@@ -348,7 +348,7 @@ The expression is: {expr}
             Self::DataFilteringFieldMissing { var_type, field } => {
                 let msg = formatdoc!(
                     r#"Unregistered field or relation: {var_type}.{field}
-                    
+
                     Please include `{field}` in the `fields` parameter of your
                     `register_class` call for {var_type}.  For example, in Python:
 
@@ -434,6 +434,10 @@ pub enum ValidationError {
         /// Term<Symbol> where the error arose, tracked for lexical context.
         term: Term,
     },
+    DuplicateShorthandRule {
+        resource: Term,
+        shorthand_rule: ShorthandRule,
+    },
 }
 
 impl fmt::Display for ValidationError {
@@ -459,6 +463,17 @@ impl fmt::Display for ValidationError {
             }
             Self::UnregisteredClass { term } => {
                 write!(f, "Unregistered class: {}", term)
+            }
+            Self::DuplicateShorthandRule {
+                resource,
+                shorthand_rule,
+            } => {
+                write!(
+                    f,
+                    "Duplicate shorthand rule `{}` for resource {}",
+                    shorthand_rule.to_polar(),
+                    resource
+                )
             }
         }
     }

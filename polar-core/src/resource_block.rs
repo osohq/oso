@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use std::collections::{HashMap, HashSet};
 
 use super::error::{OperationalError, PolarError, PolarResult, ValidationError};
@@ -191,7 +193,7 @@ pub enum Declaration {
     Relation(Term),
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Serialize, Deserialize, Debug, Hash, PartialEq, Eq)]
 pub struct ShorthandRule {
     /// `Term` is a `String`. E.g., `"member"` in `"member" if "owner";`.
     pub head: Term,
@@ -298,7 +300,19 @@ impl ResourceBlocks {
         resource: Term,
         declarations: Declarations,
         shorthand_rules: Vec<ShorthandRule>,
-    ) {
+    ) -> PolarResult<()> {
+        if let Some(existing_rules) = self.shorthand_rules.get(&resource) {
+            let existing: HashSet<&ShorthandRule> = existing_rules.into_iter().collect();
+            for rule in &shorthand_rules {
+                if existing.contains(rule) {
+                    return Err(ValidationError::DuplicateShorthandRule {
+                        resource,
+                        shorthand_rule: rule.clone(),
+                    }
+                    .into());
+                }
+            }
+        }
         // Merge existing declarations if we are reopening a resource block, otherwise add new
         if let Some(existing) = self.declarations.get_mut(&resource) {
             existing.extend(declarations.into_iter());
@@ -318,6 +332,8 @@ impl ResourceBlocks {
             BlockType::Actor => self.actors.insert(resource),
             BlockType::Resource => self.resources.insert(resource),
         };
+
+        Ok(())
     }
 
     /// Look up `declaration` in `resource` block.
@@ -664,8 +680,13 @@ impl ResourceBlock {
                 // TODO: @patrickod re-add
                 // check_that_shorthand_rule_heads_are_declared_locally
                 // equivalent with merged resource block contents
-                kb.resource_blocks
-                    .add(block_type, resource, declarations, shorthand_rules);
+
+                if let Err(e) =
+                    kb.resource_blocks
+                        .add(block_type, resource, declarations, shorthand_rules)
+                {
+                    errors.push(e);
+                }
             }
             Err(e) => errors.push(e),
         }
@@ -693,9 +714,9 @@ mod tests {
         let msg = match error.kind {
             Validation(ResourceBlock { msg, .. }) => msg,
             Validation(UnregisteredClass { .. }) => error.to_string(),
+            Validation(DuplicateShorthandRule { .. }) => error.to_string(),
             _ => panic!("Unexpected error: {}", error),
         };
-
         assert!(msg.contains(expected));
     }
 
@@ -712,18 +733,22 @@ mod tests {
         let org_declarations = index_declarations(Some(org_roles), None, None, &org_resource);
 
         let mut blocks = ResourceBlocks::new();
-        blocks.add(
-            BlockType::Resource,
-            repo_resource,
-            repo_declarations.unwrap(),
-            vec![],
-        );
-        blocks.add(
-            BlockType::Resource,
-            org_resource,
-            org_declarations.unwrap(),
-            vec![],
-        );
+        blocks
+            .add(
+                BlockType::Resource,
+                repo_resource,
+                repo_declarations.unwrap(),
+                vec![],
+            )
+            .unwrap();
+        blocks
+            .add(
+                BlockType::Resource,
+                org_resource,
+                org_declarations.unwrap(),
+                vec![],
+            )
+            .unwrap();
         let shorthand_rule = ShorthandRule {
             head: term!("reader"),
             body: (term!("member"), Some((term!(sym!("on")), term!("parent")))),
@@ -745,12 +770,14 @@ mod tests {
         let declarations = index_declarations(None, Some(permissions), Some(relations), &resource);
 
         let mut blocks = ResourceBlocks::new();
-        blocks.add(
-            BlockType::Resource,
-            resource.clone(),
-            declarations.unwrap(),
-            vec![],
-        );
+        blocks
+            .add(
+                BlockType::Resource,
+                resource.clone(),
+                declarations.unwrap(),
+                vec![],
+            )
+            .unwrap();
 
         let shorthand_rule = ShorthandRule {
             head: term!("read"),
@@ -820,18 +847,22 @@ mod tests {
         let org_roles = term!(["member"]);
         let org_declarations = index_declarations(Some(org_roles), None, None, &org_resource);
         let mut blocks = ResourceBlocks::new();
-        blocks.add(
-            BlockType::Resource,
-            repo_resource,
-            repo_declarations.unwrap(),
-            vec![],
-        );
-        blocks.add(
-            BlockType::Resource,
-            org_resource,
-            org_declarations.unwrap(),
-            vec![],
-        );
+        blocks
+            .add(
+                BlockType::Resource,
+                repo_resource,
+                repo_declarations.unwrap(),
+                vec![],
+            )
+            .unwrap();
+        blocks
+            .add(
+                BlockType::Resource,
+                org_resource,
+                org_declarations.unwrap(),
+                vec![],
+            )
+            .unwrap();
         let shorthand_rule = ShorthandRule {
             head: term!("reader"),
             body: (term!("member"), Some((term!(sym!("on")), term!("parent")))),
@@ -1021,7 +1052,11 @@ mod tests {
               "reader" if "writer";
             }
         "#;
-        expect_error(&p, invalid_policy, "duplicate rule");
+        expect_error(
+            &p,
+            invalid_policy,
+            r#"Duplicate shorthand rule `"reader" if "writer";` for resource Repo"#,
+        );
     }
 
     #[test]
