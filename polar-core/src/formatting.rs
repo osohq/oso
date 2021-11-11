@@ -77,7 +77,7 @@ pub fn source_lines(source: &Source, offset: usize, num_lines: usize) -> String 
     for (lineno, line) in source.src.lines().enumerate() {
         push_line(&mut lines, format!("{:03}: {}", lineno + 1, line));
         let end = index + line.len() + 1; // Adding one to account for new line byte.
-        if target.is_none() && end >= offset {
+        if target.is_none() && end > offset {
             target = Some(lineno);
             let spaces = " ".repeat(offset - index + prefix_len);
             push_line(&mut lines, format!("{}^", spaces));
@@ -669,5 +669,63 @@ pub mod to_polar {
             s += "}";
             s
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use indoc::indoc;
+
+    use super::*;
+
+    #[test]
+    fn test_source_lines() {
+        let src = "hi".to_owned();
+        let filename: Option<String> = None;
+        let source = Source { src, filename };
+        assert_eq!(source_lines(&source, 0, 0), "001: hi\n     ^");
+        assert_eq!(source_lines(&source, 1, 0), "001: hi\n      ^");
+        assert_eq!(source_lines(&source, 2, 0), "001: hi\n       ^");
+
+        let src = " one\n  two\n   three\n    four\n     five\n      six\n       seven\n        eight\n         nine\n".to_owned();
+        let filename: Option<String> = None;
+        let source = Source { src, filename };
+        let lines = source_lines(&source, 34, 2);
+        let expected = indoc! {"
+            003:    three
+            004:     four
+            005:      five
+                      ^
+            006:       six
+            007:        seven"};
+        assert_eq!(lines, expected, "\n{}", lines);
+
+        let src = "one\ntwo\nthree\n".to_owned();
+        let filename: Option<String> = None;
+        let source = Source { src, filename };
+
+        let lines = source_lines(&source, 0, 0);
+        let expected = indoc! {"
+            001: one
+                 ^"};
+        assert_eq!(lines, expected, "\n{}", lines);
+
+        let lines = source_lines(&source, 3, 0);
+        let expected = indoc! {"
+            001: one
+                    ^"};
+        assert_eq!(lines, expected, "\n{}", lines);
+
+        let lines = source_lines(&source, 4, 0);
+        let expected = indoc! {"
+            002: two
+                 ^"};
+        assert_eq!(lines, expected, "\n{}", lines);
+
+        let lines = source_lines(&source, 5, 0);
+        let expected = indoc! {"
+            002: two
+                  ^"};
+        assert_eq!(lines, expected, "\n{}", lines);
     }
 }
