@@ -2,10 +2,59 @@ use std::fmt;
 
 use indoc::indoc;
 
-use super::terms::{InstanceLiteral, Pattern, Term, Value};
+use super::error::{ErrorContext, Range};
+use super::sources::Source;
+use super::terms::{InstanceLiteral, Pattern, Symbol, Term, Value};
 
 #[derive(Debug)]
-pub enum Warning {
+pub struct Warning {
+    pub kind: WarningKind,
+    pub context: Option<ErrorContext>,
+}
+
+impl Warning {
+    pub fn set_context(&mut self, source: Option<&Source>) {
+        if let (Some(source), Some(span)) = (source, self.span()) {
+            let range = Range::from_span(&source.src, span);
+            self.context.replace(ErrorContext {
+                source: source.clone(),
+                range,
+            });
+        }
+    }
+
+    pub fn get_source_id(&self) -> Option<u64> {
+        use WarningKind::*;
+
+        match &self.kind {
+            AmbiguousPrecedence { term } | UnknownSpecializer { term, .. } => term.get_source_id(),
+            MissingAllowRule | MissingHasPermissionRule => None,
+        }
+    }
+
+    /// Get `(left, right)` span from warnings that carry source context.
+    fn span(&self) -> Option<(usize, usize)> {
+        use WarningKind::*;
+
+        match &self.kind {
+            AmbiguousPrecedence { term } | UnknownSpecializer { term, .. } => term.span(),
+            MissingAllowRule | MissingHasPermissionRule => None,
+        }
+    }
+}
+
+impl fmt::Display for Warning {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.kind)?;
+        if let Some(ref context) = self.context {
+            write!(f, "{}", context)?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub enum WarningKind {
     // validation | general
     AmbiguousPrecedence { term: Term },
     // validation | enforcement
@@ -13,7 +62,18 @@ pub enum Warning {
     // validation | resource blocks
     MissingHasPermissionRule,
     // validation | general
-    UnknownSpecializer { term: Term },
+    // TODO(gj): won't need `sym` once we have an easier, infallible way of going from `Term` ->
+    // `Pattern` -> `InstanceLiteral` -> `tag` (`Symbol`).
+    UnknownSpecializer { term: Term, sym: Symbol },
+}
+
+impl From<WarningKind> for Warning {
+    fn from(kind: WarningKind) -> Self {
+        Self {
+            kind,
+            context: None,
+        }
+    }
 }
 
 const AMBIGUOUS_PRECEDENCE_MSG: &str = indoc! {"
@@ -46,24 +106,6 @@ const MISSING_HAS_PERMISSION_RULE_MSG: &str = indoc! {"
 
     For more information about resource blocks, see https://docs.osohq.com/any/reference/polar/polar-syntax.html#actor-and-resource-blocks
 "};
-
-impl fmt::Display for Warning {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use Warning::*;
-        match self {
-            AmbiguousPrecedence { .. } => write!(f, "{}", AMBIGUOUS_PRECEDENCE_MSG)?,
-            MissingAllowRule => write!(f, "{}", MISSING_ALLOW_RULE_MSG)?,
-            MissingHasPermissionRule => write!(f, "{}", MISSING_HAS_PERMISSION_RULE_MSG)?,
-            UnknownSpecializer { term } => {
-                write!(f, "Unknown specializer {}", term)?;
-                if let Some(suggestion) = common_specializer_misspellings(term) {
-                    write!(f, ", did you mean {}?", suggestion)?;
-                }
-            }
-        }
-        Ok(())
-    }
-}
 
 fn common_specializer_misspellings(term: &Term) -> Option<&str> {
     if let Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) = term.value() {
@@ -101,4 +143,24 @@ fn common_specializer_misspellings(term: &Term) -> Option<&str> {
         return Some(misspelled_type);
     }
     None
+}
+
+impl fmt::Display for WarningKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use WarningKind::*;
+
+        match self {
+            AmbiguousPrecedence { .. } => write!(f, "{}", AMBIGUOUS_PRECEDENCE_MSG)?,
+            MissingAllowRule => write!(f, "{}", MISSING_ALLOW_RULE_MSG)?,
+            MissingHasPermissionRule => write!(f, "{}", MISSING_HAS_PERMISSION_RULE_MSG)?,
+            UnknownSpecializer { term, sym } => {
+                write!(f, "Unknown specializer {}", sym)?;
+                if let Some(suggestion) = common_specializer_misspellings(term) {
+                    write!(f, ", did you mean {}?", suggestion)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
 }

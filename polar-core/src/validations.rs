@@ -6,7 +6,7 @@ use super::kb::*;
 use super::rules::*;
 use super::terms::*;
 use super::visitor::{walk_call, walk_rule, walk_term, Visitor};
-use super::warning::Warning;
+use super::warning::WarningKind;
 
 /// Record singleton variables and unknown specializers in a rule.
 struct SingletonVisitor<'kb> {
@@ -23,13 +23,17 @@ impl<'kb> SingletonVisitor<'kb> {
     }
 
     fn warnings(self) -> Vec<Diagnostic> {
-        let mut singletons = self.singletons.into_values().flatten().collect::<Vec<_>>();
-        singletons.sort_by_key(Term::offset);
+        let mut singletons = self
+            .singletons
+            .into_iter()
+            .flat_map(|(sym, term)| term.map(|t| (sym, t)))
+            .collect::<Vec<_>>();
+        singletons.sort_by_key(|(_, term)| term.offset());
         singletons
             .into_iter()
-            .map(|term| {
-                if let Value::Pattern(..) = term.value() {
-                    Diagnostic::Warning(Warning::UnknownSpecializer { term })
+            .map(|(sym, term)| {
+                if let Value::Pattern(_) = term.value() {
+                    Diagnostic::Warning(WarningKind::UnknownSpecializer { term, sym }.into())
                 } else {
                     Diagnostic::Error(
                         ValidationError::SingletonVariable { term }.with_context(self.kb),
@@ -84,7 +88,7 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
     fn warnings(self) -> Vec<Diagnostic> {
         self.unparenthesized_expr
             .into_iter()
-            .map(|term| Diagnostic::Warning(Warning::AmbiguousPrecedence { term }))
+            .map(|term| Diagnostic::Warning(WarningKind::AmbiguousPrecedence { term }.into()))
             .collect()
     }
 }
@@ -128,7 +132,7 @@ pub fn check_no_allow_rule(kb: &KnowledgeBase) -> Option<Diagnostic> {
     if has_allow || has_allow_field || has_allow_request {
         None
     } else {
-        Some(Diagnostic::Warning(Warning::MissingAllowRule))
+        Some(Diagnostic::Warning(WarningKind::MissingAllowRule.into()))
     }
 }
 
@@ -154,7 +158,9 @@ impl ResourceBlocksMissingHasPermissionVisitor {
 
     fn warnings(&mut self) -> Option<Diagnostic> {
         if !self.calls_has_permission {
-            return Some(Diagnostic::Warning(Warning::MissingHasPermissionRule));
+            return Some(Diagnostic::Warning(
+                WarningKind::MissingHasPermissionRule.into(),
+            ));
         }
         None
     }
