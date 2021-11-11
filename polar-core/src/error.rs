@@ -479,3 +479,7 @@ impl fmt::Display for ValidationError {
         }
     }
 }
+
+pub fn invalid_state_error<A>(msg: String) -> PolarResult<A> {
+    Err(OperationalError::InvalidState { msg }.into())
+}

@@ -4,11 +4,8 @@ use std::{
 };
 
 use crate::{
-    data_filtering::{
-        invalid_state_error, unregistered_field_error, unsupported_op_error, PartialResults, Type,
-        Types,
-    },
-    error::{PolarResult, RuntimeError},
+    data_filtering::{unregistered_field_error, unsupported_op_error, PartialResults, Type, Types},
+    error::{invalid_state_error, PolarResult, RuntimeError},
     events::ResultEvent,
     terms::*,
 };
@@ -20,31 +17,33 @@ type FieldName = String;
 type Map<A, B> = HashMap<A, B>;
 type Set<A> = HashSet<A>;
 
+#[derive(Clone, Eq, Debug, Serialize, PartialEq)]
+pub struct Filter {
+    root: TypeName, // the host already has this, so we could leave it off
+    relations: Set<Relation>,
+    conditions: Vec<Set<Condition>>,
+}
+
 #[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
-pub struct Proj(TypeName, Option<FieldName>);
+pub struct Relation(TypeName, FieldName, TypeName);
+
+#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
+pub struct Condition(Datum, Compare, Datum);
+
 #[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
 pub enum Datum {
     Field(Proj),
     Imm(Value),
 }
 
+#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
+pub struct Proj(TypeName, Option<FieldName>);
+
 #[derive(PartialEq, Debug, Serialize, Copy, Clone, Eq, Hash)]
 pub enum Compare {
     Eq,
     Neq,
     In,
-}
-
-#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
-pub struct Condition(Datum, Compare, Datum);
-#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
-pub struct Relation(TypeName, FieldName, TypeName);
-
-#[derive(Clone, Eq, Debug, Serialize, PartialEq)]
-pub struct Filter {
-    root: TypeName, // the host already has this, so we could leave it off
-    relations: Set<Relation>,
-    conditions: Vec<Set<Condition>>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq, Hash)]
@@ -74,25 +73,6 @@ impl PathVar {
             }
             Variable(Symbol(var)) => Ok(var.clone().into()),
             _ => invalid_state_error(format!("PathVar::from_term({})", t.to_polar())),
-        }
-    }
-}
-
-trait Sources {
-    fn sources(&self) -> Set<String>;
-}
-
-impl Sources for Proj {
-    fn sources(&self) -> Set<TypeName> {
-        singleton(self.0.clone())
-    }
-}
-
-impl Sources for Datum {
-    fn sources(&self) -> Set<String> {
-        match self {
-            Self::Field(proj) => proj.sources(),
-            _ => HashSet::new(),
         }
     }
 }

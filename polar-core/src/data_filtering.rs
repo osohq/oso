@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     counter::Counter,
-    error::{OperationalError, PolarResult, RuntimeError},
+    error::{invalid_state_error, PolarResult, RuntimeError},
     events::ResultEvent,
     filter::singleton,
     terms::*,
@@ -323,10 +323,6 @@ pub fn unregistered_field_error<A>(var_type: &str, field: &str) -> PolarResult<A
         field: field.to_string(),
     }
     .into())
-}
-
-pub fn invalid_state_error<A>(msg: String) -> PolarResult<A> {
-    Err(OperationalError::InvalidState { msg }.into())
 }
 
 impl FilterPlan {
