@@ -2814,10 +2814,10 @@ impl PolarVirtualMachine {
     }
 
     fn type_error(&self, term: &Term, msg: String) -> error::PolarError {
-        let stack_trace = self.stack_trace();
-        let error = error::RuntimeError::TypeError {
+        let error = RuntimeError::TypeError {
             msg,
-            stack_trace: Some(stack_trace),
+            stack_trace: self.stack_trace(),
+            term: term.clone(),
         };
         self.set_error_context(term, error)
     }

@@ -60,7 +60,7 @@ mod tests {
         fields.insert(Symbol::new("foo"), list_of);
         let dict = Term::new_from_test(Value::Dictionary(Dictionary { fields }));
         eprintln!("{}", serde_json::to_string(&dict).unwrap());
-        let e = error::ParseError::InvalidTokenCharacter {
+        let e = ParseError::InvalidTokenCharacter {
             token: "Integer".to_owned(),
             c: 'x',
             loc: 99,
