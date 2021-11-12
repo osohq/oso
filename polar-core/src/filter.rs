@@ -36,8 +36,31 @@ pub enum Datum {
     Imm(Value),
 }
 
+impl Datum {
+    pub fn explain(&self) {
+        match self {
+            Datum::Field(proj) => {
+                proj.explain();
+            }
+            Datum::Imm(value) => {
+                eprint!("{:?}", value);
+            }
+        }
+    }
+}
+
 #[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
 pub struct Proj(TypeName, Option<FieldName>);
+
+impl Proj {
+    pub fn explain(&self) {
+        let Proj(typename, field) = self;
+        eprint!("{}", typename);
+        if let Some(field) = field {
+            eprint!(".{}", field);
+        }
+    }
+}
 
 #[derive(PartialEq, Debug, Serialize, Copy, Clone, Eq, Hash)]
 pub enum Compare {
@@ -107,12 +130,26 @@ impl Filter {
         var: &str,
         class: &str,
     ) -> PolarResult<Self> {
+        let explain = std::env::var("POLAR_EXPLAIN").is_ok();
+
+        if explain {
+            eprintln!("\n===Data Filtering Query===");
+            eprintln!("\n==Bindings==")
+        }
+
         let var = Symbol(var.to_string());
         disjuncts
             .into_iter()
             .map(|disjunct| Self::from_result_event(&types, disjunct, &var, class))
             .reduce(|l, r| Ok(l?.union(r?)))
             .unwrap_or_else(|| Ok(Self::empty(class)))
+            .map(|filter| {
+                if explain {
+                    eprintln!("\n==Filter==");
+                    filter.explain();
+                }
+                filter
+            })
     }
 
     fn from_result_event(
@@ -121,9 +158,15 @@ impl Filter {
         var: &Symbol,
         class: &str,
     ) -> PolarResult<Self> {
+        let explain = std::env::var("POLAR_EXPLAIN").is_ok();
         part.bindings
             .get(var)
-            .map(|part| Self::from_partial(types, part, class))
+            .map(|part| {
+                if explain {
+                    eprintln!("{}", part.to_polar());
+                }
+                Self::from_partial(types, part, class)
+            })
             .unwrap_or_else(|| input_error(format!("unbound variable: {}", var.0)))
     }
 
@@ -175,6 +218,29 @@ impl Filter {
         other.conditions.extend(self.conditions);
         other.relations.extend(self.relations);
         other
+    }
+
+    fn explain(&self) {
+        eprintln!("query {}", self.root);
+        eprintln!("join");
+        for Relation(_, f, ot) in &self.relations {
+            eprintln!(" {} using {}", ot, f);
+        }
+        eprintln!("where");
+        for (i, s) in self.conditions.iter().enumerate() {
+            if i != 0 {
+                eprintln!("\n  OR");
+            }
+            for (i, Condition(l, op, r)) in s.iter().enumerate() {
+                if i != 0 {
+                    eprintln!(" AND");
+                }
+                eprint!("    ");
+                l.explain();
+                eprint!(" {:?} ", op);
+                r.explain();
+            }
+        }
     }
 }
 
