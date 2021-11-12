@@ -535,7 +535,7 @@ jobs:
         working-directory: go
 
   validate_go_macos_arm:
-    name: Test go on ${{ matrix.os }}
+    name: Test go on m1
     needs: [build_go]
     runs-on: [self-hosted, m1]
     steps:
@@ -549,8 +549,8 @@ jobs:
           name: go
       - name: "test"
         run: |
-          arch -arm64 go build
-          arch -arm64 go test -v ./tests/
+          arch -arm64 CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build
+          arch -arm64 CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go test -v ./tests/ 
         working-directory: go
 
   # validate_python_linux:
