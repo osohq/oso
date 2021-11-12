@@ -1401,17 +1401,14 @@ impl PolarVirtualMachine {
         }
     }
 
-    pub fn check_error(&self) -> PolarResult<QueryEvent> {
-        if let Some(error) = &self.external_error {
+    pub fn check_error(&mut self) -> PolarResult<QueryEvent> {
+        if let Some(msg) = self.external_error.take() {
             let term = match self.trace.last().map(|t| t.node.clone()) {
                 Some(Node::Term(t)) => Some(t),
                 _ => None,
             };
             let stack_trace = self.stack_trace();
-            let error = error::RuntimeError::Application {
-                msg: error.clone(),
-                stack_trace,
-            };
+            let error = error::RuntimeError::Application { msg, stack_trace };
             if let Some(term) = term {
                 Err(self.set_error_context(&term, error))
             } else {
