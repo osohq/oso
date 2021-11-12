@@ -272,7 +272,7 @@ pub enum RuntimeError {
     },
     Application {
         msg: String,
-        stack_trace: Option<String>,
+        stack_trace: String,
     },
     FileLoading {
         msg: String,
@@ -310,9 +310,7 @@ impl fmt::Display for RuntimeError {
             }
             Self::QueryTimeout { msg } => write!(f, "Query timeout: {}", msg),
             Self::Application { msg, stack_trace } => {
-                if let Some(stack_trace) = stack_trace {
-                    writeln!(f, "{}", stack_trace)?;
-                }
+                writeln!(f, "{}", stack_trace)?;
                 write!(f, "Application error: {}", msg)
             }
             Self::FileLoading { msg } => write!(f, "Problem loading file: {}", msg),
