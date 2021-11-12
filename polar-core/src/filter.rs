@@ -393,7 +393,7 @@ impl Display for Datum {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         use Datum::*;
         match self {
-            Imm(val) => write!(f, "{:?}", val),
+            Imm(val) => write!(f, "{}", val.to_polar()),
             Field(Proj(typ, None)) => write!(f, "{}", typ),
             Field(Proj(typ, Some(field))) => {
                 write!(f, "{}", typ)?;
