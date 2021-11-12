@@ -648,9 +648,9 @@ fn check_that_shorthand_rule_heads_are_declared_globally(
     let mut errors = vec![];
 
     let mut combined = HashMap::new();
-    combined.extend(declarations.into_iter());
+    combined.extend(declarations.iter());
     if let Some(existing) = kb.resource_blocks.declarations().get(resource) {
-        combined.extend(existing.into_iter());
+        combined.extend(existing.iter());
     }
 
     for ShorthandRule { head, .. } in shorthand_rules {
@@ -689,7 +689,7 @@ impl ResourceBlock {
         match index_declarations(roles, permissions, relations, &resource) {
             Ok(declarations) => {
                 errors.append(&mut check_that_shorthand_rule_heads_are_declared_globally(
-                    &kb,
+                    kb,
                     &shorthand_rules,
                     &declarations,
                     &resource,
