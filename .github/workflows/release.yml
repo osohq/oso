@@ -56,11 +56,11 @@ jobs:
           toolchain: stable
           override: true
       - name: Build release libraries
-        run: cargo build --release
+        run: cargo build --release -p polar-c-api
       - name: Build release musl library
         run: |
           rustup target add x86_64-unknown-linux-musl
-          RUSTFLAGS="-C target-feature=-crt-static" cargo build --target x86_64-unknown-linux-musl --release
+          RUSTFLAGS="-C target-feature=-crt-static" cargo build --target x86_64-unknown-linux-musl --release -p polar-c-api
       - name: Rename static lib
         run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
       - name: Rename static lib
@@ -99,13 +99,13 @@ jobs:
           toolchain: stable
           override: true
       - name: Build release library
-        run: cargo build --release
+        run: cargo build --release -p polar-c-api
       - name: Build release arm library
         run: |
           rustup target add aarch64-apple-darwin
           SDKROOT=$(xcrun -sdk macosx11.0 --show-sdk-path) \
             MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx11.0 --show-sdk-platform-version) \
-            cargo build --target aarch64-apple-darwin --release
+            cargo build --target aarch64-apple-darwin --release -p polar-c-api
       - name: Rename static lib
         run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
       - name: Rename static lib
@@ -153,11 +153,11 @@ jobs:
           toolchain: stable
           override: true
       - name: Build release library
-        run: cargo build --release
+        run: cargo build --release -p polar-c-api
       - name: Build release MinGW library
         run: |
           rustup target add x86_64-pc-windows-gnu
-          cargo build --target x86_64-pc-windows-gnu --release
+          cargo build --target x86_64-pc-windows-gnu --release -p polar-c-api
       - name: Rename static lib
         run: |
           mv -Force target/x86_64-pc-windows-gnu/release/libpolar.a target/x86_64-pc-windows-gnu/release/libpolar-${{runner.os}}.a
