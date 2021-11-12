@@ -371,14 +371,15 @@ impl KnowledgeBase {
         index: usize,
         rule_value: &Value,
         rule_type_value: &Value,
+        rule_type: &Rule,
     ) -> PolarResult<RuleParamMatch> {
         Ok(match (rule_type_value, rule_value) {
             // List in rule head must be equal to or more specific than the list in the rule type head in order to match
             (Value::List(rule_type_list), Value::List(rule_list)) => {
                 if has_rest_var(rule_type_list) {
-                    return Err(RuntimeError::TypeError {
+                    return Err(ValidationError::InvalidRuleType {
+                        rule_type: rule_type.to_polar(),
                         msg: "Rule types cannot contain *rest variables.".to_string(),
-                        stack_trace: None,
                     }
                     .into());
                 }
@@ -417,6 +418,7 @@ impl KnowledgeBase {
         index: usize,
         rule_param: &Parameter,
         rule_type_param: &Parameter,
+        rule_type: &Rule,
     ) -> PolarResult<RuleParamMatch> {
         Ok(
             match (
@@ -518,7 +520,7 @@ impl KnowledgeBase {
                 )
                 | (Value::Variable(_), Some(rule_type_value), rule_value, None)
                 | (rule_type_value, None, rule_value, None) => {
-                    self.check_value_param(index, rule_value, rule_type_value)?
+                    self.check_value_param(index, rule_value, rule_type_value, rule_type)?
                 }
                 _ => RuleParamMatch::False(format!(
                     "Invalid parameter {}. Rule parameter {} does not match rule type parameter {}",
@@ -545,7 +547,7 @@ impl KnowledgeBase {
             .zip(rule_type.params.iter())
             .enumerate()
             .map(|(i, (rule_param, rule_type_param))| {
-                self.check_param(i + 1, rule_param, rule_type_param)
+                self.check_param(i + 1, rule_param, rule_type_param, rule_type)
             })
             .collect::<PolarResult<Vec<RuleParamMatch>>>()
             .map(|results| {
