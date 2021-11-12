@@ -23,6 +23,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     class Planet < ActiveRecord::Base
       include DFH::ActiveRecordFetcher
       self.primary_key = :name
+      has_many :signs, foreign_key: :planet_name
     end
 
     context 'astrology' do
@@ -108,6 +109,92 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           end
         end
 
+        it 'test_nested_relationship_many_single' do
+          subject.load_str <<~POL
+            allow(_: Person{sign}, _, _: Planet{signs}) if sign in signs;
+          POL
+          Person.all.each do |person|
+            query = subject.authzd_query person, nil, Planet
+            expect(query.to_a).to eq [person.sign.planet]
+          end
+        end
+
+        it 'test_nested_relationship_many_many' do
+          subject.load_str <<~POL
+            allow(person: Person, _, _: Planet{signs}) if
+              person in signs.people;
+          POL
+
+          Person.all.each do |person|
+            query = subject.authzd_query person, nil, Planet
+            expect(query.to_a).to eq [person.sign.planet]
+          end
+        end
+
+        xit 'test_nested_relationship_many_many_constrained' do
+          subject.load_str <<~POL
+            allow(person: Person{name: "eden"}, _, _: Planet{signs}) if 
+              sign in signs and
+              person in sign.people;
+          POL
+
+          Person.all.each do |person|
+            query = subject.authzd_query person, nil, Planet
+            if person == eden
+              expect(query.to_a).to eq [person.sign.planet]
+            else
+              expect(query.to_a).to eq []
+            end
+          end
+        end
+
+        it 'test_partial_in_collection' do
+          subject.load_str(
+            'allow(_: Planet{signs}, _, sign: Sign) if sign in signs;'
+          )
+          Planet.all.each do |planet|
+            query = subject.authzd_query planet, nil, Sign
+            expect(query.to_a).to contain_exactly(*planet.signs)
+          end
+        end
+
+        xit 'test_empty_constraints_in' do
+          subject.load_str 'allow(_, _, _: Planet{signs}) if _ in signs;'
+          query = subject.authzd_query 'gwen', 'get', Planet
+          expect(query.to_a).to contain_exactly(*Planet.where.not(name: 'pluto'))
+        end
+
+        xit 'test_in_with_constraints_but_no_matching_object' do
+          subject.load_str <<~POL
+            allow(_, _, sign: Sign) if p in sign.people and p.name = "graham";
+          POL
+          query = subject.authzd_query 'gwen', 'get', Sign
+          expect(query.to_a).to be_empty
+        end
+
+        xit 'test_redundant_in_on_same_field' do
+          subject.load_str <<~POL
+            allow(_, _, _: Sign{people}) if
+              a in people and b in people and
+              a != b;
+          POL
+
+          query = subject.authzd_query 'gwen', 'read', Sign
+          expect(query.to_a).to be_empty
+        end
+
+        xit 'test_unify_ins' do
+          subject.load_str <<~POL
+            allow(_, _, _: Planet{signs}) if
+              s in signs and
+              t in signs and
+              s = t;
+          POL
+          query = subject.authzd_query 'gwen', 'read', Planet
+          puts query.to_sql
+          expect(query.to_a).to contain_exactly(*Planet.all)
+        end
+
         it 'test_partial_isa_with_path' do
           subject.load_str <<~POL
             allow(_, _, _: Person{sign}) if check(sign);
@@ -141,11 +228,85 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           expect(query.to_a).to eq([eden])
         end
 
+        xit 'test_duplex_relationship' do
+          subject.load_str <<~POL
+            allow(_, _, sign: Sign) if sign in sign.planet.signs;
+          POL
+
+          query = subject.authzd_query 'gwen', 'read', Sign
+          expect(query.to_a).to contain_exactly(*Sign.all)
+        end
+
         it 'test_scalar_in_list' do
           subject.load_str 'allow(_, _, _: Sign{planet}) if planet.name in ["sun", "moon"];'
           query = subject.authzd_query 'gwen', 'read', Sign
           expected = Sign.all.select { |sign| %w[sun moon].include? sign.planet.name }
           expect(query.to_a).to contain_exactly(*expected)
+        end
+
+        it 'test_var_in_vars' do
+          subject.load_str <<~POL
+            allow(_, _, _: Sign{people}) if
+              person in people and
+              person matches Person and
+              person.name = "eden";
+          POL
+          query = subject.authzd_query('gwen', 'read', Sign)
+          expect(query.to_a).to eq [eden.sign]
+        end
+
+        it 'test_parent_child_cases' do
+          subject.load_str <<~POL
+            allow(_: Person{sign}, 0, sign: Sign);
+            allow(person: Person, 1, _: Sign{people}) if person in people;
+            allow(person: Person{sign}, 2, sign: Sign{people}) if person in people;
+          POL
+
+          0.upto(2) do |n|
+            Person.all.each do |person|
+              query = subject.authzd_query(person, n, Sign)
+              expect(query.to_a).to eq [person.sign]
+            end
+          end
+        end
+
+        xit 'test_specializers' do
+          subject.load_str <<~POL
+            allow(sign, "NoneNone", person) if person.sign = sign;
+            allow(sign, "NoneCls", person: Person) if person.sign = sign;
+            allow(sign, "NoneDict", _: {sign});
+            allow(sign, "NonePtn", _: Person{sign});
+            allow(sign: Sign, "ClsNone", person) if sign = person.sign;
+            allow(sign: Sign, "ClsCls", person: Person) if sign = person.sign;
+            allow(sign: Sign, "ClsDict", _: {sign});
+            allow(sign: Sign, "ClsPtn", _: Person{sign});
+            allow(_: {people}, "DictNone", person) if person in people;
+            allow(_: {people}, "DictCls", person: Person) if person in people;
+            allow(sign: {people}, "DictDict", person: {sign}) if person in people;
+            allow(sign: {people}, "DictPtn", person: Person{sign}) if person in people;
+            allow(_: Sign{people}, "PtnNone", person) if person in people;
+            allow(_: Sign{people}, "PtnClass", person: Person) if person in people;
+            allow(sign: Sign{people}, "PtnDict", person: {sign}) if person in people;
+            allow(sign: Sign{people}, "PtnPtn", person: Person{sign}) if person in people;
+          POL
+          parts = %w[None Cls Dict Ptn]
+          parts.each do |a|
+            parts.each do |b|
+              Person.all.each do |person|
+                query = subject.authzd_query person.sign, a + b, Person
+                expect(query.to_a).to eq [person]
+              end
+            end
+          end
+        end
+
+        xit 'test_ground_object_in_collection' do
+        end
+
+        it 'test_var_in_value' do
+          subject.load_str 'allow(_, _, _: Person{name}) if name in ["leo", "mercury"];'
+          query = subject.authzd_query('gwen', 'get', Person)
+          expect(query.to_a).to contain_exactly(leo, mercury)
         end
 
         it 'test_field_eq' do
@@ -215,6 +376,10 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           database: DB_FILE
         )
 
+        %w[mars venus mercury moon sun jupiter saturn pluto].each do |name|
+          Planet.create name: name
+        end
+
         [%w[aries fire mars],
          %w[taurus earth venus],
          %w[gemini air mercury],
@@ -227,7 +392,6 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
          %w[capricorn earth saturn],
          %w[aquarius air saturn],
          %w[pisces water jupiter]].each do |name, element, planet|
-           Planet.create(name: planet) unless Planet.where(name: planet).any?
            Sign.create(name: name, element: element, planet: Planet.find(planet))
         end
 

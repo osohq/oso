@@ -213,8 +213,8 @@ impl QueryInfo {
         let pv = PathVar::from(var); // new var with empty path
                                      // what type is the base variable?
         let mut typ = match self.entities.get(&pv) {
-            None => pv.var, // FIXME(gw) evil hack, happens to make it work
             Some(c) => c.to_string(),
+            _ => return invalid_state_error(format!("unknown type for `{}`", pv.var)),
         };
 
         // the last part of the path is always allowed not to be a relation.
@@ -254,19 +254,30 @@ impl QueryInfo {
             .map_or_else(|_| Datum::Imm(x.value().clone()), Datum::Field)
     }
 
+    fn add_condition(&mut self, l: Datum, op: Compare, r: Datum) -> PolarResult<()> {
+        self.conditions.insert(Condition(l, op, r));
+        Ok(())
+    }
+
     /// digest a conjunct from the partial results & add a new constraint.
     fn add_constraint(&mut self, op: Operation) -> PolarResult<()> {
-        let cmp = match op.operator {
-            Operator::Unify => Compare::Eq,
-            Operator::Neq => Compare::Neq,
-            Operator::In => Compare::In,
-            _ => return unsupported_op_error(op),
-        };
-
+        use Datum::*;
         let (left, right) = (self.term2datum(&op.args[0]), self.term2datum(&op.args[1]));
-
-        self.conditions.insert(Condition(left, cmp, right));
-        Ok(())
+        match op.operator {
+            Operator::Unify =>
+                self.add_condition(left, Compare::Eq, right),
+            Operator::Neq =>
+                self.add_condition(left, Compare::Neq, right),
+            Operator::In => {
+                match (&left, &right) {
+                    (Imm(_), Field(Proj(_, None))) |
+                    (Field(Proj(_, None)), Field(Proj(_, None))) =>
+                        self.add_condition(left, Compare::Eq, right),
+                    _ => self.add_condition(left, Compare::In, right),
+                }
+            }
+            _ => unsupported_op_error(op),
+        }
     }
 
     fn build_filter(types: Types, parts: Vec<Operation>, class: &str) -> PolarResult<Filter> {
