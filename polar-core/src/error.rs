@@ -254,7 +254,7 @@ impl fmt::Display for ParseError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RuntimeError {
     ArithmeticError {
-        msg: String,
+        term: Term,
     },
     Unsupported {
         msg: String,
@@ -265,14 +265,15 @@ pub enum RuntimeError {
         term: Term,
     },
     StackOverflow {
-        limit: usize,
+        msg: String,
     },
     QueryTimeout {
         msg: String,
     },
     Application {
         msg: String,
-        stack_trace: Option<String>,
+        stack_trace: String,
+        term: Option<Term>,
     },
     FileLoading {
         msg: String,
@@ -297,7 +298,7 @@ pub enum RuntimeError {
 impl fmt::Display for RuntimeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::ArithmeticError { msg } => write!(f, "Arithmetic error: {}", msg),
+            Self::ArithmeticError { term } => write!(f, "Arithmetic error: {}", term),
             Self::Unsupported { msg } => write!(f, "Not supported: {}", msg),
             Self::TypeError {
                 msg, stack_trace, ..
@@ -305,14 +306,14 @@ impl fmt::Display for RuntimeError {
                 writeln!(f, "{}", stack_trace)?;
                 write!(f, "Type error: {}", msg)
             }
-            Self::StackOverflow { limit } => {
-                write!(f, "Goal stack overflow! MAX_GOALS = {}", limit)
+            Self::StackOverflow { msg } => {
+                write!(f, "{}", msg)
             }
             Self::QueryTimeout { msg } => write!(f, "Query timeout: {}", msg),
-            Self::Application { msg, stack_trace } => {
-                if let Some(stack_trace) = stack_trace {
-                    writeln!(f, "{}", stack_trace)?;
-                }
+            Self::Application {
+                msg, stack_trace, ..
+            } => {
+                writeln!(f, "{}", stack_trace)?;
                 write!(f, "Application error: {}", msg)
             }
             Self::FileLoading { msg } => write!(f, "Problem loading file: {}", msg),
