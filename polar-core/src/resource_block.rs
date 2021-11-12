@@ -1120,7 +1120,7 @@ mod tests {
                 roles=["member"];
                 "member" if "owner";
             }"#,
-            r#"Undeclared term "owner" referenced in rule in the 'Org' resource block. Did you mean to declare it as a role, permission, or relation?"#,
+            r#"Undeclared term "owner" referenced in rule in 'Org' resource block. Did you mean to declare it as a role, permission, or relation?"#,
         );
     }
 
