@@ -46,8 +46,8 @@ pub enum Compare {
     In,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq, Hash)]
-pub struct PathVar {
+#[derive(Clone, PartialEq, Eq, Hash)]
+struct PathVar {
     var: String,
     path: Vec<String>,
 }
@@ -110,7 +110,7 @@ impl Filter {
         let var = Symbol(var.to_string());
         disjuncts
             .into_iter()
-            .map(|part| Self::from_result_event(&types, part, &var, class))
+            .map(|disjunct| Self::from_result_event(&types, disjunct, &var, class))
             .reduce(|left, right| Ok(left?.union(right?)))
             .unwrap_or_else(|| Ok(Self::empty(class)))
     }
@@ -138,12 +138,9 @@ impl Filter {
                 args,
             }) => args
                 .iter()
-                .map(|arg| match arg.value().as_expression() {
-                    Ok(x) => Ok(x.clone()),
-                    Err(_) => input_error(arg.to_polar()),
-                })
-                .collect::<PolarResult<Vec<Operation>>>()
-                .and_then(|args| QueryInfo::build_filter(types.clone(), args, class)),
+                .map(|arg| Ok(arg.value().as_expression()?.clone()))
+                .collect::<PolarResult<Vec<_>>>()
+                .and_then(|conjuncts| QueryInfo::build_filter(types.clone(), conjuncts, class)),
 
             // sometimes we get an instance back. that means the variable
             // is exactly this instance, so return a filter that matches it.
@@ -253,12 +250,11 @@ impl QueryInfo {
         PathVar::from_term(x)
             .and_then(|pv| self.pathvar2proj(pv))
             .map(Datum::Field)
-            .or_else(|_| {
-                match x.value() {
-                    v@String(_) | v@Number(_) | v@Boolean(_) | v@ExternalInstance(_) =>
-                        Ok(Datum::Imm(v.clone())),
-                    _ => invalid_state_error(format!("illegal immediate value: {}", x.to_polar())),
+            .or_else(|_| match x.value() {
+                v @ String(_) | v @ Number(_) | v @ Boolean(_) | v @ ExternalInstance(_) => {
+                    Ok(Datum::Imm(v.clone()))
                 }
+                _ => invalid_state_error(format!("illegal immediate value: {}", x.to_polar())),
             })
     }
 
@@ -272,18 +268,14 @@ impl QueryInfo {
         use Datum::*;
         let (left, right) = (self.term2datum(&op.args[0])?, self.term2datum(&op.args[1])?);
         match op.operator {
-            Operator::Unify =>
-                self.add_condition(left, Compare::Eq, right),
-            Operator::Neq =>
-                self.add_condition(left, Compare::Neq, right),
-            Operator::In => {
-                match (&left, &right) {
-                    (Imm(_), Field(Proj(_, None))) |
-                    (Field(Proj(_, None)), Field(Proj(_, None))) =>
-                        self.add_condition(left, Compare::Eq, right),
-                    _ => self.add_condition(left, Compare::In, right),
+            Operator::Unify => self.add_condition(left, Compare::Eq, right),
+            Operator::Neq => self.add_condition(left, Compare::Neq, right),
+            Operator::In => match (&left, &right) {
+                (Imm(_), Field(Proj(_, None))) | (Field(Proj(_, None)), Field(Proj(_, None))) => {
+                    self.add_condition(left, Compare::Eq, right)
                 }
-            }
+                _ => self.add_condition(left, Compare::In, right),
+            },
             _ => unsupported_op_error(op),
         }
     }

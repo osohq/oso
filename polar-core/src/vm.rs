@@ -1335,7 +1335,7 @@ impl PolarVirtualMachine {
 
         self.log_with(
             || {
-                let mut msg = format!("LOOKUP: {}.{}", instance.to_string(), field_name);
+                let mut msg = format!("LOOKUP: {}.{}", instance, field_name);
                 msg.push('(');
                 let args = args
                     .clone()
@@ -2966,7 +2966,7 @@ impl Runnable for PolarVirtualMachine {
         // For example what happens if the call asked for a field that doesn't exist?
 
         if let Some(value) = term {
-            self.log_with(|| format!("=> {}", value.to_string()), &[]);
+            self.log_with(|| format!("=> {}", value), &[]);
 
             // Fetch variable to unify with call result.
             let sym = self.get_call_sym(call_id).to_owned();
