@@ -301,8 +301,10 @@ impl ResourceBlocks {
         declarations: Declarations,
         shorthand_rules: Vec<ShorthandRule>,
     ) -> PolarResult<()> {
+        // Check for duplicate existing shorthand rules and return a
+        // ValidationError if we discover one
         if let Some(existing_rules) = self.shorthand_rules.get(&resource) {
-            let existing: HashSet<&ShorthandRule> = existing_rules.into_iter().collect();
+            let existing: HashSet<&ShorthandRule> = existing_rules.iter().collect();
             for rule in &shorthand_rules {
                 if existing.contains(rule) {
                     return Err(ValidationError::DuplicateShorthandRule {
@@ -313,6 +315,7 @@ impl ResourceBlocks {
                 }
             }
         }
+
         // Merge existing declarations if we are reopening a resource block, otherwise add new
         if let Some(existing) = self.declarations.get_mut(&resource) {
             existing.extend(declarations.into_iter());
@@ -798,7 +801,9 @@ mod tests {
         let permissions = term!(["invite", "create_repo"]);
         let declarations = index_declarations(Some(roles), Some(permissions), None, &resource);
         let mut blocks = ResourceBlocks::new();
-        blocks.add(BlockType::Resource, resource, declarations.unwrap(), vec![]);
+        blocks
+            .add(BlockType::Resource, resource, declarations.unwrap(), vec![])
+            .unwrap();
         let shorthand_rule = ShorthandRule {
             head: term!("member"),
             body: (term!("owner"), None),
@@ -915,7 +920,7 @@ mod tests {
             has_role(actor: Actor, _role: String, repo: Repo) if
                repo in actor.repos;
         "#;
-        assert!(p.load_str(&valid_policy).is_ok());
+        assert!(p.load_str(valid_policy).is_ok());
         p.clear_rules();
 
         // Allow splitting permissions used in shorthand rules across multiple resource blocks.
@@ -933,7 +938,7 @@ mod tests {
             has_role(actor: Actor, _role: String, repo: Repo) if
                repo in actor.repos;
         "#;
-        assert!(p.load_str(&valid_policy).is_ok());
+        assert!(p.load_str(valid_policy).is_ok());
         p.clear_rules();
 
         // Allow relations in shorthand rules to be declared in earlier resource blocks
@@ -955,7 +960,7 @@ mod tests {
             has_role(actor: Actor, _role: String, repo: Repo) if
                 repo in actor.repos;
         "#;
-        assert!(p.load_str(&valid_policy).is_ok());
+        assert!(p.load_str(valid_policy).is_ok());
         p.clear_rules();
 
         // Multiple blocks can declare distinct roles/permissions/relations.
@@ -985,7 +990,7 @@ mod tests {
                 object.parent_id = subject.id;
         "#;
 
-        p.load_str(&valid_policy).unwrap();
+        p.load_str(valid_policy).unwrap();
         // Create explicit scope to allow the RWLock obtained from kb.read() to
         // be dropped explicitly and independently of the function scope.
         {
