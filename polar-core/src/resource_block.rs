@@ -639,14 +639,22 @@ fn shorthand_rule_head_to_params(head: &Term, resource: &Term) -> Vec<Parameter>
     ]
 }
 
-fn check_that_shorthand_rule_heads_are_declared_locally(
+fn check_that_shorthand_rule_heads_are_declared_globally(
+    kb: &KnowledgeBase,
     shorthand_rules: &[ShorthandRule],
     declarations: &Declarations,
     resource: &Term,
 ) -> Vec<PolarError> {
     let mut errors = vec![];
+
+    let mut combined = HashMap::new();
+    combined.extend(declarations.into_iter());
+    if let Some(existing) = kb.resource_blocks.declarations().get(resource) {
+        combined.extend(existing.into_iter());
+    }
+
     for ShorthandRule { head, .. } in shorthand_rules {
-        if !declarations.contains_key(head) {
+        if !combined.contains_key(head) {
             let msg = format!(
                 "Undeclared term {} referenced in rule in '{}' resource block. \
                 Did you mean to declare it as a role, permission, or relation?",
@@ -680,9 +688,12 @@ impl ResourceBlock {
 
         match index_declarations(roles, permissions, relations, &resource) {
             Ok(declarations) => {
-                // TODO: @patrickod re-add
-                // check_that_shorthand_rule_heads_are_declared_locally
-                // equivalent with merged resource block contents
+                errors.append(&mut check_that_shorthand_rule_heads_are_declared_globally(
+                    &kb,
+                    &shorthand_rules,
+                    &declarations,
+                    &resource,
+                ));
 
                 if let Err(e) =
                     kb.resource_blocks
@@ -917,6 +928,7 @@ mod tests {
 
               "read" if "reader";
             }
+
             has_role(actor: Actor, _role: String, repo: Repo) if
                repo in actor.repos;
         "#;
@@ -962,6 +974,27 @@ mod tests {
         "#;
         assert!(p.load_str(valid_policy).is_ok());
         p.clear_rules();
+
+        // Raise a validation error if shorthand rules reference declarations
+        // not found in any matching block
+        let invalid_policy = r#"
+            resource Repo {
+                permissions = ["write"];
+            }
+
+            resource Repo {
+                roles = ["reader"];
+                "read" if "reader";
+            }
+
+            has_role(actor: Actor, _role: String, repo: Repo) if
+                repo in actor.repos;
+        "#;
+        expect_error(
+            &p,
+            invalid_policy,
+            r#"Undeclared term "read" referenced in rule in 'Repo' resource block"#,
+        );
 
         // Multiple blocks can declare distinct roles/permissions/relations.
         let valid_policy = r#"
