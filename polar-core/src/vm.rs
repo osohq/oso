@@ -1971,12 +1971,8 @@ impl PolarVirtualMachine {
                     })?;
                     Ok(QueryEvent::None)
                 } else {
-                    Err(self.set_error_context(
-                        term,
-                        error::RuntimeError::ArithmeticError {
-                            msg: term.to_polar(),
-                        },
-                    ))
+                    let e = RuntimeError::ArithmeticError { term: term.clone() };
+                    Err(self.set_error_context(term, e))
                 }
             }
             (_, _) => Err(self.set_error_context(
