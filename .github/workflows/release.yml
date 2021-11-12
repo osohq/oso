@@ -549,8 +549,8 @@ jobs:
           name: go
       - name: "test"
         run: |
-          arch -arm64 go build
-          arch -arm64 go test -v ./tests/ 
+          go build
+          go test -v ./tests/ 
         working-directory: go
         env:
           CGO_ENABLED: 1
