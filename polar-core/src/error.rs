@@ -470,7 +470,7 @@ impl fmt::Display for ValidationError {
             } => {
                 write!(
                     f,
-                    "Duplicate shorthand rule `{}` for resource {}",
+                    "Duplicate shorthand rule `{}` declared for resource {}",
                     shorthand_rule.to_polar(),
                     resource
                 )
