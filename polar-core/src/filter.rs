@@ -111,7 +111,7 @@ impl Filter {
         disjuncts
             .into_iter()
             .map(|disjunct| Self::from_result_event(&types, disjunct, &var, class))
-            .reduce(|left, right| Ok(left?.union(right?)))
+            .reduce(|l, r| Ok(l?.union(r?)))
             .unwrap_or_else(|| Ok(Self::empty(class)))
     }
 
@@ -121,11 +121,10 @@ impl Filter {
         var: &Symbol,
         class: &str,
     ) -> PolarResult<Self> {
-        use RuntimeError::IncompatibleBindings;
         part.bindings
             .get(var)
-            .ok_or_else(|| IncompatibleBindings { msg: var.0.clone() }.into())
-            .and_then(|part| Self::from_partial(types, part, class))
+            .map(|part| Self::from_partial(types, part, class))
+            .unwrap_or_else(|| input_error(format!("unbound variable: {}", var.0)))
     }
 
     fn from_partial(types: &Types, term: &Term, class: &str) -> PolarResult<Self> {
@@ -163,7 +162,7 @@ impl Filter {
         use {Datum::Imm, Value::Boolean};
         Self {
             root: class.to_string(),
-            relations: HashSet::new(),
+            relations: Default::default(),
             conditions: vec![singleton(Condition(
                 Imm(Boolean(true)),
                 Compare::Eq,
@@ -246,15 +245,15 @@ impl QueryInfo {
     }
 
     fn term2datum(&mut self, x: &Term) -> PolarResult<Datum> {
-        use Value::*;
+        use {Datum::*, Value::*};
         PathVar::from_term(x)
             .and_then(|pv| self.pathvar2proj(pv))
-            .map(Datum::Field)
+            .map(Field)
             .or_else(|_| match x.value() {
                 v @ String(_) | v @ Number(_) | v @ Boolean(_) | v @ ExternalInstance(_) => {
-                    Ok(Datum::Imm(v.clone()))
+                    Ok(Imm(v.clone()))
                 }
-                _ => invalid_state_error(format!("illegal immediate value: {}", x.to_polar())),
+                _ => invalid_state_error(format!("invalid immediate value: {}", x.to_polar())),
             })
     }
 
@@ -326,7 +325,5 @@ pub fn singleton<X>(x: X) -> Set<X>
 where
     X: Hash + Eq,
 {
-    let mut set = HashSet::new();
-    set.insert(x);
-    set
+    std::iter::once(x).collect()
 }
