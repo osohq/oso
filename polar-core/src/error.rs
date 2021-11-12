@@ -273,15 +273,18 @@ impl fmt::Display for ParseError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RuntimeError {
     ArithmeticError {
+        /// Term<Operation> where the error arose, tracked for lexical context.
         term: Term,
     },
     Unsupported {
         msg: String,
+        /// Term where the error arose, tracked for lexical context.
         term: Term,
     },
     TypeError {
         msg: String,
         stack_trace: String,
+        /// Term where the error arose, tracked for lexical context.
         term: Term,
     },
     StackOverflow {
@@ -293,6 +296,7 @@ pub enum RuntimeError {
     Application {
         msg: String,
         stack_trace: String,
+        /// Option<Term> where the error arose, tracked for lexical context.
         term: Option<Term>,
     },
     FileLoading {
@@ -303,7 +307,9 @@ pub enum RuntimeError {
     },
     UnhandledPartial {
         var: Symbol,
+        /// Simplified term for pretty printing. If it's `None`, fall back to printing `term`.
         simplified: Option<Term>,
+        /// Term where the error arose, tracked for lexical context.
         term: Term,
     },
     DataFilteringFieldMissing {
