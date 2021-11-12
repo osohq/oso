@@ -55,17 +55,17 @@ impl Trace {
 }
 
 /// Traverse a [`Source`](../types/struct.Source.html) line by line until `offset` is reached and
-/// return the source line containing the `offset` character as well as `num_lines` lines above and
-/// below it.
+/// return the source line containing the `offset` character as well as `context_lines` lines above
+/// and below it.
 // @TODO: Can we have the caret under the whole range of the expression instead of just the beginning.
-pub fn source_lines(source: &Source, offset: usize, num_lines: usize) -> String {
+pub fn source_lines(source: &Source, offset: usize, context_lines: usize) -> String {
     let (target_line, target_column) = loc_to_pos(&source.src, offset);
-    // Skip everything up to the first line of requested context (`target_line - num_lines`), but
-    // don't overflow if `num_lines > target_line`.
-    let skipped_lines = target_line.saturating_sub(num_lines);
+    // Skip everything up to the first line of requested context (`target_line - context_lines`),
+    // but don't overflow if `context_lines > target_line`.
+    let skipped_lines = target_line.saturating_sub(context_lines);
     let lines = source.src.lines().skip(skipped_lines);
-    // Take window of lines comprising current line + `num_lines` context above & below.
-    let lines = lines.take(1 + num_lines * 2).enumerate();
+    // Take window of lines comprising current line + `context_lines` of context above & below.
+    let lines = lines.take(1 + context_lines * 2).enumerate();
     // Format each line with its line number.
     let mut lines: Vec<_> = lines
         .map(|(i, line)| format!("{:03}: {}", i + skipped_lines + 1, line))
