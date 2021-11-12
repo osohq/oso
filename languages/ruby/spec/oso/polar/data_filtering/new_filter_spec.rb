@@ -131,10 +131,11 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           end
         end
 
-        xit 'test_nested_relationship_many_many_constrained' do
+        it 'test_nested_relationship_many_many_constrained' do
           subject.load_str <<~POL
             allow(person: Person{name: "eden"}, _, _: Planet{signs}) if 
               sign in signs and
+              sign matches Sign and
               person in sign.people;
           POL
 
@@ -158,24 +159,32 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           end
         end
 
-        xit 'test_empty_constraints_in' do
-          subject.load_str 'allow(_, _, _: Planet{signs}) if _ in signs;'
+        it 'test_empty_constraints_in' do
+          subject.load_str <<~POL
+            allow(_, _, _: Planet{signs}) if
+              sign matches Sign and
+              sign in signs;
+          POL
           query = subject.authzd_query 'gwen', 'get', Planet
           expect(query.to_a).to contain_exactly(*Planet.where.not(name: 'pluto'))
         end
 
-        xit 'test_in_with_constraints_but_no_matching_object' do
+        it 'test_in_with_constraints_but_no_matching_object' do
           subject.load_str <<~POL
-            allow(_, _, sign: Sign) if p in sign.people and p.name = "graham";
+            allow(_, _, sign: Sign) if
+              p in sign.people and
+              p matches Person and
+              p.name = "graham";
           POL
           query = subject.authzd_query 'gwen', 'get', Sign
           expect(query.to_a).to be_empty
         end
 
-        xit 'test_redundant_in_on_same_field' do
+        it 'test_redundant_in_on_same_field' do
           subject.load_str <<~POL
             allow(_, _, _: Sign{people}) if
               a in people and b in people and
+              a matches Person and b matches Person and
               a != b;
           POL
 
@@ -183,16 +192,16 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           expect(query.to_a).to be_empty
         end
 
-        xit 'test_unify_ins' do
+        it 'test_unify_ins' do
           subject.load_str <<~POL
             allow(_, _, _: Planet{signs}) if
-              s in signs and
-              t in signs and
+              s in signs and t in signs and
+              s matches Sign and t matches Sign and
               s = t;
           POL
           query = subject.authzd_query 'gwen', 'read', Planet
           puts query.to_sql
-          expect(query.to_a).to contain_exactly(*Planet.all)
+          expect(query.to_a).to contain_exactly(*Planet.where.not(name: 'pluto'))
         end
 
         it 'test_partial_isa_with_path' do

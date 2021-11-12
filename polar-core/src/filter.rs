@@ -248,10 +248,18 @@ impl QueryInfo {
         Ok(Proj(typ, field))
     }
 
-    fn term2datum(&mut self, x: &Term) -> Datum {
+    fn term2datum(&mut self, x: &Term) -> PolarResult<Datum> {
+        use Value::*;
         PathVar::from_term(x)
             .and_then(|pv| self.pathvar2proj(pv))
-            .map_or_else(|_| Datum::Imm(x.value().clone()), Datum::Field)
+            .map(Datum::Field)
+            .or_else(|_| {
+                match x.value() {
+                    v@String(_) | v@Number(_) | v@Boolean(_) | v@ExternalInstance(_) =>
+                        Ok(Datum::Imm(v.clone())),
+                    _ => invalid_state_error(format!("illegal immediate value: {}", x.to_polar())),
+                }
+            })
     }
 
     fn add_condition(&mut self, l: Datum, op: Compare, r: Datum) -> PolarResult<()> {
@@ -262,7 +270,7 @@ impl QueryInfo {
     /// digest a conjunct from the partial results & add a new constraint.
     fn add_constraint(&mut self, op: Operation) -> PolarResult<()> {
         use Datum::*;
-        let (left, right) = (self.term2datum(&op.args[0]), self.term2datum(&op.args[1]));
+        let (left, right) = (self.term2datum(&op.args[0])?, self.term2datum(&op.args[1])?);
         match op.operator {
             Operator::Unify =>
                 self.add_condition(left, Compare::Eq, right),

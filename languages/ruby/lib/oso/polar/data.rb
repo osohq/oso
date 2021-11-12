@@ -28,7 +28,7 @@ module Oso
             conjs.reduce(q) do |q, conj|
               q.where(*conj.to_sql_args)
             end
-          end.reduce(:or)
+          end.reduce(:or).distinct
         end
 
         def self.parse(polar, blob)
