@@ -530,10 +530,8 @@ impl PolarVirtualMachine {
     pub fn push_goal(&mut self, goal: Goal) -> PolarResult<()> {
         use {Goal::*, VariableState::Unbound};
         if self.goals.len() >= self.stack_limit {
-            Err(error::RuntimeError::StackOverflow {
-                limit: self.stack_limit,
-            }
-            .into())
+            let msg = format!("Goal stack overflow! MAX_GOALS = {}", self.stack_limit);
+            Err(RuntimeError::StackOverflow { msg }.into())
         } else if matches!(goal, LookupExternal { call_id, ..} | NextExternal { call_id, .. } if self.variable_state(self.get_call_sym(call_id)) != Unbound)
         {
             invalid_state("The call_id result variables for LookupExternal and NextExternal goals must be unbound.".to_string())
@@ -565,7 +563,8 @@ impl PolarVirtualMachine {
             .map(GoalStack::new_reversed)
             .collect();
         if self.choices.len() >= self.stack_limit {
-            invalid_state("Too many choices.".to_string())
+            let msg = "Too many choices.".to_owned();
+            Err(RuntimeError::StackOverflow { msg }.into())
         } else {
             self.choices.push(Choice {
                 alternatives,
