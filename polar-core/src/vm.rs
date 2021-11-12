@@ -178,7 +178,12 @@ fn invalid_state<A>(msg: String) -> PolarResult<A> {
     Err(OperationalError::InvalidState { msg }.into())
 }
 
-pub fn compare(op: Operator, left: &Term, right: &Term) -> PolarResult<bool> {
+pub fn compare(
+    op: Operator,
+    left: &Term,
+    right: &Term,
+    context: Option<&Term>,
+) -> PolarResult<bool> {
     use {Operator::*, Value::*};
     // Coerce booleans to integers.
     // FIXME(gw) why??
@@ -204,10 +209,14 @@ pub fn compare(op: Operator, left: &Term, right: &Term) -> PolarResult<bool> {
         (Number(l), Boolean(r)) => compare(op, l, &to_int(*r)),
         (Number(l), Number(r)) => compare(op, l, r),
         (String(l), String(r)) => compare(op, l, r),
-        _ => Err(error::RuntimeError::Unsupported {
-            msg: format!("{} {} {}", left.to_polar(), op.to_polar(), right.to_polar()),
+        _ => {
+            let context = context.expect("should only be None in Grounder, where we unwrap anyway");
+            Err(RuntimeError::Unsupported {
+                msg: context.to_string(),
+                term: context.clone(),
+            }
+            .into())
         }
-        .into()),
     }
 }
 
@@ -1690,12 +1699,11 @@ impl PolarVirtualMachine {
             }
             Operator::Cut => {
                 if self.query_contains_partial {
-                    return Err(self.set_error_context(
-                        term,
-                        error::RuntimeError::Unsupported {
-                            msg: "cannot use cut with partial evaluation".to_string(),
-                        },
-                    ));
+                    let e = RuntimeError::Unsupported {
+                        msg: "cannot use cut with partial evaluation".to_owned(),
+                        term: term.clone(),
+                    };
+                    return Err(self.set_error_context(term, e));
                 }
 
                 // Remove all choices created before this cut that are in the
@@ -1915,7 +1923,7 @@ impl PolarVirtualMachine {
                 })
             }
             _ => {
-                if !compare(*op, left, right)? {
+                if !compare(*op, left, right, Some(term))? {
                     self.push_goal(Goal::Backtrack)?;
                 }
                 Ok(QueryEvent::None)
@@ -1956,12 +1964,11 @@ impl PolarVirtualMachine {
                     Operator::Mod => (*left).modulo(*right),
                     Operator::Rem => *left % *right,
                     _ => {
-                        return Err(self.set_error_context(
-                            term,
-                            error::RuntimeError::Unsupported {
-                                msg: format!("numeric operation {}", op.to_polar()),
-                            },
-                        ));
+                        let e = RuntimeError::Unsupported {
+                            msg: format!("numeric operation {}", op.to_polar()),
+                            term: term.clone(),
+                        };
+                        return Err(self.set_error_context(term, e));
                     }
                 } {
                     self.push_goal(Goal::Unify {
@@ -1976,8 +1983,9 @@ impl PolarVirtualMachine {
             }
             (_, _) => Err(self.set_error_context(
                 term,
-                error::RuntimeError::Unsupported {
-                    msg: format!("unsupported arithmetic operands: {}", term.to_polar()),
+                RuntimeError::Unsupported {
+                    msg: format!("unsupported arithmetic operands: {}", term),
+                    term: term.clone(),
                 },
             )),
         }
@@ -2031,8 +2039,9 @@ impl PolarVirtualMachine {
                 if matches!(field.value(), Value::Call(_)) {
                     return Err(self.set_error_context(
                         object,
-                        error::RuntimeError::Unsupported {
+                        RuntimeError::Unsupported {
                             msg: format!("cannot call method on unbound variable {}", v),
+                            term: object.clone(),
                         },
                     ));
                 }

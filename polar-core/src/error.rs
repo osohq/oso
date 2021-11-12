@@ -258,6 +258,7 @@ pub enum RuntimeError {
     },
     Unsupported {
         msg: String,
+        term: Term,
     },
     TypeError {
         msg: String,
@@ -299,7 +300,7 @@ impl fmt::Display for RuntimeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::ArithmeticError { term } => write!(f, "Arithmetic error: {}", term),
-            Self::Unsupported { msg } => write!(f, "Not supported: {}", msg),
+            Self::Unsupported { msg, .. } => write!(f, "Not supported: {}", msg),
             Self::TypeError {
                 msg, stack_trace, ..
             } => {
