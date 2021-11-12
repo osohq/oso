@@ -1408,7 +1408,11 @@ impl PolarVirtualMachine {
                 _ => None,
             };
             let stack_trace = self.stack_trace();
-            let error = error::RuntimeError::Application { msg, stack_trace };
+            let error = RuntimeError::Application {
+                msg,
+                stack_trace,
+                term: term.clone(),
+            };
             if let Some(term) = term {
                 Err(self.set_error_context(&term, error))
             } else {

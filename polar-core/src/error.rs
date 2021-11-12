@@ -273,6 +273,7 @@ pub enum RuntimeError {
     Application {
         msg: String,
         stack_trace: String,
+        term: Option<Term>,
     },
     FileLoading {
         msg: String,
@@ -309,7 +310,9 @@ impl fmt::Display for RuntimeError {
                 write!(f, "Goal stack overflow! MAX_GOALS = {}", limit)
             }
             Self::QueryTimeout { msg } => write!(f, "Query timeout: {}", msg),
-            Self::Application { msg, stack_trace } => {
+            Self::Application {
+                msg, stack_trace, ..
+            } => {
                 writeln!(f, "{}", stack_trace)?;
                 write!(f, "Application error: {}", msg)
             }
