@@ -12,7 +12,7 @@ ifeq ($(UNAME_S),Linux)
 	cp ../../target/debug/libpolar.a internal/ffi/native/linux/
 endif
 ifeq ($(UNAME_S),Darwin)
-	cp ../../target/debug/libpolar.a internal/ffi/native/macos/
+	cp ../../target/debug/libpolar.a internal/ffi/native/macos/amd64/
 endif
 
 test: copy_lib
