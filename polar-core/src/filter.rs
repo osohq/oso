@@ -47,7 +47,7 @@ pub enum Compare {
     In,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 struct PathVar {
     var: String,
     path: Vec<String>,
@@ -56,6 +56,13 @@ struct PathVar {
 impl From<String> for PathVar {
     fn from(var: String) -> Self {
         Self { var, path: vec![] }
+    }
+}
+
+impl From<Proj> for PathVar {
+    fn from(Proj(var, field): Proj) -> Self {
+        let path = field.into_iter().collect();
+        PathVar { var, path }
     }
 }
 
@@ -102,12 +109,7 @@ impl Operation {
 }
 
 impl Filter {
-    pub fn build(
-        types: Types,
-        disjuncts: PartialResults,
-        var: &str,
-        class: &str,
-    ) -> PolarResult<Self> {
+    pub fn build(types: Types, ors: PartialResults, var: &str, class: &str) -> PolarResult<Self> {
         let explain = std::env::var("POLAR_EXPLAIN").is_ok();
 
         if explain {
@@ -116,9 +118,9 @@ impl Filter {
         }
 
         let var = Symbol(var.to_string());
-        let filter = disjuncts
+        let filter = ors
             .into_iter()
-            .map(|disjunct| Self::from_result_event(&types, disjunct, &var, class))
+            .map(|ands| Self::from_result_event(&types, ands, &var, class))
             .reduce(|l, r| Ok(l?.union(r?)))
             .unwrap_or_else(|| Ok(Self::empty(class)))?;
 
@@ -131,24 +133,24 @@ impl Filter {
 
     fn from_result_event(
         types: &Types,
-        part: ResultEvent,
+        ands: ResultEvent,
         var: &Symbol,
         class: &str,
     ) -> PolarResult<Self> {
-        part.bindings
+        ands.bindings
             .get(var)
-            .map(|part| Self::from_partial(types, part, class))
+            .map(|ands| Self::from_partial(types, ands, class))
             .unwrap_or_else(|| input_error(format!("unbound variable: {}", var.0)))
     }
 
-    fn from_partial(types: &Types, term: &Term, class: &str) -> PolarResult<Self> {
+    fn from_partial(types: &Types, ands: &Term, class: &str) -> PolarResult<Self> {
         use {Datum::*, Operator::*, Value::*};
 
         if std::env::var("POLAR_EXPLAIN").is_ok() {
-            eprintln!("{}", term.to_polar());
+            eprintln!("{}", ands.to_polar());
         }
 
-        match term.value() {
+        match ands.value() {
             // most of the time we're dealing with expressions from the
             // simplifier.
             Expression(Operation {
@@ -156,9 +158,9 @@ impl Filter {
                 args,
             }) => args
                 .iter()
-                .map(|arg| Ok(arg.value().as_expression()?.clone()))
+                .map(|and| Ok(and.value().as_expression()?.clone()))
                 .collect::<PolarResult<Vec<_>>>()
-                .and_then(|conjuncts| QueryInfo::build_filter(types.clone(), conjuncts, class)),
+                .and_then(|ands| QueryInfo::build_filter(types.clone(), ands, class)),
 
             // sometimes we get an instance back. that means the variable
             // is exactly this instance, so return a filter that matches it.
@@ -173,7 +175,7 @@ impl Filter {
             }),
 
             // oops, we don't know how to handle this!
-            _ => input_error(term.to_polar()),
+            _ => input_error(ands.to_polar()),
         }
     }
 
@@ -222,13 +224,13 @@ impl QueryInfo {
         }
     }
 
-    /// turn a pathvar into a projection and a set of addl relations
+    /// turn a pathvar into a projection
     fn pathvar2proj(&mut self, pv: PathVar) -> PolarResult<Proj> {
         let PathVar { mut path, var } = pv;
-        let pv = PathVar::from(var); // new var with empty path
-                                     // what type is the base variable?
-        let mut typ = match self.entities.get(&pv) {
-            Some(c) => c.to_string(),
+        let mut pv = PathVar::from(var); // new var with empty path
+                                         // what type is the base variable?
+        let mut typ = match self.get_type(pv.clone()) {
+            Some(typ) => typ,
             _ => return invalid_state_error(format!("unknown type for `{}`", pv.var)),
         };
 
@@ -243,6 +245,8 @@ impl QueryInfo {
                 None => return unregistered_field_error(&typ, &dot),
                 Some(rel) => {
                     typ = rel.2.clone();
+                    pv.path.push(rel.1.clone());
+                    self.entities.insert(pv.clone(), typ.clone());
                     self.relations.insert(rel);
                 }
             }
@@ -251,29 +255,26 @@ impl QueryInfo {
         // if the last path component names a relation from typ to typ'
         // then typ' is the new type and field is None. otherwise,
         // typ & field stay the same.
-        let (typ, field) = match field.as_ref().and_then(|dot| self.get_relation(&typ, dot)) {
-            None => (typ, field),
+        let proj = match field.as_ref().and_then(|dot| self.get_relation(&typ, dot)) {
+            None => Proj(typ, field),
             Some(rel) => {
                 let tag = rel.2.clone();
+                pv.path.push(rel.1.clone());
+                self.entities.insert(pv, tag.clone());
                 self.relations.insert(rel);
-                (tag, None)
+                Proj(tag, None)
             }
         };
 
-        Ok(Proj(typ, field))
+        Ok(proj)
     }
 
     fn term2datum(&mut self, x: &Term) -> PolarResult<Datum> {
-        use {Datum::*, Value::*};
-        PathVar::from_term(x)
-            .and_then(|pv| self.pathvar2proj(pv))
-            .map(Field)
-            .or_else(|_| match x.value() {
-                v @ String(_) | v @ Number(_) | v @ Boolean(_) | v @ ExternalInstance(_) => {
-                    Ok(Imm(v.clone()))
-                }
-                _ => invalid_state_error(format!("invalid immediate value: {}", x.to_polar())),
-            })
+        use Datum::*;
+        match PathVar::from_term(x) {
+            Ok(pv) => Ok(Field(self.pathvar2proj(pv)?)),
+            _ => Ok(Imm(x.value().clone())),
+        }
     }
 
     fn add_condition(&mut self, l: Datum, op: Compare, r: Datum) -> PolarResult<()> {
@@ -281,14 +282,33 @@ impl QueryInfo {
         Ok(())
     }
 
+    fn get_type(&mut self, pv: PathVar) -> Option<String> {
+        self.entities.get(&pv).cloned().or_else(|| {
+            let pv2 = pv.var.clone().into();
+            let mut typ = self.entities.get(&pv2)?;
+            for dot in pv.path.iter() {
+                match self.types.get(typ)?.get(dot)? {
+                    Type::Relation {
+                        other_class_tag, ..
+                    } => typ = other_class_tag,
+                    _ => return None,
+                }
+            }
+
+            let typ = typ.clone();
+            self.entities.insert(pv, typ.clone());
+            Some(typ)
+        })
+    }
+
     /// digest a conjunct from the partial results & add a new constraint.
     fn add_constraint(&mut self, op: Operation) -> PolarResult<()> {
-        use Datum::*;
+        use {Datum::*, Operator::*};
         let (left, right) = (self.term2datum(&op.args[0])?, self.term2datum(&op.args[1])?);
         match op.operator {
-            Operator::Unify => self.add_condition(left, Compare::Eq, right),
-            Operator::Neq => self.add_condition(left, Compare::Neq, right),
-            Operator::In => match (&left, &right) {
+            Unify => self.add_condition(left, Compare::Eq, right),
+            Neq => self.add_condition(left, Compare::Neq, right),
+            In => match (&left, &right) {
                 (Imm(_), Field(Proj(_, None))) | (Field(Proj(_, None)), Field(Proj(_, None))) => {
                     self.add_condition(left, Compare::Eq, right)
                 }
@@ -296,6 +316,47 @@ impl QueryInfo {
             },
             _ => unsupported_op_error(op),
         }
+    }
+
+    fn with_constraints(mut self, ops: Set<Operation>) -> PolarResult<Self> {
+        let equivs = ops.iter().filter_map(|Operation { operator, args }| {
+            use Operator::*;
+            let (l, r) = (
+                PathVar::from_term(&args[0]).ok()?,
+                PathVar::from_term(&args[1]).ok()?,
+            );
+            match operator {
+                Unify | In => Some((l, r)),
+                _ => None,
+            }
+        });
+
+        crate::data_filtering::partition_equivs(equivs)
+            .into_iter()
+            .map(std::rc::Rc::new)
+            .flat_map(|cls| {
+                cls.iter()
+                    .cloned()
+                    .map(|pv| (pv, cls.clone()))
+                    .collect::<Vec<_>>()
+            })
+            .filter_map(|(k, v)| {
+                v.iter()
+                    .find_map(|eq| self.get_type(eq.clone()))
+                    .map(|t| (k, t))
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
+            .for_each(|(k, t)| {
+                self.entities.insert(k, t);
+            });
+
+        // each partial adds a constraint and may add relations
+        for op in ops {
+            self.add_constraint(op)?;
+        }
+
+        Ok(self)
     }
 
     fn build_filter(types: Types, parts: Vec<Operation>, class: &str) -> PolarResult<Filter> {
@@ -310,23 +371,16 @@ impl QueryInfo {
             .filter_map(|op| op.into_entity())
             .collect::<PolarResult<_>>()?;
 
-        // start with types & entities
-        let mut this = Self {
-            types,
-            entities,
-            ..Default::default()
-        };
-
-        // each partial adds a constraint and may add relations
-        for op in othas {
-            this.add_constraint(op)?;
-        }
-
         let Self {
             conditions,
             relations,
             ..
-        } = this;
+        } = Self {
+            types,
+            entities,
+            ..Default::default()
+        }.with_constraints(othas)?;
+
 
         Ok(Filter {
             relations,
@@ -395,10 +449,7 @@ impl Display for Datum {
         match self {
             Imm(val) => write!(f, "{}", val.to_polar()),
             Field(Proj(typ, None)) => write!(f, "{}", typ),
-            Field(Proj(typ, Some(field))) => {
-                write!(f, "{}", typ)?;
-                write!(f, ".{}", field)
-            }
+            Field(Proj(typ, Some(field))) => write!(f, "{}.{}", typ, field),
         }
     }
 }

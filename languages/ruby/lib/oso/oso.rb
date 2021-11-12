@@ -230,6 +230,10 @@ module Oso
       data_filter.to_query(host.types)
     end
 
+    def authzd_resources(actor, action, resource_cls)
+      authzd_query(actor, action, resource_cls).to_a
+    end
+
     # Determine the resources of type +resource_cls+ that +actor+
     # is allowed to perform +action+ on.
     #
