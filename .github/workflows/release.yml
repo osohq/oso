@@ -547,10 +547,13 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: go
+      # go 1.16 is the earliest version supported on m1
       - name: "test"
         run: |
-          go build
-          go test -v ./tests/ 
+          ~/go/bin/go1.16 build
+          ~/go/bin/go1.16 test -v ./tests/ 
+          ~/go/bin/go1.17 build
+          ~/go/bin/go1.17 test -v ./tests/ 
         working-directory: go
         env:
           CGO_ENABLED: 1
