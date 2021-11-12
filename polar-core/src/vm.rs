@@ -1,37 +1,32 @@
-use std::cell::RefCell;
-use std::collections::BTreeMap;
-use std::collections::{HashMap, HashSet};
-use std::fmt::Write;
-use std::rc::Rc;
-use std::string::ToString;
-use std::sync::{Arc, RwLock, RwLockReadGuard};
+use std::{
+    cell::RefCell,
+    collections::BTreeMap,
+    collections::{HashMap, HashSet},
+    fmt::Write,
+    rc::Rc,
+    string::ToString,
+    sync::{Arc, RwLock, RwLockReadGuard},
+};
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
-use super::visitor::{walk_term, Visitor};
-use crate::bindings::{
-    Binding, BindingManager, BindingStack, Bindings, Bsp, FollowerId, VariableState,
+use crate::{
+    events::*,
+    kb::*,
+    messages::*,
+    rules::*,
+    sources::*,
+    terms::*,
+    traces::*,
+    bindings::{ Binding, BindingManager, BindingStack, Bindings, Bsp, FollowerId, VariableState, },
+    counter::Counter,
+    debugger::{DebugEvent, Debugger},
+    error::{self, ErrorKind, PolarError, PolarResult, RuntimeError},
+    filter::singleton,
+    formatting::ToPolarString,
+    runnable::Runnable,
 };
-use crate::counter::Counter;
-use crate::data_filtering::partition_equivs;
-use crate::debugger::{get_binding_for_var, DebugEvent, Debugger};
-use crate::error::{self, ErrorKind, OperationalError, PolarError, PolarResult, RuntimeError};
-use crate::events::*;
-use crate::folder::Folder;
-use crate::formatting::ToPolarString;
-use crate::inverter::Inverter;
-use crate::kb::*;
-use crate::lexer::loc_to_pos;
-use crate::messages::*;
-use crate::numerics::*;
-use crate::partial::{simplify_bindings_opt, simplify_partial, sub_this, IsaConstraintCheck};
-use crate::rewrites::Renamer;
-use crate::rules::*;
-use crate::runnable::Runnable;
-use crate::sources::*;
-use crate::terms::*;
-use crate::traces::*;
 
 pub const MAX_STACK_SIZE: usize = 10_000;
 pub const DEFAULT_TIMEOUT_MS: u64 = 30_000;
@@ -175,40 +170,37 @@ impl std::ops::DerefMut for GoalStack {
 pub type Queries = TermList;
 
 fn invalid_state<A>(msg: String) -> PolarResult<A> {
-    Err(OperationalError::InvalidState { msg }.into())
+    Err(error::OperationalError::InvalidState { msg }.into())
 }
 
 pub fn compare(op: Operator, left: &Term, right: &Term) -> PolarResult<bool> {
     use {Operator::*, Value::*};
-    // Coerce booleans to integers.
-    // FIXME(gw) why??
-    fn to_int(x: bool) -> Numeric {
-        Numeric::Integer(if x { 1 } else { 0 })
-    }
 
-    fn compare<T: PartialOrd>(op: Operator, left: T, right: T) -> PolarResult<bool> {
+    fn compare<T: PartialOrd>(op: Operator, left: T, right: T) -> Option<bool> {
         match op {
-            Lt => Ok(left < right),
-            Leq => Ok(left <= right),
-            Gt => Ok(left > right),
-            Geq => Ok(left >= right),
-            Eq => Ok(left == right),
-            Neq => Ok(left != right),
-            _ => invalid_state(format!("`{}` is not a comparison operator", op.to_polar())),
+            Lt => Some(left < right),
+            Leq => Some(left <= right),
+            Gt => Some(left > right),
+            Geq => Some(left >= right),
+            Eq => Some(left == right),
+            Neq => Some(left != right),
+            _ => None,
         }
     }
 
     match (left.value(), right.value()) {
-        (Boolean(l), Boolean(r)) => compare(op, &to_int(*l), &to_int(*r)),
-        (Boolean(l), Number(r)) => compare(op, &to_int(*l), r),
-        (Number(l), Boolean(r)) => compare(op, l, &to_int(*r)),
+        (Boolean(l), Boolean(r)) => compare(op, l, r),
         (Number(l), Number(r)) => compare(op, l, r),
         (String(l), String(r)) => compare(op, l, r),
-        _ => Err(error::RuntimeError::Unsupported {
-            msg: format!("{} {} {}", left.to_polar(), op.to_polar(), right.to_polar()),
-        }
-        .into()),
+        _ => None,
     }
+    .map(Ok)
+    .unwrap_or_else(|| RuntimeError::unsupported(
+            Operation {
+                operator: op,
+                args: vec![left.clone(), right.clone()],
+            }.to_polar()
+        ))
 }
 
 #[derive(Clone)]
@@ -265,10 +257,9 @@ impl Default for PolarVirtualMachine {
     fn default() -> Self {
         PolarVirtualMachine::new(
             Arc::new(RwLock::new(KnowledgeBase::default())),
-            false,
-            vec![],
-            // Messages will not be exposed, only use default() for testing.
-            MessageQueue::new(),
+            Default::default(),
+            Default::default(),
+            Default::default(),
         )
     }
 }
@@ -301,37 +292,46 @@ impl PolarVirtualMachine {
             .clone();
         // get all comma-delimited POLAR_LOG variables
         let polar_log = std::env::var("POLAR_LOG");
-        let polar_log_vars = polar_log
+
+        let mut polar_log_vars = polar_log
             .iter()
             .flat_map(|pl| pl.split(','))
-            .collect::<Vec<&str>>();
+            .collect::<HashSet<_>>();
+
+        if polar_log_vars.contains("0") ||
+           polar_log_vars.contains("off")
+        {
+            polar_log_vars.clear()
+        }
+
+
+
         let mut vm = Self {
-            goals: GoalStack::new_reversed(goals),
-            binding_manager: BindingManager::new(),
-            query_start_time: None,
-            query_timeout_ms,
-            stack_limit: MAX_STACK_SIZE,
-            csp: Bsp::default(),
-            choices: vec![],
-            queries: vec![],
-            tracing,
-            trace_stack: vec![],
-            trace: vec![],
-            external_error: None,
-            debugger: Debugger::default(),
             kb,
-            call_id_symbols: HashMap::new(),
-            // `log` controls internal VM logging
-            log: polar_log_vars.iter().any(|var| var == &"trace"),
+            messages,
+            query_timeout_ms,
+            tracing,
+            goals: GoalStack::new_reversed(goals),
+            log: polar_log_vars.contains("trace"),
             // `polar_log` for tracing policy evaluation
-            polar_log: !polar_log_vars.is_empty()
-                && !polar_log_vars.iter().any(|var| ["0", "off"].contains(var)),
+            polar_log: !polar_log_vars.is_empty(),
             // `polar_log_stderr` prints things immediately to stderr
             polar_log_stderr: polar_log_vars.iter().any(|var| var == &"now"),
-            polar_log_mute: false,
-            query_contains_partial: false,
-            inverting: false,
-            messages,
+            stack_limit: MAX_STACK_SIZE,
+            binding_manager: Default::default(),
+            query_start_time: Default::default(),
+            csp: Default::default(),
+            choices: Default::default(),
+            queries: Default::default(),
+            trace_stack: Default::default(),
+            trace: Default::default(),
+            external_error: Default::default(),
+            debugger: Default::default(),
+            call_id_symbols: Default::default(),
+            // `log` controls internal VM logging
+            polar_log_mute: Default::default(),
+            query_contains_partial: Default::default(),
+            inverting: Default::default(),
         };
         vm.bind_constants(constants);
         vm.query_contains_partial();
@@ -353,6 +353,7 @@ impl PolarVirtualMachine {
     }
 
     fn query_contains_partial(&mut self) {
+        use crate::visitor::{walk_term, Visitor};
         struct VarVisitor<'vm> {
             has_partial: bool,
             vm: &'vm PolarVirtualMachine,
@@ -725,6 +726,7 @@ impl PolarVirtualMachine {
 
     /// Generate a fresh set of variables for a rule.
     fn rename_rule_vars(&self, rule: &Rule) -> Rule {
+        use crate::{folder::Folder, rewrites::Renamer};
         let kb = &*self.kb.read().unwrap();
         let mut renamer = Renamer::new(kb);
         renamer.fold_rule(rule.clone())
@@ -833,7 +835,7 @@ impl PolarVirtualMachine {
                         } else {
                             let _ = write!(st, "in query ");
                         }
-                        let (row, column) = loc_to_pos(&source.src, t.offset());
+                        let (row, column) = crate::lexer::loc_to_pos(&source.src, t.offset());
                         let _ = write!(st, "at line {}, column {}", row + 1, column + 1);
                         if let Some(filename) = source.filename {
                             let _ = write!(st, " in file {}", filename);
@@ -1124,14 +1126,10 @@ impl PolarVirtualMachine {
                 _ => None,
             });
 
-        partition_equivs(cycles)
+        crate::data_filtering::partition_equivs(cycles)
             .into_iter()
             .find(|c| c.contains(s))
-            .unwrap_or_else(|| {
-                let mut hs = HashSet::with_capacity(1);
-                hs.insert(s.clone());
-                hs
-            })
+            .unwrap_or_else(|| singleton(s.clone()))
     }
 
     fn isa_expr(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
@@ -1151,6 +1149,7 @@ impl PolarVirtualMachine {
                 }
             }
             Value::Pattern(Pattern::Instance(InstanceLiteral { fields, tag })) => {
+                use crate::partial::{simplify_partial, IsaConstraintCheck};
                 // TODO(gj): assert that a simplified expression contains at most 1 unification
                 // involving a particular variable.
                 // TODO(gj): Ensure `op!(And) matches X{}` doesn't die after these changes.
@@ -1552,6 +1551,7 @@ impl PolarVirtualMachine {
                 self.choose(args.into_iter().map(|term| vec![Goal::Query { term }]))?;
             }
             Operator::Not => {
+                use crate::inverter::Inverter;
                 // Query in a sub-VM and invert the results.
                 if args.len() != 1 {
                     return wrong_arity();
@@ -2300,8 +2300,8 @@ impl PolarVirtualMachine {
 
             (Value::Dictionary(left), Value::Dictionary(right)) => {
                 // Check that the set of keys are the same.
-                let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
-                let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
+                let left_fields: HashSet<_> = left.fields.keys().collect();
+                let right_fields: HashSet<_> = right.fields.keys().collect();
                 if left_fields != right_fields {
                     self.push_goal(Goal::Backtrack)?;
                     return Ok(());
@@ -2751,8 +2751,8 @@ impl PolarVirtualMachine {
                 Value::Pattern(Pattern::Dictionary(left)),
                 Value::Pattern(Pattern::Dictionary(right)),
             ) => {
-                let left_fields: HashSet<&Symbol> = left.fields.keys().collect();
-                let right_fields: HashSet<&Symbol> = right.fields.keys().collect();
+                let left_fields: HashSet<_> = left.fields.keys().collect();
+                let right_fields: HashSet<_> = right.fields.keys().collect();
 
                 // The dictionary with more fields is taken as more specific.
                 // The assumption here is that rules have already been filtered
@@ -2891,6 +2891,10 @@ impl Runnable for PolarVirtualMachine {
             None
         };
 
+        use crate::{
+            partial::{simplify_bindings_opt, sub_this},
+            debugger::get_binding_for_var,
+        };
         let mut bindings = self.bindings(true);
         if !self.inverting {
             match simplify_bindings_opt(bindings, false) {

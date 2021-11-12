@@ -301,6 +301,13 @@ impl RuntimeError {
             _ => {}
         }
     }
+
+    pub fn type_error<A>(msg: String, stack_trace: Option<String>) -> PolarResult<A> {
+        Err(Self::TypeError { msg, stack_trace }.into())
+    }
+    pub fn unsupported<A>(msg: String) -> PolarResult<A> {
+        Err(Self::Unsupported { msg }.into())
+    }
 }
 
 impl fmt::Display for RuntimeError {
