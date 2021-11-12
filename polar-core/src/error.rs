@@ -261,7 +261,7 @@ pub enum RuntimeError {
     },
     TypeError {
         msg: String,
-        stack_trace: Option<String>,
+        stack_trace: String,
     },
     StackOverflow {
         limit: usize,
@@ -299,9 +299,7 @@ impl fmt::Display for RuntimeError {
             Self::ArithmeticError { msg } => write!(f, "Arithmetic error: {}", msg),
             Self::Unsupported { msg } => write!(f, "Not supported: {}", msg),
             Self::TypeError { msg, stack_trace } => {
-                if let Some(stack_trace) = stack_trace {
-                    writeln!(f, "{}", stack_trace)?;
-                }
+                writeln!(f, "{}", stack_trace)?;
                 write!(f, "Type error: {}", msg)
             }
             Self::StackOverflow { limit } => {
