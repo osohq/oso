@@ -66,6 +66,25 @@ impl PolarError {
                 }
                 _ => {}
             },
+            (ErrorKind::Runtime(e), Some(source), None) => {
+                let offset = match e {
+                    RuntimeError::Application { term, .. } => term.as_ref().map(|t| t.offset()),
+                    RuntimeError::ArithmeticError { term }
+                    | RuntimeError::TypeError { term, .. }
+                    | RuntimeError::UnhandledPartial { term, .. }
+                    | RuntimeError::Unsupported { term, .. } => Some(term.offset()),
+                    _ => None,
+                };
+                if let Some(offset) = offset {
+                    let (row, column) = crate::lexer::loc_to_pos(&source.src, offset);
+                    self.context.replace(ErrorContext {
+                        source: source.clone(),
+                        row,
+                        column,
+                        include_location: false,
+                    });
+                }
+            }
             (e, Some(source), Some(term)) => {
                 let (row, column) = crate::lexer::loc_to_pos(&source.src, term.offset());
                 self.context.replace(ErrorContext {
@@ -284,6 +303,7 @@ pub enum RuntimeError {
     },
     UnhandledPartial {
         var: Symbol,
+        simplified: Option<Term>,
         term: Term,
     },
     DataFilteringFieldMissing {
@@ -321,7 +341,11 @@ impl fmt::Display for RuntimeError {
             Self::IncompatibleBindings { msg } => {
                 write!(f, "Attempted binding was incompatible: {}", msg)
             }
-            Self::UnhandledPartial { var, term } => {
+            Self::UnhandledPartial {
+                var,
+                simplified,
+                term,
+            } => {
                 write!(
                     f,
                     "Found an unhandled partial in the query result: {var}
@@ -338,7 +362,7 @@ The unhandled partial is for variable {var}.
 The expression is: {expr}
 ",
                     var = var,
-                    expr = term.to_polar(),
+                    expr = simplified.as_ref().unwrap_or(term),
                 )
             }
             Self::DataFilteringFieldMissing { var_type, field } => {
