@@ -1,5 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
+    fmt::{self, Display, Formatter},
     hash::Hash,
 };
 
@@ -36,31 +37,8 @@ pub enum Datum {
     Imm(Value),
 }
 
-impl Datum {
-    pub fn explain(&self) {
-        match self {
-            Datum::Field(proj) => {
-                proj.explain();
-            }
-            Datum::Imm(value) => {
-                eprint!("{:?}", value);
-            }
-        }
-    }
-}
-
 #[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
 pub struct Proj(TypeName, Option<FieldName>);
-
-impl Proj {
-    pub fn explain(&self) {
-        let Proj(typename, field) = self;
-        eprint!("{}", typename);
-        if let Some(field) = field {
-            eprint!(".{}", field);
-        }
-    }
-}
 
 #[derive(PartialEq, Debug, Serialize, Copy, Clone, Eq, Hash)]
 pub enum Compare {
@@ -138,18 +116,17 @@ impl Filter {
         }
 
         let var = Symbol(var.to_string());
-        disjuncts
+        let filter = disjuncts
             .into_iter()
             .map(|disjunct| Self::from_result_event(&types, disjunct, &var, class))
             .reduce(|l, r| Ok(l?.union(r?)))
-            .unwrap_or_else(|| Ok(Self::empty(class)))
-            .map(|filter| {
-                if explain {
-                    eprintln!("\n==Filter==");
-                    filter.explain();
-                }
-                filter
-            })
+            .unwrap_or_else(|| Ok(Self::empty(class)))?;
+
+        if explain {
+            eprintln!("\n==Filter==\n{}", filter);
+        }
+
+        Ok(filter)
     }
 
     fn from_result_event(
@@ -158,20 +135,19 @@ impl Filter {
         var: &Symbol,
         class: &str,
     ) -> PolarResult<Self> {
-        let explain = std::env::var("POLAR_EXPLAIN").is_ok();
         part.bindings
             .get(var)
-            .map(|part| {
-                if explain {
-                    eprintln!("{}", part.to_polar());
-                }
-                Self::from_partial(types, part, class)
-            })
+            .map(|part| Self::from_partial(types, part, class))
             .unwrap_or_else(|| input_error(format!("unbound variable: {}", var.0)))
     }
 
     fn from_partial(types: &Types, term: &Term, class: &str) -> PolarResult<Self> {
         use {Datum::*, Operator::*, Value::*};
+
+        if std::env::var("POLAR_EXPLAIN").is_ok() {
+            eprintln!("{}", term.to_polar());
+        }
+
         match term.value() {
             // most of the time we're dealing with expressions from the
             // simplifier.
@@ -218,29 +194,6 @@ impl Filter {
         other.conditions.extend(self.conditions);
         other.relations.extend(self.relations);
         other
-    }
-
-    fn explain(&self) {
-        eprintln!("query {}", self.root);
-        eprintln!("join");
-        for Relation(_, f, ot) in &self.relations {
-            eprintln!(" {} using {}", ot, f);
-        }
-        eprintln!("where");
-        for (i, s) in self.conditions.iter().enumerate() {
-            if i != 0 {
-                eprintln!("\n  OR");
-            }
-            for (i, Condition(l, op, r)) in s.iter().enumerate() {
-                if i != 0 {
-                    eprintln!(" AND");
-                }
-                eprint!("    ");
-                l.explain();
-                eprint!(" {:?} ", op);
-                r.explain();
-            }
-        }
     }
 }
 
@@ -380,6 +333,87 @@ impl QueryInfo {
             conditions: vec![conditions],
             root: class.to_string(),
         })
+    }
+}
+
+impl Display for Filter {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        writeln!(f, "query {}", self.root)?;
+        if !self.relations.is_empty() {
+            writeln!(f, "join")?;
+            for rel in &self.relations {
+                writeln!(f, "    {}", rel)?;
+            }
+        }
+
+        let mut disjs = self.conditions.iter();
+        if let Some(disj) = disjs.next() {
+            writeln!(f, "where")?;
+            fmt_disj(disj, f)?;
+            for disj in disjs {
+                writeln!(f, "\n  OR")?;
+                fmt_disj(disj, f)?;
+            }
+        }
+
+        return Ok(());
+
+        fn fmt_disj(disj: &Set<Condition>, f: &mut Formatter) -> Result<(), fmt::Error> {
+            let mut conjs = disj.iter();
+            match conjs.next() {
+                None => {}
+                Some(conj) => {
+                    write!(f, "    {}", conj)?;
+                    for conj in conjs {
+                        write!(f, " AND\n    {}", conj)?;
+                    }
+                }
+            }
+            Ok(())
+        }
+    }
+}
+
+impl Display for Compare {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        use Compare::*;
+        write!(
+            f,
+            "{}",
+            match self {
+                Eq => "=",
+                Neq => "!=",
+                In => "IN",
+            }
+        )
+    }
+}
+
+impl Display for Datum {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        use Datum::*;
+        match self {
+            Imm(val) => write!(f, "{:?}", val),
+            Field(Proj(typ, None)) => write!(f, "{}", typ),
+            Field(Proj(typ, Some(field))) => {
+                write!(f, "{}", typ)?;
+                write!(f, ".{}", field)
+            }
+        }
+    }
+}
+
+impl Display for Condition {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        let Condition(l, op, r) = self;
+        write!(f, "{} {} {}", l, op, r)
+    }
+}
+
+impl Display for Relation {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        let Relation(src, nom, dest) = self;
+        write!(f, "{}.{} -> {}", src, nom, dest)
     }
 }
 

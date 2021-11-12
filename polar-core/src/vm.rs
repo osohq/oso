@@ -12,20 +12,20 @@ use std::{
 use wasm_bindgen::prelude::*;
 
 use crate::{
-    events::*,
-    kb::*,
-    messages::*,
-    rules::*,
-    sources::*,
-    terms::*,
-    traces::*,
-    bindings::{ Binding, BindingManager, BindingStack, Bindings, Bsp, FollowerId, VariableState, },
+    bindings::{Binding, BindingManager, BindingStack, Bindings, Bsp, FollowerId, VariableState},
     counter::Counter,
     debugger::{DebugEvent, Debugger},
     error::{self, ErrorKind, PolarError, PolarResult, RuntimeError},
+    events::*,
     filter::singleton,
     formatting::ToPolarString,
+    kb::*,
+    messages::*,
+    rules::*,
     runnable::Runnable,
+    sources::*,
+    terms::*,
+    traces::*,
 };
 
 pub const MAX_STACK_SIZE: usize = 10_000;
@@ -195,12 +195,15 @@ pub fn compare(op: Operator, left: &Term, right: &Term) -> PolarResult<bool> {
         _ => None,
     }
     .map(Ok)
-    .unwrap_or_else(|| RuntimeError::unsupported(
+    .unwrap_or_else(|| {
+        RuntimeError::unsupported(
             Operation {
                 operator: op,
                 args: vec![left.clone(), right.clone()],
-            }.to_polar()
-        ))
+            }
+            .to_polar(),
+        )
+    })
 }
 
 #[derive(Clone)]
@@ -298,13 +301,9 @@ impl PolarVirtualMachine {
             .flat_map(|pl| pl.split(','))
             .collect::<HashSet<_>>();
 
-        if polar_log_vars.contains("0") ||
-           polar_log_vars.contains("off")
-        {
+        if polar_log_vars.contains("0") || polar_log_vars.contains("off") {
             polar_log_vars.clear()
         }
-
-
 
         let mut vm = Self {
             kb,
@@ -2463,8 +2462,8 @@ impl PolarVirtualMachine {
     /// then sort them by specificity.
     fn filter_rules(
         &mut self,
-        applicable_rules: &Rules,
-        unfiltered_rules: &Rules,
+        applicable_rules: &[Arc<Rule>],
+        unfiltered_rules: &[Arc<Rule>],
         args: &[Term],
     ) -> PolarResult<()> {
         use Goal::*;
@@ -2478,20 +2477,20 @@ impl PolarVirtualMachine {
             })
         } else {
             // Check one rule for applicability.
-            let mut unfiltered_rules = unfiltered_rules.clone();
+            let mut unfiltered_rules = unfiltered_rules.to_vec();
             let rule = unfiltered_rules.pop().unwrap();
 
             let inapplicable = Goal::FilterRules {
                 args: args.to_vec(),
-                applicable_rules: applicable_rules.clone(),
-                unfiltered_rules: unfiltered_rules.clone(),
+                applicable_rules: applicable_rules.to_vec(),
+                unfiltered_rules: unfiltered_rules.to_vec(),
             };
 
             if rule.params.len() != args.len() {
                 return self.push_goal(inapplicable); // wrong arity
             }
 
-            let mut applicable_rules = applicable_rules.clone();
+            let mut applicable_rules = applicable_rules.to_vec();
             applicable_rules.push(rule.clone());
             let applicable = Goal::FilterRules {
                 args: args.to_vec(),
@@ -2534,7 +2533,7 @@ impl PolarVirtualMachine {
     /// list).
     fn sort_rules(
         &mut self,
-        rules: &Rules,
+        rules: &[Arc<Rule>],
         args: &[Term],
         outer: usize,
         inner: usize,
@@ -2574,17 +2573,13 @@ impl PolarVirtualMachine {
                 // If the comparison fails, break out of the inner loop.
                 // If the comparison succeeds, continue the inner loop with the swapped rules.
                 self.choose_conditional(vec![compare], vec![next_inner], vec![next_outer])
-            } 
+            }
         }
     }
 
     /// We're done; the rules are sorted.
     /// Make alternatives for calling them.
-    fn call_rules(
-        &mut self,
-        rules: &Rules,
-        args: &[Term],
-    ) -> PolarResult<()> {
+    fn call_rules(&mut self, rules: &[Arc<Rule>], args: &[Term]) -> PolarResult<()> {
         use Goal::*;
 
         self.polar_log_mute = false;
@@ -2890,8 +2885,8 @@ impl Runnable for PolarVirtualMachine {
         };
 
         use crate::{
-            partial::{simplify_bindings_opt, sub_this},
             debugger::get_binding_for_var,
+            partial::{simplify_bindings_opt, sub_this},
         };
         let mut bindings = self.bindings(true);
         if !self.inverting {
