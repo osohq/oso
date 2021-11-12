@@ -254,7 +254,7 @@ impl fmt::Display for ParseError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RuntimeError {
     ArithmeticError {
-        msg: String,
+        term: Term,
     },
     Unsupported {
         msg: String,
@@ -298,7 +298,7 @@ pub enum RuntimeError {
 impl fmt::Display for RuntimeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::ArithmeticError { msg } => write!(f, "Arithmetic error: {}", msg),
+            Self::ArithmeticError { term } => write!(f, "Arithmetic error: {}", term),
             Self::Unsupported { msg } => write!(f, "Not supported: {}", msg),
             Self::TypeError {
                 msg, stack_trace, ..
