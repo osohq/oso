@@ -549,9 +549,14 @@ jobs:
           name: go
       - name: "test"
         run: |
-          arch -arm64 CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build
-          arch -arm64 CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go test -v ./tests/ 
+          arch -arm64 go build
+          arch -arm64 go test -v ./tests/ 
         working-directory: go
+        env:
+          CGO_ENABLED: 1
+          GOOS: darwin
+          GOARCH: arm64
+
 
   # validate_python_linux:
   #   name: Test python ${{ matrix.python-version }} on Linux
