@@ -1330,7 +1330,10 @@ mod tests {
         let err = polar
             .register_constant(sym!(ACTOR_UNION_NAME), term!("unimportant"))
             .expect_err("Expected register_constant to throw error.");
-        assert!(matches!(err.kind, Runtime(RuntimeError::TypeError { .. })));
+        assert!(matches!(
+            err.kind,
+            Runtime(RuntimeError::InvalidRegistration { .. })
+        ));
     }
 
     #[test]

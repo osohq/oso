@@ -594,12 +594,9 @@ impl KnowledgeBase {
     /// special meaning in policies that use resource blocks.
     pub fn register_constant(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
         if name.0 == ACTOR_UNION_NAME || name.0 == RESOURCE_UNION_NAME {
-            return Err(RuntimeError::TypeError {
-                msg: format!(
-                    "Invalid attempt to register '{}'. '{}' is a built-in specializer.",
-                    name.0, name.0
-                ),
-                stack_trace: None,
+            return Err(RuntimeError::InvalidRegistration {
+                msg: format!("'{}' is a built-in specializer.", name),
+                sym: name,
             }
             .into());
         }

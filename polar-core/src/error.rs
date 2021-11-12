@@ -287,6 +287,10 @@ pub enum RuntimeError {
         var_type: String,
         field: String,
     },
+    InvalidRegistration {
+        sym: Symbol,
+        msg: String,
+    },
 }
 
 impl RuntimeError {
@@ -363,6 +367,9 @@ The expression is: {expr}
                     field = field
                 );
                 write!(f, "{}", msg)
+            }
+            Self::InvalidRegistration { sym, msg } => {
+                write!(f, "Invalid attempt to register '{}': {}", sym, msg)
             }
         }
     }
