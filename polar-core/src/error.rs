@@ -75,14 +75,46 @@ pub struct ErrorContext {
 }
 
 impl PolarError {
-    pub fn set_context(&mut self, source: Option<&Source>, term: Option<&Term>) {
+    /// Used to "hydrate" the error with context information
+    /// `ErrorContext` is a range of locations within a file, so this method takes in
+    /// a `Source` for where the error was created.
+    ///
+    /// To get the location within the file, this method will attempt to
+    /// get the `span` information from the error itself. This will typically
+    /// come from a `Term` that created the error, but can also be raw locations
+    /// in the case of parser errors.
+    ///
+    /// For backwards-compatibility, this also accepts an optional term to
+    /// be used for location information
+    ///
+    /// @TODO(sam/gj): remove `term` arg
+    ///
+    /// Source comes from:
+    /// 1. ValidationError::get_source, called after collecting all errors
+    /// 2. ParseErrors immediately attach the source with
+    /// 3. RuntimeErrors sometimes attempt to get the source based on a term
+    ///
+    /// Term comes from:
+    /// 1. RuntimeErrors typically call `set_context` with the term info
+    ///
+    /// Span comes from:
+    /// 1. The `term` arg, which is set for RuntimeErrors
+    /// 2. `self.span`, which fetches it from the error term.
+    ///    For some, this means the inner `term`, for parser errors
+    ///    this is raw location information (offsets)
+    ///
+    /// Future desired state:
+    /// - All errors have both the source ID, and location information
+    ///   one method can be called that uses the KB to add the context
+    ///   by looking up the source
+    pub fn set_context(&mut self, source: &Source, term: Option<&Term>) {
         let span = if let Some(term) = term {
             term.span()
         } else {
             self.span()
         };
 
-        if let (Some(source), Some(span)) = (source, span) {
+        if let Some(span) = span {
             let range = Range::from_span(&source.src, span);
             self.context.replace(ErrorContext {
                 source: source.clone(),

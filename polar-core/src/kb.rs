@@ -723,7 +723,9 @@ impl KnowledgeBase {
         let source = source_getter.source;
         let term = source_getter.term;
         let mut error: PolarError = error.into();
-        error.set_context(source.as_ref(), term.as_ref());
+        if let Some(source) = source.as_ref() {
+            error.set_context(source, term.as_ref());
+        }
         error
     }
 

@@ -2806,6 +2806,8 @@ impl PolarVirtualMachine {
         rule.to_polar()
     }
 
+    #[deprecated = "errors should instead store the term on the error instead of
+    adding the context on error creation"]
     fn set_error_context(
         &self,
         term: &Term,
@@ -2945,6 +2947,16 @@ impl Runnable for PolarVirtualMachine {
             self.goals.push(g);
             Ok(QueryEvent::None)
         } else {
+            // @TODO(Sam): is this where we _should_ be adding error context for
+            // runtime errors?
+
+            // Something like this?
+            // let source = error.get_source(&self.kb());
+            // let span = error.get_span();
+            // if let (Some(source), Some(span)) = (source, span) {
+            //     error.set_context(source, span)
+            // }
+
             Err(error)
         }
     }
