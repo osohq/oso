@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     formatting::source_lines,
+    kb::KnowledgeBase,
     rules::Rule,
     sources::Source,
     terms::{Symbol, Term},
@@ -87,35 +88,6 @@ impl PolarError {
                 source: source.clone(),
                 range,
             });
-        }
-    }
-
-    pub fn get_source_id(&self) -> Option<u64> {
-        use {ErrorKind::*, ValidationError::*};
-
-        match &self.kind {
-            Validation(e) => match e {
-                ResourceBlock { term, .. }
-                | SingletonVariable { term, .. }
-                | UndefinedRuleCall { term }
-                | UnregisteredClass { term, .. } => term.get_source_id(),
-
-                InvalidRule { rule, .. }
-                | InvalidRuleType {
-                    rule_type: rule, ..
-                } => rule.get_source_id(),
-
-                MissingRequiredRule { rule_type } => {
-                    if rule_type.name.0 == "has_relation" {
-                        rule_type.get_source_id()
-                    } else {
-                        // TODO(gj): copy source info from the appropriate resource block term for
-                        // `has_role()` rule type we create.
-                        None
-                    }
-                }
-            },
-            Operational(_) | Parse(_) | Runtime(_) => None,
         }
     }
 
@@ -553,5 +525,35 @@ impl fmt::Display for ValidationError {
                 write!(f, "Unregistered class: {}", term)
             }
         }
+    }
+}
+
+impl ValidationError {
+    pub fn get_source(&self, kb: &KnowledgeBase) -> Option<Source> {
+        use ValidationError::*;
+
+        let src_id = match self {
+            ResourceBlock { term, .. }
+            | SingletonVariable { term, .. }
+            | UndefinedRuleCall { term }
+            | UnregisteredClass { term, .. } => term.get_source_id(),
+
+            InvalidRule { rule, .. }
+            | InvalidRuleType {
+                rule_type: rule, ..
+            } => rule.get_source_id(),
+
+            MissingRequiredRule { rule_type } => {
+                if rule_type.name.0 == "has_relation" {
+                    rule_type.get_source_id()
+                } else {
+                    // TODO(gj): copy source info from the appropriate resource block term for
+                    // `has_role()` rule type we create.
+                    None
+                }
+            }
+        };
+
+        src_id.and_then(|id| kb.sources.get_source(id))
     }
 }
