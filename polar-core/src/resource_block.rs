@@ -1093,7 +1093,7 @@ mod tests {
         expect_error(
             &p,
             invalid_policy,
-            r#"Duplicate shorthand rule `"reader" if "writer";` for resource Repo"#,
+            r#"Duplicate shorthand rule `"reader" if "writer";` declared for resource Repo"#,
         );
     }
 
