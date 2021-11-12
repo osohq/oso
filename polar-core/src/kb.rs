@@ -4,7 +4,7 @@ use std::sync::Arc;
 pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::diagnostic::Diagnostic;
-use super::error::{OperationalError, PolarError, PolarResult, ValidationError};
+use super::error::{OperationalError, PolarError, PolarResult, RuntimeError, ValidationError};
 use super::resource_block::{ResourceBlocks, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::*;
@@ -149,7 +149,7 @@ impl KnowledgeBase {
                     if !found_match {
                         return Err(self.set_error_context(
                             &rule.body,
-                            error::ValidationError::InvalidRule {
+                            ValidationError::InvalidRule {
                                 rule: rule.to_polar(),
                                 msg,
                             },
@@ -175,7 +175,7 @@ impl KnowledgeBase {
                 if !found_match {
                     return Err(self.set_error_context(
                         &rule_type.body,
-                        error::ValidationError::MissingRequiredRule {
+                        ValidationError::MissingRequiredRule {
                             rule: rule_type.clone(),
                         },
                     ));
@@ -183,7 +183,7 @@ impl KnowledgeBase {
             } else {
                 return Err(self.set_error_context(
                     &rule_type.body,
-                    error::ValidationError::MissingRequiredRule {
+                    ValidationError::MissingRequiredRule {
                         rule: rule_type.clone(),
                     },
                 ));
@@ -376,7 +376,7 @@ impl KnowledgeBase {
             // List in rule head must be equal to or more specific than the list in the rule type head in order to match
             (Value::List(rule_type_list), Value::List(rule_list)) => {
                 if has_rest_var(rule_type_list) {
-                    return Err(error::RuntimeError::TypeError {
+                    return Err(RuntimeError::TypeError {
                         msg: "Rule types cannot contain *rest variables.".to_string(),
                         stack_trace: None,
                     }
@@ -592,7 +592,7 @@ impl KnowledgeBase {
     /// special meaning in policies that use resource blocks.
     pub fn register_constant(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
         if name.0 == ACTOR_UNION_NAME || name.0 == RESOURCE_UNION_NAME {
-            return Err(error::RuntimeError::TypeError {
+            return Err(RuntimeError::TypeError {
                 msg: format!(
                     "Invalid attempt to register '{}'. '{}' is a built-in specializer.",
                     name.0, name.0
@@ -671,13 +671,13 @@ impl KnowledgeBase {
             self.loaded_files.get(filename).is_some(),
         ) {
             (Some(other_file), true) if other_file == filename => {
-                return Err(error::RuntimeError::FileLoading {
+                return Err(RuntimeError::FileLoading {
                     msg: format!("File {} has already been loaded.", filename),
                 }
                 .into())
             }
             (_, true) => {
-                return Err(error::RuntimeError::FileLoading {
+                return Err(RuntimeError::FileLoading {
                     msg: format!(
                         "A file with the name {}, but different contents has already been loaded.",
                         filename
@@ -686,7 +686,7 @@ impl KnowledgeBase {
                 .into());
             }
             (Some(other_file), _) => {
-                return Err(error::RuntimeError::FileLoading {
+                return Err(RuntimeError::FileLoading {
                     msg: format!(
                         "A file with the same contents as {} named {} has already been loaded.",
                         filename, other_file
@@ -904,7 +904,7 @@ impl KnowledgeBase {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::*;
+    use crate::error::ErrorKind::{Runtime, Validation};
 
     #[test]
     /// Test validation implemented in `check_file()`.
@@ -922,8 +922,8 @@ mod tests {
 
         // Cannot load source1 a second time.
         let msg = match kb.add_source(source1).unwrap_err() {
-            error::PolarError {
-                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
+            PolarError {
+                kind: Runtime(RuntimeError::FileLoading { msg }),
                 ..
             } => msg,
             e => panic!("{}", e),
@@ -936,8 +936,8 @@ mod tests {
             filename: Some(filename1.to_owned()),
         };
         let msg = match kb.add_source(source2).unwrap_err() {
-            error::PolarError {
-                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
+            PolarError {
+                kind: Runtime(RuntimeError::FileLoading { msg }),
                 ..
             } => msg,
             e => panic!("{}", e),
@@ -957,8 +957,8 @@ mod tests {
             filename: Some(filename2.to_owned()),
         };
         let msg = match kb.add_source(source3).unwrap_err() {
-            error::PolarError {
-                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
+            PolarError {
+                kind: Runtime(RuntimeError::FileLoading { msg }),
                 ..
             } => msg,
             e => panic!("{}", e),
@@ -1461,7 +1461,7 @@ mod tests {
         assert!(matches!(
             diagnostics.first().unwrap(),
             Diagnostic::Error(PolarError {
-                kind: ErrorKind::Validation(ValidationError::InvalidRule { .. }),
+                kind: Validation(ValidationError::InvalidRule { .. }),
                 ..
             })
         ));
@@ -1481,7 +1481,7 @@ mod tests {
         assert!(matches!(
             kb.validate_rules().first().unwrap(),
             Diagnostic::Error(PolarError {
-                kind: ErrorKind::Validation(ValidationError::InvalidRule { .. }),
+                kind: Validation(ValidationError::InvalidRule { .. }),
                 ..
             })
         ));
