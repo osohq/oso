@@ -698,20 +698,22 @@ mod tests {
 
     use super::*;
     use crate::diagnostic::Diagnostic;
+    use crate::error::{
+        ErrorKind::{Runtime, Validation},
+        RuntimeError, ValidationError,
+    };
     use crate::events::QueryEvent;
     use crate::parser::{parse_lines, Line};
     use crate::polar::Polar;
 
     #[track_caller]
     fn expect_error(p: &Polar, policy: &str, expected: &str) {
-        use error::{ErrorKind::*, ValidationError::*};
         let error = p.load_str(policy).unwrap_err();
         let msg = match error.kind {
-            Validation(ResourceBlock { msg, .. }) => msg,
-            Validation(UnregisteredClass { .. }) => error.to_string(),
+            Validation(ValidationError::ResourceBlock { msg, .. }) => msg,
+            Validation(ValidationError::UnregisteredClass { .. }) => error.to_string(),
             _ => panic!("Unexpected error: {}", error),
         };
-
         assert!(msg.contains(expected));
     }
 
@@ -1279,8 +1281,8 @@ mod tests {
         let p = Polar::new();
         let q = p.new_query(&format!("new {}()", ACTOR_UNION_NAME), false);
         let msg = match q {
-            Err(error::PolarError {
-                kind: error::ErrorKind::Validation(ValidationError::ResourceBlock { msg, .. }),
+            Err(PolarError {
+                kind: Validation(ValidationError::ResourceBlock { msg, .. }),
                 ..
             }) => msg,
             Err(e) => panic!("{}", e),
@@ -1330,7 +1332,7 @@ mod tests {
             .expect_err("Expected register_constant to throw error.");
         assert!(matches!(
             err.kind,
-            error::ErrorKind::Runtime(error::RuntimeError::TypeError { .. })
+            Runtime(RuntimeError::InvalidRegistration { .. })
         ));
     }
 
@@ -1404,7 +1406,7 @@ mod tests {
         assert!(matches!(
             kb.validate_rules().first().unwrap(),
             Diagnostic::Error(PolarError {
-                kind: error::ErrorKind::Validation(error::ValidationError::InvalidRule { .. }),
+                kind: Validation(ValidationError::InvalidRule { .. }),
                 ..
             })
         ));
@@ -1431,7 +1433,7 @@ mod tests {
         assert!(matches!(
             kb.validate_rules().first().unwrap(),
             Diagnostic::Error(PolarError {
-                kind: error::ErrorKind::Validation(error::ValidationError::InvalidRule { .. }),
+                kind: Validation(ValidationError::InvalidRule { .. }),
                 ..
             })
         ));
@@ -1455,7 +1457,7 @@ mod tests {
         assert!(matches!(
             kb.validate_rules().first().unwrap(),
             Diagnostic::Error(PolarError {
-                kind: error::ErrorKind::Validation(error::ValidationError::InvalidRule { .. }),
+                kind: Validation(ValidationError::InvalidRule { .. }),
                 ..
             })
         ));

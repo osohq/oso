@@ -2,7 +2,7 @@ use std::sync::{Arc, RwLock};
 
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
 use super::diagnostic::{set_context_for_diagnostics, Diagnostic};
-use super::error::PolarResult;
+use super::error::{PolarResult, RuntimeError, ValidationError};
 use super::kb::*;
 use super::messages::*;
 use super::parser;
@@ -86,7 +86,7 @@ impl Polar {
                         ) {
                             diagnostics.push(Diagnostic::Error(kb.set_error_context(
                                 &rule_type.body,
-                                error::ValidationError::InvalidRuleType {
+                                ValidationError::InvalidRuleType {
                                     rule_type: rule_type.to_polar(),
                                     msg: "\nRule types cannot contain dot lookups.".to_owned(),
                                 },
@@ -178,7 +178,7 @@ impl Polar {
     pub fn load(&self, sources: Vec<Source>) -> PolarResult<()> {
         if self.kb.read().unwrap().has_rules() {
             let msg = MULTIPLE_LOAD_ERROR_MSG.to_owned();
-            return Err(error::RuntimeError::FileLoading { msg }.into());
+            return Err(RuntimeError::FileLoading { msg }.into());
         }
 
         let (mut errors, mut warnings) = (vec![], vec![]);
@@ -289,6 +289,7 @@ impl Polar {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::{ErrorKind::Runtime, PolarError};
 
     #[test]
     fn can_load_and_query() {
@@ -311,8 +312,8 @@ mod tests {
 
         // Loading twice is not.
         let msg = match polar.load(vec![source]).unwrap_err() {
-            error::PolarError {
-                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
+            PolarError {
+                kind: Runtime(RuntimeError::FileLoading { msg }),
                 ..
             } => msg,
             e => panic!("{}", e),
@@ -321,8 +322,8 @@ mod tests {
 
         // Even with load_str().
         let msg = match polar.load_str(src).unwrap_err() {
-            error::PolarError {
-                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
+            PolarError {
+                kind: Runtime(RuntimeError::FileLoading { msg }),
                 ..
             } => msg,
             e => panic!("{}", e),
@@ -339,8 +340,8 @@ mod tests {
         };
 
         let msg = match polar.load(vec![source.clone(), source]).unwrap_err() {
-            error::PolarError {
-                kind: error::ErrorKind::Runtime(error::RuntimeError::FileLoading { msg }),
+            PolarError {
+                kind: Runtime(RuntimeError::FileLoading { msg }),
                 ..
             } => msg,
             e => panic!("{}", e),
