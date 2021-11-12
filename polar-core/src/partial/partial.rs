@@ -348,7 +348,23 @@ mod test {
 
     macro_rules! assert_query_done {
         ($query:expr) => {
-            assert!(matches!($query.next_event()?, QueryEvent::Done { .. }));
+            let event = $query.next_event()?;
+            assert!(
+                matches!(event, QueryEvent::Done { .. }),
+                "expected `QueryEvent::Done`, got: {}",
+                if let QueryEvent::Result { bindings, .. } = event {
+                    format!(
+                        "Bindings: {}",
+                        bindings
+                            .iter()
+                            .map(|(k, v)| format!("{}: {}", k.0, v.to_polar()))
+                            .collect::<Vec<String>>()
+                            .join("\n")
+                    )
+                } else {
+                    format!("{:#?}", event)
+                }
+            );
         };
     }
 
@@ -1007,6 +1023,15 @@ mod test {
                i(y: C) if y.c > 0;
                i(y: B{bar: 2}) if y.b > 0;
 
+               # traversing `in` is tough!
+               r(a: A) if b in a.b and t(b);
+               s(a: A) if b in a.b and u(b.c);
+               t(b: B) if b.foo = 1;
+               t(b: C) if b.foo = 2;
+               u(c: C) if c.bar = 1;
+               u(c: D) if c.bar = 2;
+
+
                # the rebinding here sometimes trips up the simplifier
                # PR: https://github.com/osohq/oso/pull/1289
                a(x: A) if y = x.b and b(y);
@@ -1015,29 +1040,32 @@ mod test {
                "#,
         )?;
 
-        let next_binding = |q: &mut Query| loop {
-            match q.next_event().unwrap() {
-                QueryEvent::Result { bindings, .. } => return bindings,
-                QueryEvent::ExternalIsSubclass { call_id, .. } => {
-                    q.question_result(call_id, false).unwrap();
-                }
-                QueryEvent::ExternalIsaWithPath {
-                    call_id,
-                    path,
-                    class_tag,
-                    ..
-                } => {
-                    let last_segment = path.last().unwrap();
-                    q.question_result(
+        #[track_caller]
+        fn next_binding(q: &mut Query) -> Bindings {
+            loop {
+                match q.next_event().unwrap() {
+                    QueryEvent::Result { bindings, .. } => return bindings,
+                    QueryEvent::ExternalIsSubclass { call_id, .. } => {
+                        q.question_result(call_id, false).unwrap();
+                    }
+                    QueryEvent::ExternalIsaWithPath {
                         call_id,
-                        last_segment.value().as_string().unwrap().to_uppercase() == class_tag.0,
-                    )
-                    .unwrap();
+                        path,
+                        class_tag,
+                        ..
+                    } => {
+                        let last_segment = path.last().unwrap();
+                        q.question_result(
+                            call_id,
+                            last_segment.value().as_string().unwrap().to_uppercase() == class_tag.0,
+                        )
+                        .unwrap();
+                    }
+                    QueryEvent::None => (),
+                    e => panic!("not bindings: {:?}", e),
                 }
-                QueryEvent::None => (),
-                e => panic!("not bindings: {:?}", e),
             }
-        };
+        }
 
         // Register `x` as a partial.
         p.register_constant(
@@ -1070,6 +1098,22 @@ mod test {
             next_binding(&mut q),
             "x",
             "_this matches A{} and _this.b matches B{} and 1 = _this.b.z"
+        );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("r", [sym!("x")])), false);
+        assert_partial_expression!(
+            next_binding(&mut q),
+            "x",
+            "_this matches A{} and _b_73 in _this.b and _b_73 matches B{} and 1 = _b_73.foo"
+        );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("s", [sym!("x")])), false);
+        assert_partial_expression!(
+            next_binding(&mut q),
+            "x",
+            "_this matches A{} and _b_67 in _this.b and _b_67 matches B{} and 1 = _b_67.c.bar"
         );
         assert_query_done!(q);
         Ok(())
