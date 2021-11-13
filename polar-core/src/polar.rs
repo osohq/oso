@@ -59,7 +59,7 @@ impl Polar {
             let mut lines = parser::parse_lines(source_id, &source.src)
                 // TODO(gj): we still bomb out at the first ParseError.
                 .map_err(|mut e| {
-                    e.set_context(Some(source), None);
+                    e.set_context(Some(source));
                     e
                 })?;
             lines.reverse();
@@ -146,7 +146,7 @@ impl Polar {
                 if let Diagnostic::Error(polar_error) = diagnostic {
                     if let ErrorKind::Validation(validation_error) = &polar_error.kind {
                         let source = validation_error.get_source(kb);
-                        polar_error.set_context(source.as_ref(), None);
+                        polar_error.set_context(source.as_ref());
                     }
                 }
             }
@@ -247,7 +247,7 @@ impl Polar {
             let mut kb = self.kb.write().unwrap();
             let src_id = kb.new_id();
             let term = parser::parse_query(src_id, src).map_err(|mut e| {
-                e.set_context(Some(&source), None);
+                e.set_context(Some(&source));
                 e
             })?;
             kb.sources.add_source(source, src_id);

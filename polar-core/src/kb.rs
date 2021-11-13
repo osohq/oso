@@ -10,7 +10,6 @@ use super::rules::*;
 use super::sources::*;
 use super::terms::*;
 use super::validations::check_undefined_rule_calls;
-use super::visitor::{walk_term, Visitor};
 
 enum RuleParamMatch {
     True,
@@ -688,42 +687,6 @@ impl KnowledgeBase {
             _ => {}
         }
         Ok(())
-    }
-
-    pub fn set_error_context(&self, term: &Term, error: impl Into<PolarError>) -> PolarError {
-        /// `GetSource` will walk a term and return the _first_ piece of source
-        /// info it finds
-        struct GetSource<'kb> {
-            kb: &'kb KnowledgeBase,
-            source: Option<Source>,
-            term: Option<Term>,
-        }
-
-        impl<'kb> Visitor for GetSource<'kb> {
-            fn visit_term(&mut self, t: &Term) {
-                if self.source.is_none() {
-                    self.source = self.kb.get_term_source(t);
-
-                    if self.source.is_none() {
-                        walk_term(self, t)
-                    } else {
-                        self.term = Some(t.clone())
-                    }
-                }
-            }
-        }
-
-        let mut source_getter = GetSource {
-            kb: self,
-            source: None,
-            term: None,
-        };
-        source_getter.visit_term(term);
-        let source = source_getter.source;
-        let term = source_getter.term;
-        let mut error: PolarError = error.into();
-        error.set_context(source.as_ref(), term.as_ref());
-        error
     }
 
     /// Check that all relations declared across all resource blocks have been registered as
