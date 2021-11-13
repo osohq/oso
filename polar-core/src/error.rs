@@ -75,13 +75,10 @@ pub struct ErrorContext {
 }
 
 impl PolarError {
-    pub fn set_context(&mut self, source: Option<&Source>) {
-        if let (Some(source), Some(span)) = (source, self.span()) {
+    pub fn set_context(&mut self, source: Source) {
+        if let Some(span) = self.span() {
             let range = Range::from_span(&source.src, span);
-            self.context.replace(ErrorContext {
-                source: source.clone(),
-                range,
-            });
+            self.context.replace(ErrorContext { source, range });
         }
     }
 
