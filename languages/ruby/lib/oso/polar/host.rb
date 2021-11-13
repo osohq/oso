@@ -351,6 +351,7 @@ module Oso
               unless value['Float'].is_a? Float # rubocop:disable Metrics/BlockNesting
                 raise PolarRuntimeError, "Expected a floating point number, got \"#{value['Float']}\""
               end
+
               num
             end
           else

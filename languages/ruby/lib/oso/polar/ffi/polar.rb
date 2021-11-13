@@ -6,7 +6,7 @@ module Oso
   module Polar
     module FFI
       # Wrapper class for Polar FFI pointer + operations.
-      class Polar < ::FFI::AutoPointer
+      class Polar < ::FFI::AutoPointer # rubocop:disable Metrics/ClassLength
         attr_accessor :enrich_message
 
         Rust = Module.new do

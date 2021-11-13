@@ -90,7 +90,7 @@ module Oso
 
       # get the (maybe user-supplied) name of a class.
       # kind of a hack because of class autoreloading.
-      def get_class_name(klass) # rubocop:disable Metrics/AbcSize
+      def get_class_name(klass) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         if host.types.key? klass
           host.types[klass].name
         elsif host.types.key? klass.name

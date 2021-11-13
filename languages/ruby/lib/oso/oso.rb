@@ -5,7 +5,7 @@ require_relative 'polar/polar'
 
 module Oso
   # oso authorization API.
-  class Oso < Polar::Polar
+  class Oso < Polar::Polar # rubocop:disable Metrics/ClassLength
     # Create an Oso instance, which is used to configure and enforce an Oso
     # policy in an app.
     #
@@ -204,7 +204,7 @@ module Oso
         .build_query
     end
 
-    def authzd_query(actor, action, resource_cls) # rubocop:disable Metrics/MethodLength
+    def authzd_query(actor, action, resource_cls) # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
       var_name = 'resource'
       resource = Polar::Variable.new var_name
 

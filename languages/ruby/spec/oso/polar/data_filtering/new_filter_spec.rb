@@ -5,8 +5,7 @@ require 'sqlite3'
 require 'active_record'
 
 RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
-
-  context 'new filters' do
+  context 'new filters' do # rubocop:disable Metrics/BlockLength
     class Sign < ActiveRecord::Base
       include DFH::ActiveRecordFetcher
       self.primary_key = :name
@@ -26,9 +25,9 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       has_many :signs, foreign_key: :planet_name
     end
 
-    context 'astrology' do
-      context '#authzd_query parity' do
-        before do
+    context 'astrology' do # rubocop:disable Metrics/BlockLength
+      context '#authzd_query parity' do # rubocop:disable Metrics/BlockLength
+        before do # rubocop:disable Metrics/BlockLength
           subject.register_class(
             Person,
             fields: {
@@ -50,7 +49,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
                 kind: 'many',
                 other_type: 'Sign',
                 my_field: 'name',
-                other_field: 'planet_name',
+                other_field: 'planet_name'
               )
             }
           )
@@ -63,13 +62,13 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
                 kind: 'one',
                 other_type: 'Planet',
                 my_field: 'planet_name',
-                other_field: 'name',
+                other_field: 'name'
               ),
               people: Relation.new(
                 kind: 'many',
                 other_type: 'Person',
                 my_field: 'name',
-                other_field: 'sign_name',
+                other_field: 'sign_name'
               )
             }
           )
@@ -272,7 +271,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           end
         end
 
-        it 'test_specializers' do
+        it 'test_specializers' do # rubocop:disable Metrics/BlockLength
           subject.load_str <<~POL
             allow(sign, "NoneNone", person) if person.sign = sign;
             allow(sign, "NoneCls", person: Person) if person.sign = sign;
@@ -297,7 +296,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
               Person.all.each do |person|
                 nom = a + b
                 query = subject.authzd_query person.sign, nom, Person
-                expect(query.to_a.unshift nom).to eq [nom, person]
+                expect(query.to_a.unshift(nom)).to eq [nom, person]
               end
             end
           end
@@ -347,8 +346,6 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         end
       end
 
-
-
       DB_FILE = 'astro_test.db'
       before do # rubocop:disable Metrics/BlockLength
         File.delete DB_FILE if File.exist? DB_FILE
@@ -395,7 +392,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
          %w[capricorn earth saturn],
          %w[aquarius air saturn],
          %w[pisces water jupiter]].each do |name, element, planet|
-           Sign.create(name: name, element: element, planet: Planet.find(planet))
+          Sign.create(name: name, element: element, planet: Planet.find(planet))
         end
 
         [%w[robin scorpio],

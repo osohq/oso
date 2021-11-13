@@ -318,7 +318,9 @@ impl QueryInfo {
         }
     }
 
+    /// populate conditions and relations on an initialized QueryInfo
     fn with_constraints(mut self, ops: Set<Operation>) -> PolarResult<Self> {
+        // find pairs of implicitly equal variables
         let equivs = ops.iter().filter_map(|Operation { operator, args }| {
             use Operator::*;
             let (l, r) = (
@@ -331,7 +333,9 @@ impl QueryInfo {
             }
         });
 
+        // find equivalence classes
         crate::data_filtering::partition_equivs(equivs)
+            // send each variable to its equivalence class
             .into_iter()
             .map(std::rc::Rc::new)
             .flat_map(|cls| {
@@ -340,18 +344,25 @@ impl QueryInfo {
                     .map(|pv| (pv, cls.clone()))
                     .collect::<Vec<_>>()
             })
+            // for each variable k, if a variable in k's
+            // eq class has a known type, then assign that
+            // type to k.
             .filter_map(|(k, v)| {
                 v.iter()
                     .find_map(|eq| self.get_type(eq.clone()))
                     .map(|t| (k, t))
             })
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>() // so the closure ^^^ lets go of &mut self
             .into_iter()
+            // add them to the entities map
             .for_each(|(k, t)| {
                 self.entities.insert(k, t);
             });
 
-        // each partial adds a constraint and may add relations
+        // every variable that needs a type
+        // should now hopefully have a type.
+        // now add a condition for each partial.
+        // this also populates the relations.
         for op in ops {
             self.add_constraint(op)?;
         }
@@ -379,8 +390,8 @@ impl QueryInfo {
             types,
             entities,
             ..Default::default()
-        }.with_constraints(othas)?;
-
+        }
+        .with_constraints(othas)?;
 
         Ok(Filter {
             relations,
