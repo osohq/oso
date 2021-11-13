@@ -2797,20 +2797,9 @@ impl PolarVirtualMachine {
         rule.to_polar()
     }
 
-    fn set_error_context(&self, error: RuntimeError) -> error::PolarError {
-        use RuntimeError::*;
-
-        let term = match &error {
-            Application { term, .. } => term.as_ref(),
-            ArithmeticError { term }
-            | TypeError { term, .. }
-            | UnhandledPartial { term, .. }
-            | Unsupported { term, .. } => Some(term),
-            _ => None,
-        };
-
-        let mut error: PolarError = error.into();
-        if let Some(source) = term.and_then(|t| self.kb().get_term_source(t)) {
+    fn set_error_context(&self, error: impl Into<PolarError>) -> error::PolarError {
+        let mut error = error.into();
+        if let Some(source) = error.get_source(&self.kb()) {
             error.set_context(source);
         }
         error

@@ -2,7 +2,7 @@ use std::sync::{Arc, RwLock};
 
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
 use super::diagnostic::Diagnostic;
-use super::error::{ErrorKind, PolarResult, RuntimeError, ValidationError};
+use super::error::{PolarResult, RuntimeError, ValidationError};
 use super::kb::*;
 use super::messages::*;
 use super::parser;
@@ -144,10 +144,8 @@ impl Polar {
         fn set_context_for_validation_errors(kb: &KnowledgeBase, ds: &mut Vec<Diagnostic>) {
             for diagnostic in ds {
                 if let Diagnostic::Error(polar_error) = diagnostic {
-                    if let ErrorKind::Validation(validation_error) = &polar_error.kind {
-                        if let Some(source) = validation_error.get_source(kb) {
-                            polar_error.set_context(source);
-                        }
+                    if let Some(source) = polar_error.get_source(kb) {
+                        polar_error.set_context(source);
                     }
                 }
             }

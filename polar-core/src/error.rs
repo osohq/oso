@@ -79,6 +79,67 @@ impl PolarError {
         if let Some(span) = self.span() {
             let range = Range::from_span(&source.src, span);
             self.context.replace(ErrorContext { source, range });
+        } else {
+            panic!("set_context w/o span: {}", self);
+        }
+    }
+
+    pub fn get_source(&self, kb: &KnowledgeBase) -> Option<Source> {
+        use {ErrorKind::*, RuntimeError::*, ValidationError::*};
+
+        match &self.kind {
+            // Parse error source should be attached while parsing since we have it in our hands.
+            Parse(_) => None,
+
+            // All validation errors have a source.
+            Validation(e) => match e {
+                // These errors track `term`, from which we derive the source.
+                ResourceBlock { term, .. }
+                | SingletonVariable { term, .. }
+                | UndefinedRuleCall { term }
+                | UnregisteredClass { term, .. } => kb.get_term_source(term),
+
+                // These errors track `rule(_type)`, from which we derive the source.
+                InvalidRule { rule, .. }
+                | InvalidRuleType {
+                    rule_type: rule, ..
+                } => kb.get_rule_source(rule),
+
+                // These errors track `rule_type`, from which we can sometimes derive the source.
+                MissingRequiredRule { rule_type } => {
+                    if rule_type.name.0 == "has_relation" {
+                        kb.get_rule_source(rule_type)
+                    } else {
+                        // TODO(gj): copy source info from the appropriate resource block term for
+                        // `has_role()` rule type we create.
+                        None
+                    }
+                }
+            },
+
+            // Some runtime errors have a source.
+            Runtime(e) => match e {
+                // These errors sometimes track `term`, from which we derive the source.
+                Application { term, .. } => term.as_ref().and_then(|t| kb.get_term_source(t)),
+
+                // These errors track `term`, from which we derive the source.
+                ArithmeticError { term }
+                | TypeError { term, .. }
+                | UnhandledPartial { term, .. }
+                | Unsupported { term, .. } => kb.get_term_source(term),
+
+                // These errors never have a span.
+                StackOverflow { .. }
+                | QueryTimeout { .. }
+                | FileLoading { .. }
+                | IncompatibleBindings { .. }
+                | DataFilteringFieldMissing { .. }
+                | InvalidRegistration { .. }
+                | InvalidState { .. } => None,
+            },
+
+            // Operational errors never have a source.
+            Operational(_) => None,
         }
     }
 
@@ -87,7 +148,10 @@ impl PolarError {
         use {ErrorKind::*, ParseError::*, RuntimeError::*, ValidationError::*};
 
         match &self.kind {
+            // All parse errors have a span.
             Parse(e) => match e {
+                // These errors track `loc` (left bound) and `token`, and we calculate right bound
+                // as `loc + token.len()`.
                 DuplicateKey { key: token, loc }
                 | ExtraToken { token, loc }
                 | IntegerOverflow { token, loc }
@@ -95,24 +159,31 @@ impl PolarError {
                 | ReservedWord { token, loc }
                 | UnrecognizedToken { token, loc } => Some((*loc, loc + token.len())),
 
+                // These errors track `loc` and only pertain to a single character, so right bound
+                // of span is also `loc`.
                 InvalidTokenCharacter { loc, .. }
                 | InvalidToken { loc }
                 | UnrecognizedEOF { loc } => Some((*loc, *loc)),
 
+                // These errors track `term`, from which we calculate the span.
                 WrongValueType { term, .. } => term.span(),
             },
 
+            // All validation errors have a span.
             Validation(e) => match e {
+                // These errors track `term`, from which we calculate the span.
                 ResourceBlock { ref term, .. }
                 | SingletonVariable { ref term, .. }
                 | UndefinedRuleCall { ref term }
                 | UnregisteredClass { ref term, .. } => term.span(),
 
+                // These errors track `rule`, from which we calculate the span.
                 InvalidRule { rule, .. }
                 | InvalidRuleType {
                     rule_type: rule, ..
                 } => rule.span(),
 
+                // These errors track `rule_type`, from which we sometimes calculate the span.
                 MissingRequiredRule { rule_type } => {
                     if rule_type.name.0 == "has_relation" {
                         rule_type.span()
@@ -124,15 +195,28 @@ impl PolarError {
                 }
             },
 
+            // Some runtime errors have a span.
             Runtime(e) => match e {
+                // These errors sometimes track `term`, from which we calculate the span.
                 Application { term, .. } => term.as_ref().and_then(Term::span),
+
+                // These errors track `term`, from which we calculate the span.
                 ArithmeticError { term }
                 | TypeError { term, .. }
                 | UnhandledPartial { term, .. }
                 | Unsupported { term, .. } => term.span(),
-                _ => None,
+
+                // These errors never have a span.
+                StackOverflow { .. }
+                | QueryTimeout { .. }
+                | FileLoading { .. }
+                | IncompatibleBindings { .. }
+                | DataFilteringFieldMissing { .. }
+                | InvalidRegistration { .. }
+                | InvalidState { .. } => None,
             },
 
+            // Operational errors never have a span.
             Operational(_) => None,
         }
     }
@@ -312,7 +396,6 @@ impl fmt::Display for ParseError {
     }
 }
 
-// @TODO: Information about the context of the error.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RuntimeError {
     ArithmeticError {
@@ -534,35 +617,5 @@ impl fmt::Display for ValidationError {
                 write!(f, "Unregistered class: {}", term)
             }
         }
-    }
-}
-
-impl ValidationError {
-    pub fn get_source(&self, kb: &KnowledgeBase) -> Option<Source> {
-        use ValidationError::*;
-
-        let src_id = match self {
-            ResourceBlock { term, .. }
-            | SingletonVariable { term, .. }
-            | UndefinedRuleCall { term }
-            | UnregisteredClass { term, .. } => term.get_source_id(),
-
-            InvalidRule { rule, .. }
-            | InvalidRuleType {
-                rule_type: rule, ..
-            } => rule.get_source_id(),
-
-            MissingRequiredRule { rule_type } => {
-                if rule_type.name.0 == "has_relation" {
-                    rule_type.get_source_id()
-                } else {
-                    // TODO(gj): copy source info from the appropriate resource block term for
-                    // `has_role()` rule type we create.
-                    None
-                }
-            }
-        };
-
-        src_id.and_then(|id| kb.sources.get_source(id))
     }
 }

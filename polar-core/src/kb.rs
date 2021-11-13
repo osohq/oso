@@ -641,8 +641,14 @@ impl KnowledgeBase {
         Ok(src_id)
     }
 
+    // TODO(gj): Parsed<T> type (or something) that exposes ::get_source_id so we can remove this
+    // meaningless distinction between terms & rules.
     pub(crate) fn get_term_source(&self, t: &Term) -> Option<Source> {
         t.get_source_id().and_then(|id| self.sources.get_source(id))
+    }
+
+    pub(crate) fn get_rule_source(&self, r: &Rule) -> Option<Source> {
+        r.get_source_id().and_then(|id| self.sources.get_source(id))
     }
 
     pub fn clear_rules(&mut self) {
