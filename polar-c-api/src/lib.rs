@@ -6,7 +6,7 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr::{null, null_mut};
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 /// Get a reference to an object from a pointer
 macro_rules! ffi_ref {
