@@ -299,6 +299,7 @@ pub enum RuntimeError {
         /// Option<Term> where the error arose, tracked for lexical context.
         term: Option<Term>,
     },
+    // TODO(gj): consider moving to ValidationError.
     FileLoading {
         msg: String,
     },
@@ -316,6 +317,7 @@ pub enum RuntimeError {
         var_type: String,
         field: String,
     },
+    // TODO(gj): consider moving to ValidationError.
     InvalidRegistration {
         sym: Symbol,
         msg: String,
