@@ -2,7 +2,7 @@ use std::sync::{Arc, RwLock};
 
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
 use super::diagnostic::Diagnostic;
-use super::error::{PolarResult, RuntimeError, ValidationError};
+use super::error::{PolarError, PolarResult, RuntimeError, ValidationError};
 use super::kb::*;
 use super::messages::*;
 use super::parser;
@@ -58,10 +58,7 @@ impl Polar {
         ) -> PolarResult<Vec<Diagnostic>> {
             let mut lines = parser::parse_lines(source_id, &source.src)
                 // TODO(gj): we still bomb out at the first ParseError.
-                .map_err(|mut e| {
-                    e.set_context(source.clone());
-                    e
-                })?;
+                .map_err(|e| PolarError::from((e, source.clone())))?;
             lines.reverse();
             let mut diagnostics = vec![];
             while let Some(line) = lines.pop() {
@@ -245,10 +242,8 @@ impl Polar {
         let term = {
             let mut kb = self.kb.write().unwrap();
             let src_id = kb.new_id();
-            let term = parser::parse_query(src_id, src).map_err(|mut e| {
-                e.set_context(source.clone());
-                e
-            })?;
+            let term = parser::parse_query(src_id, src)
+                .map_err(|e| PolarError::from((e, source.clone())))?;
             kb.sources.add_source(source, src_id);
             term
         };

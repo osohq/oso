@@ -13,7 +13,7 @@ lalrpop_mod!(
     polar
 );
 
-use super::error::{self, PolarResult};
+use super::error;
 use super::lexer::{self, Lexer};
 use super::resource_block::Production;
 use super::rules::*;
@@ -57,20 +57,20 @@ fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> erro
     }
 }
 
-pub fn parse_lines(src_id: u64, src: &str) -> PolarResult<Vec<Line>> {
+pub fn parse_lines(src_id: u64, src: &str) -> Result<Vec<Line>, error::ParseError> {
     polar::LinesParser::new()
         .parse(src_id, Lexer::new(src))
         .map_err(|e| to_parse_error(e).into())
 }
 
-pub fn parse_query(src_id: u64, src: &str) -> PolarResult<Term> {
+pub fn parse_query(src_id: u64, src: &str) -> Result<Term, error::ParseError> {
     polar::TermParser::new()
         .parse(src_id, Lexer::new(src))
         .map_err(|e| to_parse_error(e).into())
 }
 
 #[cfg(test)]
-pub fn parse_rules(src_id: u64, src: &str) -> PolarResult<Vec<Rule>> {
+pub fn parse_rules(src_id: u64, src: &str) -> Result<Vec<Rule>, error::ParseError> {
     polar::RulesParser::new()
         .parse(src_id, Lexer::new(src))
         .map_err(|e| to_parse_error(e).into())
@@ -79,7 +79,7 @@ pub fn parse_rules(src_id: u64, src: &str) -> PolarResult<Vec<Rule>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::{ErrorKind::Parse, ParseError::*};
+    use crate::error::ParseError::*;
     use crate::formatting::ToPolarString;
     use pretty_assertions::assert_eq;
 
@@ -281,13 +281,13 @@ mod tests {
         assert_eq!(parse_query(q).to_polar(), q);
 
         let e = super::parse_query(0, "[1, 2, 3] = [*rest, 3]").expect_err("parse error");
-        assert!(matches!(e.kind, Parse(UnrecognizedToken { .. })));
+        assert!(matches!(e, UnrecognizedToken { .. }));
 
         let e = super::parse_query(0, "[1, 2, *3] = [*rest]").expect_err("parse error");
-        assert!(matches!(e.kind, Parse(UnrecognizedToken { .. })));
+        assert!(matches!(e, UnrecognizedToken { .. }));
 
         let e = super::parse_query(0, "[1, *x, *y] = [*rest]").expect_err("parse error");
-        assert!(matches!(e.kind, Parse(UnrecognizedToken { .. })));
+        assert!(matches!(e, UnrecognizedToken { .. }));
 
         let q = "[1, 2, 3] matches [1, 2, 3]";
         assert_eq!(parse_query(q).to_polar(), q, "{} -- {}", q, parse_query(q));
@@ -336,7 +336,7 @@ mod tests {
             "y matches z = x",
         ] {
             let e = super::parse_query(0, bad_query).expect_err("parse error");
-            assert!(matches!(e.kind, Parse(WrongValueType { .. })));
+            assert!(matches!(e, WrongValueType { .. }));
         }
     }
 
@@ -360,6 +360,6 @@ mod tests {
     fn duplicate_keys() {
         let q = r#"{a: 1, a: 2}"#;
         let e = super::parse_query(0, q).expect_err("parse error");
-        assert!(matches!(e.kind, Parse(DuplicateKey { .. })));
+        assert!(matches!(e, DuplicateKey { .. }));
     }
 }

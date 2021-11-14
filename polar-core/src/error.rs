@@ -145,29 +145,11 @@ impl PolarError {
 
     /// Get `(left, right)` span from errors that carry source context.
     fn span(&self) -> Option<(usize, usize)> {
-        use {ErrorKind::*, ParseError::*, RuntimeError::*, ValidationError::*};
+        use {ErrorKind::*, RuntimeError::*, ValidationError::*};
 
         match &self.kind {
-            // All parse errors have a span.
-            Parse(e) => match e {
-                // These errors track `loc` (left bound) and `token`, and we calculate right bound
-                // as `loc + token.len()`.
-                DuplicateKey { key: token, loc }
-                | ExtraToken { token, loc }
-                | IntegerOverflow { token, loc }
-                | InvalidFloat { token, loc }
-                | ReservedWord { token, loc }
-                | UnrecognizedToken { token, loc } => Some((*loc, loc + token.len())),
-
-                // These errors track `loc` and only pertain to a single character, so right bound
-                // of span is also `loc`.
-                InvalidTokenCharacter { loc, .. }
-                | InvalidToken { loc }
-                | UnrecognizedEOF { loc } => Some((*loc, *loc)),
-
-                // These errors track `term`, from which we calculate the span.
-                WrongValueType { term, .. } => term.span(),
-            },
+            // Parse error context should be attached while parsing since we have it in our hands.
+            Parse(_) => None,
 
             // All validation errors have a span.
             Validation(e) => match e {
@@ -222,11 +204,34 @@ impl PolarError {
     }
 }
 
-impl From<ParseError> for PolarError {
-    fn from(err: ParseError) -> Self {
+impl From<(ParseError, Source)> for PolarError {
+    fn from((error, source): (ParseError, Source)) -> Self {
+        use ParseError::*;
+
+        let span = match &error {
+            // These errors track `loc` (left bound) and `token`, and we calculate right bound
+            // as `loc + token.len()`.
+            DuplicateKey { key: token, loc }
+            | ExtraToken { token, loc }
+            | IntegerOverflow { token, loc }
+            | InvalidFloat { token, loc }
+            | ReservedWord { token, loc }
+            | UnrecognizedToken { token, loc } => (*loc, loc + token.len()),
+
+            // These errors track `loc` and only pertain to a single character, so right bound
+            // of span is also `loc`.
+            InvalidTokenCharacter { loc, .. } | InvalidToken { loc } | UnrecognizedEOF { loc } => {
+                (*loc, *loc)
+            }
+
+            // These errors track `term`, from which we calculate the span.
+            WrongValueType { term, .. } => term.span().expect("always from parser"),
+        };
+        let range = Range::from_span(&source.src, span);
+
         Self {
-            kind: ErrorKind::Parse(err),
-            context: None,
+            context: Some(ErrorContext { range, source }),
+            kind: ErrorKind::Parse(error),
         }
     }
 }
