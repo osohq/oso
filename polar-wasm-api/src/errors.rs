@@ -44,7 +44,6 @@ fn kind(err: &PolarError) -> String {
         Runtime(InvalidRegistration { .. }) => "RuntimeError::InvalidRegistration",
         Runtime(InvalidState { .. }) => "RuntimeError::InvalidState",
         Operational(Serialization { .. }) => "OperationalError::Serialization",
-        Operational(Unimplemented { .. }) => "OperationalError::Unimplemented",
         Operational(Unknown) => "OperationalError::Unknown",
         Validation(InvalidRule { .. }) => "ValidationError::InvalidRule",
         Validation(InvalidRuleType { .. }) => "ValidationError::InvalidRuleType",

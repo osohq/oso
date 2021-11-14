@@ -402,12 +402,11 @@ The expression is: {expr}
     }
 }
 
+// TODO(gj): both of these errors are only constructed/used in the `polar-c-api` crate. We should
+// probably move them there.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OperationalError {
     Serialization {
-        msg: String,
-    },
-    Unimplemented {
         msg: String,
     },
     /// Rust panics caught in the `polar-c-api` crate.
@@ -418,7 +417,6 @@ impl fmt::Display for OperationalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Serialization { msg } => write!(f, "Serialization error: {}", msg),
-            Self::Unimplemented { msg } => write!(f, "{} is not yet implemented", msg),
             Self::Unknown => write!(
                 f,
                 "We hit an unexpected error.\n\

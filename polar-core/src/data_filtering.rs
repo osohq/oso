@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     counter::Counter,
-    error::{OperationalError, PolarResult, RuntimeError},
+    error::{PolarResult, RuntimeError},
     events::ResultEvent,
     terms::*,
 };
@@ -228,7 +228,10 @@ impl VarInfo {
                 self.types.push((lhs, i.tag.0.clone()));
                 Ok(self)
             }
-            _ => err_unimplemented(format!("Unsupported specializer: {}", rhs.to_polar())),
+            _ => err_unsupported(
+                format!("Unsupported specializer: {}", rhs.to_polar()),
+                rhs.clone(),
+            ),
         }
     }
 
@@ -246,11 +249,15 @@ impl VarInfo {
             // 1 = 1 is irrelevant for data filtering, other stuff seems like an error.
             // @NOTE(steve): Going with the same not yet supported message but if this is
             // coming through it's probably a bug in the simplifier.
-            _ => err_unimplemented(format!(
-                "Unsupported unification: {} = {}",
-                left.to_polar(),
-                right.to_polar()
-            )),
+            _ => err_unsupported(
+                format!(
+                    "Unsupported unification: {} = {}",
+                    left.to_polar(),
+                    right.to_polar()
+                ),
+                // TODO(gj): reconstruct operation?
+                left.clone(),
+            ),
         }
     }
 
@@ -270,11 +277,15 @@ impl VarInfo {
                 self.uncycles.push((l, r));
                 Ok(self)
             }
-            _ => err_unimplemented(format!(
-                "Unsupported comparison: {} != {}",
-                left.to_polar(),
-                right.to_polar()
-            )),
+            _ => err_unsupported(
+                format!(
+                    "Unsupported comparison: {} != {}",
+                    left.to_polar(),
+                    right.to_polar()
+                ),
+                // TODO(gj): reconstruct operation?
+                left.clone(),
+            ),
         }
     }
 
@@ -288,11 +299,15 @@ impl VarInfo {
                 self.contained_values.push((Term::from(val), var));
                 Ok(self)
             }
-            _ => err_unimplemented(format!(
-                "Unsupported `in` check: {} in {}",
-                left.to_polar(),
-                right.to_polar()
-            )),
+            _ => err_unsupported(
+                format!(
+                    "Unsupported `in` check: {} in {}",
+                    left.to_polar(),
+                    right.to_polar()
+                ),
+                // TODO(gj): reconstruct operation?
+                left.clone(),
+            ),
         }
     }
 
@@ -307,11 +322,16 @@ impl VarInfo {
             Neq if args.len() == 2 => self.do_neq(&args[0], &args[1]),
             In if args.len() == 2 => self.do_in(&args[0], &args[1]),
             Unify | Eq | Assign if args.len() == 2 => self.do_unify(&args[0], &args[1]),
-            _ => err_unimplemented(format!(
-                "the expression {:?}/{} is not supported for data filtering",
-                exp.operator,
-                exp.args.len()
-            )),
+            _ => err_unsupported(
+                format!(
+                    "the expression {:?}/{} is not supported for data filtering",
+                    exp.operator,
+                    exp.args.len()
+                ),
+                // TODO(gj): Could try walking `exp` to find source info, but I don't think that
+                // juice is worth the squeeze.
+                term!(exp.clone()),
+            ),
         }
     }
 }
@@ -328,8 +348,8 @@ fn err_invalid<A>(msg: String) -> PolarResult<A> {
     Err(RuntimeError::InvalidState { msg }.into())
 }
 
-fn err_unimplemented<A>(msg: String) -> PolarResult<A> {
-    Err(OperationalError::Unimplemented { msg }.into())
+fn err_unsupported<A>(msg: String, term: Term) -> PolarResult<A> {
+    Err(RuntimeError::Unsupported { msg, term }.into())
 }
 
 impl FilterPlan {
@@ -1051,7 +1071,7 @@ mod test {
     use super::*;
     use crate::{
         bindings::Bindings,
-        error::{ErrorKind::*, OperationalError::Unimplemented, PolarError},
+        error::{ErrorKind::Runtime, PolarError, RuntimeError::Unsupported},
     };
     type TestResult = PolarResult<()>;
 
@@ -1189,7 +1209,7 @@ mod test {
         let err = Vars::from_op(&op!(Dot)).expect_err("should've failed");
         match err {
             PolarError {
-                kind: Operational(Unimplemented { msg }),
+                kind: Runtime(Unsupported { msg, .. }),
                 ..
             } => assert_eq!(
                 &msg,
