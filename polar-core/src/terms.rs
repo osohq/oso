@@ -349,7 +349,7 @@ impl Term {
         }
     }
 
-    /// Creates a new term from the parser
+    /// Creates a new term from across the FFI boundary
     pub fn new_from_ffi(value: Value) -> Self {
         Self {
             source_info: SourceInfo::Ffi,
