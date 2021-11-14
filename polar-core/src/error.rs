@@ -320,6 +320,10 @@ pub enum RuntimeError {
         sym: Symbol,
         msg: String,
     },
+    /// An invariant has been broken internally.
+    InvalidState {
+        msg: String,
+    },
 }
 
 impl fmt::Display for RuntimeError {
@@ -393,6 +397,7 @@ The expression is: {expr}
             Self::InvalidRegistration { sym, msg } => {
                 write!(f, "Invalid attempt to register '{}': {}", sym, msg)
             }
+            Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
         }
     }
 }
@@ -407,11 +412,6 @@ pub enum OperationalError {
     },
     /// Rust panics caught in the `polar-c-api` crate.
     Unknown,
-
-    /// An invariant has been broken internally.
-    InvalidState {
-        msg: String,
-    },
 }
 
 impl fmt::Display for OperationalError {
@@ -419,7 +419,6 @@ impl fmt::Display for OperationalError {
         match self {
             Self::Serialization { msg } => write!(f, "Serialization error: {}", msg),
             Self::Unimplemented { msg } => write!(f, "{} is not yet implemented", msg),
-            Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
             Self::Unknown => write!(
                 f,
                 "We hit an unexpected error.\n\

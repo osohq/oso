@@ -1,5 +1,5 @@
 use crate::counter::Counter;
-use crate::error::{OperationalError, PolarResult};
+use crate::error::{PolarResult, RuntimeError};
 use crate::events::QueryEvent;
 
 use crate::runnable::Runnable;
@@ -206,7 +206,7 @@ impl Runnable for IsaConstraintCheck {
 
     fn external_question_result(&mut self, call_id: u64, answer: bool) -> PolarResult<()> {
         if call_id != self.last_call_id {
-            return Err(OperationalError::InvalidState {
+            return Err(RuntimeError::InvalidState {
                 msg: String::from("Unexpected call id"),
             }
             .into());

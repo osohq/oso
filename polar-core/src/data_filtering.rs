@@ -325,7 +325,7 @@ fn unregistered_field_error<A>(var_type: &str, field: &str) -> PolarResult<A> {
 }
 
 fn err_invalid<A>(msg: String) -> PolarResult<A> {
-    Err(OperationalError::InvalidState { msg }.into())
+    Err(RuntimeError::InvalidState { msg }.into())
 }
 
 fn err_unimplemented<A>(msg: String) -> PolarResult<A> {

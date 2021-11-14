@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use super::error::{OperationalError, PolarError, PolarResult, ValidationError};
+use super::error::{PolarError, PolarResult, RuntimeError, ValidationError};
 use super::kb::KnowledgeBase;
 use super::rules::*;
 use super::terms::*;
@@ -226,7 +226,7 @@ impl Declaration {
         if let Declaration::Relation(relation) = self {
             Ok(relation)
         } else {
-            Err(OperationalError::InvalidState {
+            Err(RuntimeError::InvalidState {
                 msg: format!("Expected Relation; got: {:?}", self),
             }
             .into())

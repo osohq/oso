@@ -16,7 +16,7 @@ use crate::bindings::{
 use crate::counter::Counter;
 use crate::data_filtering::partition_equivs;
 use crate::debugger::{get_binding_for_var, DebugEvent, Debugger};
-use crate::error::{self, ErrorKind, OperationalError, PolarError, PolarResult, RuntimeError};
+use crate::error::{self, ErrorKind, PolarError, PolarResult, RuntimeError};
 use crate::events::*;
 use crate::folder::Folder;
 use crate::formatting::ToPolarString;
@@ -175,7 +175,7 @@ impl std::ops::DerefMut for GoalStack {
 pub type Queries = TermList;
 
 fn invalid_state<A>(msg: String) -> PolarResult<A> {
-    Err(OperationalError::InvalidState { msg }.into())
+    Err(RuntimeError::InvalidState { msg }.into())
 }
 
 pub fn compare(

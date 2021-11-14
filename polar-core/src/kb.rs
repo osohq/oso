@@ -4,7 +4,7 @@ use std::sync::Arc;
 pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::diagnostic::Diagnostic;
-use super::error::{OperationalError, PolarError, PolarResult, RuntimeError, ValidationError};
+use super::error::{PolarError, PolarResult, RuntimeError, ValidationError};
 use super::resource_block::{ResourceBlocks, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::*;
@@ -480,7 +480,7 @@ impl KnowledgeBase {
                                         "Value variant {} cannot be a specializer",
                                         rule_value
                                     );
-                                    return Err(OperationalError::InvalidState { msg }.into());
+                                    return Err(RuntimeError::InvalidState { msg }.into());
                                 }
                             };
                             self.check_pattern_param(
@@ -632,7 +632,7 @@ impl KnowledgeBase {
         // Confirm name is a registered class
         if !self.is_constant(&name) {
             let msg = format!("Cannot add MRO for unregistered class {}", name);
-            return Err(OperationalError::InvalidState { msg }.into());
+            return Err(RuntimeError::InvalidState { msg }.into());
         }
         self.mro.insert(name, mro);
         Ok(())

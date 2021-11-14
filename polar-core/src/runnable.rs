@@ -1,5 +1,5 @@
 use crate::counter::Counter;
-use crate::error::{OperationalError, PolarError, PolarResult};
+use crate::error::{PolarError, PolarResult, RuntimeError};
 use crate::events::QueryEvent;
 use crate::terms::Term;
 
@@ -15,21 +15,21 @@ pub trait Runnable {
     fn run(&mut self, _counter: Option<&mut Counter>) -> PolarResult<QueryEvent>;
 
     fn external_question_result(&mut self, _call_id: u64, _answer: bool) -> PolarResult<()> {
-        Err(OperationalError::InvalidState {
+        Err(RuntimeError::InvalidState {
             msg: "Unexpected query answer".to_string(),
         }
         .into())
     }
 
     fn external_call_result(&mut self, _call_id: u64, _term: Option<Term>) -> PolarResult<()> {
-        Err(OperationalError::InvalidState {
+        Err(RuntimeError::InvalidState {
             msg: "Unexpected external call".to_string(),
         }
         .into())
     }
 
     fn debug_command(&mut self, _command: &str) -> PolarResult<()> {
-        Err(OperationalError::InvalidState {
+        Err(RuntimeError::InvalidState {
             msg: "Unexpected debug command".to_string(),
         }
         .into())
