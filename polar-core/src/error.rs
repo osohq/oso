@@ -85,37 +85,13 @@ impl PolarError {
     }
 
     pub fn get_source(&self, kb: &KnowledgeBase) -> Option<Source> {
-        use {ErrorKind::*, RuntimeError::*, ValidationError::*};
+        use {ErrorKind::*, RuntimeError::*};
 
         match &self.kind {
             // Parse error source should be attached while parsing since we have it in our hands.
             Parse(_) => None,
 
-            // All validation errors have a source.
-            Validation(e) => match e {
-                // These errors track `term`, from which we derive the source.
-                ResourceBlock { term, .. }
-                | SingletonVariable { term, .. }
-                | UndefinedRuleCall { term }
-                | UnregisteredClass { term, .. } => kb.get_term_source(term),
-
-                // These errors track `rule(_type)`, from which we derive the source.
-                InvalidRule { rule, .. }
-                | InvalidRuleType {
-                    rule_type: rule, ..
-                } => kb.get_rule_source(rule),
-
-                // These errors track `rule_type`, from which we can sometimes derive the source.
-                MissingRequiredRule { rule_type } => {
-                    if rule_type.name.0 == "has_relation" {
-                        kb.get_rule_source(rule_type)
-                    } else {
-                        // TODO(gj): copy source info from the appropriate resource block term for
-                        // `has_role()` rule type we create.
-                        None
-                    }
-                }
-            },
+            Validation(_) => None,
 
             // Some runtime errors have a source.
             Runtime(e) => match e {
@@ -145,37 +121,14 @@ impl PolarError {
 
     /// Get `(left, right)` span from errors that carry source context.
     fn span(&self) -> Option<(usize, usize)> {
-        use {ErrorKind::*, RuntimeError::*, ValidationError::*};
+        use {ErrorKind::*, RuntimeError::*};
 
         match &self.kind {
             // Parse error context should be attached while parsing since we have it in our hands.
             Parse(_) => None,
 
             // All validation errors have a span.
-            Validation(e) => match e {
-                // These errors track `term`, from which we calculate the span.
-                ResourceBlock { ref term, .. }
-                | SingletonVariable { ref term, .. }
-                | UndefinedRuleCall { ref term }
-                | UnregisteredClass { ref term, .. } => term.span(),
-
-                // These errors track `rule`, from which we calculate the span.
-                InvalidRule { rule, .. }
-                | InvalidRuleType {
-                    rule_type: rule, ..
-                } => rule.span(),
-
-                // These errors track `rule_type`, from which we sometimes calculate the span.
-                MissingRequiredRule { rule_type } => {
-                    if rule_type.name.0 == "has_relation" {
-                        rule_type.span()
-                    } else {
-                        // TODO(gj): copy source info from the appropriate resource block term for
-                        // `has_role()` rule type we create.
-                        None
-                    }
-                }
-            },
+            Validation(_) => None,
 
             // Some runtime errors have a span.
             Runtime(e) => match e {
@@ -254,11 +207,43 @@ impl From<OperationalError> for PolarError {
     }
 }
 
-impl From<ValidationError> for PolarError {
-    fn from(err: ValidationError) -> Self {
+impl From<(ValidationError, &KnowledgeBase)> for PolarError {
+    fn from((err, kb): (ValidationError, &KnowledgeBase)) -> Self {
+        use ValidationError::*;
+
+        let context = match &err {
+            // These errors track `term`, from which we calculate the span.
+            ResourceBlock { term, .. }
+            | SingletonVariable { term, .. }
+            | UndefinedRuleCall { term }
+            | UnregisteredClass { term, .. } => term.span().zip(kb.get_term_source(term)),
+
+            // These errors track `rule`, from which we calculate the span.
+            InvalidRule { rule, .. }
+            | InvalidRuleType {
+                rule_type: rule, ..
+            } => rule.span().zip(kb.get_rule_source(rule)),
+
+            // These errors track `rule_type`, from which we sometimes calculate the span.
+            MissingRequiredRule { rule_type } => {
+                if rule_type.name.0 == "has_relation" {
+                    rule_type.span().zip(kb.get_rule_source(rule_type))
+                } else {
+                    // TODO(gj): copy source info from the appropriate resource block term for
+                    // `has_role()` rule type we create.
+                    None
+                }
+            }
+        };
+
+        let context = context.map(|(span, source)| ErrorContext {
+            range: Range::from_span(&source.src, span),
+            source,
+        });
+
         Self {
             kind: ErrorKind::Validation(err),
-            context: None,
+            context,
         }
     }
 }

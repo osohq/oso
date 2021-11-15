@@ -84,13 +84,13 @@ impl Polar {
                                 }
                             ) if args.is_empty()
                         ) {
-                            diagnostics.push(Diagnostic::Error(
+                            diagnostics.push(Diagnostic::Error(PolarError::from((
                                 ValidationError::InvalidRuleType {
                                     rule_type,
                                     msg: "Rule types cannot contain dot lookups.".to_owned(),
-                                }
-                                .into(),
-                            ));
+                                },
+                                &*kb,
+                            ))));
                         } else {
                             kb.add_rule_type(rule_type);
                         }
@@ -102,8 +102,12 @@ impl Polar {
                     } => match resource_block_from_productions(keyword, resource, productions)
                         .map(|block| block.add_to_kb(kb))
                     {
-                        Ok(errors) | Err(errors) => diagnostics
-                            .append(&mut errors.into_iter().map(Diagnostic::Error).collect()),
+                        Ok(errors) | Err(errors) => diagnostics.append(
+                            &mut errors
+                                .into_iter()
+                                .map(|e| Diagnostic::Error(PolarError::from((e, &*kb))))
+                                .collect(),
+                        ),
                     },
                 }
             }
@@ -127,26 +131,9 @@ impl Polar {
             &mut kb
                 .rewrite_shorthand_rules()
                 .into_iter()
-                .map(Diagnostic::Error)
+                .map(|e| Diagnostic::Error(PolarError::from((e, &*kb))))
                 .collect(),
         );
-
-        // Attach context to (compile-time) validation errors.
-        //
-        // NOTE(gj): at present, context is still attached to parse errors in the `load_source`
-        // function inside `KnowledgeBase::diagnostic_load`.
-        //
-        // NOTE(gj): some compile-time diagnostics won't ever have source context (e.g., the
-        // absence of an `allow()` rule).
-        fn set_context_for_validation_errors(kb: &KnowledgeBase, ds: &mut Vec<Diagnostic>) {
-            for diagnostic in ds {
-                if let Diagnostic::Error(polar_error) = diagnostic {
-                    if let Some(source) = polar_error.get_source(kb) {
-                        polar_error.set_context(source);
-                    }
-                }
-            }
-        }
 
         // TODO(gj): need to bomb out before rule type validation in case additional rule types
         // were defined later on in the file that encountered the `ParseError`. Those additional
@@ -155,8 +142,6 @@ impl Polar {
         // the well-parsed file but *would have* conformed to the shapes laid out in the file that
         // failed to parse.
         if diagnostics.iter().any(Diagnostic::is_parse_error) {
-            // NOTE(gj): need to set context _before_ clearing the KB so we still have source info.
-            set_context_for_validation_errors(&kb, &mut diagnostics);
             kb.clear_rules();
             return diagnostics;
         }
@@ -179,9 +164,6 @@ impl Polar {
         if let Some(w) = check_resource_blocks_missing_has_permission(&kb) {
             diagnostics.push(w)
         };
-
-        // NOTE(gj): need to set context _before_ clearing the KB so we still have source info.
-        set_context_for_validation_errors(&kb, &mut diagnostics);
 
         // If we've encountered any errors, clear the KB.
         if diagnostics.iter().any(Diagnostic::is_error) {
