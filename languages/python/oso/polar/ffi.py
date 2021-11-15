@@ -28,7 +28,7 @@ class Polar:
 
     def new_id(self):
         """Request a unique ID from the canonical external ID tracker."""
-        return self.check_result(lib.polar_get_external_id(self.ptr))
+        return lib.polar_get_external_id(self.ptr)
 
     def build_filter_plan(self, types, partial_results, variable, class_tag):
         """Get a filterplan for data filtering."""
@@ -127,7 +127,7 @@ class Query:
     def call_result(self, call_id, value):
         """Make an external call and propagate FFI errors."""
         if value is None:
-            value = ffi.NULL
+            value = to_c_str("null")
         else:
             value = ffi_serialize(value)
         self.check_result(lib.polar_call_result(self.ptr, call_id, value))
@@ -194,17 +194,6 @@ class QueryEvent:
         lib.string_free(self.ptr)
 
 
-class Error:
-    def __init__(self):
-        self.ptr = lib.polar_get_error()
-
-    def get(self, enrich_message=None):
-        return get_python_error(ffi.string(self.ptr).decode(), enrich_message)
-
-    def __del__(self):
-        lib.string_free(self.ptr)
-
-
 class Source:
     def __init__(self, ptr):
         self.ptr = ptr
@@ -217,9 +206,12 @@ class Source:
 
 
 def check_result(result, enrich_message=None):
-    if result == 0 or is_null(result):
-        raise Error().get(enrich_message)
-    return result
+    if is_null(result.error):
+        return result.result
+    else:
+        error = get_python_error(ffi.string(result.error).decode(), enrich_message)
+        lib.string_free(result.error)
+        raise error
 
 
 def is_null(result):
@@ -236,7 +228,7 @@ def ffi_serialize(value):
 
 def process_messages(next_message_method):
     while True:
-        msg_ptr = next_message_method()
+        msg_ptr = check_result(next_message_method())
         if is_null(msg_ptr):
             break
         msg_str = ffi.string(msg_ptr).decode()
