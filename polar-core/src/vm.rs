@@ -524,12 +524,12 @@ impl PolarVirtualMachine {
             }
             Goal::Unify { left, right } => self.unify(left, right)?,
             Goal::AddConstraint { term } => self.add_constraint(term)?,
-            Goal::AddConstraintsBatch { add_constraints } => add_constraints
-                .borrow_mut()
-                .drain()
-                .try_for_each(
-                |(_, constraint)| -> Result<(), RuntimeError> { self.add_constraint(&constraint) },
-            )?,
+            Goal::AddConstraintsBatch { add_constraints } => {
+                add_constraints
+                    .borrow_mut()
+                    .drain()
+                    .try_for_each(|(_, constraint)| self.add_constraint(&constraint))?
+            }
             Goal::Run { runnable } => return self.run_runnable(runnable.clone_runnable()),
         }
         Ok(QueryEvent::None)
@@ -2814,10 +2814,6 @@ impl PolarVirtualMachine {
     pub fn rule_source(&self, rule: &Rule) -> String {
         rule.to_polar()
     }
-
-    // fn set_error_context(&self, error: RuntimeError) -> error::PolarError {
-    //     PolarError::from((error, &*self.kb()))
-    // }
 
     fn type_error(&self, term: &Term, msg: String) -> RuntimeError {
         RuntimeError::TypeError {
