@@ -869,10 +869,19 @@ impl KnowledgeBase {
 
         // If there are any Relation::Role declarations in *any* of our resource
         // blocks then we want to add the `has_role` rule type.
-        if self.resource_blocks.has_roles() {
+        if self.resource_blocks.has_resource_roles() {
             rule_types.push(
                 // TODO(gj): "Internal" SourceInfo variant.
                 rule!("has_role", ["actor"; instance!(ACTOR_UNION_NAME), "role"; instance!("String"), "resource"; instance!(RESOURCE_UNION_NAME)], true)
+            );
+        }
+
+        // If there are Relation::Role declarations in *any* of our actor blocks
+        // then we want to add the appropriate `has_role` rule type
+        if self.resource_blocks.has_actor_roles() {
+            rule_types.push(
+                // TODO(gj): "Internal" SourceInfo variant.
+                rule!("has_role", ["actor"; instance!(ACTOR_UNION_NAME), "role"; instance!("String"), "resource"; instance!(ACTOR_UNION_NAME)], true)
             );
         }
 

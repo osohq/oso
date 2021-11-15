@@ -391,9 +391,26 @@ impl ResourceBlocks {
         &self.declarations
     }
 
-    pub fn has_roles(&self) -> bool {
-        let mut declarations = self.declarations().values().flat_map(HashMap::values);
-        declarations.any(|d| matches!(d, Declaration::Role))
+    pub fn has_resource_roles(&self) -> bool {
+        self.resources
+            .iter()
+            .any(|term| match self.declarations().get(term) {
+                Some(declarations) => declarations
+                    .values()
+                    .any(|d| matches!(d, Declaration::Role)),
+                None => false,
+            })
+    }
+
+    pub fn has_actor_roles(&self) -> bool {
+        self.actors
+            .iter()
+            .any(|term| match self.declarations().get(term) {
+                Some(declarations) => declarations
+                    .values()
+                    .any(|d| matches!(d, Declaration::Role)),
+                None => false,
+            })
     }
 
     pub fn relation_tuples(&self) -> Vec<(&Term, &Term, &Term)> {
@@ -1554,6 +1571,55 @@ mod tests {
         let expected = rule!("has_relation", ["subject"; instance!(org_name), "parent", "object"; instance!(repo_name)]);
         assert_eq!(1, has_relation_rule_types.len());
         assert_eq!(has_relation_rule_types[0], expected,);
+
+        Ok(())
+    }
+
+    // Test creation of rule types for actor roles
+    //   - has_role created because at least one resource block has roles declared
+    #[test]
+    fn test_create_resource_specific_rule_types_actor_roles() -> Result<(), PolarError> {
+        let policy = r#"
+            actor User {}
+
+            actor Team {
+                roles = ["member", "owner"];
+
+                "member" if "owner";
+            }
+        "#;
+
+        let polar = Polar::new();
+
+        let user_instance = ExternalInstance {
+            instance_id: 1,
+            constructor: None,
+            repr: None,
+        };
+        let user_term = term!(Value::ExternalInstance(user_instance.clone()));
+        let user_name = sym!("User");
+        polar.register_constant(user_name.clone(), user_term)?;
+        polar.register_mro(user_name.clone(), vec![user_instance.instance_id])?;
+
+        let team_instance = ExternalInstance {
+            instance_id: 2,
+            constructor: None,
+            repr: None,
+        };
+        let team_term = term!(Value::ExternalInstance(team_instance.clone()));
+        let team_name = sym!("Team");
+        polar.register_constant(team_name.clone(), team_term)?;
+        polar.register_mro(team_name.clone(), vec![team_instance.instance_id])?;
+
+        polar.load_str(policy)?;
+
+        let kb = polar.kb.read().unwrap();
+
+        let has_role_rule_types = kb.get_rule_types(&sym!("has_role")).unwrap();
+        // has_role(actor: Actor, role: String, resource: Resource)
+        let expected = rule!("has_role", ["actor"; instance!(ACTOR_UNION_NAME), "role"; instance!("String"), "resource"; instance!(ACTOR_UNION_NAME)]);
+        assert_eq!(1, has_role_rule_types.len());
+        assert_eq!(has_role_rule_types[0], expected);
 
         Ok(())
     }
