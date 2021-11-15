@@ -1,5 +1,5 @@
 use crate::counter::Counter;
-use crate::error::{PolarError, PolarResult, RuntimeError};
+use crate::error::RuntimeError;
 use crate::events::QueryEvent;
 use crate::terms::Term;
 
@@ -12,30 +12,35 @@ pub trait Runnable {
     ///
     /// The optional Counter may be used to create monotonically increasing call IDs that will not
     /// conflict with the parent VM's call IDs.
-    fn run(&mut self, _counter: Option<&mut Counter>) -> PolarResult<QueryEvent>;
+    fn run(&mut self, _counter: Option<&mut Counter>) -> Result<QueryEvent, RuntimeError>;
 
-    fn external_question_result(&mut self, _call_id: u64, _answer: bool) -> PolarResult<()> {
+    fn external_question_result(
+        &mut self,
+        _call_id: u64,
+        _answer: bool,
+    ) -> Result<(), RuntimeError> {
         Err(RuntimeError::InvalidState {
             msg: "Unexpected query answer".to_string(),
-        }
-        .into())
+        })
     }
 
-    fn external_call_result(&mut self, _call_id: u64, _term: Option<Term>) -> PolarResult<()> {
+    fn external_call_result(
+        &mut self,
+        _call_id: u64,
+        _term: Option<Term>,
+    ) -> Result<(), RuntimeError> {
         Err(RuntimeError::InvalidState {
             msg: "Unexpected external call".to_string(),
-        }
-        .into())
+        })
     }
 
-    fn debug_command(&mut self, _command: &str) -> PolarResult<()> {
+    fn debug_command(&mut self, _command: &str) -> Result<(), RuntimeError> {
         Err(RuntimeError::InvalidState {
             msg: "Unexpected debug command".to_string(),
-        }
-        .into())
+        })
     }
 
-    fn handle_error(&mut self, err: PolarError) -> PolarResult<QueryEvent> {
+    fn handle_error(&mut self, err: RuntimeError) -> Result<QueryEvent, RuntimeError> {
         Err(err)
     }
 

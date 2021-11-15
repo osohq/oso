@@ -590,11 +590,13 @@ impl KnowledgeBase {
     /// special meaning in policies that use resource blocks.
     pub fn register_constant(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
         if name.0 == ACTOR_UNION_NAME || name.0 == RESOURCE_UNION_NAME {
-            return Err(RuntimeError::InvalidRegistration {
-                msg: format!("'{}' is a built-in specializer.", name),
-                sym: name,
-            }
-            .into());
+            return Err(PolarError::from((
+                RuntimeError::InvalidRegistration {
+                    msg: format!("'{}' is a built-in specializer.", name),
+                    sym: name,
+                },
+                &*self,
+            )));
         }
         self.constants.insert(name, value);
         Ok(())
@@ -627,7 +629,10 @@ impl KnowledgeBase {
         // Confirm name is a registered class
         if !self.is_constant(&name) {
             let msg = format!("Cannot add MRO for unregistered class {}", name);
-            return Err(RuntimeError::InvalidState { msg }.into());
+            return Err(PolarError::from((
+                RuntimeError::InvalidState { msg },
+                &*self,
+            )));
         }
         self.mro.insert(name, mro);
         Ok(())
@@ -636,7 +641,8 @@ impl KnowledgeBase {
     pub fn add_source(&mut self, source: Source) -> PolarResult<u64> {
         let src_id = self.new_id();
         if let Some(ref filename) = source.filename {
-            self.check_file(&source.src, filename)?;
+            self.check_file(&source.src, filename)
+                .map_err(|e| PolarError::from((e, &*self)))?;
             self.loaded_content
                 .insert(source.src.clone(), filename.to_string());
             self.loaded_files.insert(filename.to_string(), src_id);
@@ -665,7 +671,7 @@ impl KnowledgeBase {
         self.resource_blocks.clear();
     }
 
-    fn check_file(&self, src: &str, filename: &str) -> PolarResult<()> {
+    fn check_file(&self, src: &str, filename: &str) -> Result<(), RuntimeError> {
         match (
             self.loaded_content.get(src),
             self.loaded_files.get(filename).is_some(),
@@ -673,8 +679,7 @@ impl KnowledgeBase {
             (Some(other_file), true) if other_file == filename => {
                 return Err(RuntimeError::FileLoading {
                     msg: format!("File {} has already been loaded.", filename),
-                }
-                .into())
+                })
             }
             (_, true) => {
                 return Err(RuntimeError::FileLoading {
@@ -682,8 +687,7 @@ impl KnowledgeBase {
                         "A file with the name {}, but different contents has already been loaded.",
                         filename
                     ),
-                }
-                .into());
+                })
             }
             (Some(other_file), _) => {
                 return Err(RuntimeError::FileLoading {
@@ -691,8 +695,7 @@ impl KnowledgeBase {
                         "A file with the same contents as {} named {} has already been loaded.",
                         filename, other_file
                     ),
-                }
-                .into());
+                })
             }
             _ => {}
         }

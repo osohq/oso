@@ -175,9 +175,11 @@ impl Polar {
 
     /// Load `Source`s into the KB.
     pub fn load(&self, sources: Vec<Source>) -> PolarResult<()> {
-        if self.kb.read().unwrap().has_rules() {
-            let msg = MULTIPLE_LOAD_ERROR_MSG.to_owned();
-            return Err(RuntimeError::FileLoading { msg }.into());
+        if let Ok(kb) = self.kb.read() {
+            if kb.has_rules() {
+                let msg = MULTIPLE_LOAD_ERROR_MSG.to_owned();
+                return Err(PolarError::from((RuntimeError::FileLoading { msg }, &*kb)));
+            }
         }
 
         let (mut errors, mut warnings) = (vec![], vec![]);
@@ -275,6 +277,7 @@ impl Polar {
         class_tag: &str,
     ) -> PolarResult<FilterPlan> {
         build_filter_plan(types, partial_results, variable, class_tag)
+            .map_err(|e| PolarError::from((e, &*self.kb.read().unwrap())))
     }
 
     // TODO(@gkaemmer): this is a hack and should not be used for similar cases.

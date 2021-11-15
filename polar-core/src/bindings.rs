@@ -3,7 +3,7 @@
 /// Bindings associate variables in the VM with constraints or values.
 use std::collections::{HashMap, HashSet};
 
-use crate::error::{PolarResult, RuntimeError};
+use crate::error::RuntimeError;
 use crate::folder::{fold_list, fold_term, Folder};
 use crate::terms::{has_rest_var, Operation, Operator, Symbol, Term, Value};
 use crate::vm::Goal;
@@ -157,7 +157,12 @@ impl BindingManager {
     ///
     /// If the binding succeeds, the new expression is returned as a goal. Otherwise,
     /// an error is returned.
-    fn partial_bind(&mut self, partial: Operation, var: &Symbol, val: Term) -> PolarResult<Goal> {
+    fn partial_bind(
+        &mut self,
+        partial: Operation,
+        var: &Symbol,
+        val: Term,
+    ) -> Result<Goal, RuntimeError> {
         match partial.ground(var, val.clone()) {
             None => Err(RuntimeError::IncompatibleBindings {
                 msg: "Grounding failed A".into(),
@@ -200,7 +205,7 @@ impl BindingManager {
     ///
     /// If a binding between two variables is made, and one is bound and the other unbound, the
     /// unbound variable will take the value of the bound one.
-    pub fn bind(&mut self, var: &Symbol, val: Term) -> PolarResult<Option<Goal>> {
+    pub fn bind(&mut self, var: &Symbol, val: Term) -> Result<Option<Goal>, RuntimeError> {
         let mut goal = None;
         if let Ok(symbol) = val.value().as_symbol() {
             goal = self.bind_variables(var, symbol)?;
@@ -256,7 +261,7 @@ impl BindingManager {
     /// `term` must be an expression`.
     ///
     /// An error is returned if the constraint is incompatible with existing constraints.
-    pub fn add_constraint(&mut self, term: &Term) -> PolarResult<()> {
+    pub fn add_constraint(&mut self, term: &Term) -> Result<(), RuntimeError> {
         self.do_followers(|_, follower| follower.add_constraint(term))?;
 
         assert!(term.value().as_expression().is_ok());
@@ -429,7 +434,11 @@ impl BindingManager {
 // Private impls.
 impl BindingManager {
     /// Bind two variables together.
-    fn bind_variables(&mut self, left: &Symbol, right: &Symbol) -> PolarResult<Option<Goal>> {
+    fn bind_variables(
+        &mut self,
+        left: &Symbol,
+        right: &Symbol,
+    ) -> Result<Option<Goal>, RuntimeError> {
         let mut goal = None;
         match (self._variable_state(left), self._variable_state(right)) {
             (
@@ -582,9 +591,9 @@ impl BindingManager {
         BindingManagerVariableState::Unbound
     }
 
-    fn do_followers<F>(&mut self, mut func: F) -> PolarResult<()>
+    fn do_followers<F>(&mut self, mut func: F) -> Result<(), RuntimeError>
     where
-        F: FnMut(FollowerId, &mut BindingManager) -> PolarResult<()>,
+        F: FnMut(FollowerId, &mut BindingManager) -> Result<(), RuntimeError>,
     {
         for (id, follower) in self.followers.iter_mut() {
             func(*id, follower)?

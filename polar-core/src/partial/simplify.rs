@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 use crate::bindings::Bindings;
-use crate::error::{PolarResult, RuntimeError};
+use crate::error::RuntimeError;
 use crate::folder::{fold_term, Folder};
 use crate::formatting::ToPolarString;
 use crate::terms::*;
@@ -137,7 +137,10 @@ pub fn simplify_bindings(bindings: Bindings) -> Option<Bindings> {
 ///
 /// - For partials, simplify the constraint expressions.
 /// - For non-partials, deep deref. TODO(ap/gj): deep deref.
-pub fn simplify_bindings_opt(bindings: Bindings, all: bool) -> PolarResult<Option<Bindings>> {
+pub fn simplify_bindings_opt(
+    bindings: Bindings,
+    all: bool,
+) -> Result<Option<Bindings>, RuntimeError> {
     let mut perf = PerfCounters::new(TRACK_PERF);
     simplify_debug!("simplify bindings");
 
@@ -201,8 +204,7 @@ pub fn simplify_bindings_opt(bindings: Bindings, all: bool) -> PolarResult<Optio
                     simplified: None,
                     var: var.clone(),
                     term: value.clone(),
-                }
-                .into());
+                });
             }
         }
     }

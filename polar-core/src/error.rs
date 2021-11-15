@@ -74,89 +74,6 @@ pub struct ErrorContext {
     pub range: Range,
 }
 
-impl PolarError {
-    pub fn set_context(&mut self, source: Source) {
-        if let Some(span) = self.span() {
-            let range = Range::from_span(&source.src, span);
-            self.context.replace(ErrorContext { source, range });
-        } else {
-            panic!("set_context w/o span: {}", self);
-        }
-    }
-
-    pub fn get_source(&self, kb: &KnowledgeBase) -> Option<Source> {
-        use {ErrorKind::*, RuntimeError::*};
-
-        match &self.kind {
-            // Parse error source should be attached while parsing since we have it in our hands.
-            Parse(_) => None,
-
-            Validation(_) => None,
-
-            // Some runtime errors have a source.
-            Runtime(e) => match e {
-                // These errors sometimes track `term`, from which we derive the source.
-                Application { term, .. } => term.as_ref().and_then(|t| kb.get_term_source(t)),
-
-                // These errors track `term`, from which we derive the source.
-                ArithmeticError { term }
-                | TypeError { term, .. }
-                | UnhandledPartial { term, .. }
-                | Unsupported { term, .. } => kb.get_term_source(term),
-
-                // These errors never have a span.
-                StackOverflow { .. }
-                | QueryTimeout { .. }
-                | FileLoading { .. }
-                | IncompatibleBindings { .. }
-                | DataFilteringFieldMissing { .. }
-                | InvalidRegistration { .. }
-                | InvalidState { .. } => None,
-            },
-
-            // Operational errors never have a source.
-            Operational(_) => None,
-        }
-    }
-
-    /// Get `(left, right)` span from errors that carry source context.
-    fn span(&self) -> Option<(usize, usize)> {
-        use {ErrorKind::*, RuntimeError::*};
-
-        match &self.kind {
-            // Parse error context should be attached while parsing since we have it in our hands.
-            Parse(_) => None,
-
-            // All validation errors have a span.
-            Validation(_) => None,
-
-            // Some runtime errors have a span.
-            Runtime(e) => match e {
-                // These errors sometimes track `term`, from which we calculate the span.
-                Application { term, .. } => term.as_ref().and_then(Term::span),
-
-                // These errors track `term`, from which we calculate the span.
-                ArithmeticError { term }
-                | TypeError { term, .. }
-                | UnhandledPartial { term, .. }
-                | Unsupported { term, .. } => term.span(),
-
-                // These errors never have a span.
-                StackOverflow { .. }
-                | QueryTimeout { .. }
-                | FileLoading { .. }
-                | IncompatibleBindings { .. }
-                | DataFilteringFieldMissing { .. }
-                | InvalidRegistration { .. }
-                | InvalidState { .. } => None,
-            },
-
-            // Operational errors never have a span.
-            Operational(_) => None,
-        }
-    }
-}
-
 impl From<(ParseError, Source)> for PolarError {
     fn from((error, source): (ParseError, Source)) -> Self {
         use ParseError::*;
@@ -189,11 +106,41 @@ impl From<(ParseError, Source)> for PolarError {
     }
 }
 
-impl From<RuntimeError> for PolarError {
-    fn from(err: RuntimeError) -> Self {
+impl From<(RuntimeError, &KnowledgeBase)> for PolarError {
+    fn from((err, kb): (RuntimeError, &KnowledgeBase)) -> Self {
+        use RuntimeError::*;
+
+        let context = match &err {
+            // These errors sometimes track `term`, from which we derive context.
+            Application { term, .. } => term
+                .as_ref()
+                .and_then(Term::span)
+                .zip(term.as_ref().and_then(|t| kb.get_term_source(t))),
+
+            // These errors track `term`, from which we derive the context.
+            ArithmeticError { term }
+            | TypeError { term, .. }
+            | UnhandledPartial { term, .. }
+            | Unsupported { term, .. } => term.span().zip(kb.get_term_source(term)),
+
+            // These errors never have context.
+            StackOverflow { .. }
+            | QueryTimeout { .. }
+            | FileLoading { .. }
+            | IncompatibleBindings { .. }
+            | DataFilteringFieldMissing { .. }
+            | InvalidRegistration { .. }
+            | InvalidState { .. } => None,
+        };
+
+        let context = context.map(|(span, source)| ErrorContext {
+            range: Range::from_span(&source.src, span),
+            source,
+        });
+
         Self {
             kind: ErrorKind::Runtime(err),
-            context: None,
+            context,
         }
     }
 }
