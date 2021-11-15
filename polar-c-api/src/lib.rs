@@ -1,3 +1,6 @@
+// everything in this file is unsafe, clippy
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
+
 use polar_core::error::PolarError;
 pub use polar_core::polar::Polar;
 pub use polar_core::query::Query;
@@ -9,7 +12,6 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr::{null, null_mut};
 
 /// Wrapper struct to help us return errors
-/// We Go now
 #[repr(C)]
 pub struct CResult<T> {
     pub result: *mut T,
