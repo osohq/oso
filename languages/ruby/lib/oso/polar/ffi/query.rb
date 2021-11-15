@@ -33,11 +33,11 @@ module Oso
           handle_error res
         end
 
-        # @param result [String]
+        # @param value [Object]
         # @param call_id [Integer]
         # @raise [FFI::Error] if the FFI call returns an error.
-        def call_result(result, call_id:)
-          res = Rust.call_result(self, call_id, result)
+        def call_result(value, call_id:)
+          res = Rust.call_result(self, call_id, JSON.dump(value))
           handle_error res
         end
 

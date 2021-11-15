@@ -224,14 +224,10 @@ func (q QueryFfi) nextMessage() (*C.char, error) {
 func (q QueryFfi) CallResult(callID uint64, term *types.Term) error {
 	var s *C.char
 	var err error
-	if term != nil {
-		s, err = ffiSerialize(term)
-		defer C.free(unsafe.Pointer(s))
-		if err != nil {
-			return err
-		}
-	} else {
-		s = C.CString(string("null"))
+	s, err = ffiSerialize(term)
+	defer C.free(unsafe.Pointer(s))
+	if err != nil {
+		return err
 	}
 
 	result := C.polar_call_result(q.ptr, C.uint64_t(callID), s)

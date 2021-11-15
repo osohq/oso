@@ -126,10 +126,7 @@ class Query:
 
     def call_result(self, call_id, value):
         """Make an external call and propagate FFI errors."""
-        if value is None:
-            value = to_c_str("null")
-        else:
-            value = ffi_serialize(value)
+        value = ffi_serialize(value)
         self.check_result(lib.polar_call_result(self.ptr, call_id, value))
 
     def question_result(self, call_id, answer):
