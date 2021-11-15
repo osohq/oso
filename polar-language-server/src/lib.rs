@@ -295,6 +295,8 @@ impl PolarLanguageServer {
                     range: range_from_polar_error_context(e),
                     severity: Some(DiagnosticSeverity::Error),
                     source: Some("Polar Language Server".to_owned()),
+                    // NOTE(gj): We stringify the `ErrorKind` instead of the full `PolarError`
+                    // because we don't want source context as part of the error message.
                     message: e.kind.to_string(),
                     ..Default::default()
                 };

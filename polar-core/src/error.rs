@@ -177,7 +177,8 @@ impl ParseError {
     }
 }
 
-// TODO(gj): temporary hack
+// TODO(gj): temporary hack -- this won't be necessary once `formatting::source_lines` takes a
+// `Range` instead of a single `usize` (`loc`).
 fn pos_to_loc(src: &str, row: usize, column: usize) -> usize {
     let chars_before_row = src.split('\n').take(row).flat_map(|r| r.chars()).count();
     row + chars_before_row + column
