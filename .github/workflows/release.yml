@@ -535,9 +535,13 @@ jobs:
         working-directory: go
 
   validate_go_macos_arm:
-    name: Test go on m1
+    name: Test go ${{ matrix.go-version }} on m1
     needs: [build_go]
     runs-on: [self-hosted, m1]
+    strategy:
+      matrix:
+        # go 1.16 is the earliest version supported on m1
+        go-version: ["1.16", "1.17"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -547,13 +551,10 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: go
-      # go 1.16 is the earliest version supported on m1
       - name: "test"
         run: |
-          ~/go/bin/go1.16 build
-          ~/go/bin/go1.16 test -v ./tests/ 
-          ~/go/bin/go1.17 build
-          ~/go/bin/go1.17 test -v ./tests/ 
+          ~/go/bin/go${{ matrix.go-version }} build
+          ~/go/bin/go${{ matrix.go-version }} test -v ./tests/ 
         working-directory: go
         env:
           CGO_ENABLED: 1
