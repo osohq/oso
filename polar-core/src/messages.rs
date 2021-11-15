@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
 
-use super::warning::Warning;
+use super::warning::PolarWarning;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MessageKind {
@@ -18,7 +18,7 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn warning(warning: Warning) -> Message {
+    pub fn warning(warning: PolarWarning) -> Message {
         Self {
             kind: MessageKind::Warning,
             msg: warning.to_string(),

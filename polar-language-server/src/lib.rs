@@ -698,8 +698,7 @@ mod tests {
         let polar_diagnostics = pls.load_documents();
         assert_eq!(polar_diagnostics.len(), 2, "{:?}", polar_diagnostics);
         let unknown_specializer = polar_diagnostics.get(0).unwrap();
-        let expected_message =
-            "Unknown specializer B\n004:             f(_: B);\n                      ^";
+        let expected_message = "Unknown specializer B at line 4, column 18 of file file:///whatever.polar:\n\t004:             f(_: B);\n\t                      ^\n";
         assert_eq!(unknown_specializer.to_string(), expected_message);
         let unregistered_constant = polar_diagnostics.get(1).unwrap();
         let expected_message = "Unregistered class: A";

@@ -3,47 +3,16 @@ use std::fmt;
 use indoc::indoc;
 
 use super::diagnostic::{Context, Range};
-use super::sources::Source;
+use super::kb::KnowledgeBase;
 use super::terms::{InstanceLiteral, Pattern, Symbol, Term, Value};
 
 #[derive(Debug)]
-pub struct Warning {
-    pub kind: WarningKind,
+pub struct PolarWarning {
+    pub kind: ValidationWarning,
     pub context: Option<Context>,
 }
 
-impl Warning {
-    pub fn set_context(&mut self, source: Option<&Source>) {
-        if let (Some(source), Some(span)) = (source, self.span()) {
-            let range = Range::from_span(&source.src, span);
-            self.context.replace(Context {
-                source: source.clone(),
-                range,
-            });
-        }
-    }
-
-    pub fn get_source_id(&self) -> Option<u64> {
-        use WarningKind::*;
-
-        match &self.kind {
-            AmbiguousPrecedence { term } | UnknownSpecializer { term, .. } => term.get_source_id(),
-            MissingAllowRule | MissingHasPermissionRule => None,
-        }
-    }
-
-    /// Get `(left, right)` span from warnings that carry source context.
-    fn span(&self) -> Option<(usize, usize)> {
-        use WarningKind::*;
-
-        match &self.kind {
-            AmbiguousPrecedence { term } | UnknownSpecializer { term, .. } => term.span(),
-            MissingAllowRule | MissingHasPermissionRule => None,
-        }
-    }
-}
-
-impl fmt::Display for Warning {
+impl fmt::Display for PolarWarning {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.kind)?;
         if let Some(ref context) = self.context {
@@ -54,24 +23,38 @@ impl fmt::Display for Warning {
 }
 
 #[derive(Debug)]
-pub enum WarningKind {
-    // validation | general
+pub enum ValidationWarning {
+    // Category: general
     AmbiguousPrecedence { term: Term },
-    // validation | enforcement
+    // Category: enforcement
     MissingAllowRule,
-    // validation | resource blocks
+    // Category: resource blocks
     MissingHasPermissionRule,
-    // validation | general
+    // Category: general
     // TODO(gj): won't need `sym` once we have an easier, infallible way of going from `Term` ->
     // `Pattern` -> `InstanceLiteral` -> `tag` (`Symbol`).
     UnknownSpecializer { term: Term, sym: Symbol },
 }
 
-impl From<WarningKind> for Warning {
-    fn from(kind: WarningKind) -> Self {
-        Self {
-            kind,
-            context: None,
+impl ValidationWarning {
+    pub fn with_context(self, kb: &KnowledgeBase) -> PolarWarning {
+        use ValidationWarning::*;
+
+        let context = match &self {
+            AmbiguousPrecedence { term } | UnknownSpecializer { term, .. } => {
+                term.span().zip(kb.get_term_source(term))
+            }
+            MissingAllowRule | MissingHasPermissionRule => None,
+        };
+
+        let context = context.map(|(span, source)| Context {
+            range: Range::from_span(&source.src, span),
+            source,
+        });
+
+        PolarWarning {
+            kind: self,
+            context,
         }
     }
 }
@@ -145,9 +128,9 @@ fn common_specializer_misspellings(term: &Term) -> Option<&str> {
     None
 }
 
-impl fmt::Display for WarningKind {
+impl fmt::Display for ValidationWarning {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use WarningKind::*;
+        use ValidationWarning::*;
 
         match self {
             AmbiguousPrecedence { .. } => write!(f, "{}", AMBIGUOUS_PRECEDENCE_MSG)?,

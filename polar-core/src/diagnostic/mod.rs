@@ -5,12 +5,12 @@ pub use context::{Context, Range};
 use std::fmt;
 
 use super::error::PolarError;
-use super::warning::Warning;
+use super::warning::PolarWarning;
 
 #[derive(Debug)]
 pub enum Diagnostic {
     Error(PolarError),
-    Warning(Warning),
+    Warning(PolarWarning),
 }
 
 impl Diagnostic {

@@ -6,7 +6,7 @@ use super::kb::*;
 use super::rules::*;
 use super::terms::*;
 use super::visitor::{walk_call, walk_rule, walk_term, Visitor};
-use super::warning::WarningKind;
+use super::warning::{PolarWarning, ValidationWarning};
 
 /// Record singleton variables and unknown specializers in a rule.
 struct SingletonVisitor<'kb> {
@@ -33,7 +33,9 @@ impl<'kb> SingletonVisitor<'kb> {
             .into_iter()
             .map(|(sym, term)| {
                 if let Value::Pattern(_) = term.value() {
-                    Diagnostic::Warning(WarningKind::UnknownSpecializer { term, sym }.into())
+                    Diagnostic::Warning(
+                        ValidationWarning::UnknownSpecializer { term, sym }.with_context(self.kb),
+                    )
                 } else {
                     Diagnostic::Error(
                         ValidationError::SingletonVariable { term }.with_context(self.kb),
@@ -88,7 +90,11 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
     fn warnings(self) -> Vec<Diagnostic> {
         self.unparenthesized_expr
             .into_iter()
-            .map(|term| Diagnostic::Warning(WarningKind::AmbiguousPrecedence { term }.into()))
+            .map(|term| {
+                Diagnostic::Warning(
+                    ValidationWarning::AmbiguousPrecedence { term }.with_context(self.kb),
+                )
+            })
             .collect()
     }
 }
@@ -132,7 +138,9 @@ pub fn check_no_allow_rule(kb: &KnowledgeBase) -> Option<Diagnostic> {
     if has_allow || has_allow_field || has_allow_request {
         None
     } else {
-        Some(Diagnostic::Warning(WarningKind::MissingAllowRule.into()))
+        Some(Diagnostic::Warning(
+            ValidationWarning::MissingAllowRule.with_context(kb),
+        ))
     }
 }
 
@@ -158,9 +166,10 @@ impl ResourceBlocksMissingHasPermissionVisitor {
 
     fn warnings(&mut self) -> Option<Diagnostic> {
         if !self.calls_has_permission {
-            return Some(Diagnostic::Warning(
-                WarningKind::MissingHasPermissionRule.into(),
-            ));
+            return Some(Diagnostic::Warning(PolarWarning {
+                kind: ValidationWarning::MissingHasPermissionRule,
+                context: None,
+            }));
         }
         None
     }
