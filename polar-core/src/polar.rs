@@ -2,7 +2,7 @@ use std::sync::{Arc, RwLock};
 
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
 use super::diagnostic::Diagnostic;
-use super::error::{PolarError, PolarResult, RuntimeError, ValidationError};
+use super::error::{PolarResult, RuntimeError, ValidationError};
 use super::kb::*;
 use super::messages::*;
 use super::parser;
@@ -58,7 +58,7 @@ impl Polar {
         ) -> PolarResult<Vec<Diagnostic>> {
             let mut lines = parser::parse_lines(source_id, &source.src)
                 // TODO(gj): we still bomb out at the first ParseError.
-                .map_err(|e| PolarError::from((e, source.clone())))?;
+                .map_err(|e| e.with_context(source.clone()))?;
             lines.reverse();
             let mut diagnostics = vec![];
             while let Some(line) = lines.pop() {
@@ -84,13 +84,13 @@ impl Polar {
                                 }
                             ) if args.is_empty()
                         ) {
-                            diagnostics.push(Diagnostic::Error(PolarError::from((
+                            diagnostics.push(Diagnostic::Error(
                                 ValidationError::InvalidRuleType {
                                     rule_type,
                                     msg: "Rule types cannot contain dot lookups.".to_owned(),
-                                },
-                                &*kb,
-                            ))));
+                                }
+                                .with_context(&*kb),
+                            ));
                         } else {
                             kb.add_rule_type(rule_type);
                         }
@@ -105,7 +105,7 @@ impl Polar {
                         Ok(errors) | Err(errors) => diagnostics.append(
                             &mut errors
                                 .into_iter()
-                                .map(|e| Diagnostic::Error(PolarError::from((e, &*kb))))
+                                .map(|e| Diagnostic::Error(e.with_context(&*kb)))
                                 .collect(),
                         ),
                     },
@@ -131,7 +131,7 @@ impl Polar {
             &mut kb
                 .rewrite_shorthand_rules()
                 .into_iter()
-                .map(|e| Diagnostic::Error(PolarError::from((e, &*kb))))
+                .map(|e| Diagnostic::Error(e.with_context(&*kb)))
                 .collect(),
         );
 
@@ -178,7 +178,7 @@ impl Polar {
         if let Ok(kb) = self.kb.read() {
             if kb.has_rules() {
                 let msg = MULTIPLE_LOAD_ERROR_MSG.to_owned();
-                return Err(PolarError::from((RuntimeError::FileLoading { msg }, &*kb)));
+                return Err(RuntimeError::FileLoading { msg }.with_context(&*kb));
             }
         }
 
@@ -226,8 +226,8 @@ impl Polar {
         let term = {
             let mut kb = self.kb.write().unwrap();
             let src_id = kb.new_id();
-            let term = parser::parse_query(src_id, src)
-                .map_err(|e| PolarError::from((e, source.clone())))?;
+            let term =
+                parser::parse_query(src_id, src).map_err(|e| e.with_context(source.clone()))?;
             kb.sources.add_source(source, src_id);
             term
         };
@@ -277,7 +277,7 @@ impl Polar {
         class_tag: &str,
     ) -> PolarResult<FilterPlan> {
         build_filter_plan(types, partial_results, variable, class_tag)
-            .map_err(|e| PolarError::from((e, &*self.kb.read().unwrap())))
+            .map_err(|e| e.with_context(&*self.kb.read().unwrap()))
     }
 
     // TODO(@gkaemmer): this is a hack and should not be used for similar cases.

@@ -4,7 +4,7 @@ use std::sync::Arc;
 pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::diagnostic::Diagnostic;
-use super::error::{PolarError, PolarResult, RuntimeError, ValidationError};
+use super::error::{PolarResult, RuntimeError, ValidationError};
 use super::resource_block::{ResourceBlocks, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::*;
@@ -104,7 +104,7 @@ impl KnowledgeBase {
         let mut diagnostics = vec![];
 
         if let Err(e) = self.validate_rule_types() {
-            diagnostics.push(Diagnostic::Error(PolarError::from((e, self))));
+            diagnostics.push(Diagnostic::Error(e.with_context(self)));
         }
 
         diagnostics.append(&mut self.validate_rule_calls());
@@ -590,13 +590,11 @@ impl KnowledgeBase {
     /// special meaning in policies that use resource blocks.
     pub fn register_constant(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
         if name.0 == ACTOR_UNION_NAME || name.0 == RESOURCE_UNION_NAME {
-            return Err(PolarError::from((
-                RuntimeError::InvalidRegistration {
-                    msg: format!("'{}' is a built-in specializer.", name),
-                    sym: name,
-                },
-                &*self,
-            )));
+            return Err(RuntimeError::InvalidRegistration {
+                msg: format!("'{}' is a built-in specializer.", name),
+                sym: name,
+            }
+            .with_context(&*self));
         }
         self.constants.insert(name, value);
         Ok(())
@@ -629,10 +627,7 @@ impl KnowledgeBase {
         // Confirm name is a registered class
         if !self.is_constant(&name) {
             let msg = format!("Cannot add MRO for unregistered class {}", name);
-            return Err(PolarError::from((
-                RuntimeError::InvalidState { msg },
-                &*self,
-            )));
+            return Err(RuntimeError::InvalidState { msg }.with_context(&*self));
         }
         self.mro.insert(name, mro);
         Ok(())
@@ -642,7 +637,7 @@ impl KnowledgeBase {
         let src_id = self.new_id();
         if let Some(ref filename) = source.filename {
             self.check_file(&source.src, filename)
-                .map_err(|e| PolarError::from((e, &*self)))?;
+                .map_err(|e| e.with_context(&*self))?;
             self.loaded_content
                 .insert(source.src.clone(), filename.to_string());
             self.loaded_files.insert(filename.to_string(), src_id);
@@ -884,7 +879,11 @@ impl KnowledgeBase {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::ErrorKind::{Runtime, Validation};
+
+    use crate::error::{
+        ErrorKind::{Runtime, Validation},
+        PolarError,
+    };
 
     #[test]
     /// Test validation implemented in `check_file()`.

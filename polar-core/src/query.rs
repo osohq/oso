@@ -1,5 +1,3 @@
-use crate::error::PolarError;
-
 use super::error::PolarResult;
 use super::events::*;
 use super::messages::*;
@@ -43,7 +41,7 @@ impl Query {
             Err(e) => self
                 .top_runnable()
                 .handle_error(e)
-                .map_err(|e| PolarError::from((e, &*self.vm.kb())))?,
+                .map_err(|e| e.with_context(&*self.vm.kb()))?,
         };
         self.recv_event(qe)
     }
@@ -59,7 +57,7 @@ impl Query {
                 if let Some((_, result_call_id)) = self.pop_runnable() {
                     self.top_runnable()
                         .external_question_result(result_call_id, result)
-                        .map_err(|e| PolarError::from((e, &*self.vm.kb())))?;
+                        .map_err(|e| e.with_context(&*self.vm.kb()))?;
                     self.next_event()
                 } else {
                     // VM is done.
@@ -89,25 +87,25 @@ impl Query {
     pub fn call_result(&mut self, call_id: u64, value: Option<Term>) -> PolarResult<()> {
         self.top_runnable()
             .external_call_result(call_id, value)
-            .map_err(|e| PolarError::from((e, &*self.vm.kb())))
+            .map_err(|e| e.with_context(&*self.vm.kb()))
     }
 
     pub fn question_result(&mut self, call_id: u64, result: bool) -> PolarResult<()> {
         self.top_runnable()
             .external_question_result(call_id, result)
-            .map_err(|e| PolarError::from((e, &*self.vm.kb())))
+            .map_err(|e| e.with_context(&*self.vm.kb()))
     }
 
     pub fn application_error(&mut self, message: String) -> PolarResult<()> {
         self.vm
             .external_error(message)
-            .map_err(|e| PolarError::from((e, &*self.vm.kb())))
+            .map_err(|e| e.with_context(&*self.vm.kb()))
     }
 
     pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {
         self.top_runnable()
             .debug_command(command)
-            .map_err(|e| PolarError::from((e, &*self.vm.kb())))
+            .map_err(|e| e.with_context(&*self.vm.kb()))
     }
 
     pub fn next_message(&self) -> Option<Message> {
@@ -121,7 +119,7 @@ impl Query {
     pub fn bind(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
         self.vm
             .bind(&name, value)
-            .map_err(|e| PolarError::from((e, &*self.vm.kb())))
+            .map_err(|e| e.with_context(&*self.vm.kb()))
     }
 }
 

@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use super::diagnostic::Diagnostic;
-use super::error::{PolarError, ValidationError};
+use super::error::ValidationError;
 use super::formatting::source_lines;
 use super::kb::*;
 use super::rules::*;
@@ -62,10 +62,7 @@ fn diagnostic_from_singleton(term: Term, kb: &KnowledgeBase) -> Diagnostic {
         }
         Diagnostic::Warning(msg)
     } else {
-        Diagnostic::Error(PolarError::from((
-            ValidationError::SingletonVariable { term },
-            kb,
-        )))
+        Diagnostic::Error(ValidationError::SingletonVariable { term }.with_context(kb))
     }
 }
 
@@ -296,7 +293,7 @@ pub fn check_undefined_rule_calls(kb: &KnowledgeBase) -> Vec<Diagnostic> {
     visitor
         .errors()
         .into_iter()
-        .map(|e| Diagnostic::Error(PolarError::from((e, kb))))
+        .map(|e| Diagnostic::Error(e.with_context(kb)))
         .collect()
 }
 
