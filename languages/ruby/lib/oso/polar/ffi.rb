@@ -2,6 +2,13 @@
 
 require 'ffi'
 
+# helper method to generate result types
+def result(result_klass)
+  Class.new(::FFI::Struct) do
+    layout :result, result_klass, :error, :string
+  end.by_value
+end
+
 module Oso
   module Polar
     module FFI
@@ -53,6 +60,16 @@ module Oso
           Rust.free(ptr) unless ptr.null?
         end
       end
+
+      # Defines the result type version of
+      # each of these structs
+      # result(T) => { result: T, error: string }
+      CResultVoid = result(:int)
+      CResultString = result(:string)
+      CResultQuery = result(Query)
+      CResultQueryEvent = result(QueryEvent)
+      CResultMessage = result(Message)
+      CResultSource = result(Source)
     end
     private_constant :FFI
   end

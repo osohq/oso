@@ -13,15 +13,15 @@ module Oso
           extend ::FFI::Library
           ffi_lib FFI::LIB_PATH
 
-          attach_function :debug_command, :polar_debug_command, [FFI::Query, :string], :int32
-          attach_function :call_result, :polar_call_result, [FFI::Query, :uint64, :string], :int32
-          attach_function :question_result, :polar_question_result, [FFI::Query, :uint64, :int32], :int32
-          attach_function :application_error, :polar_application_error, [FFI::Query, :string], :int32
-          attach_function :next_event, :polar_next_query_event, [FFI::Query], FFI::QueryEvent
-          attach_function :next_message, :polar_next_query_message, [FFI::Query], FFI::Message
-          attach_function :source, :polar_query_source_info, [FFI::Query], FFI::Source
+          attach_function :debug_command, :polar_debug_command, [FFI::Query, :string], CResultVoid
+          attach_function :call_result, :polar_call_result, [FFI::Query, :uint64, :string], CResultVoid
+          attach_function :question_result, :polar_question_result, [FFI::Query, :uint64, :int32], CResultVoid
+          attach_function :application_error, :polar_application_error, [FFI::Query, :string], CResultVoid
+          attach_function :next_event, :polar_next_query_event, [FFI::Query], CResultQueryEvent
+          attach_function :next_message, :polar_next_query_message, [FFI::Query], CResultMessage
+          attach_function :source, :polar_query_source_info, [FFI::Query], CResultSource
           attach_function :free, :query_free, [FFI::Query], :int32
-          attach_function :bind, :polar_bind, [FFI::Query, :string, :string], :int32
+          attach_function :bind, :polar_bind, [FFI::Query, :string, :string], CResultVoid
         end
         private_constant :Rust
 
@@ -30,7 +30,7 @@ module Oso
         def debug_command(cmd)
           res = Rust.debug_command(self, cmd)
           process_messages
-          handle_error if res.zero?
+          handle_error res
         end
 
         # @param result [String]
@@ -38,7 +38,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def call_result(result, call_id:)
           res = Rust.call_result(self, call_id, result)
-          handle_error if res.zero?
+          handle_error res
         end
 
         # @param result [Boolean]
@@ -47,14 +47,14 @@ module Oso
         def question_result(result, call_id:)
           result = result ? 1 : 0
           res = Rust.question_result(self, call_id, result)
-          handle_error if res.zero?
+          handle_error res
         end
 
         # @param message [String]
         # @raise [FFI::Error] if the FFI call returns an error.
         def application_error(message)
           res = Rust.application_error(self, message)
-          handle_error if res.zero?
+          handle_error res
         end
 
         # @return [::Oso::Polar::QueryEvent]
@@ -62,18 +62,18 @@ module Oso
         def next_event
           event = Rust.next_event(self)
           process_messages
-          handle_error if event.null?
+          event = handle_error event
 
           ::Oso::Polar::QueryEvent.new(JSON.parse(event.to_s))
         end
 
         def bind(name, value)
           res = Rust.bind(self, name, JSON.dump(value))
-          handle_error if res.zero?
+          handle_error res
         end
 
         def next_message
-          Rust.next_message(self)
+          handle_error Rust.next_message(self)
         end
 
         def process_messages
@@ -89,13 +89,15 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def source
           res = Rust.source(self)
-          handle_error if res.null?
+          res = handle_error res
 
           res.to_s
         end
 
-        def handle_error
-          raise FFI::Error.get(enrich_message)
+        def handle_error(result)
+          raise FFI::Error.get(result[:error], enrich_message) unless result[:error].nil?
+
+          result[:result]
         end
       end
     end

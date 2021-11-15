@@ -98,7 +98,7 @@ module Oso
         call_result(result, call_id: call_id)
       rescue ArgumentError, NoMethodError => e
         application_error(e.message)
-        call_result(nil, call_id: call_id)
+        call_result('null', call_id: call_id)
       end
 
       # Get the type information for a field on a class.
@@ -146,7 +146,7 @@ module Oso
         result = JSON.dump(next_call_result(call_id))
         call_result(result, call_id: call_id)
       rescue StopIteration
-        call_result(nil, call_id: call_id)
+        call_result('null', call_id: call_id)
       end
 
       def handle_make_external(data) # rubocop:disable Metrics/AbcSize

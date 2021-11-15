@@ -14,21 +14,21 @@ module Oso
           ffi_lib FFI::LIB_PATH
 
           attach_function :new, :polar_new, [], FFI::Polar
-          attach_function :load, :polar_load, [FFI::Polar, :string], :int32
-          attach_function :clear_rules, :polar_clear_rules, [FFI::Polar], :int32
+          attach_function :load, :polar_load, [FFI::Polar, :string], CResultVoid
+          attach_function :clear_rules, :polar_clear_rules, [FFI::Polar], CResultVoid
           attach_function :next_inline_query, :polar_next_inline_query, [FFI::Polar, :uint32], FFI::Query
           attach_function :new_id, :polar_get_external_id, [FFI::Polar], :uint64
-          attach_function :new_query_from_str, :polar_new_query, [FFI::Polar, :string, :uint32], FFI::Query
-          attach_function :new_query_from_term, :polar_new_query_from_term, [FFI::Polar, :string, :uint32], FFI::Query
-          attach_function :register_constant, :polar_register_constant, [FFI::Polar, :string, :string], :int32
-          attach_function :register_mro, :polar_register_mro, [FFI::Polar, :string, :string], :int32
-          attach_function :next_message, :polar_next_polar_message, [FFI::Polar], FFI::Message
+          attach_function :new_query_from_str, :polar_new_query, [FFI::Polar, :string, :uint32], CResultQuery
+          attach_function :new_query_from_term, :polar_new_query_from_term, [FFI::Polar, :string, :uint32], CResultQuery
+          attach_function :register_constant, :polar_register_constant, [FFI::Polar, :string, :string], CResultVoid
+          attach_function :register_mro, :polar_register_mro, [FFI::Polar, :string, :string], CResultVoid
+          attach_function :next_message, :polar_next_polar_message, [FFI::Polar], CResultMessage
           attach_function :free, :polar_free, [FFI::Polar], :int32
           attach_function(
             :build_filter_plan,
             :polar_build_filter_plan,
             [FFI::Polar, :string, :string, :string, :string],
-            :string
+            CResultString
           )
         end
         private_constant :Rust
@@ -36,10 +36,7 @@ module Oso
         # @return [FFI::Polar]
         # @raise [FFI::Error] if the FFI call returns an error.
         def self.create
-          polar = Rust.new
-          handle_error if polar.null?
-
-          polar
+          Rust.new
         end
 
         def build_filter_plan(types, partials, variable, class_tag)
@@ -47,7 +44,7 @@ module Oso
           partials = JSON.dump(partials)
           plan = Rust.build_filter_plan(self, types, partials, variable, class_tag)
           process_messages
-          handle_error if plan.nil?
+          plan = handle_error plan
           # TODO(gw) more error checking?
           JSON.parse plan
         end
@@ -57,14 +54,14 @@ module Oso
         def load(sources)
           loaded = Rust.load(self, JSON.dump(sources))
           process_messages
-          handle_error if loaded.zero?
+          handle_error loaded
         end
 
         # @raise [FFI::Error] if the FFI call returns an error.
         def clear_rules
           cleared = Rust.clear_rules(self)
           process_messages
-          handle_error if cleared.zero?
+          handle_error cleared
         end
 
         # @return [FFI::Query] if there are remaining inline queries.
@@ -79,12 +76,7 @@ module Oso
         # @return [Integer]
         # @raise [FFI::Error] if the FFI call returns an error.
         def new_id
-          id = Rust.new_id(self)
-          # TODO(gj): I don't think this error check is correct. If getting a new ID fails on the
-          # Rust side, it'll probably surface as a panic (e.g., the KB lock is poisoned).
-          handle_error if id.zero?
-
-          id
+          Rust.new_id(self)
         end
 
         # @param str [String] Query string.
@@ -93,9 +85,7 @@ module Oso
         def new_query_from_str(str)
           query = Rust.new_query_from_str(self, str, 0)
           process_messages
-          handle_error if query.null?
-
-          query
+          handle_error query
         end
 
         # @param term [Hash<String, Object>]
@@ -104,9 +94,7 @@ module Oso
         def new_query_from_term(term)
           query = Rust.new_query_from_term(self, JSON.dump(term), 0)
           process_messages
-          handle_error if query.null?
-
-          query
+          handle_error query
         end
 
         # @param name [String]
@@ -114,7 +102,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def register_constant(value, name:)
           registered = Rust.register_constant(self, name, JSON.dump(value))
-          handle_error if registered.zero?
+          handle_error registered
         end
 
         # @param name [String]
@@ -122,11 +110,11 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def register_mro(name, mro)
           registered = Rust.register_mro(self, name, JSON.dump(mro))
-          handle_error if registered.zero?
+          handle_error registered
         end
 
         def next_message
-          Rust.next_message(self)
+          handle_error Rust.next_message(self)
         end
 
         def process_messages
@@ -138,8 +126,10 @@ module Oso
           end
         end
 
-        def handle_error
-          raise FFI::Error.get(enrich_message)
+        def handle_error(result)
+          raise FFI::Error.get(result[:error], enrich_message) unless result[:error].nil?
+
+          result[:result]
         end
       end
     end
