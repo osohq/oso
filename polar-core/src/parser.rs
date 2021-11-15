@@ -60,20 +60,20 @@ fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> erro
 pub fn parse_lines(src_id: u64, src: &str) -> Result<Vec<Line>, error::ParseError> {
     polar::LinesParser::new()
         .parse(src_id, Lexer::new(src))
-        .map_err(|e| to_parse_error(e).into())
+        .map_err(to_parse_error)
 }
 
 pub fn parse_query(src_id: u64, src: &str) -> Result<Term, error::ParseError> {
     polar::TermParser::new()
         .parse(src_id, Lexer::new(src))
-        .map_err(|e| to_parse_error(e).into())
+        .map_err(to_parse_error)
 }
 
 #[cfg(test)]
 pub fn parse_rules(src_id: u64, src: &str) -> Result<Vec<Rule>, error::ParseError> {
     polar::RulesParser::new()
         .parse(src_id, Lexer::new(src))
-        .map_err(|e| to_parse_error(e).into())
+        .map_err(to_parse_error)
 }
 
 #[cfg(test)]

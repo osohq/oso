@@ -82,7 +82,7 @@ impl<'kb> SingletonVisitor<'kb> {
         singletons.sort_by_key(Term::offset);
         singletons
             .into_iter()
-            .map(|term| diagnostic_from_singleton(term, &self.kb))
+            .map(|term| diagnostic_from_singleton(term, self.kb))
             .collect()
     }
 }

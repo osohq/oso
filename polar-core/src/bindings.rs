@@ -166,8 +166,7 @@ impl BindingManager {
         match partial.ground(var, val.clone()) {
             None => Err(RuntimeError::IncompatibleBindings {
                 msg: "Grounding failed A".into(),
-            }
-            .into()),
+            }),
             Some(grounded) => {
                 self.add_binding(var, val);
                 Ok(Goal::Query {
@@ -220,8 +219,7 @@ impl BindingManager {
                 BindingManagerVariableState::Bound(_) => {
                     return Err(RuntimeError::IncompatibleBindings {
                         msg: format!("Cannot rebind {:?}", var),
-                    }
-                    .into())
+                    })
                 }
                 _ => self.add_binding(var, val.clone()),
             }
@@ -290,8 +288,7 @@ impl BindingManager {
                     None => {
                         return Err(RuntimeError::IncompatibleBindings {
                             msg: "Grounding failed B".into(),
-                        }
-                        .into())
+                        })
                     }
                 }
             }
@@ -514,8 +511,7 @@ impl BindingManager {
             (BindingManagerVariableState::Bound(_), BindingManagerVariableState::Bound(_)) => {
                 return Err(RuntimeError::IncompatibleBindings {
                     msg: format!("{} and {} are both bound", left, right),
-                }
-                .into());
+                });
             }
             (
                 BindingManagerVariableState::Bound(left_value),
