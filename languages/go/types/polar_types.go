@@ -2050,8 +2050,6 @@ func (RuntimeErrorIncompatibleBindings) isRuntimeError() {}
 type RuntimeErrorUnhandledPartial struct {
 	// Var
 	Var Symbol `json:"var"`
-	// Simplified
-	Simplified *Term `json:"simplified"`
 	// Term
 	Term Term `json:"term"`
 }
