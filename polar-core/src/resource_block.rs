@@ -276,7 +276,10 @@ impl ResourceBlocks {
         self.shorthand_rules
             .insert(resource.clone(), shorthand_rules);
         match block_type {
-            BlockType::Actor => self.actors.insert(resource),
+            BlockType::Actor => {
+                self.actors.insert(resource.clone());
+                self.resources.insert(resource)
+            }
             BlockType::Resource => self.resources.insert(resource),
         };
     }
