@@ -178,7 +178,12 @@ fn invalid_state<A>(msg: String) -> PolarResult<A> {
     Err(OperationalError::InvalidState { msg }.into())
 }
 
-pub fn compare(op: Operator, left: &Term, right: &Term) -> PolarResult<bool> {
+pub fn compare(
+    op: Operator,
+    left: &Term,
+    right: &Term,
+    context: Option<&Term>,
+) -> PolarResult<bool> {
     use {Operator::*, Value::*};
     // Coerce booleans to integers.
     // FIXME(gw) why??
@@ -204,10 +209,14 @@ pub fn compare(op: Operator, left: &Term, right: &Term) -> PolarResult<bool> {
         (Number(l), Boolean(r)) => compare(op, l, &to_int(*r)),
         (Number(l), Number(r)) => compare(op, l, r),
         (String(l), String(r)) => compare(op, l, r),
-        _ => Err(error::RuntimeError::Unsupported {
-            msg: format!("{} {} {}", left.to_polar(), op.to_polar(), right.to_polar()),
+        _ => {
+            let context = context.expect("should only be None in Grounder, where we unwrap anyway");
+            Err(RuntimeError::Unsupported {
+                msg: context.to_string(),
+                term: context.clone(),
+            }
+            .into())
         }
-        .into()),
     }
 }
 
@@ -1407,16 +1416,11 @@ impl PolarVirtualMachine {
                 _ => None,
             };
             let stack_trace = self.stack_trace();
-            let error = RuntimeError::Application {
+            Err(self.set_error_context(RuntimeError::Application {
                 msg,
                 stack_trace,
-                term: term.clone(),
-            };
-            if let Some(term) = term {
-                Err(self.set_error_context(&term, error))
-            } else {
-                Err(error.into())
-            }
+                term,
+            }))
         } else {
             Ok(QueryEvent::None)
         }
@@ -1690,12 +1694,10 @@ impl PolarVirtualMachine {
             }
             Operator::Cut => {
                 if self.query_contains_partial {
-                    return Err(self.set_error_context(
-                        term,
-                        error::RuntimeError::Unsupported {
-                            msg: "cannot use cut with partial evaluation".to_string(),
-                        },
-                    ));
+                    return Err(self.set_error_context(RuntimeError::Unsupported {
+                        msg: "cannot use cut with partial evaluation".to_owned(),
+                        term: term.clone(),
+                    }));
                 }
 
                 // Remove all choices created before this cut that are in the
@@ -1915,7 +1917,7 @@ impl PolarVirtualMachine {
                 })
             }
             _ => {
-                if !compare(*op, left, right)? {
+                if !compare(*op, left, right, Some(term))? {
                     self.push_goal(Goal::Backtrack)?;
                 }
                 Ok(QueryEvent::None)
@@ -1956,12 +1958,10 @@ impl PolarVirtualMachine {
                     Operator::Mod => (*left).modulo(*right),
                     Operator::Rem => *left % *right,
                     _ => {
-                        return Err(self.set_error_context(
-                            term,
-                            error::RuntimeError::Unsupported {
-                                msg: format!("numeric operation {}", op.to_polar()),
-                            },
-                        ));
+                        return Err(self.set_error_context(RuntimeError::Unsupported {
+                            msg: format!("numeric operation {}", op.to_polar()),
+                            term: term.clone(),
+                        }));
                     }
                 } {
                     self.push_goal(Goal::Unify {
@@ -1970,16 +1970,14 @@ impl PolarVirtualMachine {
                     })?;
                     Ok(QueryEvent::None)
                 } else {
-                    let e = RuntimeError::ArithmeticError { term: term.clone() };
-                    Err(self.set_error_context(term, e))
+                    let term = term.clone();
+                    Err(self.set_error_context(RuntimeError::ArithmeticError { term }))
                 }
             }
-            (_, _) => Err(self.set_error_context(
-                term,
-                error::RuntimeError::Unsupported {
-                    msg: format!("unsupported arithmetic operands: {}", term.to_polar()),
-                },
-            )),
+            (_, _) => Err(self.set_error_context(RuntimeError::Unsupported {
+                msg: format!("unsupported arithmetic operands: {}", term),
+                term: term.clone(),
+            })),
         }
     }
 
@@ -2029,12 +2027,10 @@ impl PolarVirtualMachine {
             }
             Value::Variable(v) => {
                 if matches!(field.value(), Value::Call(_)) {
-                    return Err(self.set_error_context(
-                        object,
-                        error::RuntimeError::Unsupported {
-                            msg: format!("cannot call method on unbound variable {}", v),
-                        },
-                    ));
+                    return Err(self.set_error_context(RuntimeError::Unsupported {
+                        msg: format!("cannot call method on unbound variable {}", v),
+                        term: object.clone(),
+                    }));
                 }
 
                 // Translate `.(object, field, value)` → `value = .(object, field)`.
@@ -2801,21 +2797,28 @@ impl PolarVirtualMachine {
         rule.to_polar()
     }
 
-    fn set_error_context(
-        &self,
-        term: &Term,
-        error: impl Into<error::PolarError>,
-    ) -> error::PolarError {
-        self.kb.read().unwrap().set_error_context(term, error)
+    fn set_error_context(&self, error: RuntimeError) -> error::PolarError {
+        use RuntimeError::*;
+
+        let term = match &error {
+            Application { term, .. } => term.as_ref(),
+            ArithmeticError { term }
+            | TypeError { term, .. }
+            | UnhandledPartial { term, .. }
+            | Unsupported { term, .. } => Some(term),
+            _ => None,
+        };
+
+        let source = term.and_then(|t| self.kb().get_term_source(t));
+        PolarError::from(error).set_context(source.as_ref(), None)
     }
 
     fn type_error(&self, term: &Term, msg: String) -> error::PolarError {
-        let error = RuntimeError::TypeError {
+        self.set_error_context(RuntimeError::TypeError {
             msg,
             stack_trace: self.stack_trace(),
             term: term.clone(),
-        };
-        self.set_error_context(term, error)
+        })
     }
 
     fn run_runnable(&mut self, runnable: Box<dyn Runnable>) -> PolarResult<QueryEvent> {
@@ -2901,7 +2904,7 @@ impl Runnable for PolarVirtualMachine {
                 }
 
                 Err(PolarError {
-                    kind: ErrorKind::Runtime(RuntimeError::UnhandledPartial { ref term, ref var }),
+                    kind: ErrorKind::Runtime(RuntimeError::UnhandledPartial { term, ref var, .. }),
                     ..
                 }) => {
                     // use the debugger to get the nicest possible version of this binding
@@ -2910,13 +2913,11 @@ impl Runnable for PolarVirtualMachine {
                     // there was an unhandled partial in the bindings
                     // grab the context from the variable that was defined and
                     // set the context before returning
-                    return Err(self.set_error_context(
+                    return Err(self.set_error_context(RuntimeError::UnhandledPartial {
                         term,
-                        RuntimeError::UnhandledPartial {
-                            term: simplified,
-                            var: original_var_name,
-                        },
-                    ));
+                        simplified: Some(simplified),
+                        var: original_var_name,
+                    }));
                 }
                 Err(e) => unreachable!("unexpected error: {}", e.to_string()),
             }
