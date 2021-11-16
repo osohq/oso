@@ -283,8 +283,6 @@ pub enum RuntimeError {
     },
     UnhandledPartial {
         var: Symbol,
-        /// Simplified term for pretty printing. If it's `None`, fall back to printing `term`.
-        simplified: Option<Term>,
         /// Term where the error arose, tracked for lexical context.
         term: Term,
     },
@@ -367,11 +365,7 @@ impl fmt::Display for RuntimeError {
             Self::IncompatibleBindings { msg } => {
                 write!(f, "Attempted binding was incompatible: {}", msg)
             }
-            Self::UnhandledPartial {
-                var,
-                simplified,
-                term,
-            } => {
+            Self::UnhandledPartial { var, term } => {
                 write!(
                     f,
                     "Found an unhandled partial in the query result: {var}
@@ -388,7 +382,7 @@ The unhandled partial is for variable {var}.
 The expression is: {expr}
 ",
                     var = var,
-                    expr = simplified.as_ref().unwrap_or(term),
+                    expr = term,
                 )
             }
             Self::DataFilteringFieldMissing { var_type, field } => {

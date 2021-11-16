@@ -2905,16 +2905,51 @@ impl Runnable for PolarVirtualMachine {
                     return Ok(QueryEvent::None);
                 }
 
-                Err(RuntimeError::UnhandledPartial { term, ref var, .. }) => {
+                Err(RuntimeError::UnhandledPartial { term, ref var }) => {
                     // use the debugger to get the nicest possible version of this binding
                     let Binding(original_var_name, simplified) = get_binding_for_var(&var.0, self);
+
+                    // TODO(gj): `t` is a partial constructed in the VM, so we don't have any
+                    // source context for it. We make a best effort to track down some relevant
+                    // context by walking `t` in search of the first piece of source context we
+                    // find (verified by calling the `KnowledgeBase::get_term_source` API).
+                    //
+                    // For a future refactor, we might consider using the `Term::clone_with_value`
+                    // API to preserve source context when initially binding a variable to an
+                    // `Expression`.
+                    fn try_to_add_context(kb: &KnowledgeBase, t: &Term, simplified: Term) -> Term {
+                        /// `GetSource` walks a term & returns the _1st_ piece of source info it finds.
+                        struct GetSource<'kb> {
+                            kb: &'kb KnowledgeBase,
+                            term: Option<Term>,
+                        }
+
+                        impl<'kb> Visitor for GetSource<'kb> {
+                            fn visit_term(&mut self, t: &Term) {
+                                if self.term.is_none() {
+                                    if self.kb.get_term_source(t).is_none() {
+                                        walk_term(self, t)
+                                    } else {
+                                        self.term = Some(t.clone())
+                                    }
+                                }
+                            }
+                        }
+
+                        let mut source_getter = GetSource { kb, term: None };
+                        source_getter.visit_term(t);
+                        if let Some(term_with_context) = source_getter.term {
+                            term_with_context.clone_with_value(simplified.value().clone())
+                        } else {
+                            simplified
+                        }
+                    }
 
                     // there was an unhandled partial in the bindings
                     // grab the context from the variable that was defined and
                     // set the context before returning
                     return Err(RuntimeError::UnhandledPartial {
-                        term,
-                        simplified: Some(simplified),
+                        term: try_to_add_context(&*self.kb(), &term, simplified),
                         var: original_var_name,
                     });
                 }

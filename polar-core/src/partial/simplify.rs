@@ -201,7 +201,6 @@ pub fn simplify_bindings_opt(
         } else if let Value::Expression(e) = value.value() {
             if e.variables().iter().all(|v| v.is_temporary_var()) {
                 return Err(RuntimeError::UnhandledPartial {
-                    simplified: None,
                     var: var.clone(),
                     term: value.clone(),
                 });
