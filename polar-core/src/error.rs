@@ -407,13 +407,14 @@ The expression is: {expr}
             Self::InvalidRegistration { sym, msg } => {
                 write!(f, "Invalid attempt to register '{}': {}", sym, msg)
             }
+            // TODO(gj): move this back to `OperationalError` during The Next Great Diagnostic
+            // Refactor.
             Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
         }
     }
 }
 
-// TODO(gj): both of these errors are only constructed/used in the `polar-c-api` crate. We should
-// probably move them there.
+// NOTE(gj): both of these errors are only constructed/used in the `polar-c-api` crate.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OperationalError {
     Serialization {
