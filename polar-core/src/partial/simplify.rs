@@ -9,6 +9,8 @@ use crate::terms::*;
 
 use super::partial::{invert_operation, FALSE, TRUE};
 
+type Result<T> = core::result::Result<T, RuntimeError>;
+
 /// Set to `true` to debug performance in simplifier by turning on
 /// performance counters.
 const TRACK_PERF: bool = false;
@@ -137,10 +139,7 @@ pub fn simplify_bindings(bindings: Bindings) -> Option<Bindings> {
 ///
 /// - For partials, simplify the constraint expressions.
 /// - For non-partials, deep deref. TODO(ap/gj): deep deref.
-pub fn simplify_bindings_opt(
-    bindings: Bindings,
-    all: bool,
-) -> Result<Option<Bindings>, RuntimeError> {
+pub fn simplify_bindings_opt(bindings: Bindings, all: bool) -> Result<Option<Bindings>> {
     let mut perf = PerfCounters::new(TRACK_PERF);
     simplify_debug!("simplify bindings");
 

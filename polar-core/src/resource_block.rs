@@ -8,6 +8,8 @@ use super::terms::*;
 pub const ACTOR_UNION_NAME: &str = "Actor";
 pub const RESOURCE_UNION_NAME: &str = "Resource";
 
+type Result<T> = core::result::Result<T, ValidationError>;
+
 // TODO(gj): round up longhand `has_permission/3` and `has_role/3` rules to incorporate their
 // referenced permissions & roles (implied & implier side) into the exhaustiveness checks.
 
@@ -24,7 +26,7 @@ pub enum Production {
     ShorthandRule(Term, (Term, Option<(Term, Term)>)), // (String, (String, Option<(Symbol, String)>))
 }
 
-fn validate_relation_keyword(keyword: &Term) -> Result<(), ValidationError> {
+fn validate_relation_keyword(keyword: &Term) -> Result<()> {
     if keyword.value().as_symbol().unwrap().0 != "on" {
         let msg = format!(
             "Unexpected relation keyword '{}'. Did you mean 'on'?",
@@ -43,9 +45,7 @@ enum ParsedDeclaration {
     Relations(Term),   // Dict<Symbol, Symbol>
 }
 
-fn validate_parsed_declaration(
-    (name, term): (Term, Term),
-) -> Result<ParsedDeclaration, ValidationError> {
+fn validate_parsed_declaration((name, term): (Term, Term)) -> Result<ParsedDeclaration> {
     match (name.value().as_symbol().expect("parsed as symbol").0.as_ref(), term.value()) {
         ("roles", Value::List(_)) => Ok(ParsedDeclaration::Roles(term)),
         ("permissions", Value::List(_)) => Ok(ParsedDeclaration::Permissions(term)),
@@ -72,10 +72,7 @@ fn validate_parsed_declaration(
     }
 }
 
-fn block_type_from_keyword(
-    keyword: Option<Term>,
-    resource: &Term,
-) -> Result<BlockType, ValidationError> {
+fn block_type_from_keyword(keyword: Option<Term>, resource: &Term) -> Result<BlockType> {
     if let Some(keyword) = keyword {
         match keyword.value().as_symbol().unwrap().0.as_ref() {
             "actor" => Ok(BlockType::Actor),
@@ -99,7 +96,7 @@ pub fn resource_block_from_productions(
     keyword: Option<Term>,
     resource: Term,
     productions: Vec<Production>,
-) -> Result<ResourceBlock, Vec<ValidationError>> {
+) -> core::result::Result<ResourceBlock, Vec<ValidationError>> {
     let mut errors = vec![];
 
     let block_type = match block_type_from_keyword(keyword, &resource) {
@@ -189,11 +186,7 @@ pub struct ShorthandRule {
 }
 
 impl ShorthandRule {
-    pub fn as_rule(
-        &self,
-        resource_name: &Term,
-        blocks: &ResourceBlocks,
-    ) -> Result<Rule, ValidationError> {
+    pub fn as_rule(&self, resource_name: &Term, blocks: &ResourceBlocks) -> Result<Rule> {
         let Self { head, body } = self;
         // Copy SourceInfo from head of shorthand rule.
         // TODO(gj): assert these can only be None in tests.
@@ -299,7 +292,7 @@ impl ResourceBlocks {
         &self,
         declaration: &Term,
         resource_name: &Term,
-    ) -> Result<&Declaration, ValidationError> {
+    ) -> Result<&Declaration> {
         let maybe_declarations = self.declarations.get(resource_name);
         let maybe_declaration = maybe_declarations.and_then(|ds| ds.get(declaration));
         if let Some(declaration) = maybe_declaration {
@@ -318,7 +311,7 @@ impl ResourceBlocks {
         &self,
         relation: &Term,
         resource: &Term,
-    ) -> Result<&Term, ValidationError> {
+    ) -> Result<&Term> {
         let declaration = self.get_declaration_in_resource_block(relation, resource)?;
         if let Declaration::Relation(related_type) = declaration {
             Ok(related_type)
@@ -336,7 +329,7 @@ impl ResourceBlocks {
         &self,
         declaration: &Term,
         resource_name: &Term,
-    ) -> Result<Symbol, ValidationError> {
+    ) -> Result<Symbol> {
         Ok(self
             .get_declaration_in_resource_block(declaration, resource_name)?
             .as_rule_name())
@@ -349,7 +342,7 @@ impl ResourceBlocks {
         declaration: &Term,
         relation: &Term,
         resource: &Term,
-    ) -> Result<Symbol, ValidationError> {
+    ) -> Result<Symbol> {
         let related_block = self.get_relation_type_in_resource_block(relation, resource)?;
 
         if let Some(declarations) = self.declarations.get(related_block) {
@@ -398,7 +391,7 @@ fn index_declarations(
     permissions: Option<Term>,
     relations: Option<Term>,
     resource: &Term,
-) -> Result<HashMap<Term, Declaration>, ValidationError> {
+) -> Result<HashMap<Term, Declaration>> {
     let mut declarations = HashMap::new();
 
     if let Some(roles) = roles {
@@ -502,7 +495,7 @@ fn shorthand_rule_body_to_rule_body(
     (implier, relation): &(Term, Option<(Term, Term)>),
     resource_name: &Term,
     blocks: &ResourceBlocks,
-) -> Result<Term, ValidationError> {
+) -> Result<Term> {
     // Create a variable derived from the current block's resource name. E.g., if we're in the
     // `Repo` resource block, the variable name will be `repo`.
     let resource_var = implier.clone_with_value(resource_name_as_var(resource_name, false));
@@ -593,10 +586,7 @@ fn shorthand_rule_head_to_params(head: &Term, resource: &Term) -> Vec<Parameter>
 // TODO(gj): better error message, e.g.:
 //               duplicate resource block declared: resource Org { ... } defined on line XX of file YY
 //                                                  previously defined on line AA of file BB
-fn check_for_duplicate_resource_blocks(
-    blocks: &ResourceBlocks,
-    resource: &Term,
-) -> Result<(), ValidationError> {
+fn check_for_duplicate_resource_blocks(blocks: &ResourceBlocks, resource: &Term) -> Result<()> {
     if blocks.exists(resource) {
         let msg = format!("Duplicate declaration of '{}' resource block.", resource);
         let term = resource.clone();
@@ -1469,7 +1459,7 @@ mod tests {
     //   - has_relation between (Organization, "parent", Repository)
     //   - has_role created because at least one resource block has roles declared
     #[test]
-    fn test_create_resource_specific_rule_types() -> Result<(), PolarError> {
+    fn test_create_resource_specific_rule_types() -> core::result::Result<(), PolarError> {
         let policy = r#"
             resource Organization {
                 roles = ["member"];

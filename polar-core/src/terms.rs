@@ -13,6 +13,8 @@ use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::sources::SourceInfo;
 use super::visitor::{walk_operation, walk_term, Visitor};
 
+type Result<T> = core::result::Result<T, RuntimeError>;
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {
     pub fields: BTreeMap<Symbol, Term>,
@@ -146,7 +148,7 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn as_symbol(&self) -> Result<&Symbol, RuntimeError> {
+    pub fn as_symbol(&self) -> Result<&Symbol> {
         match self {
             Value::Variable(name) => Ok(name),
             Value::RestVariable(name) => Ok(name),
@@ -156,7 +158,7 @@ impl Value {
         }
     }
 
-    pub fn as_string(&self) -> Result<&str, RuntimeError> {
+    pub fn as_string(&self) -> Result<&str> {
         match self {
             Value::String(string) => Ok(string.as_ref()),
             _ => Err(InvalidState {
@@ -165,7 +167,7 @@ impl Value {
         }
     }
 
-    pub fn as_expression(&self) -> Result<&Operation, RuntimeError> {
+    pub fn as_expression(&self) -> Result<&Operation> {
         match self {
             Value::Expression(op) => Ok(op),
             _ => Err(InvalidState {
@@ -174,7 +176,7 @@ impl Value {
         }
     }
 
-    pub fn as_call(&self) -> Result<&Call, RuntimeError> {
+    pub fn as_call(&self) -> Result<&Call> {
         match self {
             Value::Call(pred) => Ok(pred),
             _ => Err(InvalidState {
@@ -183,7 +185,7 @@ impl Value {
         }
     }
 
-    pub fn as_pattern(&self) -> Result<&Pattern, RuntimeError> {
+    pub fn as_pattern(&self) -> Result<&Pattern> {
         match self {
             Value::Pattern(p) => Ok(p),
             _ => Err(InvalidState {
@@ -192,7 +194,7 @@ impl Value {
         }
     }
 
-    pub fn as_list(&self) -> Result<&TermList, RuntimeError> {
+    pub fn as_list(&self) -> Result<&TermList> {
         match self {
             Value::List(l) => Ok(l),
             _ => Err(InvalidState {
@@ -201,7 +203,7 @@ impl Value {
         }
     }
 
-    pub fn as_dict(&self) -> Result<&Dictionary, RuntimeError> {
+    pub fn as_dict(&self) -> Result<&Dictionary> {
         match self {
             Value::Dictionary(d) => Ok(d),
             _ => Err(InvalidState {

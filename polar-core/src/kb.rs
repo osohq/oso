@@ -11,6 +11,8 @@ use super::sources::*;
 use super::terms::*;
 use super::validations::check_undefined_rule_calls;
 
+type ValidationResult<T> = Result<T, ValidationError>;
+
 enum RuleParamMatch {
     True,
     False(String),
@@ -117,7 +119,7 @@ impl KnowledgeBase {
     }
 
     /// Validate that all rules loaded into the knowledge base are valid based on rule types.
-    fn validate_rule_types(&self) -> Result<(), ValidationError> {
+    fn validate_rule_types(&self) -> ValidationResult<()> {
         // For every rule, if there *is* a rule type, check that the rule matches the rule type.
         for (rule_name, generic_rule) in &self.rules {
             if let Some(types) = self.rule_types.get(rule_name) {
@@ -206,7 +208,7 @@ impl KnowledgeBase {
         rule_instance: &InstanceLiteral,
         rule_type_instance: &InstanceLiteral,
         index: usize,
-    ) -> Result<RuleParamMatch, ValidationError> {
+    ) -> ValidationResult<RuleParamMatch> {
         // Get the unique ID of the prototype instance pattern class.
         // TODO(gj): make actual term available here instead of constructing a fake test one.
         let term = self.get_registered_class(&term!(rule_type_instance.tag.clone()))?;
@@ -245,7 +247,7 @@ impl KnowledgeBase {
         index: usize,
         rule_pattern: &Pattern,
         rule_type_pattern: &Pattern,
-    ) -> Result<RuleParamMatch, ValidationError> {
+    ) -> ValidationResult<RuleParamMatch> {
         Ok(match (rule_type_pattern, rule_pattern) {
             (Pattern::Instance(rule_type_instance), Pattern::Instance(rule_instance)) => {
                 // if tags match, all rule type fields must match those in rule fields, otherwise false
@@ -358,7 +360,7 @@ impl KnowledgeBase {
         rule_value: &Value,
         rule_type_value: &Value,
         rule_type: &Rule,
-    ) -> Result<RuleParamMatch, ValidationError> {
+    ) -> ValidationResult<RuleParamMatch> {
         Ok(match (rule_type_value, rule_value) {
             // List in rule head must be equal to or more specific than the list in the rule type head in order to match
             (Value::List(rule_type_list), Value::List(rule_list)) => {
@@ -405,7 +407,7 @@ impl KnowledgeBase {
         rule: &Rule,
         rule_type_param: &Parameter,
         rule_type: &Rule,
-    ) -> Result<RuleParamMatch, ValidationError> {
+    ) -> ValidationResult<RuleParamMatch> {
         Ok(
             match (
                 rule_type_param.parameter.value(),
@@ -525,11 +527,7 @@ impl KnowledgeBase {
     }
 
     /// Determine whether a `rule` matches a `rule_type` based on its parameters.
-    fn rule_params_match(
-        &self,
-        rule: &Rule,
-        rule_type: &Rule,
-    ) -> Result<RuleParamMatch, ValidationError> {
+    fn rule_params_match(&self, rule: &Rule, rule_type: &Rule) -> ValidationResult<RuleParamMatch> {
         if rule.params.len() != rule_type.params.len() {
             return Ok(RuleParamMatch::False(format!(
                 "Different number of parameters. Rule has {} parameter(s) but rule type has {}.",
@@ -545,7 +543,7 @@ impl KnowledgeBase {
             .map(|(i, (rule_param, rule_type_param))| {
                 self.check_param(i + 1, rule_param, rule, rule_type_param, rule_type)
             })
-            .collect::<Result<Vec<RuleParamMatch>, ValidationError>>()
+            .collect::<ValidationResult<Vec<RuleParamMatch>>>()
             .map(|results| {
                 // TODO(gj): all() is short-circuiting -- do we want to gather up *all* failure
                 // messages instead of just the first one?
@@ -613,7 +611,7 @@ impl KnowledgeBase {
     // TODO(gj): currently no way to distinguish classes from other registered constants in the
     // core, so it's up to callers to ensure this is only called with terms we expect to be
     // registered as a _class_.
-    pub fn get_registered_class(&self, class: &Term) -> Result<&Term, ValidationError> {
+    pub fn get_registered_class(&self, class: &Term) -> ValidationResult<&Term> {
         self.constants
             .get(class.value().as_symbol().expect("parsed as symbol"))
             .ok_or_else(|| ValidationError::UnregisteredClass {

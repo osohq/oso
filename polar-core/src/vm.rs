@@ -33,6 +33,8 @@ use crate::sources::*;
 use crate::terms::*;
 use crate::traces::*;
 
+type Result<T> = core::result::Result<T, RuntimeError>;
+
 pub const MAX_STACK_SIZE: usize = 10_000;
 pub const DEFAULT_TIMEOUT_MS: u64 = 30_000;
 
@@ -174,16 +176,11 @@ impl std::ops::DerefMut for GoalStack {
 
 pub type Queries = TermList;
 
-fn invalid_state<A>(msg: String) -> Result<A, RuntimeError> {
+fn invalid_state<A>(msg: String) -> Result<A> {
     Err(RuntimeError::InvalidState { msg })
 }
 
-pub fn compare(
-    op: Operator,
-    left: &Term,
-    right: &Term,
-    context: Option<&Term>,
-) -> Result<bool, RuntimeError> {
+pub fn compare(op: Operator, left: &Term, right: &Term, context: Option<&Term>) -> Result<bool> {
     use {Operator::*, Value::*};
     // Coerce booleans to integers.
     // FIXME(gw) why??
@@ -191,7 +188,7 @@ pub fn compare(
         Numeric::Integer(if x { 1 } else { 0 })
     }
 
-    fn compare<T: PartialOrd>(op: Operator, left: T, right: T) -> Result<bool, RuntimeError> {
+    fn compare<T: PartialOrd>(op: Operator, left: T, right: T) -> Result<bool> {
         match op {
             Lt => Ok(left < right),
             Leq => Ok(left <= right),
@@ -440,7 +437,7 @@ impl PolarVirtualMachine {
 
     /// Try to achieve one goal. Return `Some(QueryEvent)` if an external
     /// result is needed to achieve it, or `None` if it can run internally.
-    fn next(&mut self, goal: Rc<Goal>) -> Result<QueryEvent, RuntimeError> {
+    fn next(&mut self, goal: Rc<Goal>) -> Result<QueryEvent> {
         if self.log {
             self.print(&format!("{}", goal));
         }
@@ -536,7 +533,7 @@ impl PolarVirtualMachine {
     }
 
     /// Push a goal onto the goal stack.
-    pub fn push_goal(&mut self, goal: Goal) -> Result<(), RuntimeError> {
+    pub fn push_goal(&mut self, goal: Goal) -> Result<()> {
         use {Goal::*, VariableState::Unbound};
         if self.goals.len() >= self.stack_limit {
             let msg = format!("Goal stack overflow! MAX_GOALS = {}", self.stack_limit);
@@ -560,7 +557,7 @@ impl PolarVirtualMachine {
     /// Do not modify the goals stack.  This function defers execution of the
     /// choice until a backtrack occurs.  To immediately execute the choice on
     /// top of the current stack, use `choose`.
-    fn push_choice<I>(&mut self, alternatives: I) -> Result<(), RuntimeError>
+    fn push_choice<I>(&mut self, alternatives: I) -> Result<()>
     where
         I: IntoIterator<Item = Goals>,
         I::IntoIter: std::iter::DoubleEndedIterator,
@@ -594,7 +591,7 @@ impl PolarVirtualMachine {
     ///
     /// - `alternatives`: an ordered list of alternatives to try in the choice.
     ///   The first element is the first alternative to try.
-    fn choose<I>(&mut self, alternatives: I) -> Result<(), RuntimeError>
+    fn choose<I>(&mut self, alternatives: I) -> Result<()>
     where
         I: IntoIterator<Item = Goals>,
         I::IntoIter: std::iter::DoubleEndedIterator,
@@ -617,7 +614,7 @@ impl PolarVirtualMachine {
         mut conditional: Goals,
         consequent: Goals,
         mut alternative: Goals,
-    ) -> Result<(), RuntimeError> {
+    ) -> Result<()> {
         // If the conditional fails, cut the consequent.
         let cut_consequent = Goal::Cut {
             choice_index: self.choices.len(),
@@ -636,7 +633,7 @@ impl PolarVirtualMachine {
     }
 
     /// Push multiple goals onto the stack in reverse order.
-    fn append_goals<I>(&mut self, goals: I) -> Result<(), RuntimeError>
+    fn append_goals<I>(&mut self, goals: I) -> Result<()>
     where
         I: IntoIterator<Item = Goal>,
         I::IntoIter: std::iter::DoubleEndedIterator,
@@ -652,7 +649,7 @@ impl PolarVirtualMachine {
     }
 
     /// Push a binding onto the binding stack.
-    pub fn bind(&mut self, var: &Symbol, val: Term) -> Result<(), RuntimeError> {
+    pub fn bind(&mut self, var: &Symbol, val: Term) -> Result<()> {
         if self.log {
             self.print(&format!("⇒ bind: {} ← {}", var.to_polar(), val.to_polar()));
         }
@@ -674,7 +671,7 @@ impl PolarVirtualMachine {
     /// Add a single constraint operation to the variables referenced in it.
     /// Precondition: Operation is either binary or ternary (binary + result var),
     /// and at least one of the first two arguments is an unbound variable.
-    fn add_constraint(&mut self, term: &Term) -> Result<(), RuntimeError> {
+    fn add_constraint(&mut self, term: &Term) -> Result<()> {
         if self.log {
             self.print(&format!("⇒ add_constraint: {}", term.to_polar()));
         }
@@ -873,7 +870,7 @@ impl PolarVirtualMachine {
         self.query_timeout_ms == 0
     }
 
-    fn check_timeout(&self) -> Result<(), RuntimeError> {
+    fn check_timeout(&self) -> Result<()> {
         if self.is_query_timeout_disabled() {
             // Useful for debugging
             return Ok(());
@@ -897,7 +894,7 @@ impl PolarVirtualMachine {
 impl PolarVirtualMachine {
     /// Remove all bindings after the last choice point, and try the
     /// next available alternative. If no choice is possible, halt.
-    fn backtrack(&mut self) -> Result<(), RuntimeError> {
+    fn backtrack(&mut self) -> Result<()> {
         if self.log {
             self.print("⇒ backtrack");
         }
@@ -974,7 +971,7 @@ impl PolarVirtualMachine {
 
     /// Comparison operator that essentially performs partial unification.
     #[allow(clippy::many_single_char_names)]
-    pub fn isa(&mut self, left: &Term, right: &Term) -> Result<(), RuntimeError> {
+    pub fn isa(&mut self, left: &Term, right: &Term) -> Result<()> {
         self.log_with(
             || format!("MATCHES: {} matches {}", left.to_polar(), right.to_polar()),
             &[left, right],
@@ -1142,7 +1139,7 @@ impl PolarVirtualMachine {
             })
     }
 
-    fn isa_expr(&mut self, left: &Term, right: &Term) -> Result<(), RuntimeError> {
+    fn isa_expr(&mut self, left: &Term, right: &Term) -> Result<()> {
         match right.value() {
             Value::Pattern(Pattern::Dictionary(fields)) => {
                 // Produce a constraint like left.field = value
@@ -1244,7 +1241,7 @@ impl PolarVirtualMachine {
 
     /// To evaluate `left matches Union`, look up `Union`'s member classes and create a choicepoint
     /// to check if `left` matches any of them.
-    fn isa_union(&mut self, left: &Term, union: &Term) -> Result<(), RuntimeError> {
+    fn isa_union(&mut self, left: &Term, union: &Term) -> Result<()> {
         let member_isas = {
             let kb = self.kb.read().unwrap();
             let members = kb.get_union_members(union).iter();
@@ -1264,12 +1261,7 @@ impl PolarVirtualMachine {
         self.choose(member_isas)
     }
 
-    pub fn lookup(
-        &mut self,
-        dict: &Dictionary,
-        field: &Term,
-        value: &Term,
-    ) -> Result<(), RuntimeError> {
+    pub fn lookup(&mut self, dict: &Dictionary, field: &Term, value: &Term) -> Result<()> {
         let field = self.deref(field);
         match field.value() {
             Value::Variable(_) => {
@@ -1317,7 +1309,7 @@ impl PolarVirtualMachine {
         call_id: u64,
         instance: &Term,
         field: &Term,
-    ) -> Result<QueryEvent, RuntimeError> {
+    ) -> Result<QueryEvent> {
         let (field_name, args, kwargs): (
             Symbol,
             Option<Vec<Term>>,
@@ -1380,7 +1372,7 @@ impl PolarVirtualMachine {
         &mut self,
         instance: &Term,
         literal: &InstanceLiteral,
-    ) -> Result<QueryEvent, RuntimeError> {
+    ) -> Result<QueryEvent> {
         let (call_id, answer) = self.new_call_var("isa", false.into());
         self.push_goal(Goal::Unify {
             left: answer,
@@ -1394,11 +1386,7 @@ impl PolarVirtualMachine {
         })
     }
 
-    pub fn next_external(
-        &mut self,
-        call_id: u64,
-        iterable: &Term,
-    ) -> Result<QueryEvent, RuntimeError> {
+    pub fn next_external(&mut self, call_id: u64, iterable: &Term) -> Result<QueryEvent> {
         // add another choice point for the next result
         self.push_choice(vec![vec![Goal::NextExternal {
             call_id,
@@ -1418,7 +1406,7 @@ impl PolarVirtualMachine {
         }
     }
 
-    pub fn check_error(&mut self) -> Result<QueryEvent, RuntimeError> {
+    pub fn check_error(&mut self) -> Result<QueryEvent> {
         if let Some(msg) = self.external_error.take() {
             let term = match self.trace.last().map(|t| t.node.clone()) {
                 Some(Node::Term(t)) => Some(t),
@@ -1441,7 +1429,7 @@ impl PolarVirtualMachine {
     /// Creates a choice point over each rule, where each alternative
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
-    fn query(&mut self, term: &Term) -> Result<QueryEvent, RuntimeError> {
+    fn query(&mut self, term: &Term) -> Result<QueryEvent> {
         // Don't log if it's just a single element AND like lots of rule bodies tend to be.
         match &term.value() {
             Value::Expression(Operation {
@@ -1506,7 +1494,7 @@ impl PolarVirtualMachine {
     /// Select applicable rules for predicate.
     /// Sort applicable rules by specificity.
     /// Create a choice over the applicable rules.
-    fn query_for_predicate(&mut self, predicate: Call) -> Result<(), RuntimeError> {
+    fn query_for_predicate(&mut self, predicate: Call) -> Result<()> {
         if predicate.kwargs.is_some() {
             return invalid_state(format!(
                 "query_for_predicate: unexpected kwargs: {}",
@@ -1544,7 +1532,7 @@ impl PolarVirtualMachine {
         self.append_goals(goals)
     }
 
-    fn query_for_operation(&mut self, term: &Term) -> Result<QueryEvent, RuntimeError> {
+    fn query_for_operation(&mut self, term: &Term) -> Result<QueryEvent> {
         let operation = term.value().as_expression().unwrap();
         let mut args = operation.args.clone();
         let wrong_arity = || {
@@ -1781,9 +1769,9 @@ impl PolarVirtualMachine {
         eval: F,
         handle_unbound_left_var: bool,
         handle_unbound_right_var: bool,
-    ) -> Result<QueryEvent, RuntimeError>
+    ) -> Result<QueryEvent>
     where
-        F: Fn(&mut Self, &Term) -> Result<QueryEvent, RuntimeError>,
+        F: Fn(&mut Self, &Term) -> Result<QueryEvent>,
     {
         let Operation { operator: op, args } = term.value().as_expression().unwrap();
 
@@ -1895,7 +1883,7 @@ impl PolarVirtualMachine {
     }
 
     /// Evaluate comparison operations.
-    fn comparison_op_helper(&mut self, term: &Term) -> Result<QueryEvent, RuntimeError> {
+    fn comparison_op_helper(&mut self, term: &Term) -> Result<QueryEvent> {
         let Operation { operator: op, args } = term.value().as_expression().unwrap();
 
         if args.len() != 2 {
@@ -1937,7 +1925,7 @@ impl PolarVirtualMachine {
     // TODO(ap, dhatch): Rewrite 3-arg arithmetic ops as 2-arg + unify,
     // like we do for dots; e.g., `+(a, b, c)` → `c = +(a, b)`.
     /// Evaluate arithmetic operations.
-    fn arithmetic_op_helper(&mut self, term: &Term) -> Result<QueryEvent, RuntimeError> {
+    fn arithmetic_op_helper(&mut self, term: &Term) -> Result<QueryEvent> {
         let Operation { operator: op, args } = term.value().as_expression().unwrap();
 
         if args.len() != 3 {
@@ -1990,7 +1978,7 @@ impl PolarVirtualMachine {
     }
 
     /// Push appropriate goals for lookups on dictionaries and instances.
-    fn dot_op_helper(&mut self, term: &Term) -> Result<QueryEvent, RuntimeError> {
+    fn dot_op_helper(&mut self, term: &Term) -> Result<QueryEvent> {
         let Operation { args, .. } = term.value().as_expression().unwrap();
 
         if args.len() != 3 {
@@ -2060,7 +2048,7 @@ impl PolarVirtualMachine {
         Ok(QueryEvent::None)
     }
 
-    fn in_op_helper(&mut self, term: &Term) -> Result<QueryEvent, RuntimeError> {
+    fn in_op_helper(&mut self, term: &Term) -> Result<QueryEvent> {
         let Operation { args, .. } = term.value().as_expression().unwrap();
 
         if args.len() != 2 {
@@ -2167,7 +2155,7 @@ impl PolarVirtualMachine {
     ///  - Successful unification => bind zero or more variables to values
     ///  - Recursive unification => more `Unify` goals are pushed onto the stack
     ///  - Failure => backtrack
-    fn unify(&mut self, left: &Term, right: &Term) -> Result<(), RuntimeError> {
+    fn unify(&mut self, left: &Term, right: &Term) -> Result<()> {
         match (left.value(), right.value()) {
             (Value::Expression(op), other) | (other, Value::Expression(op)) => {
                 match op {
@@ -2369,12 +2357,7 @@ impl PolarVirtualMachine {
     /// Used by both `unify` and `isa`; hence the third argument,
     /// a closure that builds sub-goals.
     #[allow(clippy::ptr_arg)]
-    fn unify_lists<F>(
-        &mut self,
-        left: &TermList,
-        right: &TermList,
-        unify: F,
-    ) -> Result<(), RuntimeError>
+    fn unify_lists<F>(&mut self, left: &TermList, right: &TermList, unify: F) -> Result<()>
     where
         F: FnMut((&Term, &Term)) -> Goal,
     {
@@ -2400,7 +2383,7 @@ impl PolarVirtualMachine {
         rest_list_a: &TermList,
         rest_list_b: &TermList,
         mut unify: F,
-    ) -> Result<(), RuntimeError>
+    ) -> Result<()>
     where
         F: FnMut((&Term, &Term)) -> Goal,
     {
@@ -2444,7 +2427,7 @@ impl PolarVirtualMachine {
         rest_list: &TermList,
         list: &TermList,
         mut unify: F,
-    ) -> Result<(), RuntimeError>
+    ) -> Result<()>
     where
         F: FnMut((&Term, &Term)) -> Goal,
     {
@@ -2472,7 +2455,7 @@ impl PolarVirtualMachine {
         applicable_rules: &Rules,
         unfiltered_rules: &Rules,
         args: &TermList,
-    ) -> Result<(), RuntimeError> {
+    ) -> Result<()> {
         if unfiltered_rules.is_empty() {
             // The rules have been filtered. Sort them.
 
@@ -2545,7 +2528,7 @@ impl PolarVirtualMachine {
         args: &TermList,
         outer: usize,
         inner: usize,
-    ) -> Result<(), RuntimeError> {
+    ) -> Result<()> {
         if rules.is_empty() {
             return self.push_goal(Goal::Backtrack);
         } else if outer > rules.len() {
@@ -2647,12 +2630,7 @@ impl PolarVirtualMachine {
 
     /// Succeed if `left` is more specific than `right` with respect to `args`.
     #[allow(clippy::ptr_arg)]
-    fn is_more_specific(
-        &mut self,
-        left: &Rule,
-        right: &Rule,
-        args: &TermList,
-    ) -> Result<(), RuntimeError> {
+    fn is_more_specific(&mut self, left: &Rule, right: &Rule, args: &TermList) -> Result<()> {
         let zipped = left.params.iter().zip(right.params.iter()).zip(args.iter());
         for ((left_param, right_param), arg) in zipped {
             match (&left_param.specializer, &right_param.specializer) {
@@ -2724,7 +2702,7 @@ impl PolarVirtualMachine {
         left: &Term,
         right: &Term,
         arg: &Term,
-    ) -> Result<QueryEvent, RuntimeError> {
+    ) -> Result<QueryEvent> {
         let arg = self.deref(arg);
         match (arg.value(), left.value(), right.value()) {
             (
@@ -2823,7 +2801,7 @@ impl PolarVirtualMachine {
         }
     }
 
-    fn run_runnable(&mut self, runnable: Box<dyn Runnable>) -> Result<QueryEvent, RuntimeError> {
+    fn run_runnable(&mut self, runnable: Box<dyn Runnable>) -> Result<QueryEvent> {
         let (call_id, answer) = self.new_call_var("runnable_result", Value::Boolean(false));
         self.push_goal(Goal::Unify {
             left: answer,
@@ -2834,7 +2812,7 @@ impl PolarVirtualMachine {
     }
 
     /// Handle an error coming from outside the vm.
-    pub fn external_error(&mut self, message: String) -> Result<(), RuntimeError> {
+    pub fn external_error(&mut self, message: String) -> Result<()> {
         self.external_error = Some(message);
         Ok(())
     }
@@ -2845,7 +2823,7 @@ impl Runnable for PolarVirtualMachine {
     /// pop them off and execute them one at a time until we have a
     /// `QueryEvent` to return. May be called multiple times to restart
     /// the machine.
-    fn run(&mut self, _: Option<&mut Counter>) -> Result<QueryEvent, RuntimeError> {
+    fn run(&mut self, _: Option<&mut Counter>) -> Result<QueryEvent> {
         if self.query_start_time.is_none() {
             #[cfg(not(target_arch = "wasm32"))]
             let query_start_time = Some(std::time::Instant::now());
@@ -2967,7 +2945,7 @@ impl Runnable for PolarVirtualMachine {
         Ok(QueryEvent::Result { bindings, trace })
     }
 
-    fn handle_error(&mut self, error: RuntimeError) -> Result<QueryEvent, RuntimeError> {
+    fn handle_error(&mut self, error: RuntimeError) -> Result<QueryEvent> {
         // if we pushed a debug goal, push an error goal underneath it.
         if self.maybe_break(DebugEvent::Error(error.clone()))? {
             let g = self.goals.pop().unwrap();
@@ -2980,7 +2958,7 @@ impl Runnable for PolarVirtualMachine {
     }
 
     /// Handle response to a predicate posed to the application, e.g., `ExternalIsa`.
-    fn external_question_result(&mut self, call_id: u64, answer: bool) -> Result<(), RuntimeError> {
+    fn external_question_result(&mut self, call_id: u64, answer: bool) -> Result<()> {
         let var = self.call_id_symbols.remove(&call_id).expect("bad call id");
         self.rebind_external_answer(&var, Term::from(answer));
         Ok(())
@@ -2992,11 +2970,7 @@ impl Runnable for PolarVirtualMachine {
     /// symbol associated with the call ID to the result value. If the
     /// value is `None` then the external has no (more) results, so we
     /// backtrack to the choice point left by `Goal::LookupExternal`.
-    fn external_call_result(
-        &mut self,
-        call_id: u64,
-        term: Option<Term>,
-    ) -> Result<(), RuntimeError> {
+    fn external_call_result(&mut self, call_id: u64, term: Option<Term>) -> Result<()> {
         // TODO: Open question if we need to pass errors back down to rust.
         // For example what happens if the call asked for a field that doesn't exist?
 
@@ -3036,7 +3010,7 @@ impl Runnable for PolarVirtualMachine {
     }
 
     /// Drive debugger.
-    fn debug_command(&mut self, command: &str) -> Result<(), RuntimeError> {
+    fn debug_command(&mut self, command: &str) -> Result<()> {
         let mut debugger = self.debugger.clone();
         let maybe_goal = debugger.debug_command(command, self);
         if let Some(goal) = maybe_goal {

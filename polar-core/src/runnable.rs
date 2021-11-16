@@ -3,6 +3,8 @@ use crate::error::RuntimeError;
 use crate::events::QueryEvent;
 use crate::terms::Term;
 
+type Result<T> = core::result::Result<T, RuntimeError>;
+
 /// Trait for something that produces query events and accepts answers.
 ///
 /// Runnable must be clone so that the VM can re-execute runnables when
@@ -12,35 +14,27 @@ pub trait Runnable {
     ///
     /// The optional Counter may be used to create monotonically increasing call IDs that will not
     /// conflict with the parent VM's call IDs.
-    fn run(&mut self, _counter: Option<&mut Counter>) -> Result<QueryEvent, RuntimeError>;
+    fn run(&mut self, _counter: Option<&mut Counter>) -> Result<QueryEvent>;
 
-    fn external_question_result(
-        &mut self,
-        _call_id: u64,
-        _answer: bool,
-    ) -> Result<(), RuntimeError> {
+    fn external_question_result(&mut self, _call_id: u64, _answer: bool) -> Result<()> {
         Err(RuntimeError::InvalidState {
             msg: "Unexpected query answer".to_string(),
         })
     }
 
-    fn external_call_result(
-        &mut self,
-        _call_id: u64,
-        _term: Option<Term>,
-    ) -> Result<(), RuntimeError> {
+    fn external_call_result(&mut self, _call_id: u64, _term: Option<Term>) -> Result<()> {
         Err(RuntimeError::InvalidState {
             msg: "Unexpected external call".to_string(),
         })
     }
 
-    fn debug_command(&mut self, _command: &str) -> Result<(), RuntimeError> {
+    fn debug_command(&mut self, _command: &str) -> Result<()> {
         Err(RuntimeError::InvalidState {
             msg: "Unexpected debug command".to_string(),
         })
     }
 
-    fn handle_error(&mut self, err: RuntimeError) -> Result<QueryEvent, RuntimeError> {
+    fn handle_error(&mut self, err: RuntimeError) -> Result<QueryEvent> {
         Err(err)
     }
 
