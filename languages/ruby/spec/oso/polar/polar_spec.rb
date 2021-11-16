@@ -110,7 +110,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
 
       expect { subject.load_file(file.path) }.to raise_error do |e|
         expect(e).to be_an Oso::Polar::ParseError::UnrecognizedToken
-        expect(e.message).to eq("did not expect to find the token ';' at line 1, column 1 in file #{file.path}")
+        expect(e.message).to start_with("did not expect to find the token ';' at line 1, column 1 of file #{file.path}")
       end
     end
 
@@ -636,7 +636,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
         expect(e).to be_an Oso::Polar::ParseError::IntegerOverflow
-        expect(e.message).to eq("'#{int}' caused an integer overflow at line 1, column 13")
+        expect(e.message).to start_with "'#{int}' caused an integer overflow at line 1, column 13"
       end
     end
 
@@ -647,7 +647,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
         expect(e).to be_an Oso::Polar::ParseError::InvalidTokenCharacter
-        expect(e.message).to eq("'\\n' is not a valid character. Found in this is not at line 1, column 25")
+        expect(e.message).to start_with "'\\n' is not a valid character. Found in this is not at line 1, column 25"
       end
     end
 
@@ -660,7 +660,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
         expect(e).to be_an Oso::Polar::ParseError::UnrecognizedEOF
-        expect(e.message).to eq('hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 5')
+        expect(e.message).to start_with 'hit the end of the file unexpectedly. Did you forget a semi-colon at line 1'
       end
     end
 
@@ -670,7 +670,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       POLAR
       expect { subject.load_str(rule) }.to raise_error do |e|
         expect(e).to be_an Oso::Polar::ParseError::UnrecognizedToken
-        expect(e.message).to eq("did not expect to find the token '1' at line 1, column 1")
+        expect(e.message).to start_with "did not expect to find the token '1' at line 1, column 1"
       end
     end
 
@@ -717,7 +717,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
               a in b
           Type error: can only use `in` on an iterable value, this is Number(Integer(2)) at line 1, column 7
         TRACE
-        expect(e.message).to eq(error)
+        expect(e.message).to start_with error
       end
     end
 

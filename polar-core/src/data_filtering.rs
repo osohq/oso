@@ -3,14 +3,11 @@ use std::{
     hash::Hash,
 };
 
-use crate::{
-    counter::Counter,
-    error::{PolarResult, RuntimeError},
-    events::ResultEvent,
-    terms::*,
-};
+use crate::{counter::Counter, error::RuntimeError, events::ResultEvent, terms::*};
 
 use serde::{Deserialize, Serialize};
+
+type Result<T> = core::result::Result<T, RuntimeError>;
 
 type Id = u64;
 type VarId = Id;
@@ -127,7 +124,7 @@ pub fn build_filter_plan(
     partial_results: PartialResults,
     variable: &str,
     class_tag: &str,
-) -> PolarResult<FilterPlan> {
+) -> Result<FilterPlan> {
     FilterPlan::build(types, partial_results, variable, class_tag)
 }
 
@@ -142,7 +139,7 @@ impl From<Term> for Constraint {
 }
 
 impl VarInfo {
-    fn from_op(op: &Operation) -> PolarResult<Self> {
+    fn from_op(op: &Operation) -> Result<Self> {
         Self::default().process_exp(op)
     }
 
@@ -210,18 +207,18 @@ impl VarInfo {
         }
     }
 
-    fn do_and(self, args: &[Term]) -> PolarResult<Self> {
+    fn do_and(self, args: &[Term]) -> Result<Self> {
         args.iter().fold(Ok(self), |this, arg| {
             this?.process_exp(arg.value().as_expression().unwrap())
         })
     }
 
-    fn do_dot(mut self, lhs: &Term, rhs: &Term) -> PolarResult<Self> {
+    fn do_dot(mut self, lhs: &Term, rhs: &Term) -> Result<Self> {
         self.dot_var(lhs, rhs);
         Ok(self)
     }
 
-    fn do_isa(mut self, lhs: &Term, rhs: &Term) -> PolarResult<Self> {
+    fn do_isa(mut self, lhs: &Term, rhs: &Term) -> Result<Self> {
         match rhs.value().as_pattern() {
             Ok(Pattern::Instance(i)) if i.fields.fields.is_empty() => {
                 let lhs = self.symbolize(lhs);
@@ -235,7 +232,7 @@ impl VarInfo {
         }
     }
 
-    fn do_unify(mut self, left: &Term, right: &Term) -> PolarResult<Self> {
+    fn do_unify(mut self, left: &Term, right: &Term) -> Result<Self> {
         match (self.undot(left), self.undot(right)) {
             (Value::Variable(l), Value::Variable(r)) => {
                 self.cycles.push((l, r));
@@ -261,7 +258,7 @@ impl VarInfo {
         }
     }
 
-    fn do_neq(mut self, left: &Term, right: &Term) -> PolarResult<Self> {
+    fn do_neq(mut self, left: &Term, right: &Term) -> Result<Self> {
         match (self.undot(left), self.undot(right)) {
             (Value::Variable(l), Value::Variable(r)) => {
                 self.uncycles.push((l, r));
@@ -289,7 +286,7 @@ impl VarInfo {
         }
     }
 
-    fn do_in(mut self, left: &Term, right: &Term) -> PolarResult<Self> {
+    fn do_in(mut self, left: &Term, right: &Term) -> Result<Self> {
         match (self.undot(left), self.undot(right)) {
             (Value::Variable(l), Value::Variable(r)) => {
                 self.in_relationships.push((l, r));
@@ -312,7 +309,7 @@ impl VarInfo {
     }
 
     /// Process an expression in the context of this VarInfo. Just does side effects.
-    fn process_exp(self, exp: &Operation) -> PolarResult<Self> {
+    fn process_exp(self, exp: &Operation) -> Result<Self> {
         use Operator::*;
         let args = &exp.args;
         match exp.operator {
@@ -336,20 +333,19 @@ impl VarInfo {
     }
 }
 
-fn unregistered_field_error<A>(var_type: &str, field: &str) -> PolarResult<A> {
+fn unregistered_field_error<A>(var_type: &str, field: &str) -> Result<A> {
     Err(RuntimeError::DataFilteringFieldMissing {
         var_type: var_type.to_string(),
         field: field.to_string(),
-    }
-    .into())
+    })
 }
 
-fn err_invalid<A>(msg: String) -> PolarResult<A> {
-    Err(RuntimeError::InvalidState { msg }.into())
+fn err_invalid<A>(msg: String) -> Result<A> {
+    Err(RuntimeError::InvalidState { msg })
 }
 
-fn err_unsupported<A>(msg: String, term: Term) -> PolarResult<A> {
-    Err(RuntimeError::Unsupported { msg, term }.into())
+fn err_unsupported<A>(msg: String, term: Term) -> Result<A> {
+    Err(RuntimeError::Unsupported { msg, term })
 }
 
 impl FilterPlan {
@@ -358,7 +354,7 @@ impl FilterPlan {
         partial_results: PartialResults,
         var: &str,
         class_tag: &str,
-    ) -> PolarResult<FilterPlan> {
+    ) -> Result<FilterPlan> {
         // @NOTE(steve): Just reading an env var here sucks (see all the stuff we had to do
         // to get POLAR_LOG to work in all libs, wasm etc...) but that's what I'm doing today.
         // At some point surface this info better.
@@ -390,7 +386,7 @@ impl FilterPlan {
                     }
                 })
             })
-            .collect::<PolarResult<Vec<ResultSet>>>()?;
+            .collect::<Result<Vec<ResultSet>>>()?;
 
         Ok(FilterPlan { result_sets }.optimize(explain))
     }
@@ -490,7 +486,7 @@ impl ResultSet {
         }
     }
 
-    fn build(types: &Types, vars: &Vars, this_type: &str) -> PolarResult<Self> {
+    fn build(types: &Types, vars: &Vars, this_type: &str) -> Result<Self> {
         let result_set = ResultSet {
             requests: HashMap::new(),
             resolve_order: vec![],
@@ -534,7 +530,7 @@ impl FetchRequest {
 }
 
 impl<'a> ResultSetBuilder<'a> {
-    fn into_result_set(self) -> PolarResult<ResultSet> {
+    fn into_result_set(self) -> Result<ResultSet> {
         let mut rset = self.result_set;
         for (i, rid1) in rset.resolve_order.iter().enumerate() {
             let ro = &rset.resolve_order;
@@ -582,7 +578,7 @@ impl<'a> ResultSetBuilder<'a> {
         Ok(rset)
     }
 
-    fn constrain_var(&mut self, id: Id, var_type: &str) -> PolarResult<&mut Self> {
+    fn constrain_var(&mut self, id: Id, var_type: &str) -> Result<&mut Self> {
         if self.seen.insert(id) {
             // add a fetch request
             self.result_set.requests.insert(
@@ -605,7 +601,7 @@ impl<'a> ResultSetBuilder<'a> {
         Ok(self)
     }
 
-    fn constrain_neq_vars(&mut self, id: Id) -> PolarResult<&mut Self> {
+    fn constrain_neq_vars(&mut self, id: Id) -> Result<&mut Self> {
         let request = self.result_set.requests.get_mut(&id).unwrap();
         for v in self.vars.uncycles.get(&id).into_iter().flatten() {
             let (kind, value) = if let Some(val) = self.vars.eq_values.get(v) {
@@ -624,7 +620,7 @@ impl<'a> ResultSetBuilder<'a> {
         Ok(self)
     }
 
-    fn constrain_eq_vars(&mut self, id: Id) -> PolarResult<&mut Self> {
+    fn constrain_eq_vars(&mut self, id: Id) -> Result<&mut Self> {
         if let Some(t) = self.vars.eq_values.get(&id) {
             self.result_set.requests.get_mut(&id).unwrap().constrain(
                 ConstraintKind::Eq,
@@ -635,7 +631,7 @@ impl<'a> ResultSetBuilder<'a> {
         Ok(self)
     }
 
-    fn constrain_in_vars(&mut self, id: Id, var_type: &str) -> PolarResult<&mut Self> {
+    fn constrain_in_vars(&mut self, id: Id, var_type: &str) -> Result<&mut Self> {
         let mut req = self.result_set.requests.remove(&id).unwrap();
 
         // Constrain any vars that are `in` this var.
@@ -663,7 +659,7 @@ impl<'a> ResultSetBuilder<'a> {
         Ok(self)
     }
 
-    fn constrain_field_eq(&mut self, id: Id, field: &str, child: Id) -> PolarResult<&mut Self> {
+    fn constrain_field_eq(&mut self, id: Id, field: &str, child: Id) -> Result<&mut Self> {
         if let Some(v) = self.vars.eq_values.get(&child) {
             self.result_set.requests.get_mut(&id).unwrap().constrain(
                 ConstraintKind::Eq,
@@ -674,7 +670,7 @@ impl<'a> ResultSetBuilder<'a> {
         Ok(self)
     }
 
-    fn constrain_field_neq(&mut self, id: Id, field: &str, child: Id) -> PolarResult<&mut Self> {
+    fn constrain_field_neq(&mut self, id: Id, field: &str, child: Id) -> Result<&mut Self> {
         let req = self.result_set.requests.get_mut(&id).unwrap();
         for other_id in self.vars.uncycles.get(&child).into_iter().flatten() {
             match (
@@ -704,12 +700,7 @@ impl<'a> ResultSetBuilder<'a> {
         Ok(self)
     }
 
-    fn constrain_field_contained(
-        &mut self,
-        id: Id,
-        field: &str,
-        child: Id,
-    ) -> PolarResult<&mut Self> {
+    fn constrain_field_contained(&mut self, id: Id, field: &str, child: Id) -> Result<&mut Self> {
         let request = self.result_set.requests.get_mut(&id).unwrap();
         self.vars
             .contained_values
@@ -731,7 +722,7 @@ impl<'a> ResultSetBuilder<'a> {
         id: Id,
         my_field: &str,
         my_child: Id,
-    ) -> PolarResult<&mut Self> {
+    ) -> Result<&mut Self> {
         for (other_field, other_child) in self
             .vars
             .field_relationships
@@ -756,7 +747,7 @@ impl<'a> ResultSetBuilder<'a> {
         id: Id,
         my_field: &str,
         my_child: Id,
-    ) -> PolarResult<&mut Self> {
+    ) -> Result<&mut Self> {
         for (other_parent, other_children) in self
             .vars
             .field_relationships
@@ -805,7 +796,7 @@ impl<'a> ResultSetBuilder<'a> {
         other_class_tag: &str,
         my_field: &str,
         other_field: &str,
-    ) -> PolarResult<&mut Self> {
+    ) -> Result<&mut Self> {
         self.constrain_var(child, other_class_tag)?
             .result_set
             .requests
@@ -829,7 +820,7 @@ impl<'a> ResultSetBuilder<'a> {
         field: &str,
         child: Id,
         before: usize,
-    ) -> PolarResult<&mut Self> {
+    ) -> Result<&mut Self> {
         let after = self.result_set.requests.get(&id).unwrap().len();
         if before != after {
             Ok(self)
@@ -854,7 +845,7 @@ impl<'a> ResultSetBuilder<'a> {
         })
     }
 
-    fn constrain_fields(&mut self, id: Id, var_type: &str) -> PolarResult<&mut Self> {
+    fn constrain_fields(&mut self, id: Id, var_type: &str) -> Result<&mut Self> {
         match self.vars.field_relationships.get(&id) {
             None => Ok(self),
             Some(fs) => fs.iter().fold(Ok(self), |this, (field, child)| {
@@ -885,13 +876,13 @@ impl<'a> ResultSetBuilder<'a> {
 }
 
 impl Vars {
-    fn from_op(op: &Operation) -> PolarResult<Self> {
+    fn from_op(op: &Operation) -> Result<Self> {
         Self::from_info(VarInfo::from_op(op)?)
     }
 
     /// Collapses the var info that we obtained from walking the expressions.
     /// Track equivalence classes of variables and assign each one an id.
-    fn from_info(info: VarInfo) -> PolarResult<Self> {
+    fn from_info(info: VarInfo) -> Result<Self> {
         let counter = info.counter;
 
         // group the variables into equivalence classes.
@@ -1069,11 +1060,9 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{
-        bindings::Bindings,
-        error::{ErrorKind::Runtime, PolarError, RuntimeError::Unsupported},
-    };
-    type TestResult = PolarResult<()>;
+    use crate::bindings::Bindings;
+
+    type TestResult = Result<()>;
 
     impl From<Bindings> for ResultEvent {
         fn from(bindings: Bindings) -> Self {
@@ -1170,10 +1159,8 @@ mod test {
 
         let err = build_filter_plan(types, vec![bindings], "resource", "A").unwrap_err();
         match err {
-            PolarError {
-                kind: Runtime(RuntimeError::DataFilteringFieldMissing { var_type, field }),
-                ..
-            } if var_type == "A" && field == "field" => (),
+            RuntimeError::DataFilteringFieldMissing { var_type, field }
+                if var_type == "A" && field == "field" => {}
             _ => panic!("unexpected {:?}", err),
         }
         Ok(())
@@ -1187,7 +1174,7 @@ mod test {
     }
 
     #[test]
-    fn test_dot_var_cycles() -> PolarResult<()> {
+    fn test_dot_var_cycles() -> Result<()> {
         let dot_op: Term = term!(op!(Dot, var!("x"), str!("y")));
         let op = op!(
             And,
@@ -1208,10 +1195,7 @@ mod test {
     fn test_unsupported_op_msgs() {
         let err = Vars::from_op(&op!(Dot)).expect_err("should've failed");
         match err {
-            PolarError {
-                kind: Runtime(Unsupported { msg, .. }),
-                ..
-            } => assert_eq!(
+            RuntimeError::Unsupported { msg, .. } => assert_eq!(
                 &msg,
                 "the expression Dot/0 is not supported for data filtering"
             ),
