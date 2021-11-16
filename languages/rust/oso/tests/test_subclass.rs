@@ -2,57 +2,64 @@ use oso::PolarClass;
 mod common;
 use common::OsoTest;
 
-#[derive(Clone, PolarClass)]
-struct Document {
-    #[polar(attribute)]
-    project: Project,
+#[derive(Clone, Copy)]
+struct Folder {
+    pub name: &'static str,
 }
 
-#[derive(Clone, PolarClass)]
-struct Project {
+impl oso::PolarClass for Folder {
+    fn get_polar_class() -> oso::Class {
+        Self::get_polar_class_builder()
+            .set_equality_check(|f1, f2| f1.name == f2.name)
+            .build()
+    }
+}
+
+#[derive(Clone, Copy, PolarClass)]
+struct Document {
     #[polar(attribute)]
-    public: bool,
+    folder: Folder,
 }
 
 #[test]
 fn test_is_subclass() {
     common::setup();
     let policy = r#"
-        resource Document {}
-        resource Project {}
+        actor String {}
 
-        allow(_user, "read", document: Document) if
-            has_relation(document.project, "parent", document);
+        resource Folder {
+            permissions = [ "edit" ];
+            roles = [ "admin" ];
+            "edit" if "admin";
+        }
 
-        has_relation(project: Project, "parent", _document: Document) if
-            is_public(project);
+        resource Document {
+            permissions = [ "edit" ];
+            roles = [ "admin" ];
+            "edit" if "admin";
+            relations = { parent: Folder };
+            "admin" if "admin" on "parent";
+        }
 
-        is_public(project: Project) if project.public;
-        is_public(_document: Document) if false;
+        allow(actor, action: String, resource: Resource) if
+            has_permission(actor, action, resource);
+        has_relation(folder: Folder, "parent", doc: Document)
+            if folder == doc.folder;
+        has_role("folder_admin", "admin", _resource: Folder);
     "#;
     let mut test = OsoTest::new();
     test.oso
         .register_class(Document::get_polar_class())
         .unwrap();
-    test.oso.register_class(Project::get_polar_class()).unwrap();
+    test.oso.register_class(Folder::get_polar_class()).unwrap();
     test.load_str(policy);
-    assert!(!test
-        .oso
-        .is_allowed(
-            "anybody",
-            "read",
-            Document {
-                project: Project { public: false },
-            },
-        )
-        .unwrap());
     assert!(test
         .oso
         .is_allowed(
-            "anybody",
-            "read",
+            "folder_admin",
+            "edit",
             Document {
-                project: Project { public: true },
+                folder: Folder { name: "a_folder" },
             },
         )
         .unwrap());
