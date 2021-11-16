@@ -50,19 +50,19 @@ struct SingletonVisitor<'kb> {
     singletons: HashMap<Symbol, Option<Term>>,
 }
 
-fn diagnostic_from_singleton(term: Term, source: Option<Source>) -> Diagnostic {
+fn diagnostic_from_singleton(term: Term, kb: &KnowledgeBase) -> Diagnostic {
     if let Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) = term.value() {
         let mut msg = format!("Unknown specializer {}", tag);
         if let Some(t) = common_misspellings(&tag.0) {
             msg.push_str(&format!(", did you mean {}?", t));
         }
-        if let Some(ref source) = source {
+        if let Some(ref source) = kb.get_term_source(&term) {
             msg.push('\n');
             msg.push_str(&source_lines(source, term.offset(), 0));
         }
         Diagnostic::Warning(msg)
     } else {
-        Diagnostic::Error(ValidationError::SingletonVariable { term }.into())
+        Diagnostic::Error(ValidationError::SingletonVariable { term }.with_context(kb))
     }
 }
 
@@ -79,10 +79,7 @@ impl<'kb> SingletonVisitor<'kb> {
         singletons.sort_by_key(Term::offset);
         singletons
             .into_iter()
-            .map(|term| {
-                let source = self.kb.get_term_source(&term);
-                diagnostic_from_singleton(term, source)
-            })
+            .map(|term| diagnostic_from_singleton(term, self.kb))
             .collect()
     }
 }
@@ -248,12 +245,12 @@ pub fn check_resource_blocks_missing_has_permission(kb: &KnowledgeBase) -> Optio
     visitor.warnings()
 }
 
-struct UndefinedRuleVisitor<'kb> {
+struct UndefinedRuleCallVisitor<'kb> {
     call_terms: Vec<Term>,
     defined_rules: HashSet<&'kb Symbol>,
 }
 
-impl<'kb> UndefinedRuleVisitor<'kb> {
+impl<'kb> UndefinedRuleCallVisitor<'kb> {
     fn new(defined_rules: HashSet<&'kb Symbol>) -> Self {
         Self {
             defined_rules,
@@ -261,19 +258,19 @@ impl<'kb> UndefinedRuleVisitor<'kb> {
         }
     }
 
-    fn errors(self) -> Vec<Diagnostic> {
+    fn errors(self) -> Vec<ValidationError> {
         self.call_terms
             .into_iter()
             .filter(|term| {
                 let call = term.value().as_call().unwrap();
                 !self.defined_rules.contains(&call.name)
             })
-            .map(|term| Diagnostic::Error(ValidationError::UndefinedRule { term }.into()))
+            .map(|term| ValidationError::UndefinedRuleCall { term })
             .collect()
     }
 }
 
-impl<'kb> Visitor for UndefinedRuleVisitor<'kb> {
+impl<'kb> Visitor for UndefinedRuleCallVisitor<'kb> {
     fn visit_term(&mut self, term: &Term) {
         match term.value() {
             Value::Expression(op) => {
@@ -289,11 +286,15 @@ impl<'kb> Visitor for UndefinedRuleVisitor<'kb> {
 }
 
 pub fn check_undefined_rule_calls(kb: &KnowledgeBase) -> Vec<Diagnostic> {
-    let mut visitor = UndefinedRuleVisitor::new(kb.get_rules().keys().collect());
+    let mut visitor = UndefinedRuleCallVisitor::new(kb.get_rules().keys().collect());
     for rule in kb.get_rules().values() {
         visitor.visit_generic_rule(rule);
     }
-    visitor.errors()
+    visitor
+        .errors()
+        .into_iter()
+        .map(|e| Diagnostic::Error(e.with_context(kb)))
+        .collect()
 }
 
 #[cfg(test)]

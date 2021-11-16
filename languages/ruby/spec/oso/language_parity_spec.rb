@@ -10,7 +10,7 @@ begin
   oso.load_str 'missingSemicolon()'
 rescue Oso::Polar::ParseError::UnrecognizedEOF => e
   exception_thrown = true
-  raise unless e.message == 'hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 19'
+  raise unless e.message.start_with? 'hit the end of the file unexpectedly. Did you forget a semi-colon at line 1'
 end
 raise unless exception_thrown
 

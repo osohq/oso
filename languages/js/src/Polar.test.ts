@@ -381,7 +381,7 @@ describe('#loadFiles', () => {
     const p = new Polar();
     const file = await tempFile(';', 'invalid.polar');
     await expect(p.loadFiles([file])).rejects.toThrow(
-      `did not expect to find the token ';' at line 1, column 1 in file ${file}`
+      `did not expect to find the token ';' at line 1, column 1 of file ${file}`
     );
   });
 
