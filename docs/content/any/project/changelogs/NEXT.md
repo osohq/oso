@@ -8,6 +8,17 @@ description: >-
 draft: true
 ---
 
+## Oso 0.23.1
+
+### Rust
+
+#### Other bugs & improvements
+
+- Implemented `ExternalIsSubclass` query event. Prevents `x matches Foo and x matches Bar`
+  from panicking. Instead, this will now correctly fail when `Foo != Bar`.
+  Thanks to [`@davepacheco`](https://github.com/davepacheco) for the contribution!
+
+
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
