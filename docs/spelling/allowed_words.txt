@@ -45,6 +45,7 @@ Linux
 LoadString
 Lodash's
 MVC
+McCreery
 MinGW
 MyPy
 NFA
@@ -58,6 +59,7 @@ ORMs
 Oso's
 Polar's
 Postgres
+Prisma
 PyPI
 RBAC
 REPL

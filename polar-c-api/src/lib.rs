@@ -1,11 +1,12 @@
-pub use polar_core::polar::{Polar, Query};
+pub use polar_core::polar::Polar;
+pub use polar_core::query::Query;
 use polar_core::{error, terms};
 
-use std::cell::RefCell;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr::{null, null_mut};
+use std::sync::Mutex;
 
 /// Get a reference to an object from a pointer
 macro_rules! ffi_ref {
@@ -49,18 +50,18 @@ macro_rules! ffi_try {
 }
 
 thread_local! {
-    static LAST_ERROR: RefCell<Option<Box<error::PolarError>>> = RefCell::new(None);
+    static LAST_ERROR: Mutex<Option<Box<error::PolarError>>> = Default::default();
 }
 
 fn set_error(e: error::PolarError) -> i32 {
-    LAST_ERROR.with(|prev| *prev.borrow_mut() = Some(Box::new(e)));
+    LAST_ERROR.with(|prev| *prev.lock().unwrap() = Some(Box::new(e)));
     POLAR_FAILURE
 }
 
 #[no_mangle]
 pub extern "C" fn polar_get_error() -> *const c_char {
     ffi_try!({
-        let err = LAST_ERROR.with(|prev| prev.borrow_mut().take());
+        let err = LAST_ERROR.with(|prev| prev.lock().unwrap().take());
         if let Some(e) = err {
             let error_json = serde_json::to_string(&e).unwrap();
             CString::new(error_json)
@@ -88,7 +89,9 @@ pub extern "C" fn polar_load(polar_ptr: *mut Polar, sources: *const c_char) -> i
                 Err(err) => set_error(err),
                 Ok(_) => POLAR_SUCCESS,
             },
-            Err(e) => set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into()),
+            Err(e) => {
+                set_error(error::OperationalError::Serialization { msg: e.to_string() }.into())
+            }
         }
     })
 }
@@ -121,7 +124,9 @@ pub extern "C" fn polar_register_constant(
                 }
                 Ok(()) => POLAR_SUCCESS,
             },
-            Err(e) => set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into()),
+            Err(e) => {
+                set_error(error::OperationalError::Serialization { msg: e.to_string() }.into())
+            }
         }
     })
 }
@@ -145,7 +150,9 @@ pub extern "C" fn polar_register_mro(
                 }
                 Ok(()) => POLAR_SUCCESS,
             },
-            Err(e) => set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into()),
+            Err(e) => {
+                set_error(error::OperationalError::Serialization { msg: e.to_string() }.into())
+            }
         }
     })
 }
@@ -178,7 +185,7 @@ pub extern "C" fn polar_new_query_from_term(
         match term {
             Ok(term) => box_ptr!(polar.new_query_from_term(term, trace)),
             Err(e) => {
-                set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into());
+                set_error(error::OperationalError::Serialization { msg: e.to_string() }.into());
                 null_mut()
             }
         }
@@ -266,13 +273,13 @@ pub extern "C" fn polar_debug_command(query_ptr: *mut Query, value: *const c_cha
                     Err(e) => set_error(e),
                 },
                 Ok(_) => set_error(
-                    error::RuntimeError::Serialization {
+                    error::OperationalError::Serialization {
                         msg: "received bad command".to_string(),
                     }
                     .into(),
                 ),
                 Err(e) => {
-                    set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into())
+                    set_error(error::OperationalError::Serialization { msg: e.to_string() }.into())
                 }
             }
         } else {
@@ -297,7 +304,7 @@ pub extern "C" fn polar_call_result(
                 Ok(t) => term = Some(t),
                 Err(e) => {
                     return set_error(
-                        error::RuntimeError::Serialization { msg: e.to_string() }.into(),
+                        error::OperationalError::Serialization { msg: e.to_string() }.into(),
                     );
                 }
             }
@@ -379,7 +386,9 @@ pub extern "C" fn polar_bind(
                 Ok(_) => POLAR_SUCCESS,
                 Err(e) => set_error(e),
             },
-            Err(e) => set_error(error::RuntimeError::Serialization { msg: e.to_string() }.into()),
+            Err(e) => {
+                set_error(error::OperationalError::Serialization { msg: e.to_string() }.into())
+            }
         }
     })
 }
@@ -438,7 +447,7 @@ pub extern "C" fn polar_build_filter_plan(
         let types_str = unsafe { ffi_string!(types) };
         let results_str = unsafe { ffi_string!(results) };
         let types = match serde_json::from_str(&types_str)
-            .map_err(|e| error::RuntimeError::Serialization { msg: e.to_string() }.into())
+            .map_err(|e| error::OperationalError::Serialization { msg: e.to_string() }.into())
         {
             Ok(types) => types,
             Err(e) => {
@@ -447,7 +456,7 @@ pub extern "C" fn polar_build_filter_plan(
             }
         };
         let partial_results = match serde_json::from_str(&results_str)
-            .map_err(|e| error::RuntimeError::Serialization { msg: e.to_string() }.into())
+            .map_err(|e| error::OperationalError::Serialization { msg: e.to_string() }.into())
         {
             Ok(partial_results) => partial_results,
             Err(e) => {

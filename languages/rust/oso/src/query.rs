@@ -16,14 +16,14 @@ impl Iterator for Query {
 }
 
 pub struct Query {
-    inner: polar_core::polar::Query,
+    inner: polar_core::query::Query,
     /// Stores a map from call_id to the iterator the call iterates through
     iterators: HashMap<u64, PolarIterator>,
     host: Host,
 }
 
 impl Query {
-    pub fn new(inner: polar_core::polar::Query, host: Host) -> Self {
+    pub fn new(inner: polar_core::query::Query, host: Host) -> Self {
         Self {
             iterators: HashMap::new(),
             inner,

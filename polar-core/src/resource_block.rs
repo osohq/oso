@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use super::error::{PolarError, PolarResult, RuntimeError, ValidationError};
+use super::error::{OperationalError, PolarError, PolarResult, ValidationError};
 use super::kb::KnowledgeBase;
 use super::rules::*;
 use super::terms::*;
@@ -54,7 +54,7 @@ fn validate_parsed_declaration((name, term): (Term, Term)) -> PolarResult<Parsed
 
         ("roles", Value::Dictionary(_)) | ("permissions", Value::Dictionary(_)) => {
             let msg = format!("Expected '{}' declaration to be a list of strings; found a dictionary", name.to_polar());
-            Err(ValidationError::ResourceBlock { msg, term}.into())
+            Err(ValidationError::ResourceBlock { msg, term }.into())
         }
         ("relations", Value::List(_)) => Err(ValidationError::ResourceBlock {
             msg: "Expected 'relations' declaration to be a dictionary; found a list".to_owned(),
@@ -226,9 +226,8 @@ impl Declaration {
         if let Declaration::Relation(relation) = self {
             Ok(relation)
         } else {
-            Err(RuntimeError::TypeError {
+            Err(OperationalError::InvalidState {
                 msg: format!("Expected Relation; got: {:?}", self),
-                stack_trace: None,
             }
             .into())
         }
@@ -321,7 +320,9 @@ impl ResourceBlocks {
         declaration: &Term,
         resource_name: &Term,
     ) -> PolarResult<&Declaration> {
-        if let Some(declaration) = self.declarations[resource_name].get(declaration) {
+        let maybe_declarations = self.declarations.get(resource_name);
+        let maybe_declaration = maybe_declarations.and_then(|ds| ds.get(declaration));
+        if let Some(declaration) = maybe_declaration {
             Ok(declaration)
         } else {
             let msg = format!("Undeclared term {} referenced in rule in the '{}' resource block. Did you mean to declare it as a role, permission, or relation?", declaration.to_polar(), resource_name);
@@ -334,7 +335,7 @@ impl ResourceBlocks {
     }
 
     /// Look up `relation` in `resource` block and return its type.
-    fn get_relation_type_in_resource_block(
+    pub fn get_relation_type_in_resource_block(
         &self,
         relation: &Term,
         resource: &Term,
@@ -385,18 +386,27 @@ impl ResourceBlocks {
             .into())
         }
     }
-}
 
-pub fn check_all_relation_types_have_been_registered(kb: &KnowledgeBase) -> Vec<PolarError> {
-    let mut errors = vec![];
-    for declarations in kb.resource_blocks.declarations.values() {
-        for (declaration, kind) in declarations {
-            if let Declaration::Relation(relation_type) = kind {
-                errors.extend(relation_type_is_registered(kb, (declaration, relation_type)).err());
+    pub fn declarations(&self) -> &HashMap<Term, Declarations> {
+        &self.declarations
+    }
+
+    pub fn has_roles(&self) -> bool {
+        let mut declarations = self.declarations().values().flat_map(HashMap::values);
+        declarations.any(|d| matches!(d, Declaration::Role))
+    }
+
+    pub fn relation_tuples(&self) -> Vec<(&Term, &Term, &Term)> {
+        let mut tuples = vec![];
+        for (object, declarations) in self.declarations() {
+            for (name, declaration) in declarations {
+                if let Declaration::Relation(subject) = declaration {
+                    tuples.push((subject, name, object));
+                }
             }
         }
+        tuples
     }
-    errors
 }
 
 fn index_declarations(
@@ -620,70 +630,6 @@ fn check_for_duplicate_resource_blocks(
     Ok(())
 }
 
-// TODO(gj): no way to know in the core if `term` was registered as a class or a constant.
-fn is_registered_class(kb: &KnowledgeBase, term: &Term) -> PolarResult<bool> {
-    Ok(kb.is_constant(term.value().as_symbol()?))
-}
-
-fn check_that_block_type_is_not_already_registered(
-    kb: &KnowledgeBase,
-    block_type: &BlockType,
-    resource: &Term,
-) -> PolarResult<()> {
-    let union_name = match block_type {
-        BlockType::Actor => ACTOR_UNION_NAME,
-        BlockType::Resource => RESOURCE_UNION_NAME,
-    };
-    let already_registered = is_registered_class(kb, &term!(sym!(union_name)))?;
-    if already_registered {
-        let msg = format!("Cannot declare '{} {} {{ ... }}'; '{}' already registered as a constant. To resolve this conflict, please register '{}' under a different name.", block_type.to_polar(), resource.to_polar(), union_name, union_name);
-        return Err(ValidationError::ResourceBlock {
-            msg,
-            term: resource.clone(),
-        }
-        .into());
-    }
-    Ok(())
-}
-
-fn check_that_block_resource_is_registered(kb: &KnowledgeBase, resource: &Term) -> PolarResult<()> {
-    if !is_registered_class(kb, resource)? {
-        let msg = format!(
-            "Invalid resource block '{}' -- '{}' must be a registered class.",
-            resource.to_polar(),
-            resource.to_polar(),
-        );
-        // TODO(gj): UnregisteredClassError in the core.
-        return Err(ValidationError::ResourceBlock {
-            msg,
-            term: resource.clone(),
-        }
-        .into());
-    }
-    Ok(())
-}
-
-fn relation_type_is_registered(
-    kb: &KnowledgeBase,
-    (relation, kind): (&Term, &Term),
-) -> PolarResult<()> {
-    if !is_registered_class(kb, kind)? {
-        let msg = format!(
-            "Type '{}' in relation '{}: {}' must be registered as a class.",
-            kind.to_polar(),
-            relation.value().as_string()?,
-            kind.to_polar(),
-        );
-        // TODO(gj): UnregisteredClassError in the core.
-        return Err(ValidationError::ResourceBlock {
-            msg,
-            term: kind.clone(),
-        }
-        .into());
-    }
-    Ok(())
-}
-
 fn check_that_shorthand_rule_heads_are_declared_locally(
     shorthand_rules: &[ShorthandRule],
     declarations: &Declarations,
@@ -711,11 +657,8 @@ fn check_that_shorthand_rule_heads_are_declared_locally(
 impl ResourceBlock {
     pub fn add_to_kb(self, kb: &mut KnowledgeBase) -> Vec<PolarError> {
         let mut errors = vec![];
-        errors.extend(
-            check_that_block_type_is_not_already_registered(kb, &self.block_type, &self.resource)
-                .err(),
-        );
-        errors.extend(check_that_block_resource_is_registered(kb, &self.resource).err());
+        // Check that resource block's resource has been registered as a class.
+        errors.extend(kb.get_registered_class(&self.resource).err());
         errors
             .extend(check_for_duplicate_resource_blocks(&kb.resource_blocks, &self.resource).err());
 
@@ -755,20 +698,22 @@ mod tests {
 
     use super::*;
     use crate::diagnostic::Diagnostic;
+    use crate::error::{
+        ErrorKind::{Runtime, Validation},
+        RuntimeError, ValidationError,
+    };
     use crate::events::QueryEvent;
     use crate::parser::{parse_lines, Line};
     use crate::polar::Polar;
 
     #[track_caller]
     fn expect_error(p: &Polar, policy: &str, expected: &str) {
-        let msg = match p.load_str(policy).unwrap_err() {
-            error::PolarError {
-                kind: error::ErrorKind::Validation(ValidationError::ResourceBlock { msg, .. }),
-                ..
-            } => msg,
-            e => panic!("{}", e),
+        let error = p.load_str(policy).unwrap_err();
+        let msg = match error.kind {
+            Validation(ValidationError::ResourceBlock { msg, .. }) => msg,
+            Validation(ValidationError::UnregisteredClass { .. }) => error.to_string(),
+            _ => panic!("Unexpected error: {}", error),
         };
-
         assert!(msg.contains(expected));
     }
 
@@ -922,11 +867,7 @@ mod tests {
     fn test_resource_block_resource_must_be_registered() {
         let p = Polar::new();
         let valid_policy = "resource Org{}";
-        expect_error(
-            &p,
-            valid_policy,
-            "Invalid resource block 'Org' -- 'Org' must be a registered class.",
-        );
+        expect_error(&p, valid_policy, "Unregistered class: Org");
         p.register_constant(sym!("Org"), term!("unimportant"))
             .unwrap();
         assert!(p.load_str(valid_policy).is_ok());
@@ -1069,11 +1010,7 @@ mod tests {
         p.register_constant(sym!("Repo"), term!("unimportant"))
             .unwrap();
         let policy = r#"resource Repo { relations = { parent: Org }; }"#;
-        expect_error(
-            &p,
-            policy,
-            "Type 'Org' in relation 'parent: Org' must be registered as a class.",
-        );
+        expect_error(&p, policy, "Unregistered class: Org");
         p.register_constant(sym!("Org"), term!("unimportant"))
             .unwrap();
         p.load_str(policy).unwrap();
@@ -1344,8 +1281,8 @@ mod tests {
         let p = Polar::new();
         let q = p.new_query(&format!("new {}()", ACTOR_UNION_NAME), false);
         let msg = match q {
-            Err(error::PolarError {
-                kind: error::ErrorKind::Validation(ValidationError::ResourceBlock { msg, .. }),
+            Err(PolarError {
+                kind: Validation(ValidationError::ResourceBlock { msg, .. }),
                 ..
             }) => msg,
             Err(e) => panic!("{}", e),
@@ -1395,14 +1332,14 @@ mod tests {
             .expect_err("Expected register_constant to throw error.");
         assert!(matches!(
             err.kind,
-            error::ErrorKind::Runtime(error::RuntimeError::TypeError { .. })
+            Runtime(RuntimeError::InvalidRegistration { .. })
         ));
     }
 
     #[test]
     fn test_validate_rules_with_union_type_specializers() {
         let mut kb = KnowledgeBase::new();
-        kb.constant(
+        kb.register_constant(
             sym!("Fruit"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 1,
@@ -1411,7 +1348,7 @@ mod tests {
             })),
         )
         .unwrap();
-        kb.constant(
+        kb.register_constant(
             sym!("Citrus"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 2,
@@ -1420,7 +1357,7 @@ mod tests {
             })),
         )
         .unwrap();
-        kb.constant(
+        kb.register_constant(
             sym!("Orange"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 3,
@@ -1435,7 +1372,7 @@ mod tests {
         // Orange is a subclass of Citrus
         kb.add_mro(sym!("Orange"), vec![3, 2, 1]).unwrap();
 
-        kb.constant(
+        kb.register_constant(
             sym!("User"),
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 4,
@@ -1469,7 +1406,7 @@ mod tests {
         assert!(matches!(
             kb.validate_rules().first().unwrap(),
             Diagnostic::Error(PolarError {
-                kind: error::ErrorKind::Validation(error::ValidationError::InvalidRule { .. }),
+                kind: Validation(ValidationError::InvalidRule { .. }),
                 ..
             })
         ));
@@ -1496,7 +1433,7 @@ mod tests {
         assert!(matches!(
             kb.validate_rules().first().unwrap(),
             Diagnostic::Error(PolarError {
-                kind: error::ErrorKind::Validation(error::ValidationError::InvalidRule { .. }),
+                kind: Validation(ValidationError::InvalidRule { .. }),
                 ..
             })
         ));
@@ -1520,7 +1457,7 @@ mod tests {
         assert!(matches!(
             kb.validate_rules().first().unwrap(),
             Diagnostic::Error(PolarError {
-                kind: error::ErrorKind::Validation(error::ValidationError::InvalidRule { .. }),
+                kind: Validation(ValidationError::InvalidRule { .. }),
                 ..
             })
         ));
@@ -1555,4 +1492,69 @@ mod tests {
     // TODO(gj): add test for union pattern with fields. Behavior will probably be the same as for
     // fieldless union pattern where we create a choicepoint of matches against every union member
     // with the same set of fields.
+
+    // Test creation of resource-specific rule type (for `has_relation`) and general rule type (for
+    // `has_role`):
+    //   - has_relation between (Organization, "parent", Repository)
+    //   - has_role created because at least one resource block has roles declared
+    #[test]
+    fn test_create_resource_specific_rule_types() -> Result<(), PolarError> {
+        let policy = r#"
+            resource Organization {
+                roles = ["member"];
+            }
+
+            resource Repository {
+                roles = ["reader"];
+                relations = {parent: Organization};
+                "reader" if "member" on "parent";
+            }
+
+            has_relation(organization: Organization, "parent", repository: Repository) if
+                repository.org_id = organization.id;
+
+            has_role(user: Actor, _role: String, organization: Organization) if
+                organization.id in user.org_ids;
+        "#;
+
+        let polar = Polar::new();
+
+        let repo_instance = ExternalInstance {
+            instance_id: 1,
+            constructor: None,
+            repr: None,
+        };
+        let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
+        let repo_name = sym!("Repository");
+        polar.register_constant(repo_name.clone(), repo_term)?;
+        polar.register_mro(repo_name.clone(), vec![repo_instance.instance_id])?;
+
+        let org_instance = ExternalInstance {
+            instance_id: 2,
+            constructor: None,
+            repr: None,
+        };
+        let org_term = term!(Value::ExternalInstance(org_instance.clone()));
+        let org_name = sym!("Organization");
+        polar.register_constant(org_name.clone(), org_term)?;
+        polar.register_mro(org_name.clone(), vec![org_instance.instance_id])?;
+
+        polar.load_str(policy)?;
+
+        let kb = polar.kb.read().unwrap();
+
+        let has_role_rule_types = kb.get_rule_types(&sym!("has_role")).unwrap();
+        // has_role(actor: Actor, role: String, resource: Resource)
+        let expected = rule!("has_role", ["actor"; instance!(ACTOR_UNION_NAME), "role"; instance!("String"), "resource"; instance!(RESOURCE_UNION_NAME)]);
+        assert_eq!(1, has_role_rule_types.len());
+        assert_eq!(has_role_rule_types[0], expected);
+
+        let has_relation_rule_types = kb.get_rule_types(&sym!("has_relation")).unwrap();
+        // has_relation(organization: Organization, "parent", repository: Repository)
+        let expected = rule!("has_relation", ["subject"; instance!(org_name), "parent", "object"; instance!(repo_name)]);
+        assert_eq!(1, has_relation_rule_types.len());
+        assert_eq!(has_relation_rule_types[0], expected,);
+
+        Ok(())
+    }
 }

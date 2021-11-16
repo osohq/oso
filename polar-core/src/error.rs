@@ -1,9 +1,9 @@
-use serde::{Deserialize, Serialize};
-
 use std::fmt;
 
-use crate::sources::*;
-use crate::terms::*;
+use indoc::formatdoc;
+use serde::{Deserialize, Serialize};
+
+use super::{rules::Rule, sources::*, terms::*};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(into = "FormattedPolarError")]
@@ -55,8 +55,7 @@ impl PolarError {
                 | ParseError::ExtraToken { loc, .. }
                 | ParseError::WrongValueType { loc, .. }
                 | ParseError::ReservedWord { loc, .. }
-                | ParseError::DuplicateKey { loc, .. }
-                | ParseError::SingletonVariable { loc, .. } => {
+                | ParseError::DuplicateKey { loc, .. } => {
                     let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
                     self.context.replace(ErrorContext {
                         source: source.clone(),
@@ -67,6 +66,25 @@ impl PolarError {
                 }
                 _ => {}
             },
+            (ErrorKind::Runtime(e), Some(source), None) => {
+                let offset = match e {
+                    RuntimeError::Application { term, .. } => term.as_ref().map(|t| t.offset()),
+                    RuntimeError::ArithmeticError { term }
+                    | RuntimeError::TypeError { term, .. }
+                    | RuntimeError::UnhandledPartial { term, .. }
+                    | RuntimeError::Unsupported { term, .. } => Some(term.offset()),
+                    _ => None,
+                };
+                if let Some(offset) = offset {
+                    let (row, column) = crate::lexer::loc_to_pos(&source.src, offset);
+                    self.context.replace(ErrorContext {
+                        source: source.clone(),
+                        row,
+                        column,
+                        include_location: false,
+                    });
+                }
+            }
             (e, Some(source), Some(term)) => {
                 let (row, column) = crate::lexer::loc_to_pos(&source.src, term.offset());
                 self.context.replace(ErrorContext {
@@ -186,10 +204,6 @@ pub enum ParseError {
         loc: usize,
         key: String,
     },
-    SingletonVariable {
-        loc: usize,
-        name: String,
-    },
 }
 
 impl fmt::Display for ErrorContext {
@@ -251,13 +265,6 @@ impl fmt::Display for ParseError {
             Self::DuplicateKey { key, .. } => {
                 write!(f, "Duplicate key: {}", key)
             }
-            Self::SingletonVariable { name, .. } => {
-                write!(
-                    f,
-                    "Singleton variable {} is unused or undefined; try renaming to _{} or _",
-                    name, name
-                )
-            }
         }
     }
 }
@@ -266,27 +273,31 @@ impl fmt::Display for ParseError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RuntimeError {
     ArithmeticError {
-        msg: String,
-    },
-    Serialization {
-        msg: String,
+        /// Term<Operation> where the error arose, tracked for lexical context.
+        term: Term,
     },
     Unsupported {
         msg: String,
+        /// Term where the error arose, tracked for lexical context.
+        term: Term,
     },
     TypeError {
         msg: String,
-        stack_trace: Option<String>,
+        stack_trace: String,
+        /// Term where the error arose, tracked for lexical context.
+        term: Term,
     },
     StackOverflow {
-        limit: usize,
+        msg: String,
     },
     QueryTimeout {
         msg: String,
     },
     Application {
         msg: String,
-        stack_trace: Option<String>,
+        stack_trace: String,
+        /// Option<Term> where the error arose, tracked for lexical context.
+        term: Option<Term>,
     },
     FileLoading {
         msg: String,
@@ -296,48 +307,51 @@ pub enum RuntimeError {
     },
     UnhandledPartial {
         var: Symbol,
+        /// Simplified term for pretty printing. If it's `None`, fall back to printing `term`.
+        simplified: Option<Term>,
+        /// Term where the error arose, tracked for lexical context.
         term: Term,
     },
-}
-
-impl RuntimeError {
-    pub fn add_stack_trace(&mut self, vm: &crate::vm::PolarVirtualMachine) {
-        match self {
-            Self::Application { stack_trace, .. } | Self::TypeError { stack_trace, .. } => {
-                *stack_trace = Some(vm.stack_trace())
-            }
-            _ => {}
-        }
-    }
+    DataFilteringFieldMissing {
+        var_type: String,
+        field: String,
+    },
+    InvalidRegistration {
+        sym: Symbol,
+        msg: String,
+    },
 }
 
 impl fmt::Display for RuntimeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::ArithmeticError { msg } => write!(f, "Arithmetic error: {}", msg),
-            Self::Serialization { msg } => write!(f, "Serialization error: {}", msg),
-            Self::Unsupported { msg } => write!(f, "Not supported: {}", msg),
-            Self::TypeError { msg, stack_trace } => {
-                if let Some(stack_trace) = stack_trace {
-                    writeln!(f, "{}", stack_trace)?;
-                }
+            Self::ArithmeticError { term } => write!(f, "Arithmetic error: {}", term),
+            Self::Unsupported { msg, .. } => write!(f, "Not supported: {}", msg),
+            Self::TypeError {
+                msg, stack_trace, ..
+            } => {
+                writeln!(f, "{}", stack_trace)?;
                 write!(f, "Type error: {}", msg)
             }
-            Self::StackOverflow { limit } => {
-                write!(f, "Goal stack overflow! MAX_GOALS = {}", limit)
+            Self::StackOverflow { msg } => {
+                write!(f, "{}", msg)
             }
             Self::QueryTimeout { msg } => write!(f, "Query timeout: {}", msg),
-            Self::Application { msg, stack_trace } => {
-                if let Some(stack_trace) = stack_trace {
-                    writeln!(f, "{}", stack_trace)?;
-                }
+            Self::Application {
+                msg, stack_trace, ..
+            } => {
+                writeln!(f, "{}", stack_trace)?;
                 write!(f, "Application error: {}", msg)
             }
             Self::FileLoading { msg } => write!(f, "Problem loading file: {}", msg),
             Self::IncompatibleBindings { msg } => {
                 write!(f, "Attempted binding was incompatible: {}", msg)
             }
-            Self::UnhandledPartial { var, term } => {
+            Self::UnhandledPartial {
+                var,
+                simplified,
+                term,
+            } => {
                 write!(
                     f,
                     "Found an unhandled partial in the query result: {var}
@@ -354,8 +368,30 @@ The unhandled partial is for variable {var}.
 The expression is: {expr}
 ",
                     var = var,
-                    expr = term.to_polar(),
+                    expr = simplified.as_ref().unwrap_or(term),
                 )
+            }
+            Self::DataFilteringFieldMissing { var_type, field } => {
+                let msg = formatdoc!(
+                    r#"Unregistered field or relation: {var_type}.{field}
+                    
+                    Please include `{field}` in the `fields` parameter of your
+                    `register_class` call for {var_type}.  For example, in Python:
+
+                        oso.register_class({var_type}, fields={{
+                            "{field}": <type or relation>
+                        }})
+
+                    For more information please refer to our documentation:
+                        https://docs.osohq.com/guides/data_filtering.html
+                    "#,
+                    var_type = var_type,
+                    field = field
+                );
+                write!(f, "{}", msg)
+            }
+            Self::InvalidRegistration { sym, msg } => {
+                write!(f, "Invalid attempt to register '{}': {}", sym, msg)
             }
         }
     }
@@ -363,6 +399,9 @@ The expression is: {expr}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OperationalError {
+    Serialization {
+        msg: String,
+    },
     Unimplemented {
         msg: String,
     },
@@ -378,6 +417,7 @@ pub enum OperationalError {
 impl fmt::Display for OperationalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Self::Serialization { msg } => write!(f, "Serialization error: {}", msg),
             Self::Unimplemented { msg } => write!(f, "{} is not yet implemented", msg),
             Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
             Self::Unknown => write!(
@@ -391,6 +431,9 @@ impl fmt::Display for OperationalError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationError {
+    MissingRequiredRule {
+        rule: Rule,
+    },
     InvalidRule {
         rule: String,
         msg: String,
@@ -400,7 +443,8 @@ pub enum ValidationError {
         msg: String,
     },
     UndefinedRule {
-        rule_name: String,
+        /// Term<Call> where the error arose, tracked for lexical context.
+        term: Term,
     },
     ResourceBlock {
         /// Term where the error arose, tracked for lexical context.
@@ -411,7 +455,14 @@ pub enum ValidationError {
         // already-declared resource block would be relevant info for the error emitted on
         // redeclaration.
     },
-    // TODO(lm|gj): add SingletonVariable.
+    SingletonVariable {
+        /// Term<Symbol> where the error arose, tracked for lexical context.
+        term: Term,
+    },
+    UnregisteredClass {
+        /// Term<Symbol> where the error arose, tracked for lexical context.
+        term: Term,
+    },
 }
 
 impl fmt::Display for ValidationError {
@@ -423,11 +474,20 @@ impl fmt::Display for ValidationError {
             Self::InvalidRuleType { rule_type, msg } => {
                 write!(f, "Invalid rule type: {} {}", rule_type, msg)
             }
-            Self::UndefinedRule { rule_name } => {
-                write!(f, r#"Call to undefined rule "{}""#, rule_name)
+            Self::UndefinedRule { term } => {
+                write!(f, "Call to undefined rule: {}", term)
+            }
+            Self::MissingRequiredRule { rule } => {
+                write!(f, "Missing implementation for required rule {}", rule)
             }
             Self::ResourceBlock { msg, .. } => {
                 write!(f, "{}", msg)
+            }
+            Self::SingletonVariable { term } => {
+                write!(f, "Singleton variable {term} is unused or undefined; try renaming to _{term} or _", term=term)
+            }
+            Self::UnregisteredClass { term } => {
+                write!(f, "Unregistered class: {}", term)
             }
         }
     }

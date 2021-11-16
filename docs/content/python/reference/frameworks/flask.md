@@ -20,7 +20,7 @@ The Oso Flask integration is available on [PyPI](https://pypi.org/project/flask-
 `pip`:
 
 ```console
-$ pip install flask-oso=={{< version >}}
+$ pip install flask-oso
 ```
 
 ## Usage

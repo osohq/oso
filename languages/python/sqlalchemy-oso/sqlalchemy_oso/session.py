@@ -1,5 +1,6 @@
 """SQLAlchemy session classes and factories for oso."""
 from typing import Any, Callable, Dict, Optional, Type
+import logging
 
 from sqlalchemy import event, inspect
 from sqlalchemy.orm import sessionmaker, Session
@@ -11,6 +12,8 @@ from oso import Oso
 
 from sqlalchemy_oso.auth import authorize_model
 from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
+
+logger = logging.getLogger(__name__)
 
 
 class _OsoSession:
@@ -55,7 +58,7 @@ def authorized_sessionmaker(
     get_user: Callable[[], Any],
     get_checked_permissions: Callable[[], Permissions],
     class_: Type[Session] = None,
-    **kwargs
+    **kwargs,
 ):
     """Session factory for sessions with Oso authorization applied.
 
@@ -124,7 +127,7 @@ def scoped_session(
     get_user: Callable[[], Any],
     get_checked_permissions: Callable[[], Permissions],
     scopefunc: Optional[Callable[..., Any]] = None,
-    **kwargs
+    **kwargs,
 ):
     """Return a scoped session maker that uses the Oso instance, user, and
     checked permissions (resource-action pairs) as part of the scope function.
@@ -271,6 +274,7 @@ class AuthorizedSession(AuthorizedSessionBase, Session):
 try:
     # TODO(gj): remove type ignore once we upgrade to 1.4-aware MyPy types.
     from sqlalchemy.orm import with_loader_criteria  # type: ignore
+    from sqlalchemy_oso.sqlalchemy_utils import all_entities_in_statement
 
     @event.listens_for(Session, "do_orm_execute")
     def do_orm_execute(execute_state):
@@ -291,41 +295,25 @@ try:
         if checked_permissions is None:
             return
 
-        def entities_in_statement(statement):
-            def _entities_in_statement(statement):
-                try:
-                    entities = (cd["entity"] for cd in statement.column_descriptions)
-                    return set(e for e in entities if e is not None)
-                except AttributeError:
-                    return set()
-
-            entities = _entities_in_statement(statement)
-
-            # TODO(gj): currently walking way more than we have to. Probably
-            # some points in the tree where we can safely call it good for that
-            # branch and continue on to more fruitful pastures.
-            for child in statement.get_children():
-                entities |= entities_in_statement(child)
-
-            return entities
-
-        for entity in entities_in_statement(execute_state.statement):
-            # If entity is an alias, get the action for the underlying class.
-            if isinstance(entity, AliasedClass):
-                action = checked_permissions.get(inspect(entity).class_)  # type: ignore
-            else:
-                action = checked_permissions.get(entity)
+        entities = all_entities_in_statement(execute_state.statement)
+        logger.info(f"Authorizing entities: {entities}")
+        for entity in entities:
+            action = checked_permissions.get(entity)
 
             # If permissions map does not specify an action to authorize for entity
             # or if the specified action is `None`, deny access.
             if action is None:
+                logger.warning(f"No allowed action for entity {entity}")
                 where = with_loader_criteria(entity, expr.false(), include_aliases=True)
                 execute_state.statement = execute_state.statement.options(where)
             else:
                 filter = authorize_model(oso, user, action, session, entity)
                 if filter is not None:
+                    logger.info(f"Applying filter {filter} to entity {entity}")
                     where = with_loader_criteria(entity, filter, include_aliases=True)
                     execute_state.statement = execute_state.statement.options(where)
+                else:
+                    logger.warning(f"Policy did not return filter for entity {entity}")
 
 
 except ImportError:
