@@ -32,24 +32,24 @@ pub enum Line {
 }
 
 fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> error::ParseError {
-    use error::ParseError::*;
-
     match e {
-        ParseError::InvalidToken { location: loc } => InvalidToken { loc },
-        ParseError::UnrecognizedEOF { location: loc, .. } => UnrecognizedEOF { loc },
+        ParseError::InvalidToken { location: loc } => error::ParseError::InvalidToken { loc },
+        ParseError::UnrecognizedEOF { location: loc, .. } => {
+            error::ParseError::UnrecognizedEOF { loc }
+        }
         ParseError::UnrecognizedToken {
             token: (loc, t, _), ..
         } => match t {
-            Token::Debug | Token::Cut | Token::In | Token::New => ReservedWord {
+            Token::Debug | Token::Cut | Token::In | Token::New => error::ParseError::ReservedWord {
                 token: t.to_string(),
                 loc,
             },
-            _ => UnrecognizedToken {
+            _ => error::ParseError::UnrecognizedToken {
                 token: t.to_string(),
                 loc,
             },
         },
-        ParseError::ExtraToken { token: (loc, t, _) } => ExtraToken {
+        ParseError::ExtraToken { token: (loc, t, _) } => error::ParseError::ExtraToken {
             token: t.to_string(),
             loc,
         },
