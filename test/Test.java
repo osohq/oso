@@ -57,7 +57,7 @@ class Test {
     } catch (Exceptions.UnrecognizedEOF e) {
       throwsException = true;
       assert e.getMessage()
-          .equals(
+          .startsWith(
               "hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column"
                   + " 19");
     }
