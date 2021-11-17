@@ -1,7 +1,7 @@
 use std::fmt::Write;
 use std::rc::Rc;
 
-use super::error::{PolarError, PolarResult};
+use super::error::RuntimeError;
 use super::formatting::{source_lines, ToPolarString};
 use super::partial::simplify_bindings;
 use super::sources::*;
@@ -26,7 +26,7 @@ impl PolarVirtualMachine {
 
     /// If the inner [`Debugger`](struct.Debugger.html) returns a [`Goal`](../vm/enum.Goal.html),
     /// push it onto the goal stack.
-    pub fn maybe_break(&mut self, event: DebugEvent) -> PolarResult<bool> {
+    pub fn maybe_break(&mut self, event: DebugEvent) -> Result<bool, RuntimeError> {
         self.debugger.maybe_break(event, self).map_or_else(
             || Ok(false),
             |goal| {
@@ -71,7 +71,7 @@ pub enum DebugEvent {
     Goal(Rc<Goal>),
     Query,
     Pop,
-    Error(PolarError),
+    Error(RuntimeError),
     Rule,
 }
 

@@ -4,13 +4,14 @@ use std::sync::Arc;
 pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::diagnostic::Diagnostic;
-use super::error::{OperationalError, PolarError, PolarResult, RuntimeError, ValidationError};
+use super::error::{PolarResult, RuntimeError, ValidationError};
 use super::resource_block::{ResourceBlocks, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::*;
 use super::terms::*;
 use super::validations::check_undefined_rule_calls;
-use super::visitor::{walk_term, Visitor};
+
+type ValidationResult<T> = Result<T, ValidationError>;
 
 enum RuleParamMatch {
     True,
@@ -105,7 +106,7 @@ impl KnowledgeBase {
         let mut diagnostics = vec![];
 
         if let Err(e) = self.validate_rule_types() {
-            diagnostics.push(Diagnostic::Error(e));
+            diagnostics.push(Diagnostic::Error(e.with_context(self)));
         }
 
         diagnostics.append(&mut self.validate_rule_calls());
@@ -118,7 +119,7 @@ impl KnowledgeBase {
     }
 
     /// Validate that all rules loaded into the knowledge base are valid based on rule types.
-    fn validate_rule_types(&self) -> PolarResult<()> {
+    fn validate_rule_types(&self) -> ValidationResult<()> {
         // For every rule, if there *is* a rule type, check that the rule matches the rule type.
         for (rule_name, generic_rule) in &self.rules {
             if let Some(types) = self.rule_types.get(rule_name) {
@@ -132,7 +133,7 @@ impl KnowledgeBase {
                             self.rule_params_match(rule.as_ref(), rule_type)
                                 .map(|result| (result, rule_type))
                         })
-                        .collect::<PolarResult<Vec<(RuleParamMatch, &Rule)>>>()
+                        .collect::<Result<Vec<(RuleParamMatch, &Rule)>, ValidationError>>()
                         .map(|results| {
                             results.iter().any(|(result, rule_type)| match result {
                                 RuleParamMatch::True => true,
@@ -147,13 +148,8 @@ impl KnowledgeBase {
                             })
                         })?;
                     if !found_match {
-                        return Err(self.set_error_context(
-                            &rule.body,
-                            ValidationError::InvalidRule {
-                                rule: rule.to_polar(),
-                                msg,
-                            },
-                        ));
+                        let rule = Rule::clone(rule);
+                        return Err(ValidationError::InvalidRule { rule, msg });
                     }
                 }
             }
@@ -173,20 +169,12 @@ impl KnowledgeBase {
                     }
                 }
                 if !found_match {
-                    return Err(self.set_error_context(
-                        &rule_type.body,
-                        ValidationError::MissingRequiredRule {
-                            rule: rule_type.clone(),
-                        },
-                    ));
+                    let rule_type = rule_type.clone();
+                    return Err(ValidationError::MissingRequiredRule { rule_type });
                 }
             } else {
-                return Err(self.set_error_context(
-                    &rule_type.body,
-                    ValidationError::MissingRequiredRule {
-                        rule: rule_type.clone(),
-                    },
-                ));
+                let rule_type = rule_type.clone();
+                return Err(ValidationError::MissingRequiredRule { rule_type });
             }
         }
 
@@ -220,7 +208,7 @@ impl KnowledgeBase {
         rule_instance: &InstanceLiteral,
         rule_type_instance: &InstanceLiteral,
         index: usize,
-    ) -> PolarResult<RuleParamMatch> {
+    ) -> ValidationResult<RuleParamMatch> {
         // Get the unique ID of the prototype instance pattern class.
         // TODO(gj): make actual term available here instead of constructing a fake test one.
         let term = self.get_registered_class(&term!(rule_type_instance.tag.clone()))?;
@@ -259,7 +247,7 @@ impl KnowledgeBase {
         index: usize,
         rule_pattern: &Pattern,
         rule_type_pattern: &Pattern,
-    ) -> PolarResult<RuleParamMatch> {
+    ) -> ValidationResult<RuleParamMatch> {
         Ok(match (rule_type_pattern, rule_pattern) {
             (Pattern::Instance(rule_type_instance), Pattern::Instance(rule_instance)) => {
                 // if tags match, all rule type fields must match those in rule fields, otherwise false
@@ -300,7 +288,7 @@ impl KnowledgeBase {
                             // Turn `member` into an `InstanceLiteral` by copying fields from
                             // `rule_type_instance`.
                             let rule_type_instance = InstanceLiteral {
-                                tag: member.value().as_symbol()?.clone(),
+                                tag: member.value().as_symbol().expect("parsed as symbol").clone(),
                                 fields: rule_type_instance.fields.clone()
                             };
                             match self.check_rule_instance_is_subclass_of_rule_type_instance(rule_instance, &rule_type_instance, index) {
@@ -372,16 +360,15 @@ impl KnowledgeBase {
         rule_value: &Value,
         rule_type_value: &Value,
         rule_type: &Rule,
-    ) -> PolarResult<RuleParamMatch> {
+    ) -> ValidationResult<RuleParamMatch> {
         Ok(match (rule_type_value, rule_value) {
             // List in rule head must be equal to or more specific than the list in the rule type head in order to match
             (Value::List(rule_type_list), Value::List(rule_list)) => {
                 if has_rest_var(rule_type_list) {
                     return Err(ValidationError::InvalidRuleType {
-                        rule_type: rule_type.to_polar(),
+                        rule_type: rule_type.clone(),
                         msg: "Rule types cannot contain *rest variables.".to_string(),
-                    }
-                    .into());
+                    });
                 }
                 if rule_type_list.iter().all(|t| rule_list.contains(t)) {
                     RuleParamMatch::True
@@ -417,9 +404,10 @@ impl KnowledgeBase {
         &self,
         index: usize,
         rule_param: &Parameter,
+        rule: &Rule,
         rule_type_param: &Parameter,
         rule_type: &Rule,
-    ) -> PolarResult<RuleParamMatch> {
+    ) -> ValidationResult<RuleParamMatch> {
         Ok(
             match (
                 rule_type_param.parameter.value(),
@@ -476,11 +464,17 @@ impl KnowledgeBase {
                                     instance!(sym!("Dictionary"), rule_fields.clone().fields)
                                 }
                                 _ => {
-                                    let msg = format!(
-                                        "Value variant {} cannot be a specializer",
-                                        rule_value
-                                    );
-                                    return Err(OperationalError::InvalidState { msg }.into());
+                                    // TODO(gj): what type of value could this be? Will this get
+                                    // past the parser or is it unreachable? Prior to #1356 we
+                                    // could hit this branch with a `Value::Variable` if the
+                                    // specializer in the rule head was parenthesized.
+                                    return Err(ValidationError::InvalidRule {
+                                        msg: format!(
+                                            "Value variant {} cannot be a specializer",
+                                            rule_value
+                                        ),
+                                        rule: rule.clone(),
+                                    });
                                 }
                             };
                             self.check_pattern_param(
@@ -533,7 +527,7 @@ impl KnowledgeBase {
     }
 
     /// Determine whether a `rule` matches a `rule_type` based on its parameters.
-    fn rule_params_match(&self, rule: &Rule, rule_type: &Rule) -> PolarResult<RuleParamMatch> {
+    fn rule_params_match(&self, rule: &Rule, rule_type: &Rule) -> ValidationResult<RuleParamMatch> {
         if rule.params.len() != rule_type.params.len() {
             return Ok(RuleParamMatch::False(format!(
                 "Different number of parameters. Rule has {} parameter(s) but rule type has {}.",
@@ -547,9 +541,9 @@ impl KnowledgeBase {
             .zip(rule_type.params.iter())
             .enumerate()
             .map(|(i, (rule_param, rule_type_param))| {
-                self.check_param(i + 1, rule_param, rule_type_param, rule_type)
+                self.check_param(i + 1, rule_param, rule, rule_type_param, rule_type)
             })
-            .collect::<PolarResult<Vec<RuleParamMatch>>>()
+            .collect::<ValidationResult<Vec<RuleParamMatch>>>()
             .map(|results| {
                 // TODO(gj): all() is short-circuiting -- do we want to gather up *all* failure
                 // messages instead of just the first one?
@@ -598,7 +592,7 @@ impl KnowledgeBase {
                 msg: format!("'{}' is a built-in specializer.", name),
                 sym: name,
             }
-            .into());
+            .with_context(&*self));
         }
         self.constants.insert(name, value);
         Ok(())
@@ -617,12 +611,11 @@ impl KnowledgeBase {
     // TODO(gj): currently no way to distinguish classes from other registered constants in the
     // core, so it's up to callers to ensure this is only called with terms we expect to be
     // registered as a _class_.
-    pub fn get_registered_class(&self, class: &Term) -> PolarResult<&Term> {
+    pub fn get_registered_class(&self, class: &Term) -> ValidationResult<&Term> {
         self.constants
-            .get(class.value().as_symbol()?)
-            .ok_or_else(|| {
-                let term = class.clone();
-                ValidationError::UnregisteredClass { term }.into()
+            .get(class.value().as_symbol().expect("parsed as symbol"))
+            .ok_or_else(|| ValidationError::UnregisteredClass {
+                term: class.clone(),
             })
     }
 
@@ -632,7 +625,7 @@ impl KnowledgeBase {
         // Confirm name is a registered class
         if !self.is_constant(&name) {
             let msg = format!("Cannot add MRO for unregistered class {}", name);
-            return Err(OperationalError::InvalidState { msg }.into());
+            return Err(RuntimeError::InvalidState { msg }.with_context(&*self));
         }
         self.mro.insert(name, mro);
         Ok(())
@@ -641,7 +634,8 @@ impl KnowledgeBase {
     pub fn add_source(&mut self, source: Source) -> PolarResult<u64> {
         let src_id = self.new_id();
         if let Some(ref filename) = source.filename {
-            self.check_file(&source.src, filename)?;
+            self.check_file(&source.src, filename)
+                .map_err(|e| e.with_context(&*self))?;
             self.loaded_content
                 .insert(source.src.clone(), filename.to_string());
             self.loaded_files.insert(filename.to_string(), src_id);
@@ -650,8 +644,14 @@ impl KnowledgeBase {
         Ok(src_id)
     }
 
+    // TODO(gj): Parsed<T> type (or something) that exposes ::get_source_id so we can remove this
+    // meaningless distinction between terms & rules.
     pub(crate) fn get_term_source(&self, t: &Term) -> Option<Source> {
         t.get_source_id().and_then(|id| self.sources.get_source(id))
+    }
+
+    pub(crate) fn get_rule_source(&self, r: &Rule) -> Option<Source> {
+        r.get_source_id().and_then(|id| self.sources.get_source(id))
     }
 
     pub fn clear_rules(&mut self) {
@@ -664,7 +664,7 @@ impl KnowledgeBase {
         self.resource_blocks.clear();
     }
 
-    fn check_file(&self, src: &str, filename: &str) -> PolarResult<()> {
+    fn check_file(&self, src: &str, filename: &str) -> Result<(), RuntimeError> {
         match (
             self.loaded_content.get(src),
             self.loaded_files.get(filename).is_some(),
@@ -672,8 +672,7 @@ impl KnowledgeBase {
             (Some(other_file), true) if other_file == filename => {
                 return Err(RuntimeError::FileLoading {
                     msg: format!("File {} has already been loaded.", filename),
-                }
-                .into())
+                })
             }
             (_, true) => {
                 return Err(RuntimeError::FileLoading {
@@ -681,8 +680,7 @@ impl KnowledgeBase {
                         "A file with the name {}, but different contents has already been loaded.",
                         filename
                     ),
-                }
-                .into());
+                })
             }
             (Some(other_file), _) => {
                 return Err(RuntimeError::FileLoading {
@@ -690,52 +688,16 @@ impl KnowledgeBase {
                         "A file with the same contents as {} named {} has already been loaded.",
                         filename, other_file
                     ),
-                }
-                .into());
+                })
             }
             _ => {}
         }
         Ok(())
     }
 
-    pub fn set_error_context(&self, term: &Term, error: impl Into<PolarError>) -> PolarError {
-        /// `GetSource` will walk a term and return the _first_ piece of source
-        /// info it finds
-        struct GetSource<'kb> {
-            kb: &'kb KnowledgeBase,
-            source: Option<Source>,
-            term: Option<Term>,
-        }
-
-        impl<'kb> Visitor for GetSource<'kb> {
-            fn visit_term(&mut self, t: &Term) {
-                if self.source.is_none() {
-                    self.source = self.kb.get_term_source(t);
-
-                    if self.source.is_none() {
-                        walk_term(self, t)
-                    } else {
-                        self.term = Some(t.clone())
-                    }
-                }
-            }
-        }
-
-        let mut source_getter = GetSource {
-            kb: self,
-            source: None,
-            term: None,
-        };
-        source_getter.visit_term(term);
-        let source = source_getter.source;
-        let term = source_getter.term;
-        let error: PolarError = error.into();
-        error.set_context(source.as_ref(), term.as_ref())
-    }
-
     /// Check that all relations declared across all resource blocks have been registered as
     /// constants.
-    fn check_that_resource_block_relations_are_registered(&self) -> Vec<PolarError> {
+    fn check_that_resource_block_relations_are_registered(&self) -> Vec<ValidationError> {
         self.resource_blocks
             .relation_tuples()
             .into_iter()
@@ -743,7 +705,7 @@ impl KnowledgeBase {
             .collect()
     }
 
-    pub fn rewrite_shorthand_rules(&mut self) -> Vec<PolarError> {
+    pub fn rewrite_shorthand_rules(&mut self) -> Vec<ValidationError> {
         let mut errors = vec![];
 
         errors.append(&mut self.check_that_resource_block_relations_are_registered());
@@ -860,11 +822,20 @@ impl KnowledgeBase {
             }
         }
 
-        let mut rule_types = rule_types_to_create.into_iter().map(|((subject, relation_name, object), required)| {
+        let mut rule_types = rule_types_to_create.into_iter().map(|((subject, relation, object), required)| {
             let subject_specializer = pattern!(instance!(&subject.value().as_symbol().expect("must be symbol").0));
-            let relation_name = relation_name.value().as_string().expect("must be string");
+            let relation_name = relation.value().as_string().expect("must be string");
             let object_specializer = pattern!(instance!(&object.value().as_symbol().expect("must be symbol").0));
-            rule!("has_relation", ["subject"; subject_specializer, relation_name, "object"; object_specializer], required)
+
+            let src_id = relation.get_source_id().expect("must be parsed");
+            let (left, right) = relation.span().expect("must be parsed");
+
+            let mut params = args!("subject"; subject_specializer, relation_name, "object"; object_specializer);
+            params.reverse();
+            let body = term!(op!(And));
+            let mut rule = Rule::new_from_parser(src_id, left, right, sym!("has_relation"), params, body);
+            rule.required = required;
+            rule
         }).collect::<Vec<_>>();
 
         // If there are any Relation::Role declarations in *any* of our resource
@@ -872,6 +843,9 @@ impl KnowledgeBase {
         if self.resource_blocks.has_roles() {
             rule_types.push(
                 // TODO(gj): "Internal" SourceInfo variant.
+                // TODO(gj): Figure out if it's worth setting SourceInfo::Parser context for this
+                // `has_role` rule type we create. Best we could probably do at the moment is fetch
+                // a random role from self.resource_blocks.declarations and borrow its context.
                 rule!("has_role", ["actor"; instance!(ACTOR_UNION_NAME), "role"; instance!("String"), "resource"; instance!(RESOURCE_UNION_NAME)], true)
             );
         }
@@ -903,7 +877,11 @@ impl KnowledgeBase {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::ErrorKind::{Runtime, Validation};
+
+    use crate::error::{
+        ErrorKind::{Runtime, Validation},
+        PolarError,
+    };
 
     #[test]
     /// Test validation implemented in `check_file()`.

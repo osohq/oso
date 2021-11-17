@@ -204,7 +204,7 @@ fn test_load_file_error_contains_filename() {
         assert_eq!(
             err.to_string(),
             format!(
-                "did not expect to find the token ';' at line 1, column 1 in file {}",
+                "did not expect to find the token ';' at line 1, column 1 of file {}:\n\t001: ;\n\t     ^\n",
                 tempfile.path().to_string_lossy().into_owned()
             )
         );

@@ -65,7 +65,10 @@ mod tests {
             c: 'x',
             loc: 99,
         };
-        let err: PolarError = e.into();
+        let err = PolarError {
+            kind: ErrorKind::Parse(e),
+            context: None,
+        };
         eprintln!("{}", serde_json::to_string(&err).unwrap());
         let rule = Rule::new_from_test(
             Symbol::new("foo"),

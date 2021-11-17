@@ -3,13 +3,19 @@ use std::fmt;
 use indoc::formatdoc;
 use serde::{Deserialize, Serialize};
 
-use super::{rules::Rule, sources::*, terms::*};
+use super::{
+    diagnostic::{Context, Range},
+    kb::KnowledgeBase,
+    rules::Rule,
+    sources::Source,
+    terms::{Symbol, Term},
+};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(into = "FormattedPolarError")]
 pub struct PolarError {
     pub kind: ErrorKind,
-    pub context: Option<ErrorContext>,
+    pub context: Option<Context>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -35,125 +41,25 @@ pub enum ErrorKind {
     Validation(ValidationError),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ErrorContext {
-    pub source: Source,
-    pub row: usize,
-    pub column: usize,
-    pub include_location: bool,
-}
-
-impl PolarError {
-    pub fn set_context(mut self, source: Option<&Source>, term: Option<&Term>) -> Self {
-        match (&self.kind, source, term) {
-            (ErrorKind::Parse(e), Some(source), _) => match e {
-                ParseError::IntegerOverflow { loc, .. }
-                | ParseError::InvalidTokenCharacter { loc, .. }
-                | ParseError::InvalidToken { loc, .. }
-                | ParseError::UnrecognizedEOF { loc }
-                | ParseError::UnrecognizedToken { loc, .. }
-                | ParseError::ExtraToken { loc, .. }
-                | ParseError::WrongValueType { loc, .. }
-                | ParseError::ReservedWord { loc, .. }
-                | ParseError::DuplicateKey { loc, .. } => {
-                    let (row, column) = crate::lexer::loc_to_pos(&source.src, *loc);
-                    self.context.replace(ErrorContext {
-                        source: source.clone(),
-                        row,
-                        column,
-                        include_location: false,
-                    });
-                }
-                _ => {}
-            },
-            (ErrorKind::Runtime(e), Some(source), None) => {
-                let offset = match e {
-                    RuntimeError::Application { term, .. } => term.as_ref().map(|t| t.offset()),
-                    RuntimeError::ArithmeticError { term }
-                    | RuntimeError::TypeError { term, .. }
-                    | RuntimeError::UnhandledPartial { term, .. }
-                    | RuntimeError::Unsupported { term, .. } => Some(term.offset()),
-                    _ => None,
-                };
-                if let Some(offset) = offset {
-                    let (row, column) = crate::lexer::loc_to_pos(&source.src, offset);
-                    self.context.replace(ErrorContext {
-                        source: source.clone(),
-                        row,
-                        column,
-                        include_location: false,
-                    });
-                }
-            }
-            (e, Some(source), Some(term)) => {
-                let (row, column) = crate::lexer::loc_to_pos(&source.src, term.offset());
-                self.context.replace(ErrorContext {
-                    source: source.clone(),
-                    row,
-                    column,
-                    // @TODO(Sam): find a better way to include this info
-                    // TODO(gj|sam): this bool can probably be removed -- we should include
-                    // location unconditionally for errors that have the available context.
-                    include_location: matches!(
-                        e,
-                        ErrorKind::Runtime(RuntimeError::UnhandledPartial { .. })
-                    ),
-                });
-            }
-            _ => {}
-        }
-        self
-    }
-}
-
-impl From<ParseError> for PolarError {
-    fn from(err: ParseError) -> Self {
-        Self {
-            kind: ErrorKind::Parse(err),
-            context: None,
-        }
-    }
-}
-
-impl From<RuntimeError> for PolarError {
-    fn from(err: RuntimeError) -> Self {
-        Self {
-            kind: ErrorKind::Runtime(err),
-            context: None,
-        }
-    }
-}
-
-impl From<OperationalError> for PolarError {
-    fn from(err: OperationalError) -> Self {
-        Self {
-            kind: ErrorKind::Operational(err),
-            context: None,
-        }
-    }
-}
-
-impl From<ValidationError> for PolarError {
-    fn from(err: ValidationError) -> Self {
-        Self {
-            kind: ErrorKind::Validation(err),
-            context: None,
-        }
-    }
-}
-
 pub type PolarResult<T> = std::result::Result<T, PolarError>;
 
 impl std::error::Error for PolarError {}
 
-impl fmt::Display for PolarError {
+impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self.kind {
+        match self {
             ErrorKind::Parse(e) => write!(f, "{}", e)?,
             ErrorKind::Runtime(e) => write!(f, "{}", e)?,
             ErrorKind::Operational(e) => write!(f, "{}", e)?,
             ErrorKind::Validation(e) => write!(f, "{}", e)?,
         }
+        Ok(())
+    }
+}
+
+impl fmt::Display for PolarError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.kind)?;
         if let Some(ref context) = self.context {
             write!(f, "{}", context)?;
         }
@@ -206,19 +112,35 @@ pub enum ParseError {
     },
 }
 
-impl fmt::Display for ErrorContext {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // @TODO(Sam): find a better way to incorporate this info
-        if self.include_location {
-            writeln!(f, "found in:")?;
-            write!(f, "{}", self.source.src.split('\n').nth(self.row).unwrap())?;
-            write!(f, "\n{}^", " ".repeat(self.column))?;
+impl ParseError {
+    pub fn with_context(self, source: Source) -> PolarError {
+        use ParseError::*;
+
+        let span = match &self {
+            // These errors track `loc` (left bound) and `token`, and we calculate right bound
+            // as `loc + token.len()`.
+            DuplicateKey { key: token, loc }
+            | ExtraToken { token, loc }
+            | IntegerOverflow { token, loc }
+            | InvalidFloat { token, loc }
+            | ReservedWord { token, loc }
+            | UnrecognizedToken { token, loc } => (*loc, loc + token.len()),
+
+            // These errors track `loc` and only pertain to a single character, so right bound
+            // of span is also `loc`.
+            InvalidTokenCharacter { loc, .. } | InvalidToken { loc } | UnrecognizedEOF { loc } => {
+                (*loc, *loc)
+            }
+
+            // These errors track `term`, from which we calculate the span.
+            WrongValueType { term, .. } => term.span().expect("always from parser"),
+        };
+        let range = Range::from_span(&source.src, span);
+
+        PolarError {
+            context: Some(Context { range, source }),
+            kind: ErrorKind::Parse(self),
         }
-        write!(f, " at line {}, column {}", self.row + 1, self.column + 1)?;
-        if let Some(ref filename) = self.source.filename {
-            write!(f, " in file {}", filename)?;
-        }
-        Ok(())
     }
 }
 
@@ -269,7 +191,6 @@ impl fmt::Display for ParseError {
     }
 }
 
-// @TODO: Information about the context of the error.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RuntimeError {
     ArithmeticError {
@@ -299,6 +220,7 @@ pub enum RuntimeError {
         /// Option<Term> where the error arose, tracked for lexical context.
         term: Option<Term>,
     },
+    // TODO(gj): consider moving to ValidationError.
     FileLoading {
         msg: String,
     },
@@ -307,8 +229,6 @@ pub enum RuntimeError {
     },
     UnhandledPartial {
         var: Symbol,
-        /// Simplified term for pretty printing. If it's `None`, fall back to printing `term`.
-        simplified: Option<Term>,
         /// Term where the error arose, tracked for lexical context.
         term: Term,
     },
@@ -316,10 +236,54 @@ pub enum RuntimeError {
         var_type: String,
         field: String,
     },
+    // TODO(gj): consider moving to ValidationError.
     InvalidRegistration {
         sym: Symbol,
         msg: String,
     },
+    /// An invariant has been broken internally.
+    InvalidState {
+        msg: String,
+    },
+}
+
+impl RuntimeError {
+    pub fn with_context(self, kb: &KnowledgeBase) -> PolarError {
+        use RuntimeError::*;
+
+        let context = match &self {
+            // These errors sometimes track `term`, from which we derive context.
+            Application { term, .. } => term
+                .as_ref()
+                .and_then(Term::span)
+                .zip(term.as_ref().and_then(|t| kb.get_term_source(t))),
+
+            // These errors track `term`, from which we derive the context.
+            ArithmeticError { term }
+            | TypeError { term, .. }
+            | UnhandledPartial { term, .. }
+            | Unsupported { term, .. } => term.span().zip(kb.get_term_source(term)),
+
+            // These errors never have context.
+            StackOverflow { .. }
+            | QueryTimeout { .. }
+            | FileLoading { .. }
+            | IncompatibleBindings { .. }
+            | DataFilteringFieldMissing { .. }
+            | InvalidRegistration { .. }
+            | InvalidState { .. } => None,
+        };
+
+        let context = context.map(|(span, source)| Context {
+            range: Range::from_span(&source.src, span),
+            source,
+        });
+
+        PolarError {
+            kind: ErrorKind::Runtime(self),
+            context,
+        }
+    }
 }
 
 impl fmt::Display for RuntimeError {
@@ -347,11 +311,7 @@ impl fmt::Display for RuntimeError {
             Self::IncompatibleBindings { msg } => {
                 write!(f, "Attempted binding was incompatible: {}", msg)
             }
-            Self::UnhandledPartial {
-                var,
-                simplified,
-                term,
-            } => {
+            Self::UnhandledPartial { var, term } => {
                 write!(
                     f,
                     "Found an unhandled partial in the query result: {var}
@@ -368,13 +328,13 @@ The unhandled partial is for variable {var}.
 The expression is: {expr}
 ",
                     var = var,
-                    expr = simplified.as_ref().unwrap_or(term),
+                    expr = term,
                 )
             }
             Self::DataFilteringFieldMissing { var_type, field } => {
                 let msg = formatdoc!(
                     r#"Unregistered field or relation: {var_type}.{field}
-                    
+
                     Please include `{field}` in the `fields` parameter of your
                     `register_class` call for {var_type}.  For example, in Python:
 
@@ -393,33 +353,36 @@ The expression is: {expr}
             Self::InvalidRegistration { sym, msg } => {
                 write!(f, "Invalid attempt to register '{}': {}", sym, msg)
             }
+            // TODO(gj): move this back to `OperationalError` during The Next Great Diagnostic
+            // Refactor.
+            Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
         }
     }
 }
 
+// NOTE(gj): both of these errors are only constructed/used in the `polar-c-api` crate.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OperationalError {
     Serialization {
         msg: String,
     },
-    Unimplemented {
-        msg: String,
-    },
     /// Rust panics caught in the `polar-c-api` crate.
     Unknown,
+}
 
-    /// An invariant has been broken internally.
-    InvalidState {
-        msg: String,
-    },
+impl From<OperationalError> for PolarError {
+    fn from(err: OperationalError) -> Self {
+        Self {
+            kind: ErrorKind::Operational(err),
+            context: None,
+        }
+    }
 }
 
 impl fmt::Display for OperationalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Serialization { msg } => write!(f, "Serialization error: {}", msg),
-            Self::Unimplemented { msg } => write!(f, "{} is not yet implemented", msg),
-            Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
             Self::Unknown => write!(
                 f,
                 "We hit an unexpected error.\n\
@@ -432,17 +395,19 @@ impl fmt::Display for OperationalError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationError {
     MissingRequiredRule {
-        rule: Rule,
+        rule_type: Rule,
     },
     InvalidRule {
-        rule: String,
+        /// Rule where the error arose, tracked for lexical context.
+        rule: Rule,
         msg: String,
     },
     InvalidRuleType {
-        rule_type: String,
+        /// Rule type where the error arose, tracked for lexical context.
+        rule_type: Rule,
         msg: String,
     },
-    UndefinedRule {
+    UndefinedRuleCall {
         /// Term<Call> where the error arose, tracked for lexical context.
         term: Term,
     },
@@ -465,6 +430,47 @@ pub enum ValidationError {
     },
 }
 
+impl ValidationError {
+    pub fn with_context(self, kb: &KnowledgeBase) -> PolarError {
+        use ValidationError::*;
+
+        let context = match &self {
+            // These errors track `term`, from which we calculate the span.
+            ResourceBlock { term, .. }
+            | SingletonVariable { term, .. }
+            | UndefinedRuleCall { term }
+            | UnregisteredClass { term, .. } => term.span().zip(kb.get_term_source(term)),
+
+            // These errors track `rule`, from which we calculate the span.
+            InvalidRule { rule, .. }
+            | InvalidRuleType {
+                rule_type: rule, ..
+            } => rule.span().zip(kb.get_rule_source(rule)),
+
+            // These errors track `rule_type`, from which we sometimes calculate the span.
+            MissingRequiredRule { rule_type } => {
+                if rule_type.name.0 == "has_relation" {
+                    rule_type.span().zip(kb.get_rule_source(rule_type))
+                } else {
+                    // TODO(gj): copy source info from the appropriate resource block term for
+                    // `has_role()` rule type we create.
+                    None
+                }
+            }
+        };
+
+        let context = context.map(|(span, source)| Context {
+            range: Range::from_span(&source.src, span),
+            source,
+        });
+
+        PolarError {
+            kind: ErrorKind::Validation(self),
+            context,
+        }
+    }
+}
+
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -472,13 +478,13 @@ impl fmt::Display for ValidationError {
                 write!(f, "Invalid rule: {} {}", rule, msg)
             }
             Self::InvalidRuleType { rule_type, msg } => {
-                write!(f, "Invalid rule type: {} {}", rule_type, msg)
+                write!(f, "Invalid rule type: {}\n\t{}", rule_type, msg)
             }
-            Self::UndefinedRule { term } => {
+            Self::UndefinedRuleCall { term } => {
                 write!(f, "Call to undefined rule: {}", term)
             }
-            Self::MissingRequiredRule { rule } => {
-                write!(f, "Missing implementation for required rule {}", rule)
+            Self::MissingRequiredRule { rule_type } => {
+                write!(f, "Missing implementation for required rule {}", rule_type)
             }
             Self::ResourceBlock { msg, .. } => {
                 write!(f, "{}", msg)

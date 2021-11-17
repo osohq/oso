@@ -434,8 +434,9 @@ public class PolarTest {
     String rule = "f(x) if x = 18446744073709551616;";
     Exceptions.IntegerOverflow e =
         assertThrows(Exceptions.IntegerOverflow.class, () -> p.loadStr(rule));
-    assertEquals(
-        "'18446744073709551616' caused an integer overflow at line 1, column 13", e.getMessage());
+    assertTrue(
+        e.getMessage()
+            .startsWith("'18446744073709551616' caused an integer overflow at line 1, column 13"));
   }
 
   @Test
@@ -444,9 +445,10 @@ public class PolarTest {
     Exceptions.InvalidTokenCharacter e =
         assertThrows(Exceptions.InvalidTokenCharacter.class, () -> p.loadStr(rule));
     // TODO: this is a wacky message
-    assertEquals(
-        "'\\n' is not a valid character. Found in This is not at line 1, column 25",
-        e.getMessage());
+    assertTrue(
+        e.getMessage()
+            .startsWith(
+                "'\\n' is not a valid character. Found in This is not at line 1, column 25"));
   }
 
   @Test
@@ -454,7 +456,8 @@ public class PolarTest {
     String rule = "1";
     Exceptions.UnrecognizedToken e =
         assertThrows(Exceptions.UnrecognizedToken.class, () -> p.loadStr(rule));
-    assertEquals("did not expect to find the token '1' at line 1, column 1", e.getMessage());
+    assertTrue(
+        e.getMessage().startsWith("did not expect to find the token '1' at line 1, column 1"));
   }
 
   /**** TEST LOADING ****/
