@@ -62,10 +62,11 @@ fn set_error(e: error::PolarError) -> i32 {
 pub extern "C" fn polar_get_error() -> *const c_char {
     ffi_try!({
         let err = LAST_ERROR.with(|prev| prev.lock().unwrap().take());
-        let err = err.unwrap_or_else(|| {
-            error::PolarError::from(error::OperationalError::InvalidState {
+        let err = err.unwrap_or_else(|| error::PolarError {
+            kind: error::ErrorKind::Runtime(error::RuntimeError::InvalidState {
                 msg: "attempting to fetch an error, but no error is present".to_string(),
-            })
+            }),
+            context: None,
         });
         let error_json = serde_json::to_string(&err).unwrap();
         CString::new(error_json)
