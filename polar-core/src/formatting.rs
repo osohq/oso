@@ -63,17 +63,21 @@ pub fn source_lines(source: &Source, offset: usize, context_lines: usize) -> Str
     // Skip everything up to the first line of requested context (`target_line - context_lines`),
     // but don't overflow if `context_lines > target_line`.
     let skipped_lines = target_line.saturating_sub(context_lines);
-    let lines = source.src.lines().skip(skipped_lines);
-    // Take window of lines comprising current line (`1`) + number of contextual lines visible
-    // _before_ the current line (`target_line - skipped_lines`) + `context_lines` of context after
-    // the current line.
-    let lines = lines
-        .take(1 + (target_line - skipped_lines) + context_lines)
-        .enumerate();
+    let lines = source.src.lines();
+    // Skip `skipped_lines` lines and then take _up to_ `context_lines` lines of leading context.
+    let prefix = lines
+        .clone()
+        .skip(skipped_lines)
+        .take(std::cmp::min(context_lines, target_line));
+    // Take target line.
+    let target = lines.clone().nth(target_line);
+    // Take _up to_ `context_lines` lines of trailing context.
+    let suffix = lines.skip(target_line + 1).take(context_lines);
+    // Combine prefix + target + suffix.
+    let lines = prefix.chain(target).chain(suffix).enumerate();
     // Format each line with its line number.
-    let mut lines: Vec<_> = lines
-        .map(|(i, line)| format!("{:03}: {}", i + skipped_lines + 1, line))
-        .collect();
+    let format_line = |(i, line): (usize, &str)| format!("{:03}: {}", i + skipped_lines + 1, line);
+    let mut lines: Vec<_> = lines.map(format_line).collect();
     // Calculate length of line number prefix.
     let prefix_len = "123: ".len();
     // Insert 'indicator' line pointing at `target_column`.
