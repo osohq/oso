@@ -2,6 +2,7 @@
 
 use super::error::ParseError;
 use super::terms::Symbol;
+use serde::{Deserialize, Serialize};
 use std::iter::Peekable;
 use std::str::{CharIndices, FromStr};
 
@@ -43,7 +44,7 @@ impl<'input> Lexer<'input> {
 
 pub type Spanned<Tok, Loc, Error> = Result<(Loc, Tok, Loc), Error>;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Token {
     Integer(i64),
     Float(f64),
@@ -90,6 +91,7 @@ pub enum Token {
     Not,       // not
     Matches,   // matches
     Type,      // type
+    Annotation,
 }
 
 impl ToString for Token {
@@ -140,6 +142,7 @@ impl ToString for Token {
             Token::Not => "not".to_owned(),         // not
             Token::Matches => "matches".to_owned(), // matches
             Token::Type => "type".to_owned(),       // type
+            Token::Annotation => "TODO".to_owned(),
         }
     }
 }

@@ -93,6 +93,7 @@ pub fn fold_rule<T: Folder>(
         body,
         source_info,
         required,
+        ..
     }: Rule,
     fld: &mut T,
 ) -> Rule {
@@ -102,6 +103,7 @@ pub fn fold_rule<T: Folder>(
         body: fld.fold_term(body),
         source_info,
         required,
+        annotation: None,
     }
 }
 

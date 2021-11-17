@@ -189,6 +189,7 @@ macro_rules! rule {
             body: term!(op!(And, $(term!($body)),+)),
             source_info: $crate::sources::SourceInfo::Test,
             required: false,
+            annotation: None,
         }}
     };
     ($name:expr, [$($args:tt)*]) => {{
@@ -200,6 +201,7 @@ macro_rules! rule {
             body: term!(op!(And)),
             source_info: $crate::sources::SourceInfo::Test,
             required: false,
+            annotation: None,
         }
     }};
     // this macro variant is used exclusively to create rule *types*
@@ -213,6 +215,7 @@ macro_rules! rule {
             body: term!(op!(And)),
             source_info: $crate::sources::SourceInfo::Test,
             required: $required,
+            annotation: None,
         }
     }};
 }

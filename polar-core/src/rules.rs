@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
 
+use super::lexer::Token;
 use super::sources::SourceInfo;
 use super::terms::*;
 
@@ -17,6 +18,9 @@ impl Parameter {
     }
 }
 
+#[derive(Debug)]
+pub struct Annotation {}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Rule {
     pub name: Symbol,
@@ -27,6 +31,7 @@ pub struct Rule {
     // TODO @patrickod: refactor Rule into Rule & RuleType structs
     // `required` is used exclusively with rule *types* and not normal rules.
     pub required: bool,
+    pub annotation: Option<Token>,
 }
 
 impl PartialEq for Rule {
@@ -66,6 +71,7 @@ impl Rule {
             body,
             source_info: SourceInfo::Test,
             required: false,
+            annotation: None,
         }
     }
 
@@ -88,6 +94,7 @@ impl Rule {
                 right,
             },
             required: false,
+            annotation: None,
         }
     }
 }

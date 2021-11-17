@@ -64,6 +64,7 @@ extern {
         "not" => lexer::Token::Not,         // not
         "matches" => lexer::Token::Matches, // matches
         "type" => lexer::Token::Type,       // type
+        "trace" => lexer::Token::Annotation  // annotation
     }
 }
 
@@ -681,7 +682,7 @@ BodilessRule: Rule = <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";" => 
     Rule::new_from_parser(src_id, start_head, start, name, params, body)
 };
 
-Rule: Rule = {
+UnannotatedRule: Rule = {
     <BodilessRule>,
     <start_head:@L> <head:RuleHead> <end_head:@R> Define <body:TermExp> ";" => {
         let (name, params) = head;
@@ -696,7 +697,16 @@ Rule: Rule = {
         };
         Rule::new_from_parser(src_id, start_head, end_head, name, params, body)
     }
-}
+};
+
+Annotation = {"trace"};
+
+Rule: Rule = <annotation:Annotation?> <mut rule:UnannotatedRule> => {
+     if let Some(annotation) = annotation {
+         rule.annotation = Some(annotation);
+     }
+     rule
+};
 
 RuleType: Rule = "type" <BodilessRule>;
 
