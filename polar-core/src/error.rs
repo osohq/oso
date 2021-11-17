@@ -4,7 +4,7 @@ use indoc::formatdoc;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    formatting::source_lines,
+    diagnostic::{Context, Range},
     kb::KnowledgeBase,
     rules::Rule,
     sources::Source,
@@ -15,7 +15,7 @@ use super::{
 #[serde(into = "FormattedPolarError")]
 pub struct PolarError {
     pub kind: ErrorKind,
-    pub context: Option<ErrorContext>,
+    pub context: Option<Context>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -39,39 +39,6 @@ pub enum ErrorKind {
     Runtime(RuntimeError),
     Operational(OperationalError),
     Validation(ValidationError),
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
-pub struct Range {
-    pub start: Position,
-    pub end: Position,
-}
-
-impl Range {
-    pub fn from_span(source: &str, (left, right): (usize, usize)) -> Self {
-        let start = Position::from_loc(source, left);
-        let end = Position::from_loc(source, right);
-        Self { start, end }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
-pub struct Position {
-    pub row: usize,
-    pub column: usize,
-}
-
-impl Position {
-    pub fn from_loc(source: &str, loc: usize) -> Self {
-        let (row, column) = crate::lexer::loc_to_pos(source, loc);
-        Self { row, column }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ErrorContext {
-    pub source: Source,
-    pub range: Range,
 }
 
 pub type PolarResult<T> = std::result::Result<T, PolarError>;
@@ -171,30 +138,9 @@ impl ParseError {
         let range = Range::from_span(&source.src, span);
 
         PolarError {
-            context: Some(ErrorContext { range, source }),
+            context: Some(Context { range, source }),
             kind: ErrorKind::Parse(self),
         }
-    }
-}
-
-// TODO(gj): temporary hack -- this won't be necessary once `formatting::source_lines` takes a
-// `Range` instead of a single `usize` (`loc`).
-fn pos_to_loc(src: &str, row: usize, column: usize) -> usize {
-    let chars_before_row = src.split('\n').take(row).flat_map(|r| r.chars()).count();
-    row + chars_before_row + column
-}
-
-impl fmt::Display for ErrorContext {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Position { row, column } = self.range.start;
-        write!(f, " at line {}, column {}", row + 1, column + 1)?;
-        if let Some(ref filename) = self.source.filename {
-            write!(f, " of file {}", filename)?;
-        }
-        let loc = pos_to_loc(&self.source.src, row, column);
-        let lines = source_lines(&self.source, loc, 0).replace('\n', "\n\t");
-        writeln!(f, ":\n\t{}", lines)?;
-        Ok(())
     }
 }
 
@@ -328,7 +274,7 @@ impl RuntimeError {
             | InvalidState { .. } => None,
         };
 
-        let context = context.map(|(span, source)| ErrorContext {
+        let context = context.map(|(span, source)| Context {
             range: Range::from_span(&source.src, span),
             source,
         });
@@ -513,7 +459,7 @@ impl ValidationError {
             }
         };
 
-        let context = context.map(|(span, source)| ErrorContext {
+        let context = context.map(|(span, source)| Context {
             range: Range::from_span(&source.src, span),
             source,
         });

@@ -1,11 +1,16 @@
+mod context;
+
+pub use context::{Context, Range};
+
 use std::fmt;
 
 use super::error::PolarError;
+use super::warning::PolarWarning;
 
 #[derive(Debug)]
 pub enum Diagnostic {
     Error(PolarError),
-    Warning(String),
+    Warning(PolarWarning),
 }
 
 impl Diagnostic {

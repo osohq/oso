@@ -1573,7 +1573,7 @@ fn test_unknown_specializer_warning() -> TestResult {
     assert!(matches!(&out.kind, MessageKind::Warning));
     assert_eq!(
         &out.msg,
-        "Unknown specializer A\n001: f(_: A);\n          ^"
+        "Unknown specializer A at line 1, column 6:\n\t001: f(_: A);\n\t          ^\n"
     );
     Ok(())
 }
@@ -1693,24 +1693,34 @@ fn test_and_or_warning() -> TestResult {
     while let Some(msg) = p.next_message() {
         messages.push(msg);
     }
-    assert!(messages.iter().any(|msg| {
-      matches!(&msg.kind, MessageKind::Warning) &&
-      (msg.msg ==
-        "Expression without parentheses could be ambiguous. \nPrior to 0.20, `x and y or z` would parse as `x and (y or z)`. \nAs of 0.20, it parses as `(x and y) or z`, matching other languages. \n\n\n001: f(x) if x = 1 and x > 1 or x < 3;\n             ^")
-    }));
+    assert_eq!(messages.len(), 1);
+    let message = messages.first().unwrap();
+    assert!(matches!(message.kind, MessageKind::Warning));
+    let expected = indoc! {"
+        Expression without parentheses could be ambiguous.
+        Prior to 0.20, `x and y or z` would parse as `x and (y or z)`.
+        As of 0.20, it parses as `(x and y) or z`, matching other languages. at line 1, column 9:
+        \t001: f(x) if x = 1 and x > 1 or x < 3;
+        \t             ^\n"};
+    assert_eq!(message.msg, expected);
 
     p.clear_rules();
     p.load_str("f(x) if x = 1 or x > 1 and x < 3;")?;
 
-    let mut msgs: Vec<Message> = vec![];
+    let mut messages: Vec<Message> = vec![];
     while let Some(msg) = p.next_message() {
-        msgs.push(msg);
+        messages.push(msg);
     }
-    assert!(msgs.iter().any(|msg| {
-      matches!(&msg.kind, MessageKind::Warning) &&
-      (msg.msg ==
-        "Expression without parentheses could be ambiguous. \nPrior to 0.20, `x and y or z` would parse as `x and (y or z)`. \nAs of 0.20, it parses as `(x and y) or z`, matching other languages. \n\n\n001: f(x) if x = 1 or x > 1 and x < 3;\n                      ^")
-    }));
+    assert_eq!(messages.len(), 1);
+    let message = messages.first().unwrap();
+    assert!(matches!(message.kind, MessageKind::Warning));
+    let expected = indoc! {"
+        Expression without parentheses could be ambiguous.
+        Prior to 0.20, `x and y or z` would parse as `x and (y or z)`.
+        As of 0.20, it parses as `(x and y) or z`, matching other languages. at line 1, column 18:
+        \t001: f(x) if x = 1 or x > 1 and x < 3;
+        \t                      ^\n"};
+    assert_eq!(message.msg, expected);
 
     Ok(())
 }
@@ -1740,7 +1750,7 @@ fn test_unknown_specializer_suggestions() -> TestResult {
     assert!(matches!(&msg.kind, MessageKind::Warning));
     assert_eq!(
         &msg.msg,
-        "Unknown specializer string, did you mean String?\n001: f(s: string) if s;\n          ^"
+        "Unknown specializer string, did you mean String? at line 1, column 6:\n\t001: f(s: string) if s;\n\t          ^\n"
     );
     Ok(())
 }
