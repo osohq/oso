@@ -22,10 +22,13 @@ import (
 /*
 Reads a c string from polar core to a go string and frees the c string.
 */
-func readStr(cStr *C.char) string {
+func readStr(cStr *C.char) *string {
+	if cStr == nil {
+		return nil
+	}
 	goStr := C.GoString(cStr)
 	C.string_free(cStr)
-	return goStr
+	return &goStr
 }
 
 func ffiSerialize(input interface{}) (*C.char, error) {
@@ -52,8 +55,39 @@ func (p *PolarFfi) delete() {
 	p = nil
 }
 
+func checkResultVoid(res *C.polar_CResult_c_void) error {
+	err := res.error
+	defer C.result_free(res)
+	if err != nil {
+		return getError(err)
+	}
+	return nil
+}
+
+func checkResultString(res *C.polar_CResult_c_char) (*string, error) {
+	err := res.error
+	resultPtr := res.result
+	defer C.result_free((*C.polar_CResult_c_void)((unsafe.Pointer)(res)))
+	if err != nil {
+		return nil, getError(err)
+	}
+	result := readStr(resultPtr)
+	return result, nil
+}
+
+func checkResultQuery(res *C.polar_CResult_Query) (*QueryFfi, error) {
+	err := res.error
+	resultPtr := res.result
+	defer C.result_free((*C.polar_CResult_c_void)((unsafe.Pointer)(res)))
+	if err != nil {
+		return nil, getError(err)
+	}
+	result := newQueryFfi(resultPtr)
+	return result, nil
+}
+
 func getError(err *C.char) error {
-	errStr := readStr(err)
+	errStr := *readStr(err)
 	var polarError errors.FormattedPolarError
 	jsonErr := json.Unmarshal([]byte(errStr), &polarError)
 	if jsonErr != nil {
@@ -63,29 +97,24 @@ func getError(err *C.char) error {
 }
 
 type ffiInterface interface {
-	nextMessage() (*C.char, error)
+	nextMessage() (*string, error)
 }
 
-func (p PolarFfi) nextMessage() (*C.char, error) {
-	result := C.polar_next_polar_message(p.ptr)
-	if result.error != nil {
-		return nil, getError(result.error)
-	}
-	return result.result, nil
+func (p PolarFfi) nextMessage() (*string, error) {
+	return checkResultString(C.polar_next_polar_message(p.ptr))
 }
 
 func processMessages(i ffiInterface) {
 	for {
-		msgPtr, err := i.nextMessage()
+		message, err := i.nextMessage()
 		if err != nil {
 			panic(err)
 		}
-		if msgPtr == nil {
+		if message == nil {
 			return
 		}
-		message := readStr(msgPtr)
 		var messageStruct types.Message
-		err = json.Unmarshal([]byte(message), &messageStruct)
+		err = json.Unmarshal([]byte(*message), &messageStruct)
 
 		if err != nil {
 			panic(err)
@@ -93,10 +122,8 @@ func processMessages(i ffiInterface) {
 		switch messageStruct.Kind.MessageKindVariant.(type) {
 		case types.MessageKindPrint:
 			fmt.Printf("%s\n", messageStruct.Msg)
-			break
 		case types.MessageKindWarning:
 			fmt.Printf("WARNING: %s\n", messageStruct.Msg)
-			break
 		default:
 			fmt.Printf("Unexpected message: %#v\n", messageStruct)
 		}
@@ -114,32 +141,23 @@ func (p PolarFfi) Load(sources []types.Source) error {
 	if err != nil {
 		return err
 	}
-	result := C.polar_load(p.ptr, json)
+	err = checkResultVoid(C.polar_load(p.ptr, json))
 	processMessages(p)
-	if result.error != nil {
-		return getError(result.error)
-	}
-	return nil
+	return err
 }
 
 func (p PolarFfi) ClearRules() error {
-	result := C.polar_clear_rules(p.ptr)
+	err := checkResultVoid(C.polar_clear_rules(p.ptr))
 	processMessages(p)
-	if result.error != nil {
-		return getError(result.error)
-	}
-	return nil
+	return err
 }
 
 func (p PolarFfi) NewQueryFromStr(queryStr string) (*QueryFfi, error) {
 	cs := C.CString(queryStr)
 	defer C.free(unsafe.Pointer(cs))
-	result := C.polar_new_query(p.ptr, cs, 0)
+	result, err := checkResultQuery(C.polar_new_query(p.ptr, cs, 0))
 	processMessages(p)
-	if result.error != nil {
-		return nil, getError(result.error)
-	}
-	return newQueryFfi(result.result), nil
+	return result, err
 }
 
 func (p PolarFfi) NewQueryFromTerm(queryTerm types.Term) (*QueryFfi, error) {
@@ -148,22 +166,15 @@ func (p PolarFfi) NewQueryFromTerm(queryTerm types.Term) (*QueryFfi, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := C.polar_new_query_from_term(p.ptr, json, 0)
+	result, err := checkResultQuery(C.polar_new_query_from_term(p.ptr, json, 0))
 	processMessages(p)
-	if result.error != nil {
-		return nil, getError(result.error)
-	}
-	return newQueryFfi(result.result), nil
+	return result, err
 }
 
-func (p PolarFfi) NextInlineQuery() (*QueryFfi, error) {
+func (p PolarFfi) NextInlineQuery() *QueryFfi {
 	queryPtr := C.polar_next_inline_query(p.ptr, 0)
 	processMessages(p)
-	if queryPtr == nil {
-		// TODO: we don't have any way of signaling this failing?
-		return nil, nil
-	}
-	return newQueryFfi(queryPtr), nil
+	return newQueryFfi(queryPtr)
 }
 
 func (p PolarFfi) RegisterConstant(term types.Term, name string) error {
@@ -174,12 +185,9 @@ func (p PolarFfi) RegisterConstant(term types.Term, name string) error {
 	if err != nil {
 		return err
 	}
-	result := C.polar_register_constant(p.ptr, cName, cTerm)
+	err = checkResultVoid(C.polar_register_constant(p.ptr, cName, cTerm))
 	processMessages(p)
-	if result.error != nil {
-		return getError(result.error)
-	}
-	return nil
+	return err
 }
 
 func (p PolarFfi) RegisterMro(name string, mro []uint64) error {
@@ -190,12 +198,9 @@ func (p PolarFfi) RegisterMro(name string, mro []uint64) error {
 	if err != nil {
 		return err
 	}
-	result := C.polar_register_mro(p.ptr, cName, cMro)
+	err = checkResultVoid(C.polar_register_mro(p.ptr, cName, cMro))
 	processMessages(p)
-	if result.error != nil {
-		return getError(result.error)
-	}
-	return nil
+	return err
 }
 
 type QueryFfi struct {
@@ -203,6 +208,9 @@ type QueryFfi struct {
 }
 
 func newQueryFfi(ptr *C.polar_Query) *QueryFfi {
+	if ptr == nil {
+		return nil
+	}
 	return &QueryFfi{
 		ptr: ptr,
 	}
@@ -213,12 +221,8 @@ func (q *QueryFfi) Delete() {
 	q = nil
 }
 
-func (q QueryFfi) nextMessage() (*C.char, error) {
-	result := C.polar_next_query_message(q.ptr)
-	if result.error != nil {
-		return nil, getError(result.error)
-	}
-	return result.result, nil
+func (q QueryFfi) nextMessage() (*string, error) {
+	return checkResultString(C.polar_next_query_message(q.ptr))
 }
 
 func (q QueryFfi) CallResult(callID uint64, term *types.Term) error {
@@ -230,11 +234,7 @@ func (q QueryFfi) CallResult(callID uint64, term *types.Term) error {
 		return err
 	}
 
-	result := C.polar_call_result(q.ptr, C.uint64_t(callID), s)
-	if result.error != nil {
-		return getError(result.error)
-	}
-	return nil
+	return checkResultVoid(C.polar_call_result(q.ptr, C.uint64_t(callID), s))
 }
 
 func (q QueryFfi) QuestionResult(callID uint64, answer bool) error {
@@ -244,32 +244,19 @@ func (q QueryFfi) QuestionResult(callID uint64, answer bool) error {
 	} else {
 		intAnswer = 0
 	}
-	result := C.polar_question_result(q.ptr, C.uint64_t(callID), C.int(intAnswer))
-	if result.error != nil {
-		return getError(result.error)
-	}
-	return nil
+	return checkResultVoid(C.polar_question_result(q.ptr, C.uint64_t(callID), C.int(intAnswer)))
 }
 
 func (q QueryFfi) ApplicationError(message string) error {
 	cMessage := C.CString(message)
 	defer C.free(unsafe.Pointer(cMessage))
-	result := C.polar_application_error(q.ptr, cMessage)
-	if result.error != nil {
-		return getError(result.error)
-	}
-	return nil
+	return checkResultVoid(C.polar_application_error(q.ptr, cMessage))
 }
 
 func (q QueryFfi) NextEvent() (*string, error) {
-	result := C.polar_next_query_event(q.ptr)
+	result, err := checkResultString(C.polar_next_query_event(q.ptr))
 	processMessages(q)
-	if result.error != nil {
-		return nil, getError(result.error)
-	}
-	event := result.result
-	goEvent := readStr(event)
-	return &goEvent, nil
+	return result, err
 }
 
 func (q QueryFfi) DebugCommand(command *string) error {
@@ -279,19 +266,11 @@ func (q QueryFfi) DebugCommand(command *string) error {
 	if err != nil {
 		return err
 	}
-	result := C.polar_debug_command(q.ptr, cStr)
+	err = checkResultVoid(C.polar_debug_command(q.ptr, cStr))
 	processMessages(q)
-	if result.error != nil {
-		return getError(result.error)
-	}
-	return nil
+	return err
 }
 
 func (q QueryFfi) Source() (*string, error) {
-	result := C.polar_query_source_info(q.ptr)
-	if result.error != nil {
-		return nil, getError(result.error)
-	}
-	goSource := readStr(result.result)
-	return &goSource, nil
+	return checkResultString(C.polar_query_source_info(q.ptr))
 }

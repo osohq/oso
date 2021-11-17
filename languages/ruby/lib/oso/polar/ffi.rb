@@ -6,7 +6,7 @@ require 'ffi'
 def result(result_klass)
   Class.new(::FFI::Struct) do
     layout :result, result_klass, :error, :string
-  end.by_value
+  end.by_ref
 end
 
 module Oso

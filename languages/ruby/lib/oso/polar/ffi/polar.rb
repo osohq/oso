@@ -24,6 +24,7 @@ module Oso
           attach_function :register_mro, :polar_register_mro, [FFI::Polar, :string, :string], CResultVoid
           attach_function :next_message, :polar_next_polar_message, [FFI::Polar], CResultMessage
           attach_function :free, :polar_free, [FFI::Polar], :int32
+          attach_function :result_free, :result_free, [:pointer], :int32
           attach_function(
             :build_filter_plan,
             :polar_build_filter_plan,
@@ -126,10 +127,14 @@ module Oso
           end
         end
 
-        def handle_error(result)
-          raise FFI::Error.get(result[:error], enrich_message) unless result[:error].nil?
+        def handle_error(res)
+          result = res[:result]
+          error = res[:error]
+          Rust.result_free(res)
 
-          result[:result]
+          raise FFI::Error.get(error, enrich_message) unless error.nil?
+
+          result
         end
       end
     end

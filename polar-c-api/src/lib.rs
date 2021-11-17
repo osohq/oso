@@ -78,10 +78,10 @@ pub const POLAR_SUCCESS: i32 = 1;
 macro_rules! ffi_try {
     ($body:block) => {
         // $body.into()
-        catch_unwind(AssertUnwindSafe(|| $body))
+        box_ptr!(catch_unwind(AssertUnwindSafe(|| $body))
             .map_err(|_| error::OperationalError::Unknown.into())
             .and_then(|res| res)
-            .into()
+            .into())
     };
 }
 
@@ -100,7 +100,10 @@ pub extern "C" fn polar_new() -> *mut Polar {
 }
 
 #[no_mangle]
-pub extern "C" fn polar_load(polar_ptr: *mut Polar, sources: *const c_char) -> CResult<c_void> {
+pub extern "C" fn polar_load(
+    polar_ptr: *mut Polar,
+    sources: *const c_char,
+) -> *mut CResult<c_void> {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         from_json(sources).and_then(|sources| polar.load(sources))
@@ -108,7 +111,7 @@ pub extern "C" fn polar_load(polar_ptr: *mut Polar, sources: *const c_char) -> C
 }
 
 #[no_mangle]
-pub extern "C" fn polar_clear_rules(polar_ptr: *mut Polar) -> CResult<c_void> {
+pub extern "C" fn polar_clear_rules(polar_ptr: *mut Polar) -> *mut CResult<c_void> {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         polar.clear_rules();
@@ -121,7 +124,7 @@ pub extern "C" fn polar_register_constant(
     polar_ptr: *mut Polar,
     name: *const c_char,
     value: *const c_char,
-) -> CResult<c_void> {
+) -> *mut CResult<c_void> {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         let name = unsafe { ffi_string!(name) };
@@ -135,7 +138,7 @@ pub extern "C" fn polar_register_mro(
     polar_ptr: *mut Polar,
     name: *const c_char,
     mro: *const c_char,
-) -> CResult<c_void> {
+) -> *mut CResult<c_void> {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         let name = unsafe { ffi_string!(name) };
@@ -160,7 +163,7 @@ pub extern "C" fn polar_new_query_from_term(
     polar_ptr: *mut Polar,
     query_term: *const c_char,
     trace: u32,
-) -> CResult<Query> {
+) -> *mut CResult<Query> {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         from_json(query_term).map(|query| box_ptr!(polar.new_query_from_term(query, trace != 0)))
@@ -172,7 +175,7 @@ pub extern "C" fn polar_new_query(
     polar_ptr: *mut Polar,
     query_str: *const c_char,
     trace: u32,
-) -> CResult<Query> {
+) -> *mut CResult<Query> {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         let s = unsafe { ffi_string!(query_str) };
@@ -182,7 +185,7 @@ pub extern "C" fn polar_new_query(
 }
 
 #[no_mangle]
-pub extern "C" fn polar_next_polar_message(polar_ptr: *mut Polar) -> CResult<c_char> {
+pub extern "C" fn polar_next_polar_message(polar_ptr: *mut Polar) -> *mut CResult<c_char> {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         if let Some(msg) = polar.next_message() {
@@ -197,7 +200,7 @@ pub extern "C" fn polar_next_polar_message(polar_ptr: *mut Polar) -> CResult<c_c
 }
 
 #[no_mangle]
-pub extern "C" fn polar_next_query_event(query_ptr: *mut Query) -> CResult<c_char> {
+pub extern "C" fn polar_next_query_event(query_ptr: *mut Query) -> *mut CResult<c_char> {
     ffi_try!({
         let query = unsafe { ffi_ref!(query_ptr) };
         query.next_event().map(|event| {
@@ -225,7 +228,7 @@ pub extern "C" fn polar_next_query_event(query_ptr: *mut Query) -> CResult<c_cha
 pub extern "C" fn polar_debug_command(
     query_ptr: *mut Query,
     value: *const c_char,
-) -> CResult<c_void> {
+) -> *mut CResult<c_void> {
     ffi_try!({
         let query = unsafe { ffi_ref!(query_ptr) };
         from_json(value).and_then(|term: terms::Term| match term.value() {
@@ -243,7 +246,7 @@ pub extern "C" fn polar_call_result(
     query_ptr: *mut Query,
     call_id: u64,
     term: *const c_char,
-) -> CResult<c_void> {
+) -> *mut CResult<c_void> {
     ffi_try!({
         let query = unsafe { ffi_ref!(query_ptr) };
         from_json(term).and_then(|term| query.call_result(call_id, term))
@@ -255,7 +258,7 @@ pub extern "C" fn polar_question_result(
     query_ptr: *mut Query,
     call_id: u64,
     result: i32,
-) -> CResult<c_void> {
+) -> *mut CResult<c_void> {
     ffi_try!({
         let query = unsafe { ffi_ref!(query_ptr) };
         let result = result != 0;
@@ -267,7 +270,7 @@ pub extern "C" fn polar_question_result(
 pub extern "C" fn polar_application_error(
     query_ptr: *mut Query,
     message: *mut c_char,
-) -> CResult<c_void> {
+) -> *mut CResult<c_void> {
     ffi_try!({
         let query = unsafe { ffi_ref!(query_ptr) };
         let s = unsafe { ffi_string!(message) }.to_string();
@@ -277,7 +280,7 @@ pub extern "C" fn polar_application_error(
 }
 
 #[no_mangle]
-pub extern "C" fn polar_next_query_message(query_ptr: *mut Query) -> CResult<c_char> {
+pub extern "C" fn polar_next_query_message(query_ptr: *mut Query) -> *mut CResult<c_char> {
     ffi_try!({
         let query = unsafe { ffi_ref!(query_ptr) };
         if let Some(msg) = query.next_message() {
@@ -292,7 +295,7 @@ pub extern "C" fn polar_next_query_message(query_ptr: *mut Query) -> CResult<c_c
 }
 
 #[no_mangle]
-pub extern "C" fn polar_query_source_info(query_ptr: *mut Query) -> CResult<c_char> {
+pub extern "C" fn polar_query_source_info(query_ptr: *mut Query) -> *mut CResult<c_char> {
     ffi_try!({
         let query = unsafe { ffi_ref!(query_ptr) };
         Ok(CString::new(query.source_info())
@@ -306,7 +309,7 @@ pub extern "C" fn polar_bind(
     query_ptr: *mut Query,
     name: *const c_char,
     value: *const c_char,
-) -> CResult<c_void> {
+) -> *mut CResult<c_void> {
     ffi_try!({
         let query = unsafe { ffi_ref!(query_ptr) };
         let name = unsafe { ffi_string!(name) };
@@ -346,6 +349,14 @@ pub extern "C" fn query_free(query: *mut Query) -> i32 {
     POLAR_SUCCESS
 }
 
+/// Recovers the original boxed version of `query` so that
+/// it can be properly freed
+#[no_mangle]
+pub extern "C" fn result_free(result: *mut CResult<c_void>) -> i32 {
+    std::mem::drop(unsafe { Box::from_raw(result) });
+    POLAR_SUCCESS
+}
+
 #[no_mangle]
 pub extern "C" fn polar_build_filter_plan(
     polar_ptr: *mut Polar,
@@ -353,7 +364,7 @@ pub extern "C" fn polar_build_filter_plan(
     results: *const c_char,
     variable: *const c_char,
     class_tag: *const c_char,
-) -> CResult<c_char> {
+) -> *mut CResult<c_char> {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
 

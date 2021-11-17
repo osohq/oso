@@ -203,11 +203,15 @@ class Source:
 
 
 def check_result(result, enrich_message=None):
-    if is_null(result.error):
-        return result.result
+    r = result.result
+    e = result.error
+    # hack... we only near to clear allocation of the pointers
+    lib.result_free(ffi.cast("polar_CResult_c_void *", result))
+    if is_null(e):
+        return r
     else:
-        error = get_python_error(ffi.string(result.error).decode(), enrich_message)
-        lib.string_free(result.error)
+        error = get_python_error(ffi.string(e).decode(), enrich_message)
+        lib.string_free(e)
         raise error
 
 

@@ -21,6 +21,7 @@ module Oso
           attach_function :next_message, :polar_next_query_message, [FFI::Query], CResultMessage
           attach_function :source, :polar_query_source_info, [FFI::Query], CResultSource
           attach_function :free, :query_free, [FFI::Query], :int32
+          attach_function :result_free, :result_free, [:pointer], :int32
           attach_function :bind, :polar_bind, [FFI::Query, :string, :string], CResultVoid
         end
         private_constant :Rust
@@ -94,10 +95,14 @@ module Oso
           res.to_s
         end
 
-        def handle_error(result)
-          raise FFI::Error.get(result[:error], enrich_message) unless result[:error].nil?
+        def handle_error(res)
+          result = res[:result]
+          error = res[:error]
+          Rust.result_free(res)
 
-          result[:result]
+          raise FFI::Error.get(error, enrich_message) unless error.nil?
+
+          result
         end
       end
     end

@@ -8,9 +8,6 @@ import java.io.OutputStream;
 import jnr.ffi.LibraryLoader;
 import jnr.ffi.Pointer;
 import jnr.ffi.Struct;
-import jnr.ffi.StructLayout;
-import jnr.ffi.StructLayout.SignedLong;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -19,31 +16,11 @@ public class Ffi {
   // singleton variable
   private static Ffi ffi = null;
 
-  private PolarLib polarLib;
+  private static PolarLib polarLib;
 
-  // protected static class CResultT extends StructLayout {
-  // private T result;
-  // private jnr.ffi.Pointer error;
-
-  // // Necessary constructor that takes a Runtime
-  // public CResult(jnr.ffi.Runtime runtime) {
-  // super(runtime);
-  // }
-
-  // public T check() throws Exceptions.OsoException {
-  // if (error == null) {
-  // return result;
-  // } else {
-  // java.lang.String s = error.getString(0);
-  // // polarLib.string_free(error);
-  // throw Exceptions.getJavaError(s);
-  // }
-  // }
-  // }
-
-  public static final class CResultPointer extends Struct {
-    public final Pointer result = new Pointer();
-    public final Pointer error = new Pointer();
+  public static class CResultPointer extends Struct {
+    private final Struct.Pointer result = new Pointer();
+    private final Struct.Pointer error = new Pointer();
 
     // Necessary constructor that takes a Runtime
     public CResultPointer(final jnr.ffi.Runtime runtime) {
@@ -51,31 +28,36 @@ public class Ffi {
     }
 
     public jnr.ffi.Pointer check() throws Exceptions.OsoException {
-      if (error == null) {
-        return result.get();
+      jnr.ffi.Pointer e = this.error.get();
+      jnr.ffi.Pointer r = this.result.get();
+      polarLib.result_free(getMemory(this));
+      if (e == null) {
+        return r;
       } else {
-        java.lang.String s = error.get().getString(0);
-        // polarLib.string_free(error);
+        java.lang.String s = e.getString(0);
+        polarLib.string_free(e);
         throw Exceptions.getJavaError(s);
       }
     }
   }
 
-  public static final class CResultInteger extends Struct {
-    public final SignedLong result = new SignedLong();
-    public final Pointer error = new Pointer();
+  public static class CResultVoid extends Struct {
+    private final SignedLong result = new SignedLong();
+    private final Pointer error = new Pointer();
 
     // Necessary constructor that takes a Runtime
-    public CResultInteger(jnr.ffi.Runtime runtime) {
+    public CResultVoid(jnr.ffi.Runtime runtime) {
       super(runtime);
     }
 
-    public long check() throws Exceptions.OsoException {
-      if (error == null) {
-        return result.get();
+    public void check() throws Exceptions.OsoException {
+      jnr.ffi.Pointer e = this.error.get();
+      long r = this.result.get();
+      if (e == null) {
+        return;
       } else {
-        java.lang.String s = error.get().getString(0);
-        // polarLib.string_free(error);
+        java.lang.String s = e.getString(0);
+        polarLib.string_free(e);
         throw Exceptions.getJavaError(s);
       }
     }
@@ -121,7 +103,8 @@ public class Ffi {
     protected Query nextInlineQuery() throws Exceptions.OsoException {
       // Don't check result here because the returned Pointer is null to indicate
       // termination
-      Pointer p = polarLib.polar_next_inline_query(ptr, 0).check();
+
+      Pointer p = polarLib.polar_next_inline_query(ptr, 0);
       processMessages();
       if (p == null) {
         return null;
@@ -131,8 +114,8 @@ public class Ffi {
     }
 
     protected void registerConstant(String value, String name) throws Exceptions.OsoException {
-      CResultInteger result = polarLib.polar_register_constant(ptr, name, value);
-      System.out.println(result);
+      CResultVoid result = polarLib.polar_register_constant(ptr, name, value);
+      // System.out.println(result);
       // if(result == null) {
 
       // }
@@ -246,17 +229,15 @@ public class Ffi {
   }
 
   protected static interface PolarLib {
-    CResultInteger polar_debug_command(Pointer query_ptr, String value);
+    CResultVoid polar_debug_command(Pointer query_ptr, String value);
 
     int polar_free(Pointer polar);
 
-    Pointer polar_get_error();
-
     long polar_get_external_id(Pointer polar_ptr);
 
-    CResultInteger polar_load(Pointer polar_ptr, String sources);
+    CResultVoid polar_load(Pointer polar_ptr, String sources);
 
-    CResultInteger polar_clear_rules(Pointer polar_ptr);
+    CResultVoid polar_clear_rules(Pointer polar_ptr);
 
     Pointer polar_new();
 
@@ -264,25 +245,27 @@ public class Ffi {
 
     CResultPointer polar_new_query_from_term(Pointer polar_ptr, String query_term, int trace);
 
-    CResultPointer polar_next_inline_query(Pointer polar_ptr, int trace);
+    Pointer polar_next_inline_query(Pointer polar_ptr, int trace);
 
     CResultPointer polar_next_query_event(Pointer query_ptr);
 
     CResultPointer polar_query_from_repl(Pointer polar_ptr);
 
-    CResultInteger polar_question_result(Pointer query_ptr, long call_id, int result);
+    CResultVoid polar_question_result(Pointer query_ptr, long call_id, int result);
 
-    CResultInteger polar_call_result(Pointer query_ptr, long call_id, String value);
+    CResultVoid polar_call_result(Pointer query_ptr, long call_id, String value);
 
-    CResultInteger polar_application_error(Pointer query_ptr, String message);
+    CResultVoid polar_application_error(Pointer query_ptr, String message);
 
     int query_free(Pointer query);
 
     int string_free(Pointer s);
 
-    CResultInteger polar_register_constant(Pointer polar_ptr, String name, String value);
+    int result_free(Pointer r);
 
-    CResultInteger polar_register_mro(Pointer polar_ptr, String name, String mro);
+    CResultVoid polar_register_constant(Pointer polar_ptr, String name, String value);
+
+    CResultVoid polar_register_mro(Pointer polar_ptr, String name, String mro);
 
     CResultPointer polar_next_polar_message(Pointer polar_ptr);
 
@@ -290,7 +273,7 @@ public class Ffi {
 
     CResultPointer polar_query_source_info(Pointer query_ptr);
 
-    CResultInteger polar_bind(Pointer query_ptr, String name, String value);
+    CResultVoid polar_bind(Pointer query_ptr, String name, String value);
   }
 
   protected Ffi() {

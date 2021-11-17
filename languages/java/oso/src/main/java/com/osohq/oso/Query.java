@@ -73,7 +73,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
     try {
       next = nextResult();
     } catch (Exception e) {
-      throw new NoSuchElementException("Caused by: e.toString()");
+      throw new NoSuchElementException("Caused by: " + e.toString());
     }
     return ret;
   }
@@ -132,11 +132,11 @@ public class Query implements Enumeration<HashMap<String, Object>> {
       }
     } catch (Exceptions.InvalidCallError e) {
       ffiQuery.applicationError(e.getMessage());
-      ffiQuery.callResult(callId, null);
+      ffiQuery.callResult(callId, "null");
       return;
     } catch (Exceptions.InvalidAttributeError e) {
       ffiQuery.applicationError(e.getMessage());
-      ffiQuery.callResult(callId, null);
+      ffiQuery.callResult(callId, "null");
       return;
     }
   }
@@ -163,7 +163,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
     try {
       result = nextCallResult(callId).toString();
     } catch (NoSuchElementException e) {
-      result = null;
+      result = "null";
     }
     ffiQuery.callResult(callId, result);
   }
