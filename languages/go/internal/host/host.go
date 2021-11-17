@@ -415,7 +415,7 @@ func (h Host) ToGo(v types.Term) (interface{}, error) {
 		// Make a new array of values
 		args := make([]interface{}, len(inner.Args))
 		for i, arg := range inner.Args {
-			// call toPolar on each element
+			// call ToGo on each element
 			converted, err := h.ToGo(arg)
 			if err != nil {
 				return nil, err
