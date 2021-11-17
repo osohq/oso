@@ -184,11 +184,6 @@ node_modules/
 # Java formatting jar
 fmt.jar
 
-languages/go/internal/ffi/native/linux/libpolar.a
-languages/go/internal/ffi/native/macos/libpolar.a
-languages/go/internal/ffi/native/windows/polar.lib
-languages/go/internal/ffi/native/polar.h
-
 languages/python/oso/native/libpolar.a
 languages/python/oso/native/polar.lib
 languages/python/oso/native/polar.h
