@@ -64,8 +64,12 @@ pub fn source_lines(source: &Source, offset: usize, context_lines: usize) -> Str
     // but don't overflow if `context_lines > target_line`.
     let skipped_lines = target_line.saturating_sub(context_lines);
     let lines = source.src.lines().skip(skipped_lines);
-    // Take window of lines comprising current line + `context_lines` of context above & below.
-    let lines = lines.take(1 + context_lines * 2).enumerate();
+    // Take window of lines comprising current line (`1`) + number of contextual lines visible
+    // _before_ the current line (`target_line - skipped_lines`) + `context_lines` of context after
+    // the current line.
+    let lines = lines
+        .take(1 + (target_line - skipped_lines) + context_lines)
+        .enumerate();
     // Format each line with its line number.
     let mut lines: Vec<_> = lines
         .map(|(i, line)| format!("{:03}: {}", i + skipped_lines + 1, line))
@@ -686,6 +690,14 @@ mod tests {
                       ^
             006:       six
             007:        seven"};
+        assert_eq!(lines, expected, "\n{}", lines);
+
+        let lines = source_lines(&source, 1, 2);
+        let expected = indoc! {"
+            001:  one
+                  ^
+            002:   two
+            003:    three"};
         assert_eq!(lines, expected, "\n{}", lines);
 
         let src = "one\ntwo\nthree\n".to_owned();
