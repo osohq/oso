@@ -13,11 +13,11 @@ ifeq ($(UNAME_S),Linux)
 	cp ../../target/debug/libpolar.a internal/ffi/native/linux/
 endif
 ifeq ($(UNAME_S),Darwin)
-	ifeq ($(UNAME_M),x86_64)
-		cp ../../target/debug/libpolar.a internal/ffi/native/macos/amd64/
-	else
-		cp ../../target/debug/libpolar.a internal/ffi/native/macos/arm64/
-	endif
+ifeq ($(UNAME_M),x86_64)
+	cp ../../target/debug/libpolar.a internal/ffi/native/macos/amd64/
+else
+	cp ../../target/debug/libpolar.a internal/ffi/native/macos/arm64/
+endif
 endif
 
 test: copy_lib
