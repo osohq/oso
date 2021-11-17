@@ -63,18 +63,34 @@ pub fn source_lines(source: &Source, offset: usize, context_lines: usize) -> Str
     // Skip everything up to the first line of requested context (`target_line - context_lines`),
     // but don't overflow if `context_lines > target_line`.
     let skipped_lines = target_line.saturating_sub(context_lines);
-    let lines = source.src.lines().skip(skipped_lines);
-    // Take window of lines comprising current line + `context_lines` of context above & below.
-    let lines = lines.take(1 + context_lines * 2).enumerate();
+    let mut lines = source.src.lines().enumerate().skip(skipped_lines);
+
+    // Update `target_line` to account for skipped lines.
+    let target_line = std::cmp::min(context_lines, target_line);
+
+    // Take everything up to `target_line` as leading context.
+    let prefix = lines.clone().take(target_line);
+
+    // Take target line.
+    let target = lines.nth(target_line);
+
+    // Take _up to_ `context_lines` lines of trailing context.
+    let suffix = lines.take(context_lines);
+
+    // Combine prefix + target + suffix.
+    let lines = prefix.chain(target).chain(suffix);
+
     // Format each line with its line number.
-    let mut lines: Vec<_> = lines
-        .map(|(i, line)| format!("{:03}: {}", i + skipped_lines + 1, line))
-        .collect();
-    // Calculate length of line number prefix.
-    let prefix_len = "123: ".len();
+    let format_line = |(i, line): (usize, &str)| format!("{:03}: {}", i + 1, line);
+    let mut lines: Vec<_> = lines.map(format_line).collect();
+
     // Insert 'indicator' line pointing at `target_column`.
-    let indicator_line = format!("{}^", " ".repeat(prefix_len + target_column));
-    lines.insert(target_line - skipped_lines + 1, indicator_line);
+    if let Some(target) = lines.get_mut(target_line) {
+        // Calculate length of line number prefix.
+        let prefix_len = "123: ".len();
+        *target += &format!("\n{}^", " ".repeat(prefix_len + target_column));
+    }
+
     lines.join("\n")
 }
 
@@ -686,6 +702,14 @@ mod tests {
                       ^
             006:       six
             007:        seven"};
+        assert_eq!(lines, expected, "\n{}", lines);
+
+        let lines = source_lines(&source, 1, 2);
+        let expected = indoc! {"
+            001:  one
+                  ^
+            002:   two
+            003:    three"};
         assert_eq!(lines, expected, "\n{}", lines);
 
         let src = "one\ntwo\nthree\n".to_owned();
