@@ -6,7 +6,7 @@ use super::kb::*;
 use super::rules::*;
 use super::terms::*;
 use super::visitor::{walk_call, walk_rule, walk_term, Visitor};
-use super::warning::{PolarWarning, ValidationWarning};
+use super::warning::ValidationWarning;
 
 /// Record singleton variables and unknown specializers in a rule.
 struct SingletonVisitor<'kb> {
@@ -164,18 +164,17 @@ impl ResourceBlocksMissingHasPermissionVisitor {
         }
     }
 
-    fn warnings(&mut self) -> Option<Diagnostic> {
+    fn warnings(&mut self) -> Option<ValidationWarning> {
         if !self.calls_has_permission {
-            return Some(Diagnostic::Warning(PolarWarning {
-                kind: ValidationWarning::MissingHasPermissionRule,
-                context: None,
-            }));
+            return Some(ValidationWarning::MissingHasPermissionRule);
         }
         None
     }
 }
 
-pub fn check_resource_blocks_missing_has_permission(kb: &KnowledgeBase) -> Option<Diagnostic> {
+pub fn check_resource_blocks_missing_has_permission(
+    kb: &KnowledgeBase,
+) -> Option<ValidationWarning> {
     if kb.resource_blocks.resources.is_empty() {
         return None;
     }
