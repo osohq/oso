@@ -44,7 +44,7 @@ impl<'input> Lexer<'input> {
 
 pub type Spanned<Tok, Loc, Error> = Result<(Loc, Tok, Loc), Error>;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Token {
     Integer(i64),
     Float(f64),
@@ -142,7 +142,7 @@ impl ToString for Token {
             Token::Not => "not".to_owned(),         // not
             Token::Matches => "matches".to_owned(), // matches
             Token::Type => "type".to_owned(),       // type
-            Token::Annotation => "TODO".to_owned(),
+            Token::Annotation => "trace".to_owned(),
         }
     }
 }
@@ -238,6 +238,7 @@ impl<'input> Lexer<'input> {
             "type" => Token::Type,
             "mod" => Token::Mod,
             "rem" => Token::Rem,
+            "trace" => Token::Annotation,
             _ => Token::Symbol(Symbol::new(&self.buf)),
         };
         Some(Ok((start, token, last + 1)))
