@@ -595,26 +595,6 @@ fn check_for_duplicate_resource_blocks(blocks: &ResourceBlocks, resource: &Term)
     Ok(())
 }
 
-fn check_that_shorthand_rule_heads_are_declared_locally(
-    shorthand_rules: &[ShorthandRule],
-    declarations: &Declarations,
-    resource: &Term,
-) -> Vec<ValidationError> {
-    let mut errors = vec![];
-    for ShorthandRule { head, .. } in shorthand_rules {
-        if !declarations.contains_key(head) {
-            let msg = format!(
-                "Undeclared term {} referenced in rule in '{}' resource block. \
-                Did you mean to declare it as a role, permission, or relation?",
-                head, resource
-            );
-            let term = head.clone();
-            errors.push(ValidationError::ResourceBlock { msg, term });
-        }
-    }
-    errors
-}
-
 impl ResourceBlock {
     pub fn add_to_kb(self, kb: &mut KnowledgeBase) -> Vec<ValidationError> {
         let mut errors = vec![];
@@ -634,11 +614,6 @@ impl ResourceBlock {
 
         match index_declarations(roles, permissions, relations, &resource) {
             Ok(declarations) => {
-                errors.append(&mut check_that_shorthand_rule_heads_are_declared_locally(
-                    &shorthand_rules,
-                    &declarations,
-                    &resource,
-                ));
                 if errors.is_empty() {
                     kb.resource_blocks
                         .add(block_type, resource, declarations, shorthand_rules);
@@ -855,7 +830,7 @@ mod tests {
         expect_error(
             &p,
             r#"resource Org{"member" if "owner";}"#,
-            r#"Undeclared term "member" referenced in rule in 'Org' resource block. Did you mean to declare it as a role, permission, or relation?"#,
+            r#"Undeclared term "member" referenced in rule in the 'Org' resource block. Did you mean to declare it as a role, permission, or relation?"#,
         );
     }
 
