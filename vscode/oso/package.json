@@ -24,7 +24,7 @@
   },
   "main": "./client/out/main.js",
   "activationEvents": [
-    "*"
+    "onStartupFinished"
   ],
   "contributes": {
     "languages": [
