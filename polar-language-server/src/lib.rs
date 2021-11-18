@@ -296,7 +296,7 @@ impl PolarLanguageServer {
     fn diagnostic_from_polar_diagnostic(
         &self,
         d: PolarDiagnostic,
-    ) -> Option<(TextDocumentItem, Diagnostic)> {
+    ) -> Vec<(TextDocumentItem, Diagnostic)> {
         use polar_core::error::{ErrorKind::Validation, ValidationError::*};
         use polar_core::warning::ValidationWarning::UnknownSpecializer;
 
@@ -304,12 +304,12 @@ impl PolarLanguageServer {
         match &d {
             PolarDiagnostic::Error(e) => match e.kind {
                 Validation(UnregisteredClass { .. }) | Validation(SingletonVariable { .. }) => {
-                    return None
+                    return vec![];
                 }
                 _ => (),
             },
             PolarDiagnostic::Warning(w) if matches!(w.kind, UnknownSpecializer { .. }) => {
-                return None
+                return vec![];
             }
             _ => (),
         }
@@ -321,18 +321,25 @@ impl PolarLanguageServer {
             PolarDiagnostic::Warning(w) => (w.kind.to_string(), DiagnosticSeverity::Warning),
         };
 
-        self.document_from_polar_diagnostic_context(&d)
-            .or_else(|| self.documents.values().next().cloned())
+        // If the diagnostic applies to a single doc, use it; otherwise, default to emitting a
+        // duplicate diagnostic for all docs.
+        let docs = self.document_from_polar_diagnostic_context(&d).map_or_else(
+            || self.documents.values().cloned().collect(),
+            |doc| vec![doc],
+        );
+
+        docs.into_iter()
             .map(|doc| {
                 let diagnostic = Diagnostic {
                     range: range_from_polar_error_context(&d),
                     severity: Some(severity),
                     source: Some("Polar Language Server".to_owned()),
-                    message,
+                    message: message.clone(),
                     ..Default::default()
                 };
                 (doc, diagnostic)
             })
+            .collect()
     }
 
     /// Turn tracked documents into a set of Polar `Source` structs for `Polar::diagnostic_load`.
@@ -354,7 +361,7 @@ impl PolarLanguageServer {
     fn get_diagnostics(&self) -> Diagnostics {
         self.load_documents()
             .into_iter()
-            .filter_map(|d| self.diagnostic_from_polar_diagnostic(d))
+            .flat_map(|d| self.diagnostic_from_polar_diagnostic(d))
             .fold(Diagnostics::new(), |mut acc, (doc, diagnostic)| {
                 let params = acc.entry(doc.uri.clone()).or_insert_with(|| {
                     PublishDiagnosticsParams::new(doc.uri, vec![], Some(doc.version))
@@ -460,6 +467,21 @@ mod tests {
         }
     }
 
+    #[track_caller]
+    fn assert_missing_allow_rule_warning(diagnostics: &Diagnostics, docs: Vec<&TextDocumentItem>) {
+        for doc in docs {
+            let params = diagnostics.get(&doc.uri).unwrap();
+            assert_eq!(params.uri, doc.uri);
+            assert_eq!(params.version.unwrap(), doc.version);
+            assert_eq!(params.diagnostics.len(), 1, "{}", doc.uri.to_string());
+            let diagnostic = params.diagnostics.get(0).unwrap();
+            let expected = diagnostic
+                .message
+                .starts_with("Your policy does not contain an allow rule");
+            assert!(expected, "{}", diagnostic.message);
+        }
+    }
+
     #[allow(clippy::many_single_char_names)]
     #[wasm_bindgen_test]
     fn test_on_did_open_text_document() {
@@ -474,16 +496,18 @@ mod tests {
         // Load a single doc w/ no errors.
         let diagnostics = pls.on_did_open_text_document(a.clone());
         assert_eq!(diagnostics.len(), 1);
-        assert_no_errors(&diagnostics, vec![&a]);
+        assert_missing_allow_rule_warning(&diagnostics, vec![&a]);
 
         // Load a second doc w/ no errors.
         let diagnostics = pls.on_did_open_text_document(b.clone());
         assert_eq!(diagnostics.len(), 2);
-        assert_no_errors(&diagnostics, vec![&a, &b]);
+        assert_missing_allow_rule_warning(&diagnostics, vec![&a, &b]);
 
         // Load a third doc w/ errors.
         let diagnostics = pls.on_did_open_text_document(c.clone());
         assert_eq!(diagnostics.len(), 3);
+        // No 'missing allow rule' warnings b/c the parse error halts validation before reaching
+        // that check.
         assert_no_errors(&diagnostics, vec![&a, &b]);
         assert_missing_semicolon_error(&diagnostics, vec![&c]);
 
@@ -508,13 +532,13 @@ mod tests {
         let a0 = doc_with_no_errors("apple");
         let diagnostics0 = pls.on_did_change_text_document(a0.clone());
         assert_eq!(diagnostics0.len(), 1);
-        assert_no_errors(&diagnostics0, vec![&a0]);
+        assert_missing_allow_rule_warning(&diagnostics0, vec![&a0]);
 
         // Change tracked doc w/o introducing an error.
         let a1 = update_text(a0, "pie();");
         let diagnostics1 = pls.on_did_change_text_document(a1.clone());
         assert_eq!(diagnostics1.len(), 1);
-        assert_no_errors(&diagnostics1, vec![&a1]);
+        assert_missing_allow_rule_warning(&diagnostics1, vec![&a1]);
 
         // Change tracked doc, introducing an error.
         let a2 = update_text(a1, "pie()");
@@ -532,6 +556,8 @@ mod tests {
         let a4 = update_text(a2, "pie();");
         let diagnostics4 = pls.on_did_change_text_document(a4.clone());
         assert_eq!(diagnostics4.len(), 2);
+        // No 'missing allow rule' warnings b/c the parse error halts validation before reaching
+        // that check.
         assert_no_errors(&diagnostics4, vec![&a4]);
         assert_missing_semicolon_error(&diagnostics4, vec![&b3]);
 
@@ -539,7 +565,7 @@ mod tests {
         let b5 = update_text(b3, "split();");
         let diagnostics5 = pls.on_did_change_text_document(b5.clone());
         assert_eq!(diagnostics5.len(), 2);
-        assert_no_errors(&diagnostics5, vec![&a4, &b5]);
+        assert_missing_allow_rule_warning(&diagnostics5, vec![&a4, &b5]);
     }
 
     #[wasm_bindgen_test]
@@ -579,7 +605,8 @@ mod tests {
         let events4 = vec![a4.uri.clone()];
         let diagnostics4 = pls.on_did_delete_files(events4);
         assert_eq!(diagnostics4.len(), 2);
-        assert_no_errors(&diagnostics4, vec![&a4, &b4]);
+        assert_no_errors(&diagnostics4, vec![&a4]);
+        assert_missing_allow_rule_warning(&diagnostics4, vec![&b4]);
         assert!(pls.remove_document(&b4.uri).is_some());
         assert!(pls.documents.is_empty());
 
@@ -589,7 +616,8 @@ mod tests {
         let events5 = vec![a5.uri.clone()];
         let diagnostics5 = pls.on_did_delete_files(events5);
         assert_eq!(diagnostics5.len(), 2);
-        assert_no_errors(&diagnostics5, vec![&a5, &b5]);
+        assert_no_errors(&diagnostics4, vec![&a5]);
+        assert_missing_allow_rule_warning(&diagnostics5, vec![&b5]);
         assert!(pls.remove_document(&b5.uri).is_some());
         assert!(pls.documents.is_empty());
 
@@ -630,6 +658,8 @@ mod tests {
         ];
         let diagnostics8 = pls.on_did_delete_files(events8);
         assert_eq!(diagnostics8.len(), 6);
+        // No 'missing allow rule' warnings b/c the parse error halts validation before reaching
+        // that check.
         assert_no_errors(&diagnostics8, vec![&a8, &b8, &d8, &e8, &f8]);
         assert_missing_semicolon_error(&diagnostics8, vec![&c8]);
         assert!(pls.remove_document(&c8.uri).is_some());
@@ -653,6 +683,8 @@ mod tests {
         let diagnostics9a = pls.on_did_delete_files(events9a);
         assert_eq!(diagnostics9a.len(), 8);
         assert_missing_semicolon_error(&diagnostics9a, vec![&a9]);
+        // No 'missing allow rule' warnings b/c the parse error halts validation before reaching
+        // that check.
         assert_no_errors(
             &diagnostics9a,
             vec![&b9, &ca9a, &ca9b, &ch9, &d9, &g9a, &g9b],
@@ -669,6 +701,8 @@ mod tests {
         let diagnostics9b = pls.on_did_delete_files(events9b);
         assert_eq!(diagnostics9b.len(), 5);
         assert_missing_semicolon_error(&diagnostics9b, vec![&a9]);
+        // No 'missing allow rule' warnings b/c the parse error halts validation before reaching
+        // that check.
         assert_no_errors(&diagnostics9b, vec![&b9, &ca9a, &ca9b, &ch9]);
         assert_eq!(pls.documents.len(), 2);
 
@@ -680,6 +714,8 @@ mod tests {
         let diagnostics9c = pls.on_did_delete_files(events9c);
         assert_eq!(diagnostics9c.len(), 2);
         assert_missing_semicolon_error(&diagnostics9c, vec![&a9]);
+        // No 'missing allow rule' warnings b/c the parse error halts validation before reaching
+        // that check.
         assert_no_errors(&diagnostics9c, vec![&b9]);
         assert_eq!(pls.documents.len(), 1);
         assert!(pls.remove_document(&a9.uri).is_some());
