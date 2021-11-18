@@ -702,8 +702,8 @@ UnannotatedRule: Rule = {
 Annotation = {"trace"};
 
 Rule: Rule = <annotation:Annotation?> <mut rule:UnannotatedRule> => {
-     if let Some(annotation) = annotation {
-         rule.annotation = Some(annotation);
+     if let Some(_) = annotation {
+         rule.annotation = Some("trace".to_string());
      }
      rule
 };

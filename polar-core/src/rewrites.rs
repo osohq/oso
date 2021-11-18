@@ -97,7 +97,7 @@ impl<'kb> Folder for Rewriter<'kb> {
             params,
             source_info,
             required,
-            ..
+            annotation,
         }: Rule,
     ) -> Rule {
         let mut body = self.fold_term(body);
@@ -118,7 +118,7 @@ impl<'kb> Folder for Rewriter<'kb> {
             body,
             source_info,
             required,
-            annotation: None,
+            annotation,
         }
     }
 

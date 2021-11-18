@@ -511,7 +511,11 @@ impl PolarVirtualMachine {
                     self.log_with(
                         || {
                             let source_str = self.rule_source(rule);
-                            format!("RULE: {}", source_str)
+                            if let Some(_) = rule.annotation {
+                                format!("TRACE RULE: {}", source_str)
+                            } else {
+                                format!("RULE: {}", source_str)
+                            }
                         },
                         &[],
                     );
