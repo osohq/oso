@@ -1,10 +1,12 @@
 .PHONY: build wasm fmtcheck lint test
 
+CARGO_FLAGS ?= --dev
+
 build: wasm node_modules
-	@yarn compile
+	yarn vsce package
 
 wasm:
-	@$(MAKE) -C ../../polar-language-server build
+	@$(MAKE) CARGO_FLAGS=$(CARGO_FLAGS) -C ../../polar-language-server build
 
 node_modules: package.json client/package.json server/package.json
 	@yarn install
