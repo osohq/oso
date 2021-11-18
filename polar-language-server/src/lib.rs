@@ -12,7 +12,6 @@ use lsp_types::{
 };
 use polar_core::{
     diagnostic::{Diagnostic as PolarDiagnostic, Range as PolarRange},
-    error::PolarError,
     polar::Polar,
     sources::Source,
 };
@@ -46,8 +45,13 @@ pub struct PolarLanguageServer {
     send_diagnostics_callback: js_sys::Function,
 }
 
-fn range_from_polar_error_context(PolarError { context: c, .. }: &PolarError) -> Range {
-    if let Some(PolarRange { start, end }) = c.as_ref().map(|c| c.range) {
+fn range_from_polar_error_context(d: &PolarDiagnostic) -> Range {
+    let context = match d {
+        PolarDiagnostic::Error(e) => e.context.as_ref(),
+        PolarDiagnostic::Warning(w) => w.context.as_ref(),
+    };
+
+    if let Some(PolarRange { start, end }) = context.map(|c| c.range) {
         let start = Position {
             line: start.row as _,
             character: start.column as _,
@@ -62,26 +66,30 @@ fn range_from_polar_error_context(PolarError { context: c, .. }: &PolarError) ->
     }
 }
 
-fn uri_from_polar_error_context(e: &PolarError) -> Option<Url> {
-    if let Some(context) = e.context.as_ref() {
+fn uri_from_polar_error_context(d: &PolarDiagnostic) -> Option<Url> {
+    let context = match d {
+        PolarDiagnostic::Error(e) => e.context.as_ref(),
+        PolarDiagnostic::Warning(w) => w.context.as_ref(),
+    };
+    if let Some(context) = context {
         if let Some(filename) = context.source.filename.as_ref() {
             match Url::parse(filename) {
                 Ok(uri) => return Some(uri),
                 Err(err) => {
                     log(&format!(
-                        "Url::parse error: {}\n\tFilename: {}\n\tError: {}",
-                        err, filename, e
+                        "Url::parse error: {}\n\tFilename: {}\n\tDiagnostic: {}",
+                        err, filename, d
                     ));
                 }
             }
         } else {
             log(&format!(
-                "source missing filename:\n\t{:?}\n\tError: {}",
-                context.source, e
+                "source missing filename:\n\t{:?}\n\tDiagnostic: {}",
+                context.source, d
             ));
         }
     } else {
-        log(&format!("missing error context:\n\t{:?}", e));
+        log(&format!("missing context:\n\t{:?}", d));
     }
     None
 }
@@ -264,8 +272,11 @@ impl PolarLanguageServer {
             .collect()
     }
 
-    fn document_from_polar_error_context(&self, e: &PolarError) -> Option<TextDocumentItem> {
-        uri_from_polar_error_context(e).and_then(|uri| {
+    fn document_from_polar_diagnostic_context(
+        &self,
+        d: &PolarDiagnostic,
+    ) -> Option<TextDocumentItem> {
+        uri_from_polar_error_context(d).and_then(|uri| {
             if let Some(document) = self.documents.get(&uri) {
                 Some(document.clone())
             } else {
@@ -273,36 +284,55 @@ impl PolarLanguageServer {
                 let tracked_docs = tracked_docs.collect::<Vec<_>>().join(", ");
                 log(&format!(
                     "untracked doc: {}\n\tTracked: {}\n\tError: {}",
-                    uri, tracked_docs, e
+                    uri, tracked_docs, d
                 ));
                 None
             }
         })
     }
 
-    /// Create a `Diagnostic` from a `PolarError`, filtering out "ignored" errors.
-    fn diagnostic_from_polar_error(
+    /// Create `Diagnostic` from `polar_core::diagnostic::Diagnostic`, filtering out "ignored"
+    /// diagnostics.
+    fn diagnostic_from_polar_diagnostic(
         &self,
-        e: &PolarError,
+        d: PolarDiagnostic,
     ) -> Option<(TextDocumentItem, Diagnostic)> {
         use polar_core::error::{ErrorKind::Validation, ValidationError::*};
-        match e.kind {
-            // Ignore errors that depend on app data.
-            Validation(UnregisteredClass { .. }) | Validation(SingletonVariable { .. }) => None,
+        use polar_core::warning::ValidationWarning::UnknownSpecializer;
 
-            _ => self.document_from_polar_error_context(e).map(|doc| {
+        // Ignore diagnostics that depend on app data.
+        match &d {
+            PolarDiagnostic::Error(e) => match e.kind {
+                Validation(UnregisteredClass { .. }) | Validation(SingletonVariable { .. }) => {
+                    return None
+                }
+                _ => (),
+            },
+            PolarDiagnostic::Warning(w) if matches!(w.kind, UnknownSpecializer { .. }) => {
+                return None
+            }
+            _ => (),
+        }
+
+        // NOTE(gj): We stringify the error / warning variant instead of the full `PolarError` /
+        // `PolarWarning` because we don't want source context as part of the error message.
+        let (message, severity) = match &d {
+            PolarDiagnostic::Error(e) => (e.kind.to_string(), DiagnosticSeverity::Error),
+            PolarDiagnostic::Warning(w) => (w.kind.to_string(), DiagnosticSeverity::Warning),
+        };
+
+        self.document_from_polar_diagnostic_context(&d)
+            .or_else(|| self.documents.values().next().cloned())
+            .map(|doc| {
                 let diagnostic = Diagnostic {
-                    range: range_from_polar_error_context(e),
-                    severity: Some(DiagnosticSeverity::Error),
+                    range: range_from_polar_error_context(&d),
+                    severity: Some(severity),
                     source: Some("Polar Language Server".to_owned()),
-                    // NOTE(gj): We stringify the `ErrorKind` instead of the full `PolarError`
-                    // because we don't want source context as part of the error message.
-                    message: e.kind.to_string(),
+                    message,
                     ..Default::default()
                 };
                 (doc, diagnostic)
-            }),
-        }
+            })
     }
 
     /// Turn tracked documents into a set of Polar `Source` structs for `Polar::diagnostic_load`.
@@ -324,11 +354,7 @@ impl PolarLanguageServer {
     fn get_diagnostics(&self) -> Diagnostics {
         self.load_documents()
             .into_iter()
-            .filter_map(|d| match d {
-                PolarDiagnostic::Error(e) => self.diagnostic_from_polar_error(&e),
-                // TODO(gj): handle warnings
-                PolarDiagnostic::Warning(_) => None,
-            })
+            .filter_map(|d| self.diagnostic_from_polar_diagnostic(d))
             .fold(Diagnostics::new(), |mut acc, (doc, diagnostic)| {
                 let params = acc.entry(doc.uri.clone()).or_insert_with(|| {
                     PublishDiagnosticsParams::new(doc.uri, vec![], Some(doc.version))
