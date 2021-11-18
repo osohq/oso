@@ -169,6 +169,11 @@ pub fn resource_block_from_productions(
             errors,
         ))
     } else {
+        // NOTE(gj): If we don't know the `block_type`, I'm worried about trying to make much
+        // additional validation progress with the incomplete resource block since I haven't fully
+        // thought through the implications of, e.g., rule type validation on shorthand rules
+        // created in a resource block w/o a `block_type`. It might actually be fine. It's late.
+        // I'll think about it more tomorrow.
         Err(errors)
     }
 }
