@@ -2,15 +2,15 @@
 title: IDE Support
 aliases:
     - ../more/dev-tools/ide.html
-description: IDE integrations for working with Oso.
+description: IDE integrations for working with Oso policies.
 ---
 
 # IDE Support
 
 Oso’s IDE (Integrated Development Environment) integrations provide syntax
 highlighting for `.polar` files. Additionally, our Visual Studio Code extension
-will display diagnostics (errors & warnings) from your Oso policy in the
-editor.
+will display diagnostics (errors & warnings) from your Oso policy in-line in
+the editor and in VSCode's **Problems** pane.
 
 ## Supported IDEs
 
@@ -19,7 +19,8 @@ editor.
 #### Features
 
 - Syntax highlighting.
-- Diagnostics (errors & warnings) from your Oso policy displayed in the editor.
+- Diagnostics (errors & warnings) from your Oso policy are displayed in-line in
+  the editor and in VSCode's **Problems** pane.
 
 ### [Vim](https://github.com/osohq/polar.vim)
 
