@@ -7,6 +7,10 @@ from _polar_lib import ffi, lib
 from .errors import get_python_error
 
 
+def mem_allocated():
+    return lib.polar_allocations()
+
+
 @dataclass(frozen=True)
 class PolarSource:
     src: str
@@ -31,7 +35,8 @@ class Polar:
     def __init__(self):
         self.ptr = lib.polar_new()
 
-    def __del__(self):
+    def __ddel__(self):
+        print("Freeing polar")
         lib.polar_free(self.ptr)
 
     def new_id(self):

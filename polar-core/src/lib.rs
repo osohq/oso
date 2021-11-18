@@ -37,3 +37,6 @@ mod validations;
 mod visitor;
 mod vm;
 pub mod warning;
+
+#[cfg(all(nightly, feature = "track-allocations"))]
+pub mod allocator;

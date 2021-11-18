@@ -47,10 +47,6 @@ class Polar:
         for name, cls in classes.items():
             self.register_class(cls, name=name)
 
-    def __del__(self):
-        del self.host
-        del self.ffi_polar
-
     def load_files(self, filenames: List[Union[Path, str]] = []):
         """Load Polar policy from ".polar" files."""
         if not filenames:

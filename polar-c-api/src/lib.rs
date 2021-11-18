@@ -412,3 +412,8 @@ pub extern "C" fn polar_build_filter_plan(
             })
     })
 }
+
+#[no_mangle]
+pub extern "C" fn polar_allocations() -> usize {
+    polar_core::allocator::get_allocated()
+}
