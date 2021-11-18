@@ -99,9 +99,9 @@ impl Polar {
                         keyword,
                         resource,
                         productions,
-                    } => match resource_block_from_productions(keyword, resource, productions)
-                        .map(|block| block.add_to_kb(kb))
-                    {
+                    } => match resource_block_from_productions(keyword, resource, productions).map(
+                        |(block, errors)| errors.into_iter().chain(block.add_to_kb(kb)).collect(),
+                    ) {
                         Ok(errors) | Err(errors) => diagnostics.append(
                             &mut errors
                                 .into_iter()
@@ -380,5 +380,53 @@ mod tests {
             next
         );
         assert!(!polar.kb.read().unwrap().has_rules());
+    }
+
+    #[test]
+    fn test_resource_blocks_are_created_and_shorthand_rules_rewritten_despite_validation_errors() {
+        let p = Polar::new();
+        let invalid_policy = r#"
+            allow(a, b, c) if has_permission(a, b, c);
+
+            resource Org {
+              permissions = ["exists"];
+
+              "exists" if "nonexistent";
+              "nonexistent" if "exists";
+              "exists" if "exists";
+            }
+        "#;
+        let source = Source {
+            src: invalid_policy.to_owned(),
+            filename: None,
+        };
+
+        let diagnostics = p.diagnostic_load(vec![source]);
+        assert_eq!(diagnostics.len(), 3, "{:?}", diagnostics);
+
+        let mut diagnostics = diagnostics.into_iter();
+        let next = diagnostics.next().unwrap();
+        assert!(matches!(next, Diagnostic::Error(_)));
+        assert!(
+            next.to_string().starts_with("Unregistered class: Org"),
+            "{}",
+            next
+        );
+
+        let next = diagnostics.next().unwrap();
+        assert!(matches!(next, Diagnostic::Error(_)));
+        assert!(
+            next.to_string().contains("\"exists\" if \"nonexistent\";"),
+            "{}",
+            next
+        );
+
+        let next = diagnostics.next().unwrap();
+        assert!(matches!(next, Diagnostic::Error(_)));
+        assert!(
+            next.to_string().contains("\"nonexistent\" if \"exists\";"),
+            "{}",
+            next
+        );
     }
 }

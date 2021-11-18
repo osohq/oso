@@ -96,7 +96,7 @@ pub fn resource_block_from_productions(
     keyword: Option<Term>,
     resource: Term,
     productions: Vec<Production>,
-) -> core::result::Result<ResourceBlock, Vec<ValidationError>> {
+) -> core::result::Result<(ResourceBlock, Vec<ValidationError>), Vec<ValidationError>> {
     let mut errors = vec![];
 
     let block_type = match block_type_from_keyword(keyword, &resource) {
@@ -126,6 +126,9 @@ pub fn resource_block_from_productions(
             Production::Declaration(declaration) => {
                 match validate_parsed_declaration(declaration) {
                     Ok(ParsedDeclaration::Roles(new)) => {
+                        // TODO(gj): combine roles _and_ push error so that we can use the declared
+                        // roles in validating shorthand rules even in the face of resource block
+                        // errors?
                         if let Some(previous) = roles {
                             errors.push(make_error("roles", &previous, &new));
                         }
@@ -153,15 +156,18 @@ pub fn resource_block_from_productions(
         }
     }
 
-    if errors.is_empty() {
-        Ok(ResourceBlock {
-            block_type: block_type.expect("must exist if there are no errors"),
-            resource,
-            roles,
-            permissions,
-            relations,
-            shorthand_rules,
-        })
+    if let Some(block_type) = block_type {
+        Ok((
+            ResourceBlock {
+                block_type,
+                resource,
+                roles,
+                permissions,
+                relations,
+                shorthand_rules,
+            },
+            errors,
+        ))
     } else {
         Err(errors)
     }
@@ -386,6 +392,7 @@ impl ResourceBlocks {
     }
 }
 
+// TODO(gj): build up errors but keep on truckin'.
 fn index_declarations(
     roles: Option<Term>,
     permissions: Option<Term>,
@@ -614,10 +621,8 @@ impl ResourceBlock {
 
         match index_declarations(roles, permissions, relations, &resource) {
             Ok(declarations) => {
-                if errors.is_empty() {
-                    kb.resource_blocks
-                        .add(block_type, resource, declarations, shorthand_rules);
-                }
+                kb.resource_blocks
+                    .add(block_type, resource, declarations, shorthand_rules);
             }
             Err(e) => errors.push(e),
         }
@@ -1041,7 +1046,7 @@ mod tests {
                 resource,
                 productions,
             } => {
-                let parsed = resource_block_from_productions(
+                let (parsed, _) = resource_block_from_productions(
                     keyword.clone(),
                     resource.clone(),
                     productions.clone(),
