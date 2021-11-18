@@ -6,7 +6,10 @@ Syntax highlighting for `.polar` files as used by [Oso](https://www.osohq.com).
 
 ## Language Server Protocol (LSP) Functionality
 
-Coming soon.
+### Features
+
+- Diagnostics (errors & warnings) from an Oso policy in the current workspace
+  will be displayed inline in the editor and in the Problems pane.
 
 ### Known Issues
 
