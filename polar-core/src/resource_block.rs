@@ -1528,8 +1528,6 @@ mod tests {
     fn test_create_resource_specific_rule_types_actor_roles() -> core::result::Result<(), PolarError>
     {
         let policy = r#"
-            actor User {}
-
             actor Team {
                 roles = ["member", "owner"];
 
@@ -1539,18 +1537,8 @@ mod tests {
 
         let polar = Polar::new();
 
-        let user_instance = ExternalInstance {
-            instance_id: 1,
-            constructor: None,
-            repr: None,
-        };
-        let user_term = term!(Value::ExternalInstance(user_instance.clone()));
-        let user_name = sym!("User");
-        polar.register_constant(user_name.clone(), user_term)?;
-        polar.register_mro(user_name, vec![user_instance.instance_id])?;
-
         let team_instance = ExternalInstance {
-            instance_id: 2,
+            instance_id: 1,
             constructor: None,
             repr: None,
         };
