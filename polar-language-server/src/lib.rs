@@ -45,8 +45,8 @@ pub struct PolarLanguageServer {
     send_diagnostics_callback: js_sys::Function,
 }
 
-fn range_from_polar_error_context(d: &PolarDiagnostic) -> Range {
-    let context = match d {
+fn range_from_polar_error_context(diagnostic: &PolarDiagnostic) -> Range {
+    let context = match diagnostic {
         PolarDiagnostic::Error(e) => e.context.as_ref(),
         PolarDiagnostic::Warning(w) => w.context.as_ref(),
     };
@@ -66,8 +66,8 @@ fn range_from_polar_error_context(d: &PolarDiagnostic) -> Range {
     }
 }
 
-fn uri_from_polar_error_context(d: &PolarDiagnostic) -> Option<Url> {
-    let context = match d {
+fn uri_from_polar_error_context(diagnostic: &PolarDiagnostic) -> Option<Url> {
+    let context = match diagnostic {
         PolarDiagnostic::Error(e) => e.context.as_ref(),
         PolarDiagnostic::Warning(w) => w.context.as_ref(),
     };
@@ -78,18 +78,18 @@ fn uri_from_polar_error_context(d: &PolarDiagnostic) -> Option<Url> {
                 Err(err) => {
                     log(&format!(
                         "Url::parse error: {}\n\tFilename: {}\n\tDiagnostic: {}",
-                        err, filename, d
+                        err, filename, diagnostic
                     ));
                 }
             }
         } else {
             log(&format!(
                 "source missing filename:\n\t{:?}\n\tDiagnostic: {}",
-                context.source, d
+                context.source, diagnostic
             ));
         }
     } else {
-        log(&format!("missing context:\n\t{:?}", d));
+        log(&format!("missing context:\n\t{:?}", diagnostic));
     }
     None
 }
@@ -274,9 +274,9 @@ impl PolarLanguageServer {
 
     fn document_from_polar_diagnostic_context(
         &self,
-        d: &PolarDiagnostic,
+        diagnostic: &PolarDiagnostic,
     ) -> Option<TextDocumentItem> {
-        uri_from_polar_error_context(d).and_then(|uri| {
+        uri_from_polar_error_context(diagnostic).and_then(|uri| {
             if let Some(document) = self.documents.get(&uri) {
                 Some(document.clone())
             } else {
@@ -284,7 +284,7 @@ impl PolarLanguageServer {
                 let tracked_docs = tracked_docs.collect::<Vec<_>>().join(", ");
                 log(&format!(
                     "untracked doc: {}\n\tTracked: {}\n\tError: {}",
-                    uri, tracked_docs, d
+                    uri, tracked_docs, diagnostic
                 ));
                 None
             }
@@ -295,13 +295,13 @@ impl PolarLanguageServer {
     /// diagnostics.
     fn diagnostic_from_polar_diagnostic(
         &self,
-        d: PolarDiagnostic,
+        diagnostic: PolarDiagnostic,
     ) -> Vec<(TextDocumentItem, Diagnostic)> {
         use polar_core::error::{ErrorKind::Validation, ValidationError::*};
         use polar_core::warning::ValidationWarning::UnknownSpecializer;
 
         // Ignore diagnostics that depend on app data.
-        match &d {
+        match &diagnostic {
             PolarDiagnostic::Error(e) => match e.kind {
                 Validation(UnregisteredClass { .. }) | Validation(SingletonVariable { .. }) => {
                     return vec![];
@@ -316,22 +316,24 @@ impl PolarLanguageServer {
 
         // NOTE(gj): We stringify the error / warning variant instead of the full `PolarError` /
         // `PolarWarning` because we don't want source context as part of the error message.
-        let (message, severity) = match &d {
+        let (message, severity) = match &diagnostic {
             PolarDiagnostic::Error(e) => (e.kind.to_string(), DiagnosticSeverity::Error),
             PolarDiagnostic::Warning(w) => (w.kind.to_string(), DiagnosticSeverity::Warning),
         };
 
         // If the diagnostic applies to a single doc, use it; otherwise, default to emitting a
         // duplicate diagnostic for all docs.
-        let docs = self.document_from_polar_diagnostic_context(&d).map_or_else(
-            || self.documents.values().cloned().collect(),
-            |doc| vec![doc],
-        );
+        let docs = self
+            .document_from_polar_diagnostic_context(&diagnostic)
+            .map_or_else(
+                || self.documents.values().cloned().collect(),
+                |doc| vec![doc],
+            );
 
         docs.into_iter()
             .map(|doc| {
                 let diagnostic = Diagnostic {
-                    range: range_from_polar_error_context(&d),
+                    range: range_from_polar_error_context(&diagnostic),
                     severity: Some(severity),
                     source: Some("Polar Language Server".to_owned()),
                     message: message.clone(),
@@ -361,7 +363,7 @@ impl PolarLanguageServer {
     fn get_diagnostics(&self) -> Diagnostics {
         self.load_documents()
             .into_iter()
-            .flat_map(|d| self.diagnostic_from_polar_diagnostic(d))
+            .flat_map(|diagnostic| self.diagnostic_from_polar_diagnostic(diagnostic))
             .fold(Diagnostics::new(), |mut acc, (doc, diagnostic)| {
                 let params = acc.entry(doc.uri.clone()).or_insert_with(|| {
                     PublishDiagnosticsParams::new(doc.uri, vec![], Some(doc.version))
