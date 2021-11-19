@@ -291,9 +291,9 @@ impl PolarLanguageServer {
         })
     }
 
-    /// Create `Diagnostic` from `polar_core::diagnostic::Diagnostic`, filtering out "ignored"
-    /// diagnostics.
-    fn diagnostic_from_polar_diagnostic(
+    /// Create one or more `Diagnostic`s from `polar_core::diagnostic::Diagnostic`s, filtering out
+    /// "ignored" diagnostics.
+    fn diagnostics_from_polar_diagnostic(
         &self,
         diagnostic: PolarDiagnostic,
     ) -> Vec<(TextDocumentItem, Diagnostic)> {
@@ -363,7 +363,7 @@ impl PolarLanguageServer {
     fn get_diagnostics(&self) -> Diagnostics {
         self.load_documents()
             .into_iter()
-            .flat_map(|diagnostic| self.diagnostic_from_polar_diagnostic(diagnostic))
+            .flat_map(|diagnostic| self.diagnostics_from_polar_diagnostic(diagnostic))
             .fold(Diagnostics::new(), |mut acc, (doc, diagnostic)| {
                 let params = acc.entry(doc.uri.clone()).or_insert_with(|| {
                     PublishDiagnosticsParams::new(doc.uri, vec![], Some(doc.version))
