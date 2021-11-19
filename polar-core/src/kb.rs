@@ -720,9 +720,11 @@ impl KnowledgeBase {
             }
         }
 
-        // Add the rewritten rules to the KB.
-        for rule in rules {
-            self.add_rule(rule);
+        if errors.is_empty() {
+            // Add the rewritten rules to the KB.
+            for rule in rules {
+                self.add_rule(rule);
+            }
         }
 
         errors
