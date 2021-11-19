@@ -210,3 +210,14 @@ func (e *ForbiddenError) Error() string {
 		"given resource. Most often, you should handle this error by returning a " +
 		"403 error to the client."
 }
+
+type UnexpectedExpressionError struct{}
+
+func (e *UnexpectedExpressionError) Error() string {
+	return "Received Expression from Polar VM. The Expression type is only supported when " +
+		"using data filtering features. Did you perform an operation over an unbound variable " +
+		"in your policy?\n\n" +
+		"To silence this error and receive an Expression result, call query.SetAcceptExpression(true) " +
+		"on a query (e.g. created by calling Oso.NewQueryFromRule)."
+
+}
