@@ -30,5 +30,5 @@ the editor and in VSCode's **Problems** pane.
 
 ### Want support for your IDE of choice?
 
-<!-- TODO(gj): is this still accurate? I don't see the Intercom button on this page. -->
+Let us know by using our chat on the bottom right to send us a Slack message.
 Let us know by using our chat on the bottom right to send us a message.
