@@ -18,12 +18,22 @@ public class Ffi {
 
   private static PolarLib polarLib;
 
-  public static class CResultPointer extends Struct {
+  /* CResult wraps the Result type that we return from the Rust side
+
+    The `check` method will effectively unwrap the result, frees
+    the memory allocated by Rust for the result, and either
+    returns the result pointer (to be used elsewhere), or
+    throws the error as an exception, while freeing the string.
+   */
+  public static class CResult extends Struct {
+    // The pointers here are used by the jni library to know
+    // the layout of the struct
     private final Struct.Pointer result = new Pointer();
     private final Struct.Pointer error = new Pointer();
 
-    // Necessary constructor that takes a Runtime
-    public CResultPointer(final jnr.ffi.Runtime runtime) {
+    // This is how the jni library instantiates the
+    // struct and sets the values of the pointers
+    public CResult(final jnr.ffi.Runtime runtime) {
       super(runtime);
     }
 
@@ -33,29 +43,6 @@ public class Ffi {
       polarLib.result_free(getMemory(this));
       if (e == null) {
         return r;
-      } else {
-        java.lang.String s = e.getString(0);
-        polarLib.string_free(e);
-        throw Exceptions.getJavaError(s);
-      }
-    }
-  }
-
-  public static class CResultVoid extends Struct {
-    private final SignedLong result = new SignedLong();
-    private final Pointer error = new Pointer();
-
-    // Necessary constructor that takes a Runtime
-    public CResultVoid(jnr.ffi.Runtime runtime) {
-      super(runtime);
-    }
-
-    public void check() throws Exceptions.OsoException {
-      jnr.ffi.Pointer e = this.error.get();
-      long r = this.result.get();
-      polarLib.result_free(getMemory(this));
-      if (e == null) {
-        return;
       } else {
         java.lang.String s = e.getString(0);
         polarLib.string_free(e);
@@ -115,7 +102,7 @@ public class Ffi {
     }
 
     protected void registerConstant(String value, String name) throws Exceptions.OsoException {
-      CResultVoid result = polarLib.polar_register_constant(ptr, name, value);
+      CResult result = polarLib.polar_register_constant(ptr, name, value);
       result.check();
     }
 
@@ -226,33 +213,33 @@ public class Ffi {
   }
 
   protected static interface PolarLib {
-    CResultVoid polar_debug_command(Pointer query_ptr, String value);
+    CResult polar_debug_command(Pointer query_ptr, String value);
 
     int polar_free(Pointer polar);
 
     long polar_get_external_id(Pointer polar_ptr);
 
-    CResultVoid polar_load(Pointer polar_ptr, String sources);
+    CResult polar_load(Pointer polar_ptr, String sources);
 
-    CResultVoid polar_clear_rules(Pointer polar_ptr);
+    CResult polar_clear_rules(Pointer polar_ptr);
 
     Pointer polar_new();
 
-    CResultPointer polar_new_query(Pointer polar_ptr, String query_str, int trace);
+    CResult polar_new_query(Pointer polar_ptr, String query_str, int trace);
 
-    CResultPointer polar_new_query_from_term(Pointer polar_ptr, String query_term, int trace);
+    CResult polar_new_query_from_term(Pointer polar_ptr, String query_term, int trace);
 
     Pointer polar_next_inline_query(Pointer polar_ptr, int trace);
 
-    CResultPointer polar_next_query_event(Pointer query_ptr);
+    CResult polar_next_query_event(Pointer query_ptr);
 
-    CResultPointer polar_query_from_repl(Pointer polar_ptr);
+    CResult polar_query_from_repl(Pointer polar_ptr);
 
-    CResultVoid polar_question_result(Pointer query_ptr, long call_id, int result);
+    CResult polar_question_result(Pointer query_ptr, long call_id, int result);
 
-    CResultVoid polar_call_result(Pointer query_ptr, long call_id, String value);
+    CResult polar_call_result(Pointer query_ptr, long call_id, String value);
 
-    CResultVoid polar_application_error(Pointer query_ptr, String message);
+    CResult polar_application_error(Pointer query_ptr, String message);
 
     int query_free(Pointer query);
 
@@ -260,17 +247,17 @@ public class Ffi {
 
     int result_free(Pointer r);
 
-    CResultVoid polar_register_constant(Pointer polar_ptr, String name, String value);
+    CResult polar_register_constant(Pointer polar_ptr, String name, String value);
 
-    CResultVoid polar_register_mro(Pointer polar_ptr, String name, String mro);
+    CResult polar_register_mro(Pointer polar_ptr, String name, String mro);
 
-    CResultPointer polar_next_polar_message(Pointer polar_ptr);
+    CResult polar_next_polar_message(Pointer polar_ptr);
 
-    CResultPointer polar_next_query_message(Pointer query_ptr);
+    CResult polar_next_query_message(Pointer query_ptr);
 
-    CResultPointer polar_query_source_info(Pointer query_ptr);
+    CResult polar_query_source_info(Pointer query_ptr);
 
-    CResultVoid polar_bind(Pointer query_ptr, String name, String value);
+    CResult polar_bind(Pointer query_ptr, String name, String value);
   }
 
   protected Ffi() {

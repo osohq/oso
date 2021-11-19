@@ -13,6 +13,14 @@ class PolarSource:
     filename: Optional[str] = None
 
 
+def read_c_str(c_str) -> str:
+    """Copy a C string to a Python string and
+    free the memory"""
+    python_str = ffi.string(c_str).decode()
+    lib.string_free(c_str)
+    return python_str
+
+
 class Polar:
     enrich_message: Callable
     """
@@ -39,10 +47,8 @@ class Polar:
         class_tag = to_c_str(class_tag)
         plan = lib.polar_build_filter_plan(self.ptr, typs, prs, var, class_tag)
         process_messages(self.next_message)
-        filter_plan_p = check_result(plan)
-        filter_plan_s = ffi.string(filter_plan_p).decode()
-        lib.string_free(filter_plan_p)
-        filter_plan = json.loads(filter_plan_s)
+        filter_plan_str = read_c_str(check_result(plan))
+        filter_plan = json.loads(filter_plan_str)
         # @TODO(Steve): Decode Filter Plan to not just json?
         return filter_plan
 
@@ -138,11 +144,11 @@ class Query:
         message = to_c_str(message)
         self.check_result(lib.polar_application_error(self.ptr, message))
 
-    def next_event(self):
+    def next_event(self) -> str:
         event = lib.polar_next_query_event(self.ptr)
         self.process_messages()
-        event = self.check_result(event)
-        return QueryEvent(event)
+        event = read_c_str(self.check_result(event))
+        return event
 
     def debug_command(self, command):
         result = lib.polar_debug_command(self.ptr, ffi_serialize(command))
@@ -154,8 +160,8 @@ class Query:
 
     def source(self):
         source = lib.polar_query_source_info(self.ptr)
-        source = self.check_result(source)
-        return Source(source)
+        source = read_c_str(self.check_result(source))
+        return source
 
     def bind(self, name, value):
         name = to_c_str(name)
@@ -180,38 +186,27 @@ class Query:
             print(self.enrich_message(msg))
 
 
-class QueryEvent:
-    def __init__(self, ptr):
-        self.ptr = ptr
-
-    def get(self):
-        return ffi.string(self.ptr).decode()
-
-    def __del__(self):
-        lib.string_free(self.ptr)
-
-
-class Source:
-    def __init__(self, ptr):
-        self.ptr = ptr
-
-    def get(self):
-        return ffi.string(self.ptr).decode()
-
-    def __del__(self):
-        lib.string_free(self.ptr)
-
-
 def check_result(result, enrich_message=None):
+    """ 
+    Unwrap the result by (a) extracting the pointers for
+    result and error, (b) freeing the result pointers, and then
+    (c) either returning the result pointer, or constructing and
+    raising the error.
+    """
+    # TODO: what type checking/assertions can we do here?
+
     r = result.result
     e = result.error
-    # hack... we only near to clear allocation of the pointers
+    # This is a bit of a hack. All CResult struct types
+    # store two pointers: one to a result, one to an error
+    # result_free doesn't care about what the pointers actually
+    # point to though, so we can use the same result_free method
     lib.result_free(ffi.cast("polar_CResult_c_void *", result))
     if is_null(e):
         return r
     else:
-        error = get_python_error(ffi.string(e).decode(), enrich_message)
-        lib.string_free(e)
+        error_str = read_c_str(e)
+        error = get_python_error(error_str, enrich_message)
         raise error
 
 
@@ -232,8 +227,7 @@ def process_messages(next_message_method):
         msg_ptr = check_result(next_message_method())
         if is_null(msg_ptr):
             break
-        msg_str = ffi.string(msg_ptr).decode()
-        lib.string_free(msg_ptr)
+        msg_str = read_c_str(msg_ptr)
         message = json.loads(msg_str)
 
         kind = message["kind"]

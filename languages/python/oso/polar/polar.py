@@ -111,7 +111,7 @@ class Polar:
                     next(Query(query, host=self.host.copy()).run())
                 except StopIteration:
                     source = query.source()
-                    raise InlineQueryFailedError(source.get())
+                    raise InlineQueryFailedError(source)
 
     def clear_rules(self):
         self.ffi_polar.clear_rules()
