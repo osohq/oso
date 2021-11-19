@@ -6,7 +6,7 @@ import * as glob from 'glob'; // eslint-disable-line node/no-unpublished-import
 type Callback = (error?: Error, failures?: number) => void;
 
 export function run(cwd: string, cb: Callback): void {
-  const mocha = new Mocha({ ui: 'tdd', color: true, timeout: 60000 });
+  const mocha = new Mocha({ ui: 'tdd', color: true, timeout: 5000 });
 
   glob('**/**.test.js', { cwd }, (err, files) => {
     if (err) return cb(err);
