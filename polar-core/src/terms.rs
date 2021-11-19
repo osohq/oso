@@ -6,11 +6,14 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
+use super::error::RuntimeError::{self, InvalidState};
+pub use super::formatting::ToPolarString;
 pub use super::numerics::Numeric;
 use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::sources::SourceInfo;
 use super::visitor::{walk_operation, walk_term, Visitor};
-pub use super::{error, formatting::ToPolarString};
+
+type Result<T> = core::result::Result<T, RuntimeError>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {
@@ -145,73 +148,66 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn as_symbol(&self) -> Result<&Symbol, error::RuntimeError> {
+    pub fn as_symbol(&self) -> Result<&Symbol> {
         match self {
             Value::Variable(name) => Ok(name),
             Value::RestVariable(name) => Ok(name),
-            _ => Err(error::RuntimeError::TypeError {
-                msg: format!("Expected symbol, got: {}", self.to_polar()),
-                stack_trace: None, // @TODO
+            _ => Err(InvalidState {
+                msg: format!("Expected symbol, got: {}", self),
             }),
         }
     }
 
-    pub fn as_string(&self) -> Result<&str, error::RuntimeError> {
+    pub fn as_string(&self) -> Result<&str> {
         match self {
             Value::String(string) => Ok(string.as_ref()),
-            _ => Err(error::RuntimeError::TypeError {
-                msg: format!("Expected string, got: {}", self.to_polar()),
-                stack_trace: None, // @TODO
+            _ => Err(InvalidState {
+                msg: format!("Expected string, got: {}", self),
             }),
         }
     }
 
-    pub fn as_expression(&self) -> Result<&Operation, error::RuntimeError> {
+    pub fn as_expression(&self) -> Result<&Operation> {
         match self {
             Value::Expression(op) => Ok(op),
-            _ => Err(error::RuntimeError::TypeError {
-                msg: format!("Expected expression, got: {}", self.to_polar()),
-                stack_trace: None, // @TODO
+            _ => Err(InvalidState {
+                msg: format!("Expected expression, got: {}", self),
             }),
         }
     }
 
-    pub fn as_call(&self) -> Result<&Call, error::RuntimeError> {
+    pub fn as_call(&self) -> Result<&Call> {
         match self {
             Value::Call(pred) => Ok(pred),
-            _ => Err(error::RuntimeError::TypeError {
-                msg: format!("Expected call, got: {}", self.to_polar()),
-                stack_trace: None, // @TODO
+            _ => Err(InvalidState {
+                msg: format!("Expected call, got: {}", self),
             }),
         }
     }
 
-    pub fn as_pattern(&self) -> Result<&Pattern, error::RuntimeError> {
+    pub fn as_pattern(&self) -> Result<&Pattern> {
         match self {
             Value::Pattern(p) => Ok(p),
-            _ => Err(error::RuntimeError::TypeError {
-                msg: format!("Expected pattern, got: {}", self.to_polar()),
-                stack_trace: None, // @TODO
+            _ => Err(InvalidState {
+                msg: format!("Expected pattern, got: {}", self),
             }),
         }
     }
 
-    pub fn as_list(&self) -> Result<&TermList, error::RuntimeError> {
+    pub fn as_list(&self) -> Result<&TermList> {
         match self {
             Value::List(l) => Ok(l),
-            _ => Err(error::RuntimeError::TypeError {
-                msg: format!("Expected list, got: {}", self.to_polar()),
-                stack_trace: None, // @TODO
+            _ => Err(InvalidState {
+                msg: format!("Expected list, got: {}", self),
             }),
         }
     }
 
-    pub fn as_dict(&self) -> Result<&Dictionary, error::RuntimeError> {
+    pub fn as_dict(&self) -> Result<&Dictionary> {
         match self {
             Value::Dictionary(d) => Ok(d),
-            _ => Err(error::RuntimeError::TypeError {
-                msg: format!("Expected dictionary, got: {}", self.to_polar()),
-                stack_trace: None, // @TODO
+            _ => Err(InvalidState {
+                msg: format!("Expected dictionary, got: {}", self),
             }),
         }
     }
@@ -355,7 +351,7 @@ impl Term {
         }
     }
 
-    /// Creates a new term from the parser
+    /// Creates a new term from across the FFI boundary
     pub fn new_from_ffi(value: Value) -> Self {
         Self {
             source_info: SourceInfo::Ffi,

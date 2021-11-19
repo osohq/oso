@@ -1,12 +1,13 @@
 ---
 title: Enforce authorization
+metaTitle: Enforce authorization in $LANG
 description: |
     Add authorization enforcement throughout your application using the
     authorize API to reject or accept requests that users make.
 weight: 2
 ---
 
-# Enforce authorization
+# Enforce authorization in {{% lang %}}
 
 In [Model your authorization logic](model) you defined an authorization
 policy. In this guide, we will cover using Oso's enforcement API to

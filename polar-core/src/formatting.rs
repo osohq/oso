@@ -9,10 +9,7 @@
 //! In addition, there are special cases like traces and sources that have their own
 //! formatting requirements.
 
-use crate::rules::*;
-use crate::sources::*;
-use crate::terms::*;
-use crate::traces::*;
+use super::{lexer::loc_to_pos, rules::*, sources::*, terms::*, traces::*};
 pub use display::*;
 pub use to_polar::*;
 
@@ -57,36 +54,43 @@ impl Trace {
     }
 }
 
-/// Traverse a [`Source`](../types/struct.Source.html) line by line until `offset` is reached,
-/// and return the source line containing the `offset` character as well as `num_lines` lines
-/// above and below it.
+/// Traverse a [`Source`](../types/struct.Source.html) line by line until `offset` is reached and
+/// return the source line containing the `offset` character as well as `context_lines` lines above
+/// and below it.
 // @TODO: Can we have the caret under the whole range of the expression instead of just the beginning.
-pub fn source_lines(source: &Source, offset: usize, num_lines: usize) -> String {
-    // Sliding window of lines: current line + indicator + additional context above + below.
-    let max_lines = num_lines * 2 + 2;
-    let push_line = |lines: &mut Vec<String>, line: String| {
-        if lines.len() == max_lines {
-            lines.remove(0);
-        }
-        lines.push(line);
-    };
-    let mut index = 0;
-    let mut lines = Vec::new();
-    let mut target = None;
-    let prefix_len = "123: ".len();
-    for (lineno, line) in source.src.lines().enumerate() {
-        push_line(&mut lines, format!("{:03}: {}", lineno + 1, line));
-        let end = index + line.len() + 1; // Adding one to account for new line byte.
-        if target.is_none() && end >= offset {
-            target = Some(lineno);
-            let spaces = " ".repeat(offset - index + prefix_len);
-            push_line(&mut lines, format!("{}^", spaces));
-        }
-        index = end;
-        if target.is_some() && lineno == target.unwrap() + num_lines {
-            break;
-        }
+pub fn source_lines(source: &Source, offset: usize, context_lines: usize) -> String {
+    let (target_line, target_column) = loc_to_pos(&source.src, offset);
+    // Skip everything up to the first line of requested context (`target_line - context_lines`),
+    // but don't overflow if `context_lines > target_line`.
+    let skipped_lines = target_line.saturating_sub(context_lines);
+    let mut lines = source.src.lines().enumerate().skip(skipped_lines);
+
+    // Update `target_line` to account for skipped lines.
+    let target_line = std::cmp::min(context_lines, target_line);
+
+    // Take everything up to `target_line` as leading context.
+    let prefix = lines.clone().take(target_line);
+
+    // Take target line.
+    let target = lines.nth(target_line);
+
+    // Take _up to_ `context_lines` lines of trailing context.
+    let suffix = lines.take(context_lines);
+
+    // Combine prefix + target + suffix.
+    let lines = prefix.chain(target).chain(suffix);
+
+    // Format each line with its line number.
+    let format_line = |(i, line): (usize, &str)| format!("{:03}: {}", i + 1, line);
+    let mut lines: Vec<_> = lines.map(format_line).collect();
+
+    // Insert 'indicator' line pointing at `target_column`.
+    if let Some(target) = lines.get_mut(target_line) {
+        // Calculate length of line number prefix.
+        let prefix_len = "123: ".len();
+        *target += &format!("\n{}^", " ".repeat(prefix_len + target_column));
     }
+
     lines.join("\n")
 }
 
@@ -669,5 +673,71 @@ pub mod to_polar {
             s += "}";
             s
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use indoc::indoc;
+
+    use super::*;
+
+    #[test]
+    fn test_source_lines() {
+        let src = "hi".to_owned();
+        let filename: Option<String> = None;
+        let source = Source { src, filename };
+        assert_eq!(source_lines(&source, 0, 0), "001: hi\n     ^");
+        assert_eq!(source_lines(&source, 1, 0), "001: hi\n      ^");
+        assert_eq!(source_lines(&source, 2, 0), "001: hi\n       ^");
+
+        let src = " one\n  two\n   three\n    four\n     five\n      six\n       seven\n        eight\n         nine\n".to_owned();
+        let filename: Option<String> = None;
+        let source = Source { src, filename };
+        let lines = source_lines(&source, 34, 2);
+        let expected = indoc! {"
+            003:    three
+            004:     four
+            005:      five
+                      ^
+            006:       six
+            007:        seven"};
+        assert_eq!(lines, expected, "\n{}", lines);
+
+        let lines = source_lines(&source, 1, 2);
+        let expected = indoc! {"
+            001:  one
+                  ^
+            002:   two
+            003:    three"};
+        assert_eq!(lines, expected, "\n{}", lines);
+
+        let src = "one\ntwo\nthree\n".to_owned();
+        let filename: Option<String> = None;
+        let source = Source { src, filename };
+
+        let lines = source_lines(&source, 0, 0);
+        let expected = indoc! {"
+            001: one
+                 ^"};
+        assert_eq!(lines, expected, "\n{}", lines);
+
+        let lines = source_lines(&source, 3, 0);
+        let expected = indoc! {"
+            001: one
+                    ^"};
+        assert_eq!(lines, expected, "\n{}", lines);
+
+        let lines = source_lines(&source, 4, 0);
+        let expected = indoc! {"
+            002: two
+                 ^"};
+        assert_eq!(lines, expected, "\n{}", lines);
+
+        let lines = source_lines(&source, 5, 0);
+        let expected = indoc! {"
+            002: two
+                  ^"};
+        assert_eq!(lines, expected, "\n{}", lines);
     }
 }

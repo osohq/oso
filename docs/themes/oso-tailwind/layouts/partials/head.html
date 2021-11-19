@@ -2,11 +2,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ block "title" . }}
-        {{- if .Title -}}
+        {{- if .Params.metaTitle -}}
+        {{- replace .Params.metaTitle "$LANG" .Page.Language.LanguageName }} - {{ .Site.Title -}}
+        {{- else if .Title -}}
         {{- .Title }} - {{ .Site.Title -}}
         {{- else -}}
         {{ .Site.Title }}
-        {{- end -}}{{- end -}}</title>
+        {{- end -}}
+        {{- end -}}</title>
     {{- if .Description }}
     <meta name="description" content="{{ .Description }}" />
     {{ else }}
