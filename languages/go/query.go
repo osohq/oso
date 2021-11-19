@@ -138,6 +138,13 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 
 }
 
+/*
+Set whether the Host accepts Expression types from Polar, or raises an error.
+*/
+func (q *Query) SetAcceptExpression(acceptExpression bool) {
+	(q.host).SetAcceptExpression(acceptExpression)
+}
+
 func (q Query) handleMakeExternal(event types.QueryEventMakeExternal) error {
 	id := uint64(event.InstanceId)
 	call, _ := event.Constructor.Value.ValueVariant.(ValueCall)
