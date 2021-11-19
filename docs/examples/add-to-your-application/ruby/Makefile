@@ -5,10 +5,10 @@ unexport BUNDLE_GEMFILE
 .PHONY: test install
 
 test: install
-	@bundle exec ruby test.rb
+	bundle exec ruby test.rb
 
 install: .make.dependencies.installed
 
 .make.dependencies.installed: Gemfile
-	@bundle
+	bundle
 	@touch $@
