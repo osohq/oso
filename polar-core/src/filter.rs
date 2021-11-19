@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    data_filtering::{unregistered_field_error, unsupported_op_error, PartialResults, Type, Types},
+    data_filtering::{unregistered_field_error, unsupported_op_error, PartialResults, Type},
     error::{invalid_state_error, PolarResult, RuntimeError},
     events::ResultEvent,
     terms::*,
@@ -15,42 +15,51 @@ use serde::Serialize;
 
 type TypeName = String;
 type FieldName = String;
+type VarName = String;
+
 type Map<A, B> = HashMap<A, B>;
 type Set<A> = HashSet<A>;
 
+type TypeInfo = Map<TypeName, Map<FieldName, Type>>;
+type VarTypes = Map<PathVar, TypeName>;
+
+/// A variable with zero or more "dot lookups"
+///     a.b.c.d <-> PathVar { var: "a", path: ["b", "c", "d"] }
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct PathVar {
+    var: VarName,
+    path: Vec<FieldName>,
+}
+
+
+/// An abstract filter over a data source
 #[derive(Clone, Eq, Debug, Serialize, PartialEq)]
 pub struct Filter {
     root: TypeName,                  // the host already has this, so we could leave it off
+    relations: Set<Relation>,        // this & root determine the "joins" (or whatever)
     conditions: Vec<Set<Condition>>, // disjunctive normal form
-    relations: Set<Relation>,
 }
 
 #[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
 pub struct Relation(TypeName, FieldName, TypeName);
 
 #[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
-pub struct Condition(Datum, Compare, Datum);
+pub struct Condition(Datum, Comparison, Datum);
 
 #[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
 pub enum Datum {
-    Field(Proj),
-    Imm(Value),
+    Field(Projection),
+    Immediate(Value),
 }
 
 #[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
-pub struct Proj(TypeName, Option<FieldName>);
+pub struct Projection(TypeName, Option<FieldName>);
 
 #[derive(PartialEq, Debug, Serialize, Copy, Clone, Eq, Hash)]
-pub enum Compare {
+pub enum Comparison {
     Eq,
     Neq,
     In,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-struct PathVar {
-    var: String,
-    path: Vec<String>,
 }
 
 impl From<String> for PathVar {
@@ -59,8 +68,8 @@ impl From<String> for PathVar {
     }
 }
 
-impl From<Proj> for PathVar {
-    fn from(Proj(var, field): Proj) -> Self {
+impl From<Projection> for PathVar {
+    fn from(Projection(var, field): Projection) -> Self {
         let path = field.into_iter().collect();
         PathVar { var, path }
     }
@@ -102,14 +111,13 @@ impl Operation {
                     Err(_) => None,
                     Ok(p) => Some(Ok((p, tag.0.clone()))),
                 }
-            }
-            _ => Some(unsupported_op_error(self)),
+            } _ => Some(unsupported_op_error(self)),
         }
     }
 }
 
 impl Filter {
-    pub fn build(types: Types, ors: PartialResults, var: &str, class: &str) -> PolarResult<Self> {
+    pub fn build(types: TypeInfo, ors: PartialResults, var: &str, class: &str) -> PolarResult<Self> {
         let explain = std::env::var("POLAR_EXPLAIN").is_ok();
 
         if explain {
@@ -132,7 +140,7 @@ impl Filter {
     }
 
     fn from_result_event(
-        types: &Types,
+        types: &TypeInfo,
         ands: ResultEvent,
         var: &Symbol,
         class: &str,
@@ -143,7 +151,7 @@ impl Filter {
             .unwrap_or_else(|| input_error(format!("unbound variable: {}", var.0)))
     }
 
-    fn from_partial(types: &Types, ands: &Term, class: &str) -> PolarResult<Self> {
+    fn from_partial(types: &TypeInfo, ands: &Term, class: &str) -> PolarResult<Self> {
         use {Datum::*, Operator::*, Value::*};
 
         if std::env::var("POLAR_EXPLAIN").is_ok() {
@@ -168,9 +176,9 @@ impl Filter {
                 root: class.to_string(),
                 relations: HashSet::new(),
                 conditions: vec![singleton(Condition(
-                    Field(Proj(class.to_string(), None)),
-                    Compare::Eq,
-                    Imm(i.clone()),
+                    Field(Projection(class.to_string(), None)),
+                    Comparison::Eq,
+                    Immediate(i.clone()),
                 ))],
             }),
 
@@ -180,14 +188,14 @@ impl Filter {
     }
 
     fn empty(class: &str) -> Self {
-        use {Datum::Imm, Value::Boolean};
+        use {Datum::Immediate, Value::Boolean};
         Self {
             root: class.to_string(),
             relations: Default::default(),
             conditions: vec![singleton(Condition(
-                Imm(Boolean(true)),
-                Compare::Eq,
-                Imm(Boolean(false)),
+                Immediate(Boolean(true)),
+                Comparison::Eq,
+                Immediate(Boolean(false)),
             ))],
         }
     }
@@ -201,18 +209,18 @@ impl Filter {
 
 #[derive(Default)]
 struct QueryInfo {
-    types: Types,
-    entities: Map<PathVar, TypeName>,
+    type_info: TypeInfo,
+    entities: VarTypes,
     conditions: Set<Condition>,
     relations: Set<Relation>,
 }
 
 impl QueryInfo {
     /// try to match a type and a field name with a relation
-    fn get_relation(&mut self, typ: &str, dot: &str) -> Option<Relation> {
+    fn get_relation_def(&mut self, typ: &str, dot: &str) -> Option<Relation> {
         if let Some(Type::Relation {
             other_class_tag, ..
-        }) = self.types.get(typ).and_then(|map| map.get(dot))
+        }) = self.type_info.get(typ).and_then(|map| map.get(dot))
         {
             Some(Relation(
                 typ.to_string(),
@@ -224,8 +232,9 @@ impl QueryInfo {
         }
     }
 
-    /// turn a pathvar into a projection
-    fn pathvar2proj(&mut self, pv: PathVar) -> PolarResult<Proj> {
+    /// turn a pathvar into a projection.
+    /// populates relations as a side effect
+    fn pathvar2proj(&mut self, pv: PathVar) -> PolarResult<Projection> {
         let PathVar { mut path, var } = pv;
         let mut pv = PathVar::from(var); // new var with empty path
                                          // what type is the base variable?
@@ -241,7 +250,7 @@ impl QueryInfo {
         // all the middle parts have to be relations, so if we can't find one
         // then we fail here.
         for dot in path {
-            match self.get_relation(&typ, &dot) {
+            match self.get_relation_def(&typ, &dot) {
                 None => return unregistered_field_error(&typ, &dot),
                 Some(rel) => {
                     typ = rel.2.clone();
@@ -255,14 +264,14 @@ impl QueryInfo {
         // if the last path component names a relation from typ to typ'
         // then typ' is the new type and field is None. otherwise,
         // typ & field stay the same.
-        let proj = match field.as_ref().and_then(|dot| self.get_relation(&typ, dot)) {
-            None => Proj(typ, field),
+        let proj = match field.as_ref().and_then(|dot| self.get_relation_def(&typ, dot)) {
+            None => Projection(typ, field),
             Some(rel) => {
                 let tag = rel.2.clone();
                 pv.path.push(rel.1.clone());
                 self.entities.insert(pv, tag.clone());
                 self.relations.insert(rel);
-                Proj(tag, None)
+                Projection(tag, None)
             }
         };
 
@@ -273,11 +282,11 @@ impl QueryInfo {
         use Datum::*;
         match PathVar::from_term(x) {
             Ok(pv) => Ok(Field(self.pathvar2proj(pv)?)),
-            _ => Ok(Imm(x.value().clone())),
+            _ => Ok(Immediate(x.value().clone())),
         }
     }
 
-    fn add_condition(&mut self, l: Datum, op: Compare, r: Datum) -> PolarResult<()> {
+    fn add_condition(&mut self, l: Datum, op: Comparison, r: Datum) -> PolarResult<()> {
         self.conditions.insert(Condition(l, op, r));
         Ok(())
     }
@@ -287,7 +296,7 @@ impl QueryInfo {
             let pv2 = pv.var.clone().into();
             let mut typ = self.entities.get(&pv2)?;
             for dot in pv.path.iter() {
-                match self.types.get(typ)?.get(dot)? {
+                match self.type_info.get(typ)?.get(dot)? {
                     Type::Relation {
                         other_class_tag, ..
                     } => typ = other_class_tag,
@@ -306,13 +315,14 @@ impl QueryInfo {
         use {Datum::*, Operator::*};
         let (left, right) = (self.term2datum(&op.args[0])?, self.term2datum(&op.args[1])?);
         match op.operator {
-            Unify => self.add_condition(left, Compare::Eq, right),
-            Neq => self.add_condition(left, Compare::Neq, right),
+            Unify => self.add_condition(left, Comparison::Eq, right),
+            Neq => self.add_condition(left, Comparison::Neq, right),
             In => match (&left, &right) {
-                (Imm(_), Field(Proj(_, None))) | (Field(Proj(_, None)), Field(Proj(_, None))) => {
-                    self.add_condition(left, Compare::Eq, right)
+                (Immediate(_), Field(Projection(_, None))) |
+                (Field(Projection(_, None)), Field(Projection(_, None))) => {
+                    self.add_condition(left, Comparison::Eq, right)
                 }
-                _ => self.add_condition(left, Compare::In, right),
+                _ => self.add_condition(left, Comparison::In, right),
             },
             _ => unsupported_op_error(op),
         }
@@ -354,8 +364,7 @@ impl QueryInfo {
             })
             .collect::<Vec<_>>() // so the closure ^^^ lets go of &mut self
             .into_iter()
-            // add them to the entities map
-            .for_each(|(k, t)| {
+            .for_each(|(k, t)| { // add them to the entities map
                 self.entities.insert(k, t);
             });
 
@@ -370,7 +379,7 @@ impl QueryInfo {
         Ok(self)
     }
 
-    fn build_filter(types: Types, parts: Vec<Operation>, class: &str) -> PolarResult<Filter> {
+    fn build_filter(type_info: TypeInfo, parts: Vec<Operation>, class: &str) -> PolarResult<Filter> {
         // we use isa constraints to initialize the entities map
         let (isas, othas): (Set<_>, Set<_>) = parts
             .into_iter()
@@ -387,7 +396,7 @@ impl QueryInfo {
             relations,
             ..
         } = Self {
-            types,
+            type_info,
             entities,
             ..Default::default()
         }
@@ -439,9 +448,9 @@ impl Display for Filter {
     }
 }
 
-impl Display for Compare {
+impl Display for Comparison {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        use Compare::*;
+        use Comparison::*;
         write!(
             f,
             "{}",
@@ -458,9 +467,9 @@ impl Display for Datum {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         use Datum::*;
         match self {
-            Imm(val) => write!(f, "{}", val.to_polar()),
-            Field(Proj(typ, None)) => write!(f, "{}", typ),
-            Field(Proj(typ, Some(field))) => write!(f, "{}.{}", typ, field),
+            Immediate(val) => write!(f, "{}", val.to_polar()),
+            Field(Projection(typ, None)) => write!(f, "{}", typ),
+            Field(Projection(typ, Some(field))) => write!(f, "{}.{}", typ, field),
         }
     }
 }
