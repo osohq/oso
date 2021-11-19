@@ -1,5 +1,4 @@
-# Change Log
+# CHANGELOG
 
-## [0.0.1]
+See https://docs.osohq.com/project/changelogs.html
 
-- Initial release

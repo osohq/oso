@@ -21,6 +21,15 @@ draft: true
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
+
+### Go
+
+#### Other bugs & improvements
+- Added a `SetAcceptExpression` method to the `Query` struct which makes
+  it possible to get partially-evaluated terms back from the core.
+  This is a step towards data filtering in Go.
+  Thanks to [`@joshrotenberg`](https://github.com/joshrotenberg) for the PR!
+
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
 #### Breaking changes
