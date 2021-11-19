@@ -10,9 +10,9 @@
 
 ### Steps to test the extension out in VSCode
 
-1. Run `make build` in the current directory (where this README lives).
-2. Open the current directory in VSCode: `code .`.
-3. Run the `Launch Client` launch configuration (defined in
-   `.vscode/launch.json`).
+1. Run `make package` in the current directory (where this README lives).
+2. Install the output `.vsix` file into your local VSCode instance: `code
+   --install-extension oso-X.Y.Z.vsix`.
+3. Restart VSCode (if it was already open).
 
 [wasm-pack]: https://rustwasm.github.io/wasm-pack/installer/
