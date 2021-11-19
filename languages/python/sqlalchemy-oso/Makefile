@@ -17,7 +17,7 @@ dev-requirements: .make.dev-requirements-install
 	touch $@
 
 test:
-	@$(MAKE) tox
+	$(MAKE) tox
 
 fmt: dev-requirements
 	black .

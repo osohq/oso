@@ -85,6 +85,7 @@ URI
 URIs
 VM
 VPN
+VSCode's
 WASM
 Wayfair
 alice
