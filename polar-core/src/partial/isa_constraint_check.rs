@@ -1,7 +1,6 @@
 use crate::counter::Counter;
-use crate::error::{OperationalError, PolarResult};
+use crate::error::RuntimeError;
 use crate::events::QueryEvent;
-
 use crate::runnable::Runnable;
 use crate::terms::{Operation, Operator, Pattern, Symbol, Term, Value};
 
@@ -171,7 +170,7 @@ impl IsaConstraintCheck {
 }
 
 impl Runnable for IsaConstraintCheck {
-    fn run(&mut self, counter: Option<&mut Counter>) -> PolarResult<QueryEvent> {
+    fn run(&mut self, counter: Option<&mut Counter>) -> Result<QueryEvent, RuntimeError> {
         if let Some(result) = self.result.take() {
             if result {
                 // If the primary check succeeds, there's no need to check the alternative.
@@ -204,12 +203,11 @@ impl Runnable for IsaConstraintCheck {
         }
     }
 
-    fn external_question_result(&mut self, call_id: u64, answer: bool) -> PolarResult<()> {
+    fn external_question_result(&mut self, call_id: u64, answer: bool) -> Result<(), RuntimeError> {
         if call_id != self.last_call_id {
-            return Err(OperationalError::InvalidState {
+            return Err(RuntimeError::InvalidState {
                 msg: String::from("Unexpected call id"),
-            }
-            .into());
+            });
         }
 
         self.result = Some(answer);

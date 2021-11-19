@@ -51,6 +51,14 @@ impl Rule {
         }
     }
 
+    pub fn get_source_id(&self) -> Option<u64> {
+        if let SourceInfo::Parser { src_id, .. } = self.source_info {
+            Some(src_id)
+        } else {
+            None
+        }
+    }
+
     pub fn new_from_test(name: Symbol, params: Vec<Parameter>, body: Term) -> Self {
         Self {
             name,

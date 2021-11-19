@@ -18,7 +18,7 @@ The Oso SQLAlchemy integration is available on
 `pip`:
 
 ```console
-$ pip install sqlalchemy-oso=={{< version >}}
+$ pip install sqlalchemy-oso
 ```
 
 ## Usage

@@ -16,7 +16,7 @@ cases:
     load: >
       f(a)
     err: hit the end of the file unexpectedly. Did you forget a semi-colon
-  - description: missing semi-colon
+  - description: unexpected token
     load: |
       1;
     err: did not expect to find the token

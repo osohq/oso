@@ -56,11 +56,11 @@ jobs:
           toolchain: stable
           override: true
       - name: Build release libraries
-        run: cargo build --release
+        run: cargo build --release -p polar-c-api
       - name: Build release musl library
         run: |
           rustup target add x86_64-unknown-linux-musl
-          RUSTFLAGS="-C target-feature=-crt-static" cargo build --target x86_64-unknown-linux-musl --release
+          RUSTFLAGS="-C target-feature=-crt-static" cargo build --target x86_64-unknown-linux-musl --release -p polar-c-api
       - name: Rename static lib
         run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
       - name: Rename static lib
@@ -99,13 +99,13 @@ jobs:
           toolchain: stable
           override: true
       - name: Build release library
-        run: cargo build --release
+        run: cargo build --release -p polar-c-api
       - name: Build release arm library
         run: |
           rustup target add aarch64-apple-darwin
           SDKROOT=$(xcrun -sdk macosx11.0 --show-sdk-path) \
             MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx11.0 --show-sdk-platform-version) \
-            cargo build --target aarch64-apple-darwin --release
+            cargo build --target aarch64-apple-darwin --release -p polar-c-api
       - name: Rename static lib
         run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
       - name: Rename static lib
@@ -153,11 +153,11 @@ jobs:
           toolchain: stable
           override: true
       - name: Build release library
-        run: cargo build --release
+        run: cargo build --release -p polar-c-api
       - name: Build release MinGW library
         run: |
           rustup target add x86_64-pc-windows-gnu
-          cargo build --target x86_64-pc-windows-gnu --release
+          cargo build --target x86_64-pc-windows-gnu --release -p polar-c-api
       - name: Rename static lib
         run: |
           mv -Force target/x86_64-pc-windows-gnu/release/libpolar.a target/x86_64-pc-windows-gnu/release/libpolar-${{runner.os}}.a
@@ -201,8 +201,10 @@ jobs:
           cp -r oso_static_library/polar.h languages/go/internal/ffi/native/polar.h
           mkdir -p languages/go/native/linux
           cp -r oso_static_library/libpolar-musl.a languages/go/internal/ffi/native/linux/libpolar.a
-          mkdir -p languages/go/native/macos
-          cp -r oso_static_library/libpolar-macOS.a languages/go/internal/ffi/native/macos/libpolar.a
+          mkdir -p languages/go/native/macos/amd64
+          cp -r oso_static_library/libpolar-macOS.a languages/go/internal/ffi/native/macos/amd64/libpolar.a
+          mkdir -p languages/go/native/macos/arm64
+          cp -r oso_static_library/libpolar-macOS-arm.a languages/go/internal/ffi/native/macos/arm64/libpolar.a
           mkdir -p languages/go/native/windows
           cp -r oso_static_library/libpolar-Windows.a languages/go/internal/ffi/native/windows/libpolar.a
           rm languages/go/Makefile
@@ -340,9 +342,7 @@ jobs:
     needs: [version, macos_libs]
     env:
       # Skip Python 2.7 and Python 3.5
-      # Skip 3.10 due to a broken python link.
-      # Turn back on after this is resolved https://github.com/pypa/cibuildwheel/issues/902
-      CIBW_SKIP: "cp27-* cp35-* pp27-* cp310-*"
+      CIBW_SKIP: "cp27-* cp35-* pp27-*"
       # 64-bit builds only
       CIBW_BUILD: "*64"
       # Used in build.py to find right files
@@ -534,6 +534,33 @@ jobs:
         run: docker run --rm -v `pwd`:/oso golang:${{ matrix.go-version }}-buster /bin/sh -c 'cd /oso && go test -v ./tests/'
         working-directory: go
 
+  validate_go_macos_arm:
+    name: Test go ${{ matrix.go-version }} on m1
+    needs: [build_go]
+    runs-on: [self-hosted, m1]
+    strategy:
+      matrix:
+        # go 1.16 is the earliest version supported on m1
+        go-version: ["1.16", "1.17"]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set version env
+        id: version
+        run: echo "::set-output name=oso_version::$(cat VERSION)"
+      - name: Download go package from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: go
+      - name: "test"
+        run: |
+          ~/go/bin/go${{ matrix.go-version }} build
+          ~/go/bin/go${{ matrix.go-version }} test -v ./tests/ 
+        working-directory: go
+        env:
+          CGO_ENABLED: 1
+          GOOS: darwin
+          GOARCH: arm64
+
   validate_python_linux:
     name: Test python ${{ matrix.python-version }} on Linux
     needs: [build_linux_wheels]
@@ -601,9 +628,7 @@ jobs:
     strategy:
       matrix:
         # There is no python 3.6 for macos-11
-        # Skip 3.10 due to a broken python link.
-        # Turn back on after this is resolved https://github.com/pypa/cibuildwheel/issues/902
-        python-version: ["3.7", "3.8", "3.9"]
+        python-version: ["3.7", "3.8", "3.9", "3.10"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -898,12 +923,6 @@ jobs:
           name: wheel
       - name: Zip wheels
         run: zip --junk-paths -r oso-python.zip wheel/
-      - name: Download oso python musl wheels from package run
-        uses: actions/download-artifact@v1
-        with:
-          name: musl-wheel
-      - name: Zip musl wheels
-        run: zip --junk-paths -r oso-python-musl.zip musl-wheel/
       - name: Download oso gem from package run
         uses: actions/download-artifact@v1
         with:
@@ -949,15 +968,6 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./oso-lib.zip
           asset_name: oso-lib-${{ steps.version.outputs.oso_version }}.zip
-          asset_content_type: application/zip
-      - name: Upload Python Musl Package
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./oso-python-musl.zip
-          asset_name: oso-python-musl-${{ steps.version.outputs.oso_version }}.zip
           asset_content_type: application/zip
       - name: Upload Python Package
         uses: actions/upload-release-asset@v1
@@ -1021,6 +1031,7 @@ jobs:
         validate_java,
         validate_js,
         validate_go,
+        validate_go_macos_arm,
         test_quickstarts,
       ]
     steps:

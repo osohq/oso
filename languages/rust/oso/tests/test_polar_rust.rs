@@ -736,6 +736,30 @@ fn test_option() {
     test.qeval("new Foo().get_none() = nil");
 }
 
+#[test]
+fn test_is_subclass() {
+    let _ = tracing_subscriber::fmt::try_init();
+    #[derive(Clone, Default, PolarClass, PartialEq)]
+    struct Foo;
+
+    #[derive(Clone, Default, PolarClass)]
+    struct Bar;
+
+    let mut test = OsoTest::new();
+    test.oso
+        .register_class(
+            Foo::get_polar_class_builder()
+                .set_constructor(Foo::default)
+                .with_equality_check()
+                .build(),
+        )
+        .unwrap();
+    test.oso.register_class(Bar::get_polar_class()).unwrap();
+    test.qeval("x matches Foo and x matches Foo and x = new Foo()");
+    // should fail by checking that Foo != Bar so not a subclass
+    test.qnull("x matches Foo and x matches Bar");
+}
+
 #[cfg(feature = "uuid-06")]
 #[test]
 fn test_uuid_06() -> Result<(), Box<dyn std::error::Error>> {
