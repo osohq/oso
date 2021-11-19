@@ -156,7 +156,7 @@ func TestQueryRule(t *testing.T) {
 	}
 
 	o.LoadString("f(1, 2);")
-	results, errors := o.QueryRule("f", ValueVariable("x"), ValueVariable("y"))
+	results, errors := o.QueryRule("f", Variable("x"), Variable("y"))
 
 	if err = <-errors; err != nil {
 		t.Error(err.Error())
@@ -256,7 +256,7 @@ func TestConstructors(t *testing.T) {
 	o.RegisterClass(reflect.TypeOf(Foo{}), MakeFoo)
 
 	o.LoadString("f(y) if x = new Foo(\"hello\", 123) and y = x.Name;")
-	results, errors := o.QueryRule("f", ValueVariable("y"))
+	results, errors := o.QueryRule("f", Variable("y"))
 
 	if err = <-errors; err != nil {
 		t.Error(err.Error())
@@ -289,7 +289,7 @@ func TestExpressionError(t *testing.T) {
 		t.Fatalf("Load string failed: %v", err)
 	}
 
-	_, errors := o.QueryRule("f", ValueVariable("x"))
+	_, errors := o.QueryRule("f", Variable("x"))
 	err = <-errors
 
 	msg := err.Error()
@@ -400,7 +400,7 @@ func TestPointerMethods(t *testing.T) {
 	o.LoadString("rule1(x: Typ, y) if y = x.Method(); rule2(x: Typ, y) if y = x.PtrMethod();")
 
 	test := func(rule string, typ interface{}, y_val interface{}) {
-		results, errors := o.QueryRule(rule, typ, ValueVariable("y"))
+		results, errors := o.QueryRule(rule, typ, Variable("y"))
 		if err = <-errors; err != nil {
 			t.Error(err.Error())
 		} else {
@@ -441,5 +441,121 @@ func TestFailingALot(t *testing.T) {
 		} else {
 			t.Fatal("oops")
 		}
+	}
+}
+
+func TestPartial(t *testing.T) {
+	var o oso.Oso
+	var err error
+
+	if o, err = oso.NewOso(); err != nil {
+		t.Fatalf("Failed to set up Oso: %v", err)
+	}
+
+	if o.LoadString(
+		"f(1); "+
+			"f(x) if x = 1 and x = 2;"+
+			"g(x) if x.bar = 1 and x.baz = 2;") != nil {
+		t.Fatalf("Load string failed: %v", err)
+	}
+
+	test := func(o oso.Oso, setExpression *bool) error {
+		q, err := o.NewQueryFromRule("f", Variable("x"))
+		if err != nil {
+			t.Fatalf("Failed to construct query: %s", err)
+		}
+		if setExpression != nil {
+			q.SetAcceptExpression(*setExpression)
+		}
+		first, err := q.Next()
+		if err != nil || first == nil {
+			t.Errorf("Failed to get result: res: %v, err: %s", first, err)
+		}
+		if (*first)["x"] != int64(1) {
+			t.Errorf("Expected: %v, got: %v", map[string]int{"x": 1}, first)
+		}
+		second, err := q.Next()
+		if err != nil || second != nil {
+			t.Errorf("Expected no result, got res: %v, err: %s", second, err)
+		}
+
+		q, err = o.NewQueryFromRule("g", Variable("x"))
+		if err != nil {
+			t.Fatalf("Failed to construct query: %s", err)
+		}
+		if setExpression != nil {
+			q.SetAcceptExpression(*setExpression)
+		}
+		first, err = q.Next()
+		if err != nil {
+			return err
+		}
+
+		got := (*first)["x"]
+		expected := Expression{
+			Operator: Operator{OperatorAnd{}},
+			Args: []interface{}{
+				Expression{
+					Operator: Operator{OperatorUnify{}},
+					Args: []interface{}{
+						int64(1),
+						Expression{
+							Operator: Operator{OperatorDot{}},
+							Args: []interface{}{
+								Variable("_this"),
+								"bar",
+							},
+						},
+					},
+				},
+				Expression{
+					Operator: Operator{OperatorUnify{}},
+					Args: []interface{}{
+						int64(2),
+						Expression{
+							Operator: Operator{OperatorDot{}},
+							Args: []interface{}{
+								Variable("_this"),
+								"baz",
+							},
+						},
+					},
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(got, expected) {
+			t.Errorf("Expected: \n%+v,\n got: \n%+v", expected, got)
+		}
+
+		return nil
+	}
+
+	// Test One: don't call set expression at all
+	// expected result: first test passes, second test errors on expression
+	var flag bool
+	err = test(o, &flag)
+	if err == nil {
+		t.Errorf("Expected to error on expression")
+	} else if !strings.Contains(err.Error(), "Received Expression from Polar VM") {
+		t.Errorf("Expected to error on expression, got: %s", err)
+	}
+
+	// Test Two: explicitly set expression to false
+	// expected result: first test passes, second test errors on expression
+	flag = false
+	err = test(o, &flag)
+	if err == nil {
+		t.Errorf("Expected to error on expression")
+	} else if !strings.Contains(err.Error(), "Received Expression from Polar VM") {
+		t.Errorf("Expected to error on expression, got: %s", err)
+	}
+
+	// Test Three: set allow expression to true
+	// expected result: first and second tests pass
+	flag = true
+	err = test(o, &flag)
+	if err != nil {
+		t.Errorf("Expected to succeed, got: %s", err)
 	}
 }
