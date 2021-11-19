@@ -53,6 +53,7 @@ public class Ffi {
     public void check() throws Exceptions.OsoException {
       jnr.ffi.Pointer e = this.error.get();
       long r = this.result.get();
+      polarLib.result_free(getMemory(this));
       if (e == null) {
         return;
       } else {
@@ -115,10 +116,6 @@ public class Ffi {
 
     protected void registerConstant(String value, String name) throws Exceptions.OsoException {
       CResultVoid result = polarLib.polar_register_constant(ptr, name, value);
-      // System.out.println(result);
-      // if(result == null) {
-
-      // }
       result.check();
     }
 
