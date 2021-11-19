@@ -56,6 +56,19 @@ func (p *PolarFfi) delete() {
 	p = nil
 }
 
+/*
+The checkResult{Void,String,Query} methods  take the
+result _pointer_ returned from Rust, extract the result
+and turn it into (T, error) format, and free the memory
+used by the result.
+
+Results are of the form struct { T result, string error }
+`result_free` only frees those two pointers. The error
+is freed by calling getError (which calls readStr),
+and the pointer is (a) void, (b) freed in calling readStr,
+or (c) wrapped in a QueryFfi struct, depending on the method
+*/
+
 func checkResultVoid(res *C.polar_CResult_c_void) error {
 	err := res.error
 	defer C.result_free(res)
@@ -68,6 +81,8 @@ func checkResultVoid(res *C.polar_CResult_c_void) error {
 func checkResultString(res *C.polar_CResult_c_char) (*string, error) {
 	err := res.error
 	resultPtr := res.result
+	// it's fine to cast this pointer to result c_void, since Rust wont
+	// do anything with inner pointers anyway
 	defer C.result_free((*C.polar_CResult_c_void)((unsafe.Pointer)(res)))
 	if err != nil {
 		return nil, getError(err)
@@ -79,6 +94,8 @@ func checkResultString(res *C.polar_CResult_c_char) (*string, error) {
 func checkResultQuery(res *C.polar_CResult_Query) (*QueryFfi, error) {
 	err := res.error
 	resultPtr := res.result
+	// it's fine to cast this pointer to result c_void, since Rust wont
+	// do anything with inner pointers anyway
 	defer C.result_free((*C.polar_CResult_c_void)((unsafe.Pointer)(res)))
 	if err != nil {
 		return nil, getError(err)
