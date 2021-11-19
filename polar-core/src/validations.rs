@@ -2,68 +2,16 @@ use std::collections::{HashMap, HashSet};
 
 use super::diagnostic::Diagnostic;
 use super::error::ValidationError;
-use super::formatting::source_lines;
 use super::kb::*;
 use super::rules::*;
-use super::sources::Source;
 use super::terms::*;
 use super::visitor::{walk_call, walk_rule, walk_term, Visitor};
-
-fn common_misspellings(t: &str) -> Option<String> {
-    let misspelled_type = match t {
-        "integer" => "Integer",
-        "int" => "Integer",
-        "i32" => "Integer",
-        "i64" => "Integer",
-        "u32" => "Integer",
-        "u64" => "Integer",
-        "usize" => "Integer",
-        "size_t" => "Integer",
-        "float" => "Float",
-        "f32" => "Float",
-        "f64" => "Float",
-        "double" => "Float",
-        "char" => "String",
-        "str" => "String",
-        "string" => "String",
-        "list" => "List",
-        "array" => "List",
-        "Array" => "List",
-        "dict" => "Dictionary",
-        "Dict" => "Dictionary",
-        "dictionary" => "Dictionary",
-        "hash" => "Dictionary",
-        "Hash" => "Dictionary",
-        "map" => "Dictionary",
-        "Map" => "Dictionary",
-        "HashMap" => "Dictionary",
-        "hashmap" => "Dictionary",
-        "hash_map" => "Dictionary",
-        _ => return None,
-    };
-    Some(misspelled_type.to_owned())
-}
+use super::warning::ValidationWarning;
 
 /// Record singleton variables and unknown specializers in a rule.
 struct SingletonVisitor<'kb> {
     kb: &'kb KnowledgeBase,
     singletons: HashMap<Symbol, Option<Term>>,
-}
-
-fn diagnostic_from_singleton(term: Term, source: Option<Source>) -> Diagnostic {
-    if let Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) = term.value() {
-        let mut msg = format!("Unknown specializer {}", tag);
-        if let Some(t) = common_misspellings(&tag.0) {
-            msg.push_str(&format!(", did you mean {}?", t));
-        }
-        if let Some(ref source) = source {
-            msg.push('\n');
-            msg.push_str(&source_lines(source, term.offset(), 0));
-        }
-        Diagnostic::Warning(msg)
-    } else {
-        Diagnostic::Error(ValidationError::SingletonVariable { term }.into())
-    }
 }
 
 impl<'kb> SingletonVisitor<'kb> {
@@ -75,13 +23,24 @@ impl<'kb> SingletonVisitor<'kb> {
     }
 
     fn warnings(self) -> Vec<Diagnostic> {
-        let mut singletons = self.singletons.into_values().flatten().collect::<Vec<_>>();
-        singletons.sort_by_key(Term::offset);
+        let mut singletons = self
+            .singletons
+            .into_iter()
+            .flat_map(|(sym, term)| term.map(|t| (sym, t)))
+            .collect::<Vec<_>>();
+        singletons.sort_by_key(|(_, term)| term.offset());
         singletons
             .into_iter()
-            .map(|term| {
-                let source = self.kb.get_term_source(&term);
-                diagnostic_from_singleton(term, source)
+            .map(|(sym, term)| {
+                if let Value::Pattern(_) = term.value() {
+                    Diagnostic::Warning(
+                        ValidationWarning::UnknownSpecializer { term, sym }.with_context(self.kb),
+                    )
+                } else {
+                    Diagnostic::Error(
+                        ValidationError::SingletonVariable { term }.with_context(self.kb),
+                    )
+                }
             })
             .collect()
     }
@@ -117,7 +76,7 @@ pub fn check_singletons(rule: &Rule, kb: &KnowledgeBase) -> Vec<Diagnostic> {
 
 struct AndOrPrecendenceCheck<'kb> {
     kb: &'kb KnowledgeBase,
-    unparenthesized_expr: Vec<(Source, Term)>,
+    unparenthesized_expr: Vec<Term>,
 }
 
 impl<'kb> AndOrPrecendenceCheck<'kb> {
@@ -128,17 +87,13 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
         }
     }
 
-    fn warnings(&mut self) -> Vec<Diagnostic> {
+    fn warnings(self) -> Vec<Diagnostic> {
         self.unparenthesized_expr
-            .iter()
-            .map(|(source, or_term)| {
-                let mut msg = "Expression without parentheses could be ambiguous. \n\
-                    Prior to 0.20, `x and y or z` would parse as `x and (y or z)`. \n\
-                    As of 0.20, it parses as `(x and y) or z`, matching other languages. \n\
-                \n\n"
-                    .to_string();
-                msg.push_str(&source_lines(source, or_term.offset(), 0));
-                Diagnostic::Warning(msg)
+            .into_iter()
+            .map(|term| {
+                Diagnostic::Warning(
+                    ValidationWarning::AmbiguousPrecedence { term }.with_context(self.kb),
+                )
             })
             .collect()
     }
@@ -162,7 +117,7 @@ impl<'kb> Visitor for AndOrPrecendenceCheck<'kb> {
                 // check if source _before_ the term contains an opening
                 // parenthesis
                 if !source.src[..span.0].trim().ends_with('(') {
-                    self.unparenthesized_expr.push((source, term.clone()));
+                    self.unparenthesized_expr.push(term.clone());
                 }
             }
         }
@@ -184,17 +139,7 @@ pub fn check_no_allow_rule(kb: &KnowledgeBase) -> Option<Diagnostic> {
         None
     } else {
         Some(Diagnostic::Warning(
-            "Your policy does not contain an allow rule, which usually means \
-that no actions are allowed. Did you mean to add an allow rule to \
-the top of your policy?
-
-  allow(actor, action, resource) if ...
-
-You can also suppress this warning by adding an allow_field or allow_request \
-rule. For more information about allow rules, see:
-
-  https://docs.osohq.com/reference/polar/builtin_rule_types.html#allow"
-                .to_string(),
+            ValidationWarning::MissingAllowRule.with_context(kb),
         ))
     }
 }
@@ -219,24 +164,17 @@ impl ResourceBlocksMissingHasPermissionVisitor {
         }
     }
 
-    fn warnings(&mut self) -> Option<Diagnostic> {
+    fn warnings(&mut self) -> Option<ValidationWarning> {
         if !self.calls_has_permission {
-            return Some(Diagnostic::Warning("Warning: your policy uses resource blocks but does not call the \
-has_permission rule. This means that permissions you define in a \
-resource block will not have any effect. Did you mean to include a \
-call to has_permission in a top-level allow rule?
-
-  allow(actor, action, resource) if
-      has_permission(actor, action, resource);
-
-For more information about resource blocks, see https://docs.osohq.com/any/reference/polar/polar-syntax.html#actor-and-resource-blocks".to_string()
-            ));
+            return Some(ValidationWarning::MissingHasPermissionRule);
         }
         None
     }
 }
 
-pub fn check_resource_blocks_missing_has_permission(kb: &KnowledgeBase) -> Option<Diagnostic> {
+pub fn check_resource_blocks_missing_has_permission(
+    kb: &KnowledgeBase,
+) -> Option<ValidationWarning> {
     if kb.resource_blocks.resources.is_empty() {
         return None;
     }
@@ -248,12 +186,12 @@ pub fn check_resource_blocks_missing_has_permission(kb: &KnowledgeBase) -> Optio
     visitor.warnings()
 }
 
-struct UndefinedRuleVisitor<'kb> {
+struct UndefinedRuleCallVisitor<'kb> {
     call_terms: Vec<Term>,
     defined_rules: HashSet<&'kb Symbol>,
 }
 
-impl<'kb> UndefinedRuleVisitor<'kb> {
+impl<'kb> UndefinedRuleCallVisitor<'kb> {
     fn new(defined_rules: HashSet<&'kb Symbol>) -> Self {
         Self {
             defined_rules,
@@ -261,19 +199,19 @@ impl<'kb> UndefinedRuleVisitor<'kb> {
         }
     }
 
-    fn errors(self) -> Vec<Diagnostic> {
+    fn errors(self) -> Vec<ValidationError> {
         self.call_terms
             .into_iter()
             .filter(|term| {
                 let call = term.value().as_call().unwrap();
                 !self.defined_rules.contains(&call.name)
             })
-            .map(|term| Diagnostic::Error(ValidationError::UndefinedRule { term }.into()))
+            .map(|term| ValidationError::UndefinedRuleCall { term })
             .collect()
     }
 }
 
-impl<'kb> Visitor for UndefinedRuleVisitor<'kb> {
+impl<'kb> Visitor for UndefinedRuleCallVisitor<'kb> {
     fn visit_term(&mut self, term: &Term) {
         match term.value() {
             Value::Expression(op) => {
@@ -289,11 +227,15 @@ impl<'kb> Visitor for UndefinedRuleVisitor<'kb> {
 }
 
 pub fn check_undefined_rule_calls(kb: &KnowledgeBase) -> Vec<Diagnostic> {
-    let mut visitor = UndefinedRuleVisitor::new(kb.get_rules().keys().collect());
+    let mut visitor = UndefinedRuleCallVisitor::new(kb.get_rules().keys().collect());
     for rule in kb.get_rules().values() {
         visitor.visit_generic_rule(rule);
     }
-    visitor.errors()
+    visitor
+        .errors()
+        .into_iter()
+        .map(|e| Diagnostic::Error(e.with_context(kb)))
+        .collect()
 }
 
 #[cfg(test)]

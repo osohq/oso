@@ -6,12 +6,14 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
-use super::error::OperationalError::{self, InvalidState};
+use super::error::RuntimeError::{self, InvalidState};
 pub use super::formatting::ToPolarString;
 pub use super::numerics::Numeric;
 use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::sources::SourceInfo;
 use super::visitor::{walk_operation, walk_term, Visitor};
+
+type Result<T> = core::result::Result<T, RuntimeError>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {
@@ -146,7 +148,7 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn as_symbol(&self) -> Result<&Symbol, OperationalError> {
+    pub fn as_symbol(&self) -> Result<&Symbol> {
         match self {
             Value::Variable(name) => Ok(name),
             Value::RestVariable(name) => Ok(name),
@@ -156,7 +158,7 @@ impl Value {
         }
     }
 
-    pub fn as_string(&self) -> Result<&str, OperationalError> {
+    pub fn as_string(&self) -> Result<&str> {
         match self {
             Value::String(string) => Ok(string.as_ref()),
             _ => Err(InvalidState {
@@ -165,7 +167,7 @@ impl Value {
         }
     }
 
-    pub fn as_expression(&self) -> Result<&Operation, OperationalError> {
+    pub fn as_expression(&self) -> Result<&Operation> {
         match self {
             Value::Expression(op) => Ok(op),
             _ => Err(InvalidState {
@@ -174,7 +176,7 @@ impl Value {
         }
     }
 
-    pub fn as_call(&self) -> Result<&Call, OperationalError> {
+    pub fn as_call(&self) -> Result<&Call> {
         match self {
             Value::Call(pred) => Ok(pred),
             _ => Err(InvalidState {
@@ -183,7 +185,7 @@ impl Value {
         }
     }
 
-    pub fn as_pattern(&self) -> Result<&Pattern, OperationalError> {
+    pub fn as_pattern(&self) -> Result<&Pattern> {
         match self {
             Value::Pattern(p) => Ok(p),
             _ => Err(InvalidState {
@@ -192,7 +194,7 @@ impl Value {
         }
     }
 
-    pub fn as_list(&self) -> Result<&TermList, OperationalError> {
+    pub fn as_list(&self) -> Result<&TermList> {
         match self {
             Value::List(l) => Ok(l),
             _ => Err(InvalidState {
@@ -201,7 +203,7 @@ impl Value {
         }
     }
 
-    pub fn as_dict(&self) -> Result<&Dictionary, OperationalError> {
+    pub fn as_dict(&self) -> Result<&Dictionary> {
         match self {
             Value::Dictionary(d) => Ok(d),
             _ => Err(InvalidState {
@@ -349,7 +351,7 @@ impl Term {
         }
     }
 
-    /// Creates a new term from the parser
+    /// Creates a new term from across the FFI boundary
     pub fn new_from_ffi(value: Value) -> Self {
         Self {
             source_info: SourceInfo::Ffi,

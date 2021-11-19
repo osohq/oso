@@ -56,7 +56,7 @@ void (async function () {
     const expectedMessage =
       'hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 19';
     const { name, message } = e as Error;
-    if (name === expectedName && message === expectedMessage)
+    if (name === expectedName && message.startsWith(expectedMessage))
       exceptionThrown = true;
   } finally {
     if (!exceptionThrown) throw new Error(); // eslint-disable-line no-unsafe-finally
