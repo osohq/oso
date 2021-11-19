@@ -1,28 +1,28 @@
 .PHONY: build package wasm fmtcheck lint test clean
 
 build: clean wasm node_modules
-	@yarn compile
+	yarn compile
 
 package: clean wasm node_modules
-	@yarn vsce package
+	yarn vsce package
 
 CARGO_FLAGS ?= --dev
 
 wasm:
-	@$(MAKE) CARGO_FLAGS=$(CARGO_FLAGS) -C ../../polar-language-server build
+	$(MAKE) CARGO_FLAGS=$(CARGO_FLAGS) -C ../../polar-language-server build
 
 node_modules: package.json client/package.json server/package.json
-	@yarn install
+	yarn install
 	@touch $@
 
 fmtcheck: clean node_modules
-	@yarn fmtcheck
+	yarn fmtcheck
 
 lint: clean wasm node_modules
-	@yarn lint
+	yarn lint
 
 test: clean wasm node_modules
-	@yarn test
+	yarn test
 
 clean:
-	@rm -rf client/out server/out
+	rm -rf client/out server/out
