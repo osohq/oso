@@ -258,6 +258,9 @@ pub struct PolarVirtualMachine {
     polar_log_stderr: bool,
     polar_log_mute: bool,
 
+    /// Development mode flag
+    development_mode_active: bool,
+
     // Other flags.
     pub query_contains_partial: bool,
     pub inverting: bool,
@@ -327,10 +330,13 @@ impl PolarVirtualMachine {
             kb,
             call_id_symbols: HashMap::new(),
             // `log` controls internal VM logging
+            development_mode_active: polar_log_vars.iter().any(|var| var == &"development"),
             log: polar_log_vars.iter().any(|var| var == &"trace"),
             // `polar_log` for tracing policy evaluation
             polar_log: !polar_log_vars.is_empty()
-                && !polar_log_vars.iter().any(|var| ["0", "off"].contains(var)),
+                && !polar_log_vars
+                    .iter()
+                    .any(|var| ["development", "0", "off"].contains(var)),
             // `polar_log_stderr` prints things immediately to stderr
             polar_log_stderr: polar_log_vars.iter().any(|var| var == &"now"),
             polar_log_mute: false,
@@ -351,7 +357,7 @@ impl PolarVirtualMachine {
                 self.polar_log_stderr = true;
             }
             self.polar_log = match Some(pl).as_deref() {
-                None | Some("0") | Some("off") => false,
+                None | Some("development") | Some("0") | Some("off") => false,
                 _ => true,
             }
         }
@@ -508,14 +514,19 @@ impl PolarVirtualMachine {
             }
             Goal::TraceRule { trace } => {
                 if let Node::Rule(rule) = &trace.node {
+                    // check whether the rule has been annotated
+                    // TODO @patrickod `development_log` rule name & annotation
+                    if self.development_mode_active {
+                        if let Some(annotation) = &rule.annotation {
+                            let rule_msg = format!("TRACE: {} {}", annotation, rule.name);
+                            self.development_log(&rule_msg);
+                        }
+                    }
+
                     self.log_with(
                         || {
                             let source_str = self.rule_source(rule);
-                            if let Some(_) = rule.annotation {
-                                format!("TRACE RULE: {}", source_str)
-                            } else {
-                                format!("RULE: {}", source_str)
-                            }
+                            format!("RULE: {}", source_str)
                         },
                         &[],
                     );
@@ -758,6 +769,14 @@ impl PolarVirtualMachine {
             console_error(&message);
         } else {
             self.messages.push(MessageKind::Print, message);
+        }
+    }
+
+    fn development_log(&self, message: &str) {
+        if self.development_mode_active {
+            for line in message.split('\n') {
+                self.print(format!("[development] {}", line));
+            }
         }
     }
 
