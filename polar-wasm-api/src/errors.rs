@@ -53,6 +53,9 @@ fn kind(err: &PolarError) -> String {
         Validation(UnregisteredClass { .. }) => "ValidationError::UnregisteredClass",
         Validation(MissingRequiredRule { .. }) => "ValidationError::MissingRequiredRule",
         Validation(DuplicateShorthandRule { .. }) => "ValidationError::DuplicateShorthandRule",
+        Validation(DuplicateResourceBlockDeclaration { .. }) => {
+            "ValidationError::DuplicateResourceBlockDeclaration"
+        }
     }
     .to_owned()
 }

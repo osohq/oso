@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 
 use super::error::ValidationError;
 use super::kb::KnowledgeBase;
@@ -169,12 +170,28 @@ pub fn resource_block_from_productions(
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Declaration {
     Role,
     Permission,
     /// `Term` is a `Symbol` that is the (registered) type of the relation. E.g., `Org` in `parent: Org`.
     Relation(Term),
+}
+
+impl fmt::Display for Declaration {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Role => {
+                write!(f, "role")
+            }
+            Self::Permission => {
+                write!(f, "permission")
+            }
+            Self::Relation(_) => {
+                write!(f, "relation")
+            }
+        }
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, Hash, PartialEq, Eq)]
@@ -290,8 +307,36 @@ impl ResourceBlocks {
 
         // Merge existing declarations if we are reopening a resource block, otherwise add new
         if let Some(existing) = self.declarations.get_mut(&resource) {
-            existing.extend(declarations.into_iter());
+            for (key, new) in &declarations {
+                let existing_declaration = existing.get(key);
+                // allow
+                // 1. overwriting declarations of the **same** type
+                // 2. inserting declarations where none previously existed
+                //
+                // deny overwriting of declarations with mismatched types
+                match (new, existing_declaration) {
+                    // new or same-type declarations are accepted
+                    (Declaration::Relation(_), Some(Declaration::Relation(_)))
+                    | (Declaration::Relation(_), None)
+                    | (Declaration::Role, Some(Declaration::Role))
+                    | (Declaration::Role, None)
+                    | (Declaration::Permission, Some(Declaration::Permission))
+                    | (Declaration::Permission, None) => {
+                        existing.insert(key.clone(), new.clone());
+                    }
+                    // disallow all other combinations (mismatched declaration types)
+                    _ => {
+                        return Err(ValidationError::DuplicateResourceBlockDeclaration {
+                            resource,
+                            declaration: key.clone(),
+                            existing: existing_declaration.unwrap().clone(),
+                            new: new.clone(),
+                        })
+                    }
+                }
+            }
         } else {
+            // or insert a new set of declarations for the resource type
             self.declarations.insert(resource.clone(), declarations);
         }
 
@@ -698,6 +743,9 @@ mod tests {
             Validation(ValidationError::ResourceBlock { msg, .. }) => msg,
             Validation(ValidationError::UnregisteredClass { .. }) => error.to_string(),
             Validation(ValidationError::DuplicateShorthandRule { .. }) => error.to_string(),
+            Validation(ValidationError::DuplicateResourceBlockDeclaration { .. }) => {
+                error.to_string()
+            }
             _ => panic!("Unexpected error: {}", error),
         };
         assert!(msg.contains(expected));
@@ -1063,6 +1111,80 @@ mod tests {
             &p,
             invalid_policy,
             r#"Duplicate shorthand rule `"reader" if "writer";` declared for resource Repo"#,
+        );
+    }
+
+    #[test]
+    fn test_resource_block_declarations_overwriting() {
+        let p = Polar::new();
+
+        let repo_instance = ExternalInstance {
+            instance_id: 1,
+            constructor: None,
+            repr: None,
+        };
+        let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
+        let repo_name = sym!("Repo");
+        p.register_constant(repo_name.clone(), repo_term).unwrap();
+        p.register_mro(repo_name, vec![repo_instance.instance_id])
+            .unwrap();
+
+        // validate overwriting declarations of the same type is ok
+        let valid_policy = r#"
+            resource Repo {
+                roles = ["reader"];
+            }
+
+            resource Repo {
+                roles = ["reader"];
+            }
+
+            has_role(actor: Actor, _role: String, repo: Repo) if
+               repo in actor.repos;
+        "#;
+        assert!(p.load_str(valid_policy).is_ok());
+        p.clear_rules();
+
+        // validate overwriting of different types throws error
+        let invalid_policy = r#"
+            resource Repo {
+                roles = ["reader"];
+            }
+
+            resource Repo {
+                permissions = ["reader"];
+            }
+
+            has_role(actor: Actor, _role: String, repo: Repo) if
+               repo in actor.repos;
+        "#;
+
+        expect_error(
+            &p,
+            invalid_policy,
+            r#"Cannot overwrite existing role declaration "reader" in resource Repo with permission"#,
+        );
+
+        // validate overwriting of different types throws error
+        let invalid_policy = r#"
+            resource Repo {
+                roles = ["reader"];
+            }
+
+            resource Repo {
+                relations = { reader: Repo };
+            }
+
+            has_role(actor: Actor, _role: String, repo: Repo) if
+                repo in actor.repos;
+            has_relation(subject: Repo, "reader", object: Repo) if
+                object.parent_id = subject.id;
+        "#;
+
+        expect_error(
+            &p,
+            invalid_policy,
+            r#"Cannot overwrite existing role declaration "reader" in resource Repo with relation"#,
         );
     }
 

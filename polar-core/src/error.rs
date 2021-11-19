@@ -3,7 +3,7 @@ use std::fmt;
 use indoc::formatdoc;
 use serde::{Deserialize, Serialize};
 
-use crate::resource_block::ShorthandRule;
+use crate::resource_block::{Declaration, ShorthandRule};
 use crate::terms::ToPolarString;
 
 use super::{
@@ -435,6 +435,13 @@ pub enum ValidationError {
         resource: Term,
         shorthand_rule: ShorthandRule,
     },
+    DuplicateResourceBlockDeclaration {
+        /// Term<Symbol> for the resource block and Declaration where the error arose, tracked for lexical context
+        resource: Term,
+        declaration: Term,
+        existing: Declaration,
+        new: Declaration,
+    },
 }
 
 impl ValidationError {
@@ -447,6 +454,9 @@ impl ValidationError {
             | SingletonVariable { term, .. }
             | UndefinedRuleCall { term }
             | DuplicateShorthandRule { resource: term, .. }
+            | DuplicateResourceBlockDeclaration {
+                declaration: term, ..
+            }
             | UnregisteredClass { term, .. } => term.span().zip(kb.get_term_source(term)),
 
             // These errors track `rule`, from which we calculate the span.
@@ -512,6 +522,18 @@ impl fmt::Display for ValidationError {
                     "Duplicate shorthand rule `{}` declared for resource {}",
                     shorthand_rule.to_polar(),
                     resource
+                )
+            }
+            Self::DuplicateResourceBlockDeclaration {
+                resource,
+                declaration,
+                existing,
+                new,
+            } => {
+                write!(
+                    f,
+                    "Cannot overwrite existing {} declaration {} in resource {} with {}",
+                    existing, declaration, resource, new
                 )
             }
         }
