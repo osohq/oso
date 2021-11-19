@@ -1,9 +1,9 @@
-.PHONY: build wasm fmtcheck lint test
+.PHONY: build package wasm fmtcheck lint test clean
 
-build: wasm node_modules
+build: clean wasm node_modules
 	@yarn compile
 
-package: wasm node_modules
+package: clean wasm node_modules
 	@yarn vsce package
 
 CARGO_FLAGS ?= --dev
@@ -15,11 +15,14 @@ node_modules: package.json client/package.json server/package.json
 	@yarn install
 	@touch $@
 
-fmtcheck: node_modules
+fmtcheck: clean node_modules
 	@yarn fmtcheck
 
-lint: node_modules
+lint: clean wasm node_modules
 	@yarn lint
 
-test: node_modules
+test: clean wasm node_modules
 	@yarn test
+
+clean:
+	@rm -rf client/out server/out

@@ -74,12 +74,12 @@
     "fmtcheck": "prettier --check 'client/**/*.ts' 'server/**/*.ts'",
     "fix": "gts fix",
     "postinstall": "cd client && yarn install && cd ../server && yarn install && cd ..",
-    "test": "yarn compile && node ./client/out/test/runTest.js",
+    "test": "yarn compile && yarn esbuild && node ./client/out/test/runTest.js",
 
-    "vscode:prepublish": "yarn esbuild-server -- --minify && yarn esbuild-client -- --minify",
-    "esbuild-server": "esbuild ./server/src/server.ts --bundle --outfile=server/out/server.js --external:vscode --format=cjs --platform=node --analyze",
-    "esbuild-client": "esbuild ./client/src/extension.ts --bundle --outfile=client/out/main.js --external:vscode --format=cjs --platform=node --analyze",
-    "esbuild": "esbuild-server -- --sourcemap && esbuild-client -- --sourcemap"
+    "vscode:prepublish": "yarn esbuild-server --minify && yarn esbuild-client --minify",
+    "esbuild-server": "esbuild ./server/src/server.ts --bundle --outfile=server/out/server.js --external:vscode --format=cjs --platform=node",
+    "esbuild-client": "esbuild ./client/src/extension.ts --bundle --outfile=client/out/main.js --external:vscode --format=cjs --platform=node",
+    "esbuild": "yarn esbuild-server --sourcemap && yarn esbuild-client --sourcemap"
   },
   "devDependencies": {
     "esbuild": "^0.13.14",
