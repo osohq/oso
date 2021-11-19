@@ -30,7 +30,6 @@ python-sqlalchemy-build: python-build
 
 python-test: python-build
 	$(MAKE) -C languages/python/oso test
-	python examples/expenses-py/app.py
 	cd test && python test.py
 
 python-flask-test: python-build python-flask-build
