@@ -1,0 +1,14 @@
+# Ignore everything.
+**
+
+# Selectively un-ignore files we want included in the released extension.
+!CHANGELOG.md
+!client/out/main.js
+!language-configuration.json
+!LICENSE
+!oso_logo.png
+!package.json
+!README.md
+!server/out/server.js
+!server/out/polar_language_server_bg.wasm
+!syntaxes/polar.tmLanguage.json
