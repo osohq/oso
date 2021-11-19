@@ -99,16 +99,15 @@ impl Polar {
                         keyword,
                         resource,
                         productions,
-                    } => match resource_block_from_productions(keyword, resource, productions).map(
-                        |(block, errors)| errors.into_iter().chain(block.add_to_kb(kb)).collect(),
-                    ) {
-                        Ok(errors) | Err(errors) => diagnostics.append(
-                            &mut errors
-                                .into_iter()
-                                .map(|e| Diagnostic::Error(e.with_context(&*kb)))
-                                .collect(),
-                        ),
-                    },
+                    } => {
+                        let (block, mut errors) =
+                            resource_block_from_productions(keyword, resource, productions);
+                        errors.append(&mut block.add_to_kb(kb));
+                        let errors = errors
+                            .into_iter()
+                            .map(|e| Diagnostic::Error(e.with_context(&*kb)));
+                        diagnostics.append(&mut errors.collect());
+                    }
                 }
             }
             Ok(diagnostics)

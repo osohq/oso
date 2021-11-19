@@ -96,14 +96,21 @@ pub fn resource_block_from_productions(
     keyword: Option<Term>,
     resource: Term,
     productions: Vec<Production>,
-) -> core::result::Result<(ResourceBlock, Vec<ValidationError>), Vec<ValidationError>> {
+) -> (ResourceBlock, Vec<ValidationError>) {
     let mut errors = vec![];
 
     let block_type = match block_type_from_keyword(keyword, &resource) {
-        Ok(block_type) => Some(block_type),
+        Ok(block_type) => block_type,
         Err(e) => {
             errors.push(e);
-            None
+            // NOTE(gj): it doesn't matter what we default to here since the (unrecoverable)
+            // `ResourceBlock` error pushed on the line above means we aren't going to make it to
+            // rule type validation, which is the only place where the `BlockType` distinction
+            // matters. I think `Resource` makes marginally more sense than `Actor` since the
+            // `BlockType` distinction will go away and there will only be `Resource` blocks once
+            // we add better union types and can specify the `Actor` union as a union instead of as
+            // `actor Blah {}` "blocks".
+            BlockType::Resource
         }
     };
 
@@ -156,26 +163,17 @@ pub fn resource_block_from_productions(
         }
     }
 
-    if let Some(block_type) = block_type {
-        Ok((
-            ResourceBlock {
-                block_type,
-                resource,
-                roles,
-                permissions,
-                relations,
-                shorthand_rules,
-            },
-            errors,
-        ))
-    } else {
-        // NOTE(gj): If we don't know the `block_type`, I'm worried about trying to make much
-        // additional validation progress with the incomplete resource block since I haven't fully
-        // thought through the implications of, e.g., rule type validation on shorthand rules
-        // created in a resource block w/o a `block_type`. It might actually be fine. It's late.
-        // I'll think about it more tomorrow.
-        Err(errors)
-    }
+    (
+        ResourceBlock {
+            block_type,
+            resource,
+            roles,
+            permissions,
+            relations,
+            shorthand_rules,
+        },
+        errors,
+    )
 }
 
 #[derive(Clone, Debug)]
@@ -1055,8 +1053,7 @@ mod tests {
                     keyword.clone(),
                     resource.clone(),
                     productions.clone(),
-                )
-                .unwrap();
+                );
                 let parsed_shorthand_rules: HashSet<&ShorthandRule> =
                     HashSet::from_iter(&parsed.shorthand_rules);
                 let expected_shorthand_rules = HashSet::from_iter(&expected.shorthand_rules);
