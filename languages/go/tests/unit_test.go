@@ -462,7 +462,7 @@ func TestPartial(t *testing.T) {
 	test := func(o oso.Oso, setExpression *bool) error {
 		q, err := o.NewQueryFromRule("f", Variable("x"))
 		if err != nil {
-			t.Fatalf("Failed to get result: %s", err)
+			t.Fatalf("Failed to construct query: %s", err)
 		}
 		if setExpression != nil {
 			q.SetAcceptExpression(*setExpression)
