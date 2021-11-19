@@ -1525,7 +1525,8 @@ mod tests {
     // Test creation of rule types for actor roles
     //   - has_role created because at least one resource block has roles declared
     #[test]
-    fn test_create_resource_specific_rule_types_actor_roles() -> Result<(), PolarError> {
+    fn test_create_resource_specific_rule_types_actor_roles() -> core::result::Result<(), PolarError>
+    {
         let policy = r#"
             actor User {}
 
