@@ -45,7 +45,7 @@ pub struct PolarLanguageServer {
     send_diagnostics_callback: js_sys::Function,
 }
 
-fn range_from_polar_error_context(diagnostic: &PolarDiagnostic) -> Range {
+fn range_from_polar_diagnostic_context(diagnostic: &PolarDiagnostic) -> Range {
     let context = match diagnostic {
         PolarDiagnostic::Error(e) => e.context.as_ref(),
         PolarDiagnostic::Warning(w) => w.context.as_ref(),
@@ -66,7 +66,7 @@ fn range_from_polar_error_context(diagnostic: &PolarDiagnostic) -> Range {
     }
 }
 
-fn uri_from_polar_error_context(diagnostic: &PolarDiagnostic) -> Option<Url> {
+fn uri_from_polar_diagnostic_context(diagnostic: &PolarDiagnostic) -> Option<Url> {
     let context = match diagnostic {
         PolarDiagnostic::Error(e) => e.context.as_ref(),
         PolarDiagnostic::Warning(w) => w.context.as_ref(),
@@ -276,14 +276,14 @@ impl PolarLanguageServer {
         &self,
         diagnostic: &PolarDiagnostic,
     ) -> Option<TextDocumentItem> {
-        uri_from_polar_error_context(diagnostic).and_then(|uri| {
+        uri_from_polar_diagnostic_context(diagnostic).and_then(|uri| {
             if let Some(document) = self.documents.get(&uri) {
                 Some(document.clone())
             } else {
                 let tracked_docs = self.documents.keys().map(ToString::to_string);
                 let tracked_docs = tracked_docs.collect::<Vec<_>>().join(", ");
                 log(&format!(
-                    "untracked doc: {}\n\tTracked: {}\n\tError: {}",
+                    "untracked doc: {}\n\tTracked: {}\n\tDiagnostic: {}",
                     uri, tracked_docs, diagnostic
                 ));
                 None
@@ -333,7 +333,7 @@ impl PolarLanguageServer {
         docs.into_iter()
             .map(|doc| {
                 let diagnostic = Diagnostic {
-                    range: range_from_polar_error_context(&diagnostic),
+                    range: range_from_polar_diagnostic_context(&diagnostic),
                     severity: Some(severity),
                     source: Some("Polar Language Server".to_owned()),
                     message: message.clone(),
