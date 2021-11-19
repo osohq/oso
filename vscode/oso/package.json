@@ -22,7 +22,7 @@
   "engines": {
     "vscode": "^1.52.0"
   },
-  "main": "./client/out/src/extension",
+  "main": "./client/out/main.js",
   "activationEvents": [
     "onStartupFinished"
   ],
