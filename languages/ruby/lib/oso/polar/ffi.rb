@@ -2,7 +2,8 @@
 
 require 'ffi'
 
-# helper method to generate result types
+# Helper method to generate a Result type for different
+# inner types
 def result(result_klass)
   Class.new(::FFI::Struct) do
     layout :result, result_klass, :error, :string
@@ -35,27 +36,14 @@ module Oso
           Rust.free(ptr) unless ptr.null?
         end
       end
-      # Wrapper class for QueryEvent FFI pointer + operations.
-      class QueryEvent < ::FFI::AutoPointer
-        def self.release(ptr)
-          Rust.free(ptr) unless ptr.null?
-        end
-      end
       # Wrapper class for Error FFI pointer + operations.
       class Error < ::FFI::AutoPointer
         def self.release(ptr)
           Rust.free(ptr) unless ptr.null?
         end
       end
-      # Wrapper class for Message FFI pointer + operations.
-      class Message < ::FFI::AutoPointer
-        def self.release(ptr)
-          Rust.free(ptr) unless ptr.null?
-        end
-      end
-
-      # Wrapper class for Source FFI pointer.
-      class Source < ::FFI::AutoPointer
+      # Wrapper class for Rust strings FFI pointer + operations.
+      class RustString < ::FFI::AutoPointer
         def self.release(ptr)
           Rust.free(ptr) unless ptr.null?
         end
@@ -64,12 +52,12 @@ module Oso
       # Defines the result type version of
       # each of these structs
       # result(T) => { result: T, error: string }
+      #
+      # We have a bunch more here than in the other language
+      # because
       CResultVoid = result(:int)
-      CResultString = result(:string)
+      CResultString = result(RustString)
       CResultQuery = result(Query)
-      CResultQueryEvent = result(QueryEvent)
-      CResultMessage = result(Message)
-      CResultSource = result(Source)
     end
     private_constant :FFI
   end
@@ -77,7 +65,5 @@ end
 
 require 'oso/polar/ffi/polar'
 require 'oso/polar/ffi/query'
-require 'oso/polar/ffi/query_event'
 require 'oso/polar/ffi/error'
-require 'oso/polar/ffi/message'
-require 'oso/polar/ffi/source'
+require 'oso/polar/ffi/rust_string'

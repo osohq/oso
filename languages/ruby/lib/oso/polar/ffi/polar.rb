@@ -22,7 +22,7 @@ module Oso
           attach_function :new_query_from_term, :polar_new_query_from_term, [FFI::Polar, :string, :uint32], CResultQuery
           attach_function :register_constant, :polar_register_constant, [FFI::Polar, :string, :string], CResultVoid
           attach_function :register_mro, :polar_register_mro, [FFI::Polar, :string, :string], CResultVoid
-          attach_function :next_message, :polar_next_polar_message, [FFI::Polar], CResultMessage
+          attach_function :next_message, :polar_next_polar_message, [FFI::Polar], CResultString
           attach_function :free, :polar_free, [FFI::Polar], :int32
           attach_function :result_free, :result_free, [:pointer], :int32
           attach_function(
@@ -45,7 +45,7 @@ module Oso
           partials = JSON.dump(partials)
           plan = Rust.build_filter_plan(self, types, partials, variable, class_tag)
           process_messages
-          plan = handle_error plan
+          plan = check_result plan
           # TODO(gw) more error checking?
           JSON.parse plan
         end
@@ -55,14 +55,14 @@ module Oso
         def load(sources)
           loaded = Rust.load(self, JSON.dump(sources))
           process_messages
-          handle_error loaded
+          check_result loaded
         end
 
         # @raise [FFI::Error] if the FFI call returns an error.
         def clear_rules
           cleared = Rust.clear_rules(self)
           process_messages
-          handle_error cleared
+          check_result cleared
         end
 
         # @return [FFI::Query] if there are remaining inline queries.
@@ -86,7 +86,7 @@ module Oso
         def new_query_from_str(str)
           query = Rust.new_query_from_str(self, str, 0)
           process_messages
-          handle_error query
+          check_result query
         end
 
         # @param term [Hash<String, Object>]
@@ -95,7 +95,7 @@ module Oso
         def new_query_from_term(term)
           query = Rust.new_query_from_term(self, JSON.dump(term), 0)
           process_messages
-          handle_error query
+          check_result query
         end
 
         # @param name [String]
@@ -103,7 +103,7 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def register_constant(value, name:)
           registered = Rust.register_constant(self, name, JSON.dump(value))
-          handle_error registered
+          check_result registered
         end
 
         # @param name [String]
@@ -111,11 +111,25 @@ module Oso
         # @raise [FFI::Error] if the FFI call returns an error.
         def register_mro(name, mro)
           registered = Rust.register_mro(self, name, JSON.dump(mro))
-          handle_error registered
+          check_result registered
         end
 
         def next_message
-          handle_error Rust.next_message(self)
+          check_result Rust.next_message(self)
+        end
+
+        def process_message(message, enrich_message)
+          message = JSON.parse(message.to_s)
+          kind = message['kind']
+          msg = message['msg']
+          msg = enrich_message.call(msg)
+
+          case kind
+          when 'Print'
+            puts(msg)
+          when 'Warning'
+            warn(format('[warning] %<msg>s', msg: msg))
+          end
         end
 
         def process_messages
@@ -127,7 +141,7 @@ module Oso
           end
         end
 
-        def handle_error(res)
+        def check_result(res)
           result = res[:result]
           error = res[:error]
           Rust.result_free(res)
