@@ -16,5 +16,5 @@ fmtcheck: node_modules
 lint: node_modules
 	@yarn lint
 
-test: node_modules
+test: wasm node_modules
 	@yarn test
