@@ -3,6 +3,9 @@ use std::fmt;
 use indoc::formatdoc;
 use serde::{Deserialize, Serialize};
 
+use crate::resource_block::ShorthandRule;
+use crate::terms::ToPolarString;
+
 use super::{
     diagnostic::{Context, Range},
     kb::KnowledgeBase,
@@ -443,6 +446,7 @@ impl ValidationError {
             ResourceBlock { term, .. }
             | SingletonVariable { term, .. }
             | UndefinedRuleCall { term }
+            | DuplicateShorthandRule { resource: term, .. }
             | UnregisteredClass { term, .. } => term.span().zip(kb.get_term_source(term)),
 
             // These errors track `rule`, from which we calculate the span.

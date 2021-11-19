@@ -273,7 +273,7 @@ impl ResourceBlocks {
         resource: Term,
         declarations: Declarations,
         shorthand_rules: Vec<ShorthandRule>,
-    ) -> PolarResult<()> {
+    ) -> Result<()> {
         // Check for duplicate existing shorthand rules and return a
         // ValidationError if we discover one
         if let Some(existing_rules) = self.shorthand_rules.get(&resource) {
