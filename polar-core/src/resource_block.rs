@@ -283,8 +283,7 @@ impl ResourceBlocks {
                     return Err(ValidationError::DuplicateShorthandRule {
                         resource,
                         shorthand_rule: rule.clone(),
-                    }
-                    .into());
+                    });
                 }
             }
         }
