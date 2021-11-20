@@ -291,20 +291,6 @@ impl ResourceBlocks {
         declarations: Declarations,
         shorthand_rules: Vec<ShorthandRule>,
     ) -> Result<()> {
-        // Check for duplicate existing shorthand rules and return a
-        // ValidationError if we discover one
-        if let Some(existing_rules) = self.shorthand_rules.get(&resource) {
-            let existing: HashSet<&ShorthandRule> = existing_rules.iter().collect();
-            for rule in &shorthand_rules {
-                if existing.contains(rule) {
-                    return Err(ValidationError::DuplicateShorthandRule {
-                        resource,
-                        shorthand_rule: rule.clone(),
-                    });
-                }
-            }
-        }
-
         // Merge existing declarations if we are reopening a resource block, otherwise add new
         if let Some(existing) = self.declarations.get_mut(&resource) {
             for (key, new) in &declarations {
@@ -742,7 +728,6 @@ mod tests {
         let msg = match error.kind {
             Validation(ValidationError::ResourceBlock { msg, .. }) => msg,
             Validation(ValidationError::UnregisteredClass { .. }) => error.to_string(),
-            Validation(ValidationError::DuplicateShorthandRule { .. }) => error.to_string(),
             Validation(ValidationError::DuplicateResourceBlockDeclaration { .. }) => {
                 error.to_string()
             }
@@ -1091,27 +1076,6 @@ mod tests {
             let shorthand_rules = blocks.shorthand_rules.get(&term!(sym!("Repo"))).unwrap();
             assert_eq!(shorthand_rules.len(), 7);
         }
-        p.clear_rules();
-
-        // There's no reason to declare an identical rule in two different blocks.
-        let invalid_policy = r#"
-            resource Repo {
-              roles = ["reader", "writer"];
-
-              "reader" if "writer";
-            }
-
-            resource Repo {
-              roles = ["reader", "writer"];
-
-              "reader" if "writer";
-            }
-        "#;
-        expect_error(
-            &p,
-            invalid_policy,
-            r#"Duplicate shorthand rule `"reader" if "writer";` declared for resource Repo"#,
-        );
     }
 
     #[test]

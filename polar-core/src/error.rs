@@ -3,12 +3,10 @@ use std::fmt;
 use indoc::formatdoc;
 use serde::{Deserialize, Serialize};
 
-use crate::resource_block::{Declaration, ShorthandRule};
-use crate::terms::ToPolarString;
-
 use super::{
     diagnostic::{Context, Range},
     kb::KnowledgeBase,
+    resource_block::Declaration,
     rules::Rule,
     sources::Source,
     terms::{Symbol, Term},
@@ -431,10 +429,6 @@ pub enum ValidationError {
         /// Term<Symbol> where the error arose, tracked for lexical context.
         term: Term,
     },
-    DuplicateShorthandRule {
-        resource: Term,
-        shorthand_rule: ShorthandRule,
-    },
     DuplicateResourceBlockDeclaration {
         /// Term<Symbol> for the resource block and Declaration where the error arose, tracked for lexical context
         resource: Term,
@@ -453,7 +447,6 @@ impl ValidationError {
             ResourceBlock { term, .. }
             | SingletonVariable { term, .. }
             | UndefinedRuleCall { term }
-            | DuplicateShorthandRule { resource: term, .. }
             | DuplicateResourceBlockDeclaration {
                 declaration: term, ..
             }
@@ -512,17 +505,6 @@ impl fmt::Display for ValidationError {
             }
             Self::UnregisteredClass { term } => {
                 write!(f, "Unregistered class: {}", term)
-            }
-            Self::DuplicateShorthandRule {
-                resource,
-                shorthand_rule,
-            } => {
-                write!(
-                    f,
-                    "Duplicate shorthand rule `{}` declared for resource {}",
-                    shorthand_rule.to_polar(),
-                    resource
-                )
             }
             Self::DuplicateResourceBlockDeclaration {
                 resource,
