@@ -285,7 +285,10 @@ impl ResourceBlocks {
         self.shorthand_rules
             .insert(resource.clone(), shorthand_rules);
         match block_type {
-            BlockType::Actor => self.actors.insert(resource),
+            BlockType::Actor => {
+                self.actors.insert(resource.clone());
+                self.resources.insert(resource)
+            }
             BlockType::Resource => self.resources.insert(resource),
         };
     }
@@ -1497,6 +1500,44 @@ mod tests {
         let expected = rule!("has_relation", ["subject"; instance!(org_name), "parent", "object"; instance!(repo_name)]);
         assert_eq!(1, has_relation_rule_types.len());
         assert_eq!(has_relation_rule_types[0], expected,);
+
+        Ok(())
+    }
+
+    // Test creation of rule types for actor roles
+    //   - has_role created because at least one resource block has roles declared
+    #[test]
+    fn test_create_resource_specific_rule_types_actor_roles() -> core::result::Result<(), PolarError>
+    {
+        let policy = r#"
+            actor Team {
+                roles = ["member", "owner"];
+
+                "member" if "owner";
+            }
+        "#;
+
+        let polar = Polar::new();
+
+        let team_instance = ExternalInstance {
+            instance_id: 1,
+            constructor: None,
+            repr: None,
+        };
+        let team_term = term!(Value::ExternalInstance(team_instance.clone()));
+        let team_name = sym!("Team");
+        polar.register_constant(team_name.clone(), team_term)?;
+        polar.register_mro(team_name, vec![team_instance.instance_id])?;
+
+        polar.load_str(policy)?;
+
+        let kb = polar.kb.read().unwrap();
+
+        let has_role_rule_types = kb.get_rule_types(&sym!("has_role")).unwrap();
+        // has_role(actor: Actor, role: String, resource: Resource)
+        let expected = rule!("has_role", ["actor"; instance!(ACTOR_UNION_NAME), "role"; instance!("String"), "resource"; instance!(RESOURCE_UNION_NAME)]);
+        assert_eq!(1, has_role_rule_types.len());
+        assert_eq!(has_role_rule_types[0], expected);
 
         Ok(())
     }
