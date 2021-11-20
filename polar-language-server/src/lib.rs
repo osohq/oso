@@ -729,7 +729,8 @@ mod tests {
         let mut pls = new_pls();
 
         let resource_block_unregistered_constant = r#"
-            allow(_, _, _);
+            allow(_, _, _) if has_permission(_, _, _);
+            has_permission(_: Actor, _: String, _: Resource);
             actor User {}
         "#;
         let doc = polar_doc("whatever", resource_block_unregistered_constant.to_owned());
@@ -737,9 +738,12 @@ mod tests {
 
         // `load_documents()` API performs no filtering.
         let polar_diagnostics = pls.load_documents();
-        assert_eq!(polar_diagnostics.len(), 1, "{:?}", polar_diagnostics);
-        let polar_diagnostic = polar_diagnostics.get(0).unwrap();
-        assert!(polar_diagnostic
+        assert_eq!(polar_diagnostics.len(), 2, "{:?}", polar_diagnostics);
+        let unknown_specializer = polar_diagnostics.get(0).unwrap();
+        let expected_message = "Unknown specializer String at line 3, column 41 of file file:///whatever.polar:\n\t003:             has_permission(_: Actor, _: String, _: Resource);\n\t                                             ^\n";
+        assert_eq!(unknown_specializer.to_string(), expected_message);
+        let unregistered_class = polar_diagnostics.get(1).unwrap();
+        assert!(unregistered_class
             .to_string()
             .starts_with("Unregistered class: User"));
 
