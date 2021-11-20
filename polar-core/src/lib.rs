@@ -35,4 +35,4 @@ pub mod traces;
 mod validations;
 mod visitor;
 mod vm;
-mod warning;
+pub mod warning;

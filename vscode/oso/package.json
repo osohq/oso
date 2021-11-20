@@ -22,9 +22,9 @@
   "engines": {
     "vscode": "^1.52.0"
   },
-  "main": "./client/out/src/extension",
+  "main": "./client/out/main.js",
   "activationEvents": [
-    "*"
+    "onStartupFinished"
   ],
   "contributes": {
     "languages": [
@@ -66,7 +66,6 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
     "compile": "tsc --build",
     "watch": "tsc --build --watch",
     "clean": "gts clean",
@@ -75,10 +74,17 @@
     "fmtcheck": "prettier --check 'client/**/*.ts' 'server/**/*.ts'",
     "fix": "gts fix",
     "postinstall": "cd client && yarn install && cd ../server && yarn install && cd ..",
-    "test": "yarn compile && node ./client/out/test/runTest.js"
+    "test": "yarn compile && yarn esbuild && node ./client/out/test/runTest.js",
+
+    "vscode:prepublish": "yarn esbuild-server --minify && yarn esbuild-client --minify",
+    "esbuild-server": "esbuild ./server/src/server.ts --bundle --outfile=server/out/server.js --external:vscode --format=cjs --platform=node",
+    "esbuild-client": "esbuild ./client/src/extension.ts --bundle --outfile=client/out/main.js --external:vscode --format=cjs --platform=node",
+    "esbuild": "yarn esbuild-server --sourcemap && yarn esbuild-client --sourcemap"
   },
   "devDependencies": {
+    "esbuild": "^0.13.14",
     "gts": "^3.1.0",
-    "typescript": "^4.4.3"
+    "typescript": "^4.4.3",
+    "vsce": "^2.3.0"
   }
 }
