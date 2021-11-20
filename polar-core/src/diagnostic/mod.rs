@@ -18,9 +18,23 @@ impl Diagnostic {
         matches!(self, Diagnostic::Error(_))
     }
 
-    pub fn is_parse_error(&self) -> bool {
-        use super::error::ErrorKind::Parse;
-        matches!(self, Diagnostic::Error(PolarError { kind: Parse(_), .. }))
+    /// Unrecoverable diagnostics might lead to additional diagnostics that obscure the root issue.
+    ///
+    /// E.g., a `ResourceBlock` error for an invalid `relations` declaration that will cause a
+    /// second `ResourceBlock` error when rewriting a shorthand rule involving the relation.
+    pub fn is_unrecoverable(&self) -> bool {
+        use super::error::{
+            ErrorKind::{Parse, Runtime, Validation},
+            RuntimeError::FileLoading,
+            ValidationError::ResourceBlock,
+        };
+        matches!(
+            self,
+            Diagnostic::Error(PolarError {
+                kind: Parse(_) | Runtime(FileLoading { .. }) | Validation(ResourceBlock { .. }),
+                ..
+            })
+        )
     }
 }
 
