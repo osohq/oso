@@ -99,16 +99,15 @@ impl Polar {
                         keyword,
                         resource,
                         productions,
-                    } => match resource_block_from_productions(keyword, resource, productions)
-                        .map(|block| block.add_to_kb(kb))
-                    {
-                        Ok(errors) | Err(errors) => diagnostics.append(
-                            &mut errors
-                                .into_iter()
-                                .map(|e| Diagnostic::Error(e.with_context(&*kb)))
-                                .collect(),
-                        ),
-                    },
+                    } => {
+                        let (block, mut errors) =
+                            resource_block_from_productions(keyword, resource, productions);
+                        errors.append(&mut block.add_to_kb(kb));
+                        let errors = errors
+                            .into_iter()
+                            .map(|e| Diagnostic::Error(e.with_context(&*kb)));
+                        diagnostics.append(&mut errors.collect());
+                    }
                 }
             }
             Ok(diagnostics)
@@ -126,6 +125,15 @@ impl Polar {
             }
         }
 
+        // NOTE(gj): need to bomb out before rewriting shorthand rules to avoid emitting
+        // correct-but-unhelpful errors, e.g., when there's an invalid `relations` declaration that
+        // will result in a second error when rewriting a shorthand rule involving the relation
+        // that would only distract from the _actual_ error (the invalid `relations` declaration).
+        if diagnostics.iter().any(Diagnostic::is_unrecoverable) {
+            kb.clear_rules();
+            return diagnostics;
+        }
+
         // Rewrite shorthand rules in resource blocks before validating rule types.
         diagnostics.append(
             &mut kb
@@ -135,13 +143,13 @@ impl Polar {
                 .collect(),
         );
 
-        // TODO(gj): need to bomb out before rule type validation in case additional rule types
-        // were defined later on in the file that encountered the `ParseError`. Those additional
-        // rule types might extend the valid shapes for a rule type defined in a different,
-        // well-parsed file that also contains rules that don't conform to the shapes laid out in
-        // the well-parsed file but *would have* conformed to the shapes laid out in the file that
-        // failed to parse.
-        if diagnostics.iter().any(Diagnostic::is_parse_error) {
+        // NOTE(gj): need to bomb out before rule type validation in case additional rule types
+        // were defined later on in the file that encountered the unrecoverable error. Those
+        // additional rule types might extend the valid shapes for a rule type defined in a
+        // different, well-parsed file that also contains rules that don't conform to the shapes
+        // laid out in the well-parsed file but *would have* conformed to the shapes laid out in
+        // the file that failed to parse.
+        if diagnostics.iter().any(Diagnostic::is_unrecoverable) {
             kb.clear_rules();
             return diagnostics;
         }
