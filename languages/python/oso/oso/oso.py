@@ -228,7 +228,7 @@ class Oso(Polar):
 
         return fields
 
-    def authorized_query(self, actor, action, resource_cls):
+    def old_authorized_query(self, actor, action, resource_cls):
         """Create a query for resources of type ``resource_cls``
         that ``actor`` is allowed to perform ``action`` on. The
         query is built by using the ``build_query`` and ``combine_query``
@@ -268,7 +268,50 @@ class Oso(Polar):
 
         return filter_data(self, plan)
 
-    def authorized_resources(self, actor, action, resource_cls) -> List[Any]:
+    def authorized_query(self, actor, action, resource_cls):
+        """Create a query for resources of type ``resource_cls``
+        that ``actor`` is allowed to perform ``action`` on. The
+        query is built by using the ``build_query`` and ``combine_query``
+        functions registered for the ``resource_cls``.
+
+        :param actor: The actor for whom to collect allowed resources.
+        :param action: The action that user wants to perform.
+        :param resource_cls: The type of the resources.
+
+        :return: A query to fetch the resources,
+        """
+        # todo: maybe call the old function if the old config is registered so we dont break existing code.
+
+        # Data filtering.
+        resource = Variable("resource")
+        # Get registered class name somehow
+        class_name = self.host.types[resource_cls].name
+        constraint = Expression(
+            "And", [Expression("Isa", [resource, Pattern(class_name, {})])]
+        )
+
+        query = self.query_rule(
+            "allow",
+            actor,
+            action,
+            resource,
+            bindings={"resource": constraint},
+            accept_expression=True,
+        )
+
+        results = [
+            {"bindings": {k: self.host.to_polar(v)}}
+            for result in query
+            for k, v in result["bindings"].items()
+        ]
+
+        types = serialize_types(self.host.distinct_user_types(), self.host.types)
+        plan = self.ffi_polar.build_data_filter(types, results, "resource", class_name)
+        query = self.host.data_filtering_adapter.build_query(types, plan)
+
+        return query
+
+    def old_authorized_resources(self, actor, action, resource_cls) -> List[Any]:
         """Determine the resources of type ``resource_cls`` that ``actor``
         is allowed to perform ``action`` on.
 
@@ -284,6 +327,28 @@ class Oso(Polar):
 
         results = self.host.types[resource_cls].exec_query(query)
         return results
+
+    def authorized_resources(self, actor, action, resource_cls) -> List[Any]:
+        """Determine the resources of type ``resource_cls`` that ``actor``
+        is allowed to perform ``action`` on.
+
+        :param actor: The actor for whom to collect allowed resources.
+        :param action: The action that user wants to perform.
+        :param resource_cls: The type of the resources.
+
+        :return: The requested resources.
+        """
+        # todo: maybe call the old function if the old config is registered so we dont break existing code.
+
+        query = self.authorized_query(actor, action, resource_cls)
+        if query is None:
+            return []
+
+        results = self.host.data_filtering_adapter.execute_query(query)
+        return results
+
+    def set_data_filtering_adapter(self, adapter):
+        self.host.data_filtering_adapter = adapter
 
     def set_data_filtering_query_defaults(
         self, build_query=None, exec_query=None, combine_query=None

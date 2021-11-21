@@ -46,6 +46,20 @@ class Polar:
         # @TODO(Steve): Decode Filter Plan to not just json?
         return filter_plan
 
+    def build_data_filter(self, types, partial_results, variable, class_tag):
+        """Get a filter for data filtering."""
+        typs = ffi_serialize(types)
+        prs = ffi_serialize(partial_results)
+        var = to_c_str(variable)
+        class_tag = to_c_str(class_tag)
+        plan = lib.polar_build_data_filter(self.ptr, typs, prs, var, class_tag)
+        process_messages(self.next_message)
+        data_filter_p = check_result(plan)
+        data_filter_s = ffi.string(data_filter_p).decode()
+        lib.string_free(data_filter_p)
+        filter = json.loads(data_filter_s)
+        return filter
+
     def load(self, sources: List[PolarSource]):
         """Load Polar policies."""
         result = lib.polar_load(self.ptr, ffi_serialize([s.__dict__ for s in sources]))

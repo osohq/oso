@@ -50,6 +50,9 @@ class Host:
         self.types = (types or {}).copy()
         self.instances = (instances or {}).copy()
         self._accept_expression = False  # default, see set_accept_expression
+
+        self.data_filtering_adapter = None
+
         self.build_query = None
         self.exec_query = None
         self.combine_query = None
