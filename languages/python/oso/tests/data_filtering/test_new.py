@@ -1,6 +1,6 @@
 import pytest
 from oso import Relation, ArrayAdapter
-from .helpers import filter_array, DfTestOso
+from helpers import filter_array, DfTestOso
 from dataclasses import dataclass
 
 
@@ -60,15 +60,15 @@ roles = [
 
 
 @pytest.fixture
-def oso():
+def oso_roles():
     oso = DfTestOso()
 
     type_arrays = {
-        Org: orgs,
-        Repo: repos,
-        Issue: issues,
-        Role: roles,
-        User: users
+        'Org': orgs,
+        'Repo': repos,
+        'Issue': issues,
+        'Role': roles,
+        'User': users
     }
     adapter = ArrayAdapter(type_arrays=type_arrays)
     oso.set_data_filtering_adapter(adapter)
@@ -174,6 +174,139 @@ def oso():
 
     return oso
 
-def test_it(oso):
-    query = oso.authzd_query(leina, "edit", Issue)
+def test_roles(oso_roles):
+    query = oso_roles.authorized_query(leina, "edit", Issue)
     print(query)
+
+
+@dataclass
+class Bar:
+    id: str
+    is_cool: bool
+    is_still_cool: bool
+
+    def foos(self):
+        return [foo for foo in foos if foo.bar_id == self.id]
+
+    def __hash__(self) -> int:
+        return hash(self.id)
+
+
+@dataclass
+class Foo:
+    id: str
+    bar_id: str
+    is_fooey: bool
+    numbers: list
+
+    def bar(self):
+        one_bar = [bar for bar in bars if bar.id == self.bar_id]
+        assert len(one_bar) == 1
+        return one_bar[0]
+
+    def logs(self):
+        return [log for log in logs if self.id == log.foo_id]
+
+    def __hash__(self) -> int:
+        return hash(self.id)
+
+
+@dataclass
+class Log:
+    id: str
+    foo_id: str
+    data: str
+
+    def foo(self):
+        one_foo = [foo for foo in foos if foo.id == self.foo_id]
+        assert len(one_foo) == 1
+        return one_foo[0]
+
+    def __hash__(self) -> int:
+        return hash(self.id)
+
+
+hello_bar = Bar(id="hello", is_cool=True, is_still_cool=True)
+goodbye_bar = Bar(id="goodbye", is_cool=False, is_still_cool=True)
+hershey_bar = Bar(id="hershey", is_cool=False, is_still_cool=False)
+
+something_foo = Foo(id="something", bar_id="hello", is_fooey=False, numbers=[])
+another_foo = Foo(id="another", bar_id="hello", is_fooey=True, numbers=[1])
+third_foo = Foo(id="third", bar_id="hello", is_fooey=True, numbers=[2])
+fourth_foo = Foo(id="fourth", bar_id="goodbye", is_fooey=True, numbers=[2, 1])
+
+fourth_log_a = Log(id="a", foo_id="fourth", data="hello")
+third_log_b = Log(id="b", foo_id="third", data="world")
+another_log_c = Log(id="c", foo_id="another", data="steve")
+
+bars = [hello_bar, goodbye_bar, hershey_bar]
+foos = [something_foo, another_foo, third_foo, fourth_foo]
+logs = [fourth_log_a, third_log_b, another_log_c]
+
+
+@pytest.fixture
+def oso_foo():
+    oso = DfTestOso()
+
+    type_arrays = {
+        'Foo': foos,
+        'Bar': bars,
+        'Log': logs
+    }
+    adapter = ArrayAdapter(type_arrays=type_arrays)
+    oso.set_data_filtering_adapter(adapter)
+
+    oso.register_class(
+        Bar,
+        fields={
+            "id": str,
+            "is_cool": bool,
+            "is_still_cool": bool,
+            "foos": Relation(
+                kind="many", other_type="Foo", my_field="id", other_field="bar_id"
+            ),
+        },
+    )
+    oso.register_class(
+        Foo,
+        fields={
+            "id": str,
+            "bar_id": str,
+            "is_fooey": bool,
+            "numbers": list,
+            "bar": Relation(
+                kind="one", other_type="Bar", my_field="bar_id", other_field="id"
+            ),
+            "logs": Relation(
+                kind="many",
+                other_type="Log",
+                my_field="id",
+                other_field="foo_id",
+            ),
+        },
+    )
+    oso.register_class(
+        Log,
+        fields={
+            "id": str,
+            "foo_id": str,
+            "data": str,
+            "foo": Relation(
+                kind="one", other_type="Foo", my_field="foo_id", other_field="id"
+            ),
+        },
+    )
+    return oso
+
+def test_foo(oso_foo):
+    oso_foo.load_str('allow(_, _, _: Foo{id: "something"});')
+    oso_foo.check_authz("gwen", "get", Foo, [something_foo])
+
+    oso_foo.clear_rules()
+    oso_foo.load_str(
+        """
+            allow(_, _, _: Foo{id: "something"});
+            allow(_, _, _: Foo{id: "another"});
+        """
+    )
+    oso_foo.check_authz("gwen", "get", Foo, [another_foo, something_foo])

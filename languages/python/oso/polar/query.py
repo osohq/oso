@@ -105,24 +105,44 @@ class Query:
                     attr_typ = typ[attribute]
                     if isinstance(attr_typ, Relation):
                         rel = attr_typ
-                        # Use the fetcher for the other type to traverse the relationship
-                        build_query = self.host.types[rel.other_type].build_query
-                        exec_query = self.host.types[rel.other_type].exec_query
-                        assert build_query is not None
-                        assert exec_query is not None
-                        constraint = Filter(
-                            kind="Eq",
-                            field=rel.other_field,
-                            value=getattr(instance, rel.my_field),
-                        )
-                        constraints = [constraint]
-                        query = build_query(constraints)
-                        results = exec_query(query)
+                        adapter = self.host.adapter
+                        assert adapter is not None
+                        # query for the relationship
+
+                        filter = {
+                            "root": attr_typ.other_type,
+                            "conditions": [],
+                            "relations": [
+                                [cls_rec.name, rel.my_field, rel.other_type]
+                            ]
+                        }
+                        query = adapter.build_query(self.host.types, filter)
+                        results = adapter.execute_query(query)
                         if rel.kind == "one":
                             assert len(results) == 1
                             attr = results[0]
                         elif rel.kind == "many":
                             attr = results
+
+                        #rel = attr_typ
+                        # Use the fetcher for the other type to traverse the relationship
+                        #build_query = self.host.types[rel.other_type].build_query
+                        #exec_query = self.host.types[rel.other_type].exec_query
+                        #assert build_query is not None
+                        #assert exec_query is not None
+                        #constraint = Filter(
+                        #    kind="Eq",
+                        #    field=rel.other_field,
+                        #    value=getattr(instance, rel.my_field),
+                        #)
+                        #constraints = [constraint]
+                        #query = build_query(constraints)
+                        #results = exec_query(query)
+                        #if rel.kind == "one":
+                        #    assert len(results) == 1
+                        #    attr = results[0]
+                        #elif rel.kind == "many":
+                        #    attr = results
             if attr is None:
                 attr = getattr(instance, attribute)
         except AttributeError as e:

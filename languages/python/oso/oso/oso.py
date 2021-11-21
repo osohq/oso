@@ -284,7 +284,7 @@ class Oso(Polar):
 
         # Data filtering.
         resource = Variable("resource")
-        # Get registered class name somehow
+        # Get registered class name
         class_name = self.host.types[resource_cls].name
         constraint = Expression(
             "And", [Expression("Isa", [resource, Pattern(class_name, {})])]
@@ -307,7 +307,7 @@ class Oso(Polar):
 
         types = serialize_types(self.host.distinct_user_types(), self.host.types)
         plan = self.ffi_polar.build_data_filter(types, results, "resource", class_name)
-        query = self.host.data_filtering_adapter.build_query(types, plan)
+        query = self.host.adapter.build_query(self.host, types, plan)
 
         return query
 
@@ -344,11 +344,11 @@ class Oso(Polar):
         if query is None:
             return []
 
-        results = self.host.data_filtering_adapter.execute_query(query)
+        results = self.host.adapter.execute_query(self.host, query)
         return results
 
     def set_data_filtering_adapter(self, adapter):
-        self.host.data_filtering_adapter = adapter
+        self.host.adapter = adapter
 
     def set_data_filtering_query_defaults(
         self, build_query=None, exec_query=None, combine_query=None

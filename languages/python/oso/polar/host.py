@@ -43,6 +43,7 @@ class Host:
         types=None,
         instances=None,
         get_field=None,
+        adapter=None
     ):
         assert polar, "no Polar handle"
         self.ffi_polar = polar  # a "weak" handle, which we do not free
@@ -51,7 +52,7 @@ class Host:
         self.instances = (instances or {}).copy()
         self._accept_expression = False  # default, see set_accept_expression
 
-        self.data_filtering_adapter = None
+        self.adapter = adapter or None
 
         self.build_query = None
         self.exec_query = None
@@ -85,6 +86,7 @@ class Host:
             types=self.types,
             instances=self.instances,
             get_field=self.get_field,
+            adapter=self.adapter
         )
 
     def get_class(self, name):
