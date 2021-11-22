@@ -198,6 +198,18 @@ let user = User { nickname: Some("Jimmy".to_string()), };
 assert!(oso.is_allowed(user, "foo", "bar")?);
 ```
 
+### UUIDs via the uuid crate
+Oso supports the `UUID` via Rust's [uuid](`https://crates.io/crates/uuid`) crate. To enable it, you'll need to add the feature flag to you `Cargo.toml` file and make sure you have the uuid crate . An example of that appears below:
+```rust
+`oso = {version="0.23.0", features=["uuid-07"]}`
+```
+Note that uuid-07 feature flag does not refer to the uuid version, but to the uuid crate version. 
+Most people will want the `uuid-07` feature flag
+| Uuid Crate Version | Feature Flag |
+|--------------------|--------------|
+| 0.6.5              | uuid-06      |
+| >0.7               | uuid-07      |
+
 ### Rust → Polar Types Summary
 
 | Rust type                                                             | Polar type   |
@@ -208,3 +220,4 @@ assert!(oso.is_allowed(user, "foo", "bar")?);
 | `String`, `&'static str`, `str`                                       | `String`     |
 | `HashMap`, `BTreeMap`                                                 | `Dictionary` |
 | `Vec`, `LinkedList`, `VecDeque` `BinaryHeap`, `HashSet`, `BTreeSet`   | `List`       |
+| `UUID(with the feature flag`                                          | `UUID`       |
