@@ -623,34 +623,6 @@ fn shorthand_rule_head_to_params(head: &Term, resource: &Term) -> Vec<Parameter>
     ]
 }
 
-fn check_that_shorthand_rule_heads_are_declared_globally(
-    kb: &KnowledgeBase,
-    shorthand_rules: &[ShorthandRule],
-    declarations: &Declarations,
-    resource: &Term,
-) -> Vec<ValidationError> {
-    let mut errors = vec![];
-
-    let mut combined = HashMap::new();
-    combined.extend(declarations.iter());
-    if let Some(existing) = kb.resource_blocks.declarations().get(resource) {
-        combined.extend(existing.iter());
-    }
-
-    for ShorthandRule { head, .. } in shorthand_rules {
-        if !combined.contains_key(head) {
-            let msg = format!(
-                "Undeclared term {} referenced in rule in '{}' resource block. \
-                Did you mean to declare it as a role, permission, or relation?",
-                head, resource
-            );
-            let term = head.clone();
-            errors.push(ValidationError::ResourceBlock { msg, term });
-        }
-    }
-    errors
-}
-
 impl ResourceBlock {
     pub fn add_to_kb(self, kb: &mut KnowledgeBase) -> Vec<ValidationError> {
         let mut errors = vec![];
@@ -668,13 +640,6 @@ impl ResourceBlock {
 
         match index_declarations(roles, permissions, relations, &resource) {
             Ok(declarations) => {
-                errors.append(&mut check_that_shorthand_rule_heads_are_declared_globally(
-                    kb,
-                    &shorthand_rules,
-                    &declarations,
-                    &resource,
-                ));
-
                 if let Err(e) =
                     kb.resource_blocks
                         .add(block_type, resource, declarations, shorthand_rules)
