@@ -1063,6 +1063,38 @@ mod tests {
             invalid_policy,
             r#"Cannot overwrite existing role declaration "reader" in resource Repo with relation"#,
         );
+
+        // validating overwriting relations of different types throws error
+        let invalid_policy = r#"
+            actor User {}
+            resource Repo {
+                relations = { reader: Repo };
+            }
+
+            resource Repo {
+                relations = { reader: User };
+            }
+
+            has_role(actor: Actor, _role: String, repo: Repo) if
+                repo in actor.repos;
+            has_relation(subject: Repo, "reader", object: Repo) if
+                object.parent_id = subject.id;
+        "#;
+        let user_instance = ExternalInstance {
+            instance_id: 2,
+            constructor: None,
+            repr: None,
+        };
+        let user_term = term!(Value::ExternalInstance(user_instance.clone()));
+        let user_name = sym!("User");
+        p.register_constant(user_name.clone(), user_term).unwrap();
+        p.register_mro(user_name, vec![user_instance.instance_id])
+            .unwrap();
+        expect_error(
+            &p,
+            invalid_policy,
+            r#"Cannot overwrite existing relation declaration "reader" in resource Repo with relation"#,
+        );
     }
 
     #[test]
