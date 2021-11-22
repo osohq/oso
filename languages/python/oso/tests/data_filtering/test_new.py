@@ -310,3 +310,11 @@ def test_foo(oso_foo):
         """
     )
     oso_foo.check_authz("gwen", "get", Foo, [another_foo, something_foo])
+
+    oso_foo.clear_rules()
+    oso_foo.load_str(
+        """
+            allow(_, _, foo: Foo) if foo.bar.is_cool = true;
+        """
+    )
+    oso_foo.check_authz("gwen", "get", Foo, [another_foo, something_foo, third_foo])

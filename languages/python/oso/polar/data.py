@@ -41,30 +41,71 @@ class ArrayAdapter(Adapter):
             v = val[kind]
             return host.to_python({'value': v})
 
-
+    # todo: hash joins would be better for big arrays but this is mostly used for small tests.
     def build_query(self, host, types, filter):
         assert filter['root'] in types
         typ = filter['root']
 
-        # todo: joins
-        assert filter['relations'] == []
-
+        records = []
+        def join(obj, record, relations):
+            if relations == []:
+                records.append(record)
+                return
+            relation, rest_relations = relations[0], relations[1:]
+            _, name, other_typ = relation
+            rel = types[typ][name]['Relation']
+            rel_typ = rel['other_class_tag']
+            other_array = self.type_arrays[rel_typ]
+            for j, j_obj in enumerate(other_array):
+                my_field = getattr(obj, rel['my_field'])
+                other_field = getattr(j_obj, rel['other_field'])
+                if my_field == other_field:
+                    joined_record = dict(record)
+                    joined_record[rel_typ] = j
+                    join(obj, joined_record, rest_relations)
+                    if rel['kind'] == 'one':
+                        break
+        
         array = self.type_arrays[typ]
+        for i, obj in enumerate(array):
+            record = {typ: i}
+            relations = filter['relations']
+            join(obj, record, relations)
+
         results = set()
         for conditions in filter['conditions']:
-            for obj in array:
+            for rec in records:
                 test = True
                 for (lhs, op, rhs) in conditions:
-                    l = self.get_val(host, typ, obj, lhs)
-                    r = self.get_val(host, typ, obj, rhs)
+                    kind = next(iter(lhs))
+                    if kind == 'Field':
+                        (t, f) = lhs[kind]
+                        i = rec[t]
+                        obj = self.type_arrays[t][i]
+                        v = getattr(obj, f)
+                        l = v
+                    elif kind == 'Imm':
+                        v = lhs[kind]
+                        l = host.to_python({'value': v})
+
+                    kind = next(iter(rhs))
+                    if kind == 'Field':
+                        (t, f) = rhs[kind]
+                        i = rec[t]
+                        obj = self.type_arrays[t][i]
+                        v = getattr(obj, f)
+                        r = v
+                    elif kind == 'Imm':
+                        v = rhs[kind]
+                        r = host.to_python({'value': v})
+
                     if op == 'Eq':
                         test &= l == r
                     else:
                         raise NotImplementedError
                 if test:
-                    results.add(obj)
+                    results.add(self.type_arrays[typ][rec[typ]])
         return results
-                    
     
     def execute_query(self, host, query):
         return list(query)

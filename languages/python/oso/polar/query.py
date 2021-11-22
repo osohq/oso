@@ -7,7 +7,7 @@ from .exceptions import (
     InvalidConstructorError,
     PolarRuntimeError,
 )
-from .data_filtering import Relation, Filter
+from .data_filtering import Relation, Filter, serialize_types
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 
@@ -107,17 +107,21 @@ class Query:
                         rel = attr_typ
                         adapter = self.host.adapter
                         assert adapter is not None
-                        # query for the relationship
-
+                        
                         filter = {
-                            "root": attr_typ.other_type,
-                            "conditions": [],
-                            "relations": [
-                                [cls_rec.name, rel.my_field, rel.other_type]
-                            ]
+                            "root": rel.other_type,
+                            "conditions": [[
+                                [
+                                    {"Field": [rel.other_type, rel.other_field]},
+                                    'Eq',
+                                    {"Imm": self.host.to_polar(getattr(instance, rel.my_field))['value']}
+                                ]
+                            ]],
+                            "relations": []
                         }
-                        query = adapter.build_query(self.host.types, filter)
-                        results = adapter.execute_query(query)
+                        types = serialize_types(self.host.distinct_user_types(), self.host.types)
+                        query = adapter.build_query(self.host, types, filter)
+                        results = adapter.execute_query(self.host, query)
                         if rel.kind == "one":
                             assert len(results) == 1
                             attr = results[0]
