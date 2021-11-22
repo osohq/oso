@@ -20,8 +20,61 @@ type VarName = String;
 type Map<A, B> = HashMap<A, B>;
 type Set<A> = HashSet<A>;
 
-type TypeInfo = Map<TypeName, Map<FieldName, Type>>;
-type VarTypes = Map<PathVar, TypeName>;
+/// Represents an abstract filter over a data source.
+///
+/// `root` is a data type name supplied by the host, for example "User".
+///
+/// `relations` is a set of named logical extensions from the root data type to
+/// other data types (representing "joins" for example).
+///
+/// `conditions` is is set of sets of binary relations (an OR of ANDs) that must
+/// hold over the data source: for every record in the data source, if for some
+/// top-level set in `conditions` every inner condition holds on the record, then
+/// the record passes through the filter.
+#[derive(Clone, Eq, Debug, Serialize, PartialEq)]
+pub struct Filter {
+    root: TypeName,                  // the host already has this, so we could leave it off
+    relations: Set<Relation>,        // this & root determine the "joins" (or whatever)
+    conditions: Vec<Set<Condition>>, // disjunctive normal form
+}
+
+/// A named logical extension of a data set. Corresponds to a "join" in relational
+/// algebra, but we leave out the details about columns (the host knows how to do
+/// it).
+#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
+pub struct Relation(TypeName, FieldName, TypeName);
+
+/// A constraint that must hold for a record in the data source.
+#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
+pub struct Condition(Datum, Comparison, Datum);
+
+/// The left or right side of a Condition.
+#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
+pub enum Datum {
+    Field(Projection),
+    Immediate(Value),
+}
+
+/// The comparison operation applied by a Condition.
+#[derive(PartialEq, Debug, Serialize, Copy, Clone, Eq, Hash)]
+pub enum Comparison {
+    Eq,
+    Neq,
+    In,
+}
+
+/// An abstract "field reference" on a record from a named data source.
+#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
+pub struct Projection(TypeName, Option<FieldName>);
+
+/// Used to keep track of information for building a Filter
+#[derive(Default)]
+struct FilterInfo {
+    type_info: TypeInfo,
+    entities: VarTypes,
+    conditions: Set<Condition>,
+    relations: Set<Relation>,
+}
 
 /// A variable with zero or more "dot lookups"
 ///     a.b.c.d <-> PathVar { var: "a", path: ["b", "c", "d"] }
@@ -31,36 +84,9 @@ struct PathVar {
     path: Vec<FieldName>,
 }
 
+type TypeInfo = Map<TypeName, Map<FieldName, Type>>;
+type VarTypes = Map<PathVar, TypeName>;
 
-/// An abstract filter over a data source
-#[derive(Clone, Eq, Debug, Serialize, PartialEq)]
-pub struct Filter {
-    root: TypeName,                  // the host already has this, so we could leave it off
-    relations: Set<Relation>,        // this & root determine the "joins" (or whatever)
-    conditions: Vec<Set<Condition>>, // disjunctive normal form
-}
-
-#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
-pub struct Relation(TypeName, FieldName, TypeName);
-
-#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
-pub struct Condition(Datum, Comparison, Datum);
-
-#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
-pub enum Datum {
-    Field(Projection),
-    Immediate(Value),
-}
-
-#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
-pub struct Projection(TypeName, Option<FieldName>);
-
-#[derive(PartialEq, Debug, Serialize, Copy, Clone, Eq, Hash)]
-pub enum Comparison {
-    Eq,
-    Neq,
-    In,
-}
 
 impl From<String> for PathVar {
     fn from(var: String) -> Self {
@@ -90,28 +116,6 @@ impl PathVar {
             }
             Variable(Symbol(var)) => Ok(var.clone().into()),
             _ => invalid_state_error(format!("PathVar::from_term({})", t.to_polar())),
-        }
-    }
-}
-
-impl Operation {
-    /// turn an isa from the partial results into a pathvar -> type pair
-    fn into_entity(self) -> Option<PolarResult<(PathVar, TypeName)>> {
-        match self.args[1].value() {
-            Value::Pattern(Pattern::Instance(InstanceLiteral { tag, fields }))
-                if fields.is_empty() =>
-            {
-                // FIXME(gw) this is to work around a complicated simplifier
-                // bug that causes external instances to sometimes be embedded
-                // in partials. term2pathvar will fail if the base of the path
-                // is an external instance and not a var. we can't check if the
-                // isa is true from in here, so just drop it for now. the host
-                // should check for these before building the filter.
-                match PathVar::from_term(&self.args[0]) {
-                    Err(_) => None,
-                    Ok(p) => Some(Ok((p, tag.0.clone()))),
-                }
-            } _ => Some(unsupported_op_error(self)),
         }
     }
 }
@@ -154,6 +158,7 @@ impl Filter {
     fn from_partial(types: &TypeInfo, ands: &Term, class: &str) -> PolarResult<Self> {
         use {Datum::*, Operator::*, Value::*};
 
+
         if std::env::var("POLAR_EXPLAIN").is_ok() {
             eprintln!("{}", ands.to_polar());
         }
@@ -168,7 +173,7 @@ impl Filter {
                 .iter()
                 .map(|and| Ok(and.value().as_expression()?.clone()))
                 .collect::<PolarResult<Vec<_>>>()
-                .and_then(|ands| QueryInfo::build_filter(types.clone(), ands, class)),
+                .and_then(|ands| FilterInfo::build_filter(types.clone(), ands, class)),
 
             // sometimes we get an instance back. that means the variable
             // is exactly this instance, so return a filter that matches it.
@@ -207,15 +212,7 @@ impl Filter {
     }
 }
 
-#[derive(Default)]
-struct QueryInfo {
-    type_info: TypeInfo,
-    entities: VarTypes,
-    conditions: Set<Condition>,
-    relations: Set<Relation>,
-}
-
-impl QueryInfo {
+impl FilterInfo {
     /// try to match a type and a field name with a relation
     fn get_relation_def(&mut self, typ: &str, dot: &str) -> Option<Relation> {
         if let Some(Type::Relation {
@@ -253,9 +250,10 @@ impl QueryInfo {
             match self.get_relation_def(&typ, &dot) {
                 None => return unregistered_field_error(&typ, &dot),
                 Some(rel) => {
-                    typ = rel.2.clone();
-                    pv.path.push(rel.1.clone());
-                    self.entities.insert(pv.clone(), typ.clone());
+                    let Relation(_, name, right) = &rel;
+                    typ = right.clone();
+                    pv.path.push(name.clone());
+                    self.entities.insert(pv.clone(), right.clone());
                     self.relations.insert(rel);
                 }
             }
@@ -328,7 +326,7 @@ impl QueryInfo {
         }
     }
 
-    /// populate conditions and relations on an initialized QueryInfo
+    /// populate conditions and relations on an initialized FilterInfo
     fn with_constraints(mut self, ops: Set<Operation>) -> PolarResult<Self> {
         // find pairs of implicitly equal variables
         let equivs = ops.iter().filter_map(|Operation { operator, args }| {
@@ -380,6 +378,27 @@ impl QueryInfo {
     }
 
     fn build_filter(type_info: TypeInfo, parts: Vec<Operation>, class: &str) -> PolarResult<Filter> {
+
+        // turn an isa from the partial results into a pathvar -> type pair
+        fn isa2entity(op: Operation) -> Option<PolarResult<(PathVar, TypeName)>> {
+            match op.args[1].value() {
+                Value::Pattern(Pattern::Instance(InstanceLiteral { tag, fields }))
+                    if fields.is_empty() =>
+                {
+                    // FIXME(gw) this is to work around a complicated simplifier
+                    // bug that causes external instances to sometimes be embedded
+                    // in partials. term2pathvar will fail if the base of the path
+                    // is an external instance and not a var. we can't check if the
+                    // isa is true from in here, so just drop it for now. the host
+                    // should check for these before building the filter.
+                    match PathVar::from_term(&op.args[0]) {
+                        Err(_) => None,
+                        Ok(p) => Some(Ok((p, tag.0.clone()))),
+                    }
+                } _ => Some(unsupported_op_error(op)),
+            }
+        }
+
         // we use isa constraints to initialize the entities map
         let (isas, othas): (Set<_>, Set<_>) = parts
             .into_iter()
@@ -388,7 +407,7 @@ impl QueryInfo {
         // entities maps variable paths to types
         let entities = isas
             .into_iter()
-            .filter_map(|op| op.into_entity())
+            .filter_map(isa2entity)
             .collect::<PolarResult<_>>()?;
 
         let Self {

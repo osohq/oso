@@ -88,7 +88,7 @@ module Oso
             case key
             when 'Field'
               Projection.new(polar.get_class(val[0]), val[1])
-            when 'Imm'
+            when 'Immediate'
               polar.host.to_ruby('value' => [[val.keys.first, val.values.first]])
             else
               raise key
