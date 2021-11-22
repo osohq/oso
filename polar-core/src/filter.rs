@@ -349,9 +349,11 @@ impl FilterInfo {
             }
         });
 
-        // find equivalence classes
+        // add every variable whose type we know to the entities map.
+        //
+        // partition variables into equivalence classes
         crate::data_filtering::partition_equivs(equivs)
-            // send each variable to its equivalence class
+            // map each variable to its own equivalence class
             .into_iter()
             .map(std::rc::Rc::new)
             .flat_map(|cls| {
