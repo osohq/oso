@@ -305,12 +305,10 @@ impl ResourceBlocks {
         }
 
         // Merge existing shorthand rules if we are reopening a resource block, otherwise add new
-        if let Some(existing) = self.shorthand_rules.get_mut(&resource) {
-            existing.extend(shorthand_rules.into_iter());
-        } else {
-            self.shorthand_rules
-                .insert(resource.clone(), shorthand_rules);
-        }
+        self.shorthand_rules
+            .entry(resource.clone())
+            .and_modify(|existing| existing.extend(shorthand_rules.clone()))
+            .or_insert(shorthand_rules);
 
         match block_type {
             BlockType::Actor => {
