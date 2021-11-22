@@ -5,11 +5,11 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     diagnostic::{Context, Range},
+    formatting::to_polar::ToPolarString,
     kb::KnowledgeBase,
     rules::Rule,
     sources::Source,
-    terms::{Symbol, Term, Operation},
-    formatting::to_polar::ToPolarString,
+    terms::{Operation, Symbol, Term},
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -301,8 +301,8 @@ impl RuntimeError {
         }
     }
 
-    pub fn unsupported<A>(msg: String, term: Term) -> PolarResult<A> {
-        Err(Self::Unsupported { msg, term }.into())
+    pub fn unsupported<A>(msg: String, term: Term) -> Result<A, RuntimeError> {
+        Err(Self::Unsupported { msg, term })
     }
 }
 
@@ -406,15 +406,6 @@ impl From<OperationalError> for PolarError {
     fn from(err: OperationalError) -> Self {
         Self {
             kind: ErrorKind::Operational(err),
-            context: None,
-        }
-    }
-}
-
-impl From<RuntimeError> for PolarError {
-    fn from(err: RuntimeError) -> Self {
-        Self {
-            kind: ErrorKind::Runtime(err),
             context: None,
         }
     }
@@ -540,6 +531,6 @@ impl fmt::Display for ValidationError {
     }
 }
 
-pub fn invalid_state_error<A>(msg: String) -> PolarResult<A> {
-    Err(RuntimeError::InvalidState { msg  }.into())
+pub fn invalid_state_error<A>(msg: String) -> Result<A, RuntimeError> {
+    Err(RuntimeError::InvalidState { msg })
 }

@@ -6,12 +6,14 @@ use std::{
 
 use crate::{
     data_filtering::{unregistered_field_error, unsupported_op_error, PartialResults, Type},
-    error::{invalid_state_error, PolarResult, RuntimeError},
+    error::{invalid_state_error, RuntimeError},
     events::ResultEvent,
     terms::*,
 };
 
 use serde::Serialize;
+
+type FilterResult<A> = core::result::Result<A, RuntimeError>;
 
 type TypeName = String;
 type FieldName = String;
@@ -87,7 +89,6 @@ struct PathVar {
 type TypeInfo = Map<TypeName, Map<FieldName, Type>>;
 type VarTypes = Map<PathVar, TypeName>;
 
-
 impl From<String> for PathVar {
     fn from(var: String) -> Self {
         Self { var, path: vec![] }
@@ -102,7 +103,7 @@ impl From<Projection> for PathVar {
 }
 
 impl PathVar {
-    fn from_term(t: &Term) -> PolarResult<Self> {
+    fn from_term(t: &Term) -> FilterResult<Self> {
         use Value::*;
         match t.value() {
             Expression(Operation {
@@ -121,7 +122,12 @@ impl PathVar {
 }
 
 impl Filter {
-    pub fn build(types: TypeInfo, ors: PartialResults, var: &str, class: &str) -> PolarResult<Self> {
+    pub fn build(
+        types: TypeInfo,
+        ors: PartialResults,
+        var: &str,
+        class: &str,
+    ) -> FilterResult<Self> {
         let explain = std::env::var("POLAR_EXPLAIN").is_ok();
 
         if explain {
@@ -148,16 +154,15 @@ impl Filter {
         ands: ResultEvent,
         var: &Symbol,
         class: &str,
-    ) -> PolarResult<Self> {
+    ) -> FilterResult<Self> {
         ands.bindings
             .get(var)
             .map(|ands| Self::from_partial(types, ands, class))
             .unwrap_or_else(|| input_error(format!("unbound variable: {}", var.0)))
     }
 
-    fn from_partial(types: &TypeInfo, ands: &Term, class: &str) -> PolarResult<Self> {
+    fn from_partial(types: &TypeInfo, ands: &Term, class: &str) -> FilterResult<Self> {
         use {Datum::*, Operator::*, Value::*};
-
 
         if std::env::var("POLAR_EXPLAIN").is_ok() {
             eprintln!("{}", ands.to_polar());
@@ -172,7 +177,7 @@ impl Filter {
             }) => args
                 .iter()
                 .map(|and| Ok(and.value().as_expression()?.clone()))
-                .collect::<PolarResult<Vec<_>>>()
+                .collect::<FilterResult<Vec<_>>>()
                 .and_then(|ands| FilterInfo::build_filter(types.clone(), ands, class)),
 
             // sometimes we get an instance back. that means the variable
@@ -231,7 +236,7 @@ impl FilterInfo {
 
     /// turn a pathvar into a projection.
     /// populates relations as a side effect
-    fn pathvar2proj(&mut self, pv: PathVar) -> PolarResult<Projection> {
+    fn pathvar2proj(&mut self, pv: PathVar) -> FilterResult<Projection> {
         let PathVar { mut path, var } = pv;
         let mut pv = PathVar::from(var); // new var with empty path
                                          // what type is the base variable?
@@ -262,7 +267,10 @@ impl FilterInfo {
         // if the last path component names a relation from typ to typ'
         // then typ' is the new type and field is None. otherwise,
         // typ & field stay the same.
-        let proj = match field.as_ref().and_then(|dot| self.get_relation_def(&typ, dot)) {
+        let proj = match field
+            .as_ref()
+            .and_then(|dot| self.get_relation_def(&typ, dot))
+        {
             None => Projection(typ, field),
             Some(rel) => {
                 let tag = rel.2.clone();
@@ -276,7 +284,7 @@ impl FilterInfo {
         Ok(proj)
     }
 
-    fn term2datum(&mut self, x: &Term) -> PolarResult<Datum> {
+    fn term2datum(&mut self, x: &Term) -> FilterResult<Datum> {
         use Datum::*;
         match PathVar::from_term(x) {
             Ok(pv) => Ok(Field(self.pathvar2proj(pv)?)),
@@ -284,7 +292,7 @@ impl FilterInfo {
         }
     }
 
-    fn add_condition(&mut self, l: Datum, op: Comparison, r: Datum) -> PolarResult<()> {
+    fn add_condition(&mut self, l: Datum, op: Comparison, r: Datum) -> FilterResult<()> {
         self.conditions.insert(Condition(l, op, r));
         Ok(())
     }
@@ -309,15 +317,15 @@ impl FilterInfo {
     }
 
     /// digest a conjunct from the partial results & add a new constraint.
-    fn add_constraint(&mut self, op: Operation) -> PolarResult<()> {
+    fn add_constraint(&mut self, op: Operation) -> FilterResult<()> {
         use {Datum::*, Operator::*};
         let (left, right) = (self.term2datum(&op.args[0])?, self.term2datum(&op.args[1])?);
         match op.operator {
             Unify => self.add_condition(left, Comparison::Eq, right),
             Neq => self.add_condition(left, Comparison::Neq, right),
             In => match (&left, &right) {
-                (Immediate(_), Field(Projection(_, None))) |
-                (Field(Projection(_, None)), Field(Projection(_, None))) => {
+                (Immediate(_), Field(Projection(_, None)))
+                | (Field(Projection(_, None)), Field(Projection(_, None))) => {
                     self.add_condition(left, Comparison::Eq, right)
                 }
                 _ => self.add_condition(left, Comparison::In, right),
@@ -327,7 +335,7 @@ impl FilterInfo {
     }
 
     /// populate conditions and relations on an initialized FilterInfo
-    fn with_constraints(mut self, ops: Set<Operation>) -> PolarResult<Self> {
+    fn with_constraints(mut self, ops: Set<Operation>) -> FilterResult<Self> {
         // find pairs of implicitly equal variables
         let equivs = ops.iter().filter_map(|Operation { operator, args }| {
             use Operator::*;
@@ -362,7 +370,8 @@ impl FilterInfo {
             })
             .collect::<Vec<_>>() // so the closure ^^^ lets go of &mut self
             .into_iter()
-            .for_each(|(k, t)| { // add them to the entities map
+            .for_each(|(k, t)| {
+                // add them to the entities map
                 self.entities.insert(k, t);
             });
 
@@ -377,10 +386,13 @@ impl FilterInfo {
         Ok(self)
     }
 
-    fn build_filter(type_info: TypeInfo, parts: Vec<Operation>, class: &str) -> PolarResult<Filter> {
-
+    fn build_filter(
+        type_info: TypeInfo,
+        parts: Vec<Operation>,
+        class: &str,
+    ) -> FilterResult<Filter> {
         // turn an isa from the partial results into a pathvar -> type pair
-        fn isa2entity(op: Operation) -> Option<PolarResult<(PathVar, TypeName)>> {
+        fn isa2entity(op: Operation) -> Option<FilterResult<(PathVar, TypeName)>> {
             match op.args[1].value() {
                 Value::Pattern(Pattern::Instance(InstanceLiteral { tag, fields }))
                     if fields.is_empty() =>
@@ -395,7 +407,8 @@ impl FilterInfo {
                         Err(_) => None,
                         Ok(p) => Some(Ok((p, tag.0.clone()))),
                     }
-                } _ => Some(unsupported_op_error(op)),
+                }
+                _ => Some(unsupported_op_error(op)),
             }
         }
 
@@ -408,7 +421,7 @@ impl FilterInfo {
         let entities = isas
             .into_iter()
             .filter_map(isa2entity)
-            .collect::<PolarResult<_>>()?;
+            .collect::<FilterResult<_>>()?;
 
         let Self {
             conditions,
@@ -507,8 +520,8 @@ impl Display for Relation {
     }
 }
 
-fn input_error<A>(msg: String) -> PolarResult<A> {
-    Err(RuntimeError::InvalidState { msg }.into())
+fn input_error<A>(msg: String) -> FilterResult<A> {
+    Err(RuntimeError::InvalidState { msg })
 }
 
 pub fn singleton<X>(x: X) -> Set<X>

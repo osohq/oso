@@ -3,8 +3,8 @@ use std::sync::{Arc, RwLock};
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
 use super::diagnostic::Diagnostic;
 use super::error::{PolarResult, RuntimeError, ValidationError};
-use super::kb::*;
 use super::filter::Filter;
+use super::kb::*;
 use super::messages::*;
 use super::parser;
 use super::query::Query;
@@ -286,6 +286,7 @@ impl Polar {
         class_tag: &str,
     ) -> PolarResult<FilterPlan> {
         build_filter_plan(types, partial_results, variable, class_tag)
+            .map_err(|e| e.with_context(&*self.kb.read().unwrap()))
     }
 
     pub fn build_data_filter(
@@ -296,6 +297,7 @@ impl Polar {
         class_tag: &str,
     ) -> PolarResult<Filter> {
         Filter::build(types, partial_results, variable, class_tag)
+            .map_err(|e| e.with_context(&*self.kb.read().unwrap()))
     }
 
     // TODO(@gkaemmer): this is a hack and should not be used for similar cases.
