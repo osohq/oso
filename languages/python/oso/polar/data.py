@@ -8,8 +8,6 @@ class Filter:
     pass
 
 class Adapter:
-    # host is only needed to call topolar so maybe we just handle that
-    # as a preprocess step for the filter instead of passing it in here.
     def build_query(self, host, types, filter):
         """
         Takes in a Filter and produces a query. What the query object is would depend on the adapter
@@ -30,23 +28,13 @@ class ArrayAdapter(Adapter):
     def __init__(self, type_arrays):
         self.type_arrays = type_arrays
 
-    def get_val(self, host, typ, obj, val):
-        kind = next(iter(val))
-        if kind == 'Field':
-            (t, f) = val[kind]
-            assert t == typ
-            v = getattr(obj, f)
-            return v
-        elif kind == 'Imm':
-            v = val[kind]
-            return host.to_python({'value': v})
 
-    # todo: hash joins would be better for big arrays but this is mostly used for small tests so fine for now
     def build_query(self, host, types, filter):
         assert filter['root'] in types
         typ = filter['root']
 
         records = []
+        # todo: hash joins would be better for big arrays but this is mostly used for small tests so fine for now
         def join(record, relations):
             if relations == []:
                 records.append(record)
