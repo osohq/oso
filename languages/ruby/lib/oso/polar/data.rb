@@ -66,7 +66,7 @@ module Oso
           def to_sql_args
             args = []
             lhs = self.class.to_sql_arg left, args
-            rhs = self.class.to_sql_args right, args
+            rhs = self.class.to_sql_arg right, args
             args.unshift "#{lhs} #{OPS[cmp]} #{rhs}"
           end
 
