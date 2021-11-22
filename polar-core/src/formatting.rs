@@ -179,6 +179,7 @@ pub mod display {
     use super::ToPolarString;
     use crate::bindings::Binding;
     use crate::numerics::Numeric;
+    use crate::resource_block::Declaration;
     use crate::rules::Rule;
     use crate::terms::{Operation, Operator, Symbol, Term, Value};
     use crate::vm::*;
@@ -345,6 +346,21 @@ pub mod display {
             match self {
                 Self::Integer(i) => write!(f, "{}", i),
                 Self::Float(float) => write!(f, "{}", float),
+            }
+        }
+    }
+    impl fmt::Display for Declaration {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            match self {
+                Self::Role => {
+                    write!(f, "role")
+                }
+                Self::Permission => {
+                    write!(f, "permission")
+                }
+                Self::Relation(_) => {
+                    write!(f, "relation")
+                }
             }
         }
     }

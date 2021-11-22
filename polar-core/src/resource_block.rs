@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 
 use std::collections::{HashMap, HashSet};
-use std::fmt;
 
 use super::error::ValidationError;
 use super::kb::KnowledgeBase;
@@ -178,23 +177,7 @@ pub enum Declaration {
     Relation(Term),
 }
 
-impl fmt::Display for Declaration {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Role => {
-                write!(f, "role")
-            }
-            Self::Permission => {
-                write!(f, "permission")
-            }
-            Self::Relation(_) => {
-                write!(f, "relation")
-            }
-        }
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct ShorthandRule {
     /// `Term` is a `String`. E.g., `"member"` in `"member" if "owner";`.
     pub head: Term,
@@ -355,7 +338,7 @@ impl ResourceBlocks {
         if let Some(declaration) = maybe_declaration {
             Ok(declaration)
         } else {
-            let msg = format!("Undeclared term {} referenced in rule in '{}' resource block. Did you mean to declare it as a role, permission, or relation?", declaration.to_polar(), resource_name);
+            let msg = format!("Undeclared term {} referenced in rule in '{}' resource block. Did you mean to declare it as a role, permission, or relation?", declaration, resource_name);
             Err(ValidationError::ResourceBlock {
                 msg,
                 term: declaration.clone(),
