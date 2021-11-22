@@ -2494,7 +2494,6 @@ fn test_default_rule_types() -> TestResult {
     p.load_str(
         r#"
     has_permission(_actor: Actor, "eat", _resource: Resource);
-    has_permission(_actor: Actor, "eat", _resource: Actor);
     has_role(_actor: Actor, "member", _resource: Resource);
     has_role(_actor: Actor, "member", _resource: Actor);
     has_relation(_actor: Actor, "any", _other: Actor);

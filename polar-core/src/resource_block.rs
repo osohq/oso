@@ -98,14 +98,21 @@ pub fn resource_block_from_productions(
     keyword: Option<Term>,
     resource: Term,
     productions: Vec<Production>,
-) -> core::result::Result<ResourceBlock, Vec<ValidationError>> {
+) -> (ResourceBlock, Vec<ValidationError>) {
     let mut errors = vec![];
 
     let block_type = match block_type_from_keyword(keyword, &resource) {
-        Ok(block_type) => Some(block_type),
+        Ok(block_type) => block_type,
         Err(e) => {
             errors.push(e);
-            None
+            // NOTE(gj): it doesn't matter what we default to here since the (unrecoverable)
+            // `ResourceBlock` error pushed on the line above means we aren't going to make it to
+            // rule type validation, which is the only place where the `BlockType` distinction
+            // matters. I think `Resource` makes marginally more sense than `Actor` since the
+            // `BlockType` distinction will go away and there will only be `Resource` blocks once
+            // we add better union types and can specify the `Actor` union as a union instead of as
+            // `actor Blah {}` "blocks".
+            BlockType::Resource
         }
     };
 
@@ -128,6 +135,9 @@ pub fn resource_block_from_productions(
             Production::Declaration(declaration) => {
                 match validate_parsed_declaration(declaration) {
                     Ok(ParsedDeclaration::Roles(new)) => {
+                        // TODO(gj): combine roles _and_ push error so that we can use the declared
+                        // roles in validating shorthand rules even in the face of resource block
+                        // errors?
                         if let Some(previous) = roles {
                             errors.push(make_error("roles", &previous, &new));
                         }
@@ -155,18 +165,17 @@ pub fn resource_block_from_productions(
         }
     }
 
-    if errors.is_empty() {
-        Ok(ResourceBlock {
-            block_type: block_type.expect("must exist if there are no errors"),
+    (
+        ResourceBlock {
+            block_type,
             resource,
             roles,
             permissions,
             relations,
             shorthand_rules,
-        })
-    } else {
-        Err(errors)
-    }
+        },
+        errors,
+    )
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -320,7 +329,10 @@ impl ResourceBlocks {
         }
 
         match block_type {
-            BlockType::Actor => self.actors.insert(resource),
+            BlockType::Actor => {
+                self.actors.insert(resource.clone());
+                self.resources.insert(resource)
+            }
             BlockType::Resource => self.resources.insert(resource),
         };
 
@@ -428,6 +440,7 @@ impl ResourceBlocks {
     }
 }
 
+// TODO(gj): build up errors but keep on truckin'.
 fn index_declarations(
     roles: Option<Term>,
     permissions: Option<Term>,
@@ -1309,12 +1322,11 @@ mod tests {
                 resource,
                 productions,
             } => {
-                let parsed = resource_block_from_productions(
+                let (parsed, _) = resource_block_from_productions(
                     keyword.clone(),
                     resource.clone(),
                     productions.clone(),
-                )
-                .unwrap();
+                );
                 let parsed_shorthand_rules: HashSet<&ShorthandRule> =
                     HashSet::from_iter(&parsed.shorthand_rules);
                 let expected_shorthand_rules = HashSet::from_iter(&expected.shorthand_rules);
@@ -1758,6 +1770,44 @@ mod tests {
         let expected = rule!("has_relation", ["subject"; instance!(org_name), "parent", "object"; instance!(repo_name)]);
         assert_eq!(1, has_relation_rule_types.len());
         assert_eq!(has_relation_rule_types[0], expected,);
+
+        Ok(())
+    }
+
+    // Test creation of rule types for actor roles
+    //   - has_role created because at least one resource block has roles declared
+    #[test]
+    fn test_create_resource_specific_rule_types_actor_roles() -> core::result::Result<(), PolarError>
+    {
+        let policy = r#"
+            actor Team {
+                roles = ["member", "owner"];
+
+                "member" if "owner";
+            }
+        "#;
+
+        let polar = Polar::new();
+
+        let team_instance = ExternalInstance {
+            instance_id: 1,
+            constructor: None,
+            repr: None,
+        };
+        let team_term = term!(Value::ExternalInstance(team_instance.clone()));
+        let team_name = sym!("Team");
+        polar.register_constant(team_name.clone(), team_term)?;
+        polar.register_mro(team_name, vec![team_instance.instance_id])?;
+
+        polar.load_str(policy)?;
+
+        let kb = polar.kb.read().unwrap();
+
+        let has_role_rule_types = kb.get_rule_types(&sym!("has_role")).unwrap();
+        // has_role(actor: Actor, role: String, resource: Resource)
+        let expected = rule!("has_role", ["actor"; instance!(ACTOR_UNION_NAME), "role"; instance!("String"), "resource"; instance!(RESOURCE_UNION_NAME)]);
+        assert_eq!(1, has_role_rule_types.len());
+        assert_eq!(has_role_rule_types[0], expected);
 
         Ok(())
     }
