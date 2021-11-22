@@ -2,3 +2,4 @@
 client/out
 server/out
 .vscode-test/
+**/*.vsix

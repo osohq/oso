@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::bindings::{BindingManager, Bsp, FollowerId, VariableState};
 use crate::counter::Counter;
-use crate::error::{PolarError, PolarResult};
+use crate::error::RuntimeError;
 use crate::events::QueryEvent;
 use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
@@ -13,6 +13,8 @@ use crate::partial::simplify_bindings;
 use crate::runnable::Runnable;
 use crate::terms::{Operation, Operator, Term, Value};
 use crate::vm::{Goals, PolarVirtualMachine};
+
+type Result<T> = core::result::Result<T, RuntimeError>;
 
 /// The inverter implements the `not` operation in Polar.
 ///
@@ -189,7 +191,7 @@ fn filter_inverted_constraints(
 ///    true.
 /// 3. In all other cases, return false.
 impl Runnable for Inverter {
-    fn run(&mut self, _: Option<&mut Counter>) -> PolarResult<QueryEvent> {
+    fn run(&mut self, _: Option<&mut Counter>) -> Result<QueryEvent> {
         if self.follower.is_none() {
             // Binding followers are used to collect new bindings made during
             // the inversion.
@@ -236,15 +238,15 @@ impl Runnable for Inverter {
         }
     }
 
-    fn external_question_result(&mut self, call_id: u64, answer: bool) -> PolarResult<()> {
+    fn external_question_result(&mut self, call_id: u64, answer: bool) -> Result<()> {
         self.vm.external_question_result(call_id, answer)
     }
 
-    fn external_call_result(&mut self, call_id: u64, term: Option<Term>) -> PolarResult<()> {
+    fn external_call_result(&mut self, call_id: u64, term: Option<Term>) -> Result<()> {
         self.vm.external_call_result(call_id, term)
     }
 
-    fn debug_command(&mut self, command: &str) -> PolarResult<()> {
+    fn debug_command(&mut self, command: &str) -> Result<()> {
         self.vm.debug_command(command)
     }
 
@@ -252,7 +254,7 @@ impl Runnable for Inverter {
         Box::new(self.clone())
     }
 
-    fn handle_error(&mut self, error: PolarError) -> PolarResult<QueryEvent> {
+    fn handle_error(&mut self, error: RuntimeError) -> Result<QueryEvent> {
         self.vm.handle_error(error)
     }
 }

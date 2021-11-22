@@ -2,11 +2,11 @@ pub use polar_core::polar::Polar;
 pub use polar_core::query::Query;
 use polar_core::{error, terms};
 
-use std::cell::RefCell;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr::{null, null_mut};
+use std::sync::Mutex;
 
 /// Get a reference to an object from a pointer
 macro_rules! ffi_ref {
@@ -50,26 +50,28 @@ macro_rules! ffi_try {
 }
 
 thread_local! {
-    static LAST_ERROR: RefCell<Option<Box<error::PolarError>>> = RefCell::new(None);
+    static LAST_ERROR: Mutex<Option<error::PolarError>> = Default::default();
 }
 
 fn set_error(e: error::PolarError) -> i32 {
-    LAST_ERROR.with(|prev| *prev.borrow_mut() = Some(Box::new(e)));
+    LAST_ERROR.with(|prev| *prev.lock().unwrap() = Some(e));
     POLAR_FAILURE
 }
 
 #[no_mangle]
 pub extern "C" fn polar_get_error() -> *const c_char {
     ffi_try!({
-        let err = LAST_ERROR.with(|prev| prev.borrow_mut().take());
-        if let Some(e) = err {
-            let error_json = serde_json::to_string(&e).unwrap();
-            CString::new(error_json)
-                .expect("JSON should not contain any 0 bytes")
-                .into_raw()
-        } else {
-            null()
-        }
+        let err = LAST_ERROR.with(|prev| prev.lock().unwrap().take());
+        let err = err.unwrap_or_else(|| error::PolarError {
+            kind: error::ErrorKind::Runtime(error::RuntimeError::InvalidState {
+                msg: "attempting to fetch an error, but no error is present".to_string(),
+            }),
+            context: None,
+        });
+        let error_json = serde_json::to_string(&err).unwrap();
+        CString::new(error_json)
+            .expect("JSON should not contain any 0 bytes")
+            .into_raw()
     })
 }
 

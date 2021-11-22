@@ -321,8 +321,7 @@ pub fn unregistered_field_error<A>(var_type: &str, field: &str) -> PolarResult<A
     Err(RuntimeError::DataFilteringFieldMissing {
         var_type: var_type.to_string(),
         field: field.to_string(),
-    }
-    .into())
+    }.into())
 }
 
 impl FilterPlan {
@@ -677,12 +676,7 @@ impl<'a> ResultSetBuilder<'a> {
         Ok(self)
     }
 
-    fn constrain_field_contained(
-        &mut self,
-        id: Id,
-        field: &str,
-        child: Id,
-    ) -> PolarResult<&mut Self> {
+    fn constrain_field_contained(&mut self, id: Id, field: &str, child: Id) -> PolarResult<&mut Self> {
         let request = self.result_set.requests.get_mut(&id).unwrap();
         self.vars
             .contained_values
@@ -1037,6 +1031,7 @@ mod test {
         bindings::Bindings,
         error::{ErrorKind::*, PolarError, RuntimeError::*},
     };
+
     type TestResult = PolarResult<()>;
 
     impl From<Bindings> for ResultEvent {
@@ -1139,8 +1134,9 @@ mod test {
         match err {
             PolarError {
                 kind: Runtime(RuntimeError::DataFilteringFieldMissing { var_type, field }),
-                ..
-            } if var_type == "A" && field == "field" => (),
+            ..
+            }
+                if var_type == "A" && field == "field" => {}
             _ => panic!("unexpected {:?}", err),
         }
         Ok(())
@@ -1173,17 +1169,17 @@ mod test {
 
     #[test]
     fn test_unsupported_op_msgs() {
+        use crate::error::ErrorKind;
         let err = Vars::from_op(&op!(Dot)).expect_err("should've failed");
         match err {
             PolarError {
-                kind:
-                    Runtime(DataFilteringUnsupportedOp {
-                        operation:
-                            Operation {
-                                operator: Operator::Dot,
-                                args,
-                            },
-                    }),
+                kind: ErrorKind::Runtime(DataFilteringUnsupportedOp {
+                    operation:
+                        Operation {
+                            operator: Operator::Dot,
+                            args,
+                        },
+                }),
                 ..
             } if args.is_empty() => (),
             _ => panic!("unexpected"),

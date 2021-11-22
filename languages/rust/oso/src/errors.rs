@@ -9,6 +9,7 @@ pub use polar_core::error as polar;
 /// oso errors
 ///
 /// TODO: fill in other variants
+#[allow(clippy::large_enum_variant)]
 #[derive(Error, Debug)]
 pub enum OsoError {
     #[error(transparent)]

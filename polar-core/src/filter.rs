@@ -508,7 +508,7 @@ impl Display for Relation {
 }
 
 fn input_error<A>(msg: String) -> PolarResult<A> {
-    Err(RuntimeError::Unsupported { msg }.into())
+    Err(RuntimeError::InvalidState { msg }.into())
 }
 
 pub fn singleton<X>(x: X) -> Set<X>
