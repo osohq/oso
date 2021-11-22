@@ -178,7 +178,7 @@ pub fn resource_block_from_productions(
     )
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Declaration {
     Role,
     Permission,
@@ -287,29 +287,13 @@ impl ResourceBlocks {
 
         // Merge existing declarations if we are reopening a resource block, otherwise add new
         if let Some(existing) = self.declarations.get_mut(&resource) {
-            for (key, new) in &declarations {
-                let existing_declaration = existing.get(key);
-                // allow
-                // 1. overwriting declarations of the **same** type
-                // 2. inserting declarations where none previously existed
-                //
-                // deny overwriting of declarations with mismatched types
-                match (new, existing_declaration) {
-                    // new or same-type declarations are accepted
-                    (Declaration::Relation(_), Some(Declaration::Relation(_)))
-                    | (Declaration::Relation(_), None)
-                    | (Declaration::Role, Some(Declaration::Role))
-                    | (Declaration::Role, None)
-                    | (Declaration::Permission, Some(Declaration::Permission))
-                    | (Declaration::Permission, None) => {
-                        existing.insert(key.clone(), new.clone());
-                    }
-                    // disallow all other combinations (mismatched declaration types)
-                    _ => {
+            for (key, new) in declarations {
+                if let Some(existing) = existing.insert(key.clone(), new.clone()) {
+                    if existing != new {
                         errors.push(ValidationError::DuplicateResourceBlockDeclaration {
                             resource: resource.clone(),
                             declaration: key.clone(),
-                            existing: existing_declaration.unwrap().clone(),
+                            existing,
                             new: new.clone(),
                         });
                     }
