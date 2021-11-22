@@ -33,10 +33,10 @@ fn load_file_errors() {
     let err = polar.wasm_load(sources).unwrap_err();
     let err: Error = err.dyn_into().unwrap();
     assert_eq!(err.name(), "ParseError::UnrecognizedToken");
-    assert_eq!(
-        err.message(),
-        "did not expect to find the token ';' at line 1, column 1"
-    );
+    assert!(err.message().starts_with(
+        "did not expect to find the token ';' at line 1, column 1",
+        0
+    ));
 }
 
 #[wasm_bindgen_test]
@@ -112,7 +112,7 @@ fn new_query_from_str_errors() {
     let mut query = polar.wasm_new_query_from_str("[]").unwrap();
     let err: Error = query.wasm_next_event().unwrap_err().dyn_into().unwrap();
     assert_eq!(err.name(), "RuntimeError::TypeError");
-    assert_eq!(err.message(), "trace (most recent evaluation last):\n  in query at line 1, column 1\n    []\nType error: [] isn\'t something that is true or false so can\'t be a condition at line 1, column 1");
+    assert!(err.message().starts_with("trace (most recent evaluation last):\n  in query at line 1, column 1\n    []\nType error: [] isn\'t something that is true or false so can\'t be a condition at line 1, column 1", 0));
 }
 
 #[wasm_bindgen_test]

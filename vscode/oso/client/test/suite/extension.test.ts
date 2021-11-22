@@ -1,6 +1,13 @@
 import * as assert from 'assert';
 
-import { Diagnostic, languages, Uri, workspace } from 'vscode';
+import {
+  Diagnostic,
+  DiagnosticSeverity,
+  languages,
+  Position,
+  Uri,
+  workspace,
+} from 'vscode';
 
 // Helper that waits for `n` diagnostics to appear and then returns them.
 async function getDiagnostics(n: number): Promise<[Uri, Diagnostic[]][]> {
@@ -23,16 +30,23 @@ suite('Diagnostics', () => {
 
     let [uri, [diagnostic]] = diagnostics[0];
     assert.strictEqual(uri.toString(), files[0]);
-    assert.strictEqual(diagnostic, undefined);
+    assert.strictEqual(diagnostic.severity, DiagnosticSeverity.Warning);
+    assert(diagnostic.range.start.isEqual(new Position(0, 0)));
+    assert(diagnostic.range.end.isEqual(new Position(0, 0)));
+    assert(
+      diagnostic.message.startsWith(
+        'Your policy does not contain an allow rule'
+      )
+    );
 
     [uri, [diagnostic]] = diagnostics[1];
     assert.strictEqual(uri.toString(), files[1]);
-    const { line, character } = diagnostic.range.start;
+    assert.strictEqual(diagnostic.severity, DiagnosticSeverity.Error);
+    assert(diagnostic.range.start.isEqual(new Position(0, 6)));
+    assert(diagnostic.range.end.isEqual(new Position(0, 6)));
     assert.strictEqual(
       diagnostic.message,
-      `hit the end of the file unexpectedly. Did you forget a semi-colon at line ${
-        line + 1
-      }, column ${character + 1} in file ${uri.toString()}`
+      'hit the end of the file unexpectedly. Did you forget a semi-colon'
     );
   });
 });

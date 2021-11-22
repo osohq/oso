@@ -8,7 +8,27 @@ description: >-
 draft: true
 ---
 
+## Oso 0.23.1
+
+### Rust
+
+#### Other bugs & improvements
+
+- Implemented `ExternalIsSubclass` query event. Prevents `x matches Foo and x matches Bar`
+  from panicking. Instead, this will now correctly fail when `Foo != Bar`.
+  Thanks to [`@davepacheco`](https://github.com/davepacheco) for the contribution!
+
+
 ## `RELEASED_PACKAGE_1` NEW_VERSION
+
+
+### Go
+
+#### Other bugs & improvements
+- Added a `SetAcceptExpression` method to the `Query` struct which makes
+  it possible to get partially-evaluated terms back from the core.
+  This is a step towards data filtering in Go.
+  Thanks to [`@joshrotenberg`](https://github.com/joshrotenberg) for the PR!
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 

@@ -545,25 +545,9 @@ type OperationalErrorSerialization struct {
 
 func (OperationalErrorSerialization) isOperationalError() {}
 
-// OperationalErrorUnimplemented struct
-type OperationalErrorUnimplemented struct {
-	// Msg
-	Msg string `json:"msg"`
-}
-
-func (OperationalErrorUnimplemented) isOperationalError() {}
-
 type OperationalErrorUnknown struct{}
 
 func (OperationalErrorUnknown) isOperationalError() {}
-
-// OperationalErrorInvalidState struct
-type OperationalErrorInvalidState struct {
-	// Msg
-	Msg string `json:"msg"`
-}
-
-func (OperationalErrorInvalidState) isOperationalError() {}
 
 // OperationalError enum
 type OperationalErrorVariant interface {
@@ -608,30 +592,8 @@ func (result *OperationalError) UnmarshalJSON(b []byte) error {
 		*result = OperationalError{variant}
 		return nil
 
-	case "Unimplemented":
-		var variant OperationalErrorUnimplemented
-		if variantValue != nil {
-			err := json.Unmarshal(*variantValue, &variant)
-			if err != nil {
-				return err
-			}
-		}
-		*result = OperationalError{variant}
-		return nil
-
 	case "Unknown":
 		var variant OperationalErrorUnknown
-		if variantValue != nil {
-			err := json.Unmarshal(*variantValue, &variant)
-			if err != nil {
-				return err
-			}
-		}
-		*result = OperationalError{variant}
-		return nil
-
-	case "InvalidState":
-		var variant OperationalErrorInvalidState
 		if variantValue != nil {
 			err := json.Unmarshal(*variantValue, &variant)
 			if err != nil {
@@ -654,19 +616,9 @@ func (variant OperationalError) MarshalJSON() ([]byte, error) {
 			"Serialization": inner,
 		})
 
-	case OperationalErrorUnimplemented:
-		return json.Marshal(map[string]OperationalErrorUnimplemented{
-			"Unimplemented": inner,
-		})
-
 	case OperationalErrorUnknown:
 		return json.Marshal(map[string]OperationalErrorUnknown{
 			"Unknown": inner,
-		})
-
-	case OperationalErrorInvalidState:
-		return json.Marshal(map[string]OperationalErrorInvalidState{
-			"InvalidState": inner,
 		})
 
 	}
@@ -2022,8 +1974,8 @@ type Rule struct {
 
 // RuntimeErrorArithmeticError struct
 type RuntimeErrorArithmeticError struct {
-	// Msg
-	Msg string `json:"msg"`
+	// Term
+	Term Term `json:"term"`
 }
 
 func (RuntimeErrorArithmeticError) isRuntimeError() {}
@@ -2032,6 +1984,8 @@ func (RuntimeErrorArithmeticError) isRuntimeError() {}
 type RuntimeErrorUnsupported struct {
 	// Msg
 	Msg string `json:"msg"`
+	// Term
+	Term Term `json:"term"`
 }
 
 func (RuntimeErrorUnsupported) isRuntimeError() {}
@@ -2041,15 +1995,17 @@ type RuntimeErrorTypeError struct {
 	// Msg
 	Msg string `json:"msg"`
 	// StackTrace
-	StackTrace *string `json:"stack_trace"`
+	StackTrace string `json:"stack_trace"`
+	// Term
+	Term Term `json:"term"`
 }
 
 func (RuntimeErrorTypeError) isRuntimeError() {}
 
 // RuntimeErrorStackOverflow struct
 type RuntimeErrorStackOverflow struct {
-	// Limit
-	Limit uint64 `json:"limit"`
+	// Msg
+	Msg string `json:"msg"`
 }
 
 func (RuntimeErrorStackOverflow) isRuntimeError() {}
@@ -2067,7 +2023,9 @@ type RuntimeErrorApplication struct {
 	// Msg
 	Msg string `json:"msg"`
 	// StackTrace
-	StackTrace *string `json:"stack_trace"`
+	StackTrace string `json:"stack_trace"`
+	// Term
+	Term *Term `json:"term"`
 }
 
 func (RuntimeErrorApplication) isRuntimeError() {}
@@ -2107,6 +2065,24 @@ type RuntimeErrorDataFilteringFieldMissing struct {
 }
 
 func (RuntimeErrorDataFilteringFieldMissing) isRuntimeError() {}
+
+// RuntimeErrorInvalidRegistration struct
+type RuntimeErrorInvalidRegistration struct {
+	// Sym
+	Sym Symbol `json:"sym"`
+	// Msg
+	Msg string `json:"msg"`
+}
+
+func (RuntimeErrorInvalidRegistration) isRuntimeError() {}
+
+// RuntimeErrorInvalidState struct
+type RuntimeErrorInvalidState struct {
+	// Msg
+	Msg string `json:"msg"`
+}
+
+func (RuntimeErrorInvalidState) isRuntimeError() {}
 
 // RuntimeError enum
 type RuntimeErrorVariant interface {
@@ -2250,6 +2226,28 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		*result = RuntimeError{variant}
 		return nil
 
+	case "InvalidRegistration":
+		var variant RuntimeErrorInvalidRegistration
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = RuntimeError{variant}
+		return nil
+
+	case "InvalidState":
+		var variant RuntimeErrorInvalidState
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = RuntimeError{variant}
+		return nil
+
 	}
 
 	return fmt.Errorf("Cannot deserialize RuntimeError: %s", string(b))
@@ -2308,6 +2306,16 @@ func (variant RuntimeError) MarshalJSON() ([]byte, error) {
 			"DataFilteringFieldMissing": inner,
 		})
 
+	case RuntimeErrorInvalidRegistration:
+		return json.Marshal(map[string]RuntimeErrorInvalidRegistration{
+			"InvalidRegistration": inner,
+		})
+
+	case RuntimeErrorInvalidState:
+		return json.Marshal(map[string]RuntimeErrorInvalidState{
+			"InvalidState": inner,
+		})
+
 	}
 
 	return nil, fmt.Errorf("unexpected variant of %v", variant)
@@ -2359,8 +2367,8 @@ type TraceResult struct {
 
 // ValidationErrorMissingRequiredRule struct
 type ValidationErrorMissingRequiredRule struct {
-	// Rule
-	Rule Rule `json:"rule"`
+	// RuleType
+	RuleType Rule `json:"rule_type"`
 }
 
 func (ValidationErrorMissingRequiredRule) isValidationError() {}
@@ -2368,7 +2376,7 @@ func (ValidationErrorMissingRequiredRule) isValidationError() {}
 // ValidationErrorInvalidRule struct
 type ValidationErrorInvalidRule struct {
 	// Rule
-	Rule string `json:"rule"`
+	Rule Rule `json:"rule"`
 	// Msg
 	Msg string `json:"msg"`
 }
@@ -2378,20 +2386,20 @@ func (ValidationErrorInvalidRule) isValidationError() {}
 // ValidationErrorInvalidRuleType struct
 type ValidationErrorInvalidRuleType struct {
 	// RuleType
-	RuleType string `json:"rule_type"`
+	RuleType Rule `json:"rule_type"`
 	// Msg
 	Msg string `json:"msg"`
 }
 
 func (ValidationErrorInvalidRuleType) isValidationError() {}
 
-// ValidationErrorUndefinedRule struct
-type ValidationErrorUndefinedRule struct {
-	// RuleName
-	RuleName string `json:"rule_name"`
+// ValidationErrorUndefinedRuleCall struct
+type ValidationErrorUndefinedRuleCall struct {
+	// Term
+	Term Term `json:"term"`
 }
 
-func (ValidationErrorUndefinedRule) isValidationError() {}
+func (ValidationErrorUndefinedRuleCall) isValidationError() {}
 
 // ValidationErrorResourceBlock struct
 type ValidationErrorResourceBlock struct {
@@ -2407,8 +2415,6 @@ func (ValidationErrorResourceBlock) isValidationError() {}
 type ValidationErrorSingletonVariable struct {
 	// Term
 	Term Term `json:"term"`
-	// Name
-	Name string `json:"name"`
 }
 
 func (ValidationErrorSingletonVariable) isValidationError() {}
@@ -2486,8 +2492,8 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		*result = ValidationError{variant}
 		return nil
 
-	case "UndefinedRule":
-		var variant ValidationErrorUndefinedRule
+	case "UndefinedRuleCall":
+		var variant ValidationErrorUndefinedRuleCall
 		if variantValue != nil {
 			err := json.Unmarshal(*variantValue, &variant)
 			if err != nil {
@@ -2553,9 +2559,9 @@ func (variant ValidationError) MarshalJSON() ([]byte, error) {
 			"InvalidRuleType": inner,
 		})
 
-	case ValidationErrorUndefinedRule:
-		return json.Marshal(map[string]ValidationErrorUndefinedRule{
-			"UndefinedRule": inner,
+	case ValidationErrorUndefinedRuleCall:
+		return json.Marshal(map[string]ValidationErrorUndefinedRuleCall{
+			"UndefinedRuleCall": inner,
 		})
 
 	case ValidationErrorResourceBlock:

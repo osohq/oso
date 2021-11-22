@@ -82,7 +82,7 @@ fn test() {
 
     assert_eq!(
         oso.load_str("missingSemicolon()").unwrap_err().to_string(),
-        "hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 19"
+        "hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 19:\n\t001: missingSemicolon()\n\t                       ^\n"
     );
 
     // Test that a built in string method can be called.

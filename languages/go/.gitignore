@@ -1,1 +1,2 @@
-oso
+internal/ffi/native/**/*.[ah]
+internal/ffi/native/**/*.lib
