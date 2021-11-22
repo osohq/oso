@@ -433,38 +433,26 @@ fn index_declarations(
 
     if let Some(roles) = roles {
         for role in roles.value().as_list().expect("parsed as list") {
-            if declarations
-                .insert(role.clone(), Declaration::Role)
-                .is_some()
-            {
-                let msg = format!(
-                    "{}: Duplicate declaration of {} in the roles list.",
-                    resource, role
-                );
-                let term = role.clone();
-                return Err(ValidationError::ResourceBlock { msg, term });
+            if let Some(existing) = declarations.insert(role.clone(), Declaration::Role) {
+                return Err(ValidationError::DuplicateResourceBlockDeclaration {
+                    resource: resource.clone(),
+                    declaration: role.clone(),
+                    existing,
+                    new: Declaration::Role,
+                });
             }
         }
     }
 
     if let Some(permissions) = permissions {
         for permission in permissions.value().as_list().expect("parsed as list") {
-            if let Some(previous) = declarations.insert(permission.clone(), Declaration::Permission)
+            if let Some(existing) = declarations.insert(permission.clone(), Declaration::Permission)
             {
-                let msg = if matches!(previous, Declaration::Permission) {
-                    format!(
-                        "{}: Duplicate declaration of {} in the permissions list.",
-                        resource, permission
-                    )
-                } else {
-                    format!(
-                        "{}: {} declared as a permission but it was previously declared as a role.",
-                        resource, permission
-                    )
-                };
-                return Err(ValidationError::ResourceBlock {
-                    msg,
-                    term: permission.clone(),
+                return Err(ValidationError::DuplicateResourceBlockDeclaration {
+                    resource: resource.clone(),
+                    declaration: permission.clone(),
+                    existing,
+                    new: Declaration::Permission,
                 });
             }
         }
@@ -481,23 +469,15 @@ fn index_declarations(
             // is.
             let stringified_relation = relation_type.clone_with_value(value!(relation.0.as_str()));
             let declaration = Declaration::Relation(relation_type.clone());
-            if let Some(previous) = declarations.insert(stringified_relation, declaration) {
-                let msg = match previous {
-                    Declaration::Role => format!(
-                        "{}: '{}' declared as a relation but it was previously declared as a role.",
-                        resource,
-                        relation
-                    ),
-                    Declaration::Permission => format!(
-                        "{}: '{}' declared as a relation but it was previously declared as a permission.",
-                        resource,
-                        relation
-                    ),
-                    _ => unreachable!("duplicate dict keys aren't parseable"),
-                };
-                return Err(ValidationError::ResourceBlock {
-                    msg,
-                    term: relation_type.clone(),
+
+            if let Some(existing) =
+                declarations.insert(stringified_relation.clone(), declaration.clone())
+            {
+                return Err(ValidationError::DuplicateResourceBlockDeclaration {
+                    resource: resource.clone(),
+                    declaration: stringified_relation,
+                    existing,
+                    new: declaration,
                 });
             }
         }
@@ -1227,7 +1207,7 @@ mod tests {
               roles = ["egg","egg"];
               "egg" if "egg";
             }"#,
-            r#"Org: Duplicate declaration of "egg" in the roles list."#,
+            r#"Cannot overwrite existing role declaration "egg" in resource Org with role"#,
         );
 
         expect_error(
@@ -1239,7 +1219,7 @@ mod tests {
               "egg" if "tootsie";
               "tootsie" if "spring";
             }"#,
-            r#"Org: "egg" declared as a permission but it was previously declared as a role."#,
+            r#"Cannot overwrite existing role declaration "egg" in resource Org with permission"#,
         );
 
         expect_error(
@@ -1248,7 +1228,7 @@ mod tests {
               permissions = [ "egg" ];
               relations = { egg: Roll };
             }"#,
-            r#"Org: 'egg' declared as a relation but it was previously declared as a permission."#,
+            r#"Cannot overwrite existing permission declaration "egg" in resource Org with relation"#,
         );
     }
 
