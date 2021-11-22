@@ -41,28 +41,30 @@ class ArrayAdapter(Adapter):
             v = val[kind]
             return host.to_python({'value': v})
 
-    # todo: hash joins would be better for big arrays but this is mostly used for small tests.
+    # todo: hash joins would be better for big arrays but this is mostly used for small tests so fine for now
     def build_query(self, host, types, filter):
         assert filter['root'] in types
         typ = filter['root']
 
         records = []
-        def join(obj, record, relations):
+        def join(record, relations):
             if relations == []:
                 records.append(record)
                 return
             relation, rest_relations = relations[0], relations[1:]
-            _, name, other_typ = relation
-            rel = types[typ][name]['Relation']
+            from_typ, name, other_typ = relation
+            from_array = self.type_arrays[from_typ]
+            from_obj = from_array[record[from_typ]]
+            rel = types[from_typ][name]['Relation']
             rel_typ = rel['other_class_tag']
             other_array = self.type_arrays[rel_typ]
-            for j, j_obj in enumerate(other_array):
-                my_field = getattr(obj, rel['my_field'])
-                other_field = getattr(j_obj, rel['other_field'])
-                if my_field == other_field:
+            for j, to_obj in enumerate(other_array):
+                from_field = getattr(from_obj, rel['my_field'])
+                other_field = getattr(to_obj, rel['other_field'])
+                if from_field == other_field:
                     joined_record = dict(record)
                     joined_record[rel_typ] = j
-                    join(obj, joined_record, rest_relations)
+                    join(joined_record, rest_relations)
                     if rel['kind'] == 'one':
                         break
         
@@ -70,7 +72,15 @@ class ArrayAdapter(Adapter):
         for i, obj in enumerate(array):
             record = {typ: i}
             relations = filter['relations']
-            join(obj, record, relations)
+            # make sure that all relations go from the root
+            # or a type we've already joined
+            # todo: sort instead of just assert
+            seen = set([typ])
+            for f, _, t in relations:
+                assert f in seen
+                seen.add(t)
+
+            join(record, relations)
 
         results = set()
         for conditions in filter['conditions']:

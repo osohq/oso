@@ -4,29 +4,28 @@ from helpers import filter_array, DfTestOso
 from dataclasses import dataclass
 
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class User:
     name: str
 
-
-@dataclass
+@dataclass(eq=True, frozen=True)
 class Org:
     name: str
 
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class Repo:
     name: str
     org_name: str
 
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class Issue:
     name: str
     repo_name: str
 
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class Role:
     user_name: str
     resource_name: str
