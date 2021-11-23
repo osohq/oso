@@ -22,9 +22,6 @@ import { telemetryEventsKey, createTelemetryRecorder } from './telemetry';
 // TODO(gj): think about what it would take to support `load_str()` via
 // https://code.visualstudio.com/api/language-extensions/embedded-languages
 
-// TODO(gj): do we need to maintain state for all (potentially dirty) Polar
-// docs in the current workspace?
-
 // TODO(gj): maybe just punt on non-workspace use cases entirely for now? At
 // least until progress is made on
 // https://github.com/Microsoft/vscode/issues/15178 so we have a less hacky way
