@@ -200,9 +200,9 @@ assert!(oso.is_allowed(user, "foo", "bar")?);
 
 ### UUIDs via the `uuid` crate
 
-Oso supports UUIDs via the [`uuid`](`https://crates.io/crates/uuid`) crate
-behind a feature flag. To enable support, you'll need to add a feature flag to
-your `Cargo.toml` file and make sure you have the `uuid` crate as a separate
+Oso supports UUIDs via the [`uuid`](https://crates.io/crates/uuid) crate behind
+a feature flag. To enable support, you'll need to add a feature flag to your
+`Cargo.toml` file and make sure you have the `uuid` crate as a separate
 dependency. In `Cargo.toml`, an Oso dependency that supports UUIDs looks as
 follows:
 
