@@ -17,6 +17,8 @@ import {
   TransportKind,
 } from 'vscode-languageclient/node';
 
+import { telemetryEventsKey, createTelemetryRecorder } from './telemetry';
+
 // TODO(gj): think about what it would take to support `load_str()` via
 // https://code.visualstudio.com/api/language-extensions/embedded-languages
 
@@ -154,6 +156,15 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   context.subscriptions.push(deleteWatcher);
   context.subscriptions.push(createChangeWatcher);
 
+  // Synchronize `events` state across devices.
+  context.globalState.setKeysForSync([telemetryEventsKey]);
+
+  const recordTelemetryEvent = createTelemetryRecorder(
+    context.globalState,
+    folder.uri,
+    outputChannel
+  );
+
   const debugOpts = {
     execArgv: ['--nolazy', `--inspect=${6011 + clients.size}`],
   };
@@ -171,6 +182,12 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
     diagnosticCollectionName: extensionName,
     workspaceFolder: folder,
     outputChannel,
+    middleware: {
+      handleDiagnostics: (uri, diagnostics, next) => {
+        diagnostics.forEach(({ code }) => recordTelemetryEvent({ code }));
+        next(uri, diagnostics);
+      },
+    },
   };
   const client = new LanguageClient(extensionName, serverOpts, clientOpts);
 

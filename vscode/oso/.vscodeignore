@@ -3,6 +3,7 @@
 
 # Selectively un-ignore files we want included in the released extension.
 !CHANGELOG.md
+!client/out/blake3_js_bg.wasm
 !client/out/main.js
 !language-configuration.json
 !LICENSE
