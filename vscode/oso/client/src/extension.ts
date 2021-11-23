@@ -17,7 +17,12 @@ import {
   TransportKind,
 } from 'vscode-languageclient/node';
 
-import { telemetryEventsKey, createTelemetryRecorder } from './telemetry';
+import {
+  createTelemetryRecorder,
+  sendQueuedEvents,
+  telemetryEventsKey,
+  TELEMETRY_INTERVAL,
+} from './telemetry';
 
 // TODO(gj): think about what it would take to support `load_str()` via
 // https://code.visualstudio.com/api/language-extensions/embedded-languages
@@ -158,7 +163,6 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
 
   const recordTelemetryEvent = createTelemetryRecorder(
     context.globalState,
-    folder.uri,
     outputChannel
   );
 
@@ -181,7 +185,8 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
     outputChannel,
     middleware: {
       handleDiagnostics: (uri, diagnostics, next) => {
-        diagnostics.forEach(({ code }) => recordTelemetryEvent({ code }));
+        const values = diagnostics.map(({ code }) => code);
+        recordTelemetryEvent(uri, { key: 'diagnostic', values });
         next(uri, diagnostics);
       },
     },
@@ -222,6 +227,16 @@ function updateClients(context: ExtensionContext) {
 
 export async function activate(context: ExtensionContext): Promise<void> {
   const folders = workspace.workspaceFolders || [];
+
+  // Flush the telemetry event queue on initialization...
+  sendQueuedEvents(context.globalState, outputChannel)();
+  // ...and then every 5 minutes thereafter.
+  const interval = setInterval(
+    sendQueuedEvents(context.globalState, outputChannel),
+    TELEMETRY_INTERVAL
+  );
+  // Clear interval when extension is deactivated.
+  context.subscriptions.push({ dispose: () => clearInterval(interval) });
 
   // Start a client for every folder in the workspace.
   for (const folder of folders) await startClient(folder, context);
