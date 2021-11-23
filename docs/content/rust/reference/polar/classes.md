@@ -199,17 +199,19 @@ assert!(oso.is_allowed(user, "foo", "bar")?);
 ```
 
 ### UUIDs via the uuid crate
-Oso supports the `UUID` type via Rust's [uuid](`https://crates.io/crates/uuid`) crate. To enable it, you'll need to add the feature flag to you `Cargo.toml` file and make sure you have the `uuid` crate as a separate dependency. An example of an oso entry that supports UUIDs appears below:
-```rust
+Oso supports `UUID` types via the [uuid](`https://crates.io/crates/uuid`) crate behind a feature flag. To enable support, you'll need to add a feature flag to your `Cargo.toml` file and make sure you have the `uuid` crate as a separate dependency. In `Cargo.toml`, an Oso dependency that supports UUIDs looks as follows:
+```toml
 `oso = {version="0.23.0", features=["uuid-07"]}`
 ```
-Note that uuid-07 feature flag does not refer to the uuid version, but to the uuid crate version. 
-Most people will want the `uuid-07` feature flag, as it supports recent versions of `uuid`. 
+**Note that the feature flags do not refer to [the UUID version][wiki], but to the version of the `uuid` crate.**
+Most people will want the `uuid-07` feature flag, as it supports recent versions of the `uuid` crate. 
+
+[wiki]: https://en.wikipedia.org/wiki/Universally_unique_identifier#Versions
 
 | uuid Crate Version | Feature Flag |
 |--------------------|--------------|
-| 0.6.5              | uuid-06      |
-| >0.7               | uuid-07      |
+| `0.6.5` - `0.6.x`  | uuid-06      |
+| `0.7.0` - `0.8.x`  | uuid-07      |
 
 ### Rust → Polar Types Summary
 
@@ -221,4 +223,4 @@ Most people will want the `uuid-07` feature flag, as it supports recent versions
 | `String`, `&'static str`, `str`                                       | `String`     |
 | `HashMap`, `BTreeMap`                                                 | `Dictionary` |
 | `Vec`, `LinkedList`, `VecDeque` `BinaryHeap`, `HashSet`, `BTreeSet`   | `List`       |
-| `UUID(with the feature flag)`                                         | `UUID`       |
+| `UUID` (behind a feature flag)                                        | `UUID`       |
