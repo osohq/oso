@@ -7,7 +7,7 @@ use lsp_types::{
     },
     DeleteFilesParams, Diagnostic, DiagnosticSeverity, DidChangeTextDocumentParams,
     DidChangeWatchedFilesParams, DidOpenTextDocumentParams, FileChangeType, FileDelete, FileEvent,
-    Position, PublishDiagnosticsParams, Range, TextDocumentItem, Url,
+    NumberOrString, Position, PublishDiagnosticsParams, Range, TextDocumentItem, Url,
     VersionedTextDocumentIdentifier,
 };
 use polar_core::{
@@ -333,6 +333,7 @@ impl PolarLanguageServer {
         docs.into_iter()
             .map(|doc| {
                 let diagnostic = Diagnostic {
+                    code: Some(NumberOrString::String(diagnostic.kind())),
                     range: range_from_polar_diagnostic_context(&diagnostic),
                     severity: Some(severity),
                     source: Some("Polar Language Server".to_owned()),
