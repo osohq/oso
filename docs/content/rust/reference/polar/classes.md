@@ -198,20 +198,28 @@ let user = User { nickname: Some("Jimmy".to_string()), };
 assert!(oso.is_allowed(user, "foo", "bar")?);
 ```
 
-### UUIDs via the uuid crate
-Oso supports `UUID` types via the [uuid](`https://crates.io/crates/uuid`) crate behind a feature flag. To enable support, you'll need to add a feature flag to your `Cargo.toml` file and make sure you have the `uuid` crate as a separate dependency. In `Cargo.toml`, an Oso dependency that supports UUIDs looks as follows:
+### UUIDs via the `uuid` crate
+
+Oso supports UUIDs via the [`uuid`](`https://crates.io/crates/uuid`) crate
+behind a feature flag. To enable support, you'll need to add a feature flag to
+your `Cargo.toml` file and make sure you have the `uuid` crate as a separate
+dependency. In `Cargo.toml`, an Oso dependency that supports UUIDs looks as
+follows:
+
 ```toml
-`oso = {version="0.23.0", features=["uuid-07"]}`
+oso = { version = "X.Y.Z", features = ["uuid-07"] }
 ```
-**Note that the feature flags do not refer to [the UUID version][wiki], but to the version of the `uuid` crate.**
-Most people will want the `uuid-07` feature flag, as it supports recent versions of the `uuid` crate. 
+
+**Note that the numbers in the feature flags do not refer to [the UUID
+version][wiki] but to the version of the `uuid` crate.** Most people will want
+the `uuid-07` feature flag, as it supports recent versions of the `uuid` crate.
 
 [wiki]: https://en.wikipedia.org/wiki/Universally_unique_identifier#Versions
 
-| uuid Crate Version | Feature Flag |
-|--------------------|--------------|
-| `0.6.5` - `0.6.x`  | uuid-06      |
-| `0.7.0` - `0.8.x`  | uuid-07      |
+| `uuid` Crate Version | Feature Flag |
+|----------------------|--------------|
+| `0.6.5` - `0.6.x`    | `uuid-06`    |
+| `0.7.0` - `0.8.x`    | `uuid-07`    |
 
 ### Rust → Polar Types Summary
 
@@ -223,4 +231,4 @@ Most people will want the `uuid-07` feature flag, as it supports recent versions
 | `String`, `&'static str`, `str`                                       | `String`     |
 | `HashMap`, `BTreeMap`                                                 | `Dictionary` |
 | `Vec`, `LinkedList`, `VecDeque` `BinaryHeap`, `HashSet`, `BTreeSet`   | `List`       |
-| `UUID` (behind a feature flag)                                        | `UUID`       |
+| UUID (behind a feature flag)                                          | `Uuid`       |
