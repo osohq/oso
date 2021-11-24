@@ -71,8 +71,12 @@ or (c) wrapped in a QueryFfi struct, depending on the method
 
 func checkResultVoid(res *C.polar_CResult_c_void) error {
 	err := res.error
+	resultPtr := res.result
 	defer C.result_free(res)
 	if err != nil {
+		if resultPtr != nil {
+			panic("Internal error: both result and error pointers are not null")
+		}
 		return getError(err)
 	}
 	return nil
@@ -85,6 +89,9 @@ func checkResultString(res *C.polar_CResult_c_char) (*string, error) {
 	// do anything with inner pointers anyway
 	defer C.result_free((*C.polar_CResult_c_void)((unsafe.Pointer)(res)))
 	if err != nil {
+		if resultPtr != nil {
+			panic("Internal error: both result and error pointers are not null")
+		}
 		return nil, getError(err)
 	}
 	result := readStr(resultPtr)
@@ -98,6 +105,9 @@ func checkResultQuery(res *C.polar_CResult_Query) (*QueryFfi, error) {
 	// do anything with inner pointers anyway
 	defer C.result_free((*C.polar_CResult_c_void)((unsafe.Pointer)(res)))
 	if err != nil {
+		if resultPtr != nil {
+			panic("Internal error: both result and error pointers are not null")
+		}
 		return nil, getError(err)
 	}
 	result := newQueryFfi(resultPtr)

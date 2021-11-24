@@ -118,6 +118,7 @@ module Oso
           error = res[:error]
           Rust.result_free(res)
 
+          raise 'internal error: both result and error pointers are not nil' if !error.nil? && !result.nil?
           raise FFI::Error.get(error, enrich_message) unless error.nil?
 
           result

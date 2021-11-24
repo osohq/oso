@@ -121,8 +121,7 @@ module Oso
         def process_message(message, enrich_message)
           message = JSON.parse(message.to_s)
           kind = message['kind']
-          msg = message['msg']
-          msg = enrich_message.call(msg)
+          msg = enrich_message.call(message['msg'])
 
           case kind
           when 'Print'
@@ -146,6 +145,7 @@ module Oso
           error = res[:error]
           Rust.result_free(res)
 
+          raise 'internal error: both result and error pointers are not nil' if !error.nil? && !result.nil?
           raise FFI::Error.get(error, enrich_message) unless error.nil?
 
           result

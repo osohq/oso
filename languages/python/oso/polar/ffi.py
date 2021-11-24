@@ -205,6 +205,7 @@ def check_result(result, enrich_message=None):
     if is_null(e):
         return r
     else:
+        assert is_null(r), "internal error: result pointer must be null"
         error_str = read_c_str(e)
         error = get_python_error(error_str, enrich_message)
         raise error
