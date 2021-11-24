@@ -2,14 +2,6 @@
 
 require 'ffi'
 
-# Helper method to generate a Result type for different
-# inner types
-def result(result_klass)
-  Class.new(::FFI::Struct) do
-    layout :result, result_klass, :error, :string
-  end.by_ref
-end
-
 module Oso
   module Polar
     module FFI
@@ -26,29 +18,43 @@ module Oso
 
       # Wrapper class for Polar FFI pointer + operations.
       class Polar < ::FFI::AutoPointer
+        def zero?
+          null?
+        end
+
         def self.release(ptr)
           Rust.free(ptr) unless ptr.null?
         end
       end
       # Wrapper class for Query FFI pointer + operations.
       class Query < ::FFI::AutoPointer
-        def self.release(ptr)
-          Rust.free(ptr) unless ptr.null?
+        def zero?
+          null?
         end
-      end
-      # Wrapper class for Error FFI pointer + operations.
-      class Error < ::FFI::AutoPointer
-        def self.release(ptr)
-          Rust.free(ptr) unless ptr.null?
-        end
-      end
-      # Wrapper class for Rust strings FFI pointer + operations.
-      class RustString < ::FFI::AutoPointer
+
         def self.release(ptr)
           Rust.free(ptr) unless ptr.null?
         end
       end
 
+      # Wrapper class for Rust strings FFI pointer + operations.
+      class RustString < ::FFI::AutoPointer
+        def zero?
+          null?
+        end
+
+        def self.release(ptr)
+          Rust.free(ptr) unless ptr.null?
+        end
+      end
+
+      # Helper method to generate a Result type for different
+      # inner types
+      def self.result(result_klass)
+        Class.new(::FFI::Struct) do
+          layout :result, result_klass, :error, RustString
+        end.by_ref
+      end
       # Defines the result type version of
       # each of these structs
       # result(T) => { result: T, error: string }
