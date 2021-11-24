@@ -327,17 +327,34 @@ impl FilterInfo {
         use {Datum::*, Operator::*};
         let (left, right) = (self.term2datum(&op.args[0])?, self.term2datum(&op.args[1])?);
         match op.operator {
-            Unify => self.add_condition(left, Comparison::Eq, right),
-            Neq => self.add_condition(left, Comparison::Neq, right),
+            Unify => self.add_eq_condition(left, right),
+            Neq => self.add_neq_condition(left, right),
             In => match (&left, &right) {
                 (Immediate(_), Field(Projection(_, None)))
                 | (Field(Projection(_, None)), Field(Projection(_, None))) => {
-                    self.add_condition(left, Comparison::Eq, right)
+                    self.add_eq_condition(left, right)
                 }
-                _ => self.add_condition(left, Comparison::In, right),
+                _ => self.add_in_condition(left, right),
             },
             _ => unsupported_op_error(op),
         }
+    }
+
+    fn add_eq_condition(&mut self, left: Datum, right: Datum) -> FilterResult<()> {
+        if left == right {
+            // or not
+            Ok(())
+        } else {
+            self.add_condition(left, Comparison::Eq, right)
+        }
+    }
+
+    fn add_neq_condition(&mut self, left: Datum, right: Datum) -> FilterResult<()> {
+        self.add_condition(left, Comparison::Neq, right)
+    }
+
+    fn add_in_condition(&mut self, left: Datum, right: Datum) -> FilterResult<()> {
+        self.add_condition(left, Comparison::In, right)
     }
 
     /// populate conditions and relations on an initialized FilterInfo
@@ -547,7 +564,7 @@ mod test {
 
     #[test]
     fn test_in() {
-        let types = hashmap!{
+        let types = hashmap! {
             String::from("Resource") => hashmap!{
                 String::from("foos") => Type::Relation {
                    kind: String::from("many"),
@@ -563,17 +580,13 @@ mod test {
             }
         };
 
-        let ors = vec![
-            ResultEvent::new(
-                hashmap! {
-                    sym!("resource") => term!(op!(And,
-                        term!(op!(Isa, var!("_this"), term!(pattern!(instance!("Resource"))))),
-                        term!(op!(In, var!("x"), term!(op!(Dot, var!("_this"), str!("foos"))))),
-                        term!(op!(Unify, term!(1), term!(op!(Dot, var!("x"), str!("y")))))
-                    ))
-                }
-            ),
-        ];
+        let ors = vec![ResultEvent::new(hashmap! {
+            sym!("resource") => term!(op!(And,
+                term!(op!(Isa, var!("_this"), term!(pattern!(instance!("Resource"))))),
+                term!(op!(In, var!("x"), term!(op!(Dot, var!("_this"), str!("foos"))))),
+                term!(op!(Unify, term!(1), term!(op!(Dot, var!("x"), str!("y")))))
+            ))
+        })];
 
         let filter = Filter::build(types, ors, "resource", "Resource").unwrap();
         println!("filter: {}", filter);
@@ -581,20 +594,22 @@ mod test {
         let Filter {
             root,
             relations,
-            conditions
+            conditions,
         } = filter;
 
         assert_eq!(&root, "Resource");
-        assert_eq!(relations, hashset! {
-            Relation(String::from("Resource"), String::from("foos"), String::from("Foo"))
-        });
-
-        // FAILS HERE because of extra condition.
-        assert_eq!(conditions, vec![
-            hashset!{
-                Condition(Datum::Immediate(value!(1)), Comparison::Eq, Datum::Field(Projection(String::from("Foo"), Some(String::from("y")))))
+        assert_eq!(
+            relations,
+            hashset! {
+                Relation(String::from("Resource"), String::from("foos"), String::from("Foo"))
             }
-        ]);
-    }
+        );
 
+        assert_eq!(
+            conditions,
+            vec![hashset! {
+                Condition(Datum::Immediate(value!(1)), Comparison::Eq, Datum::Field(Projection(String::from("Foo"), Some(String::from("y")))))
+            }]
+        );
+    }
 }
