@@ -416,31 +416,10 @@ impl FilterInfo {
         parts: Vec<Operation>,
         class: &str,
     ) -> FilterResult<Filter> {
-        // turn an isa from the partial results into a pathvar -> type pair
-        fn isa2entity(op: Operation) -> Option<FilterResult<(PathVar, TypeName)>> {
-            match op.args[1].value() {
-                Value::Pattern(Pattern::Instance(InstanceLiteral { tag, fields }))
-                    if fields.is_empty() =>
-                {
-                    // FIXME(gw) this is to work around a complicated simplifier
-                    // bug that causes external instances to sometimes be embedded
-                    // in partials. term2pathvar will fail if the base of the path
-                    // is an external instance and not a var. we can't check if the
-                    // isa is true from in here, so just drop it for now. the host
-                    // should check for these before building the filter.
-                    match PathVar::from_term(&op.args[0]) {
-                        Err(_) => None,
-                        Ok(p) => Some(Ok((p, tag.0.clone()))),
-                    }
-                }
-                _ => Some(unsupported_op_error(op)),
-            }
-        }
-
         let entities =
             std::iter::once((PathVar::from(String::from("_this")), class.to_string())).collect();
 
-        // we use isa constraints to initialize the entities map
+        // TODO(gw) check isas in host
         let (_isas, othas): (Set<_>, Set<_>) = parts
             .into_iter()
             .partition(|op| op.operator == Operator::Isa);
@@ -555,8 +534,6 @@ where
 
 #[cfg(test)]
 mod test {
-    use std::collections::hash_map;
-
     use super::*;
 
     #[test]
