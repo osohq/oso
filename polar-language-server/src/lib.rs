@@ -1,7 +1,4 @@
-use std::{
-    collections::{BTreeMap, HashMap},
-    str::Split,
-};
+use std::{collections::BTreeMap, str::Split};
 
 use lsp_types::{
     notification::{
@@ -18,8 +15,8 @@ use polar_core::{
     polar::Polar,
     sources::Source,
 };
+use serde::Serialize;
 use serde_wasm_bindgen::{from_value, to_value};
-use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -47,6 +44,7 @@ pub struct PolarLanguageServer {
     documents: Documents,
     polar: Polar,
     send_diagnostics_callback: js_sys::Function,
+    telemetry_callback: js_sys::Function,
 }
 
 fn range_from_polar_diagnostic_context(diagnostic: &PolarDiagnostic) -> Range {
@@ -109,13 +107,17 @@ fn empty_diagnostics_for_doc(
 #[wasm_bindgen]
 impl PolarLanguageServer {
     #[wasm_bindgen(constructor)]
-    pub fn new(send_diagnostics_callback: &js_sys::Function) -> Self {
+    pub fn new(
+        send_diagnostics_callback: &js_sys::Function,
+        telemetry_callback: &js_sys::Function,
+    ) -> Self {
         console_error_panic_hook::set_once();
 
         Self {
             documents: BTreeMap::new(),
             polar: Polar::default(),
             send_diagnostics_callback: send_diagnostics_callback.clone(),
+            telemetry_callback: telemetry_callback.clone(),
         }
     }
 
@@ -230,6 +232,12 @@ impl PolarLanguageServer {
     }
 }
 
+#[derive(Serialize)]
+struct DiagnosticLoadTelemetryEvent {
+    diagnostics: Vec<Diagnostic>,
+    has_resource_blocks: bool,
+}
+
 /// Helper methods.
 impl PolarLanguageServer {
     fn upsert_document(&mut self, doc: TextDocumentItem) -> Option<TextDocumentItem> {
@@ -266,6 +274,17 @@ impl PolarLanguageServer {
                     params, e
                 ));
             }
+        }
+    }
+
+    fn send_telemetry(&self, event: DiagnosticLoadTelemetryEvent) {
+        let params = &to_value(&event).unwrap();
+        let this = &JsValue::null();
+        if let Err(e) = self.telemetry_callback.call1(this, params) {
+            log(&format!(
+                "send_telemetry params:\n\t{:?}\n\tJS error: {:?}",
+                params, e
+            ));
         }
     }
 
@@ -366,19 +385,19 @@ impl PolarLanguageServer {
     }
 
     fn get_diagnostics(&self) -> Diagnostics {
-        // Generate unique ID for this `diagnostic_load` call. We can use the ID to tie diagnostic
-        // events (errors & warnings) to a particular load event (success or failure).
-        let mut metadata = HashMap::new();
-        metadata.insert("load_id", Uuid::new_v4());
-        let metadata = Some(serde_json::to_value(metadata).unwrap());
-
-        self.load_documents()
+        let diagnostics = self
+            .load_documents()
             .into_iter()
             .flat_map(|diagnostic| self.diagnostics_from_polar_diagnostic(diagnostic))
-            .map(|(doc, mut diagnostic)| {
-                diagnostic.data = metadata.clone();
-                (doc, diagnostic)
-            })
+            .collect::<Vec<_>>();
+
+        self.send_telemetry(DiagnosticLoadTelemetryEvent {
+            diagnostics: diagnostics.clone().into_iter().map(|(_, d)| d).collect(),
+            has_resource_blocks: false,
+        });
+
+        diagnostics
+            .into_iter()
             .fold(Diagnostics::new(), |mut acc, (doc, diagnostic)| {
                 let params = acc.entry(doc.uri.clone()).or_insert_with(|| {
                     PublishDiagnosticsParams::new(doc.uri, vec![], Some(doc.version))
@@ -410,7 +429,7 @@ mod tests {
     #[track_caller]
     fn new_pls() -> PolarLanguageServer {
         let noop = js_sys::Function::new_with_args("_params", "");
-        let pls = PolarLanguageServer::new(&noop);
+        let pls = PolarLanguageServer::new(&noop, &noop);
         assert!(pls.reload_kb().is_empty());
         pls
     }

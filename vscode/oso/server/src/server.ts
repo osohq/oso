@@ -11,7 +11,9 @@ const connection = createConnection(ProposedFeatures.all);
 
 const sendDiagnosticsCallback = (params: PublishDiagnosticsParams) =>
   connection.sendDiagnostics(params);
-const pls = new PolarLanguageServer(sendDiagnosticsCallback);
+const telemetryCallback = (event: unknown) =>
+  connection.telemetry.logEvent(event);
+const pls = new PolarLanguageServer(sendDiagnosticsCallback, telemetryCallback);
 
 connection.onNotification((...args) => pls.onNotification(...args));
 

@@ -13,9 +13,8 @@ console_error_panic_hook = "0.1.6"
 js-sys = "0.3.53"
 lsp-types = "0.90.0"
 polar-core = { path = "../polar-core", version = "=0.23.0" }
-serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
 serde-wasm-bindgen = "0.3.1"
-uuid = { version = "0.8", features = ["serde", "v4", "wasm-bindgen"] }
 wasm-bindgen = "0.2.76"
 
 [dev-dependencies]

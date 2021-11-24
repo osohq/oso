@@ -12,15 +12,15 @@ import {
   WorkspaceFoldersChangeEvent,
 } from 'vscode';
 import {
-  Diagnostic,
   LanguageClient,
   LanguageClientOptions,
   TransportKind,
 } from 'vscode-languageclient/node';
 
 import {
-  recordDiagnostics,
-  sendQueuedEvents,
+  enqueueEvent,
+  flushQueue,
+  TelemetryEvent,
   telemetryEventsKey,
   TELEMETRY_INTERVAL,
 } from './telemetry';
@@ -179,19 +179,14 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
     diagnosticCollectionName: extensionName,
     workspaceFolder: folder,
     outputChannel,
-    middleware: {
-      handleDiagnostics: (uri, diagnostics, next) => {
-        recordDiagnostics(
-          context.globalState,
-          outputChannel,
-          uri,
-          diagnostics as unknown as Diagnostic[]
-        );
-        next(uri, diagnostics);
-      },
-    },
   };
   const client = new LanguageClient(extensionName, serverOpts, clientOpts);
+
+  context.subscriptions.push(
+    client.onTelemetry((event: TelemetryEvent) =>
+      enqueueEvent(context.globalState, outputChannel, folder.uri, event)
+    )
+  );
 
   // Start client and mark it for cleanup when the extension is deactivated.
   context.subscriptions.push(client.start());
@@ -229,10 +224,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
   const folders = workspace.workspaceFolders || [];
 
   // Flush the telemetry event queue on initialization...
-  sendQueuedEvents(context.globalState, outputChannel)();
-  // ...and then every 5 minutes thereafter.
+  flushQueue(context.globalState, outputChannel)();
+  // ...and then every `TELEMETRY_INTERVAL` thereafter.
   const interval = setInterval(
-    sendQueuedEvents(context.globalState, outputChannel),
+    flushQueue(context.globalState, outputChannel),
     TELEMETRY_INTERVAL
   );
   // Clear interval when extension is deactivated.
