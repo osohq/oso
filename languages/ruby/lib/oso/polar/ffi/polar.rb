@@ -28,13 +28,13 @@ module Oso
             :build_filter_plan,
             :polar_build_filter_plan,
             [FFI::Polar, :string, :string, :string, :string],
-            :string
+            FFI::DataFilter
           )
           attach_function(
             :build_data_filter,
             :polar_build_data_filter,
             [FFI::Polar, :string, :string, :string, :string],
-            :string
+            FFI::DataFilter
           )
         end
         private_constant :Rust
@@ -55,7 +55,7 @@ module Oso
           process_messages
           handle_error if plan.nil?
           # TODO(gw) more error checking?
-          JSON.parse plan
+          JSON.parse plan.to_s
         end
 
         def build_data_filter(types, partials, variable, class_tag)
@@ -65,7 +65,7 @@ module Oso
           process_messages
           handle_error if plan.nil?
           # TODO(gw) more error checking?
-          JSON.parse plan
+          JSON.parse plan.to_s
         end
 
         # @param sources [Array<Source>]
