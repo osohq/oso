@@ -53,7 +53,7 @@ module Oso
         Relation = Struct.new(:left, :name, :right) do
           # this doesn't depend on the ORM
           def self.parse(polar, left, name, right)
-            new(polar.get_class(left), name, polar.get_class(right))
+            Relation.new(polar.get_class(left), name, polar.get_class(right))
           end
         end
 
@@ -79,7 +79,7 @@ module Oso
           end
 
           def self.parse(polar, left, cmp, right)
-            new(parse_side(polar, left), cmp, parse_side(polar, right))
+            Condition.new(parse_side(polar, left), cmp, parse_side(polar, right))
           end
 
           def self.parse_side(polar, side)
