@@ -43,6 +43,11 @@ pub struct Filter {
 /// A named logical extension of a data set. Corresponds to a "join" in relational
 /// algebra, but we leave out the details about columns (the host knows how to do
 /// it).
+///
+/// Fields represent "from", "through" and "to".
+/// For example, Relation("Foo", "bar", "Bar") represents a Relation
+/// from the `Foo` type to the `Bar` type, accessed using the `bar` field
+/// on `Foo`.
 #[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
 pub struct Relation(TypeName, FieldName, TypeName);
 
@@ -69,6 +74,9 @@ pub enum Comparison {
 #[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
 pub struct Projection(TypeName, Option<FieldName>);
 
+type TypeInfo = Map<TypeName, Map<FieldName, Type>>;
+type VarTypes = Map<PathVar, TypeName>;
+
 /// Used to keep track of information for building a Filter
 #[derive(Default)]
 struct FilterInfo {
@@ -85,9 +93,6 @@ struct PathVar {
     var: VarName,
     path: Vec<FieldName>,
 }
-
-type TypeInfo = Map<TypeName, Map<FieldName, Type>>;
-type VarTypes = Map<PathVar, TypeName>;
 
 impl From<String> for PathVar {
     fn from(var: String) -> Self {
@@ -238,8 +243,9 @@ impl FilterInfo {
     /// populates relations as a side effect
     fn pathvar2proj(&mut self, pv: PathVar) -> FilterResult<Projection> {
         let PathVar { mut path, var } = pv;
-        let mut pv = PathVar::from(var); // new var with empty path
-                                         // what type is the base variable?
+        // new var with empty path
+        let mut pv = PathVar::from(var);
+        // what type is the base variable?
         let mut typ = match self.get_type(pv.clone()) {
             Some(typ) => typ,
             _ => return invalid_state_error(format!("unknown type for `{}`", pv.var)),
