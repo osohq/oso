@@ -437,16 +437,13 @@ impl FilterInfo {
             }
         }
 
+        let entities =
+            std::iter::once((PathVar::from(String::from("_this")), class.to_string())).collect();
+
         // we use isa constraints to initialize the entities map
-        let (isas, othas): (Set<_>, Set<_>) = parts
+        let (_isas, othas): (Set<_>, Set<_>) = parts
             .into_iter()
             .partition(|op| op.operator == Operator::Isa);
-
-        // entities maps variable paths to types
-        let entities = isas
-            .into_iter()
-            .filter_map(isa2entity)
-            .collect::<FilterResult<_>>()?;
 
         let Self {
             conditions,
