@@ -83,6 +83,8 @@ TypeScript
 UI
 URI
 URIs
+UUID
+UUIDs
 VM
 VPN
 VSCode's
