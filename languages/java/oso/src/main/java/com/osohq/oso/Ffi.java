@@ -35,7 +35,8 @@ public class Ffi {
         return r;
       } else {
         if (r != null) {
-          throw new Exceptions.OsoException("Internal error: both result and error pointers are non-null");
+          throw new Exceptions.OsoException(
+              "Internal error: both result and error pointers are non-null");
         }
         java.lang.String s = e.getString(0);
         polarLib.string_free(e);
@@ -61,7 +62,8 @@ public class Ffi {
         return;
       } else {
         if (r != 0) {
-          throw new Exceptions.OsoException("Internal error: both result and error pointers are non-null");
+          throw new Exceptions.OsoException(
+              "Internal error: both result and error pointers are non-null");
         }
         java.lang.String s = e.getString(0);
         polarLib.string_free(e);
