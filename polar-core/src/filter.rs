@@ -74,6 +74,9 @@ pub enum Comparison {
 #[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
 pub struct Projection(TypeName, Option<FieldName>);
 
+type TypeInfo = Map<TypeName, Map<FieldName, Type>>;
+type VarTypes = Map<PathVar, TypeName>;
+
 /// Used to keep track of information for building a Filter
 #[derive(Default)]
 struct FilterInfo {
@@ -90,9 +93,6 @@ struct PathVar {
     var: VarName,
     path: Vec<FieldName>,
 }
-
-type TypeInfo = Map<TypeName, Map<FieldName, Type>>;
-type VarTypes = Map<PathVar, TypeName>;
 
 impl From<String> for PathVar {
     fn from(var: String) -> Self {
