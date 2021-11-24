@@ -245,9 +245,9 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
 
     it 'test_parent_child_cases' do
       subject.load_str <<~POL
-        allow(_: Log{foo: foo},   0, foo: Foo);
-        allow(log: Log,           1, _: Foo{logs: logs}) if log in logs;
-        allow(log: Log{foo: foo}, 2, foo: Foo{logs: logs}) if log in logs;
+        allow(_: Log{foo}, 0, foo: Foo);
+        allow(log: Log, 1, _: Foo{logs}) if log in logs;
+        allow(log: Log{foo}, 2, foo: Foo{logs}) if log in logs;
       POL
       0.upto(2) do |n|
         logs.each do |log|
@@ -258,7 +258,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
 
     it 'test_specializers' do
       subject.load_str <<~POL
-        allow(foo: Foo,             "NoneNone", log) if foo = log.foo;
+        allow(foo,                  "NoneNone", log) if foo = log.foo;
         allow(foo,                  "NoneCls",  log: Log) if foo = log.foo;
         allow(foo,                  "NoneDict", _: {foo:foo});
         allow(foo,                  "NonePtn",  _: Log{foo: foo});

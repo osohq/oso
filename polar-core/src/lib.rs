@@ -14,6 +14,7 @@ mod debugger;
 pub mod diagnostic;
 pub mod error;
 pub mod events;
+pub mod filter;
 mod folder;
 pub mod formatting;
 mod inverter;
