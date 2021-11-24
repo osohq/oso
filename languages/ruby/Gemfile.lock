@@ -49,7 +49,7 @@ GEM
     pry-byebug (3.9.0)
       byebug (~> 11.0)
       pry (~> 0.13.0)
-    racc (1.6.0)
+    racc (1.5.0)
     rainbow (3.0.0)
     rake (12.3.3)
     regexp_parser (2.1.1)
