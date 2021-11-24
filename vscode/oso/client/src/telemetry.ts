@@ -14,12 +14,7 @@ export const TELEMETRY_INTERVAL = 1000 * 60 * 60;
 const distinct_id = hash(env.machineId).toString('base64');
 
 const MIXPANEL_PROJECT_TOKEN = 'd14a9580b894059dffd19437b7ddd7be';
-const mixpanel = Mixpanel.init(MIXPANEL_PROJECT_TOKEN, {
-  protocol: 'https',
-  debug: true,
-  test: true,
-  verbose: true,
-});
+const mixpanel = Mixpanel.init(MIXPANEL_PROJECT_TOKEN, { protocol: 'https' });
 
 type MixpanelLoadEvent = {
   event: 'load';
@@ -31,12 +26,14 @@ type MixpanelLoadEvent = {
     warnings: number;
   };
 };
+
 type MixpanelDiagnosticEvent = {
   event: 'diagnostic';
   properties: {
     code: Diagnostic['code'];
   };
 };
+
 type MixpanelMetadata = {
   // One-way hash of VSCode machine ID.
   distinct_id: string;
@@ -46,6 +43,7 @@ type MixpanelMetadata = {
   // One-way hash of workspace folder URI.
   workspace_id: string;
 };
+
 type MixpanelEvent = { properties: MixpanelMetadata } & (
   | MixpanelLoadEvent
   | MixpanelDiagnosticEvent
