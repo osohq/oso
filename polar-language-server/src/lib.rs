@@ -1,4 +1,7 @@
-use std::{collections::BTreeMap, str::Split};
+use std::{
+    collections::{BTreeMap, HashMap},
+    str::Split,
+};
 
 use lsp_types::{
     notification::{
@@ -16,6 +19,7 @@ use polar_core::{
     sources::Source,
 };
 use serde_wasm_bindgen::{from_value, to_value};
+use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -362,9 +366,19 @@ impl PolarLanguageServer {
     }
 
     fn get_diagnostics(&self) -> Diagnostics {
+        // Generate unique ID for this `diagnostic_load` call. We can use the ID to tie diagnostic
+        // events (errors & warnings) to a particular load event (success or failure).
+        let mut metadata = HashMap::new();
+        metadata.insert("load_id", Uuid::new_v4());
+        let metadata = Some(serde_json::to_value(metadata).unwrap());
+
         self.load_documents()
             .into_iter()
             .flat_map(|diagnostic| self.diagnostics_from_polar_diagnostic(diagnostic))
+            .map(|(doc, mut diagnostic)| {
+                diagnostic.data = metadata.clone();
+                (doc, diagnostic)
+            })
             .fold(Diagnostics::new(), |mut acc, (doc, diagnostic)| {
                 let params = acc.entry(doc.uri.clone()).or_insert_with(|| {
                     PublishDiagnosticsParams::new(doc.uri, vec![], Some(doc.version))
