@@ -1,10 +1,13 @@
-import { ExtensionContext, env, Diagnostic, Uri, OutputChannel } from 'vscode';
+import { inspect } from 'util';
+
+import { ExtensionContext, env, Uri, OutputChannel } from 'vscode';
 import { hash } from 'blake3-wasm';
 import * as Mixpanel from 'mixpanel';
+import { Diagnostic } from 'vscode-languageclient';
 
 export const telemetryEventsKey = 'events';
-// Flush telemetry events in batches every five minutes.
-export const TELEMETRY_INTERVAL = 300000;
+// Flush telemetry events in batches every hour.
+export const TELEMETRY_INTERVAL = 1000 * 60 * 60;
 
 // `distinct_id`: One-way hash of VSCode machine ID.
 const distinct_id = hash(env.machineId).toString('base64');
@@ -17,17 +20,20 @@ const mixpanel = Mixpanel.init(MIXPANEL_PROJECT_TOKEN, {
   verbose: true,
 });
 
-type HasResourceBlocksPayload = {
-  key: 'has_resource_blocks';
-  values: [boolean];
+type DiagnosticsPayload = {
+  event: 'diagnostic';
+  properties: {
+    code: Diagnostic['code'];
+  };
 };
-type DiagnosticPayload = {
-  key: 'diagnostic';
-  values: Diagnostic['code'][];
-};
-type TelemetryPayload = DiagnosticPayload | HasResourceBlocksPayload;
+type TelemetryPayload = DiagnosticsPayload;
 // `workspaceId`: One-way hash of workspace folder URI.
-type TelemetryEvent = { workspaceId: string } & TelemetryPayload;
+type TelemetryMetadata = {
+  distinct_id: string;
+  load_id: string;
+  workspace_id: string;
+};
+type TelemetryEvent = { properties: TelemetryMetadata } & TelemetryPayload;
 
 type State = ExtensionContext['globalState'];
 
@@ -41,29 +47,18 @@ export function sendQueuedEvents(
         // Retrieve all queued events.
         const events = state.get<TelemetryEvent[]>(telemetryEventsKey, []);
 
-        outputChannel.appendLine(`Queue length: ${events.length.toString()}`);
-
         if (events.length === 0) return;
 
         // Clear events queue.
-        outputChannel.appendLine('Flushing...');
+        outputChannel.appendLine(`Flushing ${events.length.toString()} events`);
         await state.update(telemetryEventsKey, []);
 
-        mixpanel.track_batch(
-          events.flatMap(({ key, values, workspaceId: workspace_id }) => {
-            // Generate `group_id` to track events encountered en masse.
-            const group_id = hash(Math.random().toString()).toString('base64');
-            return values.map((value: TelemetryPayload['values'][number]) => ({
-              event: key,
-              properties: { distinct_id, group_id, [key]: value, workspace_id },
-            }));
-          }),
-          errors =>
-            errors.forEach(({ name, message }) =>
-              outputChannel.appendLine(
-                `Mixpanel track_batch error: ${name}\n\t${message}`
-              )
-            )
+        mixpanel.track_batch(events, errors =>
+          errors.forEach(({ name, message, stack }) => {
+            outputChannel.appendLine(`Mixpanel track_batch error: ${name}`);
+            outputChannel.appendLine(`\t${message}`);
+            if (stack) outputChannel.appendLine(`\t${stack}`);
+          })
         );
       } catch (e) {
         outputChannel.append('Caught error while sending telemetry: ');
@@ -73,24 +68,33 @@ export function sendQueuedEvents(
   };
 }
 
-type Recorder = (uri: Uri, payload: TelemetryPayload) => void;
-
-export function createTelemetryRecorder(
+export function recordDiagnostics(
   state: State,
-  outputChannel: OutputChannel
-): Recorder {
-  return (uri: Uri, { key, values }: TelemetryPayload) =>
-    void (async () => {
-      try {
-        const workspaceId = hash(uri.toString()).toString('base64');
+  outputChannel: OutputChannel,
+  uri: Uri,
+  diagnostics: Diagnostic[]
+): void {
+  void (async () => {
+    try {
+      const workspace_id = hash(uri.toString()).toString('base64');
 
-        // TODO(gj): race condition?
-        const events = state.get<TelemetryEvent[]>(telemetryEventsKey, []);
-        const newEvent = { key, values, workspaceId };
-        await state.update(telemetryEventsKey, [...events, newEvent]);
-      } catch (e) {
-        outputChannel.append('Caught error while recording telemetry: ');
-        outputChannel.appendLine(e);
-      }
-    })();
+      // TODO(gj): race condition?
+      const oldEvents = state.get<TelemetryEvent[]>(telemetryEventsKey, []);
+      const newEvents: TelemetryEvent[] = diagnostics.map(({ code, data }) => ({
+        event: 'diagnostic',
+        properties: {
+          code,
+          distinct_id,
+          load_id: (data as { load_id: string }).load_id,
+          workspace_id,
+        },
+      }));
+      outputChannel.appendLine(`Recording new events: ${inspect(newEvents)}`);
+      const combinedEvents = [...oldEvents, ...newEvents];
+      await state.update(telemetryEventsKey, combinedEvents);
+    } catch (e) {
+      outputChannel.append('Caught error while recording telemetry: ');
+      outputChannel.appendLine(e);
+    }
+  })();
 }

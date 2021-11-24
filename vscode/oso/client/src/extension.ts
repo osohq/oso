@@ -12,13 +12,14 @@ import {
   WorkspaceFoldersChangeEvent,
 } from 'vscode';
 import {
+  Diagnostic,
   LanguageClient,
   LanguageClientOptions,
   TransportKind,
 } from 'vscode-languageclient/node';
 
 import {
-  createTelemetryRecorder,
+  recordDiagnostics,
   sendQueuedEvents,
   telemetryEventsKey,
   TELEMETRY_INTERVAL,
@@ -161,11 +162,6 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   // Synchronize `events` state across devices.
   context.globalState.setKeysForSync([telemetryEventsKey]);
 
-  const recordTelemetryEvent = createTelemetryRecorder(
-    context.globalState,
-    outputChannel
-  );
-
   const debugOpts = {
     execArgv: ['--nolazy', `--inspect=${6011 + clients.size}`],
   };
@@ -185,8 +181,12 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
     outputChannel,
     middleware: {
       handleDiagnostics: (uri, diagnostics, next) => {
-        const values = diagnostics.map(({ code }) => code);
-        recordTelemetryEvent(uri, { key: 'diagnostic', values });
+        recordDiagnostics(
+          context.globalState,
+          outputChannel,
+          uri,
+          diagnostics as unknown as Diagnostic[]
+        );
         next(uri, diagnostics);
       },
     },
