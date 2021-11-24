@@ -187,7 +187,7 @@ class Query:
 
 
 def check_result(result, enrich_message=None):
-    """ 
+    """
     Unwrap the result by (a) extracting the pointers for
     result and error, (b) freeing the result pointers, and then
     (c) either returning the result pointer, or constructing and
