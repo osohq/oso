@@ -1,3 +1,4 @@
+use std::fmt;
 use std::sync::{Arc, RwLock};
 
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
@@ -21,6 +22,12 @@ pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
     messages: MessageQueue,
     ignore_no_allow_warning: bool,
+}
+
+impl fmt::Debug for Polar {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Polar").finish()
+    }
 }
 
 impl Default for Polar {

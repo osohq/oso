@@ -1,4 +1,5 @@
 #![allow(clippy::vec_init_then_push)]
+#![feature(backtrace)]
 
 #[cfg(test)]
 #[macro_use]
@@ -38,5 +39,4 @@ mod visitor;
 mod vm;
 pub mod warning;
 
-#[cfg(all(nightly, feature = "track-allocations"))]
 pub mod allocator;

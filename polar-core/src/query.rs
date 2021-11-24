@@ -1,3 +1,5 @@
+use std::fmt;
+
 use super::error::PolarResult;
 use super::events::*;
 use super::messages::*;
@@ -10,6 +12,17 @@ pub struct Query {
     vm: PolarVirtualMachine,
     term: Term,
     done: bool,
+}
+
+impl fmt::Debug for Query {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Query")
+            // .field("runnable_stack", &self.runnable_stack)
+            // .field("vm", &self.vm)
+            .field("term", &self.term)
+            // .field("done", &self.done)
+            .finish()
+    }
 }
 
 impl Query {

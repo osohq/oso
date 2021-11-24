@@ -48,24 +48,27 @@ impl<T> From<Result<*mut T, error::PolarError>> for CResult<T> {
 /// Get a reference to an object from a pointer
 macro_rules! ffi_ref {
     ($name:ident) => {{
-        assert!(!$name.is_null());
-        &mut *$name
+        let v = $name;
+        assert!(!v.is_null());
+        &mut *v
     }};
 }
 
 /// Get a `Cow<str>` back from a C-style string
 macro_rules! ffi_string {
     ($name:ident) => {{
-        assert!(!$name.is_null());
-        CStr::from_ptr($name).to_string_lossy()
+        let v = $name;
+        assert!(!v.is_null());
+        CStr::from_ptr(v).to_string_lossy()
     }};
 }
 
 /// Returns a raw pointer from an object
 macro_rules! box_ptr {
-    ($x:expr) => {
-        Box::into_raw(Box::new($x))
-    };
+    ($x:expr) => {{
+        let v = $x;
+        Box::into_raw(Box::new(v))
+    }};
 }
 
 /// We use the convention of zero as an error term,
