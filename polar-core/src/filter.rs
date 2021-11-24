@@ -43,6 +43,11 @@ pub struct Filter {
 /// A named logical extension of a data set. Corresponds to a "join" in relational
 /// algebra, but we leave out the details about columns (the host knows how to do
 /// it).
+/// 
+/// Fields represent "from", "through" and "to".
+/// For example, Relation("Foo", "bar", "Bar") represents a Relation
+/// from the `Foo` type to the `Bar` type, accessed using the `bar` field
+/// on `Foo`. 
 #[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
 pub struct Relation(TypeName, FieldName, TypeName);
 
