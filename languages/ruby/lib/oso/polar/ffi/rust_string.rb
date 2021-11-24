@@ -20,7 +20,7 @@ module Oso
           extend ::FFI::Library
           ffi_lib FFI::LIB_PATH
 
-          attach_function :free, :string_free, [Message], :int32
+          attach_function :free, :string_free, [RustString], :int32
         end
 
         private_constant :Rust
