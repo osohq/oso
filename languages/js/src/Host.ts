@@ -5,6 +5,8 @@ import {
   PolarError,
   UnregisteredClassError,
   UnregisteredInstanceError,
+  UnexpectedPolarTypeError,
+  UNEXPECTED_EXPRESSION_MESSAGE
 } from './errors';
 import {
   ancestors,
@@ -93,6 +95,7 @@ export class Host implements Required<DataFilteringQueryParams> {
   #instances: Map<number, unknown>;
   types: Map<string | Class, UserType<any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
   #equalityFn: EqualityFn;
+  acceptExpression: Boolean;
 
   // global data filtering config
   buildQuery: BuildQueryFn;
@@ -112,6 +115,7 @@ export class Host implements Required<DataFilteringQueryParams> {
     clone.buildQuery = host.buildQuery;
     clone.execQuery = host.execQuery;
     clone.combineQuery = host.combineQuery;
+    clone.acceptExpression = host.acceptExpression;
     return clone;
   }
 
@@ -121,6 +125,7 @@ export class Host implements Required<DataFilteringQueryParams> {
     this.#instances = new Map();
     this.#equalityFn = equalityFn;
     this.types = new Map();
+    this.acceptExpression = false;
     this.buildQuery = () => {
       throw new DataFilteringConfigurationError('buildQuery');
     };
@@ -572,6 +577,9 @@ export class Host implements Required<DataFilteringQueryParams> {
       return new Variable(t.Variable);
     } else if (isPolarExpression(t)) {
       // TODO(gj): Only allow expressions if the flag has been frobbed.
+      if(!this.acceptExpression) {
+        throw new UnexpectedPolarTypeError(UNEXPECTED_EXPRESSION_MESSAGE);
+      }
       const { operator, args: argTerms } = t.Expression;
       const args = await Promise.all(argTerms.map(a => this.toJs(a)));
       return new Expression(operator, args);
@@ -592,4 +600,8 @@ export class Host implements Required<DataFilteringQueryParams> {
       return _;
     }
   }
+
+  setAcceptExpression(acceptExpression: Boolean) : void {
+    this.acceptExpression = acceptExpression;
+  } 
 }
