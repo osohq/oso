@@ -4,8 +4,6 @@ build: clean wasm node_modules
 	yarn compile
 
 package: clean wasm node_modules
-	mkdir -p client/out
-	cp client/node_modules/blake3-wasm/dist/wasm/nodejs/blake3_js_bg.wasm client/out
 	yarn vsce package
 
 CARGO_FLAGS ?= --dev
@@ -15,6 +13,7 @@ wasm:
 
 node_modules: package.json client/package.json server/package.json
 	yarn install
+	cp client/node_modules/blake3-wasm/dist/wasm/nodejs/blake3_js_bg.wasm client/out
 	@touch $@
 
 fmtcheck: clean node_modules
@@ -28,3 +27,4 @@ test: clean wasm node_modules
 
 clean:
 	rm -rf client/out server/out
+	mkdir -p client/out server/out
