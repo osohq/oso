@@ -232,12 +232,6 @@ impl PolarLanguageServer {
     }
 }
 
-#[derive(Serialize)]
-struct DiagnosticLoadTelemetryEvent {
-    diagnostics: Vec<Diagnostic>,
-    has_resource_blocks: bool,
-}
-
 /// Helper methods.
 impl PolarLanguageServer {
     fn upsert_document(&mut self, doc: TextDocumentItem) -> Option<TextDocumentItem> {
@@ -277,7 +271,36 @@ impl PolarLanguageServer {
         }
     }
 
-    fn send_telemetry(&self, event: DiagnosticLoadTelemetryEvent) {
+    fn send_telemetry(&self, diagnostics: Vec<&Diagnostic>) {
+        #[derive(Serialize)]
+        struct DiagnosticLoadTelemetryEvent<'a> {
+            diagnostics: Vec<&'a Diagnostic>,
+            has_resource_blocks: bool,
+        }
+
+        // KB might not contain resource block data if we encounter an error before persisting any.
+        let encountered_resource_block_diagnostic = diagnostics.iter().any(|d| {
+            d.code
+                == Some(NumberOrString::String(
+                    "ValidationError::ResourceBlock".into(),
+                ))
+        });
+
+        let kb_contains_resource_blocks = {
+            let resource_blocks = &self.polar.kb.read().unwrap().resource_blocks;
+            let is_empty = resource_blocks.declarations().is_empty()
+                && resource_blocks.shorthand_rules.is_empty()
+                && resource_blocks.actors.is_empty()
+                && resource_blocks.resources.is_empty();
+            !is_empty
+        };
+
+        let event = DiagnosticLoadTelemetryEvent {
+            diagnostics,
+            has_resource_blocks: encountered_resource_block_diagnostic
+                || kb_contains_resource_blocks,
+        };
+
         let params = &to_value(&event).unwrap();
         let this = &JsValue::null();
         if let Err(e) = self.telemetry_callback.call1(this, params) {
@@ -391,10 +414,7 @@ impl PolarLanguageServer {
             .flat_map(|diagnostic| self.diagnostics_from_polar_diagnostic(diagnostic))
             .collect::<Vec<_>>();
 
-        self.send_telemetry(DiagnosticLoadTelemetryEvent {
-            diagnostics: diagnostics.clone().into_iter().map(|(_, d)| d).collect(),
-            has_resource_blocks: false,
-        });
+        self.send_telemetry(diagnostics.iter().map(|(_, d)| d).collect());
 
         diagnostics
             .into_iter()
