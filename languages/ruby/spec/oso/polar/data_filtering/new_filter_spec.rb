@@ -344,6 +344,16 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           query = subject.authzd_query 'gwen', 'read', Person
           expect(query.to_a).to eq [mercury]
         end
+
+        it 'test_in_with_scalar' do
+          subject.load_str <<~POL
+            allow(_, _, planet: Planet) if
+              s in planet.signs and
+              s.name = "scorpio";
+          POL
+          query = subject.authzd_query 'gwen', 'read', Planet
+          expect(query.to_a).to eq [mars]
+        end
       end
 
       DB_FILE = 'astro_test.db'
@@ -414,6 +424,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       let(:eden) { Person.find 'eden' }
       let(:leo) { Person.find 'leo' }
       let(:mercury) { Person.find 'mercury' }
+      let(:mars) { Planet.find 'mars' }
     end
   end
 end

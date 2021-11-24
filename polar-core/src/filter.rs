@@ -538,3 +538,63 @@ where
 {
     std::iter::once(x).collect()
 }
+
+#[cfg(test)]
+mod test {
+    use std::collections::hash_map;
+
+    use super::*;
+
+    #[test]
+    fn test_in() {
+        let types = hashmap!{
+            String::from("Resource") => hashmap!{
+                String::from("foos") => Type::Relation {
+                   kind: String::from("many"),
+                   my_field: String::from("_"),
+                   other_field: String::from("_"),
+                   other_class_tag: String::from("Foo")
+                }
+            },
+            String::from("Foo") => hashmap!{
+                String::from("y") => Type::Base {
+                    class_tag: String::from("Integer")
+                }
+            }
+        };
+
+        let ors = vec![
+            ResultEvent::new(
+                hashmap! {
+                    sym!("resource") => term!(op!(And,
+                        term!(op!(Isa, var!("_this"), term!(pattern!(instance!("Resource"))))),
+                        term!(op!(In, var!("x"), term!(op!(Dot, var!("_this"), str!("foos"))))),
+                        term!(op!(Unify, term!(1), term!(op!(Dot, var!("x"), str!("y")))))
+                    ))
+                }
+            ),
+        ];
+
+        let filter = Filter::build(types, ors, "resource", "Resource").unwrap();
+        println!("filter: {}", filter);
+
+        let Filter {
+            root,
+            relations,
+            conditions
+        } = filter;
+
+        assert_eq!(&root, "Resource");
+        assert_eq!(relations, hashset! {
+            Relation(String::from("Resource"), String::from("foos"), String::from("Foo"))
+        });
+
+        // FAILS HERE because of extra condition.
+        assert_eq!(conditions, vec![
+            hashset!{
+                Condition(Datum::Immediate(value!(1)), Comparison::Eq, Datum::Field(Projection(String::from("Foo"), Some(String::from("y")))))
+            }
+        ]);
+    }
+
+}
