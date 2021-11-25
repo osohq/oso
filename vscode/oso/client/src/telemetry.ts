@@ -58,10 +58,7 @@ type MixpanelEvent = { properties: MixpanelMetadata } & (
 
 type State = ExtensionContext['globalState'];
 
-export function flushQueue(
-  state: State,
-  outputChannel: OutputChannel
-): () => void {
+export function flushQueue(state: State, log: OutputChannel): () => void {
   return () => {
     void (async () => {
       try {
@@ -71,19 +68,19 @@ export function flushQueue(
         if (events.length === 0) return;
 
         // Clear events queue.
-        outputChannel.appendLine(`Flushing ${events.length.toString()} events`);
+        log.appendLine(`Flushing ${events.length.toString()} events`);
         await state.update(telemetryEventsKey, []);
 
         mixpanel.track_batch(events, errors =>
           errors.forEach(({ name, message, stack }) => {
-            outputChannel.appendLine(`Mixpanel track_batch error: ${name}`);
-            outputChannel.appendLine(`\t${message}`);
-            if (stack) outputChannel.appendLine(`\t${stack}`);
+            log.appendLine(`Mixpanel track_batch error: ${name}`);
+            log.appendLine(`\t${message}`);
+            if (stack) log.appendLine(`\t${stack}`);
           })
         );
       } catch (e) {
-        outputChannel.append('Caught error while sending telemetry: ');
-        outputChannel.appendLine(e);
+        log.append('Caught error while sending telemetry: ');
+        log.appendLine(e);
       }
     })();
   };
