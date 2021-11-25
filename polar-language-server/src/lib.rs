@@ -272,33 +272,24 @@ impl PolarLanguageServer {
     }
 
     fn send_telemetry(&self, diagnostics: Vec<&Diagnostic>) {
+        use polar_core::parser::{parse_lines, Line};
+
         #[derive(Serialize)]
         struct DiagnosticLoadTelemetryEvent<'a> {
             diagnostics: Vec<&'a Diagnostic>,
             has_resource_blocks: bool,
         }
 
-        // KB might not contain resource block data if we encounter an error before persisting any.
-        let encountered_resource_block_diagnostic = diagnostics.iter().any(|d| {
-            d.code
-                == Some(NumberOrString::String(
-                    "ValidationError::ResourceBlock".into(),
-                ))
-        });
-
-        let kb_contains_resource_blocks = {
-            let resource_blocks = &self.polar.kb.read().unwrap().resource_blocks;
-            let is_empty = resource_blocks.declarations().is_empty()
-                && resource_blocks.shorthand_rules.is_empty()
-                && resource_blocks.actors.is_empty()
-                && resource_blocks.resources.is_empty();
-            !is_empty
-        };
+        let has_resource_blocks = self
+            .documents
+            .values()
+            .filter_map(|doc| parse_lines(0, &doc.text).ok())
+            .flatten()
+            .any(|line| matches!(line, Line::ResourceBlock { .. }));
 
         let event = DiagnosticLoadTelemetryEvent {
             diagnostics,
-            has_resource_blocks: encountered_resource_block_diagnostic
-                || kb_contains_resource_blocks,
+            has_resource_blocks,
         };
 
         let params = &to_value(&event).unwrap();
