@@ -10,11 +10,7 @@ use lsp_types::{
     NumberOrString, Position, PublishDiagnosticsParams, Range, TextDocumentItem, Url,
     VersionedTextDocumentIdentifier,
 };
-use polar_core::{
-    diagnostic::{Diagnostic as PolarDiagnostic, Range as PolarRange},
-    polar::Polar,
-    sources::Source,
-};
+use polar_core::{diagnostic::Diagnostic as PolarDiagnostic, polar::Polar, sources::Source};
 use serde::Serialize;
 use serde_wasm_bindgen::{from_value, to_value};
 use wasm_bindgen::prelude::*;
@@ -48,6 +44,8 @@ pub struct PolarLanguageServer {
 }
 
 fn range_from_polar_diagnostic_context(diagnostic: &PolarDiagnostic) -> Range {
+    use polar_core::diagnostic::Range as PolarRange;
+
     let context = match diagnostic {
         PolarDiagnostic::Error(e) => e.context.as_ref(),
         PolarDiagnostic::Warning(w) => w.context.as_ref(),
@@ -274,20 +272,33 @@ impl PolarLanguageServer {
     fn send_telemetry(&self, diagnostics: Vec<&Diagnostic>) {
         use polar_core::parser::{parse_lines, Line};
 
-        #[derive(Serialize)]
-        struct Counts {
+        #[derive(Default, Serialize)]
+        struct GeneralStats {
             inline_queries: usize,
+            longhand_rules: usize,
             polar_chars: usize,
             polar_files: usize,
-            resource_blocks: usize,
             rule_types: usize,
-            rules: usize,
         }
 
-        #[derive(Serialize)]
+        #[derive(Default, Serialize)]
+        struct ResourceBlockStats {
+            resource_blocks: usize,
+            actors: usize,
+            resources: usize,
+            declarations: usize,
+            roles: usize,
+            permissions: usize,
+            relations: usize,
+            shorthand_rules: usize,
+            cross_resource_shorthand_rules: usize,
+        }
+
+        #[derive(Default, Serialize)]
         struct TelemetryEvent<'a> {
-            counts: Counts,
             diagnostics: Vec<&'a Diagnostic>,
+            general_stats: GeneralStats,
+            resource_block_stats: ResourceBlockStats,
         }
 
         let polar_chars = self
@@ -296,32 +307,78 @@ impl PolarLanguageServer {
             .map(|d| d.text.chars().count())
             .sum();
 
-        let (inline_queries, resource_blocks, rule_types, rules) =
-            self.documents.values().fold((0, 0, 0, 0), |mut acc, doc| {
-                if let Ok(lines) = parse_lines(0, &doc.text) {
-                    for line in lines {
-                        match line {
-                            Line::Query(_) => acc.0 += 1,
-                            Line::ResourceBlock { .. } => acc.1 += 1,
-                            Line::RuleType(_) => acc.2 += 1,
-                            Line::Rule(_) => acc.3 += 1,
+        let mut event = TelemetryEvent {
+            diagnostics,
+            general_stats: GeneralStats {
+                polar_chars,
+                polar_files: self.documents.len(),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        let lines = self.documents.values();
+        let lines = lines.filter_map(|d| parse_lines(0, &d.text).ok()).flatten();
+        for line in lines {
+            match line {
+                Line::Query(_) => event.general_stats.inline_queries += 1,
+                Line::ResourceBlock {
+                    keyword,
+                    productions,
+                    ..
+                } => {
+                    use polar_core::resource_block::Production;
+
+                    event.resource_block_stats.resource_blocks += 1;
+
+                    if let Some(keyword) = keyword {
+                        match keyword.value().as_symbol().unwrap().0.as_ref() {
+                            "actor" => event.resource_block_stats.actors += 1,
+                            "resource" => event.resource_block_stats.resources += 1,
+                            _ => (),
+                        }
+                    }
+
+                    for production in productions {
+                        match production {
+                            Production::Declaration(declaration) => {
+                                use polar_core::resource_block::{
+                                    validate_parsed_declaration, ParsedDeclaration,
+                                };
+
+                                event.resource_block_stats.declarations += 1;
+
+                                if let Ok(declaration) = validate_parsed_declaration(declaration) {
+                                    match declaration {
+                                        ParsedDeclaration::Permissions(permissions) => {
+                                            event.resource_block_stats.permissions +=
+                                                permissions.value().as_list().unwrap().len();
+                                        }
+                                        ParsedDeclaration::Relations(relations) => {
+                                            event.resource_block_stats.relations +=
+                                                relations.value().as_dict().unwrap().fields.len();
+                                        }
+                                        ParsedDeclaration::Roles(roles) => {
+                                            event.resource_block_stats.roles +=
+                                                roles.value().as_list().unwrap().len();
+                                        }
+                                    }
+                                }
+                            }
+                            Production::ShorthandRule(_, (_, relation)) => {
+                                event.resource_block_stats.shorthand_rules += 1;
+
+                                if relation.is_some() {
+                                    event.resource_block_stats.cross_resource_shorthand_rules += 1;
+                                }
+                            }
                         }
                     }
                 }
-                acc
-            });
-
-        let event = TelemetryEvent {
-            diagnostics,
-            counts: Counts {
-                inline_queries,
-                polar_chars,
-                polar_files: self.documents.len(),
-                resource_blocks,
-                rule_types,
-                rules,
-            },
-        };
+                Line::RuleType(_) => event.general_stats.rule_types += 1,
+                Line::Rule(_) => event.general_stats.longhand_rules += 1,
+            }
+        }
 
         let params = &to_value(&event).unwrap();
         let this = &JsValue::null();

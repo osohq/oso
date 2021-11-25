@@ -20,14 +20,18 @@ const distinct_id = hash(env.machineId);
 const MIXPANEL_PROJECT_TOKEN = 'd14a9580b894059dffd19437b7ddd7be';
 const mixpanel = Mixpanel.init(MIXPANEL_PROJECT_TOKEN, { protocol: 'https' });
 
-type MixpanelLoadEvent = { properties: TelemetryEvent['counts'] } & {
+type MixpanelLoadEvent = {
   event: 'TEST_load';
   properties: {
     diagnostics: number;
     errors: number;
     successful: boolean;
+    total_rules: number;
     warnings: number;
   };
+} & {
+  properties: TelemetryEvent['general_stats'] &
+    TelemetryEvent['resource_block_stats'];
 };
 
 type MixpanelDiagnosticEvent = {
@@ -87,13 +91,23 @@ export function flushQueue(
 
 export type TelemetryEvent = {
   diagnostics: Diagnostic[];
-  counts: {
+  general_stats: {
     inline_queries: number;
+    longhand_rules: number;
     polar_chars: number;
     polar_files: number;
-    resource_blocks: number;
     rule_types: number;
-    rules: number;
+  };
+  resource_block_stats: {
+    resource_blocks: number;
+    actors: number;
+    resources: number;
+    declarations: number;
+    roles: number;
+    permissions: number;
+    relations: number;
+    shorthand_rules: number;
+    cross_resource_shorthand_rules: number;
   };
 };
 
@@ -101,7 +115,7 @@ export function enqueueEvent(
   state: State,
   log: OutputChannel,
   uri: Uri,
-  { diagnostics, counts }: TelemetryEvent
+  { diagnostics, general_stats, resource_block_stats }: TelemetryEvent
 ): void {
   void (async () => {
     try {
@@ -115,11 +129,14 @@ export function enqueueEvent(
       const loadEvent: MixpanelEvent = {
         event: 'TEST_load',
         properties: {
-          ...counts,
           diagnostics: diagnostics.length,
           errors: errors.length,
           successful: errors.length === 0,
+          total_rules:
+            general_stats.longhand_rules + resource_block_stats.shorthand_rules,
           warnings: warnings.length,
+          ...general_stats,
+          ...resource_block_stats,
           ...metadata,
         },
       };
