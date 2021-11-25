@@ -22,7 +22,7 @@ void (async function () {
       version: minSupportedVSCodeVersion,
       extensionDevelopmentPath,
       extensionTestsPath,
-      launchArgs: [workspace, '--disable-extensions'],
+      launchArgs: [workspace, '--disable-extensions', '--disable-telemetry'],
     });
   } catch (e) {
     console.error(e);
