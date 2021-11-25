@@ -14,6 +14,20 @@ module DataFilteringHelpers
     end
   end
 
+  def check_authzd(actor, action, resource, expected)
+    results = subject.authzd_resources(actor, action, resource)
+    expect(results).to contain_exactly(*expected)
+    expected.each do |it|
+      answer = subject.query_rule 'allow', actor, action, it
+      expect(answer.to_a).not_to be_empty
+    end
+  end
+
+  def check_authzs(*args)
+    check_authz(*args)
+    check_authzd(*args)
+  end
+
   def self.record(*args, &blk)
     Struct.new(*args, &blk).include(AutoFetcher)
   end

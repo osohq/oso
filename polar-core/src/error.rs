@@ -5,10 +5,11 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     diagnostic::{Context, Range},
+    formatting::to_polar::ToPolarString,
     kb::KnowledgeBase,
     rules::Rule,
     sources::Source,
-    terms::{Symbol, Term},
+    terms::{Operation, Symbol, Term},
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -47,6 +48,9 @@ impl PolarError {
             Runtime(UnhandledPartial { .. }) => "RuntimeError::UnhandledPartial",
             Runtime(Unsupported { .. }) => "RuntimeError::Unsupported",
             Runtime(DataFilteringFieldMissing { .. }) => "RuntimeError::DataFilteringFieldMissing",
+            Runtime(DataFilteringUnsupportedOp { .. }) => {
+                "RuntimeError::DataFilteringUnsupportedOp"
+            }
             Runtime(InvalidRegistration { .. }) => "RuntimeError::InvalidRegistration",
             Runtime(InvalidState { .. }) => "RuntimeError::InvalidState",
             Operational(Serialization { .. }) => "OperationalError::Serialization",
@@ -281,6 +285,9 @@ pub enum RuntimeError {
         var_type: String,
         field: String,
     },
+    DataFilteringUnsupportedOp {
+        operation: Operation,
+    },
     // TODO(gj): consider moving to ValidationError.
     InvalidRegistration {
         sym: Symbol,
@@ -315,6 +322,7 @@ impl RuntimeError {
             | FileLoading { .. }
             | IncompatibleBindings { .. }
             | DataFilteringFieldMissing { .. }
+            | DataFilteringUnsupportedOp { .. }
             | InvalidRegistration { .. }
             | InvalidState { .. } => None,
         };
@@ -328,6 +336,10 @@ impl RuntimeError {
             kind: ErrorKind::Runtime(self),
             context,
         }
+    }
+
+    pub fn unsupported<A>(msg: String, term: Term) -> Result<A, RuntimeError> {
+        Err(Self::Unsupported { msg, term })
     }
 }
 
@@ -392,6 +404,18 @@ The expression is: {expr}
                     "#,
                     var_type = var_type,
                     field = field
+                );
+                write!(f, "{}", msg)
+            }
+            Self::DataFilteringUnsupportedOp { operation } => {
+                let msg = formatdoc!(
+                    r#"Unsupported operation: {}
+
+                    This operation is not supported for data filtering.
+                    For more information please refer to our documentation:
+                        https://docs.osohq.com/guides/data_filtering.html
+                    "#,
+                    operation.to_polar()
                 );
                 write!(f, "{}", msg)
             }
@@ -542,4 +566,8 @@ impl fmt::Display for ValidationError {
             }
         }
     }
+}
+
+pub fn invalid_state_error<A>(msg: String) -> Result<A, RuntimeError> {
+    Err(RuntimeError::InvalidState { msg })
 }

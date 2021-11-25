@@ -34,6 +34,12 @@ module Oso
           Rust.free(ptr) unless ptr.null?
         end
       end
+      # Wrapper class for DataFilter FFI pointer + operations.
+      class DataFilter < ::FFI::AutoPointer
+        def self.release(ptr)
+          Rust.free(ptr) unless ptr.null?
+        end
+      end
       # Wrapper class for Error FFI pointer + operations.
       class Error < ::FFI::AutoPointer
         def self.release(ptr)
@@ -58,6 +64,7 @@ module Oso
   end
 end
 
+require 'oso/polar/ffi/data_filter'
 require 'oso/polar/ffi/polar'
 require 'oso/polar/ffi/query'
 require 'oso/polar/ffi/query_event'

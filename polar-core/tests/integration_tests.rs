@@ -42,7 +42,7 @@ fn no_debug(_: &str) -> String {
 type QueryResults = Vec<(HashMap<Symbol, Value>, Option<TraceResult>)>;
 
 fn no_error_handler(e: PolarError) -> QueryResults {
-    panic!("Query returned error: {}", e.to_string())
+    panic!("Query returned error: {}", e)
 }
 
 fn no_isa(_: Term, _: Symbol) -> bool {
