@@ -325,27 +325,24 @@ impl PolarLanguageServer {
                 Line::ResourceBlock {
                     keyword,
                     productions,
-                    ..
+                    resource,
                 } => {
-                    use polar_core::resource_block::Production;
+                    use polar_core::resource_block::{
+                        block_type_from_keyword, validate_parsed_declaration, BlockType,
+                        ParsedDeclaration, Production,
+                    };
 
                     event.resource_block_stats.resource_blocks += 1;
 
-                    if let Some(keyword) = keyword {
-                        match keyword.value().as_symbol().unwrap().0.as_ref() {
-                            "actor" => event.resource_block_stats.actors += 1,
-                            "resource" => event.resource_block_stats.resources += 1,
-                            _ => (),
-                        }
+                    match block_type_from_keyword(keyword, &resource) {
+                        Ok(BlockType::Actor) => event.resource_block_stats.actors += 1,
+                        Ok(BlockType::Resource) => event.resource_block_stats.resources += 1,
+                        _ => (),
                     }
 
                     for production in productions {
                         match production {
                             Production::Declaration(declaration) => {
-                                use polar_core::resource_block::{
-                                    validate_parsed_declaration, ParsedDeclaration,
-                                };
-
                                 event.resource_block_stats.declarations += 1;
 
                                 if let Ok(declaration) = validate_parsed_declaration(declaration) {
