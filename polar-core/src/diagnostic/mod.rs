@@ -14,6 +14,10 @@ pub enum Diagnostic {
 }
 
 impl Diagnostic {
+    pub fn is_error(&self) -> bool {
+        matches!(self, Diagnostic::Error(_))
+    }
+
     /// Unrecoverable diagnostics might lead to additional diagnostics that obscure the root issue.
     ///
     /// E.g., a `ResourceBlock` error for an invalid `relations` declaration that will cause a

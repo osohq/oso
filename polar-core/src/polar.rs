@@ -130,6 +130,7 @@ impl Polar {
         // will result in a second error when rewriting a shorthand rule involving the relation
         // that would only distract from the _actual_ error (the invalid `relations` declaration).
         if diagnostics.iter().any(Diagnostic::is_unrecoverable) {
+            kb.clear_rules();
             return diagnostics;
         }
 
@@ -149,6 +150,7 @@ impl Polar {
         // laid out in the well-parsed file but *would have* conformed to the shapes laid out in
         // the file that failed to parse.
         if diagnostics.iter().any(Diagnostic::is_unrecoverable) {
+            kb.clear_rules();
             return diagnostics;
         }
 
@@ -170,6 +172,11 @@ impl Polar {
         if let Some(w) = check_resource_blocks_missing_has_permission(&kb) {
             diagnostics.push(Diagnostic::Warning(w.with_context(&*kb)))
         };
+
+        // If we've encountered any errors, clear the KB.
+        if diagnostics.iter().any(Diagnostic::is_error) {
+            kb.clear_rules();
+        }
 
         diagnostics
     }
@@ -195,8 +202,6 @@ impl Polar {
             .extend(warnings.into_iter().map(Message::warning));
 
         if let Some(e) = errors.into_iter().next() {
-            // If we've encountered any errors, clear the KB.
-            self.clear_rules();
             return Err(e);
         }
         Ok(())
