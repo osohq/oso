@@ -27,4 +27,3 @@ test: clean wasm
 clean: node_modules
 	rm -rf client/out server/out
 	mkdir -p client/out server/out
-	cp client/node_modules/blake3-wasm/dist/wasm/nodejs/blake3_js_bg.wasm client/out

@@ -1,5 +1,6 @@
+import { createHash } from 'crypto';
+
 import { ExtensionContext, env, Uri, OutputChannel } from 'vscode';
-import { hash } from 'blake3-wasm';
 import * as Mixpanel from 'mixpanel';
 import {
   Diagnostic,
@@ -10,8 +11,11 @@ export const telemetryEventsKey = 'events';
 // Flush telemetry events in batches every hour.
 export const TELEMETRY_INTERVAL = 1000 * 60 * 60;
 
-// `distinct_id`: One-way hash of VSCode machine ID.
-const distinct_id = hash(env.machineId).toString('base64');
+const hash = (contents: string) =>
+  createHash('sha256').update(contents).digest('base64');
+
+// One-way hash of VSCode machine ID.
+const distinct_id = hash(env.machineId);
 
 const MIXPANEL_PROJECT_TOKEN = 'd14a9580b894059dffd19437b7ddd7be';
 const mixpanel = Mixpanel.init(MIXPANEL_PROJECT_TOKEN, { protocol: 'https' });
@@ -95,8 +99,8 @@ export function enqueueEvent(
 ): void {
   void (async () => {
     try {
-      const load_id = hash(Math.random().toString()).toString('base64');
-      const workspace_id = hash(uri.toString()).toString('base64');
+      const load_id = hash(Math.random().toString());
+      const workspace_id = hash(uri.toString());
       const metadata: MixpanelMetadata = { distinct_id, load_id, workspace_id };
 
       const errors = diagnostics.filter(d => d.severity === Severity.Error);

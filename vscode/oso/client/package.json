@@ -13,7 +13,6 @@
 		"vscode": "^1.52.0"
 	},
 	"dependencies": {
-		"blake3-wasm": "^2.1.5",
 		"mixpanel": "^0.14.0",
 		"vscode-languageclient": "^7.0.0"
 	},
