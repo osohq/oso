@@ -49,18 +49,22 @@
     ],
     "configuration": {
       "type": "object",
-      "title": "Polar Analyzer configuration",
+      "title": "Oso",
       "properties": {
-        "polarAnalyzer.trace.server": {
-          "scope": "window",
+        "oso.polarLanguageServer.telemetry.enabled": {
           "type": "string",
           "enum": [
-            "off",
-            "messages",
-            "verbose"
+            "default",
+            "on",
+            "off"
           ],
-          "default": "off",
-          "description": "Traces the communication between VSCode and the language server."
+          "enumDescriptions": [
+            "Default to VSCode's 'telemetry.telemetryLevel' setting",
+            "Enable telemetry",
+            "Disable telemetry"
+          ],
+          "default": "default",
+          "description": "Share usage data to help us make Oso better."
         }
       }
     }
