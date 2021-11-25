@@ -1,9 +1,9 @@
 .PHONY: build package wasm fmtcheck lint test clean
 
-build: clean wasm node_modules
+build: clean wasm
 	yarn compile
 
-package: clean wasm node_modules
+package: clean wasm
 	yarn vsce package
 
 CARGO_FLAGS ?= --dev
@@ -13,18 +13,18 @@ wasm:
 
 node_modules: package.json client/package.json server/package.json
 	yarn install
-	cp client/node_modules/blake3-wasm/dist/wasm/nodejs/blake3_js_bg.wasm client/out
 	@touch $@
 
-fmtcheck: clean node_modules
+fmtcheck: clean
 	yarn fmtcheck
 
-lint: clean wasm node_modules
+lint: clean wasm
 	yarn lint
 
-test: clean wasm node_modules
+test: clean wasm
 	yarn test
 
-clean:
+clean: node_modules
 	rm -rf client/out server/out
 	mkdir -p client/out server/out
+	cp client/node_modules/blake3-wasm/dist/wasm/nodejs/blake3_js_bg.wasm client/out
