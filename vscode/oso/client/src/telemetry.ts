@@ -20,19 +20,18 @@ const distinct_id = hash(env.machineId);
 const MIXPANEL_PROJECT_TOKEN = 'd14a9580b894059dffd19437b7ddd7be';
 const mixpanel = Mixpanel.init(MIXPANEL_PROJECT_TOKEN, { protocol: 'https' });
 
-type MixpanelLoadEvent = {
-  event: 'load';
+type MixpanelLoadEvent = { properties: TelemetryEvent['counts'] } & {
+  event: 'TEST_load';
   properties: {
     diagnostics: number;
     errors: number;
-    has_resource_blocks: boolean;
     successful: boolean;
     warnings: number;
   };
 };
 
 type MixpanelDiagnosticEvent = {
-  event: 'diagnostic';
+  event: 'TEST_diagnostic';
   properties: {
     code: Diagnostic['code'];
   };
@@ -88,14 +87,21 @@ export function flushQueue(
 
 export type TelemetryEvent = {
   diagnostics: Diagnostic[];
-  has_resource_blocks: boolean;
+  counts: {
+    inline_queries: number;
+    polar_chars: number;
+    polar_files: number;
+    resource_blocks: number;
+    rule_types: number;
+    rules: number;
+  };
 };
 
 export function enqueueEvent(
   state: State,
   log: OutputChannel,
   uri: Uri,
-  { diagnostics, has_resource_blocks }: TelemetryEvent
+  { diagnostics, counts }: TelemetryEvent
 ): void {
   void (async () => {
     try {
@@ -107,11 +113,11 @@ export function enqueueEvent(
       const warnings = diagnostics.filter(d => d.severity === Severity.Warning);
 
       const loadEvent: MixpanelEvent = {
-        event: 'load',
+        event: 'TEST_load',
         properties: {
+          ...counts,
           diagnostics: diagnostics.length,
           errors: errors.length,
-          has_resource_blocks,
           successful: errors.length === 0,
           warnings: warnings.length,
           ...metadata,
@@ -119,7 +125,7 @@ export function enqueueEvent(
       };
 
       const diagnosticEvents: MixpanelEvent[] = diagnostics.map(({ code }) => ({
-        event: 'diagnostic',
+        event: 'TEST_diagnostic',
         properties: { code, ...metadata },
       }));
 

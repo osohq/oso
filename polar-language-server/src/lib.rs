@@ -275,21 +275,52 @@ impl PolarLanguageServer {
         use polar_core::parser::{parse_lines, Line};
 
         #[derive(Serialize)]
-        struct DiagnosticLoadTelemetryEvent<'a> {
-            diagnostics: Vec<&'a Diagnostic>,
-            has_resource_blocks: bool,
+        struct Counts {
+            inline_queries: usize,
+            polar_chars: usize,
+            polar_files: usize,
+            resource_blocks: usize,
+            rule_types: usize,
+            rules: usize,
         }
 
-        let has_resource_blocks = self
+        #[derive(Serialize)]
+        struct TelemetryEvent<'a> {
+            counts: Counts,
+            diagnostics: Vec<&'a Diagnostic>,
+        }
+
+        let polar_chars = self
             .documents
             .values()
-            .filter_map(|doc| parse_lines(0, &doc.text).ok())
-            .flatten()
-            .any(|line| matches!(line, Line::ResourceBlock { .. }));
+            .map(|d| d.text.chars().count())
+            .sum();
 
-        let event = DiagnosticLoadTelemetryEvent {
+        let (inline_queries, resource_blocks, rule_types, rules) =
+            self.documents.values().fold((0, 0, 0, 0), |mut acc, doc| {
+                if let Ok(lines) = parse_lines(0, &doc.text) {
+                    for line in lines {
+                        match line {
+                            Line::Query(_) => acc.0 += 1,
+                            Line::ResourceBlock { .. } => acc.1 += 1,
+                            Line::RuleType(_) => acc.2 += 1,
+                            Line::Rule(_) => acc.3 += 1,
+                        }
+                    }
+                }
+                acc
+            });
+
+        let event = TelemetryEvent {
             diagnostics,
-            has_resource_blocks,
+            counts: Counts {
+                inline_queries,
+                polar_chars,
+                polar_files: self.documents.len(),
+                resource_blocks,
+                rule_types,
+                rules,
+            },
         };
 
         let params = &to_value(&event).unwrap();
