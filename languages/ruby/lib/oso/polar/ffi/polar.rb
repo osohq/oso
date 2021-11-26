@@ -61,7 +61,7 @@ module Oso
           partials = JSON.dump(partials)
           plan = Rust.build_data_filter(self, types, partials, variable, class_tag)
           process_messages
-          handle_error if plan.nil?
+          plan = check_result plan
           # TODO(gw) more error checking?
           JSON.parse plan.to_s
         end
