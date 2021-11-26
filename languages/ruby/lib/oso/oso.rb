@@ -5,7 +5,7 @@ require_relative 'polar/polar'
 
 module Oso
   # oso authorization API.
-  class Oso < Polar::Polar
+  class Oso < Polar::Polar # rubocop:disable Metrics/ClassLength
     # Create an Oso instance, which is used to configure and enforce an Oso
     # policy in an app.
     #
@@ -202,6 +202,36 @@ module Oso
       ::Oso::Polar::DataFiltering::FilterPlan
         .parse(self, results, get_class_name(resource_cls))
         .build_query
+    end
+
+    def authzd_query(actor, action, resource_cls) # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
+      var_name = 'resource'
+      resource = Polar::Variable.new var_name
+
+      partials = query_rule(
+        'allow',
+        actor,
+        action,
+        resource,
+        bindings: { var_name => type_constraint(resource, resource_cls) },
+        accept_expression: true
+      )
+      partials = partials.each_with_object([]) do |result, out|
+        result.each do |key, val|
+          out.push({ 'bindings' => { key => host.to_polar(val) } })
+        end
+      end
+
+      types = host.serialize_types
+      class_name = get_class_name resource_cls
+
+      data_filter = ffi.build_data_filter(types, partials, var_name, class_name)
+      data_filter = ::Oso::Polar::Data::Filter.parse(self, data_filter)
+      data_filter.to_query(host.types)
+    end
+
+    def authzd_resources(actor, action, resource_cls)
+      authzd_query(actor, action, resource_cls).to_a
     end
 
     # Determine the resources of type +resource_cls+ that +actor+

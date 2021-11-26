@@ -42,7 +42,7 @@ fn no_debug(_: &str) -> String {
 type QueryResults = Vec<(HashMap<Symbol, Value>, Option<TraceResult>)>;
 
 fn no_error_handler(e: PolarError) -> QueryResults {
-    panic!("Query returned error: {}", e.to_string())
+    panic!("Query returned error: {}", e)
 }
 
 fn no_isa(_: Term, _: Symbol) -> bool {
@@ -2494,7 +2494,6 @@ fn test_default_rule_types() -> TestResult {
     p.load_str(
         r#"
     has_permission(_actor: Actor, "eat", _resource: Resource);
-    has_permission(_actor: Actor, "eat", _resource: Actor);
     has_role(_actor: Actor, "member", _resource: Resource);
     has_role(_actor: Actor, "member", _resource: Actor);
     has_relation(_actor: Actor, "any", _other: Actor);

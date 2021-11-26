@@ -6,7 +6,7 @@ module Oso
   module Polar
     module FFI
       # Wrapper class for Polar FFI pointer + operations.
-      class Polar < ::FFI::AutoPointer
+      class Polar < ::FFI::AutoPointer # rubocop:disable Metrics/ClassLength
         attr_accessor :enrich_message
 
         Rust = Module.new do
@@ -31,6 +31,12 @@ module Oso
             [FFI::Polar, :string, :string, :string, :string],
             CResultString
           )
+          attach_function(
+            :build_data_filter,
+            :polar_build_data_filter,
+            [FFI::Polar, :string, :string, :string, :string],
+            CResultString
+          )
         end
         private_constant :Rust
 
@@ -46,6 +52,16 @@ module Oso
           plan = Rust.build_filter_plan(self, types, partials, variable, class_tag)
           process_messages
           plan = check_result plan
+          # TODO(gw) more error checking?
+          JSON.parse plan.to_s
+        end
+
+        def build_data_filter(types, partials, variable, class_tag)
+          types = JSON.dump(types)
+          partials = JSON.dump(partials)
+          plan = Rust.build_data_filter(self, types, partials, variable, class_tag)
+          process_messages
+          handle_error if plan.nil?
           # TODO(gw) more error checking?
           JSON.parse plan.to_s
         end

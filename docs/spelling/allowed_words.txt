@@ -83,8 +83,11 @@ TypeScript
 UI
 URI
 URIs
+UUID
+UUIDs
 VM
 VPN
+VSCode's
 WASM
 Wayfair
 alice
