@@ -1025,12 +1025,14 @@ mod test {
 
                # traversing `in` is tough!
                r(a: A) if b in a.b and t(b);
-               s(a: A) if b in a.b and u(b.c);
+               s(a: A) if b in a.b and b matches B and u(b.c);
+               # This is still incorrect
+               # this should be equivalent to `s`
+               s_bad(a: A) if b in a.b and u(b.c);
                t(b: B) if b.foo = 1;
                t(b: C) if b.foo = 2;
                u(c: C) if c.bar = 1;
                u(c: D) if c.bar = 2;
-
 
                # the rebinding here sometimes trips up the simplifier
                # PR: https://github.com/osohq/oso/pull/1289
@@ -1105,7 +1107,7 @@ mod test {
         assert_partial_expression!(
             next_binding(&mut q),
             "x",
-            "_this matches A{} and _b_73 in _this.b and _b_73 matches B{} and 1 = _b_73.foo"
+            "_this matches A{} and _b_74 in _this.b and _b_74 matches B{} and 1 = _b_74.foo"
         );
         assert_query_done!(q);
 
@@ -1113,7 +1115,23 @@ mod test {
         assert_partial_expression!(
             next_binding(&mut q),
             "x",
-            "_this matches A{} and _b_67 in _this.b and _b_67 matches B{} and 1 = _b_67.c.bar"
+            "_this matches A{} and _b_84 in _this.b and _b_84 matches B{} and _b_84.c matches C{} and 1 = _b_84.c.bar"
+        );
+        assert_query_done!(q);
+
+        let mut q = p.new_query_from_term(term!(call!("s_bad", [sym!("x")])), false);
+        assert_partial_expression!(
+            next_binding(&mut q),
+            "x",
+            "_this matches A{} and _b_104 in _this.b and _b_104.c matches C{} and 1 = _b_104.c.bar"
+        );
+        // @TODO(sam): this result is incorrect. We *could* know
+        // that `_b_104` matches B{} by checking `a.b` first
+        // or perhaps by also traversing `in` and checking whether a.b.c matches D
+        assert_partial_expression!(
+            next_binding(&mut q),
+            "x",
+            "_this matches A{} and _b_104 in _this.b and _b_104.c matches D{} and 2 = _b_104.c.bar"
         );
         assert_query_done!(q);
         Ok(())
