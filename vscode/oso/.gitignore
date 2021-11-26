@@ -1,5 +1,4 @@
 !.vscode
-client/out
-server/out
+out
 .vscode-test/
 **/*.vsix

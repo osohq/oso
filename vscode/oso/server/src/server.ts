@@ -4,7 +4,7 @@ import {
   PublishDiagnosticsParams,
   TextDocumentSyncKind,
 } from 'vscode-languageserver/node';
-import { PolarLanguageServer } from '../out/polar_language_server';
+import { PolarLanguageServer } from '../../out/polar_language_server';
 
 // Create LSP connection
 const connection = createConnection(ProposedFeatures.all);
