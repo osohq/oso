@@ -314,6 +314,7 @@ def tag_nested_many_many_test_fixture(session):
     user_posts = Tag(name="user_posts")
     random = Tag(name="random", is_public=True)
     other = Tag(name="other")
+    unused = Tag(name="unused")
 
     user = User(username="user", tags=[eng, user_posts])
     other_user = User(username="other_user", tags=[random])
@@ -766,10 +767,17 @@ def test_in_intersection(session, oso, tag_nested_many_many_test_fixture):
 def test_partial_isa_with_path(session, oso, tag_nested_many_many_test_fixture):
     oso.load_str(
         """
-            allow(_, _, post: Post) if check_user(post.created_by);
-            # User is not a tag.
-            check_user(user: Tag) if user.username = "other_user";
-            check_user(user: User) if user.username = "user";
+            allow(user, _, post: Post) if
+                check(user, post.created_by);
+
+
+            allow(user, _, tag: Tag) if
+                post in tag.posts and
+                check(user, post);
+
+            check(user: User, post: Post) if post.created_by = user;
+            check(_: User, tag: Tag)      if tag.is_public;
+            check(_: User, user: User)    if user.username = "user";
         """
     )
 
@@ -783,6 +791,15 @@ def test_partial_isa_with_path(session, oso, tag_nested_many_many_test_fixture):
         assert post.created_by.username == "user"
 
     assert len(posts) == 5
+
+    tags = session.query(Tag).filter(authorize_model(oso, user, "read", session, Tag))
+    print_query(tags)
+    # Should only get tags created by user.
+    tags = tags.all()
+    for tag in tags:
+        assert any(post.created_by.username == "user" for post in tag.posts)
+
+    assert len(tags) == 4
 
 
 # TODO test_nested_relationship_single_many
