@@ -576,7 +576,6 @@ export class Host implements Required<DataFilteringQueryParams> {
     } else if (isPolarVariable(t)) {
       return new Variable(t.Variable);
     } else if (isPolarExpression(t)) {
-      // TODO(gj): Only allow expressions if the flag has been frobbed.
       if(!this.acceptExpression) {
         throw new UnexpectedPolarTypeError(UNEXPECTED_EXPRESSION_MESSAGE);
       }
