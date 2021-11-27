@@ -8,10 +8,11 @@ type Result = Map<string, unknown>;
 
 export async function query<T extends Polar>(
   x: T,
-  q: string | Predicate
+  q: string | Predicate,
+  acceptExpression?: boolean
 ): Promise<Result[]> {
   const results = [];
-  for await (const result of x.query(q)) {
+  for await (const result of x.query(q, new Map(), acceptExpression)) {
     results.push(result);
   }
   return results;
@@ -33,9 +34,10 @@ export async function qvar<T extends Polar>(
   x: T,
   q: string | Predicate,
   prop: string,
-  one?: boolean
+  one?: boolean,
+  acceptExpression?: boolean
 ): Promise<unknown> {
-  const results = await query(x, q);
+  const results = await query(x, q, acceptExpression);
   return one ? results[0]?.get(prop) : results.map(r => r.get(prop));
 }
 

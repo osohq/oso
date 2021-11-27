@@ -131,7 +131,7 @@ export class Oso<
       'allow',
       actor,
       new Variable('action'),
-      resource
+      resource,
     );
     const actions = new Set<Action | '*'>();
     for await (const result of results) {
@@ -280,9 +280,10 @@ export class Oso<
     ]);
     const bindings = new Map();
     bindings.set('resource', constraint);
-    const results = this.queryRuleWithBindings(
+    const results = this.queryRuleWithBindingsAndAcceptExpression(
       'allow',
       bindings,
+      true,
       actor,
       action,
       resource

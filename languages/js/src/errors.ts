@@ -143,4 +143,4 @@ using django-oso or sqlalchemy-oso's data filtering features. Did you perform an
 operation over an unbound variable in your policy?
 
 To silence this error and receive an Expression result, pass
-accept_expression=True to Oso.query.`;
+accept_expression as True to Oso.Query.`;

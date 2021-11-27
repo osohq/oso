@@ -859,7 +859,7 @@ describe('iterators', () => {
 test('handles expressions', async () => {
   const p = new Polar();
   await p.loadStr('f(x) if x > 2;');
-  const result = (await query(p, 'f(x)'))[0];
+  const result = (await query(p, 'f(x)', true))[0];
   const x = result.get('x');
   expect(x).toBeInstanceOf(Expression);
   const gt = new Expression('Gt', [new Variable('_this'), 2]);
