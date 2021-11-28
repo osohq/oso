@@ -77,8 +77,8 @@
     "fmtwrite": "prettier --write 'client/**/*.ts' 'server/**/*.ts' 'test/**/*.ts'",
     "fmtcheck": "prettier --check 'client/**/*.ts' 'server/**/*.ts' 'test/**/*.ts'",
     "test": "tsc --build test && yarn esbuild-all && node ./out/test/src/runTest.js",
-    "esbuild-client": "esbuild client=./client/src/extension.ts --bundle --outdir=out --external:vscode --format=cjs --platform=node",
-    "esbuild-server": "esbuild server=./server/src/server.ts    --bundle --outdir=out --external:vscode --format=cjs --platform=node",
+    "esbuild-client": "esbuild client=./client/src --bundle --outdir=out --external:vscode --format=cjs --platform=node",
+    "esbuild-server": "esbuild server=./server/src --bundle --outdir=out --external:vscode --format=cjs --platform=node",
     "esbuild-all": "yarn esbuild-server --sourcemap && yarn esbuild-client --sourcemap",
     "vscode:prepublish": "yarn esbuild-server --minify && yarn esbuild-client --minify"
   },

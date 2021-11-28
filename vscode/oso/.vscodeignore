@@ -6,7 +6,7 @@
 !language-configuration.json
 !LICENSE
 !oso_logo.png
-!out/main.js
+!out/client.js
 !out/polar_language_server_bg.wasm
 !out/server.js
 !package.json
