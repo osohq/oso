@@ -14,7 +14,11 @@ module.exports = {
       ],
       parserOptions: {
         tsconfigRootDir: __dirname,
-        project: ['./client/tsconfig.json', './server/tsconfig.json'],
+        project: [
+          './client/tsconfig.json',
+          './server/tsconfig.json',
+          './test/tsconfig.json',
+        ],
       },
     },
   ],

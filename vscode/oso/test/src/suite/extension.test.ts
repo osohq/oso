@@ -1,4 +1,4 @@
-import * as assert from 'assert';
+import { ok, strictEqual } from 'assert';
 
 import {
   Diagnostic,
@@ -15,7 +15,8 @@ async function getDiagnostics(n: number): Promise<[Uri, Diagnostic[]][]> {
   for (;;) {
     diagnostics = languages.getDiagnostics();
     if (diagnostics.length === n) break;
-    if (diagnostics.length > n) throw new Error('too many diagnostics');
+    if (diagnostics.length > n)
+      throw new Error(`too many diagnostics: ${diagnostics.toString()}`);
     await new Promise(r => setTimeout(r, 0));
   }
   return diagnostics;
@@ -29,22 +30,22 @@ suite('Diagnostics', () => {
     const diagnostics = (await getDiagnostics(files.length)).sort();
 
     let [uri, [diagnostic]] = diagnostics[0];
-    assert.strictEqual(uri.toString(), files[0]);
-    assert.strictEqual(diagnostic.severity, DiagnosticSeverity.Warning);
-    assert(diagnostic.range.start.isEqual(new Position(0, 0)));
-    assert(diagnostic.range.end.isEqual(new Position(0, 0)));
-    assert(
+    strictEqual(uri.toString(), files[0]);
+    strictEqual(diagnostic.severity, DiagnosticSeverity.Warning);
+    ok(diagnostic.range.start.isEqual(new Position(0, 0)));
+    ok(diagnostic.range.end.isEqual(new Position(0, 0)));
+    ok(
       diagnostic.message.startsWith(
         'Your policy does not contain an allow rule'
       )
     );
 
     [uri, [diagnostic]] = diagnostics[1];
-    assert.strictEqual(uri.toString(), files[1]);
-    assert.strictEqual(diagnostic.severity, DiagnosticSeverity.Error);
-    assert(diagnostic.range.start.isEqual(new Position(0, 6)));
-    assert(diagnostic.range.end.isEqual(new Position(0, 6)));
-    assert.strictEqual(
+    strictEqual(uri.toString(), files[1]);
+    strictEqual(diagnostic.severity, DiagnosticSeverity.Error);
+    ok(diagnostic.range.start.isEqual(new Position(0, 6)));
+    ok(diagnostic.range.end.isEqual(new Position(0, 6)));
+    strictEqual(
       diagnostic.message,
       'hit the end of the file unexpectedly. Did you forget a semi-colon'
     );

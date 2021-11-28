@@ -1,7 +1,16 @@
 .PHONY: build package wasm fmtcheck lint test clean
 
-build: wasm
-	yarn compile
+test: wasm
+	yarn test
+
+lint: wasm
+	yarn lint
+
+typecheck: wasm
+	yarn typecheck
+
+fmtcheck: clean
+	yarn fmtcheck
 
 package: wasm
 	yarn vsce package
@@ -14,15 +23,6 @@ wasm: clean
 node_modules: package.json
 	yarn install
 	@touch $@
-
-fmtcheck: clean
-	yarn fmtcheck
-
-lint: wasm
-	yarn lint
-
-test: wasm
-	yarn test
 
 clean: node_modules
 	rm -rf out

@@ -1,7 +1,7 @@
 import { resolve } from 'path';
 
-import * as Mocha from 'mocha'; // eslint-disable-line node/no-unpublished-import
-import * as glob from 'glob'; // eslint-disable-line node/no-unpublished-import
+import Mocha from 'mocha'; // eslint-disable-line node/no-unpublished-import
+import glob from 'glob'; // eslint-disable-line node/no-unpublished-import
 
 type Callback = (error: Error | null, failures?: number) => void;
 

@@ -1,8 +1,4 @@
 {
-  "compilerOptions": {
-    "resolveJsonModule": true
-  },
-  "exclude": ["node_modules", ".vscode-test"],
   "extends": "../tsconfig.json",
-  "include": ["src", "test"]
+  "include": ["src"]
 }

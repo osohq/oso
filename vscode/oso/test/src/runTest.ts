@@ -16,7 +16,7 @@ void (async function () {
     const extensionTestsPath = resolve(__dirname, './suite');
     const workspace = resolve(
       __dirname,
-      '../../../client/test-fixtures/workspace/test.code-workspace'
+      '../../../test-fixtures/workspace/test.code-workspace'
     );
 
     await runTests({

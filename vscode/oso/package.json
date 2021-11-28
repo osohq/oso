@@ -23,7 +23,7 @@
   "engines": {
     "vscode": "^1.52.0"
   },
-  "main": "./out/main.js",
+  "main": "./out/client.js",
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -71,19 +71,16 @@
     }
   },
   "scripts": {
-    "compile": "tsc --build",
-    "watch": "tsc --build --watch",
-    "clean": "gts clean",
-    "lint": "gts lint -- . --max-warnings 0",
-    "fmt": "prettier --write 'client/**/*.ts' 'server/**/*.ts'",
-    "fmtcheck": "prettier --check 'client/**/*.ts' 'server/**/*.ts'",
+    "typecheck": "tsc --noEmit",
     "fix": "gts fix",
-    "test": "yarn compile && yarn esbuild && node ./out/client/test/runTest.js",
-
-    "vscode:prepublish": "yarn esbuild-server --minify && yarn esbuild-client --minify",
-    "esbuild-server": "esbuild ./server/src/server.ts --bundle --outfile=out/server.js --external:vscode --format=cjs --platform=node",
-    "esbuild-client": "esbuild ./client/src/extension.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
-    "esbuild": "yarn esbuild-server --sourcemap && yarn esbuild-client --sourcemap"
+    "lint": "gts lint -- . --max-warnings 0",
+    "fmtwrite": "prettier --write 'client/**/*.ts' 'server/**/*.ts' 'test/**/*.ts'",
+    "fmtcheck": "prettier --check 'client/**/*.ts' 'server/**/*.ts' 'test/**/*.ts'",
+    "test": "tsc --build test && yarn esbuild-all && node ./out/test/src/runTest.js",
+    "esbuild-client": "esbuild client=./client/src/extension.ts --bundle --outdir=out --external:vscode --format=cjs --platform=node",
+    "esbuild-server": "esbuild server=./server/src/server.ts    --bundle --outdir=out --external:vscode --format=cjs --platform=node",
+    "esbuild-all": "yarn esbuild-server --sourcemap && yarn esbuild-client --sourcemap",
+    "vscode:prepublish": "yarn esbuild-server --minify && yarn esbuild-client --minify"
   },
   "dependencies": {
     "mixpanel": "^0.14.0",
