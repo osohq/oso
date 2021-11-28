@@ -141,4 +141,4 @@ export const UNEXPECTED_EXPRESSION_MESSAGE = `Received Expression from Polar VM.
   operation over an unbound variable in your policy?
 
   To silence this error and receive an Expression result, pass
-  accept_expression as True to Oso.Query.`;
+  accept_expression as true to Oso.Query.`;
