@@ -12,7 +12,7 @@ export async function query<T extends Polar>(
   acceptExpression?: boolean
 ): Promise<Result[]> {
   const results = [];
-  for await (const result of x.query(q, new Map(), acceptExpression)) {
+  for await (const result of x.queryWithAcceptExpression(q, acceptExpression)) {
     results.push(result);
   }
   return results;

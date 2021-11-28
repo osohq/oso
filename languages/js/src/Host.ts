@@ -6,7 +6,7 @@ import {
   UnregisteredClassError,
   UnregisteredInstanceError,
   UnexpectedPolarTypeError,
-  UNEXPECTED_EXPRESSION_MESSAGE
+  UNEXPECTED_EXPRESSION_MESSAGE,
 } from './errors';
 import {
   ancestors,
@@ -95,7 +95,7 @@ export class Host implements Required<DataFilteringQueryParams> {
   #instances: Map<number, unknown>;
   types: Map<string | Class, UserType<any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
   #equalityFn: EqualityFn;
-  acceptExpression: Boolean;
+  acceptExpression: boolean;
 
   // global data filtering config
   buildQuery: BuildQueryFn;
@@ -576,7 +576,7 @@ export class Host implements Required<DataFilteringQueryParams> {
     } else if (isPolarVariable(t)) {
       return new Variable(t.Variable);
     } else if (isPolarExpression(t)) {
-      if(!this.acceptExpression) {
+      if (!this.acceptExpression) {
         throw new UnexpectedPolarTypeError(UNEXPECTED_EXPRESSION_MESSAGE);
       }
       const { operator, args: argTerms } = t.Expression;
@@ -600,7 +600,7 @@ export class Host implements Required<DataFilteringQueryParams> {
     }
   }
 
-  setAcceptExpression(acceptExpression: Boolean) : void {
+  setAcceptExpression(acceptExpression = false): void {
     this.acceptExpression = acceptExpression;
-  } 
+  }
 }

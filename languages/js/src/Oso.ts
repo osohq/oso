@@ -131,7 +131,7 @@ export class Oso<
       'allow',
       actor,
       new Variable('action'),
-      resource,
+      resource
     );
     const actions = new Set<Action | '*'>();
     for await (const result of results) {

@@ -185,7 +185,11 @@ export class Polar {
   /**
    * Query for a Polar predicate or string.
    */
-  query(q: Predicate | string, bindings?: Map<string, unknown>, acceptExpression:boolean=false): QueryResult {
+  query(
+    q: Predicate | string,
+    bindings?: Map<string, unknown>,
+    acceptExpression?: boolean
+  ): QueryResult {
     const host = Host.clone(this.getHost());
     host.setAcceptExpression(acceptExpression);
     let ffiQuery;
@@ -200,6 +204,17 @@ export class Polar {
   }
 
   /**
+   * Query for a Polar predicate or string with optional
+   * acceptExpression flag
+   */
+  queryWithAcceptExpression(
+    q: Predicate | string,
+    acceptExpression?: boolean
+  ): QueryResult {
+    return this.query(q, new Map(), acceptExpression);
+  }
+
+  /**
    * Query for a Polar rule with bindings.
    */
   queryRuleWithBindings(
@@ -210,6 +225,10 @@ export class Polar {
     return this.query(new Predicate(name, args), bindings);
   }
 
+  /**
+   * Query for a Polar rule with bindings with optional
+   * acceptExpression flag.
+   */
   queryRuleWithBindingsAndAcceptExpression(
     name: string,
     bindings: Map<string, unknown>,

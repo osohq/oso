@@ -132,15 +132,13 @@ export class DataFilteringConfigurationError extends PolarError {
 
 export class UnexpectedPolarTypeError extends PolarError {
   constructor(message: string) {
-    super(
-      `${message}`
-    );
+    super(`${message}`);
   }
 }
 
 export const UNEXPECTED_EXPRESSION_MESSAGE = `Received Expression from Polar VM. The Expression type is only supported when
-using django-oso or sqlalchemy-oso's data filtering features. Did you perform an
-operation over an unbound variable in your policy?
+  using data filtering features. Did you perform an
+  operation over an unbound variable in your policy?
 
-To silence this error and receive an Expression result, pass
-accept_expression as True to Oso.Query.`;
+  To silence this error and receive an Expression result, pass
+  accept_expression as True to Oso.Query.`;
