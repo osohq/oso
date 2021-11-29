@@ -829,6 +829,7 @@ dependencies = [
  "js-sys",
  "lsp-types",
  "polar-core",
+ "serde",
  "serde-wasm-bindgen",
  "wasm-bindgen",
  "wasm-bindgen-test",

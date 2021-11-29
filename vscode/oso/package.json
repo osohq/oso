@@ -1,5 +1,6 @@
 {
-  "version": "0.1.1",
+  "private": true,
+  "version": "0.23.0",
   "name": "oso",
   "displayName": "Oso",
   "author": "Oso Security Inc.",
@@ -22,7 +23,7 @@
   "engines": {
     "vscode": "^1.52.0"
   },
-  "main": "./client/out/main.js",
+  "main": "./out/client.js",
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -49,42 +50,58 @@
     ],
     "configuration": {
       "type": "object",
-      "title": "Polar Analyzer configuration",
+      "title": "Oso",
       "properties": {
-        "polarAnalyzer.trace.server": {
-          "scope": "window",
+        "oso.polarLanguageServer.telemetry.enabled": {
           "type": "string",
           "enum": [
-            "off",
-            "messages",
-            "verbose"
+            "default",
+            "on",
+            "off"
           ],
-          "default": "off",
-          "description": "Traces the communication between VSCode and the language server."
+          "enumDescriptions": [
+            "Default to VSCode's 'telemetry.telemetryLevel' setting",
+            "Enable telemetry",
+            "Disable telemetry"
+          ],
+          "default": "default",
+          "description": "Share usage data to help us make Oso better."
         }
       }
     }
   },
   "scripts": {
-    "compile": "tsc --build",
-    "watch": "tsc --build --watch",
-    "clean": "gts clean",
-    "lint": "gts lint -- . --max-warnings 0",
-    "fmt": "prettier --write 'client/**/*.ts' 'server/**/*.ts'",
-    "fmtcheck": "prettier --check 'client/**/*.ts' 'server/**/*.ts'",
+    "package": "vsce package --yarn --githubBranch main --pre-release --out oso.vsix",
+    "publish": "vsce publish --yarn --githubBranch main --pre-release --packagePath oso.vsix",
+    "typecheck": "tsc --noEmit",
     "fix": "gts fix",
-    "postinstall": "cd client && yarn install && cd ../server && yarn install && cd ..",
-    "test": "yarn compile && yarn esbuild && node ./client/out/test/runTest.js",
-
-    "vscode:prepublish": "yarn esbuild-server --minify && yarn esbuild-client --minify",
-    "esbuild-server": "esbuild ./server/src/server.ts --bundle --outfile=server/out/server.js --external:vscode --format=cjs --platform=node",
-    "esbuild-client": "esbuild ./client/src/extension.ts --bundle --outfile=client/out/main.js --external:vscode --format=cjs --platform=node",
-    "esbuild": "yarn esbuild-server --sourcemap && yarn esbuild-client --sourcemap"
+    "lint": "gts lint -- . --max-warnings 0",
+    "fmtwrite": "prettier --write 'client/**/*.ts' 'server/**/*.ts' 'test/**/*.ts'",
+    "fmtcheck": "prettier --check 'client/**/*.ts' 'server/**/*.ts' 'test/**/*.ts'",
+    "test": "tsc --build test && yarn esbuild-all && node ./out/test/src/runTest.js",
+    "esbuild-client": "esbuild client=./client/src --bundle --outdir=out --external:vscode --format=cjs --platform=node",
+    "esbuild-server": "esbuild server=./server/src --bundle --outdir=out --external:vscode --format=cjs --platform=node",
+    "esbuild-all": "yarn esbuild-server --sourcemap && yarn esbuild-client --sourcemap",
+    "vscode:prepublish": "yarn esbuild-server --minify && yarn esbuild-client --minify"
+  },
+  "dependencies": {
+    "mixpanel": "^0.14.0",
+    "vscode-languageclient": "^7.0.0",
+    "vscode-languageserver": "^7.0.0"
   },
   "devDependencies": {
+    "@types/glob": "^7.1.4",
+    "@types/mocha": "^9.0.0",
+    "@types/node": "^16.10.3",
+    "@types/semver": "^7.3.8",
+    "@types/vscode": "^1.52.0",
+    "@vscode/test-electron": "^1.6.2",
     "esbuild": "^0.13.14",
+    "glob": "^7.2.0",
     "gts": "^3.1.0",
+    "mocha": "^9.1.3",
+    "semver": "^7.3.5",
     "typescript": "^4.4.3",
-    "vsce": "^2.3.0"
+    "vsce": "^2.5.0"
   }
 }
