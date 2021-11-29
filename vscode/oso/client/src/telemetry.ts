@@ -14,7 +14,9 @@ const diagnosticEventName = 'TEST_diagnostic';
 const loadEventName = 'TEST_load';
 
 const hash = (contents: { toString(): string }) =>
-  createHash('sha256').update(contents.toString()).digest('base64');
+  createHash('sha256')
+    .update(`oso-vscode-telemetry:${contents.toString()}`)
+    .digest('base64');
 
 // One-way hash of VSCode machine ID.
 const distinct_id = hash(env.machineId);
