@@ -10,6 +10,9 @@ import {
 // Flush telemetry events in batches every hour.
 export const TELEMETRY_INTERVAL = 1000 * 60 * 60;
 
+const diagnosticEventName = 'TEST_diagnostic';
+const loadEventName = 'TEST_load';
+
 const hash = (contents: { toString(): string }) =>
   createHash('sha256').update(contents.toString()).digest('base64');
 
@@ -49,7 +52,7 @@ function telemetryEnabled() {
 }
 
 type MixpanelLoadEvent = {
-  event: 'TEST_load';
+  event: typeof loadEventName;
   properties: {
     diagnostics: number;
     errors: number;
@@ -63,7 +66,7 @@ type MixpanelLoadEvent = {
 };
 
 type MixpanelDiagnosticEvent = {
-  event: 'TEST_diagnostic';
+  event: typeof diagnosticEventName;
   properties: {
     code: Diagnostic['code'];
   };
@@ -132,7 +135,7 @@ export function enqueueEvent(uri: Uri, event: TelemetryEvent): void {
   const warnings = diagnostics.filter(d => d.severity === Severity.Warning);
 
   const loadEvent: MixpanelEvent = {
-    event: 'TEST_load',
+    event: loadEventName,
     properties: {
       diagnostics: diagnostics.length,
       errors: errors.length,
@@ -147,7 +150,7 @@ export function enqueueEvent(uri: Uri, event: TelemetryEvent): void {
   };
 
   const diagnosticEvents: MixpanelEvent[] = diagnostics.map(({ code }) => ({
-    event: 'TEST_diagnostic',
+    event: diagnosticEventName,
     properties: { code, ...metadata },
   }));
 
