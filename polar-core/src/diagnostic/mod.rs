@@ -36,6 +36,13 @@ impl Diagnostic {
             })
         )
     }
+
+    pub fn kind(&self) -> String {
+        match self {
+            Diagnostic::Error(e) => e.kind(),
+            Diagnostic::Warning(w) => w.kind(),
+        }
+    }
 }
 
 impl fmt::Display for Diagnostic {

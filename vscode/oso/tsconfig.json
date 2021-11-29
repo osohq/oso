@@ -1,16 +1,22 @@
 {
-  "extends": "./node_modules/gts/tsconfig-google.json",
   "compilerOptions": {
-    "allowJs": true,
+    "composite": true,
     "esModuleInterop": true,
+    "isolatedModules": true,
+    "lib": ["ES2019"],
+    "module": "commonjs",
     "outDir": "out",
-    "rootDir": "src",
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "resolveJsonModule": true,
+    "rootDir": ".",
+    "sourceMap": true,
+    "target": "es2019"
   },
-  "include": ["src"],
+  "exclude": ["./node_modules", "./out"],
+  "extends": "./node_modules/gts/tsconfig-google.json",
+  "include": [],
   "references": [
     { "path": "./client" },
-    { "path": "./server" }
+    { "path": "./server" },
+    { "path": "./test" }
   ]
 }
