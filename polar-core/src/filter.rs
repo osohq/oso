@@ -576,31 +576,22 @@ mod test {
             }
         };
 
+        // this is a great example of why i want to have shorter macros like opn! ptn! etc ...
         let ors = vec![ResultEvent::new(hashmap! {
             sym!("resource") => term!(op!(And,
                 term!(op!(Isa, var!("_this"), term!(pattern!(instance!("Resource"))))),
                 term!(op!(Isa, term!(op!(Dot, var!("_this"), str!("foo"))), term!(pattern!(instance!("Foo"))))),
-                term!(op!(Isa, term!(op!(Dot, term!(op!(Dot, var!("_this"), str!("foo"))), str!("resource"))),
-                               term!(pattern!(instance!("Foo"))))),
-                term!(op!(
-                        Unify,
-                        term!(1),
-                        term!(op!(Dot, term!(op!(Dot, term!(op!(Dot, var!("_this"), str!("foo"))), str!("resource"))), str!("foo")))
-
-                          )
-
-
-                      )
-            ))
+                term!(op!(Isa, term!(op!(Dot, term!(op!(Dot, var!("_this"), str!("foo"))), str!("resource"))), term!(pattern!(instance!("Foo"))))),
+                term!(op!(Unify, term!(1), term!(op!(Dot, term!(op!(Dot, term!(op!(Dot, var!("_this"), str!("foo"))), str!("resource"))), str!("foo")))))))
         })];
 
-        let err = Filter::build(types, ors, "resource", "Resource").unwrap_err();
-        match err {
-            RuntimeError::InvalidState { msg }
+        match Filter::build(types, ors, "resource", "Resource") {
+            Err(RuntimeError::InvalidState { msg })
                 if &msg == "Type `Resource` occurs more than once as the target of a relation" => {}
             _ => panic!("unexpected"),
         }
     }
+
     #[test]
     fn test_in() {
         let types = hashmap! {
