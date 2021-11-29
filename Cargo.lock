@@ -798,6 +798,7 @@ version = "0.23.0"
 dependencies = [
  "cbindgen",
  "polar-core",
+ "serde",
  "serde_json",
 ]
 

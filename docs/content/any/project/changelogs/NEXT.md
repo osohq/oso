@@ -15,6 +15,7 @@ draft: true
 #### Other bugs & improvements
 
 - Oso now allows multiple resource blocks to be declared for the same resource type. The declarations from all resource blocks for a given type are merged together before policy evaluation. This permits rules in one block to reference declarations in another and for resource blocks to be composed over multiple files.
+- Fixed a data race in our error handling functionality which resulted in truncated error messages.
 
 ### Rust
 
