@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 
-import { ExtensionContext, env, Uri, OutputChannel } from 'vscode';
+import { env, ExtensionContext, OutputChannel, Uri, workspace } from 'vscode';
 import * as Mixpanel from 'mixpanel';
 import {
   Diagnostic,
@@ -19,6 +19,28 @@ const distinct_id = hash(env.machineId);
 
 const MIXPANEL_PROJECT_TOKEN = 'd14a9580b894059dffd19437b7ddd7be';
 const mixpanel = Mixpanel.init(MIXPANEL_PROJECT_TOKEN, { protocol: 'https' });
+
+function telemetryEnabled() {
+  const setting = workspace
+    .getConfiguration('oso.polarLanguageServer.telemetry')
+    .get<'default' | 'on' | 'off' | undefined>('enabled');
+
+  // Check if user explicitly enabled or disabled telemetry.
+  if (setting === 'on') return true;
+  if (setting === 'off') return false;
+
+  // Otherwise, default to VSCode's telemetry setting.
+
+  // VSCode >=1.55
+  //
+  // https://code.visualstudio.com/updates/v1_55#_telemetry-enablement-api
+  if (env.isTelemetryEnabled !== undefined) return env.isTelemetryEnabled;
+
+  // VSCode <1.55
+  const config = workspace.getConfiguration('telemetry');
+  const enabled = config.get<boolean>('enableTelemetry');
+  return enabled;
+}
 
 type MixpanelLoadEvent = {
   event: 'TEST_load';
@@ -60,6 +82,8 @@ type State = ExtensionContext['globalState'];
 
 export function flushQueue(state: State, log: OutputChannel): () => void {
   return () => {
+    if (!telemetryEnabled()) return;
+
     void (async () => {
       try {
         // Retrieve all queued events.
@@ -114,6 +138,8 @@ export function enqueueEvent(
   uri: Uri,
   { diagnostics, general_stats, resource_block_stats }: TelemetryEvent
 ): void {
+  if (!telemetryEnabled()) return;
+
   void (async () => {
     try {
       const load_id = hash(Math.random().toString());
