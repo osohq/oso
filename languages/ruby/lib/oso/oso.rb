@@ -182,10 +182,11 @@ module Oso
     #
     # @return A query for resources accessible to the actor.
     def authorized_query(actor, action, resource_cls)
-      results = partial_query(actor, action, resource_cls)
-      Polar::DataFiltering::FilterPlan
-        .parse(self, results, class_to_name(resource_cls))
-        .build_query
+      if host.use_new_data_filtering?
+        new_authorized_query(actor, action, resource_cls)
+      else
+        old_authorized_query(actor, action, resource_cls)
+      end
     end
 
     # Determine the resources of type +resource_cls+ that +actor+
@@ -197,41 +198,10 @@ module Oso
     #
     # @return A list of resources accessible to the actor.
     def authorized_resources(actor, action, resource_cls)
-      q = authorized_query actor, action, resource_cls
+      q = authorized_query(actor, action, resource_cls)
       return [] if q.nil?
 
-      host.types[name_to_class resource_cls].exec_query[q]
-    end
-
-    # Create a query for resources of type +cls+ that +actor+ is
-    # allowed to perform +action+ on. Same API as `authorized_query`
-    # but uses the new data filtering internals.
-    #
-    # @param actor The actor whose permissions to check.
-    # @param action The action being taken on the resource.
-    # @param resource_cls The resource being accessed.
-    #
-    # @return A query for resources accessible to the actor.
-    def authzd_query(actor, action, resource_cls)
-      partials = partial_query(actor, action, resource_cls)
-      types = host.serialize_types
-      class_name = class_to_name resource_cls
-      data_filter = ffi.build_data_filter(types, partials, 'resource', class_name)
-      data_filter = Polar::Data::Filter.parse(self, data_filter)
-      host.adapter.build_query(host.types, data_filter)
-    end
-
-    # Determine the resources of type +resource_cls+ that +actor+
-    # is allowed to perform +action+ on. Same API as `authorized_resources`
-    # but uses the new data filtering internals.
-    #
-    # @param actor The actor whose permissions to check.
-    # @param action The action being taken on the resource.
-    # @param resource_cls The resource being accessed.
-    #
-    # @return A list of resources accessible to the actor.
-    def authzd_resources(actor, action, resource_cls)
-      authzd_query(actor, action, resource_cls).to_a
+      host.types[resource_cls].exec_query[q]
     end
 
     # Register default values for data filtering query functions.

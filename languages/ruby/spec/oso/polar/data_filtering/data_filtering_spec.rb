@@ -13,7 +13,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       )
 
       subject.load_str 'allow("gwen", "get", it: Doohickey) if it.id = 8;'
-      check_authz 'gwen', 'get', Widget, [Widget.all[8]]
+      check_old_authorized_query 'gwen', 'get', Widget, [Widget.all[8]]
     end
 
     it 'handles queries that return known results' do
@@ -291,7 +291,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         policy = 'allow("gwen", "get", foo: Foo) if log in foo.logs and log.data = "goodbye";'
         subject.load_str policy
         expected = Foo.all.select { |foo| foo.id == 'fourth' }
-        check_authz 'gwen', 'get', Foo, expected
+        check_old_authorized_query 'gwen', 'get', Foo, expected
       end
 
       it 'handles nested one-to-one relationships' do
@@ -319,7 +319,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         subject.load_str policy
         log = Log.all.find { |l| l.foo_id == 'fourth' }
         foos = Foo.all.select { |foo| foo.id == 'fourth' }
-        %w[a b c d].each { |x| check_authz log, x, Foo, foos }
+        %w[a b c d].each { |x| check_old_authorized_query log, x, Foo, foos }
       end
     end
   end

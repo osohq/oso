@@ -35,6 +35,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
   let(:hedwig) { Familiar.new('hedwig', 'owl', 'galadriel') }
 
   before do # rubocop:disable Metrics/BlockLength
+    subject.data_filtering_adapter = nil
     subject.register_class(
       Wizard,
       fields: {
@@ -80,37 +81,37 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
   context 'wizards' do
     it 'can cast any spell in their spellbook up to their level' do
       Wizard.all.each do |wiz|
-        check_authz wiz, 'cast', Spell, wiz.spells
+        check_old_authorized_query wiz, 'cast', Spell, wiz.spells
       end
     end
 
     it 'can ride their horse familiars' do
-      check_authz gandalf, 'ride', Familiar, [shadowfax]
-      check_authz galadriel, 'ride', Familiar, []
-      check_authz baba_yaga, 'ride', Familiar, []
+      check_old_authorized_query gandalf, 'ride', Familiar, [shadowfax]
+      check_old_authorized_query galadriel, 'ride', Familiar, []
+      check_old_authorized_query baba_yaga, 'ride', Familiar, []
     end
 
     it 'can groom their familiars' do
-      check_authz baba_yaga, 'groom', Familiar, [brown_jenkin]
-      check_authz galadriel, 'groom', Familiar, [hedwig, gimli]
-      check_authz gandalf, 'groom', Familiar, [shadowfax]
+      check_old_authorized_query baba_yaga, 'groom', Familiar, [brown_jenkin]
+      check_old_authorized_query galadriel, 'groom', Familiar, [hedwig, gimli]
+      check_old_authorized_query gandalf, 'groom', Familiar, [shadowfax]
     end
 
     context 'having mastered inscription' do
       it 'can inscribe any spell they can cast' do
-        check_authz galadriel, 'inscribe', Spell, galadriel.spells
-        check_authz gandalf, 'inscribe', Spell, []
-        check_authz baba_yaga, 'inscribe', Spell, []
+        check_old_authorized_query galadriel, 'inscribe', Spell, galadriel.spells
+        check_old_authorized_query gandalf, 'inscribe', Spell, []
+        check_old_authorized_query baba_yaga, 'inscribe', Spell, []
       end
     end
   end
 
   context 'rat familiars' do
     it 'can groom other familiars, except owls (predator)' do
-      check_authz brown_jenkin, 'groom', Familiar, [gimli, brown_jenkin, shadowfax]
+      check_old_authorized_query brown_jenkin, 'groom', Familiar, [gimli, brown_jenkin, shadowfax]
     end
     it 'can groom their wizard' do
-      check_authz brown_jenkin, 'groom', Wizard, [baba_yaga]
+      check_old_authorized_query brown_jenkin, 'groom', Wizard, [baba_yaga]
     end
   end
 end

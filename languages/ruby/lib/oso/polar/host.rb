@@ -74,7 +74,6 @@ module Oso
       DEFAULT_COMBINE_QUERY = proc { raise 'implement combine_query to use data filtering' }
       DEFAULT_BUILD_QUERY = proc { raise 'implement build_query to use data filtering' }
       DEFAULT_EXEC_QUERY = proc { raise 'implement exec_query to use data filtering' }
-      DEFAULT_ADAPTER = ::Oso::Polar::Data::Adapter.new
 
       def initialize(ffi_polar)
         @ffi_polar = ffi_polar
@@ -84,7 +83,6 @@ module Oso
         @combine_query = DEFAULT_COMBINE_QUERY
         @build_query = DEFAULT_BUILD_QUERY
         @exec_query = DEFAULT_EXEC_QUERY
-        @adapter = DEFAULT_ADAPTER
       end
 
       def initialize_copy(other)
@@ -397,6 +395,10 @@ module Oso
         msg.gsub(/\^\{id: ([0-9]+)\}/) do
           get_instance(Regexp.last_match[1].to_i).to_s
         end
+      end
+
+      def use_new_data_filtering?
+        !adapter.nil?
       end
     end
   end

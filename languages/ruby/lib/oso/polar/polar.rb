@@ -268,6 +268,25 @@ module Oso
         end
       end
 
+      def new_authorized_query(actor, action, resource_cls)
+        partials = partial_query(actor, action, resource_cls)
+        types = host.serialize_types
+        class_name = class_to_name resource_cls
+        data_filter = ffi.build_data_filter(types, partials, 'resource', class_name)
+        data_filter = ::Oso::Polar::Data::Filter.parse(self, data_filter)
+
+        raise 'Data filtering adapter not configured' if host.adapter.nil?
+
+        host.adapter.build_query(host.types, data_filter)
+      end
+
+      def old_authorized_query(actor, action, resource_cls)
+        results = partial_query(actor, action, resource_cls)
+        ::Oso::Polar::DataFiltering::FilterPlan
+          .parse(self, results, class_to_name(resource_cls))
+          .build_query
+      end
+
       # handle Isa constraints in a partial query
       def prefilter_isas(key, val) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         # this will usually be the case! sometimes not, if it's an instance.

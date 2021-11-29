@@ -10,72 +10,72 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     context 'org members' do
       it 'can access the right resources' do
         # steve is a member of osohq
-        check_authzs steve, 'read', Org, [osohq]
-        check_authzs steve, 'list_repos', Org, [osohq]
-        check_authzs steve, 'create_repos', Org, []
+        check_authz steve, 'read', Org, [osohq]
+        check_authz steve, 'list_repos', Org, [osohq]
+        check_authz steve, 'create_repos', Org, []
 
-        check_authzs steve, 'read', Repo, [oso, demo]
-        check_authzs steve, 'push', Repo, []
-        check_authzs steve, 'pull', Repo, [oso, demo]
-        check_authzs steve, 'create_issues', Repo, []
-        check_authzs steve, 'list_issues', Repo, [oso, demo]
+        check_authz steve, 'read', Repo, [oso, demo]
+        check_authz steve, 'push', Repo, []
+        check_authz steve, 'pull', Repo, [oso, demo]
+        check_authz steve, 'create_issues', Repo, []
+        check_authz steve, 'list_issues', Repo, [oso, demo]
 
-        check_authzs steve, 'read', Issue, [bug]
-        check_authzs steve, 'edit', Issue, []
+        check_authz steve, 'read', Issue, [bug]
+        check_authz steve, 'edit', Issue, []
       end
     end
 
     context 'org owners' do
       it 'can access the right resources' do
         # leina is an owner of osohq
-        check_authzs leina, 'read', Org, [osohq]
-        check_authzs leina, 'list_repos', Org, [osohq]
-        check_authzs leina, 'create_repos', Org, [osohq]
+        check_authz leina, 'read', Org, [osohq]
+        check_authz leina, 'list_repos', Org, [osohq]
+        check_authz leina, 'create_repos', Org, [osohq]
 
-        check_authzs leina, 'read', Repo, [oso, demo]
-        check_authzs leina, 'push', Repo, [oso, demo]
-        check_authzs leina, 'pull', Repo, [oso, demo]
-        check_authzs leina, 'create_issues', Repo, [oso, demo]
-        check_authzs leina, 'list_issues', Repo, [oso, demo]
+        check_authz leina, 'read', Repo, [oso, demo]
+        check_authz leina, 'push', Repo, [oso, demo]
+        check_authz leina, 'pull', Repo, [oso, demo]
+        check_authz leina, 'create_issues', Repo, [oso, demo]
+        check_authz leina, 'list_issues', Repo, [oso, demo]
 
-        check_authzs leina, 'read', Issue, [bug]
-        check_authzs leina, 'edit', Issue, [bug]
+        check_authz leina, 'read', Issue, [bug]
+        check_authz leina, 'edit', Issue, [bug]
       end
     end
 
     context 'repo readers' do
       it 'can access the right resources' do
         # graham owns apple and has read access to demo
-        check_authzs graham, 'read', Org, [apple]
-        check_authzs graham, 'list_repos', Org, [apple]
-        check_authzs graham, 'create_repos', Org, [apple]
+        check_authz graham, 'read', Org, [apple]
+        check_authz graham, 'list_repos', Org, [apple]
+        check_authz graham, 'create_repos', Org, [apple]
 
-        check_authzs graham, 'read', Repo, [ios, demo]
-        check_authzs graham, 'push', Repo, [ios]
-        check_authzs graham, 'pull', Repo, [ios, demo]
-        check_authzs graham, 'create_issues', Repo, [ios]
-        check_authzs graham, 'list_issues', Repo, [ios, demo]
+        check_authz graham, 'read', Repo, [ios, demo]
+        check_authz graham, 'push', Repo, [ios]
+        check_authz graham, 'pull', Repo, [ios, demo]
+        check_authz graham, 'create_issues', Repo, [ios]
+        check_authz graham, 'list_issues', Repo, [ios, demo]
 
-        check_authzs graham, 'read', Issue, [laggy]
-        check_authzs graham, 'edit', Issue, [laggy]
+        check_authz graham, 'read', Issue, [laggy]
+        check_authz graham, 'edit', Issue, [laggy]
       end
     end
 
     context 'repo writers' do
       it 'can access the right resources' do
         # gabe has write access to oso
-        check_authzs gabe, 'read', Org, []
-        check_authzs gabe, 'list_repos', Org, []
-        check_authzs gabe, 'create_repos', Org, []
+        check_authz gabe, 'read', Org, []
+        check_authz gabe, 'list_repos', Org, []
+        check_authz gabe, 'create_repos', Org, []
 
-        check_authzs gabe, 'read', Repo, [oso]
-        check_authzs gabe, 'push', Repo, [oso]
-        check_authzs gabe, 'pull', Repo, [oso]
-        check_authzs gabe, 'create_issues', Repo, [oso]
-        check_authzs gabe, 'list_issues', Repo, [oso]
+        check_authz gabe, 'read', Repo, [oso]
+        check_authz gabe, 'push', Repo, [oso]
+        check_authz gabe, 'pull', Repo, [oso]
+        check_authz gabe, 'create_issues', Repo, [oso]
+        check_authz gabe, 'list_issues', Repo, [oso]
 
-        check_authzs gabe, 'read', Issue, [bug]
-        check_authzs gabe, 'edit', Issue, [bug]
+        check_authz gabe, 'read', Issue, [bug]
+        check_authz gabe, 'edit', Issue, [bug]
       end
     end
   end
