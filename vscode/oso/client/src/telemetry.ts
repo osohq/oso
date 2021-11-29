@@ -1,17 +1,17 @@
-/* eslint-disable @typescript-eslint/restrict-template-expressions */
-
 import { createHash } from 'crypto';
 
-import { env, ExtensionContext, OutputChannel, Uri, workspace } from 'vscode';
+import { env, Uri, workspace } from 'vscode';
 import * as Mixpanel from 'mixpanel';
 import {
   Diagnostic,
   DiagnosticSeverity as Severity,
 } from 'vscode-languageclient';
 
-export const telemetryEventsKey = 'events';
 // Flush telemetry events in batches every hour.
 export const TELEMETRY_INTERVAL = 1000 * 60 * 60;
+
+const diagnosticEventName = 'TEST_diagnostic';
+const loadEventName = 'TEST_load';
 
 const hash = (contents: { toString(): string }) =>
   createHash('sha256').update(contents.toString()).digest('base64');
@@ -21,6 +21,13 @@ const distinct_id = hash(env.machineId);
 
 const MIXPANEL_PROJECT_TOKEN = 'd14a9580b894059dffd19437b7ddd7be';
 const mixpanel = Mixpanel.init(MIXPANEL_PROJECT_TOKEN, { protocol: 'https' });
+const trackBatch = (events: Mixpanel.Event[]) =>
+  new Promise<void>((res, rej) =>
+    mixpanel.track_batch(events, errors => {
+      if (!errors) return res();
+      rej(errors[0]);
+    })
+  );
 
 function telemetryEnabled() {
   const setting = workspace
@@ -45,7 +52,7 @@ function telemetryEnabled() {
 }
 
 type MixpanelLoadEvent = {
-  event: 'TEST_load';
+  event: typeof loadEventName;
   properties: {
     diagnostics: number;
     errors: number;
@@ -59,7 +66,7 @@ type MixpanelLoadEvent = {
 };
 
 type MixpanelDiagnosticEvent = {
-  event: 'TEST_diagnostic';
+  event: typeof diagnosticEventName;
   properties: {
     code: Diagnostic['code'];
   };
@@ -80,34 +87,17 @@ type MixpanelEvent = { properties: MixpanelMetadata } & (
   | MixpanelDiagnosticEvent
 );
 
-type State = ExtensionContext['globalState'];
+const queue: MixpanelEvent[] = [];
 
-export function flushQueue(state: State, log: OutputChannel): () => void {
-  return () => {
-    if (!telemetryEnabled()) return;
+export async function flushQueue(): Promise<void> {
+  if (!telemetryEnabled()) return;
 
-    void (async () => {
-      try {
-        // Retrieve all queued events.
-        const events = state.get<MixpanelEvent[]>(telemetryEventsKey, []);
+  // Drain all queued events.
+  const events = queue.splice(0);
 
-        if (events.length === 0) return;
+  if (events.length === 0) return;
 
-        // Clear events queue.
-        log.appendLine(`Flushing ${events.length} events`);
-        await state.update(telemetryEventsKey, []);
-
-        mixpanel.track_batch(events, errors =>
-          (errors || []).forEach(({ name, message, stack }) => {
-            log.appendLine(`Mixpanel track_batch error: ${name}\n\t${message}`);
-            if (stack) log.appendLine(`\t${stack}`);
-          })
-        );
-      } catch (e) {
-        log.appendLine(`Caught error while sending telemetry: ${e}`);
-      }
-    })();
-  };
+  return trackBatch(events);
 }
 
 export type TelemetryEvent = {
@@ -132,49 +122,37 @@ export type TelemetryEvent = {
   };
 };
 
-export function enqueueEvent(
-  state: State,
-  log: OutputChannel,
-  uri: Uri,
-  { diagnostics, general_stats, resource_block_stats }: TelemetryEvent
-): void {
+export function enqueueEvent(uri: Uri, event: TelemetryEvent): void {
   if (!telemetryEnabled()) return;
 
-  void (async () => {
-    try {
-      const load_id = hash(Math.random());
-      const workspace_id = hash(uri);
-      const metadata: MixpanelMetadata = { distinct_id, load_id, workspace_id };
+  const load_id = hash(Math.random());
+  const workspace_id = hash(uri);
+  const metadata: MixpanelMetadata = { distinct_id, load_id, workspace_id };
 
-      const errors = diagnostics.filter(d => d.severity === Severity.Error);
-      const warnings = diagnostics.filter(d => d.severity === Severity.Warning);
+  const { diagnostics, general_stats, resource_block_stats } = event;
 
-      const loadEvent: MixpanelEvent = {
-        event: 'TEST_load',
-        properties: {
-          diagnostics: diagnostics.length,
-          errors: errors.length,
-          successful: errors.length === 0,
-          total_rules:
-            general_stats.longhand_rules + resource_block_stats.shorthand_rules,
-          warnings: warnings.length,
-          ...general_stats,
-          ...resource_block_stats,
-          ...metadata,
-        },
-      };
+  const errors = diagnostics.filter(d => d.severity === Severity.Error);
+  const warnings = diagnostics.filter(d => d.severity === Severity.Warning);
 
-      const diagnosticEvents: MixpanelEvent[] = diagnostics.map(({ code }) => ({
-        event: 'TEST_diagnostic',
-        properties: { code, ...metadata },
-      }));
+  const loadEvent: MixpanelEvent = {
+    event: loadEventName,
+    properties: {
+      diagnostics: diagnostics.length,
+      errors: errors.length,
+      successful: errors.length === 0,
+      total_rules:
+        general_stats.longhand_rules + resource_block_stats.shorthand_rules,
+      warnings: warnings.length,
+      ...general_stats,
+      ...resource_block_stats,
+      ...metadata,
+    },
+  };
 
-      // TODO(gj): race condition?
-      const old = state.get<MixpanelEvent[]>(telemetryEventsKey, []);
-      const events: MixpanelEvent[] = [...old, loadEvent, ...diagnosticEvents];
-      await state.update(telemetryEventsKey, events);
-    } catch (e) {
-      log.appendLine(`Caught error while recording telemetry: ${e}`);
-    }
-  })();
+  const diagnosticEvents: MixpanelEvent[] = diagnostics.map(({ code }) => ({
+    event: diagnosticEventName,
+    properties: { code, ...metadata },
+  }));
+
+  queue.push(loadEvent, ...diagnosticEvents);
 }

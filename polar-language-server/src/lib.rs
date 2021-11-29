@@ -948,4 +948,29 @@ mod tests {
         assert_eq!(diagnostic.range.start, Position::new(0, 0));
         assert_eq!(diagnostic.range.end, Position::new(0, 5));
     }
+
+    #[wasm_bindgen_test]
+    fn test_resource_block_errors() {
+        let mut pls = new_pls();
+
+        let policy = r#"
+            resource Repo {
+              "read" if "write";
+            }
+        "#;
+        let doc = polar_doc("whatever", policy.to_owned());
+        pls.upsert_document(doc.clone());
+
+        let diagnostics = pls.reload_kb();
+        let params = diagnostics.get(&doc.uri).unwrap();
+        assert_eq!(params.uri, doc.uri);
+        assert_eq!(params.version.unwrap(), doc.version);
+        assert_eq!(params.diagnostics.len(), 1, "{:?}", params.diagnostics);
+        let undeclared_term = &params.diagnostics.get(0).unwrap().message;
+        assert!(
+            undeclared_term.starts_with("Undeclared term \"read\""),
+            "{}",
+            undeclared_term
+        );
+    }
 }
