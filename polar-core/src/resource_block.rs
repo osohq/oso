@@ -648,8 +648,8 @@ mod tests {
         let error = p.load_str(policy).unwrap_err();
         let msg = match error.kind {
             Validation(ValidationError::ResourceBlock { msg, .. }) => msg,
-            Validation(ValidationError::UnregisteredClass { .. }) => error.to_string(),
-            Validation(ValidationError::DuplicateResourceBlockDeclaration { .. }) => {
+            Validation(ValidationError::UnregisteredClass { .. })
+            | Validation(ValidationError::DuplicateResourceBlockDeclaration { .. }) => {
                 error.to_string()
             }
             _ => panic!("Unexpected error: {}", error),
