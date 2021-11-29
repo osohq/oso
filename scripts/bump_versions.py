@@ -142,6 +142,9 @@ def bump_oso_version(version):
     replace_version(version,
                     BASE / ".github/workflows/publish-docs.yml",
                     fr'default: "({VERSION_RE})" # oso_version')
+    replace_version(version,
+                    BASE / "vscode/oso/package.json",
+                    fr'"version": "({VERSION_RE})"')
 
 
 def oso_python_dependency_version(version):

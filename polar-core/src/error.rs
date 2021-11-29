@@ -7,6 +7,7 @@ use super::{
     diagnostic::{Context, Range},
     formatting::to_polar::ToPolarString,
     kb::KnowledgeBase,
+    resource_block::Declaration,
     rules::Rule,
     sources::Source,
     terms::{Operation, Symbol, Term},
@@ -17,6 +18,57 @@ use super::{
 pub struct PolarError {
     pub kind: ErrorKind,
     pub context: Option<Context>,
+}
+
+impl PolarError {
+    pub fn kind(&self) -> String {
+        use ErrorKind::*;
+        use OperationalError::*;
+        use ParseError::*;
+        use RuntimeError::*;
+        use ValidationError::*;
+
+        match self.kind {
+            Parse(IntegerOverflow { .. }) => "ParseError::IntegerOverflow",
+            Parse(InvalidTokenCharacter { .. }) => "ParseError::InvalidTokenCharacter",
+            Parse(InvalidToken { .. }) => "ParseError::InvalidToken",
+            Parse(UnrecognizedEOF { .. }) => "ParseError::UnrecognizedEOF",
+            Parse(UnrecognizedToken { .. }) => "ParseError::UnrecognizedToken",
+            Parse(ExtraToken { .. }) => "ParseError::ExtraToken",
+            Parse(ReservedWord { .. }) => "ParseError::ReservedWord",
+            Parse(InvalidFloat { .. }) => "ParseError::InvalidFloat",
+            Parse(WrongValueType { .. }) => "ParseError::WrongValueType",
+            Parse(DuplicateKey { .. }) => "ParseError::DuplicateKey",
+            Runtime(Application { .. }) => "RuntimeError::Application",
+            Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
+            Runtime(FileLoading { .. }) => "RuntimeError::FileLoading",
+            Runtime(IncompatibleBindings { .. }) => "RuntimeError::IncompatibleBindings",
+            Runtime(QueryTimeout { .. }) => "RuntimeError::QueryTimeout",
+            Runtime(StackOverflow { .. }) => "RuntimeError::StackOverflow",
+            Runtime(TypeError { .. }) => "RuntimeError::TypeError",
+            Runtime(UnhandledPartial { .. }) => "RuntimeError::UnhandledPartial",
+            Runtime(Unsupported { .. }) => "RuntimeError::Unsupported",
+            Runtime(DataFilteringFieldMissing { .. }) => "RuntimeError::DataFilteringFieldMissing",
+            Runtime(DataFilteringUnsupportedOp { .. }) => {
+                "RuntimeError::DataFilteringUnsupportedOp"
+            }
+            Runtime(InvalidRegistration { .. }) => "RuntimeError::InvalidRegistration",
+            Runtime(InvalidState { .. }) => "RuntimeError::InvalidState",
+            Operational(Serialization { .. }) => "OperationalError::Serialization",
+            Operational(Unknown) => "OperationalError::Unknown",
+            Validation(InvalidRule { .. }) => "ValidationError::InvalidRule",
+            Validation(InvalidRuleType { .. }) => "ValidationError::InvalidRuleType",
+            Validation(ResourceBlock { .. }) => "ValidationError::ResourceBlock",
+            Validation(UndefinedRuleCall { .. }) => "ValidationError::UndefinedRuleCall",
+            Validation(SingletonVariable { .. }) => "ValidationError::SingletonVariable",
+            Validation(UnregisteredClass { .. }) => "ValidationError::UnregisteredClass",
+            Validation(MissingRequiredRule { .. }) => "ValidationError::MissingRequiredRule",
+            Validation(DuplicateResourceBlockDeclaration { .. }) => {
+                "ValidationError::DuplicateResourceBlockDeclaration"
+            }
+        }
+        .to_owned()
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -449,6 +501,14 @@ pub enum ValidationError {
         /// Term<Symbol> where the error arose, tracked for lexical context.
         term: Term,
     },
+    DuplicateResourceBlockDeclaration {
+        /// Term<Symbol> where the error arose.
+        resource: Term,
+        /// Term<String> where the error arose, tracked for lexical context.
+        declaration: Term,
+        existing: Declaration,
+        new: Declaration,
+    },
 }
 
 impl ValidationError {
@@ -460,6 +520,9 @@ impl ValidationError {
             ResourceBlock { term, .. }
             | SingletonVariable { term, .. }
             | UndefinedRuleCall { term }
+            | DuplicateResourceBlockDeclaration {
+                declaration: term, ..
+            }
             | UnregisteredClass { term, .. } => term.span().zip(kb.get_term_source(term)),
 
             // These errors track `rule`, from which we calculate the span.
@@ -515,6 +578,18 @@ impl fmt::Display for ValidationError {
             }
             Self::UnregisteredClass { term } => {
                 write!(f, "Unregistered class: {}", term)
+            }
+            Self::DuplicateResourceBlockDeclaration {
+                resource,
+                declaration,
+                existing,
+                new,
+            } => {
+                write!(
+                    f,
+                    "Cannot overwrite existing {} declaration {} in resource {} with {}",
+                    existing, declaration, resource, new
+                )
             }
         }
     }

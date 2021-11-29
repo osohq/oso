@@ -12,6 +12,20 @@ pub struct PolarWarning {
     pub context: Option<Context>,
 }
 
+impl PolarWarning {
+    pub fn kind(&self) -> String {
+        use ValidationWarning::*;
+
+        match self.kind {
+            AmbiguousPrecedence { .. } => "ValidationWarning::AmbiguousPrecedence",
+            MissingAllowRule => "ValidationWarning::MissingAllowRule",
+            MissingHasPermissionRule => "ValidationWarning::MissingHasPermissionRule",
+            UnknownSpecializer { .. } => "ValidationWarning::UnknownSpecializer",
+        }
+        .to_owned()
+    }
+}
+
 impl fmt::Display for PolarWarning {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.kind)?;

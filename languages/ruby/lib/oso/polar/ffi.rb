@@ -4,6 +4,7 @@ require 'ffi'
 
 module Oso
   module Polar
+    # FFI classes shared between all ffi/*.rb modules
     module FFI
       LIB = "#{::FFI::Platform::LIBPREFIX}polar.#{::FFI::Platform::LIBSUFFIX}"
       RELEASE_PATH = File.expand_path(File.join(__dir__, "../../../ext/oso-oso/lib/#{LIB}"))
@@ -18,56 +19,56 @@ module Oso
 
       # Wrapper class for Polar FFI pointer + operations.
       class Polar < ::FFI::AutoPointer
+        def zero?
+          null?
+        end
+
         def self.release(ptr)
           Rust.free(ptr) unless ptr.null?
         end
       end
       # Wrapper class for Query FFI pointer + operations.
       class Query < ::FFI::AutoPointer
-        def self.release(ptr)
-          Rust.free(ptr) unless ptr.null?
+        def zero?
+          null?
         end
-      end
-      # Wrapper class for QueryEvent FFI pointer + operations.
-      class QueryEvent < ::FFI::AutoPointer
-        def self.release(ptr)
-          Rust.free(ptr) unless ptr.null?
-        end
-      end
-      # Wrapper class for DataFilter FFI pointer + operations.
-      class DataFilter < ::FFI::AutoPointer
-        def self.release(ptr)
-          Rust.free(ptr) unless ptr.null?
-        end
-      end
-      # Wrapper class for Error FFI pointer + operations.
-      class Error < ::FFI::AutoPointer
-        def self.release(ptr)
-          Rust.free(ptr) unless ptr.null?
-        end
-      end
-      # Wrapper class for Message FFI pointer + operations.
-      class Message < ::FFI::AutoPointer
+
         def self.release(ptr)
           Rust.free(ptr) unless ptr.null?
         end
       end
 
-      # Wrapper class for Source FFI pointer.
-      class Source < ::FFI::AutoPointer
+      # Wrapper class for Rust strings FFI pointer + operations.
+      class RustString < ::FFI::AutoPointer
+        def zero?
+          null?
+        end
+
         def self.release(ptr)
           Rust.free(ptr) unless ptr.null?
         end
       end
+
+      # Helper method to generate a Result type for different
+      # inner types
+      def self.result(result_klass)
+        Class.new(::FFI::Struct) do
+          layout :result, result_klass, :error, RustString
+        end.by_ref
+      end
+
+      # Defines the result type version of
+      # each of these structs
+      # result(T) => { result: T, error: string }
+      CResultVoid = result(:int)
+      CResultString = result(RustString)
+      CResultQuery = result(Query)
     end
     private_constant :FFI
   end
 end
 
-require 'oso/polar/ffi/data_filter'
 require 'oso/polar/ffi/polar'
 require 'oso/polar/ffi/query'
-require 'oso/polar/ffi/query_event'
 require 'oso/polar/ffi/error'
-require 'oso/polar/ffi/message'
-require 'oso/polar/ffi/source'
+require 'oso/polar/ffi/rust_string'

@@ -1,0 +1,37 @@
+name: Release VSCode Extension
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    name: Build Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Add WebAssembly target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Build extension
+        working-directory: vscode/oso
+        run: |
+          make CARGO_FLAGS=--release package
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_vscode_extension
+          path: vscode/oso/oso.vsix
