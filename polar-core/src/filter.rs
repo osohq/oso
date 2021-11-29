@@ -163,7 +163,7 @@ impl Filter {
         ands.bindings
             .get(var)
             .map(|ands| Self::from_partial(types, ands, class))
-            .unwrap_or_else(|| input_error(format!("unbound variable: {}", var.0)))
+            .unwrap_or_else(|| invalid_state_error(format!("unbound variable: {}", var.0)))
     }
 
     fn from_partial(types: &TypeInfo, ands: &Term, class: &str) -> FilterResult<Self> {
@@ -198,7 +198,7 @@ impl Filter {
             }),
 
             // oops, we don't know how to handle this!
-            _ => input_error(ands.to_polar()),
+            _ => invalid_state_error(ands.to_polar()),
         }
     }
 
@@ -273,21 +273,19 @@ impl FilterInfo {
         // if the last path component names a relation from typ to typ'
         // then typ' is the new type and field is None. otherwise,
         // typ & field stay the same.
-        let proj = match field
+        match field
             .as_ref()
             .and_then(|dot| self.get_relation_def(&typ, dot))
         {
-            None => Projection(typ, field),
+            None => Ok(Projection(typ, field)),
             Some(rel) => {
                 let tag = rel.2.clone();
                 pv.path.push(rel.1.clone());
                 self.entities.insert(pv, tag.clone());
                 self.relations.insert(rel);
-                Projection(tag, None)
+                Ok(Projection(tag, None))
             }
-        };
-
-        Ok(proj)
+        }
     }
 
     fn term2datum(&mut self, x: &Term) -> FilterResult<Datum> {
@@ -296,11 +294,6 @@ impl FilterInfo {
             Ok(pv) => Ok(Field(self.pathvar2proj(pv)?)),
             _ => Ok(Immediate(x.value().clone())),
         }
-    }
-
-    fn add_condition(&mut self, l: Datum, op: Comparison, r: Datum) -> FilterResult<()> {
-        self.conditions.insert(Condition(l, op, r));
-        Ok(())
     }
 
     fn get_type(&mut self, pv: PathVar) -> Option<String> {
@@ -340,13 +333,17 @@ impl FilterInfo {
         }
     }
 
+    fn add_condition(&mut self, l: Datum, op: Comparison, r: Datum) -> FilterResult<()> {
+        self.conditions.insert(Condition(l, op, r));
+        Ok(())
+    }
+
     fn add_eq_condition(&mut self, left: Datum, right: Datum) -> FilterResult<()> {
-        if left == right {
-            // or not
-            Ok(())
-        } else {
-            self.add_condition(left, Comparison::Eq, right)
+        // only add condition if the side aren't == (otherwise it's redundant)
+        if left != right {
+            self.add_condition(left, Comparison::Eq, right)?;
         }
+        Ok(())
     }
 
     fn add_neq_condition(&mut self, left: Datum, right: Datum) -> FilterResult<()> {
@@ -357,6 +354,7 @@ impl FilterInfo {
         self.add_condition(left, Comparison::In, right)
     }
 
+    /// Validate FilterInfo before constructing a Filter
     fn validate(self, root: &str) -> FilterResult<Self> {
         let mut set = singleton(root);
         for Relation(_, _, dst) in self.relations.iter() {
@@ -534,10 +532,6 @@ impl Display for Relation {
         let Relation(src, nom, dest) = self;
         write!(f, "{}.{} -> {}", src, nom, dest)
     }
-}
-
-fn input_error<A>(msg: String) -> FilterResult<A> {
-    Err(RuntimeError::InvalidState { msg })
 }
 
 pub fn singleton<X>(x: X) -> Set<X>
