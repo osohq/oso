@@ -828,62 +828,43 @@ mod tests {
         p.register_mro(repo_name, vec![repo_instance.instance_id])
             .unwrap();
 
-        // Allow splitting roles used in shorthand rules across multiple resource blocks.
+        // Use declarations from one resource block in shorthand rules in another.
         let valid_policy = r#"
             resource Repo {
+              relations = { readable_parent: Repo };
               roles = ["reader"];
+              permissions = ["read"];
+
+              "write" if "writer";
+              "write" if "write" on "writable_parent";
             }
 
             resource Repo {
-              permissions = ["read"];
+              relations = { writable_parent: Repo };
+              roles = ["writer"];
+              permissions = ["write"];
 
               "read" if "reader";
+              "read" if "read" on "readable_parent";
             }
 
-            has_role(actor: Actor, _role: String, repo: Repo) if
-               repo in actor.repos;
-        "#;
-        assert!(p.load_str(valid_policy).is_ok());
-        p.clear_rules();
-
-        // Allow splitting permissions used in shorthand rules across multiple resource blocks.
-        let valid_policy = r#"
-            resource Repo {
-              permissions = ["read"];
-            }
-
-            resource Repo {
-              roles = ["reader"];
-
-              "read" if "reader";
-            }
-
-            has_role(actor: Actor, _role: String, repo: Repo) if
-               repo in actor.repos;
-        "#;
-        assert!(p.load_str(valid_policy).is_ok());
-        p.clear_rules();
-
-        // Allow relations in shorthand rules to be declared in earlier resource blocks
-        let valid_policy = r#"
-            resource Repo {
-              relations = { parent: Repo };
-            }
-
-            resource Repo {
-              roles = ["reader"];
-              permissions = ["read"];
-
-              "read" if "reader" on "parent";
-            }
-
-            has_relation(subject: Repo, "parent", object: Repo) if
+            has_role(_: Actor, _: String, _: Resource);
+            has_relation(subject: Repo, "writable_parent", object: Repo) if
                 object.parent_id = subject.id;
-
-            has_role(actor: Actor, _role: String, repo: Repo) if
-                repo in actor.repos;
+            has_relation(subject: Repo, "readable_parent", object: Repo) if
+                object.parent_id = subject.id;
         "#;
-        assert!(p.load_str(valid_policy).is_ok());
+
+        p.load_str(valid_policy).unwrap();
+        // Create explicit scope to allow the RWLock obtained from kb.read() to
+        // be dropped explicitly and independently of the function scope.
+        {
+            let blocks = &p.kb.read().unwrap().resource_blocks;
+            let declarations = blocks.declarations.get(&term!(sym!("Repo"))).unwrap();
+            assert_eq!(declarations.len(), 6);
+            let shorthand_rules = blocks.shorthand_rules.get(&term!(sym!("Repo"))).unwrap();
+            assert_eq!(shorthand_rules.len(), 4);
+        }
         p.clear_rules();
 
         // Raise a validation error if shorthand rules reference declarations
