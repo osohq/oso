@@ -203,6 +203,15 @@ module Oso
       host.types[name_to_class resource_cls].exec_query[q]
     end
 
+    # Create a query for resources of type +cls+ that +actor+ is
+    # allowed to perform +action+ on. Same API as `authorized_query`
+    # but uses the new data filtering internals.
+    #
+    # @param actor The actor whose permissions to check.
+    # @param action The action being taken on the resource.
+    # @param resource_cls The resource being accessed.
+    #
+    # @return A query for resources accessible to the actor.
     def authzd_query(actor, action, resource_cls)
       partials = partial_query(actor, action, resource_cls)
       types = host.serialize_types
@@ -212,6 +221,15 @@ module Oso
       host.adapter.build_query(host.types, data_filter)
     end
 
+    # Determine the resources of type +resource_cls+ that +actor+
+    # is allowed to perform +action+ on. Same API as `authorized_resources`
+    # but uses the new data filtering internals.
+    #
+    # @param actor The actor whose permissions to check.
+    # @param action The action being taken on the resource.
+    # @param resource_cls The resource being accessed.
+    #
+    # @return A list of resources accessible to the actor.
     def authzd_resources(actor, action, resource_cls)
       authzd_query(actor, action, resource_cls).to_a
     end
