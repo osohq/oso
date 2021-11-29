@@ -9,7 +9,7 @@ import {
   DiagnosticSeverity as Severity,
 } from 'vscode-languageclient';
 
-export const telemetryEventsKey = 'events';
+export const TELEMETRY_EVENTS_KEY = 'telemetry.eventQueue';
 // Flush telemetry events in batches every hour.
 export const TELEMETRY_INTERVAL = 1000 * 60 * 60;
 
@@ -93,14 +93,14 @@ export async function flushQueue(state: State): Promise<void> {
   if (!telemetryEnabled()) return;
 
   // Retrieve all queued events.
-  const events = state.get<MixpanelEvent[]>(telemetryEventsKey, []);
+  const events = state.get<MixpanelEvent[]>(TELEMETRY_EVENTS_KEY, []);
 
   if (events.length === 0) return;
 
   await trackBatch(events);
 
   // Clear events queue.
-  await state.update(telemetryEventsKey, []);
+  return state.update(TELEMETRY_EVENTS_KEY, []);
 }
 
 export type TelemetryEvent = {
@@ -160,7 +160,7 @@ export async function enqueueEvent(
   }));
 
   // TODO(gj): race condition?
-  const old = state.get<MixpanelEvent[]>(telemetryEventsKey, []);
+  const old = state.get<MixpanelEvent[]>(TELEMETRY_EVENTS_KEY, []);
   const events: MixpanelEvent[] = [...old, loadEvent, ...diagnosticEvents];
-  return state.update(telemetryEventsKey, events);
+  return state.update(TELEMETRY_EVENTS_KEY, events);
 }

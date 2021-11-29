@@ -23,7 +23,7 @@ import {
   enqueueEvent,
   flushQueue,
   TelemetryEvent,
-  telemetryEventsKey,
+  TELEMETRY_EVENTS_KEY,
   TELEMETRY_INTERVAL,
 } from './telemetry';
 
@@ -162,7 +162,7 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   context.subscriptions.push(createChangeWatcher);
 
   // Synchronize `events` state across devices.
-  context.globalState.setKeysForSync([telemetryEventsKey]);
+  context.globalState.setKeysForSync([TELEMETRY_EVENTS_KEY]);
 
   const debugOpts = {
     execArgv: ['--nolazy', `--inspect=${6011 + clients.size}`],
