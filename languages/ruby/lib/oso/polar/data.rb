@@ -4,6 +4,41 @@ module Oso
   module Polar
     # Data filtering interface for Ruby
     module Data
+      # Abstract adapter supertype
+      class Adapter
+        def build_query(_types, _filter)
+          raise "build_query not implemented for #{self}"
+        end
+
+        def execute_query(_query)
+          raise "execute_query not implemented for #{self}"
+        end
+
+        # Adapter for ActiveRecord
+        class ActiveRecordAdapter < Adapter
+          def build_query(types, filter) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+            q = filter.relations.reduce(filter.model.all) do |q1, rel|
+              rec = types[rel.left].fields[rel.name]
+              q1.joins(
+                "INNER JOIN #{rel.right.table_name} ON " \
+                "#{rel.left.table_name}.#{rec.my_field} = " \
+                "#{rel.right.table_name}.#{rec.other_field}"
+              )
+            end
+
+            filter.conditions.map do |conjs|
+              conjs.reduce(q) do |q1, conj|
+                q1.where(*conj.to_sql_args)
+              end
+            end.reduce(:or).distinct
+          end
+
+          def execute_query(query)
+            query.to_a
+          end
+        end
+      end
+
       # Data Filter
       class Filter
         attr_reader :model, :relations, :conditions
@@ -14,22 +49,8 @@ module Oso
           @conditions = conditions
         end
 
-        # this is very ORM specific
-        def to_query(types) # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
-          q = @relations.reduce(@model.all) do |q1, rel|
-            rec = types[rel.left].fields[rel.name]
-            q1.joins(
-              "INNER JOIN #{rel.right.table_name} ON " \
-              "#{rel.left.table_name}.#{rec.my_field} = " \
-              "#{rel.right.table_name}.#{rec.other_field}"
-            )
-          end
-
-          @conditions.map do |conjs|
-            conjs.reduce(q) do |q1, conj|
-              q1.where(*conj.to_sql_args)
-            end
-          end.reduce(:or).distinct
+        def to_query(types)
+          ActiveRecordAdapter.new.build_query(types, self)
         end
 
         def self.parse(polar, blob)

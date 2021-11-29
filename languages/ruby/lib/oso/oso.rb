@@ -209,7 +209,7 @@ module Oso
       class_name = class_to_name resource_cls
       data_filter = ffi.build_data_filter(types, partials, 'resource', class_name)
       data_filter = Polar::Data::Filter.parse(self, data_filter)
-      data_filter.to_query(host.types)
+      host.adapter.build_query(host.types, data_filter)
     end
 
     def authzd_resources(actor, action, resource_cls)
@@ -224,6 +224,10 @@ module Oso
       host.build_query = build_query if build_query
       host.exec_query = exec_query if exec_query
       host.combine_query = combine_query if combine_query
+    end
+
+    def data_filtering_adapter=(adapter)
+      host.adapter = adapter
     end
   end
 end

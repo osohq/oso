@@ -28,6 +28,9 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     context 'astrology' do # rubocop:disable Metrics/BlockLength
       context '#authzd_query parity' do # rubocop:disable Metrics/BlockLength
         before do # rubocop:disable Metrics/BlockLength
+          subject.data_filtering_adapter =
+            ::Oso::Polar::Data::Adapter::ActiveRecordAdapter.new
+
           subject.register_class(
             Person,
             fields: {

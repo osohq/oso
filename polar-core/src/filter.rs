@@ -432,7 +432,7 @@ impl FilterInfo {
         let entities =
             std::iter::once((PathVar::from(String::from("_this")), class.to_string())).collect();
 
-        // TODO(gw) check isas in host
+        // TODO(gw) check more isas in host -- rn we only check external instances
         let (_isas, othas): (Set<_>, Set<_>) = parts
             .into_iter()
             .partition(|op| op.operator == Operator::Isa);
