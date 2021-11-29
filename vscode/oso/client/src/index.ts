@@ -19,13 +19,7 @@ import {
   TransportKind,
 } from 'vscode-languageclient/node';
 
-import {
-  enqueueEvent,
-  flushQueue,
-  TelemetryEvent,
-  TELEMETRY_EVENTS_KEY,
-  TELEMETRY_INTERVAL,
-} from './telemetry';
+import { enqueueEvent, flushQueue, TELEMETRY_INTERVAL } from './telemetry';
 
 // TODO(gj): think about what it would take to support `load_str()` via
 // https://code.visualstudio.com/api/language-extensions/embedded-languages
@@ -161,9 +155,6 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   context.subscriptions.push(deleteWatcher);
   context.subscriptions.push(createChangeWatcher);
 
-  // Synchronize `events` state across devices.
-  context.globalState.setKeysForSync([TELEMETRY_EVENTS_KEY]);
-
   const debugOpts = {
     execArgv: ['--nolazy', `--inspect=${6011 + clients.size}`],
   };
@@ -185,11 +176,7 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   const client = new LanguageClient(extensionName, serverOpts, clientOpts);
 
   context.subscriptions.push(
-    client.onTelemetry((event: TelemetryEvent) =>
-      enqueueEvent(context.globalState, folder.uri, event).catch(e =>
-        outputChannel.appendLine(`Caught error while recording telemetry: ${e}`)
-      )
-    )
+    client.onTelemetry(event => enqueueEvent(folder.uri, event))
   );
 
   // Start client and mark it for cleanup when the extension is deactivated.
@@ -224,21 +211,17 @@ function updateClients(context: ExtensionContext) {
   };
 }
 
-let sendTelemetry = async () => {}; // eslint-disable-line @typescript-eslint/no-empty-function
+const flushTelemetryEvents = () =>
+  flushQueue().catch(e =>
+    outputChannel.appendLine(`Caught error while sending telemetry: ${e}`)
+  );
 
 export async function activate(context: ExtensionContext): Promise<void> {
-  // Capture `context.globalState` in closure so we can flush telemetry queue
-  // in `deactivate()`, which does not have access to `ExtensionContext`.
-  sendTelemetry = () =>
-    flushQueue(context.globalState).catch(e =>
-      outputChannel.appendLine(`Caught error while sending telemetry: ${e}`)
-    );
-
   const folders = workspace.workspaceFolders || [];
 
-  // Flush telemetry queue every `TELEMETRY_INTERVAL` ms. We don't `await` the
-  // `sendTelemetry` promise because nothing depends on its outcome.
-  const interval = setInterval(sendTelemetry, TELEMETRY_INTERVAL); // eslint-disable-line @typescript-eslint/no-misused-promises
+  // Flush telemetry events every `TELEMETRY_INTERVAL` ms. We don't `await` the
+  // `flushTelemetryEvents` promise because nothing depends on its outcome.
+  const interval = setInterval(flushTelemetryEvents, TELEMETRY_INTERVAL); // eslint-disable-line @typescript-eslint/no-misused-promises
   // Clear interval when extension is deactivated.
   context.subscriptions.push({ dispose: () => clearInterval(interval) });
 
@@ -264,7 +247,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
 export async function deactivate(): Promise<void[]> {
   // Flush telemetry queue on shutdown.
-  await sendTelemetry();
+  await flushTelemetryEvents();
 
   return Promise.all([...clients.values()].map(c => c.stop()));
 }

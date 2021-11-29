@@ -2,14 +2,13 @@
 
 import { createHash } from 'crypto';
 
-import { env, ExtensionContext, Uri, workspace } from 'vscode';
+import { env, Uri, workspace } from 'vscode';
 import * as Mixpanel from 'mixpanel';
 import {
   Diagnostic,
   DiagnosticSeverity as Severity,
 } from 'vscode-languageclient';
 
-export const TELEMETRY_EVENTS_KEY = 'telemetry.eventQueue';
 // Flush telemetry events in batches every hour.
 export const TELEMETRY_INTERVAL = 1000 * 60 * 60;
 
@@ -87,20 +86,17 @@ type MixpanelEvent = { properties: MixpanelMetadata } & (
   | MixpanelDiagnosticEvent
 );
 
-type State = ExtensionContext['globalState'];
+const queue: MixpanelEvent[] = [];
 
-export async function flushQueue(state: State): Promise<void> {
+export async function flushQueue(): Promise<void> {
   if (!telemetryEnabled()) return;
 
-  // Retrieve all queued events.
-  const events = state.get<MixpanelEvent[]>(TELEMETRY_EVENTS_KEY, []);
+  // Drain all queued events.
+  const events = queue.splice(0);
 
   if (events.length === 0) return;
 
-  await trackBatch(events);
-
-  // Clear events queue.
-  return state.update(TELEMETRY_EVENTS_KEY, []);
+  return trackBatch(events);
 }
 
 export type TelemetryEvent = {
@@ -125,16 +121,14 @@ export type TelemetryEvent = {
   };
 };
 
-export async function enqueueEvent(
-  state: State,
-  uri: Uri,
-  { diagnostics, general_stats, resource_block_stats }: TelemetryEvent
-): Promise<void> {
+export function enqueueEvent(uri: Uri, event: TelemetryEvent): void {
   if (!telemetryEnabled()) return;
 
   const load_id = hash(Math.random());
   const workspace_id = hash(uri);
   const metadata: MixpanelMetadata = { distinct_id, load_id, workspace_id };
+
+  const { diagnostics, general_stats, resource_block_stats } = event;
 
   const errors = diagnostics.filter(d => d.severity === Severity.Error);
   const warnings = diagnostics.filter(d => d.severity === Severity.Warning);
@@ -159,8 +153,5 @@ export async function enqueueEvent(
     properties: { code, ...metadata },
   }));
 
-  // TODO(gj): race condition?
-  const old = state.get<MixpanelEvent[]>(TELEMETRY_EVENTS_KEY, []);
-  const events: MixpanelEvent[] = [...old, loadEvent, ...diagnosticEvents];
-  return state.update(TELEMETRY_EVENTS_KEY, events);
+  queue.push(loadEvent, ...diagnosticEvents);
 }
