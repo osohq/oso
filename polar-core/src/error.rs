@@ -7,6 +7,7 @@ use super::{
     diagnostic::{Context, Range},
     formatting::to_polar::ToPolarString,
     kb::KnowledgeBase,
+    resource_block::Declaration,
     rules::Rule,
     sources::Source,
     terms::{Operation, Symbol, Term},
@@ -449,6 +450,14 @@ pub enum ValidationError {
         /// Term<Symbol> where the error arose, tracked for lexical context.
         term: Term,
     },
+    DuplicateResourceBlockDeclaration {
+        /// Term<Symbol> where the error arose.
+        resource: Term,
+        /// Term<String> where the error arose, tracked for lexical context.
+        declaration: Term,
+        existing: Declaration,
+        new: Declaration,
+    },
 }
 
 impl ValidationError {
@@ -460,6 +469,9 @@ impl ValidationError {
             ResourceBlock { term, .. }
             | SingletonVariable { term, .. }
             | UndefinedRuleCall { term }
+            | DuplicateResourceBlockDeclaration {
+                declaration: term, ..
+            }
             | UnregisteredClass { term, .. } => term.span().zip(kb.get_term_source(term)),
 
             // These errors track `rule`, from which we calculate the span.
@@ -515,6 +527,18 @@ impl fmt::Display for ValidationError {
             }
             Self::UnregisteredClass { term } => {
                 write!(f, "Unregistered class: {}", term)
+            }
+            Self::DuplicateResourceBlockDeclaration {
+                resource,
+                declaration,
+                existing,
+                new,
+            } => {
+                write!(
+                    f,
+                    "Cannot overwrite existing {} declaration {} in resource {} with {}",
+                    existing, declaration, resource, new
+                )
             }
         }
     }

@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use std::collections::{HashMap, HashSet};
 
 use super::error::ValidationError;
@@ -176,7 +178,7 @@ pub fn resource_block_from_productions(
     )
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Declaration {
     Role,
     Permission,
@@ -216,11 +218,7 @@ type Declarations = HashMap<Term, Declaration>;
 
 impl Declaration {
     fn as_rule_name(&self) -> Symbol {
-        match self {
-            Declaration::Role => sym!("has_role"),
-            Declaration::Permission => sym!("has_permission"),
-            Declaration::Relation(_) => sym!("has_relation"),
-        }
+        sym!(&format!("has_{}", self))
     }
 }
 
@@ -280,10 +278,34 @@ impl ResourceBlocks {
         resource: Term,
         declarations: Declarations,
         shorthand_rules: Vec<ShorthandRule>,
-    ) {
-        self.declarations.insert(resource.clone(), declarations);
+    ) -> Vec<ValidationError> {
+        let mut errors = vec![];
+
+        // Merge existing declarations if we are reopening a resource block, otherwise add new
+        if let Some(existing) = self.declarations.get_mut(&resource) {
+            for (key, new) in declarations {
+                if let Some(existing) = existing.insert(key.clone(), new.clone()) {
+                    if existing != new {
+                        errors.push(ValidationError::DuplicateResourceBlockDeclaration {
+                            resource: resource.clone(),
+                            declaration: key.clone(),
+                            existing,
+                            new: new.clone(),
+                        });
+                    }
+                }
+            }
+        } else {
+            // or insert a new set of declarations for the resource type
+            self.declarations.insert(resource.clone(), declarations);
+        }
+
+        // Merge existing shorthand rules if we are reopening a resource block, otherwise add new
         self.shorthand_rules
-            .insert(resource.clone(), shorthand_rules);
+            .entry(resource.clone())
+            .and_modify(|existing| existing.extend(shorthand_rules.clone()))
+            .or_insert(shorthand_rules);
+
         match block_type {
             BlockType::Actor => {
                 self.actors.insert(resource.clone());
@@ -291,10 +313,8 @@ impl ResourceBlocks {
             }
             BlockType::Resource => self.resources.insert(resource),
         };
-    }
 
-    fn exists(&self, resource: &Term) -> bool {
-        self.declarations.contains_key(resource)
+        errors
     }
 
     /// Look up `declaration` in `resource` block.
@@ -310,7 +330,7 @@ impl ResourceBlocks {
         if let Some(declaration) = maybe_declaration {
             Ok(declaration)
         } else {
-            let msg = format!("Undeclared term {} referenced in rule in the '{}' resource block. Did you mean to declare it as a role, permission, or relation?", declaration, resource_name);
+            let msg = format!("Undeclared term {} referenced in rule in '{}' resource block. Did you mean to declare it as a role, permission, or relation?", declaration, resource_name);
             Err(ValidationError::ResourceBlock {
                 msg,
                 term: declaration.clone(),
@@ -409,38 +429,26 @@ fn index_declarations(
 
     if let Some(roles) = roles {
         for role in roles.value().as_list().expect("parsed as list") {
-            if declarations
-                .insert(role.clone(), Declaration::Role)
-                .is_some()
-            {
-                let msg = format!(
-                    "{}: Duplicate declaration of {} in the roles list.",
-                    resource, role
-                );
-                let term = role.clone();
-                return Err(ValidationError::ResourceBlock { msg, term });
+            if let Some(existing) = declarations.insert(role.clone(), Declaration::Role) {
+                return Err(ValidationError::DuplicateResourceBlockDeclaration {
+                    resource: resource.clone(),
+                    declaration: role.clone(),
+                    existing,
+                    new: Declaration::Role,
+                });
             }
         }
     }
 
     if let Some(permissions) = permissions {
         for permission in permissions.value().as_list().expect("parsed as list") {
-            if let Some(previous) = declarations.insert(permission.clone(), Declaration::Permission)
+            if let Some(existing) = declarations.insert(permission.clone(), Declaration::Permission)
             {
-                let msg = if matches!(previous, Declaration::Permission) {
-                    format!(
-                        "{}: Duplicate declaration of {} in the permissions list.",
-                        resource, permission
-                    )
-                } else {
-                    format!(
-                        "{}: {} declared as a permission but it was previously declared as a role.",
-                        resource, permission
-                    )
-                };
-                return Err(ValidationError::ResourceBlock {
-                    msg,
-                    term: permission.clone(),
+                return Err(ValidationError::DuplicateResourceBlockDeclaration {
+                    resource: resource.clone(),
+                    declaration: permission.clone(),
+                    existing,
+                    new: Declaration::Permission,
                 });
             }
         }
@@ -457,23 +465,15 @@ fn index_declarations(
             // is.
             let stringified_relation = relation_type.clone_with_value(value!(relation.0.as_str()));
             let declaration = Declaration::Relation(relation_type.clone());
-            if let Some(previous) = declarations.insert(stringified_relation, declaration) {
-                let msg = match previous {
-                    Declaration::Role => format!(
-                        "{}: '{}' declared as a relation but it was previously declared as a role.",
-                        resource,
-                        relation
-                    ),
-                    Declaration::Permission => format!(
-                        "{}: '{}' declared as a relation but it was previously declared as a permission.",
-                        resource,
-                        relation
-                    ),
-                    _ => unreachable!("duplicate dict keys aren't parseable"),
-                };
-                return Err(ValidationError::ResourceBlock {
-                    msg,
-                    term: relation_type.clone(),
+
+            if let Some(existing) =
+                declarations.insert(stringified_relation.clone(), declaration.clone())
+            {
+                return Err(ValidationError::DuplicateResourceBlockDeclaration {
+                    resource: resource.clone(),
+                    declaration: stringified_relation,
+                    existing,
+                    new: declaration,
                 });
             }
         }
@@ -596,25 +596,11 @@ fn shorthand_rule_head_to_params(head: &Term, resource: &Term) -> Vec<Parameter>
     ]
 }
 
-// TODO(gj): better error message, e.g.:
-//               duplicate resource block declared: resource Org { ... } defined on line XX of file YY
-//                                                  previously defined on line AA of file BB
-fn check_for_duplicate_resource_blocks(blocks: &ResourceBlocks, resource: &Term) -> Result<()> {
-    if blocks.exists(resource) {
-        let msg = format!("Duplicate declaration of '{}' resource block.", resource);
-        let term = resource.clone();
-        return Err(ValidationError::ResourceBlock { msg, term });
-    }
-    Ok(())
-}
-
 impl ResourceBlock {
     pub fn add_to_kb(self, kb: &mut KnowledgeBase) -> Vec<ValidationError> {
         let mut errors = vec![];
         // Check that resource block's resource has been registered as a class.
         errors.extend(kb.get_registered_class(&self.resource).err());
-        errors
-            .extend(check_for_duplicate_resource_blocks(&kb.resource_blocks, &self.resource).err());
 
         let ResourceBlock {
             block_type,
@@ -627,8 +613,12 @@ impl ResourceBlock {
 
         match index_declarations(roles, permissions, relations, &resource) {
             Ok(declarations) => {
-                kb.resource_blocks
-                    .add(block_type, resource, declarations, shorthand_rules);
+                errors.extend(kb.resource_blocks.add(
+                    block_type,
+                    resource,
+                    declarations,
+                    shorthand_rules,
+                ));
             }
             Err(e) => errors.push(e),
         }
@@ -658,7 +648,10 @@ mod tests {
         let error = p.load_str(policy).unwrap_err();
         let msg = match error.kind {
             Validation(ValidationError::ResourceBlock { msg, .. }) => msg,
-            Validation(ValidationError::UnregisteredClass { .. }) => error.to_string(),
+            Validation(ValidationError::UnregisteredClass { .. })
+            | Validation(ValidationError::DuplicateResourceBlockDeclaration { .. }) => {
+                error.to_string()
+            }
             _ => panic!("Unexpected error: {}", error),
         };
         assert!(msg.contains(expected));
@@ -821,15 +814,263 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_block_duplicates() {
+    fn test_resource_block_declarations_spread_over_multiple_resource_blocks() {
         let p = Polar::new();
-        let invalid_policy = "resource Org{}resource Org{}";
-        p.register_constant(sym!("Org"), term!("unimportant"))
+
+        let repo_instance = ExternalInstance {
+            instance_id: 1,
+            constructor: None,
+            repr: None,
+        };
+        let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
+        let repo_name = sym!("Repo");
+        p.register_constant(repo_name.clone(), repo_term).unwrap();
+        p.register_mro(repo_name, vec![repo_instance.instance_id])
+            .unwrap();
+
+        // Use declarations from one resource block in shorthand rules in another.
+        let valid_policy = r#"
+            resource Repo {
+              relations = { readable_parent: Repo };
+              roles = ["reader"];
+              permissions = ["read"];
+
+              "write" if "writer";
+              "write" if "write" on "writable_parent";
+            }
+
+            resource Repo {
+              relations = { writable_parent: Repo };
+              roles = ["writer"];
+              permissions = ["write"];
+
+              "read" if "reader";
+              "read" if "read" on "readable_parent";
+            }
+
+            has_role(_: Actor, _: String, _: Resource);
+            has_relation(subject: Repo, "writable_parent", object: Repo) if
+                object.parent_id = subject.id;
+            has_relation(subject: Repo, "readable_parent", object: Repo) if
+                object.parent_id = subject.id;
+        "#;
+
+        p.load_str(valid_policy).unwrap();
+        // Create explicit scope to allow the RWLock obtained from kb.read() to
+        // be dropped explicitly and independently of the function scope.
+        {
+            let blocks = &p.kb.read().unwrap().resource_blocks;
+            let declarations = blocks.declarations.get(&term!(sym!("Repo"))).unwrap();
+            assert_eq!(declarations.len(), 6);
+            let shorthand_rules = blocks.shorthand_rules.get(&term!(sym!("Repo"))).unwrap();
+            assert_eq!(shorthand_rules.len(), 4);
+        }
+        p.clear_rules();
+
+        // Raise a validation error if shorthand rules reference declarations
+        // not found in any matching block
+        let invalid_policy = r#"
+            resource Repo {
+                permissions = ["write"];
+            }
+
+            resource Repo {
+                roles = ["reader"];
+                "read" if "reader";
+            }
+
+            has_role(actor: Actor, _role: String, repo: Repo) if
+                repo in actor.repos;
+        "#;
+        expect_error(
+            &p,
+            invalid_policy,
+            r#"Undeclared term "read" referenced in rule in 'Repo' resource block"#,
+        );
+
+        // Multiple blocks can declare distinct roles/permissions/relations.
+        let valid_policy = r#"
+            resource Repo {
+              relations = { readable_parent: Repo };
+              roles = ["reader"];
+              permissions = ["read"];
+
+              "read" if "reader";
+              "read" if "read" on "readable_parent";
+            }
+
+            resource Repo {
+              relations = { writable_parent: Repo };
+              roles = ["writer"];
+              permissions = ["write"];
+
+              "write" if "writer";
+              "write" if "write" on "writable_parent";
+            }
+
+            has_role(_: Actor, _: String, _: Resource);
+            has_relation(subject: Repo, "writable_parent", object: Repo) if
+                object.parent_id = subject.id;
+            has_relation(subject: Repo, "readable_parent", object: Repo) if
+                object.parent_id = subject.id;
+        "#;
+
+        p.load_str(valid_policy).unwrap();
+        // Create explicit scope to allow the RWLock obtained from kb.read() to
+        // be dropped explicitly and independently of the function scope.
+        {
+            let blocks = &p.kb.read().unwrap().resource_blocks;
+            let declarations = blocks.declarations.get(&term!(sym!("Repo"))).unwrap();
+            assert_eq!(declarations.len(), 6);
+            let shorthand_rules = blocks.shorthand_rules.get(&term!(sym!("Repo"))).unwrap();
+            assert_eq!(shorthand_rules.len(), 4);
+        }
+        p.clear_rules();
+
+        // Duplicate declarations are fine if they're used in multiple blocks.
+        let valid_policy = r#"
+            resource Repo {
+              relations = { readable_parent: Repo, writable_parent: Repo };
+              roles = ["reader", "writer"];
+              permissions = ["read", "write"];
+
+              "read" if "reader";
+              "write" if "writer";
+
+              "read" if "read" on "readable_parent";
+              "write" if "write" on "writable_parent";
+            }
+
+            resource Repo {
+              relations = { readable_parent: Repo, writable_parent: Repo };
+              roles = ["reader", "writer"];
+              permissions = ["read", "write"];
+
+              "reader" if "writer";
+
+              "read" if "reader" on "readable_parent";
+              "write" if "writer" on "writable_parent";
+            }
+
+            has_role(_: Actor, _: String, _: Resource);
+            has_relation(subject: Repo, "writable_parent", object: Repo) if
+                object.parent_id = subject.id;
+            has_relation(subject: Repo, "readable_parent", object: Repo) if
+                object.parent_id = subject.id;
+        "#;
+        p.load_str(valid_policy).unwrap();
+        {
+            let blocks = &p.kb.read().unwrap().resource_blocks;
+            let declarations = blocks.declarations.get(&term!(sym!("Repo"))).unwrap();
+            assert_eq!(declarations.len(), 6);
+            let shorthand_rules = blocks.shorthand_rules.get(&term!(sym!("Repo"))).unwrap();
+            assert_eq!(shorthand_rules.len(), 7);
+        }
+    }
+
+    #[test]
+    fn test_resource_block_declarations_overwriting() {
+        let p = Polar::new();
+
+        let repo_instance = ExternalInstance {
+            instance_id: 1,
+            constructor: None,
+            repr: None,
+        };
+        let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
+        let repo_name = sym!("Repo");
+        p.register_constant(repo_name.clone(), repo_term).unwrap();
+        p.register_mro(repo_name, vec![repo_instance.instance_id])
+            .unwrap();
+
+        // validate overwriting declarations of the same type is ok
+        let valid_policy = r#"
+            resource Repo {
+                roles = ["reader"];
+            }
+
+            resource Repo {
+                roles = ["reader"];
+            }
+
+            has_role(actor: Actor, _role: String, repo: Repo) if
+               repo in actor.repos;
+        "#;
+        assert!(p.load_str(valid_policy).is_ok());
+        p.clear_rules();
+
+        // validate overwriting of different types throws error
+        let invalid_policy = r#"
+            resource Repo {
+                roles = ["reader"];
+            }
+
+            resource Repo {
+                permissions = ["reader"];
+            }
+
+            has_role(actor: Actor, _role: String, repo: Repo) if
+               repo in actor.repos;
+        "#;
+
+        expect_error(
+            &p,
+            invalid_policy,
+            r#"Cannot overwrite existing role declaration "reader" in resource Repo with permission"#,
+        );
+
+        // validate overwriting of different types throws error
+        let invalid_policy = r#"
+            resource Repo {
+                roles = ["reader"];
+            }
+
+            resource Repo {
+                relations = { reader: Repo };
+            }
+
+            has_role(actor: Actor, _role: String, repo: Repo) if
+                repo in actor.repos;
+            has_relation(subject: Repo, "reader", object: Repo) if
+                object.parent_id = subject.id;
+        "#;
+
+        expect_error(
+            &p,
+            invalid_policy,
+            r#"Cannot overwrite existing role declaration "reader" in resource Repo with relation"#,
+        );
+
+        // validating overwriting relations of different types throws error
+        let invalid_policy = r#"
+            actor User {}
+            resource Repo {
+                relations = { reader: Repo };
+            }
+
+            resource Repo {
+                relations = { reader: User };
+            }
+
+            has_role(actor: Actor, _role: String, repo: Repo) if
+                repo in actor.repos;
+            has_relation(subject: Repo, "reader", object: Repo) if
+                object.parent_id = subject.id;
+        "#;
+        let user_instance = ExternalInstance {
+            instance_id: 2,
+            constructor: None,
+            repr: None,
+        };
+        let user_term = term!(Value::ExternalInstance(user_instance.clone()));
+        let user_name = sym!("User");
+        p.register_constant(user_name.clone(), user_term).unwrap();
+        p.register_mro(user_name, vec![user_instance.instance_id])
             .unwrap();
         expect_error(
             &p,
             invalid_policy,
-            "Duplicate declaration of 'Org' resource block.",
+            r#"Cannot overwrite existing relation declaration "reader" in resource Repo with relation"#,
         );
     }
 
@@ -841,7 +1082,7 @@ mod tests {
         expect_error(
             &p,
             r#"resource Org{"member" if "owner";}"#,
-            r#"Undeclared term "member" referenced in rule in the 'Org' resource block. Did you mean to declare it as a role, permission, or relation?"#,
+            r#"Undeclared term "member" referenced in rule in 'Org' resource block. Did you mean to declare it as a role, permission, or relation?"#,
         );
     }
 
@@ -856,7 +1097,7 @@ mod tests {
                 roles=["member"];
                 "member" if "owner";
             }"#,
-            r#"Undeclared term "owner" referenced in rule in the 'Org' resource block. Did you mean to declare it as a role, permission, or relation?"#,
+            r#"Undeclared term "owner" referenced in rule in 'Org' resource block. Did you mean to declare it as a role, permission, or relation?"#,
         );
     }
 
@@ -975,7 +1216,7 @@ mod tests {
               roles = ["egg","egg"];
               "egg" if "egg";
             }"#,
-            r#"Org: Duplicate declaration of "egg" in the roles list."#,
+            r#"Cannot overwrite existing role declaration "egg" in resource Org with role"#,
         );
 
         expect_error(
@@ -987,7 +1228,7 @@ mod tests {
               "egg" if "tootsie";
               "tootsie" if "spring";
             }"#,
-            r#"Org: "egg" declared as a permission but it was previously declared as a role."#,
+            r#"Cannot overwrite existing role declaration "egg" in resource Org with permission"#,
         );
 
         expect_error(
@@ -996,7 +1237,7 @@ mod tests {
               permissions = [ "egg" ];
               relations = { egg: Roll };
             }"#,
-            r#"Org: 'egg' declared as a relation but it was previously declared as a permission."#,
+            r#"Cannot overwrite existing permission declaration "egg" in resource Org with relation"#,
         );
     }
 
