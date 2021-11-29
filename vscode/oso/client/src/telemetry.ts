@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+
 import { createHash } from 'crypto';
 
 import { env, ExtensionContext, OutputChannel, Uri, workspace } from 'vscode';
@@ -11,8 +13,8 @@ export const telemetryEventsKey = 'events';
 // Flush telemetry events in batches every hour.
 export const TELEMETRY_INTERVAL = 1000 * 60 * 60;
 
-const hash = (contents: string) =>
-  createHash('sha256').update(contents).digest('base64');
+const hash = (contents: { toString(): string }) =>
+  createHash('sha256').update(contents.toString()).digest('base64');
 
 // One-way hash of VSCode machine ID.
 const distinct_id = hash(env.machineId);
@@ -92,19 +94,17 @@ export function flushQueue(state: State, log: OutputChannel): () => void {
         if (events.length === 0) return;
 
         // Clear events queue.
-        log.appendLine(`Flushing ${events.length.toString()} events`);
+        log.appendLine(`Flushing ${events.length} events`);
         await state.update(telemetryEventsKey, []);
 
         mixpanel.track_batch(events, errors =>
-          errors.forEach(({ name, message, stack }) => {
-            log.appendLine(`Mixpanel track_batch error: ${name}`);
-            log.appendLine(`\t${message}`);
+          (errors || []).forEach(({ name, message, stack }) => {
+            log.appendLine(`Mixpanel track_batch error: ${name}\n\t${message}`);
             if (stack) log.appendLine(`\t${stack}`);
           })
         );
       } catch (e) {
-        log.append('Caught error while sending telemetry: ');
-        log.appendLine(e);
+        log.appendLine(`Caught error while sending telemetry: ${e}`);
       }
     })();
   };
@@ -142,8 +142,8 @@ export function enqueueEvent(
 
   void (async () => {
     try {
-      const load_id = hash(Math.random().toString());
-      const workspace_id = hash(uri.toString());
+      const load_id = hash(Math.random());
+      const workspace_id = hash(uri);
       const metadata: MixpanelMetadata = { distinct_id, load_id, workspace_id };
 
       const errors = diagnostics.filter(d => d.severity === Severity.Error);
@@ -174,8 +174,7 @@ export function enqueueEvent(
       const events: MixpanelEvent[] = [...old, loadEvent, ...diagnosticEvents];
       await state.update(telemetryEventsKey, events);
     } catch (e) {
-      log.append('Caught error while recording telemetry: ');
-      log.appendLine(e);
+      log.appendLine(`Caught error while recording telemetry: ${e}`);
     }
   })();
 }

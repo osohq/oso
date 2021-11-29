@@ -128,7 +128,7 @@ async function reloadDocument(uri: Uri) {
 }
 
 async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
-  const server = context.asAbsolutePath(join('server', 'out', 'server.js'));
+  const server = context.asAbsolutePath(join('out', 'server.js'));
 
   // Watch `FileChangeType.Deleted` events for Polar files in the current
   // workspace, including those not open in any editor in the workspace.
@@ -206,7 +206,7 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
 
 async function stopClient(folder: string) {
   const client = clients.get(folder);
-  await client.stop();
+  if (client) await client.stop();
   clients.delete(folder);
 }
 
