@@ -218,11 +218,7 @@ type Declarations = HashMap<Term, Declaration>;
 
 impl Declaration {
     fn as_rule_name(&self) -> Symbol {
-        match self {
-            Declaration::Role => sym!("has_role"),
-            Declaration::Permission => sym!("has_permission"),
-            Declaration::Relation(_) => sym!("has_relation"),
-        }
+        sym!(&format!("has_{}", self))
     }
 }
 
