@@ -7,7 +7,7 @@ install:
 	bundle install
 
 test: install rust
-	bundle exec rake spec
+	POLAR_IGNORE_NO_ALLOW_WARNING=1 bundle exec rake spec
 
 lint: install
 	bundle exec rubocop
