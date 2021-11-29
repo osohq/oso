@@ -56,12 +56,10 @@ module Oso
           layout :result, result_klass, :error, RustString
         end.by_ref
       end
+
       # Defines the result type version of
       # each of these structs
       # result(T) => { result: T, error: string }
-      #
-      # We have a bunch more here than in the other language
-      # because
       CResultVoid = result(:int)
       CResultString = result(RustString)
       CResultQuery = result(Query)

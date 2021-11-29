@@ -349,7 +349,7 @@ pub extern "C" fn query_free(query: *mut Query) -> i32 {
     POLAR_SUCCESS
 }
 
-/// Recovers the original boxed version of `query` so that
+/// Recovers the original boxed version of `result` so that
 /// it can be properly freed
 #[no_mangle]
 pub extern "C" fn result_free(result: *mut CResult<c_void>) -> i32 {
