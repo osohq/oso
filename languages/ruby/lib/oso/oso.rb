@@ -218,7 +218,7 @@ module Oso
         bindings: { var_name => type_constraint(resource, resource_cls) },
         accept_expression: true
       )
-      require 'pry'
+
       partials = partials.each_with_object([]) do |result, out|
         result.each do |key, val|
           out.push prefilter_isas(key, val)
