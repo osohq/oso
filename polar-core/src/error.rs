@@ -430,8 +430,9 @@ pub enum ValidationError {
         term: Term,
     },
     DuplicateResourceBlockDeclaration {
-        /// Term<Symbol> for the resource block and Declaration where the error arose, tracked for lexical context
+        /// Term<Symbol> where the error arose.
         resource: Term,
+        /// Term<String> where the error arose, tracked for lexical context.
         declaration: Term,
         existing: Declaration,
         new: Declaration,
