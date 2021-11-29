@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/restrict-template-expressions */
-
 import { createHash } from 'crypto';
 
 import { env, Uri, workspace } from 'vscode';
