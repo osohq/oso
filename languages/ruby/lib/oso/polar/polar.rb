@@ -84,26 +84,8 @@ module Oso
         @ffi_polar
       end
 
-      def get_class(class_name)
+      def name_to_class(class_name)
         host.types[class_name].klass.get
-      end
-
-      # get the (maybe user-supplied) name of a class.
-      # kind of a hack because of class autoreloading.
-      def get_class_name(klass) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
-        if host.types.key? klass
-          host.types[klass].name
-        elsif host.types.key? klass.name
-          host.types[klass.name].name
-        else
-          rec = host.types.values.find do |v|
-            v.klass.get == klass
-          end
-          raise "Unknown class `#{klass}`" if rec.nil?
-
-          host.types[klass] = rec
-          rec.name
-        end
       end
 
       # Clear all rules and rule sources from the current Polar instance
@@ -265,10 +247,29 @@ module Oso
 
       private
 
+      # get the (maybe user-supplied) name of a class.
+      # kind of a hack because of class autoreloading.
+      def class_to_name(klass) # rubocop:disable Metrics/AbcSize
+        if (rec = host.types[klass]) || (rec = host.types[klass.name])
+          rec.name
+        elsif (rec = host.types.values.find { |v| v.klass.get == klass })
+          host.types[klass] = rec
+          rec.name
+        else
+          raise NameError, "Unknown class `#{klass}`"
+        end
+      end
+
+      def try_class_to_name(klass)
+        class_to_name klass
+      rescue NameError
+        nil
+      end
+
       def type_constraint(var, cls)
         Expression.new(
           'And',
-          [Expression.new('Isa', [var, Pattern.new(get_class_name(cls), {})])]
+          [Expression.new('Isa', [var, Pattern.new(class_to_name(cls), {})])]
         )
       end
 

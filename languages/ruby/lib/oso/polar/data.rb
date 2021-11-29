@@ -53,7 +53,7 @@ module Oso
         Relation = Struct.new(:left, :name, :right) do
           # this doesn't depend on the ORM
           def self.parse(polar, left, name, right)
-            Relation.new(polar.get_class(left), name, polar.get_class(right))
+            Relation.new(polar.name_to_class(left), name, polar.name_to_class(right))
           end
         end
 
@@ -61,8 +61,8 @@ module Oso
           OPS = {
             'Eq' => '=', 'In' => 'IN', 'Nin' => 'NOT IN', 'Neq' => '!='
           }.freeze
-          # this is very ORM specific
 
+          # this is very ORM specific
           def to_sql_args
             args = []
             lhs = self.class.to_sql_arg left, args
@@ -71,11 +71,7 @@ module Oso
           end
 
           def self.to_sql_arg(side, args)
-            if side.is_a? Projection then side.columnize
-            else
-              args.push side
-              '?'
-            end
+            side.is_a?(Projection) ? side.columnize : '?'.tap { args.push side }
           end
 
           def self.parse(polar, left, cmp, right)
@@ -87,7 +83,7 @@ module Oso
             val = side[key]
             case key
             when 'Field'
-              Projection.new(polar.get_class(val[0]), val[1])
+              Projection.new(polar.name_to_class(val[0]), val[1])
             when 'Immediate'
               polar.host.to_ruby('value' => [[val.keys.first, val.values.first]])
             else

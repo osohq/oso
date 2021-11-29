@@ -865,7 +865,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         end
       end)
 
-      expect(subject.get_class_name(Bar)).to be 'Baz'
+      expect(subject.send(:class_to_name, Bar)).to be 'Baz'
     end
 
     it 'can lookup attributes on anonymous classes' do

@@ -2,6 +2,8 @@
 
 require 'set'
 require_relative 'polar/polar'
+require_relative 'polar/expression'
+require_relative 'polar/pattern'
 
 module Oso
   # oso authorization API.
@@ -200,7 +202,7 @@ module Oso
       end
 
       ::Oso::Polar::DataFiltering::FilterPlan
-        .parse(self, results, get_class_name(resource_cls))
+        .parse(self, results, class_to_name(resource_cls))
         .build_query
     end
 
@@ -216,14 +218,15 @@ module Oso
         bindings: { var_name => type_constraint(resource, resource_cls) },
         accept_expression: true
       )
+      require 'pry'
       partials = partials.each_with_object([]) do |result, out|
         result.each do |key, val|
-          out.push({ 'bindings' => { key => host.to_polar(val) } })
+          out.push prefilter_isas(key, val)
         end
       end
 
       types = host.serialize_types
-      class_name = get_class_name resource_cls
+      class_name = class_to_name resource_cls
 
       data_filter = ffi.build_data_filter(types, partials, var_name, class_name)
       data_filter = ::Oso::Polar::Data::Filter.parse(self, data_filter)
@@ -246,7 +249,7 @@ module Oso
       q = authorized_query actor, action, resource_cls
       return [] if q.nil?
 
-      host.types[get_class_name resource_cls].exec_query[q]
+      host.types[name_to_class resource_cls].exec_query[q]
     end
 
     # Register default values for data filtering query functions.
@@ -257,6 +260,32 @@ module Oso
       host.build_query = build_query if build_query
       host.exec_query = exec_query if exec_query
       host.combine_query = combine_query if combine_query
+    end
+
+    private
+
+    def prefilter_isas(key, val) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+      # this will usually be the case! sometimes not, if it's an instance.
+      if val.is_a?(::Oso::Polar::Expression) && val.operator == 'And'
+        # get the isas
+        isas, othas = val.args.partition do |expr|
+          expr.operator == 'Isa' &&
+            expr.args[1].is_a?(::Oso::Polar::Pattern) &&
+            expr.args[1].fields.empty?
+        end
+        # keep all othe other ones
+        val.args = othas
+
+        # drop all the isas we can verify now
+        isas.reject! do |isa|
+          try_class_to_name(isa.args[0].class) == isa.args[1].tag
+        end
+
+        # TODO(gw) check the rest of them instead of just adding them?
+        val.args += isas
+      end
+      val = host.to_polar val
+      { 'bindings' => { key => val } }
     end
   end
 end
