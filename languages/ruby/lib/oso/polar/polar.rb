@@ -247,6 +247,50 @@ module Oso
 
       private
 
+      # new/old data filtering core API shared logic
+      def partial_query(actor, action, resource_cls) # rubocop:disable Metrics/MethodLength
+        var_name = 'resource'
+        resource = Variable.new var_name
+
+        partials = query_rule(
+          'allow',
+          actor,
+          action,
+          resource,
+          bindings: { var_name => type_constraint(resource, resource_cls) },
+          accept_expression: true
+        )
+
+        partials.each_with_object([]) do |result, out|
+          result.each do |key, val|
+            out.push prefilter_isas(key, val)
+          end
+        end
+      end
+
+      # handle Isa constraints in a partial query
+      def prefilter_isas(key, val) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+        # this will usually be the case! sometimes not, if it's an instance.
+        if val.is_a?(Expression) && val.operator == 'And'
+          # get the isas
+          isas, othas = val.args.partition do |expr|
+            expr.operator == 'Isa' &&
+              expr.args[1].is_a?(Pattern) &&
+              expr.args[1].fields.empty?
+          end
+
+          # drop all the isas we can verify now, keep everything else
+          othas += isas.reject do |isa|
+            isa.args[0].is_a? name_to_class isa.args[1].tag
+          end
+
+          # TODO(gw) check the rest of them instead of just adding them?
+          val.args = othas
+        end
+        val = host.to_polar val
+        { 'bindings' => { key => val } }
+      end
+
       # get the (maybe user-supplied) name of a class.
       # kind of a hack because of class autoreloading.
       def class_to_name(klass) # rubocop:disable Metrics/AbcSize

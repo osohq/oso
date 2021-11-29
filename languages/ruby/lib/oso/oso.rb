@@ -2,12 +2,10 @@
 
 require 'set'
 require_relative 'polar/polar'
-require_relative 'polar/expression'
-require_relative 'polar/pattern'
 
 module Oso
   # oso authorization API.
-  class Oso < Polar::Polar # rubocop:disable Metrics/ClassLength
+  class Oso < Polar::Polar
     # Create an Oso instance, which is used to configure and enforce an Oso
     # policy in an app.
     #
@@ -183,58 +181,11 @@ module Oso
     # @param resource_cls The resource being accessed.
     #
     # @return A query for resources accessible to the actor.
-    def authorized_query(actor, action, resource_cls) # rubocop:disable Metrics/MethodLength
-      resource = Polar::Variable.new 'resource'
-
-      results = query_rule(
-        'allow',
-        actor,
-        action,
-        resource,
-        bindings: { 'resource' => type_constraint(resource, resource_cls) },
-        accept_expression: true
-      )
-
-      results = results.each_with_object([]) do |result, out|
-        result.each do |key, val|
-          out.push({ 'bindings' => { key => host.to_polar(val) } })
-        end
-      end
-
-      ::Oso::Polar::DataFiltering::FilterPlan
+    def authorized_query(actor, action, resource_cls)
+      results = partial_query(actor, action, resource_cls)
+      Polar::DataFiltering::FilterPlan
         .parse(self, results, class_to_name(resource_cls))
         .build_query
-    end
-
-    def authzd_query(actor, action, resource_cls) # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
-      var_name = 'resource'
-      resource = Polar::Variable.new var_name
-
-      partials = query_rule(
-        'allow',
-        actor,
-        action,
-        resource,
-        bindings: { var_name => type_constraint(resource, resource_cls) },
-        accept_expression: true
-      )
-
-      partials = partials.each_with_object([]) do |result, out|
-        result.each do |key, val|
-          out.push prefilter_isas(key, val)
-        end
-      end
-
-      types = host.serialize_types
-      class_name = class_to_name resource_cls
-
-      data_filter = ffi.build_data_filter(types, partials, var_name, class_name)
-      data_filter = ::Oso::Polar::Data::Filter.parse(self, data_filter)
-      data_filter.to_query(host.types)
-    end
-
-    def authzd_resources(actor, action, resource_cls)
-      authzd_query(actor, action, resource_cls).to_a
     end
 
     # Determine the resources of type +resource_cls+ that +actor+
@@ -252,6 +203,19 @@ module Oso
       host.types[name_to_class resource_cls].exec_query[q]
     end
 
+    def authzd_query(actor, action, resource_cls)
+      partials = partial_query(actor, action, resource_cls)
+      types = host.serialize_types
+      class_name = class_to_name resource_cls
+      data_filter = ffi.build_data_filter(types, partials, 'resource', class_name)
+      data_filter = Polar::Data::Filter.parse(self, data_filter)
+      data_filter.to_query(host.types)
+    end
+
+    def authzd_resources(actor, action, resource_cls)
+      authzd_query(actor, action, resource_cls).to_a
+    end
+
     # Register default values for data filtering query functions.
     # These can be overridden by passing specific implementations to
     # `register_class` or by defining `build_query`, `exec_query` and
@@ -260,32 +224,6 @@ module Oso
       host.build_query = build_query if build_query
       host.exec_query = exec_query if exec_query
       host.combine_query = combine_query if combine_query
-    end
-
-    private
-
-    def prefilter_isas(key, val) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
-      # this will usually be the case! sometimes not, if it's an instance.
-      if val.is_a?(::Oso::Polar::Expression) && val.operator == 'And'
-        # get the isas
-        isas, othas = val.args.partition do |expr|
-          expr.operator == 'Isa' &&
-            expr.args[1].is_a?(::Oso::Polar::Pattern) &&
-            expr.args[1].fields.empty?
-        end
-        # keep all othe other ones
-        val.args = othas
-
-        # drop all the isas we can verify now
-        isas.reject! do |isa|
-          try_class_to_name(isa.args[0].class) == isa.args[1].tag
-        end
-
-        # TODO(gw) check the rest of them instead of just adding them?
-        val.args += isas
-      end
-      val = host.to_polar val
-      { 'bindings' => { key => val } }
     end
   end
 end
