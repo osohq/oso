@@ -13,6 +13,7 @@
   },
   "exclude": ["./node_modules", "./out"],
   "extends": "./node_modules/gts/tsconfig-google.json",
+  "include": [],
   "references": [
     { "path": "./client" },
     { "path": "./server" },
