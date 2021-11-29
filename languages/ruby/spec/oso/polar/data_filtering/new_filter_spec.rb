@@ -5,22 +5,24 @@ require 'sqlite3'
 require 'active_record'
 
 RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
+  before do
+    subject.data_filtering_adapter =
+      ::Oso::Polar::Data::Adapter::ActiveRecordAdapter.new
+  end
+
   context 'new filters' do # rubocop:disable Metrics/BlockLength
     class Sign < ActiveRecord::Base
-      include DFH::ActiveRecordFetcher
       self.primary_key = :name
       has_many :people, foreign_key: :sign_name
       belongs_to :planet, foreign_key: :planet_name
     end
 
     class Person < ActiveRecord::Base
-      include DFH::ActiveRecordFetcher
       self.primary_key = :name
       belongs_to :sign, foreign_key: :sign_name
     end
 
     class Planet < ActiveRecord::Base
-      include DFH::ActiveRecordFetcher
       self.primary_key = :name
       has_many :signs, foreign_key: :planet_name
     end
@@ -28,9 +30,6 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     context 'astrology' do # rubocop:disable Metrics/BlockLength
       context '#authorized_query parity' do # rubocop:disable Metrics/BlockLength
         before do # rubocop:disable Metrics/BlockLength
-          subject.data_filtering_adapter =
-            ::Oso::Polar::Data::Adapter::ActiveRecordAdapter.new
-
           subject.register_class(
             Person,
             fields: {

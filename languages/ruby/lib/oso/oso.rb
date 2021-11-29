@@ -183,6 +183,11 @@ module Oso
     # @return A query for resources accessible to the actor.
     def authorized_query(actor, action, resource_cls)
       if host.use_new_data_filtering?
+
+        unless host.types[resource_cls].build_query == ::Oso::Polar::Host::DEFAULT_BUILD_QUERY
+          warn 'Warning: redundant data filtering configuration detected'
+        end
+
         new_authorized_query(actor, action, resource_cls)
       else
         old_authorized_query(actor, action, resource_cls)
