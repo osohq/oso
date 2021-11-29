@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+
 import { join } from 'path';
 
 import {
@@ -184,7 +186,9 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
 
   context.subscriptions.push(
     client.onTelemetry((event: TelemetryEvent) =>
-      enqueueEvent(context.globalState, outputChannel, folder.uri, event)
+      enqueueEvent(context.globalState, folder.uri, event).catch(e =>
+        outputChannel.appendLine(`Caught error while recording telemetry: ${e}`)
+      )
     )
   );
 
@@ -220,16 +224,21 @@ function updateClients(context: ExtensionContext) {
   };
 }
 
+let sendTelemetry = async () => {}; // eslint-disable-line @typescript-eslint/no-empty-function
+
 export async function activate(context: ExtensionContext): Promise<void> {
+  // Capture `context.globalState` in closure so we can flush telemetry queue
+  // in `deactivate()`, which does not have access to `ExtensionContext`.
+  sendTelemetry = () =>
+    flushQueue(context.globalState).catch(e =>
+      outputChannel.appendLine(`Caught error while sending telemetry: ${e}`)
+    );
+
   const folders = workspace.workspaceFolders || [];
 
-  // Flush the telemetry event queue on initialization...
-  flushQueue(context.globalState, outputChannel)();
-  // ...and then every `TELEMETRY_INTERVAL` thereafter.
-  const interval = setInterval(
-    flushQueue(context.globalState, outputChannel),
-    TELEMETRY_INTERVAL
-  );
+  // Flush telemetry queue every `TELEMETRY_INTERVAL` ms. We don't `await` the
+  // `sendTelemetry` promise because nothing depends on its outcome.
+  const interval = setInterval(sendTelemetry, TELEMETRY_INTERVAL); // eslint-disable-line @typescript-eslint/no-misused-promises
   // Clear interval when extension is deactivated.
   context.subscriptions.push({ dispose: () => clearInterval(interval) });
 
@@ -253,6 +262,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
   // *not* be considered part of the same policy?
 }
 
-export function deactivate(): Promise<void[]> {
+export async function deactivate(): Promise<void[]> {
+  // Flush telemetry queue on shutdown.
+  await sendTelemetry();
+
   return Promise.all([...clients.values()].map(c => c.stop()));
 }
