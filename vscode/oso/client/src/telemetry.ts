@@ -21,18 +21,21 @@ const MIXPANEL_PROJECT_TOKEN = 'd14a9580b894059dffd19437b7ddd7be';
 const mixpanel = Mixpanel.init(MIXPANEL_PROJECT_TOKEN, { protocol: 'https' });
 
 type MixpanelLoadEvent = {
-  event: 'load';
+  event: 'TEST_load';
   properties: {
     diagnostics: number;
     errors: number;
-    has_resource_blocks: boolean;
     successful: boolean;
+    total_rules: number;
     warnings: number;
   };
+} & {
+  properties: TelemetryEvent['general_stats'] &
+    TelemetryEvent['resource_block_stats'];
 };
 
 type MixpanelDiagnosticEvent = {
-  event: 'diagnostic';
+  event: 'TEST_diagnostic';
   properties: {
     code: Diagnostic['code'];
   };
@@ -55,10 +58,7 @@ type MixpanelEvent = { properties: MixpanelMetadata } & (
 
 type State = ExtensionContext['globalState'];
 
-export function flushQueue(
-  state: State,
-  outputChannel: OutputChannel
-): () => void {
+export function flushQueue(state: State, log: OutputChannel): () => void {
   return () => {
     void (async () => {
       try {
@@ -68,19 +68,19 @@ export function flushQueue(
         if (events.length === 0) return;
 
         // Clear events queue.
-        outputChannel.appendLine(`Flushing ${events.length.toString()} events`);
+        log.appendLine(`Flushing ${events.length.toString()} events`);
         await state.update(telemetryEventsKey, []);
 
         mixpanel.track_batch(events, errors =>
           errors.forEach(({ name, message, stack }) => {
-            outputChannel.appendLine(`Mixpanel track_batch error: ${name}`);
-            outputChannel.appendLine(`\t${message}`);
-            if (stack) outputChannel.appendLine(`\t${stack}`);
+            log.appendLine(`Mixpanel track_batch error: ${name}`);
+            log.appendLine(`\t${message}`);
+            if (stack) log.appendLine(`\t${stack}`);
           })
         );
       } catch (e) {
-        outputChannel.append('Caught error while sending telemetry: ');
-        outputChannel.appendLine(e);
+        log.append('Caught error while sending telemetry: ');
+        log.appendLine(e);
       }
     })();
   };
@@ -88,14 +88,31 @@ export function flushQueue(
 
 export type TelemetryEvent = {
   diagnostics: Diagnostic[];
-  has_resource_blocks: boolean;
+  general_stats: {
+    inline_queries: number;
+    longhand_rules: number;
+    polar_chars: number;
+    polar_files: number;
+    rule_types: number;
+  };
+  resource_block_stats: {
+    resource_blocks: number;
+    actors: number;
+    resources: number;
+    declarations: number;
+    roles: number;
+    permissions: number;
+    relations: number;
+    shorthand_rules: number;
+    cross_resource_shorthand_rules: number;
+  };
 };
 
 export function enqueueEvent(
   state: State,
   log: OutputChannel,
   uri: Uri,
-  { diagnostics, has_resource_blocks }: TelemetryEvent
+  { diagnostics, general_stats, resource_block_stats }: TelemetryEvent
 ): void {
   void (async () => {
     try {
@@ -107,19 +124,22 @@ export function enqueueEvent(
       const warnings = diagnostics.filter(d => d.severity === Severity.Warning);
 
       const loadEvent: MixpanelEvent = {
-        event: 'load',
+        event: 'TEST_load',
         properties: {
           diagnostics: diagnostics.length,
           errors: errors.length,
-          has_resource_blocks,
           successful: errors.length === 0,
+          total_rules:
+            general_stats.longhand_rules + resource_block_stats.shorthand_rules,
           warnings: warnings.length,
+          ...general_stats,
+          ...resource_block_stats,
           ...metadata,
         },
       };
 
       const diagnosticEvents: MixpanelEvent[] = diagnostics.map(({ code }) => ({
-        event: 'diagnostic',
+        event: 'TEST_diagnostic',
         properties: { code, ...metadata },
       }));
 
