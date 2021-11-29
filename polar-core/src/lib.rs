@@ -26,7 +26,7 @@ pub mod parser;
 mod partial;
 pub mod polar;
 pub mod query;
-mod resource_block;
+pub mod resource_block;
 mod rewrites;
 pub mod rules;
 mod runnable;

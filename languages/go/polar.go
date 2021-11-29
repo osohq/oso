@@ -57,10 +57,7 @@ func newPolar() (*Polar, error) {
 
 func (p Polar) checkInlineQueries() error {
 	for {
-		ffiQuery, err := p.ffiPolar.NextInlineQuery()
-		if err != nil {
-			return err
-		}
+		ffiQuery := p.ffiPolar.NextInlineQuery()
 		if ffiQuery == nil {
 			return nil
 		}

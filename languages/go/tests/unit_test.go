@@ -431,7 +431,7 @@ func TestFailingALot(t *testing.T) {
 	o.LoadString("f(x) if x.Foo();")
 
 	// Do it 100 times, hoping for bad stuff to happen.
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 10000; i++ {
 		_, errors := o.QueryStr("f(1)")
 
 		if err = <-errors; err != nil {

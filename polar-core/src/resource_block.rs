@@ -41,13 +41,13 @@ fn validate_relation_keyword(keyword: &Term) -> Result<()> {
 }
 
 #[derive(Debug)]
-enum ParsedDeclaration {
+pub enum ParsedDeclaration {
     Roles(Term),       // List<String>
     Permissions(Term), // List<String>
     Relations(Term),   // Dict<Symbol, Symbol>
 }
 
-fn validate_parsed_declaration((name, term): (Term, Term)) -> Result<ParsedDeclaration> {
+pub fn validate_parsed_declaration((name, term): (Term, Term)) -> Result<ParsedDeclaration> {
     match (name.value().as_symbol().expect("parsed as symbol").0.as_ref(), term.value()) {
         ("roles", Value::List(_)) => Ok(ParsedDeclaration::Roles(term)),
         ("permissions", Value::List(_)) => Ok(ParsedDeclaration::Permissions(term)),
@@ -74,7 +74,7 @@ fn validate_parsed_declaration((name, term): (Term, Term)) -> Result<ParsedDecla
     }
 }
 
-fn block_type_from_keyword(keyword: Option<Term>, resource: &Term) -> Result<BlockType> {
+pub fn block_type_from_keyword(keyword: Option<Term>, resource: &Term) -> Result<BlockType> {
     if let Some(keyword) = keyword {
         match keyword.value().as_symbol().unwrap().0.as_ref() {
             "actor" => Ok(BlockType::Actor),

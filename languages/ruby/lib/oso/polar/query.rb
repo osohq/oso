@@ -94,8 +94,7 @@ module Oso
                  else
                    instance.__send__(attribute, *args, **kwargs)
                  end
-        result = JSON.dump(host.to_polar(result))
-        call_result(result, call_id: call_id)
+        call_result(host.to_polar(result), call_id: call_id)
       rescue ArgumentError, NoMethodError => e
         application_error(e.message)
         call_result(nil, call_id: call_id)
@@ -143,7 +142,7 @@ module Oso
           calls[call_id] = value.lazy
         end
 
-        result = JSON.dump(next_call_result(call_id))
+        result = next_call_result(call_id)
         call_result(result, call_id: call_id)
       rescue StopIteration
         call_result(nil, call_id: call_id)
@@ -278,8 +277,7 @@ module Oso
           res = res[0]
         end
 
-        res = JSON.dump host.to_polar res
-        call_result(res, call_id: call_id)
+        call_result(host.to_polar(res), call_id: call_id)
       end
     end
   end
