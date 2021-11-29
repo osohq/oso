@@ -357,8 +357,23 @@ impl FilterInfo {
         self.add_condition(left, Comparison::In, right)
     }
 
+    fn validate(self, root: &str) -> FilterResult<Self> {
+        let mut set = singleton(root);
+        for Relation(_, _, dst) in self.relations.iter() {
+            if set.contains(dst as &str) {
+                return invalid_state_error(format!(
+                    "Type `{}` occurs more than once as the target of a relation",
+                    dst
+                ));
+            } else {
+                set.insert(dst);
+            }
+        }
+        Ok(self)
+    }
+
     /// populate conditions and relations on an initialized FilterInfo
-    fn with_constraints(mut self, ops: Set<Operation>) -> FilterResult<Self> {
+    fn with_constraints(mut self, ops: Set<Operation>, class: &str) -> FilterResult<Self> {
         // find pairs of implicitly equal variables
         let equivs = ops.iter().filter_map(|Operation { operator, args }| {
             use Operator::*;
@@ -408,7 +423,7 @@ impl FilterInfo {
             self.add_constraint(op)?;
         }
 
-        Ok(self)
+        self.validate(class)
     }
 
     fn build_filter(
@@ -433,7 +448,7 @@ impl FilterInfo {
             entities,
             ..Default::default()
         }
-        .with_constraints(othas)?;
+        .with_constraints(othas, class)?;
 
         Ok(Filter {
             relations,
@@ -537,6 +552,56 @@ mod test {
     use super::*;
 
     #[test]
+    fn test_dup_reln() {
+        let s = String::from;
+        let types = hashmap! {
+            s("Resource") => hashmap!{
+                s("foo") => Type::Relation {
+                   kind: s("one"),
+                   my_field: s("_"),
+                   other_field: s("_"),
+                   other_class_tag: s("Foo")
+                }
+            },
+            s("Foo") => hashmap!{
+                s("y") => Type::Base {
+                    class_tag: s("Integer")
+                },
+                s("resource") => Type::Relation {
+                    kind: s("one"),
+                    my_field: s("_"),
+                    other_field: s("_"),
+                    other_class_tag: s("Resource"),
+                }
+            }
+        };
+
+        let ors = vec![ResultEvent::new(hashmap! {
+            sym!("resource") => term!(op!(And,
+                term!(op!(Isa, var!("_this"), term!(pattern!(instance!("Resource"))))),
+                term!(op!(Isa, term!(op!(Dot, var!("_this"), str!("foo"))), term!(pattern!(instance!("Foo"))))),
+                term!(op!(Isa, term!(op!(Dot, term!(op!(Dot, var!("_this"), str!("foo"))), str!("resource"))),
+                               term!(pattern!(instance!("Foo"))))),
+                term!(op!(
+                        Unify,
+                        term!(1),
+                        term!(op!(Dot, term!(op!(Dot, term!(op!(Dot, var!("_this"), str!("foo"))), str!("resource"))), str!("foo")))
+
+                          )
+
+
+                      )
+            ))
+        })];
+
+        let err = Filter::build(types, ors, "resource", "Resource").unwrap_err();
+        match err {
+            RuntimeError::InvalidState { msg }
+                if &msg == "Type `Resource` occurs more than once as the target of a relation" => {}
+            _ => panic!("unexpected"),
+        }
+    }
+    #[test]
     fn test_in() {
         let types = hashmap! {
             String::from("Resource") => hashmap!{
@@ -563,7 +628,6 @@ mod test {
         })];
 
         let filter = Filter::build(types, ors, "resource", "Resource").unwrap();
-        println!("filter: {}", filter);
 
         let Filter {
             root,
