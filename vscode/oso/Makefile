@@ -13,7 +13,7 @@ fmtcheck: clean
 	yarn fmtcheck
 
 package: wasm
-	yarn vsce package
+	yarn package
 
 CARGO_FLAGS ?= --dev
 

@@ -71,6 +71,8 @@
     }
   },
   "scripts": {
+    "package": "vsce package --yarn --githubBranch main --pre-release --out oso.vsix",
+    "publish": "vsce publish --yarn --githubBranch main --pre-release --packagePath oso.vsix",
     "typecheck": "tsc --noEmit",
     "fix": "gts fix",
     "lint": "gts lint -- . --max-warnings 0",
