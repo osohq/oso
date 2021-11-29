@@ -3,6 +3,7 @@ use std::sync::{Arc, RwLock};
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
 use super::diagnostic::Diagnostic;
 use super::error::{PolarResult, RuntimeError, ValidationError};
+use super::filter::Filter;
 use super::kb::*;
 use super::messages::*;
 use super::parser;
@@ -15,7 +16,6 @@ use super::validations::{
     check_ambiguous_precedence, check_no_allow_rule, check_resource_blocks_missing_has_permission,
     check_singletons,
 };
-use super::vm::*;
 
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
@@ -243,6 +243,7 @@ impl Polar {
     }
 
     pub fn new_query_from_term(&self, mut term: Term, trace: bool) -> Query {
+        use crate::vm::{Goal, PolarVirtualMachine};
         {
             let mut kb = self.kb.write().unwrap();
             term = rewrite_term(term, &mut kb);
@@ -285,6 +286,17 @@ impl Polar {
         class_tag: &str,
     ) -> PolarResult<FilterPlan> {
         build_filter_plan(types, partial_results, variable, class_tag)
+            .map_err(|e| e.with_context(&*self.kb.read().unwrap()))
+    }
+
+    pub fn build_data_filter(
+        &self,
+        types: Types,
+        partial_results: PartialResults,
+        variable: &str,
+        class_tag: &str,
+    ) -> PolarResult<Filter> {
+        Filter::build(types, partial_results, variable, class_tag)
             .map_err(|e| e.with_context(&*self.kb.read().unwrap()))
     }
 

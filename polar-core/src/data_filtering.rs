@@ -3,12 +3,17 @@ use std::{
     hash::Hash,
 };
 
-use crate::{counter::Counter, error::RuntimeError, events::ResultEvent, terms::*};
+use crate::{
+    counter::Counter,
+    error::{invalid_state_error, RuntimeError},
+    events::ResultEvent,
+    filter::singleton,
+    terms::*,
+};
 
 use serde::{Deserialize, Serialize};
 
-type Result<T> = core::result::Result<T, RuntimeError>;
-
+type Result<A> = core::result::Result<A, RuntimeError>;
 type Id = u64;
 type VarId = Id;
 type TypeName = String;
@@ -225,10 +230,10 @@ impl VarInfo {
                 self.types.push((lhs, i.tag.0.clone()));
                 Ok(self)
             }
-            _ => err_unsupported(
-                format!("Unsupported specializer: {}", rhs.to_polar()),
-                rhs.clone(),
-            ),
+            _ => unsupported_op_error(Operation {
+                operator: Operator::Isa,
+                args: vec![lhs.clone(), rhs.clone()],
+            }),
         }
     }
 
@@ -246,15 +251,10 @@ impl VarInfo {
             // 1 = 1 is irrelevant for data filtering, other stuff seems like an error.
             // @NOTE(steve): Going with the same not yet supported message but if this is
             // coming through it's probably a bug in the simplifier.
-            _ => err_unsupported(
-                format!(
-                    "Unsupported unification: {} = {}",
-                    left.to_polar(),
-                    right.to_polar()
-                ),
-                // TODO(gj): reconstruct operation?
-                left.clone(),
-            ),
+            _ => unsupported_op_error(Operation {
+                operator: Operator::Unify,
+                args: vec![left.clone(), right.clone()],
+            }),
         }
     }
 
@@ -274,15 +274,10 @@ impl VarInfo {
                 self.uncycles.push((l, r));
                 Ok(self)
             }
-            _ => err_unsupported(
-                format!(
-                    "Unsupported comparison: {} != {}",
-                    left.to_polar(),
-                    right.to_polar()
-                ),
-                // TODO(gj): reconstruct operation?
-                left.clone(),
-            ),
+            _ => unsupported_op_error(Operation {
+                operator: Operator::Neq,
+                args: vec![left.clone(), right.clone()],
+            }),
         }
     }
 
@@ -296,15 +291,10 @@ impl VarInfo {
                 self.contained_values.push((Term::from(val), var));
                 Ok(self)
             }
-            _ => err_unsupported(
-                format!(
-                    "Unsupported `in` check: {} in {}",
-                    left.to_polar(),
-                    right.to_polar()
-                ),
-                // TODO(gj): reconstruct operation?
-                left.clone(),
-            ),
+            _ => unsupported_op_error(Operation {
+                operator: Operator::In,
+                args: vec![left.clone(), right.clone()],
+            }),
         }
     }
 
@@ -319,33 +309,20 @@ impl VarInfo {
             Neq if args.len() == 2 => self.do_neq(&args[0], &args[1]),
             In if args.len() == 2 => self.do_in(&args[0], &args[1]),
             Unify | Eq | Assign if args.len() == 2 => self.do_unify(&args[0], &args[1]),
-            _ => err_unsupported(
-                format!(
-                    "the expression {:?}/{} is not supported for data filtering",
-                    exp.operator,
-                    exp.args.len()
-                ),
-                // TODO(gj): Could try walking `exp` to find source info, but I don't think that
-                // juice is worth the squeeze.
-                term!(exp.clone()),
-            ),
+            _ => unsupported_op_error(exp.clone()),
         }
     }
 }
 
-fn unregistered_field_error<A>(var_type: &str, field: &str) -> Result<A> {
+pub fn unsupported_op_error<A>(operation: Operation) -> Result<A> {
+    Err(RuntimeError::DataFilteringUnsupportedOp { operation })
+}
+
+pub fn unregistered_field_error<A>(var_type: &str, field: &str) -> Result<A> {
     Err(RuntimeError::DataFilteringFieldMissing {
         var_type: var_type.to_string(),
         field: field.to_string(),
     })
-}
-
-fn err_invalid<A>(msg: String) -> Result<A> {
-    Err(RuntimeError::InvalidState { msg })
-}
-
-fn err_unsupported<A>(msg: String, term: Term) -> Result<A> {
-    Err(RuntimeError::Unsupported { msg, term })
 }
 
 impl FilterPlan {
@@ -549,24 +526,24 @@ impl<'a> ResultSetBuilder<'a> {
 
         // error messages
         let missing = |id| {
-            err_invalid(format!(
+            invalid_state_error(format!(
                 "Request {} missing from resolve order {:?}",
                 id, order
             ))
         };
         let bad_order = |id1, id2, rset| {
-            err_invalid(format!(
+            invalid_state_error(format!(
                 "Result set {} is resolved before its dependency {} in {:?}",
                 id1, id2, rset
             ))
         };
 
         for (id1, v) in rset.requests.iter() {
-            match index_of(order, id1) {
+            match order.iter().position(|i| i == id1) {
                 None => return missing(*id1),
                 Some(idx1) => {
                     for id2 in v.deps() {
-                        match index_of(order, &id2) {
+                        match order.iter().position(|i| *i == id2) {
                             None => return missing(id2),
                             Some(idx2) if idx2 >= idx1 => return bad_order(id1, id2, &rset),
                             _ => (),
@@ -825,7 +802,7 @@ impl<'a> ResultSetBuilder<'a> {
         if before != after {
             Ok(self)
         } else {
-            err_invalid(format!(
+            invalid_state_error(format!(
                 "Unsupported field access: {}.{} = {}",
                 self.var_name(id)
                     .unwrap_or_else(|| Symbol(format!("{}", id))),
@@ -936,7 +913,7 @@ impl Vars {
         });
 
         seek_var_id(&variables, &sym!("_this")).map_or_else(
-            || err_invalid("No `_this` variable".to_string()),
+            || invalid_state_error("No `_this` variable".to_string()),
             |this_id| {
                 Ok(Vars {
                     variables,
@@ -1013,9 +990,7 @@ fn seek_var_id(vars: &HashMap<Id, HashSet<VarName>>, var: &VarName) -> Option<Id
 fn get_var_id(vars: &mut HashMap<Id, HashSet<VarName>>, var: VarName, counter: &Counter) -> Id {
     seek_var_id(vars, &var).unwrap_or_else(|| {
         let new_id = counter.next();
-        let mut new_set = HashSet::new();
-        new_set.insert(var);
-        vars.insert(new_id, new_set);
+        vars.insert(new_id, singleton(var));
         new_id
     })
 }
@@ -1041,13 +1016,6 @@ where
         })
 }
 
-fn index_of<A>(v: &[A], x: &A) -> Option<usize>
-where
-    A: PartialEq<A>,
-{
-    v.iter().position(|y| y == x)
-}
-
 fn hash_map_set_add<A, B>(mut map: HashMap<A, HashSet<B>>, a: A, b: B) -> HashMap<A, HashSet<B>>
 where
     A: Eq + Hash,
@@ -1060,7 +1028,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::bindings::Bindings;
+    use crate::{bindings::Bindings, error::RuntimeError::*};
 
     type TestResult = Result<()>;
 
@@ -1083,13 +1051,12 @@ mod test {
         b.is_empty()
     }
 
-    #[test]
-    fn test_dot_plan() -> TestResult {
+    fn test_input_0() -> Term {
         let ins0: Term = ExternalInstance::from(0).into();
         let ins1: Term = ExternalInstance::from(1).into();
         let pat_a = term!(pattern!(instance!("A")));
         let pat_b = term!(pattern!(instance!("B")));
-        let partial = term!(op!(
+        term!(op!(
             And,
             term!(op!(Isa, var!("_this"), pat_a)),
             term!(op!(Isa, ins0.clone(), pat_b.clone())),
@@ -1104,8 +1071,12 @@ mod test {
                 term!(op!(Dot, var!("_this"), str!("field"))),
                 ins1
             ))
-        ));
+        ))
+    }
 
+    #[test]
+    fn test_dot_plan() -> TestResult {
+        let partial = test_input_0();
         let bindings = ResultEvent::from(hashmap! {
             sym!("resource") => partial
         });
@@ -1195,10 +1166,13 @@ mod test {
     fn test_unsupported_op_msgs() {
         let err = Vars::from_op(&op!(Dot)).expect_err("should've failed");
         match err {
-            RuntimeError::Unsupported { msg, .. } => assert_eq!(
-                &msg,
-                "the expression Dot/0 is not supported for data filtering"
-            ),
+            DataFilteringUnsupportedOp {
+                operation:
+                    Operation {
+                        operator: Operator::Dot,
+                        args,
+                    },
+            } if args.is_empty() => (),
             _ => panic!("unexpected"),
         }
     }
