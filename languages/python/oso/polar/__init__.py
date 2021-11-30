@@ -4,3 +4,4 @@ from .variable import Variable
 from .predicate import Predicate
 from .expression import Expression, Pattern
 from .data_filtering import Relation, Filter
+from .data import Fil, Rel, Cond, Proj, SqlAlchemyAdapter

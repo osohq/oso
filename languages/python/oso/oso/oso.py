@@ -240,33 +240,11 @@ class Oso(Polar):
 
         :return: A query to fetch the resources,
         """
-        # Data filtering.
-        resource = Variable("resource")
-        # Get registered class name somehow
-        class_name = self.host.types[resource_cls].name
-        constraint = Expression(
-            "And", [Expression("Isa", [resource, Pattern(class_name, {})])]
-        )
 
-        query = self.query_rule(
-            "allow",
-            actor,
-            action,
-            resource,
-            bindings={"resource": constraint},
-            accept_expression=True,
-        )
-
-        results = [
-            {"bindings": {k: self.host.to_polar(v)}}
-            for result in query
-            for k, v in result["bindings"].items()
-        ]
-
-        types = serialize_types(self.host.distinct_user_types(), self.host.types)
-        plan = self.ffi_polar.build_filter_plan(types, results, "resource", class_name)
-
-        return filter_data(self, plan)
+        if self.is_new_data_filtering_configured():
+            return self.new_authorized_query(actor, action, resource_cls)
+        else:
+            return self.old_authorized_query(actor, action, resource_cls)
 
     def authorized_resources(self, actor, action, resource_cls) -> List[Any]:
         """Determine the resources of type ``resource_cls`` that ``actor``
@@ -279,11 +257,14 @@ class Oso(Polar):
         :return: The requested resources.
         """
         query = self.authorized_query(actor, action, resource_cls)
-        if query is None:
-            return []
+        if self.is_new_data_filtering_configured():
+            return self.host.adapter.exec_query(query)
+        else:
+            if query is None:
+                return []
 
-        results = self.host.types[resource_cls].exec_query(query)
-        return results
+            results = self.host.types[resource_cls].exec_query(query)
+            return results
 
     def set_data_filtering_query_defaults(
         self, build_query=None, exec_query=None, combine_query=None
