@@ -87,6 +87,7 @@ UUID
 UUIDs
 VM
 VPN
+VSCode
 VSCode's
 WASM
 Wayfair
