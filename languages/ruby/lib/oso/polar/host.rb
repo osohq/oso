@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative 'data'
+
 module Oso
   module Polar
     # Ruby code reloaders (i.e. the one used by rails) swap out the value of
@@ -67,7 +69,7 @@ module Oso
       public
 
       attr_writer :accept_expression
-      attr_accessor :build_query, :combine_query, :exec_query
+      attr_accessor :build_query, :combine_query, :exec_query, :adapter
 
       DEFAULT_COMBINE_QUERY = proc { raise 'implement combine_query to use data filtering' }
       DEFAULT_BUILD_QUERY = proc { raise 'implement build_query to use data filtering' }
@@ -393,6 +395,10 @@ module Oso
         msg.gsub(/\^\{id: ([0-9]+)\}/) do
           get_instance(Regexp.last_match[1].to_i).to_s
         end
+      end
+
+      def use_new_data_filtering?
+        !adapter.nil?
       end
     end
   end
