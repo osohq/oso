@@ -21,6 +21,9 @@ the editor and in VSCode's **Problems** pane.
 - Syntax highlighting.
 - Diagnostics (errors & warnings) from your Oso policy are displayed in-line in
   the editor and in VSCode's **Problems** pane.
+  - This massively shortens the policy writing development cycle since the
+    extension immediately highlights errors and warnings encountered during
+    parsing and validating your policy.
 
 ### [Vim](https://github.com/osohq/polar.vim)
 
