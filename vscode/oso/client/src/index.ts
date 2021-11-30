@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+
 import { join } from 'path';
 
 import {
@@ -17,11 +19,10 @@ import {
   TransportKind,
 } from 'vscode-languageclient/node';
 
+import { enqueueEvent, flushQueue, TELEMETRY_INTERVAL } from './telemetry';
+
 // TODO(gj): think about what it would take to support `load_str()` via
 // https://code.visualstudio.com/api/language-extensions/embedded-languages
-
-// TODO(gj): do we need to maintain state for all (potentially dirty) Polar
-// docs in the current workspace?
 
 // TODO(gj): maybe just punt on non-workspace use cases entirely for now? At
 // least until progress is made on
@@ -123,7 +124,7 @@ async function reloadDocument(uri: Uri) {
 }
 
 async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
-  const server = context.asAbsolutePath(join('server', 'out', 'server.js'));
+  const server = context.asAbsolutePath(join('out', 'server.js'));
 
   // Watch `FileChangeType.Deleted` events for Polar files in the current
   // workspace, including those not open in any editor in the workspace.
@@ -174,6 +175,10 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   };
   const client = new LanguageClient(extensionName, serverOpts, clientOpts);
 
+  context.subscriptions.push(
+    client.onTelemetry(event => enqueueEvent(folder.uri, event))
+  );
+
   // Start client and mark it for cleanup when the extension is deactivated.
   context.subscriptions.push(client.start());
 
@@ -192,7 +197,7 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
 
 async function stopClient(folder: string) {
   const client = clients.get(folder);
-  await client.stop();
+  if (client) await client.stop();
   clients.delete(folder);
 }
 
@@ -206,8 +211,19 @@ function updateClients(context: ExtensionContext) {
   };
 }
 
+const flushTelemetryEvents = () =>
+  flushQueue().catch(e =>
+    outputChannel.appendLine(`Caught error while sending telemetry: ${e}`)
+  );
+
 export async function activate(context: ExtensionContext): Promise<void> {
   const folders = workspace.workspaceFolders || [];
+
+  // Flush telemetry events every `TELEMETRY_INTERVAL` ms. We don't `await` the
+  // `flushTelemetryEvents` promise because nothing depends on its outcome.
+  const interval = setInterval(flushTelemetryEvents, TELEMETRY_INTERVAL); // eslint-disable-line @typescript-eslint/no-misused-promises
+  // Clear interval when extension is deactivated.
+  context.subscriptions.push({ dispose: () => clearInterval(interval) });
 
   // Start a client for every folder in the workspace.
   for (const folder of folders) await startClient(folder, context);
@@ -229,6 +245,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
   // *not* be considered part of the same policy?
 }
 
-export function deactivate(): Promise<void[]> {
+export async function deactivate(): Promise<void[]> {
+  // Flush telemetry queue on shutdown.
+  await flushTelemetryEvents();
+
   return Promise.all([...clients.values()].map(c => c.stop()));
 }

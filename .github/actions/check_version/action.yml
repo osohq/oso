@@ -1,5 +1,5 @@
 name: "Check Version"
-description: "Checks that the oso version numbers all match"
+description: "Checks that the Oso version numbers all match"
 runs:
   using: "composite"
   steps:
@@ -34,5 +34,9 @@ runs:
         grep "^version = \"$oso_version\"$" polar-core/Cargo.toml
         grep "^version = \"$oso_version\"$" polar-c-api/Cargo.toml
         grep "^version = \"$oso_version\"$" polar-wasm-api/Cargo.toml
+      shell: bash
+    - name: Check VSCode extension version matches
+      run: |
         grep "^version = \"$oso_version\"$" polar-language-server/Cargo.toml
+        grep "\"version\": \"$oso_version\"" vscode/oso/package.json
       shell: bash

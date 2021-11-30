@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import jnr.ffi.LibraryLoader;
 import jnr.ffi.Pointer;
+import jnr.ffi.Struct;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -15,7 +16,61 @@ public class Ffi {
   // singleton variable
   private static Ffi ffi = null;
 
-  private PolarLib polarLib;
+  private static PolarLib polarLib;
+
+  public static class CResultPointer extends Struct {
+    private final Struct.Pointer result = new Pointer();
+    private final Struct.Pointer error = new Pointer();
+
+    // Necessary constructor that takes a Runtime
+    public CResultPointer(final jnr.ffi.Runtime runtime) {
+      super(runtime);
+    }
+
+    public jnr.ffi.Pointer check() throws Exceptions.OsoException {
+      jnr.ffi.Pointer e = this.error.get();
+      jnr.ffi.Pointer r = this.result.get();
+      polarLib.result_free(getMemory(this));
+      if (e == null) {
+        return r;
+      } else {
+        if (r != null) {
+          throw new Exceptions.OsoException(
+              "Internal error: both result and error pointers are non-null");
+        }
+        java.lang.String s = e.getString(0);
+        polarLib.string_free(e);
+        throw Exceptions.getJavaError(s);
+      }
+    }
+  }
+
+  public static class CResultVoid extends Struct {
+    private final SignedLong result = new SignedLong();
+    private final Pointer error = new Pointer();
+
+    // Necessary constructor that takes a Runtime
+    public CResultVoid(jnr.ffi.Runtime runtime) {
+      super(runtime);
+    }
+
+    public void check() throws Exceptions.OsoException {
+      jnr.ffi.Pointer e = this.error.get();
+      long r = this.result.get();
+      polarLib.result_free(getMemory(this));
+      if (e == null) {
+        return;
+      } else {
+        if (r != 0) {
+          throw new Exceptions.OsoException(
+              "Internal error: both result and error pointers are non-null");
+        }
+        java.lang.String s = e.getString(0);
+        polarLib.string_free(e);
+        throw Exceptions.getJavaError(s);
+      }
+    }
+  }
 
   protected class Polar {
     private Pointer ptr;
@@ -28,37 +83,36 @@ public class Ffi {
       return ptr;
     }
 
-    protected long newId() throws Exceptions.OsoException {
-      return checkResult(polarLib.polar_get_external_id(ptr));
+    protected long newId() {
+      return polarLib.polar_get_external_id(ptr);
     }
 
-    protected int load(JSONArray sources) throws Exceptions.OsoException {
-      int result = polarLib.polar_load(ptr, sources.toString());
+    protected void load(JSONArray sources) throws Exceptions.OsoException {
+      polarLib.polar_load(ptr, sources.toString()).check();
       processMessages();
-      return checkResult(result);
     }
 
-    protected int clearRules() throws Exceptions.OsoException {
-      int result = polarLib.polar_clear_rules(ptr);
+    protected void clearRules() throws Exceptions.OsoException {
+      polarLib.polar_clear_rules(ptr).check();
       processMessages();
-      return checkResult(result);
     }
 
     protected Query newQueryFromStr(String queryStr) throws Exceptions.OsoException {
-      Pointer queryPtr = polarLib.polar_new_query(ptr, queryStr, 0);
+      Pointer queryPtr = polarLib.polar_new_query(ptr, queryStr, 0).check();
       processMessages();
-      return new Query(checkResult(queryPtr));
+      return new Query(queryPtr);
     }
 
     protected Query newQueryFromTerm(String queryTerm) throws Exceptions.OsoException {
-      Pointer queryPtr = polarLib.polar_new_query_from_term(ptr, queryTerm, 0);
+      Pointer queryPtr = polarLib.polar_new_query_from_term(ptr, queryTerm, 0).check();
       processMessages();
-      return new Query(checkResult(queryPtr));
+      return new Query(queryPtr);
     }
 
     protected Query nextInlineQuery() throws Exceptions.OsoException {
       // Don't check result here because the returned Pointer is null to indicate
       // termination
+
       Pointer p = polarLib.polar_next_inline_query(ptr, 0);
       processMessages();
       if (p == null) {
@@ -68,16 +122,17 @@ public class Ffi {
       }
     }
 
-    protected int registerConstant(String value, String name) throws Exceptions.OsoException {
-      return checkResult(polarLib.polar_register_constant(ptr, name, value));
+    protected void registerConstant(String value, String name) throws Exceptions.OsoException {
+      CResultVoid result = polarLib.polar_register_constant(ptr, name, value);
+      result.check();
     }
 
-    protected int registerMro(String name, String mro) throws Exceptions.OsoException {
-      return checkResult(polarLib.polar_register_mro(ptr, name, mro));
+    protected void registerMro(String name, String mro) throws Exceptions.OsoException {
+      polarLib.polar_register_mro(ptr, name, mro).check();
     }
 
     protected Pointer nextMessage() throws Exceptions.OsoException {
-      return polarLib.polar_next_polar_message(ptr);
+      return polarLib.polar_next_polar_message(ptr).check();
     }
 
     private void processMessages() throws Exceptions.OsoException {
@@ -107,32 +162,31 @@ public class Ffi {
       return ptr;
     }
 
-    protected int questionResult(long call_id, int result) throws Exceptions.OsoException {
-      return checkResult(polarLib.polar_question_result(ptr, call_id, result));
+    protected void questionResult(long call_id, int result) throws Exceptions.OsoException {
+      polarLib.polar_question_result(ptr, call_id, result).check();
     }
 
-    protected int callResult(long call_id, String value) throws Exceptions.OsoException {
-      return checkResult(polarLib.polar_call_result(ptr, call_id, value));
+    protected void callResult(long call_id, String value) throws Exceptions.OsoException {
+      polarLib.polar_call_result(ptr, call_id, value).check();
     }
 
-    protected int applicationError(String message) throws Exceptions.OsoException {
-      return checkResult(polarLib.polar_application_error(ptr, message));
+    protected void applicationError(String message) throws Exceptions.OsoException {
+      polarLib.polar_application_error(ptr, message).check();
     }
 
     protected QueryEvent nextEvent() throws Exceptions.OsoException {
-      Pointer eventPtr = polarLib.polar_next_query_event(ptr);
+      Pointer eventPtr = polarLib.polar_next_query_event(ptr).check();
       processMessages();
-      return new QueryEvent(checkResult(eventPtr));
+      return new QueryEvent(eventPtr);
     }
 
-    protected int debugCommand(String value) throws Exceptions.OsoException {
-      int result = polarLib.polar_debug_command(ptr, value);
+    protected void debugCommand(String value) throws Exceptions.OsoException {
+      polarLib.polar_debug_command(ptr, value).check();
       processMessages();
-      return checkResult(result);
     }
 
     protected Pointer nextMessage() throws Exceptions.OsoException {
-      return polarLib.polar_next_query_message(ptr);
+      return polarLib.polar_next_query_message(ptr).check();
     }
 
     private void processMessages() throws Exceptions.OsoException {
@@ -146,15 +200,14 @@ public class Ffi {
     }
 
     protected String source() throws Exceptions.OsoException {
-      Pointer sourcePtr = polarLib.polar_query_source_info(ptr);
-      sourcePtr = checkResult(sourcePtr);
+      Pointer sourcePtr = polarLib.polar_query_source_info(ptr).check();
       String source = sourcePtr.getString(0);
       polarLib.string_free(sourcePtr);
       return source;
     }
 
-    protected int bind(String name, String value) throws Exceptions.OsoException {
-      return checkResult(polarLib.polar_bind(ptr, name, value));
+    protected void bind(String name, String value) throws Exceptions.OsoException {
+      polarLib.polar_bind(ptr, name, value).check();
     }
 
     @Override
@@ -180,69 +233,52 @@ public class Ffi {
     }
   }
 
-  protected class Error {
-    private Pointer ptr;
-
-    protected Error() {
-      ptr = polarLib.polar_get_error();
-    }
-
-    private Exceptions.OsoException get() {
-      return Exceptions.getJavaError(ptr.getString(0));
-    }
-
-    @Override
-    protected void finalize() {
-      polarLib.string_free(ptr);
-    }
-  }
-
   protected static interface PolarLib {
-    int polar_debug_command(Pointer query_ptr, String value);
+    CResultVoid polar_debug_command(Pointer query_ptr, String value);
 
     int polar_free(Pointer polar);
 
-    Pointer polar_get_error();
-
     long polar_get_external_id(Pointer polar_ptr);
 
-    int polar_load(Pointer polar_ptr, String sources);
+    CResultVoid polar_load(Pointer polar_ptr, String sources);
 
-    int polar_clear_rules(Pointer polar_ptr);
+    CResultVoid polar_clear_rules(Pointer polar_ptr);
 
     Pointer polar_new();
 
-    Pointer polar_new_query(Pointer polar_ptr, String query_str, int trace);
+    CResultPointer polar_new_query(Pointer polar_ptr, String query_str, int trace);
 
-    Pointer polar_new_query_from_term(Pointer polar_ptr, String query_term, int trace);
+    CResultPointer polar_new_query_from_term(Pointer polar_ptr, String query_term, int trace);
 
     Pointer polar_next_inline_query(Pointer polar_ptr, int trace);
 
-    Pointer polar_next_query_event(Pointer query_ptr);
+    CResultPointer polar_next_query_event(Pointer query_ptr);
 
-    Pointer polar_query_from_repl(Pointer polar_ptr);
+    CResultPointer polar_query_from_repl(Pointer polar_ptr);
 
-    int polar_question_result(Pointer query_ptr, long call_id, int result);
+    CResultVoid polar_question_result(Pointer query_ptr, long call_id, int result);
 
-    int polar_call_result(Pointer query_ptr, long call_id, String value);
+    CResultVoid polar_call_result(Pointer query_ptr, long call_id, String value);
 
-    int polar_application_error(Pointer query_ptr, String message);
+    CResultVoid polar_application_error(Pointer query_ptr, String message);
 
     int query_free(Pointer query);
 
     int string_free(Pointer s);
 
-    int polar_register_constant(Pointer polar_ptr, String name, String value);
+    int result_free(Pointer r);
 
-    int polar_register_mro(Pointer polar_ptr, String name, String mro);
+    CResultVoid polar_register_constant(Pointer polar_ptr, String name, String value);
 
-    Pointer polar_next_polar_message(Pointer polar_ptr);
+    CResultVoid polar_register_mro(Pointer polar_ptr, String name, String mro);
 
-    Pointer polar_next_query_message(Pointer query_ptr);
+    CResultPointer polar_next_polar_message(Pointer polar_ptr);
 
-    Pointer polar_query_source_info(Pointer query_ptr);
+    CResultPointer polar_next_query_message(Pointer query_ptr);
 
-    int polar_bind(Pointer query_ptr, String name, String value);
+    CResultPointer polar_query_source_info(Pointer query_ptr);
+
+    CResultVoid polar_bind(Pointer query_ptr, String name, String value);
   }
 
   protected Ffi() {
@@ -288,36 +324,12 @@ public class Ffi {
     return ffi;
   }
 
-  protected Polar polarNew() throws Exceptions.OsoException {
-    return new Polar(checkResult(polarLib.polar_new()));
+  protected Polar polarNew() {
+    return new Polar(polarLib.polar_new());
   }
 
-  protected int stringFree(Pointer s) throws Exceptions.OsoException {
-    return checkResult(polarLib.string_free(s));
-  }
-
-  private int checkResult(int i) throws Exceptions.OsoException {
-    if (i == 0) {
-      throw new Error().get();
-    } else {
-      return i;
-    }
-  }
-
-  private long checkResult(long i) throws Exceptions.OsoException {
-    if (i == 0) {
-      throw new Error().get();
-    } else {
-      return i;
-    }
-  }
-
-  private Pointer checkResult(Pointer p) throws Exceptions.OsoException {
-    if (p == null) {
-      throw new Error().get();
-    } else {
-      return p;
-    }
+  protected int stringFree(Pointer s) {
+    return polarLib.string_free(s);
   }
 
   private void processMessage(Pointer msgPtr) throws Exceptions.OsoException {

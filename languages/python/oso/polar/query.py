@@ -45,8 +45,7 @@ class Query:
         assert self.ffi_query, "no query to run"
         while True:
             ffi_event = self.ffi_query.next_event()
-            event = json.loads(ffi_event.get())
-            del ffi_event
+            event = json.loads(ffi_event)
             kind = [*event][0]
             data = event[kind]
 
