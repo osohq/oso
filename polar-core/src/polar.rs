@@ -29,9 +29,6 @@ impl Default for Polar {
     }
 }
 
-const MULTIPLE_LOAD_ERROR_MSG: &str =
-    "Cannot load additional Polar code -- all Polar code must be loaded at the same time.";
-
 impl Polar {
     pub fn new() -> Self {
         // TODO(@gkaemmer): pulling this from an environment variable is a hack
@@ -185,8 +182,7 @@ impl Polar {
     pub fn load(&self, sources: Vec<Source>) -> PolarResult<()> {
         if let Ok(kb) = self.kb.read() {
             if kb.has_rules() {
-                let msg = MULTIPLE_LOAD_ERROR_MSG.to_owned();
-                return Err(RuntimeError::FileLoading { msg }.with_context(&*kb));
+                return Err(RuntimeError::MultipleLoadError.with_context(&*kb));
             }
         }
 
@@ -311,7 +307,10 @@ impl Polar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::{ErrorKind::Runtime, PolarError};
+    use crate::error::{
+        ErrorKind::{Runtime, Validation},
+        PolarError,
+    };
 
     #[test]
     fn can_load_and_query() {
@@ -333,24 +332,22 @@ mod tests {
         polar.load(vec![source.clone()]).unwrap();
 
         // Loading twice is not.
-        let msg = match polar.load(vec![source]).unwrap_err() {
+        assert!(matches!(
+            polar.load(vec![source.clone()]).unwrap_err(),
             PolarError {
-                kind: Runtime(RuntimeError::FileLoading { msg }),
+                kind: Runtime(RuntimeError::MultipleLoadError),
                 ..
-            } => msg,
-            e => panic!("{}", e),
-        };
-        assert_eq!(msg, MULTIPLE_LOAD_ERROR_MSG);
+            }
+        ));
 
         // Even with load_str().
-        let msg = match polar.load_str(src).unwrap_err() {
+        assert!(matches!(
+            polar.load(vec![source]).unwrap_err(),
             PolarError {
-                kind: Runtime(RuntimeError::FileLoading { msg }),
+                kind: Runtime(RuntimeError::MultipleLoadError),
                 ..
-            } => msg,
-            e => panic!("{}", e),
-        };
-        assert_eq!(msg, MULTIPLE_LOAD_ERROR_MSG);
+            }
+        ));
     }
 
     #[test]
@@ -363,7 +360,7 @@ mod tests {
 
         let msg = match polar.load(vec![source.clone(), source]).unwrap_err() {
             PolarError {
-                kind: Runtime(RuntimeError::FileLoading { msg }),
+                kind: Validation(ValidationError::FileLoading { msg, .. }),
                 ..
             } => msg,
             e => panic!("{}", e),

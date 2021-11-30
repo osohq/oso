@@ -664,18 +664,20 @@ impl KnowledgeBase {
         self.resource_blocks.clear();
     }
 
-    fn check_file(&self, src: &str, filename: &str) -> Result<(), RuntimeError> {
+    fn check_file(&self, src: &str, filename: &str) -> Result<(), ValidationError> {
         match (
             self.loaded_content.get(src),
             self.loaded_files.get(filename).is_some(),
         ) {
             (Some(other_file), true) if other_file == filename => {
-                return Err(RuntimeError::FileLoading {
+                return Err(ValidationError::FileLoading {
+                    source: Source::new(Some(filename), src),
                     msg: format!("File {} has already been loaded.", filename),
                 })
             }
             (_, true) => {
-                return Err(RuntimeError::FileLoading {
+                return Err(ValidationError::FileLoading {
+                    source: Source::new(Some(filename), src),
                     msg: format!(
                         "A file with the name {}, but different contents has already been loaded.",
                         filename
@@ -683,7 +685,8 @@ impl KnowledgeBase {
                 })
             }
             (Some(other_file), _) => {
-                return Err(RuntimeError::FileLoading {
+                return Err(ValidationError::FileLoading {
+                    source: Source::new(Some(filename), src),
                     msg: format!(
                         "A file with the same contents as {} named {} has already been loaded.",
                         filename, other_file
@@ -878,10 +881,7 @@ impl KnowledgeBase {
 mod tests {
     use super::*;
 
-    use crate::error::{
-        ErrorKind::{Runtime, Validation},
-        PolarError,
-    };
+    use crate::error::{ErrorKind::Validation, PolarError};
 
     #[test]
     /// Test validation implemented in `check_file()`.
@@ -900,7 +900,7 @@ mod tests {
         // Cannot load source1 a second time.
         let msg = match kb.add_source(source1).unwrap_err() {
             PolarError {
-                kind: Runtime(RuntimeError::FileLoading { msg }),
+                kind: Validation(ValidationError::FileLoading { msg, .. }),
                 ..
             } => msg,
             e => panic!("{}", e),
@@ -914,7 +914,7 @@ mod tests {
         };
         let msg = match kb.add_source(source2).unwrap_err() {
             PolarError {
-                kind: Runtime(RuntimeError::FileLoading { msg }),
+                kind: Validation(ValidationError::FileLoading { msg, .. }),
                 ..
             } => msg,
             e => panic!("{}", e),
@@ -935,7 +935,7 @@ mod tests {
         };
         let msg = match kb.add_source(source3).unwrap_err() {
             PolarError {
-                kind: Runtime(RuntimeError::FileLoading { msg }),
+                kind: Validation(ValidationError::FileLoading { msg, .. }),
                 ..
             } => msg,
             e => panic!("{}", e),

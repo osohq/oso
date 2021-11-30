@@ -7,7 +7,6 @@ from polar.exceptions import (
     UnrecognizedToken,
     PolarTypeError,
     StackOverflowError,
-    FileLoadingError,
     PolarRuntimeError,
     UnknownError,
     OperationalError,
@@ -70,7 +69,6 @@ def _runtime_error(subkind, message, details):
         "Unsupported": UnsupportedError(message, details),
         "TypeError": PolarTypeError(message, details),
         "StackOverflow": StackOverflowError(message, details),
-        "FileLoading": FileLoadingError(message, details),
     }
     return runtime_errors.get(subkind, PolarRuntimeError(message, details))
 
