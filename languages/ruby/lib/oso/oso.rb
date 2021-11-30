@@ -207,9 +207,9 @@ module Oso
 
       if host.use_new_data_filtering?
         host.adapter.exec_query q
+      elsif q.nil?
+        []
       else
-        return [] if q.nil?
-
         host.types[resource_cls].exec_query[q]
       end
     end

@@ -19,7 +19,7 @@ module Oso
 
             filter.conditions.map do |conjs|
               conjs.reduce(query) do |q, conj|
-                q.where(*sqlize_args(conj))
+                q.where(*sqlize(conj))
               end
             end.reduce(:or).distinct
           end
@@ -34,14 +34,14 @@ module Oso
 
           private
 
-          def sqlize_args(cond)
+          def sqlize(cond)
             args = []
-            lhs = add_arg cond.left, args
-            rhs = add_arg cond.right, args
+            lhs = add_side cond.left, args
+            rhs = add_side cond.right, args
             args.unshift "#{lhs} #{OPS[cond.cmp]} #{rhs}"
           end
 
-          def add_arg(side, args)
+          def add_side(side, args)
             if side.is_a? ::Oso::Polar::Data::Filter::Projection
               "#{side.source.table_name}.#{side.field || side.source.primary_key}"
             else
