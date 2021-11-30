@@ -1,7 +1,7 @@
 ---
 title: IDE Support
 aliases:
-    - ../more/dev-tools/ide.html
+    - ../../more/dev-tools/ide.html
 description: IDE integrations for working with Oso policies.
 ---
 
@@ -30,5 +30,4 @@ the editor and in VSCode's **Problems** pane.
 
 ### Want support for your IDE of choice?
 
-Let us know by using our chat on the bottom right to send us a Slack message.
 Let us know by using our chat on the bottom right to send us a message.
