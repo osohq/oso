@@ -72,6 +72,7 @@ def build_query(filters):
         'Nin': lambda a, b: not_(a.in_(b)),
     }
 
+    cls = Repository
     query = session.query(Repository)
 
     for filter in filters:

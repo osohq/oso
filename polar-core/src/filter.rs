@@ -163,7 +163,7 @@ impl Filter {
         ands.bindings
             .get(var)
             .map(|ands| Self::from_partial(types, ands, class))
-            .unwrap_or_else(|| input_error(format!("unbound variable: {}", var.0)))
+            .unwrap_or_else(|| invalid_state_error(format!("unbound variable: {}", var.0)))
     }
 
     fn from_partial(types: &TypeInfo, ands: &Term, class: &str) -> FilterResult<Self> {
@@ -198,7 +198,7 @@ impl Filter {
             }),
 
             // oops, we don't know how to handle this!
-            _ => input_error(ands.to_polar()),
+            _ => invalid_state_error(ands.to_polar()),
         }
     }
 
@@ -273,21 +273,19 @@ impl FilterInfo {
         // if the last path component names a relation from typ to typ'
         // then typ' is the new type and field is None. otherwise,
         // typ & field stay the same.
-        let proj = match field
+        match field
             .as_ref()
             .and_then(|dot| self.get_relation_def(&typ, dot))
         {
-            None => Projection(typ, field),
+            None => Ok(Projection(typ, field)),
             Some(rel) => {
                 let tag = rel.2.clone();
                 pv.path.push(rel.1.clone());
                 self.entities.insert(pv, tag.clone());
                 self.relations.insert(rel);
-                Projection(tag, None)
+                Ok(Projection(tag, None))
             }
-        };
-
-        Ok(proj)
+        }
     }
 
     fn term2datum(&mut self, x: &Term) -> FilterResult<Datum> {
@@ -296,11 +294,6 @@ impl FilterInfo {
             Ok(pv) => Ok(Field(self.pathvar2proj(pv)?)),
             _ => Ok(Immediate(x.value().clone())),
         }
-    }
-
-    fn add_condition(&mut self, l: Datum, op: Comparison, r: Datum) -> FilterResult<()> {
-        self.conditions.insert(Condition(l, op, r));
-        Ok(())
     }
 
     fn get_type(&mut self, pv: PathVar) -> Option<String> {
@@ -340,13 +333,17 @@ impl FilterInfo {
         }
     }
 
+    fn add_condition(&mut self, l: Datum, op: Comparison, r: Datum) -> FilterResult<()> {
+        self.conditions.insert(Condition(l, op, r));
+        Ok(())
+    }
+
     fn add_eq_condition(&mut self, left: Datum, right: Datum) -> FilterResult<()> {
-        if left == right {
-            // or not
-            Ok(())
-        } else {
-            self.add_condition(left, Comparison::Eq, right)
+        // only add condition if the side aren't == (otherwise it's redundant)
+        if left != right {
+            self.add_condition(left, Comparison::Eq, right)?;
         }
+        Ok(())
     }
 
     fn add_neq_condition(&mut self, left: Datum, right: Datum) -> FilterResult<()> {
@@ -357,8 +354,24 @@ impl FilterInfo {
         self.add_condition(left, Comparison::In, right)
     }
 
+    /// Validate FilterInfo before constructing a Filter
+    fn validate(self, root: &str) -> FilterResult<Self> {
+        let mut set = singleton(root);
+        for Relation(_, _, dst) in self.relations.iter() {
+            if set.contains(dst as &str) {
+                return invalid_state_error(format!(
+                    "Type `{}` occurs more than once as the target of a relation",
+                    dst
+                ));
+            } else {
+                set.insert(dst);
+            }
+        }
+        Ok(self)
+    }
+
     /// populate conditions and relations on an initialized FilterInfo
-    fn with_constraints(mut self, ops: Set<Operation>) -> FilterResult<Self> {
+    fn with_constraints(mut self, ops: Set<Operation>, class: &str) -> FilterResult<Self> {
         // find pairs of implicitly equal variables
         let equivs = ops.iter().filter_map(|Operation { operator, args }| {
             use Operator::*;
@@ -408,7 +421,7 @@ impl FilterInfo {
             self.add_constraint(op)?;
         }
 
-        Ok(self)
+        self.validate(class)
     }
 
     fn build_filter(
@@ -419,7 +432,7 @@ impl FilterInfo {
         let entities =
             std::iter::once((PathVar::from(String::from("_this")), class.to_string())).collect();
 
-        // TODO(gw) check isas in host
+        // TODO(gw) check more isas in host -- rn we only check external instances
         let (_isas, othas): (Set<_>, Set<_>) = parts
             .into_iter()
             .partition(|op| op.operator == Operator::Isa);
@@ -433,7 +446,7 @@ impl FilterInfo {
             entities,
             ..Default::default()
         }
-        .with_constraints(othas)?;
+        .with_constraints(othas, class)?;
 
         Ok(Filter {
             relations,
@@ -521,10 +534,6 @@ impl Display for Relation {
     }
 }
 
-fn input_error<A>(msg: String) -> FilterResult<A> {
-    Err(RuntimeError::InvalidState { msg })
-}
-
 pub fn singleton<X>(x: X) -> Set<X>
 where
     X: Hash + Eq,
@@ -535,6 +544,47 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_dup_reln() {
+        let s = String::from;
+        let types = hashmap! {
+            s("Resource") => hashmap!{
+                s("foo") => Type::Relation {
+                   kind: s("one"),
+                   my_field: s("_"),
+                   other_field: s("_"),
+                   other_class_tag: s("Foo")
+                }
+            },
+            s("Foo") => hashmap!{
+                s("y") => Type::Base {
+                    class_tag: s("Integer")
+                },
+                s("resource") => Type::Relation {
+                    kind: s("one"),
+                    my_field: s("_"),
+                    other_field: s("_"),
+                    other_class_tag: s("Resource"),
+                }
+            }
+        };
+
+        // this is a great example of why i want to have shorter macros like opn! ptn! etc ...
+        let ors = vec![ResultEvent::new(hashmap! {
+            sym!("resource") => term!(op!(And,
+                term!(op!(Isa, var!("_this"), term!(pattern!(instance!("Resource"))))),
+                term!(op!(Isa, term!(op!(Dot, var!("_this"), str!("foo"))), term!(pattern!(instance!("Foo"))))),
+                term!(op!(Isa, term!(op!(Dot, term!(op!(Dot, var!("_this"), str!("foo"))), str!("resource"))), term!(pattern!(instance!("Foo"))))),
+                term!(op!(Unify, term!(1), term!(op!(Dot, term!(op!(Dot, term!(op!(Dot, var!("_this"), str!("foo"))), str!("resource"))), str!("foo")))))))
+        })];
+
+        match Filter::build(types, ors, "resource", "Resource") {
+            Err(RuntimeError::InvalidState { msg })
+                if &msg == "Type `Resource` occurs more than once as the target of a relation" => {}
+            _ => panic!("unexpected"),
+        }
+    }
 
     #[test]
     fn test_in() {
@@ -563,7 +613,6 @@ mod test {
         })];
 
         let filter = Filter::build(types, ors, "resource", "Resource").unwrap();
-        println!("filter: {}", filter);
 
         let Filter {
             root,

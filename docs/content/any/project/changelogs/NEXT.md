@@ -38,6 +38,18 @@ draft: true
   This is a step towards data filtering in Go.
   Thanks to [`@joshrotenberg`](https://github.com/joshrotenberg) for the PR!
 
+### Ruby
+
+#### New Features
+
+##### New Data Filtering API
+
+A new data filtering backend is now available in the Ruby library, which should provide
+better performance in most cases. An example ActiveRecord adapter is also included. For
+details on how to configure and use the new data filtering code, please see [our docs][new_data_filtering_docs].
+
+[new_data_filtering_docs]: https://docs.osohq.com/ruby/guides/data_filtering_next.html
+
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
 #### Breaking changes
@@ -52,7 +64,6 @@ draft: true
 ##### Breaking change 1
 
 Summary of breaking change.
-
 Link to [migration guide]().
 
 #### New features

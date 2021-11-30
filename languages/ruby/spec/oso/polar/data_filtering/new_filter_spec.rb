@@ -3,30 +3,33 @@
 require_relative './helpers'
 require 'sqlite3'
 require 'active_record'
+require 'oso/polar/data/adapter/active_record_adapter'
 
 RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
+  before do
+    subject.data_filtering_adapter =
+      ::Oso::Polar::Data::Adapter::ActiveRecordAdapter.new
+  end
+
   context 'new filters' do # rubocop:disable Metrics/BlockLength
     class Sign < ActiveRecord::Base
-      include DFH::ActiveRecordFetcher
       self.primary_key = :name
       has_many :people, foreign_key: :sign_name
       belongs_to :planet, foreign_key: :planet_name
     end
 
     class Person < ActiveRecord::Base
-      include DFH::ActiveRecordFetcher
       self.primary_key = :name
       belongs_to :sign, foreign_key: :sign_name
     end
 
     class Planet < ActiveRecord::Base
-      include DFH::ActiveRecordFetcher
       self.primary_key = :name
       has_many :signs, foreign_key: :planet_name
     end
 
     context 'astrology' do # rubocop:disable Metrics/BlockLength
-      context '#authzd_query parity' do # rubocop:disable Metrics/BlockLength
+      context '#authorized_query parity' do # rubocop:disable Metrics/BlockLength
         before do # rubocop:disable Metrics/BlockLength
           subject.register_class(
             Person,
@@ -78,7 +81,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
             allow(_: Person, "read", _: Sign{element: "fire"});
             allow(_: Person{sign}, "read", sign);
           POL
-          query = subject.authzd_query(Person.find('sam'), 'read', Sign)
+          query = subject.authorized_query(Person.find('sam'), 'read', Sign)
           expected_signs = %w[pisces aries sagittarius leo].map { |n| Sign.find n }
           expect(query.to_a).to contain_exactly(*expected_signs)
         end
@@ -103,7 +106,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
             expected = Person.all.select do |person|
               test[person, sign]
             end
-            query = subject.authzd_query sign, 'read', Person
+            query = subject.authorized_query sign, 'read', Person
             expect(query.to_a).to contain_exactly(*expected)
           end
         end
@@ -113,7 +116,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
             allow(_: Person{sign}, _, _: Planet{signs}) if sign in signs;
           POL
           Person.all.each do |person|
-            query = subject.authzd_query person, nil, Planet
+            query = subject.authorized_query person, nil, Planet
             expect(query.to_a).to eq [person.sign.planet]
           end
         end
@@ -125,7 +128,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           POL
 
           Person.all.each do |person|
-            query = subject.authzd_query person, nil, Planet
+            query = subject.authorized_query person, nil, Planet
             expect(query.to_a).to eq [person.sign.planet]
           end
         end
@@ -138,7 +141,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           POL
 
           Person.all.each do |person|
-            query = subject.authzd_query person, nil, Planet
+            query = subject.authorized_query person, nil, Planet
             if person == eden
               expect(query.to_a).to eq [person.sign.planet]
             else
@@ -152,7 +155,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
             'allow(_: Planet{signs}, _, sign: Sign) if sign in signs;'
           )
           Planet.all.each do |planet|
-            query = subject.authzd_query planet, nil, Sign
+            query = subject.authorized_query planet, nil, Sign
             expect(query.to_a).to contain_exactly(*planet.signs)
           end
         end
@@ -162,7 +165,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
             allow(_, _, _: Planet{signs}) if
               _ in signs;
           POL
-          query = subject.authzd_query 'gwen', 'get', Planet
+          query = subject.authorized_query 'gwen', 'get', Planet
           expect(query.to_a).to contain_exactly(*Planet.where.not(name: 'pluto'))
         end
 
@@ -172,7 +175,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
               p in sign.people and
               p.name = "graham";
           POL
-          query = subject.authzd_query 'gwen', 'get', Sign
+          query = subject.authorized_query 'gwen', 'get', Sign
           expect(query.to_a).to be_empty
         end
 
@@ -183,7 +186,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
               a != b;
           POL
 
-          query = subject.authzd_query 'gwen', 'read', Sign
+          query = subject.authorized_query 'gwen', 'read', Sign
           expect(query.to_a).to be_empty
         end
 
@@ -193,7 +196,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
               s in signs and t in signs and
               s = t;
           POL
-          query = subject.authzd_query 'gwen', 'read', Planet
+          query = subject.authorized_query 'gwen', 'read', Planet
           expect(query.to_a).to contain_exactly(*Planet.where.not(name: 'pluto'))
         end
 
@@ -203,7 +206,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
             check(_: Sign{ name: "cancer" });
             check(_: Person{sign}) if sign.name = "leo";
           POL
-          query = subject.authzd_query 'gwen', 'read', Person
+          query = subject.authorized_query 'gwen', 'read', Person
           expected = Person.all.select { |person| person.sign.name == 'cancer' }
 
           expect(query.to_a).to contain_exactly(*expected)
@@ -211,13 +214,13 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
 
         it 'test_no_relationships' do
           subject.load_str 'allow(_, _, _: Sign{element:"fire"});'
-          query = subject.authzd_query 'gwen', 'read', Sign
+          query = subject.authorized_query 'gwen', 'read', Sign
           expect(query.to_a).to contain_exactly(*Sign.where(element: 'fire'))
         end
 
         it 'test_neq' do
           subject.load_str 'allow(_, action, _: Sign{name}) if name != action;'
-          query = subject.authzd_query 'gwen', 'libra', Sign
+          query = subject.authorized_query 'gwen', 'libra', Sign
           expect(query.to_a).to contain_exactly(*Sign.where.not(name: 'libra'))
         end
 
@@ -226,7 +229,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
             allow(_, _, _: Person{ name: "eden", sign }) if sign.name = "cancer";
           POL
 
-          query = subject.authzd_query 'gwen', 'read', Person
+          query = subject.authorized_query 'gwen', 'read', Person
           expect(query.to_a).to eq([eden])
         end
 
@@ -235,13 +238,13 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
             allow(_, _, sign: Sign) if sign in sign.planet.signs;
           POL
 
-          query = subject.authzd_query 'gwen', 'read', Sign
+          query = subject.authorized_query 'gwen', 'read', Sign
           expect(query.to_a).to contain_exactly(*Sign.all)
         end
 
         it 'test_scalar_in_list' do
           subject.load_str 'allow(_, _, _: Sign{planet}) if planet.name in ["sun", "moon"];'
-          query = subject.authzd_query 'gwen', 'read', Sign
+          query = subject.authorized_query 'gwen', 'read', Sign
           expected = Sign.all.select { |sign| %w[sun moon].include? sign.planet.name }
           expect(query.to_a).to contain_exactly(*expected)
         end
@@ -252,7 +255,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
               person in people and
               person.name = "eden";
           POL
-          query = subject.authzd_query('gwen', 'read', Sign)
+          query = subject.authorized_query('gwen', 'read', Sign)
           expect(query.to_a).to eq [eden.sign]
         end
 
@@ -265,7 +268,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
 
           0.upto(2) do |n|
             Person.all.each do |person|
-              query = subject.authzd_query(person, n, Sign)
+              query = subject.authorized_query(person, n, Sign)
               expect(query.to_a).to eq [person.sign]
             end
           end
@@ -295,7 +298,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
             parts.each do |b|
               Person.all.each do |person|
                 nom = a + b
-                query = subject.authzd_query person.sign, nom, Person
+                query = subject.authorized_query person.sign, nom, Person
                 expect(query.to_a.unshift(nom)).to eq [nom, person]
               end
             end
@@ -307,33 +310,33 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
 
         it 'test_var_in_value' do
           subject.load_str 'allow(_, _, _: Person{name}) if name in ["leo", "mercury"];'
-          query = subject.authzd_query('gwen', 'get', Person)
+          query = subject.authorized_query('gwen', 'get', Person)
           expect(query.to_a).to contain_exactly(leo, mercury)
         end
 
         it 'test_field_eq' do
           subject.load_str 'allow(_, _, _: Person{name, sign}) if name = sign.name;'
-          query = subject.authzd_query 'gwen', 'read', Person
+          query = subject.authorized_query 'gwen', 'read', Person
           expect(query.to_a).to eq([leo])
         end
 
         it 'test_field_neq' do
           subject.load_str 'allow(_, _, _: Person{name, sign}) if name != sign.name;'
-          query = subject.authzd_query 'gwen', 'read', Person
+          query = subject.authorized_query 'gwen', 'read', Person
           expect(query.to_a).to contain_exactly(*Person.where.not(name: 'leo'))
         end
 
         it 'test_param_field' do
           subject.load_str 'allow(planet, element, _: Sign{planet, element});'
           Sign.all.each do |sign|
-            query = subject.authzd_query sign.planet, sign.element, Sign
+            query = subject.authorized_query sign.planet, sign.element, Sign
             expect(query.to_a).to eq [sign]
           end
         end
 
         it 'test_field_cmp_rel_field' do
           subject.load_str 'allow(_, _, _: Person{name, sign}) if name = sign.name;'
-          query = subject.authzd_query 'gwen', 'read', Person
+          query = subject.authorized_query 'gwen', 'read', Person
           expect(query.to_a).to eq [leo]
         end
 
@@ -341,7 +344,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           subject.load_str <<~POL
             allow(_, _, _: Person{name, sign}) if name = sign.planet.name;
           POL
-          query = subject.authzd_query 'gwen', 'read', Person
+          query = subject.authorized_query 'gwen', 'read', Person
           expect(query.to_a).to eq [mercury]
         end
 
@@ -351,7 +354,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
               s in planet.signs and
               s.name = "scorpio";
           POL
-          query = subject.authzd_query 'gwen', 'read', Planet
+          query = subject.authorized_query 'gwen', 'read', Planet
           expect(query.to_a).to eq [mars]
         end
       end
