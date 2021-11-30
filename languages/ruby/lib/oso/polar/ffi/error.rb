@@ -82,8 +82,6 @@ module Oso
             ::Oso::Polar::PolarTypeError.new(msg, details: details)
           when 'StackOverflow'
             ::Oso::Polar::StackOverflowError.new(msg, details: details)
-          when 'FileLoading'
-            ::Oso::Polar::FileLoadingError.new(msg, details: details)
           else
             ::Oso::Polar::PolarRuntimeError.new(msg, details: details)
           end
