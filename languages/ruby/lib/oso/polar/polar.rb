@@ -275,8 +275,6 @@ module Oso
         data_filter = ffi.build_data_filter(types, partials, 'resource', class_name)
         data_filter = ::Oso::Polar::Data::Filter.parse(self, data_filter)
 
-        raise 'Data filtering adapter not configured' if host.adapter.nil?
-
         host.adapter.build_query(host.types, data_filter)
       end
 
