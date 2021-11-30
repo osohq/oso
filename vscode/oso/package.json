@@ -59,13 +59,13 @@
             "on",
             "off"
           ],
-          "enumDescriptions": [
-            "Default to VSCode's 'telemetry.telemetryLevel' setting",
+          "markdownEnumDescriptions": [
+            "Default to VSCode's `#telemetry.telemetryLevel#` setting",
             "Enable telemetry",
             "Disable telemetry"
           ],
           "default": "default",
-          "description": "Share usage data to help us make Oso better."
+          "markdownDescription": "Share usage data to help us make Oso better. Defaults to the `#telemetry.telemetryLevel#` setting."
         }
       }
     }
