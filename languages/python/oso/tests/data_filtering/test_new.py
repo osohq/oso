@@ -1,7 +1,7 @@
 import pytest
 from oso import Relation
 from polar.data_filtering import Field, _getattr
-from polar.data.adapter import SqlAlchemyAdapter
+from polar.data.adapter.sqlalchemy_adapter import SqlAlchemyAdapter
 from sqlalchemy import create_engine, not_, or_, and_, false
 from sqlalchemy.types import String, Boolean
 from sqlalchemy.schema import Column, ForeignKey
