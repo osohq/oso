@@ -137,4 +137,4 @@ Some Polar expressions are not supported. `not`, `cut` and `forall` are not
 allowed in policies that want to use data filtering. Numeric comparisons with
 the `<` `>` `<=` and `>=` are not currently supported either.
 
-Currently the new data filtering preview doesn't support queries where one model (eg. `User`) occurs more than once. Consequently relations from a type to itself are also unsupported. This limitation will be removed in an upcoming release.
+The new data filtering backend doesn't support queries where a given resource occurs more than once, so direct or indirect relations from a type to itself are currently unsupported. This limitation will be removed in an upcoming release.
