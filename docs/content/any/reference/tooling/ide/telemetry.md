@@ -7,8 +7,10 @@ description: Information about telemetry collected by IDE integrations.
 
 ## VSCode
 
-The VSCode extension collects non-identifiable telemetry data that we use to
-improve Oso.
+The VSCode extension collects **non-identifiable** telemetry data that we use
+to improve Oso. We collect data into un-timestamped batches instead of sending
+it on every policy load since we care about aggregate statistics; not tracking
+your personal development behavior. **We will never sell this data**.
 
 | Data collected | Link to code | Purpose |
 | -------------- | ------------ | ------- |
