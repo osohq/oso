@@ -257,11 +257,11 @@ module Oso
           filter = ::Oso::Polar::Data::Filter.new(
             model: cls,
             relations: [],
-            conditions: [[condition]]
+            conditions: [[condition]],
+            types: host.types
           )
 
-          types = host.serialize_types
-          res = host.adapter.execute_query host.adapter.build_query(types, filter)
+          res = host.adapter.execute_query host.adapter.build_query(filter)
         else
           constraint = ::Oso::Polar::DataFiltering::Filter.new(
             kind: 'Eq',

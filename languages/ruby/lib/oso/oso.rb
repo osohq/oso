@@ -204,9 +204,14 @@ module Oso
     # @return A list of resources accessible to the actor.
     def authorized_resources(actor, action, resource_cls)
       q = authorized_query(actor, action, resource_cls)
-      return [] if q.nil?
 
-      host.types[resource_cls].exec_query[q]
+      if host.use_new_data_filtering?
+        host.adapter.exec_query q
+      else
+        return [] if q.nil?
+
+        host.types[resource_cls].exec_query[q]
+      end
     end
 
     # Register default values for data filtering query functions.

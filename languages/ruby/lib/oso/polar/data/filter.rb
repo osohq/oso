@@ -4,25 +4,27 @@ module Oso
   module Polar
     # Data filtering interface for Ruby
     module Data
-      # Abstract data filter used by the Adapter API
+      # Abstract data filter used by the Adapter API.
       class Filter
-        attr_reader :model, :relations, :conditions
+        attr_reader :model, :relations, :conditions, :types
 
-        def initialize(model:, relations:, conditions:)
+        def initialize(model:, relations:, conditions:, types:)
           @model = model
           @relations = relations
           @conditions = conditions
+          @types = types
         end
 
         def self.parse(polar, blob)
-          model = polar.host.types[blob['root']].klass.get
+          types = polar.host.types
+          model = types[blob['root']].klass.get
           relations = blob['relations'].map do |rel|
             Relation.parse(polar, *rel)
           end
           conditions = blob['conditions'].map do |disj|
             disj.map { |conj| Condition.parse(polar, *conj) }
           end
-          new(model: model, relations: relations, conditions: conditions)
+          new(model: model, relations: relations, conditions: conditions, types: types)
         end
 
         Projection = Struct.new(:source, :field)

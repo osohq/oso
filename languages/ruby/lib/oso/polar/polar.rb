@@ -268,14 +268,13 @@ module Oso
         end
       end
 
-      def new_authorized_query(actor, action, resource_cls)
-        partials = partial_query(actor, action, resource_cls)
+      def new_authorized_query(actor, action, resource_class)
+        partials = partial_query(actor, action, resource_class)
         types = host.serialize_types
-        class_name = class_to_name resource_cls
-        data_filter = ffi.build_data_filter(types, partials, 'resource', class_name)
-        data_filter = ::Oso::Polar::Data::Filter.parse(self, data_filter)
-
-        host.adapter.build_query(host.types, data_filter)
+        class_name = class_to_name resource_class
+        plan = ffi.build_data_filter(types, partials, 'resource', class_name)
+        filter = ::Oso::Polar::Data::Filter.parse(self, plan)
+        host.adapter.build_query filter
       end
 
       def old_authorized_query(actor, action, resource_cls)

@@ -6,7 +6,8 @@ module Oso
       class Adapter
         # Example data filtering adapter for ActiveRecord
         class ActiveRecordAdapter < Adapter
-          def build_query(types, filter) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+          def build_query(filter) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+            types = filter.types
             query = filter.relations.reduce(filter.model.all) do |q, rel|
               rec = types[rel.left].fields[rel.name]
               q.joins(
