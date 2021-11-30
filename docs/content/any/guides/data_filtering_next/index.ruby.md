@@ -37,7 +37,7 @@ executed query.
 This lets you add additional filters or sorts or any other data to it before
 executing it.
 
-The mapping from polar to a query is defined by an `Adapter`. If an adapter exists for your orm or database you can use it, otherwise you may have to implement your own.
+The mapping from polar to a query is defined by an `Adapter`. If an adapter exists for your ORM or database you can use it, otherwise you may have to implement your own.
 
 ## Implementing an Adapter
 
@@ -49,7 +49,7 @@ An adapter is an interface that defines two methods.
 
 `{{% exampleGet "buildQuery" %}}` takes some type information and an oso `Filter` object and returns a `Query`.
 
-A `Filter` is a representation of a query. It is very similar to a sql query.
+A `Filter` is a representation of a query. It is very similar to a SQL query.
 It has three fields
 
 - `root` Is the type we are filtering.
