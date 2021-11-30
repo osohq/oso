@@ -5,8 +5,7 @@ __version__ = "0.23.0"
 import os
 from typing import List, Any, Set
 
-from polar import Polar, Variable, exceptions, Expression, Pattern
-from polar.data_filtering import serialize_types, filter_data
+from polar import Polar, Variable, exceptions
 from .exceptions import NotFoundError, ForbiddenError
 
 
@@ -257,14 +256,13 @@ class Oso(Polar):
         :return: The requested resources.
         """
         query = self.authorized_query(actor, action, resource_cls)
+
         if self.is_new_data_filtering_configured():
             return self.host.adapter.exec_query(query)
+        elif query is None:
+            return []
         else:
-            if query is None:
-                return []
-
-            results = self.host.types[resource_cls].exec_query(query)
-            return results
+            return self.host.types[resource_cls].exec_query(query)
 
     def set_data_filtering_query_defaults(
         self, build_query=None, exec_query=None, combine_query=None

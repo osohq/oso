@@ -4,8 +4,8 @@ from sqlalchemy.sql import false, true
 from .adapter import DataAdapter
 from ..filter import Proj
 
-class SqlAlchemyAdapter(DataAdapter):
 
+class SqlAlchemyAdapter(DataAdapter):
     def __init__(self, session):
         self.session = session
 
@@ -17,7 +17,9 @@ class SqlAlchemyAdapter(DataAdapter):
             rec = typ.fields[rel.name]
             left = typ.cls
             right = types[rec.other_type].cls
-            return q.join(right, getattr(left, rec.my_field) == getattr(right, rec.other_field))
+            return q.join(
+                right, getattr(left, rec.my_field) == getattr(right, rec.other_field)
+            )
 
         query = reduce(re, filter.relations, self.session.query(filter.model))
         disj = reduce(
@@ -26,12 +28,11 @@ class SqlAlchemyAdapter(DataAdapter):
                 reduce(
                     lambda a, b: a & b,
                     [SqlAlchemyAdapter.sqlize(conj) for conj in conjs],
-                    true()
-
+                    true(),
                 )
                 for conjs in filter.conditions
             ],
-            false()
+            false(),
         )
         return query.filter(disj).distinct()
 
@@ -42,13 +43,13 @@ class SqlAlchemyAdapter(DataAdapter):
         op = cond.cmp
         lhs = SqlAlchemyAdapter.add_side(cond.left)
         rhs = SqlAlchemyAdapter.add_side(cond.right)
-        if op == 'Eq':
+        if op == "Eq":
             return lhs == rhs
-        elif op == 'Neq':
+        elif op == "Neq":
             return lhs != rhs
-        elif op == 'In':
+        elif op == "In":
             return lhs in rhs
-        elif op == 'Nin':
+        elif op == "Nin":
             return lhs not in rhs
 
     def add_side(side):

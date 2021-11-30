@@ -286,7 +286,7 @@ class Polar:
         return self.host.get_class(name)
 
     def partial_query(self, actor, action, resource_cls):
-        resource = Variable('resource')
+        resource = Variable("resource")
         class_name = self.host.types[resource_cls].name
         constraint = Expression(
             "And", [Expression("Isa", [resource, Pattern(class_name, {})])]
@@ -308,7 +308,7 @@ class Polar:
         ]
 
     def is_new_data_filtering_configured(self):
-        return self.host.adapter != None
+        return self.host.adapter is not None
 
     def old_authorized_query(self, actor, action, resource_cls):
         results = self.partial_query(actor, action, resource_cls)
@@ -325,7 +325,7 @@ class Polar:
 
         types = serialize_types(self.host.distinct_user_types(), self.host.types)
         class_name = self.host.types[resource_cls].name
-        plan = self.ffi_polar.build_data_filter(types, results, 'resource', class_name)
+        plan = self.ffi_polar.build_data_filter(types, results, "resource", class_name)
 
         return self.host.adapter.build_query(Fil.parse(self, plan))
 

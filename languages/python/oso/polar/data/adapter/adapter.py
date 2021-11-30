@@ -1,6 +1,6 @@
-class DataAdapter():
+class DataAdapter:
     def build_query(self, _filter):
-        raise NotImplemented
+        raise NotImplementedError
 
     def exec_query(self, _query):
-        raise NotImplemented
+        raise NotImplementedError

@@ -364,6 +364,7 @@ def test_relationship(oso):
     oso.check_authz("steve", "get", Foo, expected)
 
 
+@pytest.mark.xfail(reason="not supported yet")
 def test_duplex_relationship(oso):
     oso.load_str("allow(_, _, foo: Foo) if foo in foo.bar.foos;")
     oso.check_authz("gwen", "gwen", Foo, foos)

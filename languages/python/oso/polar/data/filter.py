@@ -1,4 +1,4 @@
-class Fil():
+class Fil:
     def __init__(self, model, relations, conditions, types):
         self.model = model
         self.relations = relations
@@ -7,21 +7,22 @@ class Fil():
 
     def parse(polar, blob):
         types = polar.host.types
-        model = types[blob['root']].cls
-        relations = [Rel.parse(polar, *rel) for rel in blob['relations']]
+        model = types[blob["root"]].cls
+        relations = [Rel.parse(polar, *rel) for rel in blob["relations"]]
         conditions = [
-            [Cond.parse(polar, *conj) for conj in disj]
-            for disj in blob['conditions']
+            [Cond.parse(polar, *conj) for conj in disj] for disj in blob["conditions"]
         ]
 
         return Fil(model=model, relations=relations, conditions=conditions, types=types)
 
-class Proj():
+
+class Proj:
     def __init__(self, source, field):
         self.source = source
         self.field = field
 
-class Rel():
+
+class Rel:
     def __init__(self, left, name, right):
         self.left = left
         self.name = name
@@ -32,7 +33,8 @@ class Rel():
         right = polar.host.types[right].cls
         return Rel(left=left, name=name, right=right)
 
-class Cond():
+
+class Cond:
     def __init__(self, left, cmp, right):
         self.left = left
         self.cmp = cmp
@@ -46,12 +48,13 @@ class Cond():
     def parse_side(polar, side):
         key = next(iter(side.keys()))
         val = side[key]
-        if key == 'Field':
+        if key == "Field":
             source = polar.host.types[val[0]].cls
             field = val[1]
             return Proj(source=source, field=field)
-        elif key == 'Immediate':
-            return polar.host.to_python({'value': { next(iter(val.keys())) : next(iter(val.values()))}})
+        elif key == "Immediate":
+            return polar.host.to_python(
+                {"value": {next(iter(val.keys())): next(iter(val.values()))}}
+            )
         else:
             raise ValueError(key)
-
