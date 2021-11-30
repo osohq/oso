@@ -4,7 +4,6 @@ from polar import (
     Predicate,
     Relation,
     Filter,
-    SqlAlchemyAdapter,
     Fil,
 )
 from .oso import Oso
