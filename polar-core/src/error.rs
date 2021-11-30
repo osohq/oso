@@ -41,7 +41,6 @@ impl PolarError {
             Parse(DuplicateKey { .. }) => "ParseError::DuplicateKey",
             Runtime(Application { .. }) => "RuntimeError::Application",
             Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
-            Runtime(FileLoading { .. }) => "RuntimeError::FileLoading",
             Runtime(IncompatibleBindings { .. }) => "RuntimeError::IncompatibleBindings",
             Runtime(QueryTimeout { .. }) => "RuntimeError::QueryTimeout",
             Runtime(StackOverflow { .. }) => "RuntimeError::StackOverflow",
@@ -56,6 +55,7 @@ impl PolarError {
             Runtime(InvalidState { .. }) => "RuntimeError::InvalidState",
             Operational(Serialization { .. }) => "OperationalError::Serialization",
             Operational(Unknown) => "OperationalError::Unknown",
+            Validation(FileLoading { .. }) => "ValidationError::FileLoading",
             Validation(InvalidRule { .. }) => "ValidationError::InvalidRule",
             Validation(InvalidRuleType { .. }) => "ValidationError::InvalidRuleType",
             Validation(ResourceBlock { .. }) => "ValidationError::ResourceBlock",
@@ -273,10 +273,6 @@ pub enum RuntimeError {
         /// Option<Term> where the error arose, tracked for lexical context.
         term: Option<Term>,
     },
-    // TODO(gj): consider moving to ValidationError.
-    FileLoading {
-        msg: String,
-    },
     IncompatibleBindings {
         msg: String,
     },
@@ -323,7 +319,6 @@ impl RuntimeError {
             // These errors never have context.
             StackOverflow { .. }
             | QueryTimeout { .. }
-            | FileLoading { .. }
             | IncompatibleBindings { .. }
             | DataFilteringFieldMissing { .. }
             | DataFilteringUnsupportedOp { .. }
@@ -368,7 +363,6 @@ impl fmt::Display for RuntimeError {
                 writeln!(f, "{}", stack_trace)?;
                 write!(f, "Application error: {}", msg)
             }
-            Self::FileLoading { msg } => write!(f, "Problem loading file: {}", msg),
             Self::IncompatibleBindings { msg } => {
                 write!(f, "Attempted binding was incompatible: {}", msg)
             }
@@ -467,6 +461,9 @@ impl fmt::Display for OperationalError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationError {
+    FileLoading {
+        msg: String,
+    },
     MissingRequiredRule {
         rule_type: Rule,
     },
@@ -541,6 +538,9 @@ impl ValidationError {
                     None
                 }
             }
+
+            // These errors never have context.
+            FileLoading { .. } => None,
         };
 
         let context = context.map(|(span, source)| Context {
@@ -558,6 +558,7 @@ impl ValidationError {
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Self::FileLoading { msg } => write!(f, "Problem loading file: {}", msg),
             Self::InvalidRule { rule, msg } => {
                 write!(f, "Invalid rule: {} {}", rule, msg)
             }

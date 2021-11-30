@@ -2,7 +2,7 @@ use std::sync::{Arc, RwLock};
 
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
 use super::diagnostic::Diagnostic;
-use super::error::{PolarResult, RuntimeError, ValidationError};
+use super::error::{PolarResult, ValidationError};
 use super::filter::Filter;
 use super::kb::*;
 use super::messages::*;
@@ -186,7 +186,7 @@ impl Polar {
         if let Ok(kb) = self.kb.read() {
             if kb.has_rules() {
                 let msg = MULTIPLE_LOAD_ERROR_MSG.to_owned();
-                return Err(RuntimeError::FileLoading { msg }.with_context(&*kb));
+                return Err(ValidationError::FileLoading { msg }.with_context(&*kb));
             }
         }
 
@@ -311,7 +311,7 @@ impl Polar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::{ErrorKind::Runtime, PolarError};
+    use crate::error::{ErrorKind::Validation, PolarError};
 
     #[test]
     fn can_load_and_query() {
@@ -335,7 +335,7 @@ mod tests {
         // Loading twice is not.
         let msg = match polar.load(vec![source]).unwrap_err() {
             PolarError {
-                kind: Runtime(RuntimeError::FileLoading { msg }),
+                kind: Validation(ValidationError::FileLoading { msg }),
                 ..
             } => msg,
             e => panic!("{}", e),
@@ -345,7 +345,7 @@ mod tests {
         // Even with load_str().
         let msg = match polar.load_str(src).unwrap_err() {
             PolarError {
-                kind: Runtime(RuntimeError::FileLoading { msg }),
+                kind: Validation(ValidationError::FileLoading { msg }),
                 ..
             } => msg,
             e => panic!("{}", e),
@@ -363,7 +363,7 @@ mod tests {
 
         let msg = match polar.load(vec![source.clone(), source]).unwrap_err() {
             PolarError {
-                kind: Runtime(RuntimeError::FileLoading { msg }),
+                kind: Validation(ValidationError::FileLoading { msg }),
                 ..
             } => msg,
             e => panic!("{}", e),
