@@ -5,8 +5,13 @@ module DataFilteringHelpers
     coll.reduce(Hash.new(0)) { |c, x| c.tap { c[x] += 1 } }
   end
 
-  def check_authz(actor, action, resource, expected)
-    results = subject.authorized_resources(actor, action, resource)
+  def check_old_authorized_query(actor, action, resource, expected) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+    q = subject.send(:old_authorized_query, actor, action, resource)
+    results = if q.nil?
+                []
+              else
+                subject.host.types[resource].exec_query[q]
+              end
     expect(results).to contain_exactly(*expected)
     expected.each do |it|
       answer = subject.query_rule 'allow', actor, action, it
@@ -14,8 +19,8 @@ module DataFilteringHelpers
     end
   end
 
-  def check_authzd(actor, action, resource, expected)
-    results = subject.authzd_resources(actor, action, resource)
+  def check_new_authorized_query(actor, action, resource, expected)
+    results = subject.send(:new_authorized_query, actor, action, resource).to_a
     expect(results).to contain_exactly(*expected)
     expected.each do |it|
       answer = subject.query_rule 'allow', actor, action, it
@@ -23,9 +28,9 @@ module DataFilteringHelpers
     end
   end
 
-  def check_authzs(*args)
-    check_authz(*args)
-    check_authzd(*args)
+  def check_authz(*args)
+    check_old_authorized_query(*args)
+    check_new_authorized_query(*args)
   end
 
   def self.record(*args, &blk)

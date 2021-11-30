@@ -24,7 +24,6 @@ draft: true
 ##### Breaking change 1
 
 Summary of breaking change.
-
 Link to [migration guide]().
 
 #### New features
