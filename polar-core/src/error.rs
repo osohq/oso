@@ -53,6 +53,7 @@ impl PolarError {
             }
             Runtime(InvalidRegistration { .. }) => "RuntimeError::InvalidRegistration",
             Runtime(InvalidState { .. }) => "RuntimeError::InvalidState",
+            Runtime(MultipleLoadError) => "RuntimeError::MultipleLoadError",
             Operational(Serialization { .. }) => "OperationalError::Serialization",
             Operational(Unknown) => "OperationalError::Unknown",
             Validation(FileLoading { .. }) => "ValidationError::FileLoading",
@@ -297,6 +298,7 @@ pub enum RuntimeError {
     InvalidState {
         msg: String,
     },
+    MultipleLoadError,
 }
 
 impl RuntimeError {
@@ -323,7 +325,8 @@ impl RuntimeError {
             | DataFilteringFieldMissing { .. }
             | DataFilteringUnsupportedOp { .. }
             | InvalidRegistration { .. }
-            | InvalidState { .. } => None,
+            | InvalidState { .. }
+            | MultipleLoadError => None,
         };
 
         let context = context.map(|(span, source)| Context {
@@ -423,6 +426,7 @@ The expression is: {expr}
             // TODO(gj): move this back to `OperationalError` during The Next Great Diagnostic
             // Refactor.
             Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
+            Self::MultipleLoadError => write!(f, "Cannot load additional Polar code -- all Polar code must be loaded at the same time."),
         }
     }
 }
