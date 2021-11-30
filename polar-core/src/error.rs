@@ -466,6 +466,7 @@ impl fmt::Display for OperationalError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationError {
     FileLoading {
+        source: Source,
         msg: String,
     },
     MissingRequiredRule {
@@ -543,8 +544,8 @@ impl ValidationError {
                 }
             }
 
-            // These errors never have context.
-            FileLoading { .. } => None,
+            // These errors always pertain to a specific file but not to a specific place therein.
+            FileLoading { source, .. } => Some(((0, 0), source.to_owned())),
         };
 
         let context = context.map(|(span, source)| Context {
@@ -562,7 +563,7 @@ impl ValidationError {
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::FileLoading { msg } => write!(f, "Problem loading file: {}", msg),
+            Self::FileLoading { msg, .. } => write!(f, "Problem loading file: {}", msg),
             Self::InvalidRule { rule, msg } => {
                 write!(f, "Invalid rule: {} {}", rule, msg)
             }

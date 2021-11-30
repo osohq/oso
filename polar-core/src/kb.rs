@@ -671,11 +671,13 @@ impl KnowledgeBase {
         ) {
             (Some(other_file), true) if other_file == filename => {
                 return Err(ValidationError::FileLoading {
+                    source: Source::new(Some(filename), src),
                     msg: format!("File {} has already been loaded.", filename),
                 })
             }
             (_, true) => {
                 return Err(ValidationError::FileLoading {
+                    source: Source::new(Some(filename), src),
                     msg: format!(
                         "A file with the name {}, but different contents has already been loaded.",
                         filename
@@ -684,6 +686,7 @@ impl KnowledgeBase {
             }
             (Some(other_file), _) => {
                 return Err(ValidationError::FileLoading {
+                    source: Source::new(Some(filename), src),
                     msg: format!(
                         "A file with the same contents as {} named {} has already been loaded.",
                         filename, other_file
@@ -897,7 +900,7 @@ mod tests {
         // Cannot load source1 a second time.
         let msg = match kb.add_source(source1).unwrap_err() {
             PolarError {
-                kind: Validation(ValidationError::FileLoading { msg }),
+                kind: Validation(ValidationError::FileLoading { msg, .. }),
                 ..
             } => msg,
             e => panic!("{}", e),
@@ -911,7 +914,7 @@ mod tests {
         };
         let msg = match kb.add_source(source2).unwrap_err() {
             PolarError {
-                kind: Validation(ValidationError::FileLoading { msg }),
+                kind: Validation(ValidationError::FileLoading { msg, .. }),
                 ..
             } => msg,
             e => panic!("{}", e),
@@ -932,7 +935,7 @@ mod tests {
         };
         let msg = match kb.add_source(source3).unwrap_err() {
             PolarError {
-                kind: Validation(ValidationError::FileLoading { msg }),
+                kind: Validation(ValidationError::FileLoading { msg, .. }),
                 ..
             } => msg,
             e => panic!("{}", e),

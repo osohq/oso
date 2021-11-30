@@ -360,7 +360,7 @@ mod tests {
 
         let msg = match polar.load(vec![source.clone(), source]).unwrap_err() {
             PolarError {
-                kind: Validation(ValidationError::FileLoading { msg }),
+                kind: Validation(ValidationError::FileLoading { msg, .. }),
                 ..
             } => msg,
             e => panic!("{}", e),
