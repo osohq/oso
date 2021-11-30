@@ -87,7 +87,7 @@ class Post(ModelBase):
 
     needs_moderation = Column(Boolean, nullable=False, default=False)
 
-    tags = relationship("Tag", secondary=post_tags)
+    tags = relationship("Tag", secondary=post_tags, backref="posts")
 
 
 class User(ModelBase):

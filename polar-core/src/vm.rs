@@ -781,7 +781,7 @@ impl PolarVirtualMachine {
                         ", BINDINGS: {{{}}}",
                         relevant_bindings
                             .iter()
-                            .map(|(var, val)| format!("{} = {}", var.0, val.to_polar()))
+                            .map(|(var, val)| format!("{} => {}", var.0, val.to_polar()))
                             .collect::<Vec<String>>()
                             .join(", ")
                     ));
@@ -1178,15 +1178,17 @@ impl PolarVirtualMachine {
                     .constraints()
                     .into_iter()
                     .find_map(|c| {
-                        // If the simplified partial includes a `var = dot_op` constraint where the
-                        // receiver of the dot operation is either `var` or an alias thereof, use
-                        // the dot op as the LHS of the matches.
-                        if c.operator != Operator::Unify {
+                        // If the simplified partial includes a constraint of form:
+                        // `v = dot_op`, `dot_op = v`, or `v in dot_op`
+                        // and the receiver of the dot operation is either
+                        // `var` or an alias thereof, use the dot op as the LHS of the matches.
+                        if c.operator != Operator::Unify && c.operator != Operator::In {
                             None
                         } else if matches!(c.args[0].value().as_symbol(), Ok(s) if names.contains(s)) &&
                             matches!(c.args[1].value().as_expression(), Ok(o) if o.operator == Operator::Dot) {
                             Some(c.args[1].clone())
-                        } else if matches!(c.args[1].value().as_symbol(), Ok(s) if names.contains(s)) &&
+                        } else if c.operator == Operator::Unify && matches!(c.args[1].value().as_symbol(), Ok(s) if names.contains(s)) &&
+                            // only look for var on the RHS of a unfication (i.e. not on the RHS of an `in`)
                             matches!(c.args[0].value().as_expression(), Ok(o) if o.operator == Operator::Dot) {
                             Some(c.args[0].clone())
                         } else {
