@@ -1,16 +1,86 @@
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+
 import { createHash } from 'crypto';
 
-import { env, Uri, workspace } from 'vscode';
+import type { DebouncedFunc } from 'lodash';
+import { env, OutputChannel, Uri, workspace } from 'vscode';
 import * as Mixpanel from 'mixpanel';
 import {
   Diagnostic,
   DiagnosticSeverity as Severity,
 } from 'vscode-languageclient';
 
-// Flush telemetry events in batches every hour.
-export const TELEMETRY_INTERVAL = 1000 * 60 * 60;
+const ONE_HOUR_IN_MS = 1_000 * 60 * 60;
+const ONE_DAY_IN_MS = ONE_HOUR_IN_MS * 24;
+const ONE_MONTH_IN_MS = ONE_DAY_IN_MS * 30;
 
-const diagnosticEventName = 'TEST_diagnostic';
+// Flush telemetry events in batches every hour.
+export const TELEMETRY_INTERVAL = ONE_HOUR_IN_MS;
+export const TELEMETRY_STATE_KEY = 'telemetry.state';
+export const TELEMETRY_DAILY_MAXIMUM = 60;
+export const TELEMETRY_MONTHLY_MAXIMUM = 3_000;
+export type TelemetryCounters = {
+  monthly: {
+    reset: number;
+    count: number;
+  };
+  daily: {
+    reset: number;
+    count: number;
+  };
+};
+
+export const counters: TelemetryCounters = {
+  monthly: { count: 0, reset: 0 },
+  daily: { count: 0, reset: 0 },
+};
+
+export const sendTelemetryEvents: (log: OutputChannel) => Promise<void> =
+  async (log: OutputChannel) => {
+    const now = Date.now();
+
+    // If a month has elapsed, reset both counters and timestamps.
+    if (now > counters.monthly.reset + ONE_MONTH_IN_MS) {
+      counters.monthly = { reset: now, count: 0 };
+      counters.daily = { reset: now, count: 0 };
+    }
+
+    // If a day has elapsed, reset the daily counter and timestamp.
+    if (now > counters.daily.reset + ONE_DAY_IN_MS) {
+      counters.daily = { reset: now, count: 0 };
+    }
+
+    // If at or over monthly count and *also* at or over daily count, no-op.
+    if (
+      counters.monthly.count >= TELEMETRY_MONTHLY_MAXIMUM &&
+      counters.daily.count >= TELEMETRY_DAILY_MAXIMUM
+    )
+      return;
+
+    try {
+      const flushedEvents = await sendEvents();
+      counters.monthly.count += flushedEvents;
+      counters.daily.count += flushedEvents;
+    } catch (e) {
+      log.appendLine(`Caught error while sending telemetry: ${e}`);
+    }
+  };
+
+export function seedState(state?: TelemetryCounters): void {
+  if (state === undefined) {
+    // Initialize monthly & daily reset timestamps; counters will already be
+    // initialized to 0.
+    const now = Date.now();
+    counters.monthly.reset = now;
+    counters.daily.reset = now;
+  } else {
+    // Initialize monthly & daily reset timestamps & counters from memento
+    // state.
+    counters.monthly = state.monthly;
+    counters.daily = state.daily;
+  }
+}
+
 const loadEventName = 'TEST_load';
 
 const hash = (contents: { toString(): string }) =>
@@ -53,63 +123,54 @@ function telemetryEnabled() {
   return enabled;
 }
 
-type MixpanelLoadEvent = {
-  event: typeof loadEventName;
-  properties: {
-    diagnostics: number;
-    errors: number;
-    successful: boolean;
-    total_rules: number;
-    warnings: number;
-  };
-} & {
-  properties: TelemetryEvent['general_stats'] &
-    TelemetryEvent['resource_block_stats'];
-};
+class DiagnosticStats {
+  diagnostic_count: number;
+  error_count: number;
+  load_failure_count: number;
+  load_success_count: number;
+  unknown_diagnostic_count: number;
+  warning_count: number;
+  [diagnostic_code: `${string}_count`]: number;
 
-type MixpanelDiagnosticEvent = {
-  event: typeof diagnosticEventName;
-  properties: {
-    code: Diagnostic['code'];
-  };
-};
+  constructor() {
+    this.diagnostic_count = 0;
+    this.error_count = 0;
+    this.load_failure_count = 0;
+    this.load_success_count = 0;
+    this.unknown_diagnostic_count = 0;
+    this.warning_count = 0;
+  }
+}
 
-type MixpanelMetadata = {
-  // One-way hash of VSCode machine ID.
-  distinct_id: string;
-  // Unique ID for a `diagnostic_load` call. We use this to tie diagnostic
-  // events (errors & warnings) to the load event they came from.
-  load_id: string;
-  // One-way hash of workspace folder URI.
-  workspace_id: string;
-};
+function compileDiagnostics(stats: DiagnosticStats, diagnostics: Diagnostic[]) {
+  const errors = diagnostics.filter(d => d.severity === Severity.Error);
+  const warnings = diagnostics.filter(d => d.severity === Severity.Warning);
 
-type MixpanelEvent = { properties: MixpanelMetadata } & (
-  | MixpanelLoadEvent
-  | MixpanelDiagnosticEvent
-);
+  stats.diagnostic_count += diagnostics.length;
+  stats.error_count += errors.length;
+  stats.load_failure_count += errors.length === 0 ? 0 : 1;
+  stats.load_success_count += errors.length === 0 ? 1 : 0;
+  stats.warning_count += warnings.length;
 
-const queue: MixpanelEvent[] = [];
-
-export async function flushQueue(): Promise<void> {
-  if (!telemetryEnabled()) return;
-
-  // Drain all queued events.
-  const events = queue.splice(0);
-
-  if (events.length === 0) return;
-
-  return trackBatch(events);
+  for (const { code } of diagnostics) {
+    if (typeof code !== 'string') {
+      stats.unknown_diagnostic_count++;
+    } else {
+      const count = stats[`${code}_count`] || 0;
+      stats[`${code}_count`] = count + 1;
+    }
+  }
 }
 
 export type TelemetryEvent = {
   diagnostics: Diagnostic[];
-  general_stats: {
+  policy_stats: {
     inline_queries: number;
     longhand_rules: number;
     polar_chars: number;
     polar_files: number;
     rule_types: number;
+    total_rules: number;
   };
   resource_block_stats: {
     resource_blocks: number;
@@ -124,37 +185,63 @@ export type TelemetryEvent = {
   };
 };
 
-export function enqueueEvent(uri: Uri, event: TelemetryEvent): void {
+type LoadStats = TelemetryEvent['policy_stats'] &
+  TelemetryEvent['resource_block_stats'];
+
+type MixpanelLoadEvent = {
+  event: typeof loadEventName;
+  properties: DiagnosticStats & LoadStats;
+};
+
+type MixpanelMetadata = {
+  // One-way hash of VSCode machine ID.
+  distinct_id: string;
+  // One-way hash of workspace folder URI.
+  workspace_folder: string;
+};
+
+type MixpanelEvent = { properties: MixpanelMetadata } & MixpanelLoadEvent;
+
+const purgatory: Map<string, [LoadStats, DiagnosticStats]> = new Map();
+
+export async function sendEvents(): Promise<number> {
+  if (!telemetryEnabled()) return 0;
+
+  // Drain all queued events, one for each workspace folder.
+  const events: MixpanelEvent[] = [...purgatory.entries()].map(
+    ([folder, [loadStats, diagnosticStats]]) => ({
+      event: loadEventName,
+      properties: {
+        distinct_id,
+        workspace_folder: hash(folder),
+        ...diagnosticStats,
+        ...loadStats,
+      },
+    })
+  );
+
+  purgatory.clear();
+
+  if (events.length === 0) return 0;
+
+  await trackBatch(events);
+
+  return events.length;
+}
+
+export type TelemetryRecorder = DebouncedFunc<(event: TelemetryEvent) => void>;
+
+export function recordEvent(uri: Uri, event: TelemetryEvent): void {
   if (!telemetryEnabled()) return;
 
-  const load_id = hash(Math.random());
-  const workspace_id = hash(uri);
-  const metadata: MixpanelMetadata = { distinct_id, load_id, workspace_id };
+  const { diagnostics, policy_stats, resource_block_stats } = event;
 
-  const { diagnostics, general_stats, resource_block_stats } = event;
-
-  const errors = diagnostics.filter(d => d.severity === Severity.Error);
-  const warnings = diagnostics.filter(d => d.severity === Severity.Warning);
-
-  const loadEvent: MixpanelEvent = {
-    event: loadEventName,
-    properties: {
-      diagnostics: diagnostics.length,
-      errors: errors.length,
-      successful: errors.length === 0,
-      total_rules:
-        general_stats.longhand_rules + resource_block_stats.shorthand_rules,
-      warnings: warnings.length,
-      ...general_stats,
-      ...resource_block_stats,
-      ...metadata,
-    },
-  };
-
-  const diagnosticEvents: MixpanelEvent[] = diagnostics.map(({ code }) => ({
-    event: diagnosticEventName,
-    properties: { code, ...metadata },
-  }));
-
-  queue.push(loadEvent, ...diagnosticEvents);
+  const folder = uri.toString();
+  const existing = purgatory.get(folder);
+  const diagnosticStats = existing ? existing[1] : new DiagnosticStats();
+  compileDiagnostics(diagnosticStats, diagnostics);
+  purgatory.set(folder, [
+    { ...policy_stats, ...resource_block_stats },
+    diagnosticStats,
+  ]);
 }
