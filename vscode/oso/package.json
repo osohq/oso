@@ -21,6 +21,7 @@
   },
   "license": "Apache-2.0",
   "engines": {
+    "node": ">=8.10.0",
     "vscode": "^1.52.0"
   },
   "main": "./out/client.js",
