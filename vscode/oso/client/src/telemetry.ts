@@ -81,7 +81,7 @@ export function seedState(state?: TelemetryCounters): void {
   }
 }
 
-const loadEventName = 'TEST_load';
+const loadEventName = 'diagnostic_load';
 
 const hash = (contents: { toString(): string }) =>
   createHash('sha256')
