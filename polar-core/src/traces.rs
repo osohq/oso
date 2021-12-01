@@ -31,3 +31,20 @@ pub struct TraceResult {
     pub trace: Rc<Trace>,
     pub formatted: String,
 }
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub enum TraceEvent {
+    Query {
+        term: Term
+    },
+    Rule {
+        rule: Rule,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct CoasterTrace {
+    pub max_depth: usize,
+    pub depths: Vec<usize>,
+    pub events: Vec<TraceEvent>,
+}

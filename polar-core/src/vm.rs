@@ -1,3 +1,4 @@
+use serde_json;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::collections::{HashMap, HashSet};
@@ -261,7 +262,10 @@ pub struct PolarVirtualMachine {
     log: bool,
     polar_log: bool,
     polar_log_stderr: bool,
+    polarcoaster: bool,
     polar_log_mute: bool,
+
+    coaster_trace: CoasterTrace,
 
     // Other flags.
     pub query_contains_partial: bool,
@@ -355,6 +359,12 @@ impl PolarVirtualMachine {
                 && !polar_log_vars.iter().any(|var| ["0", "off"].contains(var)),
             // `polar_log_stderr` prints things immediately to stderr
             polar_log_stderr: polar_log_vars.iter().any(|var| var == &"now"),
+            polarcoaster: polar_log_vars.iter().any(|var| var == &"polarcoaster"),
+            coaster_trace: CoasterTrace {
+                max_depth: 0,
+                depths: vec![],
+                events: vec![],
+            },
             polar_log_mute: false,
             query_contains_partial: false,
             inverting: false,
@@ -532,6 +542,12 @@ impl PolarVirtualMachine {
             }
             Goal::TraceRule { trace } => {
                 if let Node::Rule(rule) = &trace.node {
+                    if self.polarcoaster {
+                        self.trace_snapshot(TraceEvent::Rule {
+                            rule: Rule::clone(rule),
+                        });
+                    }
+
                     self.log_with(
                         || {
                             let source_str = self.rule_source(rule);
@@ -927,6 +943,13 @@ impl PolarVirtualMachine {
         .unwrap();
         sock.send_to(&msg, self.osc_destination.unwrap()).ok();
     }
+
+    fn trace_snapshot(&mut self, event: TraceEvent) {
+        let depth = self.queries.len();
+        self.coaster_trace.max_depth = std::cmp::max(self.coaster_trace.max_depth, depth);
+        self.coaster_trace.events.push(event);
+        self.coaster_trace.depths.push(depth);
+    }
 }
 
 /// Implementations of instructions.
@@ -938,6 +961,10 @@ impl PolarVirtualMachine {
             self.print("⇒ backtrack");
         }
         self.log("BACKTRACK", &[]);
+
+        if self.polarcoaster {
+            //self.trace_snapshot(TraceEvent::Backtrack);
+        }
 
         loop {
             match self.choices.pop() {
@@ -1005,6 +1032,19 @@ impl PolarVirtualMachine {
         self.log("HALT", &[]);
         self.goals.clear();
         self.choices.clear();
+
+        if self.polarcoaster {
+            use std::io::Write as iowrite;
+            let trace_json = serde_json::to_string(&self.coaster_trace).unwrap();
+            let mut file = std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .open("coaster.json")
+                .unwrap();
+            file.write_all(&trace_json.as_bytes()).unwrap();
+        }
+
         QueryEvent::Done { result: true }
     }
 
@@ -1478,6 +1518,9 @@ impl PolarVirtualMachine {
                 args,
             }) if args.len() < 2 => (),
             _ => {
+                if self.polarcoaster {
+                    self.trace_snapshot(TraceEvent::Query { term: term.clone() });
+                }
                 self.log_with(|| format!("QUERY: {}", term.to_polar()), &[term]);
                 self.send_osc_event("query");
             }
