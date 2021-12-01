@@ -59,11 +59,10 @@ type MixpanelLoadEvent = {
     diagnostics: number;
     errors: number;
     successful: boolean;
-    total_rules: number;
     warnings: number;
   };
 } & {
-  properties: TelemetryEvent['general_stats'] &
+  properties: TelemetryEvent['policy_stats'] &
     TelemetryEvent['resource_block_stats'];
 };
 
@@ -104,12 +103,13 @@ export async function flushQueue(): Promise<void> {
 
 export type TelemetryEvent = {
   diagnostics: Diagnostic[];
-  general_stats: {
+  policy_stats: {
     inline_queries: number;
     longhand_rules: number;
     polar_chars: number;
     polar_files: number;
     rule_types: number;
+    total_rules: number;
   };
   resource_block_stats: {
     resource_blocks: number;
@@ -131,7 +131,7 @@ export function enqueueEvent(uri: Uri, event: TelemetryEvent): void {
   const workspace_id = hash(uri);
   const metadata: MixpanelMetadata = { distinct_id, load_id, workspace_id };
 
-  const { diagnostics, general_stats, resource_block_stats } = event;
+  const { diagnostics, policy_stats, resource_block_stats } = event;
 
   const errors = diagnostics.filter(d => d.severity === Severity.Error);
   const warnings = diagnostics.filter(d => d.severity === Severity.Warning);
@@ -142,10 +142,8 @@ export function enqueueEvent(uri: Uri, event: TelemetryEvent): void {
       diagnostics: diagnostics.length,
       errors: errors.length,
       successful: errors.length === 0,
-      total_rules:
-        general_stats.longhand_rules + resource_block_stats.shorthand_rules,
       warnings: warnings.length,
-      ...general_stats,
+      ...policy_stats,
       ...resource_block_stats,
       ...metadata,
     },
