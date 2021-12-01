@@ -1,22 +1,20 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
 
-import { inspect } from 'util';
-
 import { createHash } from 'crypto';
 
 import type { DebouncedFunc } from 'lodash';
 import { env, OutputChannel, Uri, workspace } from 'vscode';
-// import * as Mixpanel from 'mixpanel';
+import * as Mixpanel from 'mixpanel';
 import {
   Diagnostic,
   DiagnosticSeverity as Severity,
 } from 'vscode-languageclient';
 
 // Flush telemetry events in batches every hour.
-export const TELEMETRY_INTERVAL = 1000 * 20;
+export const TELEMETRY_INTERVAL = 1000 * 10;
 export const TELEMETRY_STATE_KEY = 'telemetry.state';
-export const TELEMETRY_DAILY_MAXIMUM = 60;
-export const TELEMETRY_MONTHLY_MAXIMUM = 3000;
+export const TELEMETRY_DAILY_MAXIMUM = 2;
+export const TELEMETRY_MONTHLY_MAXIMUM = 5;
 export type TelemetryCounters = {
   monthly: {
     reset: number;
@@ -32,8 +30,8 @@ export const counters: TelemetryCounters = {
   monthly: { count: 0, reset: 0 },
   daily: { count: 0, reset: 0 },
 };
-const ONE_DAY_IN_MS = 1000 * 60 * 60 * 24;
-const ONE_MONTH_IN_MS = ONE_DAY_IN_MS * 30;
+const ONE_DAY_IN_MS = 1000 * 30;
+const ONE_MONTH_IN_MS = ONE_DAY_IN_MS * 2;
 
 export const sendTelemetryEvents: (log: OutputChannel) => Promise<void> =
   async (log: OutputChannel) => {
@@ -58,7 +56,7 @@ export const sendTelemetryEvents: (log: OutputChannel) => Promise<void> =
       return;
 
     try {
-      const flushedEvents = await sendEvents(log);
+      const flushedEvents = await sendEvents();
       counters.monthly.count += flushedEvents;
       counters.daily.count += flushedEvents;
     } catch (e) {
@@ -91,15 +89,15 @@ const hash = (contents: { toString(): string }) =>
 // One-way hash of VSCode machine ID.
 const distinct_id = hash(env.machineId);
 
-// const MIXPANEL_PROJECT_TOKEN = 'd14a9580b894059dffd19437b7ddd7be';
-// const mixpanel = Mixpanel.init(MIXPANEL_PROJECT_TOKEN, { protocol: 'https' });
-// const trackBatch = (events: Mixpanel.Event[]) =>
-//   new Promise<void>((res, rej) =>
-//     mixpanel.track_batch(events, errors => {
-//       if (!errors) return res();
-//       rej(errors[0]);
-//     })
-//   );
+const MIXPANEL_PROJECT_TOKEN = 'd14a9580b894059dffd19437b7ddd7be';
+const mixpanel = Mixpanel.init(MIXPANEL_PROJECT_TOKEN, { protocol: 'https' });
+const trackBatch = (events: Mixpanel.Event[]) =>
+  new Promise<void>((res, rej) =>
+    mixpanel.track_batch(events, errors => {
+      if (!errors) return res();
+      rej(errors[0]);
+    })
+  );
 
 function telemetryEnabled() {
   const setting = workspace
@@ -204,7 +202,7 @@ type MixpanelEvent = { properties: MixpanelMetadata } & MixpanelLoadEvent;
 
 const purgatory: Map<string, [LoadStats, DiagnosticStats]> = new Map();
 
-export async function sendEvents(log: OutputChannel): Promise<number> {
+export async function sendEvents(): Promise<number> {
   if (!telemetryEnabled()) return 0;
 
   // Drain all queued events, one for each workspace folder.
@@ -222,15 +220,9 @@ export async function sendEvents(log: OutputChannel): Promise<number> {
 
   purgatory.clear();
 
-  log.appendLine('Sending:');
-  for (const event of events) {
-    log.appendLine(inspect(event));
-  }
-
   if (events.length === 0) return 0;
 
-  await Promise.resolve();
-  // await trackBatch(events);
+  await trackBatch(events);
 
   return events.length;
 }
