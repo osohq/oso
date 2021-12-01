@@ -72,10 +72,7 @@ class DiagnosticStats {
   }
 }
 
-function recordDiagnosticStats(
-  stats: DiagnosticStats,
-  diagnostics: Diagnostic[]
-) {
+function compileDiagnostics(stats: DiagnosticStats, diagnostics: Diagnostic[]) {
   const errors = diagnostics.filter(d => d.severity === Severity.Error);
   const warnings = diagnostics.filter(d => d.severity === Severity.Warning);
 
@@ -118,12 +115,12 @@ export type TelemetryEvent = {
   };
 };
 
+type LoadStats = TelemetryEvent['policy_stats'] &
+  TelemetryEvent['resource_block_stats'];
+
 type MixpanelLoadEvent = {
   event: typeof loadEventName;
-  properties: DiagnosticStats;
-} & {
-  properties: TelemetryEvent['policy_stats'] &
-    TelemetryEvent['resource_block_stats'];
+  properties: DiagnosticStats & LoadStats;
 };
 
 type MixpanelMetadata = {
@@ -135,13 +132,25 @@ type MixpanelMetadata = {
 
 type MixpanelEvent = { properties: MixpanelMetadata } & MixpanelLoadEvent;
 
-const queue: MixpanelEvent[] = [];
+const purgatory: Map<string, [LoadStats, DiagnosticStats]> = new Map();
 
 export async function flushQueue(): Promise<void> {
   if (!telemetryEnabled()) return;
 
-  // Drain all queued events.
-  const events = queue.splice(0);
+  // Drain all queued events, one for each workspace folder.
+  const events: MixpanelEvent[] = [...purgatory.entries()].map(
+    ([folder, [loadStats, diagnosticStats]]) => ({
+      event: loadEventName,
+      properties: {
+        distinct_id,
+        workspace_folder: hash(folder),
+        ...diagnosticStats,
+        ...loadStats,
+      },
+    })
+  );
+
+  purgatory.clear();
 
   if (events.length === 0) return;
 
@@ -153,23 +162,14 @@ export type TelemetryRecorder = DebouncedFunc<(event: TelemetryEvent) => void>;
 export function enqueueEvent(uri: Uri, event: TelemetryEvent): void {
   if (!telemetryEnabled()) return;
 
-  const workspace_folder = hash(uri);
-  const metadata: MixpanelMetadata = { distinct_id, workspace_folder };
-
   const { diagnostics, policy_stats, resource_block_stats } = event;
 
-  const diagnosticStats = new DiagnosticStats();
-  recordDiagnosticStats(diagnosticStats, diagnostics);
-
-  const loadEvent: MixpanelEvent = {
-    event: loadEventName,
-    properties: {
-      ...diagnosticStats,
-      ...policy_stats,
-      ...resource_block_stats,
-      ...metadata,
-    },
-  };
-
-  queue.push(loadEvent);
+  const folder = uri.toString();
+  const existing = purgatory.get(folder);
+  const diagnosticStats = existing ? existing[1] : new DiagnosticStats();
+  compileDiagnostics(diagnosticStats, diagnostics);
+  purgatory.set(folder, [
+    { ...policy_stats, ...resource_block_stats },
+    diagnosticStats,
+  ]);
 }
