@@ -2,6 +2,7 @@
 
 import { join } from 'path';
 
+import { debounce } from 'lodash';
 import {
   ExtensionContext,
   languages,
@@ -19,7 +20,12 @@ import {
   TransportKind,
 } from 'vscode-languageclient/node';
 
-import { enqueueEvent, flushQueue, TELEMETRY_INTERVAL } from './telemetry';
+import {
+  enqueueEvent,
+  flushQueue,
+  TELEMETRY_INTERVAL,
+  TelemetryRecorder,
+} from './telemetry';
 
 // TODO(gj): think about what it would take to support `load_str()` via
 // https://code.visualstudio.com/api/language-extensions/embedded-languages
@@ -44,7 +50,7 @@ const outputChannel = window.createOutputChannel(extensionName);
 //
 // TODO(gj): handle 'Untitled' docs like this example?
 // https://github.com/microsoft/vscode-extension-samples/blob/355d5851a8e87301cf814a3d20f3918cb162ff73/lsp-multi-server-sample/client/src/extension.ts#L62-L79
-const clients: Map<string, LanguageClient> = new Map();
+const clients: Map<string, [LanguageClient, TelemetryRecorder]> = new Map();
 
 // TODO(gj): nested workspace folders:
 //     folderA/
@@ -175,9 +181,11 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   };
   const client = new LanguageClient(extensionName, serverOpts, clientOpts);
 
-  context.subscriptions.push(
-    client.onTelemetry(event => enqueueEvent(folder.uri, event))
+  const recordTelemetry = debounce(
+    event => enqueueEvent(folder.uri, event),
+    10_000
   );
+  context.subscriptions.push(client.onTelemetry(recordTelemetry));
 
   // Start client and mark it for cleanup when the extension is deactivated.
   context.subscriptions.push(client.start());
@@ -192,12 +200,17 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   // currently open in VSCode) to the server.
   await openPolarFilesInWorkspaceFolder(folder);
 
-  clients.set(folder.uri.toString(), client);
+  clients.set(folder.uri.toString(), [client, recordTelemetry]);
 }
 
 async function stopClient(folder: string) {
-  const client = clients.get(folder);
-  if (client) await client.stop();
+  const exists = clients.get(folder);
+  if (exists) {
+    const [client, recordTelemetry] = exists;
+    // Try flushing latest event in case one's in the chamber.
+    recordTelemetry.flush();
+    await client.stop();
+  }
   clients.delete(folder);
 }
 
@@ -245,9 +258,15 @@ export async function activate(context: ExtensionContext): Promise<void> {
   // *not* be considered part of the same policy?
 }
 
-export async function deactivate(): Promise<void[]> {
-  // Flush telemetry queue on shutdown.
-  await flushTelemetryEvents();
+export async function deactivate(): Promise<void> {
+  await Promise.all(
+    [...clients.values()].map(([client, recordTelemetry]) => {
+      // Try flushing latest event in case one's in the chamber.
+      recordTelemetry.flush();
+      return client.stop();
+    })
+  );
 
-  return Promise.all([...clients.values()].map(c => c.stop()));
+  // Flush telemetry queue on shutdown.
+  return flushTelemetryEvents();
 }

@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 
+import type { DebouncedFunc } from 'lodash';
 import { env, Uri, workspace } from 'vscode';
 import * as Mixpanel from 'mixpanel';
 import {
@@ -110,6 +111,8 @@ export type TelemetryEvent = {
     cross_resource_shorthand_rules: number;
   };
 };
+
+export type TelemetryRecorder = DebouncedFunc<(event: TelemetryEvent) => void>;
 
 export function enqueueEvent(uri: Uri, event: TelemetryEvent): void {
   if (!telemetryEnabled()) return;
