@@ -53,40 +53,46 @@ function telemetryEnabled() {
   return enabled;
 }
 
-type MixpanelLoadEvent = {
-  event: typeof loadEventName;
-  properties: {
-    diagnostic_count: number;
-    error_count: number;
-    successful: boolean;
-    warning_count: number;
-    [diagnostic_kind: `${string}_count`]: number;
-  };
-} & {
-  properties: TelemetryEvent['policy_stats'] &
-    TelemetryEvent['resource_block_stats'];
-};
+class DiagnosticStats {
+  diagnostic_count: number;
+  error_count: number;
+  load_failure_count: number;
+  load_success_count: number;
+  unknown_diagnostic_count: number;
+  warning_count: number;
+  [diagnostic_code: `${string}_count`]: number;
 
-type MixpanelMetadata = {
-  // One-way hash of VSCode machine ID.
-  distinct_id: string;
-  // One-way hash of workspace folder URI.
-  workspace_id: string;
-};
+  constructor() {
+    this.diagnostic_count = 0;
+    this.error_count = 0;
+    this.load_failure_count = 0;
+    this.load_success_count = 0;
+    this.unknown_diagnostic_count = 0;
+    this.warning_count = 0;
+  }
+}
 
-type MixpanelEvent = { properties: MixpanelMetadata } & MixpanelLoadEvent;
+function recordDiagnosticStats(
+  stats: DiagnosticStats,
+  diagnostics: Diagnostic[]
+) {
+  const errors = diagnostics.filter(d => d.severity === Severity.Error);
+  const warnings = diagnostics.filter(d => d.severity === Severity.Warning);
 
-const queue: MixpanelEvent[] = [];
+  stats.diagnostic_count += diagnostics.length;
+  stats.error_count += errors.length;
+  stats.load_failure_count += errors.length === 0 ? 0 : 1;
+  stats.load_success_count += errors.length === 0 ? 1 : 0;
+  stats.warning_count += warnings.length;
 
-export async function flushQueue(): Promise<void> {
-  if (!telemetryEnabled()) return;
-
-  // Drain all queued events.
-  const events = queue.splice(0);
-
-  if (events.length === 0) return;
-
-  return trackBatch(events);
+  for (const { code } of diagnostics) {
+    if (typeof code !== 'string') {
+      stats.unknown_diagnostic_count++;
+    } else {
+      const count = stats[`${code}_count`] || 0;
+      stats[`${code}_count`] = count + 1;
+    }
+  }
 }
 
 export type TelemetryEvent = {
@@ -112,54 +118,58 @@ export type TelemetryEvent = {
   };
 };
 
+type MixpanelLoadEvent = {
+  event: typeof loadEventName;
+  properties: DiagnosticStats;
+} & {
+  properties: TelemetryEvent['policy_stats'] &
+    TelemetryEvent['resource_block_stats'];
+};
+
+type MixpanelMetadata = {
+  // One-way hash of VSCode machine ID.
+  distinct_id: string;
+  // One-way hash of workspace folder URI.
+  workspace_folder: string;
+};
+
+type MixpanelEvent = { properties: MixpanelMetadata } & MixpanelLoadEvent;
+
+const queue: MixpanelEvent[] = [];
+
+export async function flushQueue(): Promise<void> {
+  if (!telemetryEnabled()) return;
+
+  // Drain all queued events.
+  const events = queue.splice(0);
+
+  if (events.length === 0) return;
+
+  return trackBatch(events);
+}
+
 export type TelemetryRecorder = DebouncedFunc<(event: TelemetryEvent) => void>;
 
 export function enqueueEvent(uri: Uri, event: TelemetryEvent): void {
   if (!telemetryEnabled()) return;
 
-  const workspace_id = hash(uri);
-  const metadata: MixpanelMetadata = { distinct_id, workspace_id };
+  const workspace_folder = hash(uri);
+  const metadata: MixpanelMetadata = { distinct_id, workspace_folder };
 
   const { diagnostics, policy_stats, resource_block_stats } = event;
 
-  const errors = diagnostics.filter(d => d.severity === Severity.Error);
-  const warnings = diagnostics.filter(d => d.severity === Severity.Warning);
+  const diagnosticStats = new DiagnosticStats();
+  recordDiagnosticStats(diagnosticStats, diagnostics);
 
   const loadEvent: MixpanelEvent = {
     event: loadEventName,
     properties: {
-      diagnostic_count: diagnostics.length,
-      error_count: errors.length,
-      successful: errors.length === 0,
-      warning_count: warnings.length,
+      ...diagnosticStats,
       ...policy_stats,
       ...resource_block_stats,
       ...metadata,
     },
   };
-
-  type DiagnosticOccurrences = {
-    unknown_diagnostic_count: number;
-    [diagnostic_code: `${string}_count`]: number;
-  };
-
-  const diagnosticOccurrences: DiagnosticOccurrences = diagnostics
-    .map(({ code }) => code)
-    .reduce(
-      (acc: DiagnosticOccurrences, code) => {
-        if (typeof code !== 'string') {
-          acc.unknown_diagnostic_count++;
-        } else {
-          const count = acc[`${code}_count`] || 0;
-          acc[`${code}_count`] = count + 1;
-        }
-        return acc;
-      },
-      { unknown_diagnostic_count: 0 }
-    );
-
-  // Add tallied-up `diagnosticOccurrences` to `loadEvent.properties` map.
-  loadEvent.properties = { ...loadEvent.properties, ...diagnosticOccurrences };
 
   queue.push(loadEvent);
 }
