@@ -41,7 +41,6 @@ impl PolarError {
             Parse(DuplicateKey { .. }) => "ParseError::DuplicateKey",
             Runtime(Application { .. }) => "RuntimeError::Application",
             Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
-            Runtime(FileLoading { .. }) => "RuntimeError::FileLoading",
             Runtime(IncompatibleBindings { .. }) => "RuntimeError::IncompatibleBindings",
             Runtime(QueryTimeout { .. }) => "RuntimeError::QueryTimeout",
             Runtime(StackOverflow { .. }) => "RuntimeError::StackOverflow",
@@ -54,8 +53,10 @@ impl PolarError {
             }
             Runtime(InvalidRegistration { .. }) => "RuntimeError::InvalidRegistration",
             Runtime(InvalidState { .. }) => "RuntimeError::InvalidState",
+            Runtime(MultipleLoadError) => "RuntimeError::MultipleLoadError",
             Operational(Serialization { .. }) => "OperationalError::Serialization",
             Operational(Unknown) => "OperationalError::Unknown",
+            Validation(FileLoading { .. }) => "ValidationError::FileLoading",
             Validation(InvalidRule { .. }) => "ValidationError::InvalidRule",
             Validation(InvalidRuleType { .. }) => "ValidationError::InvalidRuleType",
             Validation(ResourceBlock { .. }) => "ValidationError::ResourceBlock",
@@ -273,10 +274,6 @@ pub enum RuntimeError {
         /// Option<Term> where the error arose, tracked for lexical context.
         term: Option<Term>,
     },
-    // TODO(gj): consider moving to ValidationError.
-    FileLoading {
-        msg: String,
-    },
     IncompatibleBindings {
         msg: String,
     },
@@ -301,6 +298,7 @@ pub enum RuntimeError {
     InvalidState {
         msg: String,
     },
+    MultipleLoadError,
 }
 
 impl RuntimeError {
@@ -323,12 +321,12 @@ impl RuntimeError {
             // These errors never have context.
             StackOverflow { .. }
             | QueryTimeout { .. }
-            | FileLoading { .. }
             | IncompatibleBindings { .. }
             | DataFilteringFieldMissing { .. }
             | DataFilteringUnsupportedOp { .. }
             | InvalidRegistration { .. }
-            | InvalidState { .. } => None,
+            | InvalidState { .. }
+            | MultipleLoadError => None,
         };
 
         let context = context.map(|(span, source)| Context {
@@ -368,7 +366,6 @@ impl fmt::Display for RuntimeError {
                 writeln!(f, "{}", stack_trace)?;
                 write!(f, "Application error: {}", msg)
             }
-            Self::FileLoading { msg } => write!(f, "Problem loading file: {}", msg),
             Self::IncompatibleBindings { msg } => {
                 write!(f, "Attempted binding was incompatible: {}", msg)
             }
@@ -429,6 +426,7 @@ The expression is: {expr}
             // TODO(gj): move this back to `OperationalError` during The Next Great Diagnostic
             // Refactor.
             Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
+            Self::MultipleLoadError => write!(f, "Cannot load additional Polar code -- all Polar code must be loaded at the same time."),
         }
     }
 }
@@ -467,6 +465,10 @@ impl fmt::Display for OperationalError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationError {
+    FileLoading {
+        source: Source,
+        msg: String,
+    },
     MissingRequiredRule {
         rule_type: Rule,
     },
@@ -541,6 +543,9 @@ impl ValidationError {
                     None
                 }
             }
+
+            // These errors always pertain to a specific file but not to a specific place therein.
+            FileLoading { source, .. } => Some(((0, 0), source.to_owned())),
         };
 
         let context = context.map(|(span, source)| Context {
@@ -558,6 +563,7 @@ impl ValidationError {
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Self::FileLoading { msg, .. } => write!(f, "Problem loading file: {}", msg),
             Self::InvalidRule { rule, msg } => {
                 write!(f, "Invalid rule: {} {}", rule, msg)
             }

@@ -26,7 +26,6 @@ module Oso
     class UnsupportedError < PolarRuntimeError; end
     class PolarTypeError < PolarRuntimeError; end
     class StackOverflowError < PolarRuntimeError; end
-    class FileLoadingError < PolarRuntimeError; end
 
     # Errors originating from this side of the FFI boundary.
 

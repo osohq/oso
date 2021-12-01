@@ -973,4 +973,32 @@ mod tests {
             undeclared_term
         );
     }
+
+    #[wasm_bindgen_test]
+    fn test_file_loading_errors() {
+        let mut pls = new_pls();
+
+        let doc1 = polar_doc("one", "".to_owned());
+        let doc2 = polar_doc("two", "".to_owned());
+        pls.upsert_document(doc1.clone());
+        pls.upsert_document(doc2.clone());
+
+        let diagnostics = pls.reload_kb();
+        let params = diagnostics.get(&doc1.uri).unwrap();
+        assert_eq!(params.uri, doc1.uri);
+        assert_eq!(params.version.unwrap(), doc1.version);
+        assert!(params.diagnostics.is_empty(), "{:?}", params.diagnostics);
+
+        let params = diagnostics.get(&doc2.uri).unwrap();
+        assert_eq!(params.uri, doc2.uri);
+        assert_eq!(params.version.unwrap(), doc2.version);
+        assert_eq!(params.diagnostics.len(), 1, "{:?}", params.diagnostics);
+        let undeclared_term = &params.diagnostics.get(0).unwrap().message;
+        assert_eq!(
+            undeclared_term,
+            &format!("Problem loading file: A file with the same contents as {} named {} has already been loaded.", doc2.uri, doc1.uri),
+            "{}",
+            undeclared_term
+        );
+    }
 }

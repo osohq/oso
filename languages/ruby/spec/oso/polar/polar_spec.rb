@@ -131,8 +131,8 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
     # in the core. We should test this once in the core.
     it 'errors if file is already loaded' do
       expect { subject.load_files([test_file, test_file]) }.to raise_error do |e|
-        expect(e).to be_an Oso::Polar::FileLoadingError
-        expect(e.message).to eq("Problem loading file: File #{test_file} has already been loaded.")
+        expect(e).to be_an Oso::Polar::ValidationError
+        expect(e.message).to start_with "Problem loading file: File #{test_file} has already been loaded."
       end
     end
 
@@ -865,7 +865,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         end
       end)
 
-      expect(subject.get_class_name(Bar)).to be 'Baz'
+      expect(subject.send(:class_to_name, Bar)).to be 'Baz'
     end
 
     it 'can lookup attributes on anonymous classes' do

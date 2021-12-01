@@ -4,7 +4,7 @@ module Oso
   module Polar
     # Polar expression.
     class Expression
-      attr_reader :operator, :args
+      attr_accessor :operator, :args
 
       # @param operator [String]
       # @param args [Array<Object>]

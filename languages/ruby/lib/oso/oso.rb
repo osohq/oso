@@ -5,7 +5,7 @@ require_relative 'polar/polar'
 
 module Oso
   # oso authorization API.
-  class Oso < Polar::Polar # rubocop:disable Metrics/ClassLength
+  class Oso < Polar::Polar
     # Create an Oso instance, which is used to configure and enforce an Oso
     # policy in an app.
     #
@@ -181,57 +181,17 @@ module Oso
     # @param resource_cls The resource being accessed.
     #
     # @return A query for resources accessible to the actor.
-    def authorized_query(actor, action, resource_cls) # rubocop:disable Metrics/MethodLength
-      resource = Polar::Variable.new 'resource'
+    def authorized_query(actor, action, resource_cls)
+      if host.use_new_data_filtering?
 
-      results = query_rule(
-        'allow',
-        actor,
-        action,
-        resource,
-        bindings: { 'resource' => type_constraint(resource, resource_cls) },
-        accept_expression: true
-      )
-
-      results = results.each_with_object([]) do |result, out|
-        result.each do |key, val|
-          out.push({ 'bindings' => { key => host.to_polar(val) } })
+        unless host.types[resource_cls].build_query == ::Oso::Polar::Host::DEFAULT_BUILD_QUERY
+          warn 'Warning: redundant data filtering configuration detected'
         end
+
+        new_authorized_query(actor, action, resource_cls)
+      else
+        old_authorized_query(actor, action, resource_cls)
       end
-
-      ::Oso::Polar::DataFiltering::FilterPlan
-        .parse(self, results, get_class_name(resource_cls))
-        .build_query
-    end
-
-    def authzd_query(actor, action, resource_cls) # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
-      var_name = 'resource'
-      resource = Polar::Variable.new var_name
-
-      partials = query_rule(
-        'allow',
-        actor,
-        action,
-        resource,
-        bindings: { var_name => type_constraint(resource, resource_cls) },
-        accept_expression: true
-      )
-      partials = partials.each_with_object([]) do |result, out|
-        result.each do |key, val|
-          out.push({ 'bindings' => { key => host.to_polar(val) } })
-        end
-      end
-
-      types = host.serialize_types
-      class_name = get_class_name resource_cls
-
-      data_filter = ffi.build_data_filter(types, partials, var_name, class_name)
-      data_filter = ::Oso::Polar::Data::Filter.parse(self, data_filter)
-      data_filter.to_query(host.types)
-    end
-
-    def authzd_resources(actor, action, resource_cls)
-      authzd_query(actor, action, resource_cls).to_a
     end
 
     # Determine the resources of type +resource_cls+ that +actor+
@@ -243,10 +203,15 @@ module Oso
     #
     # @return A list of resources accessible to the actor.
     def authorized_resources(actor, action, resource_cls)
-      q = authorized_query actor, action, resource_cls
-      return [] if q.nil?
+      q = authorized_query(actor, action, resource_cls)
 
-      host.types[get_class_name resource_cls].exec_query[q]
+      if host.use_new_data_filtering?
+        host.adapter.execute_query q
+      elsif q.nil?
+        []
+      else
+        host.types[resource_cls].exec_query[q]
+      end
     end
 
     # Register default values for data filtering query functions.
@@ -257,6 +222,10 @@ module Oso
       host.build_query = build_query if build_query
       host.exec_query = exec_query if exec_query
       host.combine_query = combine_query if combine_query
+    end
+
+    def data_filtering_adapter=(adapter)
+      host.adapter = adapter
     end
   end
 end

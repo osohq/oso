@@ -35,6 +35,15 @@ pub struct Source {
     pub src: String,
 }
 
+impl Source {
+    pub(crate) fn new(filename: Option<&str>, src: &str) -> Self {
+        Self {
+            filename: filename.map(Into::into),
+            src: src.into(),
+        }
+    }
+}
+
 pub struct Sources {
     /// Map from term ID to `Source`.
     sources: HashMap<u64, Source>,
