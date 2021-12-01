@@ -60,7 +60,7 @@
 {{ $isCurrent := .InSection $currentNode }}
 <li data-nav-id="{{.RelPermalink}}" title="{{.Title}}" class="
     pl-2
-    {{ if or (lt $level 2) ($currentNode.InSection .Parent) $isCurrent  }}
+    {{ if or (lt $level 2) ($currentNode.InSection .Parent) $isCurrent }}
     {{ else }}
     hidden
     {{ end }}
@@ -106,10 +106,11 @@
 </li>
 {{ else }}
 {{ $isCurrent := eq .File.UniqueID $currentFileUniqueID }}
+{{ $hide := isset .Params "no_nav" }}
 <li data-nav-id="{{.RelPermalink}}" title="{{.Title}}" class="{{if $isCurrent }}
         active text-primary
         {{ else}}
-        {{ if or (lt $level 2) ($currentNode.InSection .)  }}
+        {{ if and (not $hide) (or (lt $level 2) ($currentNode.InSection .)) }}
         {{ else }}
         hidden
         {{ end }}
