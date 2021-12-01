@@ -11,7 +11,7 @@ use std::sync::{Arc, RwLock, RwLockReadGuard};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
-use rosc::encoder;
+use rosc::{encoder, OscType};
 use rosc::{OscMessage, OscPacket};
 use std::net::{SocketAddrV4, UdpSocket};
 
@@ -949,6 +949,20 @@ impl PolarVirtualMachine {
         self.coaster_trace.max_depth = std::cmp::max(self.coaster_trace.max_depth, depth);
         self.coaster_trace.events.push(event);
         self.coaster_trace.depths.push(depth);
+    }
+
+    fn send_osc_event(&self, name: &str) {
+        if self.osc_source.is_none() || self.osc_destination.is_none() {
+            return;
+        }
+        let query_depth = self.queries.len();
+        let sock = UdpSocket::bind(self.osc_source.unwrap()).unwrap();
+        let msg = encoder::encode(&OscPacket::Message(OscMessage {
+            addr: format!("/{}", name),
+            args: vec![OscType::Int(query_depth)],
+        }))
+        .unwrap();
+        sock.send_to(&msg, "172.30.42.20:9100").ok();
     }
 }
 
