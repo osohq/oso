@@ -3,11 +3,16 @@ use std::collections::BTreeMap;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 use std::rc::Rc;
+use std::str::FromStr;
 use std::string::ToString;
 use std::sync::{Arc, RwLock, RwLockReadGuard};
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
+
+use rosc::encoder;
+use rosc::{OscMessage, OscPacket};
+use std::net::{SocketAddrV4, UdpSocket};
 
 use super::visitor::{walk_term, Visitor};
 use crate::bindings::{
@@ -264,6 +269,10 @@ pub struct PolarVirtualMachine {
 
     /// Output messages.
     pub messages: MessageQueue,
+
+    /// OSC outputs
+    osc_source: Option<SocketAddrV4>,
+    osc_destination: Option<SocketAddrV4>,
 }
 
 impl Default for PolarVirtualMachine {
@@ -310,6 +319,19 @@ impl PolarVirtualMachine {
             .iter()
             .flat_map(|pl| pl.split(','))
             .collect::<Vec<&str>>();
+
+        let osc_host_addr = if let Ok(addr) = std::env::var("OSC_HOST") {
+            SocketAddrV4::from_str(&addr).ok()
+        } else {
+            None
+        };
+
+        let osc_client_addr = if let Ok(addr) = std::env::var("OSC_CLIENT") {
+            SocketAddrV4::from_str(&addr).ok()
+        } else {
+            None
+        };
+
         let mut vm = Self {
             goals: GoalStack::new_reversed(goals),
             binding_manager: BindingManager::new(),
@@ -337,6 +359,8 @@ impl PolarVirtualMachine {
             query_contains_partial: false,
             inverting: false,
             messages,
+            osc_source: osc_host_addr,
+            osc_destination: osc_client_addr,
         };
         vm.bind_constants(constants);
         vm.query_contains_partial();
@@ -515,6 +539,8 @@ impl PolarVirtualMachine {
                         },
                         &[],
                     );
+
+                    self.send_osc_event(&format!("rule/{}", rule.name));
                 }
                 self.trace.push(trace.clone());
                 self.maybe_break(DebugEvent::Rule)?;
@@ -887,6 +913,19 @@ impl PolarVirtualMachine {
             );
         }
         Ok(())
+    }
+
+    fn send_osc_event(&self, name: &str) {
+        if self.osc_source.is_none() || self.osc_destination.is_none() {
+            return;
+        }
+        let sock = UdpSocket::bind(self.osc_source.unwrap()).unwrap();
+        let msg = encoder::encode(&OscPacket::Message(OscMessage {
+            addr: format!("/{}", name),
+            args: vec![],
+        }))
+        .unwrap();
+        sock.send_to(&msg, "172.30.42.20:9100").ok();
     }
 }
 
@@ -1440,6 +1479,7 @@ impl PolarVirtualMachine {
             }) if args.len() < 2 => (),
             _ => {
                 self.log_with(|| format!("QUERY: {}", term.to_polar()), &[term]);
+                self.send_osc_event("query");
             }
         };
 
