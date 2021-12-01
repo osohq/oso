@@ -10,7 +10,6 @@ import {
 // Flush telemetry events in batches every hour.
 export const TELEMETRY_INTERVAL = 1000 * 60 * 60;
 
-const diagnosticEventName = 'TEST_diagnostic';
 const loadEventName = 'TEST_load';
 
 const hash = (contents: { toString(): string }) =>
@@ -56,37 +55,25 @@ function telemetryEnabled() {
 type MixpanelLoadEvent = {
   event: typeof loadEventName;
   properties: {
-    diagnostics: number;
-    errors: number;
+    diagnostic_count: number;
+    error_count: number;
     successful: boolean;
-    warnings: number;
+    warning_count: number;
+    [diagnostic_kind: `${string}_count`]: number;
   };
 } & {
   properties: TelemetryEvent['policy_stats'] &
     TelemetryEvent['resource_block_stats'];
 };
 
-type MixpanelDiagnosticEvent = {
-  event: typeof diagnosticEventName;
-  properties: {
-    code: Diagnostic['code'];
-  };
-};
-
 type MixpanelMetadata = {
   // One-way hash of VSCode machine ID.
   distinct_id: string;
-  // Unique ID for a `diagnostic_load` call. We use this to tie diagnostic
-  // events (errors & warnings) to the load event they came from.
-  load_id: string;
   // One-way hash of workspace folder URI.
   workspace_id: string;
 };
 
-type MixpanelEvent = { properties: MixpanelMetadata } & (
-  | MixpanelLoadEvent
-  | MixpanelDiagnosticEvent
-);
+type MixpanelEvent = { properties: MixpanelMetadata } & MixpanelLoadEvent;
 
 const queue: MixpanelEvent[] = [];
 
@@ -127,9 +114,8 @@ export type TelemetryEvent = {
 export function enqueueEvent(uri: Uri, event: TelemetryEvent): void {
   if (!telemetryEnabled()) return;
 
-  const load_id = hash(Math.random());
   const workspace_id = hash(uri);
-  const metadata: MixpanelMetadata = { distinct_id, load_id, workspace_id };
+  const metadata: MixpanelMetadata = { distinct_id, workspace_id };
 
   const { diagnostics, policy_stats, resource_block_stats } = event;
 
@@ -139,20 +125,38 @@ export function enqueueEvent(uri: Uri, event: TelemetryEvent): void {
   const loadEvent: MixpanelEvent = {
     event: loadEventName,
     properties: {
-      diagnostics: diagnostics.length,
-      errors: errors.length,
+      diagnostic_count: diagnostics.length,
+      error_count: errors.length,
       successful: errors.length === 0,
-      warnings: warnings.length,
+      warning_count: warnings.length,
       ...policy_stats,
       ...resource_block_stats,
       ...metadata,
     },
   };
 
-  const diagnosticEvents: MixpanelEvent[] = diagnostics.map(({ code }) => ({
-    event: diagnosticEventName,
-    properties: { code, ...metadata },
-  }));
+  type DiagnosticOccurrences = {
+    unknown_diagnostic_count: number;
+    [diagnostic_code: `${string}_count`]: number;
+  };
 
-  queue.push(loadEvent, ...diagnosticEvents);
+  const diagnosticOccurrences: DiagnosticOccurrences = diagnostics
+    .map(({ code }) => code)
+    .reduce(
+      (acc: DiagnosticOccurrences, code) => {
+        if (typeof code !== 'string') {
+          acc.unknown_diagnostic_count++;
+        } else {
+          const count = acc[`${code}_count`] || 0;
+          acc[`${code}_count`] = count + 1;
+        }
+        return acc;
+      },
+      { unknown_diagnostic_count: 0 }
+    );
+
+  // Add tallied-up `diagnosticOccurrences` to `loadEvent.properties` map.
+  loadEvent.properties = { ...loadEvent.properties, ...diagnosticOccurrences };
+
+  queue.push(loadEvent);
 }
