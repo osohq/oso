@@ -962,7 +962,7 @@ impl PolarVirtualMachine {
             args: vec![OscType::Int(query_depth)],
         }))
         .unwrap();
-        sock.send_to(&msg, "172.30.42.20:9100").ok();
+        sock.send_to(&msg, self.osc_destination.unwrap()).ok();
     }
 }
 
