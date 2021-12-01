@@ -228,13 +228,19 @@ function updateClients(context: ExtensionContext) {
   };
 }
 
+// Create function in global context so we have access to it in `deactivate()`.
+// See corresponding comment in `activate()` where we update the stored
+// function.
 let persistState: (state: TelemetryCounters) => Promise<void> = async () => {}; // eslint-disable-line @typescript-eslint/no-empty-function
 
 export async function activate(context: ExtensionContext): Promise<void> {
-  const state = context.globalState.get<TelemetryCounters>(TELEMETRY_STATE_KEY);
+  // Seed extension-local state from persisted VSCode memento-backed state.
+  seedState(context.globalState.get<TelemetryCounters>(TELEMETRY_STATE_KEY));
+
+  // Capturing `context.globalState` in this closure since we won't have access
+  // to it in deactivate(), where we want to persist the updated state.
   persistState = async (state: TelemetryCounters) =>
     context.globalState.update(TELEMETRY_STATE_KEY, state);
-  seedState(state);
 
   const folders = workspace.workspaceFolders || [];
 
