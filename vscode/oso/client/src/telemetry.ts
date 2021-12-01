@@ -10,11 +10,15 @@ import {
   DiagnosticSeverity as Severity,
 } from 'vscode-languageclient';
 
+const ONE_HOUR_IN_MS = 1_000 * 60 * 60;
+const ONE_DAY_IN_MS = ONE_HOUR_IN_MS * 24;
+const ONE_MONTH_IN_MS = ONE_DAY_IN_MS * 30;
+
 // Flush telemetry events in batches every hour.
-export const TELEMETRY_INTERVAL = 1000 * 10;
+export const TELEMETRY_INTERVAL = ONE_HOUR_IN_MS;
 export const TELEMETRY_STATE_KEY = 'telemetry.state';
-export const TELEMETRY_DAILY_MAXIMUM = 2;
-export const TELEMETRY_MONTHLY_MAXIMUM = 5;
+export const TELEMETRY_DAILY_MAXIMUM = 60;
+export const TELEMETRY_MONTHLY_MAXIMUM = 3_000;
 export type TelemetryCounters = {
   monthly: {
     reset: number;
@@ -30,8 +34,6 @@ export const counters: TelemetryCounters = {
   monthly: { count: 0, reset: 0 },
   daily: { count: 0, reset: 0 },
 };
-const ONE_DAY_IN_MS = 1000 * 30;
-const ONE_MONTH_IN_MS = ONE_DAY_IN_MS * 2;
 
 export const sendTelemetryEvents: (log: OutputChannel) => Promise<void> =
   async (log: OutputChannel) => {

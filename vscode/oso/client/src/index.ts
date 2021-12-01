@@ -187,7 +187,7 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
 
   const recordTelemetry = debounce(
     event => recordEvent(folder.uri, event),
-    100
+    1_000
   );
   context.subscriptions.push(client.onTelemetry(recordTelemetry));
 
