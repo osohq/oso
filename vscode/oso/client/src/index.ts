@@ -21,13 +21,13 @@ import {
 } from 'vscode-languageclient/node';
 
 import {
+  counters,
   recordEvent,
-  sendEvents,
+  seedState,
+  sendTelemetryEvents,
   TelemetryCounters,
   TelemetryRecorder,
   TELEMETRY_STATE_KEY,
-  TELEMETRY_MONTHLY_MAXIMUM,
-  TELEMETRY_DAILY_MAXIMUM,
   TELEMETRY_INTERVAL,
 } from './telemetry';
 
@@ -229,65 +229,21 @@ function updateClients(context: ExtensionContext) {
 }
 
 let persistState: (state: TelemetryCounters) => Promise<void> = async () => {}; // eslint-disable-line @typescript-eslint/no-empty-function
-const counters: TelemetryCounters = {
-  monthly: { count: 0, reset: 0 },
-  daily: { count: 0, reset: 0 },
-};
-const ONE_DAY_IN_MS = 1000 * 60 * 60 * 24;
-const ONE_MONTH_IN_MS = ONE_DAY_IN_MS * 30;
-const sendTelemetryEvents = async () => {
-  const now = Date.now();
-
-  // If a month has elapsed, reset both counters and timestamps.
-  if (now > counters.monthly.reset + ONE_MONTH_IN_MS) {
-    counters.monthly = { reset: now, count: 0 };
-    counters.daily = { reset: now, count: 0 };
-  }
-
-  // If a day has elapsed, reset the daily counter and timestamp.
-  if (now > counters.daily.reset + ONE_DAY_IN_MS) {
-    counters.daily = { reset: now, count: 0 };
-  }
-
-  // If at or over monthly count and *also* at or over daily count, no-op.
-  if (
-    counters.monthly.count >= TELEMETRY_MONTHLY_MAXIMUM &&
-    counters.daily.count >= TELEMETRY_DAILY_MAXIMUM
-  )
-    return;
-
-  try {
-    const flushedEvents = await sendEvents(outputChannel);
-    counters.monthly.count += flushedEvents;
-    counters.daily.count += flushedEvents;
-  } catch (e) {
-    outputChannel.appendLine(`Caught error while sending telemetry: ${e}`);
-  }
-};
 
 export async function activate(context: ExtensionContext): Promise<void> {
   const state = context.globalState.get<TelemetryCounters>(TELEMETRY_STATE_KEY);
   persistState = async (state: TelemetryCounters) =>
     context.globalState.update(TELEMETRY_STATE_KEY, state);
-
-  if (state === undefined) {
-    // Initialize monthly & daily reset timestamps; counters will already be
-    // initialized to 0.
-    const now = Date.now();
-    counters.monthly.reset = now;
-    counters.daily.reset = now;
-  } else {
-    // Initialize monthly & daily reset timestamps & counters from memento
-    // state.
-    counters.monthly = state.monthly;
-    counters.daily = state.daily;
-  }
+  seedState(state);
 
   const folders = workspace.workspaceFolders || [];
 
   // Send telemetry events every `TELEMETRY_INTERVAL` ms. We don't `await` the
   // `sendTelemetryEvents` promise because nothing depends on its outcome.
-  const interval = setInterval(sendTelemetryEvents, TELEMETRY_INTERVAL); // eslint-disable-line @typescript-eslint/no-misused-promises
+  const interval = setInterval(
+    () => sendTelemetryEvents(outputChannel), // eslint-disable-line @typescript-eslint/no-misused-promises
+    TELEMETRY_INTERVAL
+  );
   // Clear interval when extension is deactivated.
   context.subscriptions.push({ dispose: () => clearInterval(interval) });
 
@@ -321,7 +277,7 @@ export async function deactivate(): Promise<void> {
   );
 
   // Flush telemetry queue on shutdown.
-  await sendTelemetryEvents();
+  await sendTelemetryEvents(outputChannel);
 
   // Persist monthly/daily counter/timestamp state.
   return persistState(counters);

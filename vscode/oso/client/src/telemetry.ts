@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+
 import { inspect } from 'util';
 
 import { createHash } from 'crypto';
@@ -25,6 +27,59 @@ export type TelemetryCounters = {
     count: number;
   };
 };
+
+export const counters: TelemetryCounters = {
+  monthly: { count: 0, reset: 0 },
+  daily: { count: 0, reset: 0 },
+};
+const ONE_DAY_IN_MS = 1000 * 60 * 60 * 24;
+const ONE_MONTH_IN_MS = ONE_DAY_IN_MS * 30;
+
+export const sendTelemetryEvents: (log: OutputChannel) => Promise<void> =
+  async (log: OutputChannel) => {
+    const now = Date.now();
+
+    // If a month has elapsed, reset both counters and timestamps.
+    if (now > counters.monthly.reset + ONE_MONTH_IN_MS) {
+      counters.monthly = { reset: now, count: 0 };
+      counters.daily = { reset: now, count: 0 };
+    }
+
+    // If a day has elapsed, reset the daily counter and timestamp.
+    if (now > counters.daily.reset + ONE_DAY_IN_MS) {
+      counters.daily = { reset: now, count: 0 };
+    }
+
+    // If at or over monthly count and *also* at or over daily count, no-op.
+    if (
+      counters.monthly.count >= TELEMETRY_MONTHLY_MAXIMUM &&
+      counters.daily.count >= TELEMETRY_DAILY_MAXIMUM
+    )
+      return;
+
+    try {
+      const flushedEvents = await sendEvents(log);
+      counters.monthly.count += flushedEvents;
+      counters.daily.count += flushedEvents;
+    } catch (e) {
+      log.appendLine(`Caught error while sending telemetry: ${e}`);
+    }
+  };
+
+export function seedState(state?: TelemetryCounters): void {
+  if (state === undefined) {
+    // Initialize monthly & daily reset timestamps; counters will already be
+    // initialized to 0.
+    const now = Date.now();
+    counters.monthly.reset = now;
+    counters.daily.reset = now;
+  } else {
+    // Initialize monthly & daily reset timestamps & counters from memento
+    // state.
+    counters.monthly = state.monthly;
+    counters.daily = state.daily;
+  }
+}
 
 const loadEventName = 'TEST_load';
 
