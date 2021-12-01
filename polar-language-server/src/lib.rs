@@ -273,12 +273,13 @@ impl PolarLanguageServer {
         use polar_core::parser::{parse_lines, Line};
 
         #[derive(Default, Serialize)]
-        struct GeneralStats {
+        struct PolicyStats {
             inline_queries: usize,
             longhand_rules: usize,
             polar_chars: usize,
             polar_files: usize,
             rule_types: usize,
+            total_rules: usize,
         }
 
         #[derive(Default, Serialize)]
@@ -297,7 +298,7 @@ impl PolarLanguageServer {
         #[derive(Default, Serialize)]
         struct TelemetryEvent<'a> {
             diagnostics: Vec<&'a Diagnostic>,
-            general_stats: GeneralStats,
+            policy_stats: PolicyStats,
             resource_block_stats: ResourceBlockStats,
         }
 
@@ -309,7 +310,7 @@ impl PolarLanguageServer {
 
         let mut event = TelemetryEvent {
             diagnostics,
-            general_stats: GeneralStats {
+            policy_stats: PolicyStats {
                 polar_chars,
                 polar_files: self.documents.len(),
                 ..Default::default()
@@ -321,7 +322,7 @@ impl PolarLanguageServer {
         let lines = lines.filter_map(|d| parse_lines(0, &d.text).ok()).flatten();
         for line in lines {
             match line {
-                Line::Query(_) => event.general_stats.inline_queries += 1,
+                Line::Query(_) => event.policy_stats.inline_queries += 1,
                 Line::ResourceBlock {
                     keyword,
                     productions,
@@ -364,6 +365,7 @@ impl PolarLanguageServer {
                             }
                             Production::ShorthandRule(_, (_, relation)) => {
                                 event.resource_block_stats.shorthand_rules += 1;
+                                event.policy_stats.total_rules += 1;
 
                                 if relation.is_some() {
                                     event.resource_block_stats.cross_resource_shorthand_rules += 1;
@@ -372,8 +374,11 @@ impl PolarLanguageServer {
                         }
                     }
                 }
-                Line::RuleType(_) => event.general_stats.rule_types += 1,
-                Line::Rule(_) => event.general_stats.longhand_rules += 1,
+                Line::RuleType(_) => event.policy_stats.rule_types += 1,
+                Line::Rule(_) => {
+                    event.policy_stats.longhand_rules += 1;
+                    event.policy_stats.total_rules += 1;
+                }
             }
         }
 
