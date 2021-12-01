@@ -20,14 +20,14 @@ will be displayed inline in the editor and in the **Problems** pane.
 
 [60813]: https://github.com/microsoft/vscode/issues/60813
 
-## Telemetry
+## Metrics
 
-The extension collects **non-identifiable** telemetry data that we use to
-improve Oso. We collect data into un-timestamped batches instead of sending it
-on every policy load since we care about aggregate statistics; not tracking
-your personal development behavior. **We will never sell this data**.
+The extension collects **non-identifiable** metrics that we use to improve Oso.
+We collect data into un-timestamped batches instead of sending it on every
+policy load since we care about aggregate statistics, not tracking your
+personal development behavior. **We will never sell this data**.
 
 For more info on exactly what is tracked and why, see [this page][docs] in the
 docs.
 
-[docs]: https://docs.osohq.com/reference/tooling/ide/telemetry.html
+[docs]: https://docs.osohq.com/reference/tooling/ide/metrics.html
