@@ -17,8 +17,8 @@ const ONE_MONTH_IN_MS = ONE_DAY_IN_MS * 30;
 // Flush telemetry events in batches every hour.
 export const TELEMETRY_INTERVAL = ONE_HOUR_IN_MS;
 export const TELEMETRY_STATE_KEY = 'telemetry.state';
-export const TELEMETRY_DAILY_MAXIMUM = 60;
-export const TELEMETRY_MONTHLY_MAXIMUM = 3_000;
+const TELEMETRY_DAILY_MAXIMUM = 60;
+const TELEMETRY_MONTHLY_MAXIMUM = 3_000;
 export type TelemetryCounters = {
   monthly: {
     reset: number;
@@ -162,7 +162,7 @@ function compileDiagnostics(stats: DiagnosticStats, diagnostics: Diagnostic[]) {
   }
 }
 
-export type TelemetryEvent = {
+type TelemetryEvent = {
   diagnostics: Diagnostic[];
   policy_stats: {
     inline_queries: number;
@@ -204,7 +204,7 @@ type MixpanelEvent = { properties: MixpanelMetadata } & MixpanelLoadEvent;
 
 const purgatory: Map<string, [LoadStats, DiagnosticStats]> = new Map();
 
-export async function sendEvents(): Promise<number> {
+async function sendEvents(): Promise<number> {
   if (!telemetryEnabled()) return 0;
 
   // Drain all queued events, one for each workspace folder.
