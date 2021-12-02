@@ -28,11 +28,15 @@ unsafe impl GlobalAlloc for Allocator {
             eprintln!("A {:x} {}", ptr as usize, size);
             let frame = bt
                 .split('\n')
-                .skip_while(|f| !f.contains("polar_core::") || f.contains("polar_core::allocator"))
+                .skip_while(|f| {
+                    !(f.contains("polar_core::") || f.contains("polar::"))
+                        || f.contains("polar_core::allocator")
+                })
                 .take(2)
                 .collect::<Vec<&str>>()
                 .join("\n");
             eprintln!("{}", frame);
+            // eprintln!("{}", bt);
         }
         NESTED_ALLOCS.fetch_sub(1, Ordering::SeqCst);
         ptr
