@@ -1,6 +1,7 @@
 from datetime import time
 import math
 import os
+import gc
 
 from polar.exceptions import PolarRuntimeError, UnrecognizedEOF
 from oso import Oso, OsoError, Variable
@@ -9,14 +10,17 @@ from polar.ffi import mem_allocated
 print("Allocated: ", mem_allocated())
 oso = Oso()
 print("Allocated: ", mem_allocated())
-oso.ffi_polar.__ddel__()
+del oso
+gc.collect()
 
 print("Allocated: ", mem_allocated())
 
 oso = Oso()
 try:
     oso.load_str("test()")
-except:
+except OsoError as e:
+    print(e)
+    del e
     pass
 
 # # Application class with default kwargs constructor, registered with the
@@ -144,8 +148,9 @@ except:
 #     exception_thrown = True
 
 # assert exception_thrown
-
+gc.collect()
 print("Allocated: ", mem_allocated())
-oso.ffi_polar.__ddel__()
+del oso
+gc.collect()
 
 print("Allocated: ", mem_allocated())

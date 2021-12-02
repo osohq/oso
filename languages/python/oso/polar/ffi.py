@@ -35,7 +35,7 @@ class Polar:
     def __init__(self):
         self.ptr = lib.polar_new()
 
-    def __ddel__(self):
+    def __del__(self):
         print("Freeing polar")
         lib.polar_free(self.ptr)
 
