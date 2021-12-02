@@ -139,10 +139,10 @@ class Query:
         answer = 1 if answer else 0
         self.check_result(lib.polar_question_result(self.ptr, call_id, answer))
 
-    def application_error(self, message):
+    def application_error(self, call_id, message):
         """Pass an error back to polar to get stack trace and other info."""
         message = to_c_str(message)
-        self.check_result(lib.polar_application_error(self.ptr, message))
+        self.check_result(lib.polar_application_error(self.ptr, call_id, message))
 
     def next_event(self) -> str:
         event = lib.polar_next_query_event(self.ptr)

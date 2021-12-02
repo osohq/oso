@@ -5,7 +5,7 @@ use crate::vm::PolarVirtualMachine;
 use crate::messages::Message;
 use crate::runtime::Host;
 use crate::kb::KnowledgeBase;
-use std::sync::{Mutex, Arc};
+use std::sync::{Mutex, Arc, MutexGuard};
 use std::cell::Cell;
 
 pub struct AsyncVm {
@@ -19,9 +19,13 @@ impl AsyncVm {
         Self { vm: Mutex::new(vm), host, sync_result: Cell::new(None) }
     }
 
+    pub fn vm(&self) -> MutexGuard<PolarVirtualMachine> {
+        self.vm.lock().unwrap()
+    }
+
     pub fn with_kb<F, R>(&self, f: F) -> R
     where F: FnOnce(&KnowledgeBase) -> R {
-        f(&self.vm.lock().unwrap().kb())
+        f(&self.vm().kb())
     }
 
     pub fn bind(&self, var: &Symbol, val: Term) -> Result<(), crate::error::RuntimeError> {
@@ -61,7 +65,7 @@ impl AsyncVm {
                 MakeExternal { instance_id, constructor } => self.host.make_external(instance_id, constructor).await,
                 ExternalCall { call_id, instance, attribute, args, kwargs } => {
                     let result = self.host.external_call(call_id, instance, attribute, args, kwargs).await;
-                    self.vm.lock().unwrap().external_call_result(call_id, result.unwrap()).unwrap();
+                    self.vm.lock().unwrap().external_call_result(call_id, result?).unwrap();
                 },
                 ExternalIsa { call_id, instance, class_tag } => {
                     let result = self.host.external_isa(call_id, instance, class_tag).await;

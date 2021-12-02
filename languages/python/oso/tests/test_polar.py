@@ -445,7 +445,6 @@ Type error: can only use `in` on an iterable value, this is Number(Integer(2)) a
     )
 
 
-@pytest.mark.xfail(reason="app error")
 def test_lookup_errors(polar, query):
     class Foo:
         def foo(self):

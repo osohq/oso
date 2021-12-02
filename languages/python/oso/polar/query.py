@@ -125,8 +125,8 @@ class Query:
             if attr is None:
                 attr = getattr(instance, attribute)
         except AttributeError as e:
-            self.ffi_query.application_error(str(e))
-            self.ffi_query.call_result(call_id, None)
+            self.ffi_query.application_error(call_id, str(e))
+            # self.ffi_query.call_result(call_id, None)
             return
         if (
             callable(attr) and not data["args"] is None
@@ -158,17 +158,18 @@ class Query:
         self.ffi_query.question_result(data["call_id"], answer)
 
     def handle_external_isa_with_path(self, data):
+        call_id = data["call_id"]
         base_tag = data["base_tag"]
         path = data["path"]
         class_tag = data["class_tag"]
         try:
             answer = self.host.isa_with_path(base_tag, path, class_tag)
-            self.ffi_query.question_result(data["call_id"], answer)
+            self.ffi_query.question_result(call_id, answer)
         except AttributeError as e:
             # TODO(gj): make sure we are printing but not failing on receipt of
             # this error in core.
-            self.ffi_query.application_error(str(e))
-            self.ffi_query.question_result(data["call_id"], False)
+            self.ffi_query.application_error(call_id, str(e))
+            self.ffi_query.question_result(call_id, False)
 
     def handle_external_is_subspecializer(self, data):
         instance_id = data["instance_id"]

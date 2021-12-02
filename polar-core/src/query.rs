@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
+use crate::error::RuntimeError;
 use crate::runtime::Host;
+use crate::traces::Node;
 
 use super::error::PolarResult;
 use super::events::*;
@@ -82,9 +84,14 @@ impl Query {
         self.host.external_question_result(call_id, result)
     }
 
-    pub fn application_error(&mut self, message: String) -> PolarResult<()> {
-        self.host.application_error(message);
-        Ok(())
+    pub fn application_error(&mut self, call_id: u64, msg: String) -> PolarResult<()> {
+        let vm = self.vm.vm();
+            let term = match vm.trace.last().map(|t| t.node.clone()) {
+                Some(Node::Term(t)) => Some(t),
+                _ => None,
+            };
+            let stack_trace = vm.stack_trace();
+        self.host.application_error(call_id, RuntimeError::Application { msg, stack_trace, term })
     }
 
     pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {

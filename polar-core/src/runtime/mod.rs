@@ -37,23 +37,24 @@ pub struct Host {
 #[derive(Debug)]
 enum ExternalValue {
     Term(ExternalResult<Option<Term>>),
-    Boolean(ExternalResult<bool>)
+    Boolean(ExternalResult<bool>),
+    Error(RuntimeError),
 }
 
 impl ExternalValue {
     fn to_term(self) -> ExternalResult<Option<Term>> {
-        if let ExternalValue::Term(e) = self {
-            e
-        } else {
-            panic!("Not term.")
+        match self {
+            Self::Term(e) => e,
+            Self::Boolean(_) => panic!("Not term."),
+            Self::Error(e) => Err(e),
         }
     }
 
     fn to_bool(self) -> ExternalResult<bool> {
-        if let ExternalValue::Boolean(e) = self {
-            e
-        } else {
-            panic!("Not bool.")
+        match self {
+            Self::Term(_) => panic!("Not bool."),
+            Self::Boolean(e) => e,
+            Self::Error(e) => Err(e),
         }
     }
 }
@@ -61,7 +62,6 @@ impl ExternalValue {
 #[derive(Debug)]
 struct HostState {
     results: HashMap<CallId, Sender<ExternalValue>>,
-    application_error: Option<String>,
     messages: VecDeque<Message>,
     event_rx: Receiver<QueryEvent>,
     event_tx: Sender<QueryEvent>
@@ -83,7 +83,6 @@ impl Host {
 
         let state = HostState {
             results: HashMap::default(),
-            application_error: Default::default(),
             messages: Default::default(),
             event_rx: rx,
             event_tx: tx,
@@ -205,8 +204,10 @@ impl Host {
         Ok(())
     }
 
-    pub fn application_error(&self, _message: String) {
-        unimplemented!("Not handling these gracefully right now.")
+    pub fn application_error(&self, call_id: u64, e: RuntimeError) -> PolarResult<()> {
+        let sender = self.state().results.remove(&call_id).unwrap();
+        sender.try_send(ExternalValue::Error(e)).unwrap();
+        Ok(())
     }
 
     pub fn next_event(&self) -> Option<PolarResult<QueryEvent>> {

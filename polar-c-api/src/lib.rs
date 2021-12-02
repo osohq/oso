@@ -269,13 +269,14 @@ pub extern "C" fn polar_question_result(
 #[no_mangle]
 pub extern "C" fn polar_application_error(
     query_ptr: *mut Query,
+    call_id: u64,
     message: *mut c_char,
 ) -> *mut CResult<c_void> {
     ffi_try!({
         let query = unsafe { ffi_ref!(query_ptr) };
         let s = unsafe { ffi_string!(message) }.to_string();
 
-        query.application_error(s)
+        query.application_error(call_id, s)
     })
 }
 
