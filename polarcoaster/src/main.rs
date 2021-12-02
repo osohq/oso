@@ -102,7 +102,7 @@ fn main() {
     }
 
     let (mut rl, thread) = raylib::init()
-        .size(640, 480)
+        .size(window_width as i32, window_height as i32)
         .title("Hello, World")
         .build();
 
@@ -110,7 +110,7 @@ fn main() {
     let mut cart_to = 1;
     let mut cart_progress: f32 = 0.0;
 
-    let time_per_node = 0.5;
+    let time_per_node = 1.5;
     let mut last_t = 0.0;
 
     while !rl.window_should_close() {
@@ -155,10 +155,17 @@ fn main() {
             y: 15.0
         };
         d.draw_circle_v(cart_pos, 5.0, Color::BLUE);
-        //d.draw_rectangle_v(cart_pos-(cart_size/2.0), cart_size, Color::BLUE);
 
-
-
+        let event = &trace.events[from_node];
+        let text = match event {
+            TraceEvent::Query { term } => {
+                term.to_string()
+            }
+            TraceEvent::Rule { rule } => {
+                rule.to_string()
+            }
+        };
+        d.draw_text(&text, 12,12,18,Color::BLACK);
 
         //d.draw_text("Hello, world!", 12, 12, 20, Color::BLACK);
         //d.draw_rectangle(center_x-half_cs*scale,center_y-half_cs*scale,coaster_size*scale,coaster_size*scale, Color::RED);
