@@ -1,7 +1,6 @@
 use crate::counter::Counter;
 use crate::error::RuntimeError;
 use crate::events::QueryEvent;
-use crate::runnable::Runnable;
 use crate::terms::{Operation, Operator, Pattern, Symbol, Term, Value};
 
 use std::collections::HashSet;
@@ -169,7 +168,7 @@ impl IsaConstraintCheck {
     }
 }
 
-impl Runnable for IsaConstraintCheck {
+impl IsaConstraintCheck {
     fn run(&mut self, counter: Option<&mut Counter>) -> Result<QueryEvent, RuntimeError> {
         if let Some(result) = self.result.take() {
             if result {
@@ -212,9 +211,5 @@ impl Runnable for IsaConstraintCheck {
 
         self.result = Some(answer);
         Ok(())
-    }
-
-    fn clone_runnable(&self) -> Box<dyn Runnable> {
-        Box::new(self.clone())
     }
 }

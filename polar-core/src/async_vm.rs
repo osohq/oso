@@ -1,12 +1,11 @@
 use crate::counter::Counter;
 use crate::events::QueryEvent;
-use crate::runnable::Runnable;
 use crate::terms::{Term, Symbol};
 use crate::vm::PolarVirtualMachine;
 use crate::messages::Message;
 use crate::runtime::Host;
 use crate::kb::KnowledgeBase;
-use std::sync::{RwLockReadGuard, Mutex, Arc};
+use std::sync::{Mutex, Arc};
 use std::cell::Cell;
 
 pub struct AsyncVm {
@@ -53,7 +52,7 @@ impl AsyncVm {
             };
             eprintln!("async event {:?}", ev);
             match ev {
-                None | Done { .. } | Run { .. } | Result { .. } => {
+                None | Done { .. } | Result { .. } => {
                     self.sync_result.set(Some(Ok(ev)));
                     eprintln!("done");
                     return Ok(());

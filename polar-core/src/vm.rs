@@ -28,7 +28,6 @@ use crate::numerics::*;
 use crate::partial::{simplify_bindings_opt, simplify_partial, sub_this, IsaConstraintCheck};
 use crate::rewrites::Renamer;
 use crate::rules::*;
-use crate::runnable::Runnable;
 use crate::sources::*;
 use crate::terms::*;
 use crate::traces::*;
@@ -117,11 +116,6 @@ pub enum Goal {
     Unify {
         left: Term,
         right: Term,
-    },
-
-    /// Run the `runnable`.
-    Run {
-        runnable: Box<dyn Runnable>,
     },
 
     /// Add a new constraint
@@ -527,7 +521,6 @@ impl PolarVirtualMachine {
                     .drain()
                     .try_for_each(|(_, constraint)| self.add_constraint(&constraint))?
             }
-            Goal::Run { runnable } => return self.run_runnable(runnable.clone_runnable()),
         }
         Ok(QueryEvent::None)
     }
@@ -1203,32 +1196,34 @@ impl PolarVirtualMachine {
 
                 let new_matches = op!(Isa, lhs_of_matches, right.clone());
 
-                let runnable = Box::new(IsaConstraintCheck::new(
-                    simplified.constraints(),
-                    new_matches,
-                    names,
-                ));
+                // TODO
+                panic!("no isa constraint check");
+                // let runnable = Box::new(IsaConstraintCheck::new(
+                //     simplified.constraints(),
+                //     new_matches,
+                //     names,
+                // ));
 
                 // Construct field constraints.
-                let field_constraints = fields.fields.iter().rev().map(|(f, v)| {
-                    let v = self.deref(v);
-                    let field = right.clone_with_value(value!(f.0.as_ref()));
-                    let left = left.clone_with_value(value!(op!(Dot, left.clone(), field)));
-                    op!(Unify, left, v)
-                });
+                // let field_constraints = fields.fields.iter().rev().map(|(f, v)| {
+                //     let v = self.deref(v);
+                //     let field = right.clone_with_value(value!(f.0.as_ref()));
+                //     let left = left.clone_with_value(value!(op!(Dot, left.clone(), field)));
+                //     op!(Unify, left, v)
+                // });
 
-                let mut add_constraints = vec![type_constraint];
-                add_constraints.extend(field_constraints.into_iter());
+                // let mut add_constraints = vec![type_constraint];
+                // add_constraints.extend(field_constraints.into_iter());
 
-                // Run compatibility check.
-                self.choose_conditional(
-                    vec![Goal::Run { runnable }],
-                    add_constraints
-                        .into_iter()
-                        .map(|op| Goal::AddConstraint { term: op.into() })
-                        .collect(),
-                    vec![Goal::CheckError, Goal::Backtrack],
-                )?;
+                // // Run compatibility check.
+                // self.choose_conditional(
+                //     vec![Goal::Run { runnable }],
+                //     add_constraints
+                //         .into_iter()
+                //         .map(|op| Goal::AddConstraint { term: op.into() })
+                //         .collect(),
+                //     vec![Goal::CheckError, Goal::Backtrack],
+                // )?;
             }
             // if the RHS isn't a pattern or a dictionary, we'll fall back to unifying
             // this is not the _best_ behaviour, but it's what we've been doing
@@ -1568,11 +1563,14 @@ impl PolarVirtualMachine {
                     add_constraints.clone(),
                     self.bsp(),
                 ));
-                self.choose_conditional(
-                    vec![Goal::Run { runnable: inverter }],
-                    vec![Goal::AddConstraintsBatch { add_constraints }],
-                    vec![Goal::Backtrack],
-                )?;
+
+                // TODO
+                panic!("No inverter");
+                // self.choose_conditional(
+                //     vec![Goal::Run { runnable: inverter }],
+                //     vec![Goal::AddConstraintsBatch { add_constraints }],
+                //     vec![Goal::Backtrack],
+                // )?;
             }
             Operator::Assign => {
                 if args.len() != 2 {
@@ -2803,29 +2801,17 @@ impl PolarVirtualMachine {
         }
     }
 
-    fn run_runnable(&mut self, runnable: Box<dyn Runnable>) -> Result<QueryEvent> {
-        let (call_id, answer) = self.new_call_var("runnable_result", Value::Boolean(false));
-        self.push_goal(Goal::Unify {
-            left: answer,
-            right: Term::from(true),
-        })?;
-
-        Ok(QueryEvent::Run { runnable, call_id })
-    }
-
     /// Handle an error coming from outside the vm.
     pub fn external_error(&mut self, message: String) -> Result<()> {
         self.external_error = Some(message);
         Ok(())
     }
-}
 
-impl Runnable for PolarVirtualMachine {
     /// Run the virtual machine. While there are goals on the stack,
     /// pop them off and execute them one at a time until we have a
     /// `QueryEvent` to return. May be called multiple times to restart
     /// the machine.
-    fn run(&mut self, _: Option<&mut Counter>) -> Result<QueryEvent> {
+    pub fn run(&mut self, _: Option<&mut Counter>) -> Result<QueryEvent> {
         if self.query_start_time.is_none() {
             #[cfg(not(target_arch = "wasm32"))]
             let query_start_time = Some(std::time::Instant::now());
@@ -2947,7 +2933,7 @@ impl Runnable for PolarVirtualMachine {
         Ok(QueryEvent::Result { bindings, trace })
     }
 
-    fn handle_error(&mut self, error: RuntimeError) -> Result<QueryEvent> {
+    pub fn handle_error(&mut self, error: RuntimeError) -> Result<QueryEvent> {
         // if we pushed a debug goal, push an error goal underneath it.
         if self.maybe_break(DebugEvent::Error(error.clone()))? {
             let g = self.goals.pop().unwrap();
@@ -2960,7 +2946,7 @@ impl Runnable for PolarVirtualMachine {
     }
 
     /// Handle response to a predicate posed to the application, e.g., `ExternalIsa`.
-    fn external_question_result(&mut self, call_id: u64, answer: bool) -> Result<()> {
+    pub fn external_question_result(&mut self, call_id: u64, answer: bool) -> Result<()> {
         let var = self.call_id_symbols.remove(&call_id).expect("bad call id");
         self.rebind_external_answer(&var, Term::from(answer));
         Ok(())
@@ -2972,7 +2958,7 @@ impl Runnable for PolarVirtualMachine {
     /// symbol associated with the call ID to the result value. If the
     /// value is `None` then the external has no (more) results, so we
     /// backtrack to the choice point left by `Goal::LookupExternal`.
-    fn external_call_result(&mut self, call_id: u64, term: Option<Term>) -> Result<()> {
+    pub fn external_call_result(&mut self, call_id: u64, term: Option<Term>) -> Result<()> {
         // TODO: Open question if we need to pass errors back down to rust.
         // For example what happens if the call asked for a field that doesn't exist?
 
@@ -3012,7 +2998,7 @@ impl Runnable for PolarVirtualMachine {
     }
 
     /// Drive debugger.
-    fn debug_command(&mut self, command: &str) -> Result<()> {
+    pub fn debug_command(&mut self, command: &str) -> Result<()> {
         let mut debugger = self.debugger.clone();
         let maybe_goal = debugger.debug_command(command, self);
         if let Some(goal) = maybe_goal {
@@ -3020,10 +3006,6 @@ impl Runnable for PolarVirtualMachine {
         }
         self.debugger = debugger;
         Ok(())
-    }
-
-    fn clone_runnable(&self) -> Box<dyn Runnable> {
-        Box::new(self.clone())
     }
 }
 

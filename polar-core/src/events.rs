@@ -3,7 +3,6 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use super::bindings::Bindings;
-use super::runnable::Runnable;
 use super::terms::*;
 use super::traces::*;
 
@@ -16,14 +15,6 @@ pub enum QueryEvent {
     /// This runnable is complete with `result`.
     Done {
         result: bool,
-    },
-
-    /// Run `runnable`, and report the result to its parent using `call_id`
-    /// when it completes.
-    #[serde(skip)]
-    Run {
-        call_id: u64,
-        runnable: Box<dyn Runnable>,
     },
 
     Debug {

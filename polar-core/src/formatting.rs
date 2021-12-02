@@ -277,7 +277,6 @@ pub mod display {
                 ),
                 Goal::PopQuery { term } => write!(fmt, "PopQuery({})", term.to_polar()),
                 Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
-                Goal::Run { .. } => write!(fmt, "Run(...)"),
                 Goal::FilterRules {
                     applicable_rules,
                     unfiltered_rules,

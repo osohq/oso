@@ -10,7 +10,6 @@ use crate::events::QueryEvent;
 use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 use crate::partial::simplify_bindings;
-use crate::runnable::Runnable;
 use crate::terms::{Operation, Operator, Term, Value};
 use crate::vm::{Goals, PolarVirtualMachine};
 
@@ -183,14 +182,14 @@ fn filter_inverted_constraints(
         .collect::<Bindings>()
 }
 
-/// A Runnable that runs a query and inverts the results in three ways:
-///
-/// 1. If no results are emitted (indicating failure), return true.
-/// 2. If at least one result is emitted containing a partial, invert the partial's constraints,
-///    pass the inverted partials back to the parent Runnable via a shared BindingStack, and return
-///    true.
-/// 3. In all other cases, return false.
-impl Runnable for Inverter {
+impl Inverter {
+    /// A Runnable that runs a query and inverts the results in three ways:
+    ///
+    /// 1. If no results are emitted (indicating failure), return true.
+    /// 2. If at least one result is emitted containing a partial, invert the partial's constraints,
+    ///    pass the inverted partials back to the parent Runnable via a shared BindingStack, and return
+    ///    true.
+    /// 3. In all other cases, return false.
     fn run(&mut self, _: Option<&mut Counter>) -> Result<QueryEvent> {
         if self.follower.is_none() {
             // Binding followers are used to collect new bindings made during
@@ -248,10 +247,6 @@ impl Runnable for Inverter {
 
     fn debug_command(&mut self, command: &str) -> Result<()> {
         self.vm.debug_command(command)
-    }
-
-    fn clone_runnable(&self) -> Box<dyn Runnable> {
-        Box::new(self.clone())
     }
 
     fn handle_error(&mut self, error: RuntimeError) -> Result<QueryEvent> {

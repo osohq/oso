@@ -31,7 +31,6 @@ pub mod query;
 pub mod resource_block;
 mod rewrites;
 pub mod rules;
-mod runnable;
 pub mod sources;
 pub mod terms;
 pub mod traces;
