@@ -1,5 +1,5 @@
 use std::alloc::{GlobalAlloc, Layout, System};
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
 static NESTED_ALLOCS: AtomicUsize = AtomicUsize::new(0);
@@ -36,7 +36,6 @@ unsafe impl GlobalAlloc for Allocator {
                 .collect::<Vec<&str>>()
                 .join("\n");
             eprintln!("{}", frame);
-            // eprintln!("{}", bt);
         }
         NESTED_ALLOCS.fetch_sub(1, Ordering::SeqCst);
         ptr
