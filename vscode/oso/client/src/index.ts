@@ -2,6 +2,7 @@
 
 import { join } from 'path';
 
+import { debounce } from 'lodash';
 import {
   ExtensionContext,
   languages,
@@ -19,7 +20,16 @@ import {
   TransportKind,
 } from 'vscode-languageclient/node';
 
-import { enqueueEvent, flushQueue, TELEMETRY_INTERVAL } from './telemetry';
+import {
+  counters,
+  recordEvent,
+  seedState,
+  sendTelemetryEvents,
+  TelemetryCounters,
+  TelemetryRecorder,
+  TELEMETRY_STATE_KEY,
+  TELEMETRY_INTERVAL,
+} from './telemetry';
 
 // TODO(gj): think about what it would take to support `load_str()` via
 // https://code.visualstudio.com/api/language-extensions/embedded-languages
@@ -44,7 +54,7 @@ const outputChannel = window.createOutputChannel(extensionName);
 //
 // TODO(gj): handle 'Untitled' docs like this example?
 // https://github.com/microsoft/vscode-extension-samples/blob/355d5851a8e87301cf814a3d20f3918cb162ff73/lsp-multi-server-sample/client/src/extension.ts#L62-L79
-const clients: Map<string, LanguageClient> = new Map();
+const clients: Map<string, [LanguageClient, TelemetryRecorder]> = new Map();
 
 // TODO(gj): nested workspace folders:
 //     folderA/
@@ -175,9 +185,11 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   };
   const client = new LanguageClient(extensionName, serverOpts, clientOpts);
 
-  context.subscriptions.push(
-    client.onTelemetry(event => enqueueEvent(folder.uri, event))
+  const recordTelemetry = debounce(
+    event => recordEvent(folder.uri, event),
+    1_000
   );
+  context.subscriptions.push(client.onTelemetry(recordTelemetry));
 
   // Start client and mark it for cleanup when the extension is deactivated.
   context.subscriptions.push(client.start());
@@ -192,12 +204,17 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   // currently open in VSCode) to the server.
   await openPolarFilesInWorkspaceFolder(folder);
 
-  clients.set(folder.uri.toString(), client);
+  clients.set(folder.uri.toString(), [client, recordTelemetry]);
 }
 
 async function stopClient(folder: string) {
-  const client = clients.get(folder);
-  if (client) await client.stop();
+  const exists = clients.get(folder);
+  if (exists) {
+    const [client, recordTelemetry] = exists;
+    // Try flushing latest event in case one's in the chamber.
+    recordTelemetry.flush();
+    await client.stop();
+  }
   clients.delete(folder);
 }
 
@@ -211,17 +228,28 @@ function updateClients(context: ExtensionContext) {
   };
 }
 
-const flushTelemetryEvents = () =>
-  flushQueue().catch(e =>
-    outputChannel.appendLine(`Caught error while sending telemetry: ${e}`)
-  );
+// Create function in global context so we have access to it in `deactivate()`.
+// See corresponding comment in `activate()` where we update the stored
+// function.
+let persistState: (state: TelemetryCounters) => Promise<void> = async () => {}; // eslint-disable-line @typescript-eslint/no-empty-function
 
 export async function activate(context: ExtensionContext): Promise<void> {
+  // Seed extension-local state from persisted VSCode memento-backed state.
+  seedState(context.globalState.get<TelemetryCounters>(TELEMETRY_STATE_KEY));
+
+  // Capturing `context.globalState` in this closure since we won't have access
+  // to it in deactivate(), where we want to persist the updated state.
+  persistState = async (state: TelemetryCounters) =>
+    context.globalState.update(TELEMETRY_STATE_KEY, state);
+
   const folders = workspace.workspaceFolders || [];
 
-  // Flush telemetry events every `TELEMETRY_INTERVAL` ms. We don't `await` the
-  // `flushTelemetryEvents` promise because nothing depends on its outcome.
-  const interval = setInterval(flushTelemetryEvents, TELEMETRY_INTERVAL); // eslint-disable-line @typescript-eslint/no-misused-promises
+  // Send telemetry events every `TELEMETRY_INTERVAL` ms. We don't `await` the
+  // `sendTelemetryEvents` promise because nothing depends on its outcome.
+  const interval = setInterval(
+    () => sendTelemetryEvents(outputChannel), // eslint-disable-line @typescript-eslint/no-misused-promises
+    TELEMETRY_INTERVAL
+  );
   // Clear interval when extension is deactivated.
   context.subscriptions.push({ dispose: () => clearInterval(interval) });
 
@@ -245,9 +273,18 @@ export async function activate(context: ExtensionContext): Promise<void> {
   // *not* be considered part of the same policy?
 }
 
-export async function deactivate(): Promise<void[]> {
-  // Flush telemetry queue on shutdown.
-  await flushTelemetryEvents();
+export async function deactivate(): Promise<void> {
+  await Promise.all(
+    [...clients.values()].map(([client, recordTelemetry]) => {
+      // Try flushing latest event in case one's in the chamber.
+      recordTelemetry.flush();
+      return client.stop();
+    })
+  );
 
-  return Promise.all([...clients.values()].map(c => c.stop()));
+  // Flush telemetry queue on shutdown.
+  await sendTelemetryEvents(outputChannel);
+
+  // Persist monthly/daily counter/timestamp state.
+  return persistState(counters);
 }
