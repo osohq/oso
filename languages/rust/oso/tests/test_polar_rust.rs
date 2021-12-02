@@ -389,7 +389,7 @@ fn test_enums() {
 
     test.load_str(
         r#"
-        is_admin(Role::Admin); 
+        is_admin(Role::Admin);
         is_member(Role::Member);"#,
     );
 
@@ -414,7 +414,6 @@ fn test_enums_and_structs() {
 
     #[derive(Clone, Debug, PolarClass)]
     struct User {
-        name: String,
         #[polar(attribute)]
         role: Role,
     }
@@ -435,15 +434,9 @@ fn test_enums_and_structs() {
         )
         .unwrap();
 
-    let admin = User {
-        name: "sudo".to_string(),
-        role: Role::Admin,
-    };
+    let admin = User { role: Role::Admin };
 
-    let member = User {
-        name: "not sudo".to_string(),
-        role: Role::Member,
-    };
+    let member = User { role: Role::Member };
 
     assert!(test.oso.is_allowed(admin, "read", "resource").unwrap());
     assert!(!test.oso.is_allowed(member, "read", "resource").unwrap());
