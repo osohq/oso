@@ -11,7 +11,11 @@ use std::{
     }
 };
 
-use tokio::sync::{oneshot::{self, Receiver}, mpsc};
+use smol::channel::{
+    bounded,
+    Sender,
+    Receiver 
+};
 
 use crate::{
     terms::{Term, Symbol, TermList, Operator},
@@ -56,23 +60,26 @@ impl ExternalValue {
 
 #[derive(Debug)]
 struct HostState {
-    results: HashMap<CallId, oneshot::Sender<ExternalValue>>,
+    results: HashMap<CallId, Sender<ExternalValue>>,
     application_error: Option<String>,
     messages: VecDeque<Message>,
-    event_rx: mpsc::Receiver<QueryEvent>,
-    event_tx: mpsc::Sender<QueryEvent>
+    event_rx: Receiver<QueryEvent>,
+    event_tx: Sender<QueryEvent>
 }
 
 impl HostState {
     async fn send_event(&mut self, event: QueryEvent) {
-        self.event_tx.send(event).await.unwrap()
+        eprintln!("wll send event {:?}", event);
+        let r = self.event_tx.send(event).await.unwrap();
+        eprintln!("send len chan {:?}", self.event_tx.len());
+        eprintln!("sent event {:?}", r);
     }
 }
 
 /// Interface the VM uses.
 impl Host {
     pub fn new() -> Host {
-        let (tx, rx) = mpsc::channel(10);
+        let (tx, rx) = bounded(10);
 
         let state = HostState {
             results: HashMap::default(),
@@ -101,10 +108,10 @@ impl Host {
         }).await
     }
 
-    pub async fn send_event_with_result(&self, call_id: u64, event: QueryEvent) -> Receiver<ExternalValue> {
-        let (tx, rx) = oneshot::channel();
+    async fn send_event_with_result(&self, call_id: u64, event: QueryEvent) -> Receiver<ExternalValue> {
+        let (tx, rx) = bounded(1);
         let mut state = self.state();
-        state.results.insert(call_id, tx).unwrap();
+        assert!(state.results.insert(call_id, tx).is_none());
         state.send_event(event).await;
         rx
     }
@@ -118,7 +125,7 @@ impl Host {
             kwargs
         }).await;
 
-        let external_value = rx.await.unwrap();
+        let external_value = rx.recv().await.unwrap();
         external_value.to_term()
     }
 
@@ -130,7 +137,8 @@ impl Host {
             class_tag
         }).await;
 
-        let external_value = rx.await.unwrap();
+        eprintln!("isa wait external val");
+        let external_value = rx.recv().await.unwrap();
         external_value.to_bool().unwrap()
     }
 
@@ -142,7 +150,7 @@ impl Host {
             class_tag
         }).await;
 
-        let external_value = rx.await.unwrap();
+        let external_value = rx.recv().await.unwrap();
         external_value.to_bool()
     }
 
@@ -154,7 +162,7 @@ impl Host {
             right_class_tag
         }).await;
 
-        let external_value = rx.await.unwrap();
+        let external_value = rx.recv().await.unwrap();
         external_value.to_bool().unwrap()
 
     }
@@ -166,7 +174,7 @@ impl Host {
             right_class_tag
         }).await;
 
-        let external_value = rx.await.unwrap();
+        let external_value = rx.recv().await.unwrap();
         external_value.to_bool().unwrap()
     }
 
@@ -177,7 +185,7 @@ impl Host {
             args
         }).await;
 
-        let external_value = rx.await.unwrap();
+        let external_value = rx.recv().await.unwrap();
         external_value.to_bool().unwrap()
     }
 }
@@ -187,13 +195,13 @@ impl Host {
 impl Host {
     pub fn external_call_result(&self, call_id: u64, term: Option<Term>) -> PolarResult<()> {
         let sender = self.state().results.remove(&call_id).unwrap();
-        sender.send(ExternalValue::Term(Ok(term))).unwrap();
+        sender.try_send(ExternalValue::Term(Ok(term))).unwrap();
         Ok(())
     }
 
     pub fn external_question_result(&self, call_id: u64, b: bool) -> PolarResult<()> {
         let sender = self.state().results.remove(&call_id).unwrap();
-        sender.send(ExternalValue::Boolean(Ok(b))).unwrap();
+        sender.try_send(ExternalValue::Boolean(Ok(b))).unwrap();
         Ok(())
     }
 
@@ -203,10 +211,13 @@ impl Host {
 
     pub fn next_event(&self) -> Option<PolarResult<QueryEvent>> {
         let mut state = self.state();
-        match state.event_rx.try_recv() {
+        eprintln!("len chan {:?}", state.event_rx.len());
+        let ev = state.event_rx.try_recv();
+        eprintln!("next event host {:?}", ev);
+        match ev {
             Ok(r) => Some(Ok(r)),
-            Err(mpsc::error::TryRecvError::Empty) => None,
-            e @ Err(mpsc::error::TryRecvError::Disconnected) => unimplemented!("Handle this error."),
+            Err(smol::channel::TryRecvError::Empty) => None,
+            Err(smol::channel::TryRecvError::Closed) => unimplemented!("Handle this error."),
         }
     }
 }

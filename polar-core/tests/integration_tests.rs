@@ -1023,7 +1023,8 @@ fn test_load_str_with_query() -> TestResult {
 /// Test using a constructor with positional + kwargs.
 #[test]
 fn test_make_external() -> TestResult {
-    let q = polar().new_query("x = new Bar(1, a: 2, b: 3)", false)?;
+    let p = polar();
+    let q = p.new_query("x = new Bar(1, a: 2, b: 3)", false)?;
     let mock_make_bar = |_, constructor: Term| match constructor.value() {
         Value::Call(Call {
             name,

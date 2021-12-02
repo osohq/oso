@@ -7,6 +7,7 @@ extern crate maplit;
 #[macro_use]
 pub mod macros;
 
+mod async_vm;
 mod bindings;
 mod counter;
 pub mod data_filtering;
