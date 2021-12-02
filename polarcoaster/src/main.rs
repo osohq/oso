@@ -66,6 +66,8 @@ fn main() {
     let width = (width-1) as f32;
     let height = (height) as f32;
 
+
+
     let scale = if width > height {
         window_width*0.8 / width
     } else {
@@ -90,6 +92,10 @@ fn main() {
         .title("Hello, World")
         .build();
 
+    let mut cart_from = 0;
+    let mut cart_to = 1;
+    let mut cart_progress = 0.0;
+
     while !rl.window_should_close() {
         let mut d = rl.begin_drawing(&thread);
 
@@ -103,8 +109,18 @@ fn main() {
             d.draw_line_ex(node_positions[from], node_positions[to], 2.0, Color::BLACK);
         }
         for pos in &node_positions {
-            d.draw_circle_v(*pos, 5.0, Color::RED);
+            d.draw_circle_v(*pos, 3.0, Color::RED);
         }
+
+        let cart_pos = node_positions[cart_from];
+        let cart_size = Vector2{
+            x: 10.0,
+            y: 15.0
+        };
+        d.draw_rectangle_v(cart_pos-(cart_size/2.0), cart_size, Color::BLUE);
+
+
+
         //d.draw_text("Hello, world!", 12, 12, 20, Color::BLACK);
         //d.draw_rectangle(center_x-half_cs*scale,center_y-half_cs*scale,coaster_size*scale,coaster_size*scale, Color::RED);
     }
