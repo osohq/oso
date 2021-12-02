@@ -1,27 +1,16 @@
 use std::{
-    collections::{
-        BTreeMap,
-        HashMap,
-        VecDeque
-    },
+    collections::{BTreeMap, HashMap, VecDeque},
     option::Option,
-    sync::{
-        Arc,
-        Mutex, MutexGuard
-    }
+    sync::{Arc, Mutex, MutexGuard},
 };
 
-use smol::channel::{
-    bounded,
-    Sender,
-    Receiver 
-};
+use smol::channel::{bounded, Receiver, Sender};
 
 use crate::{
-    terms::{Term, Symbol, TermList, Operator},
-    messages::Message,
+    error::{PolarResult, RuntimeError},
     events::QueryEvent,
-    error::{PolarResult, RuntimeError}
+    messages::Message,
+    terms::{Operator, Symbol, Term, TermList},
 };
 
 type ExternalResult<T> = std::result::Result<T, RuntimeError>;
@@ -31,7 +20,7 @@ type CallId = u64;
 #[derive(Clone, Debug)]
 pub struct Host {
     // mutable state
-    state: Arc<Mutex<HostState>>
+    state: Arc<Mutex<HostState>>,
 }
 
 #[derive(Debug)]
@@ -64,15 +53,15 @@ struct HostState {
     results: HashMap<CallId, Sender<ExternalValue>>,
     messages: VecDeque<Message>,
     event_rx: Receiver<QueryEvent>,
-    event_tx: Sender<QueryEvent>
+    event_tx: Sender<QueryEvent>,
 }
 
 impl HostState {
     async fn send_event(&mut self, event: QueryEvent) {
-        eprintln!("wll send event {:?}", event);
+        eprintln!("==============\nwll send event {:?}", event);
         let r = self.event_tx.send(event).await.unwrap();
-        eprintln!("send len chan {:?}", self.event_tx.len());
-        eprintln!("sent event {:?}", r);
+        eprintln!("==============\nsend len chan {:?}", self.event_tx.len());
+        eprintln!("==============\nsent event {:?}", r);
     }
 }
 
@@ -87,7 +76,9 @@ impl Host {
             event_rx: rx,
             event_tx: tx,
         };
-        Host { state: Arc::new(Mutex::new(state)) }
+        Host {
+            state: Arc::new(Mutex::new(state)),
+        }
     }
 
     fn state(&self) -> MutexGuard<HostState> {
@@ -95,19 +86,23 @@ impl Host {
     }
 
     pub async fn debug(&self, message: String) {
-        self.state().send_event(QueryEvent::Debug {
-            message
-        }).await
+        self.state().send_event(QueryEvent::Debug { message }).await
     }
 
     pub async fn make_external(&self, instance_id: u64, constructor: Term) {
-        self.state().send_event(QueryEvent::MakeExternal {
-            instance_id,
-            constructor
-        }).await
+        self.state()
+            .send_event(QueryEvent::MakeExternal {
+                instance_id,
+                constructor,
+            })
+            .await
     }
 
-    async fn send_event_with_result(&self, call_id: u64, event: QueryEvent) -> Receiver<ExternalValue> {
+    async fn send_event_with_result(
+        &self,
+        call_id: u64,
+        event: QueryEvent,
+    ) -> Receiver<ExternalValue> {
         let (tx, rx) = bounded(1);
         let mut state = self.state();
         assert!(state.results.insert(call_id, tx).is_none());
@@ -115,80 +110,131 @@ impl Host {
         rx
     }
 
-    pub async fn external_call(&self, call_id: u64, instance: Term, attribute: Symbol, args: Option<Vec<Term>>, kwargs: Option<BTreeMap<Symbol, Term>>) -> ExternalResult<Option<Term>> {
-        let rx = self.send_event_with_result(call_id, QueryEvent::ExternalCall {
-            call_id,
-            instance,
-            attribute,
-            args,
-            kwargs
-        }).await;
+    pub async fn external_call(
+        &self,
+        call_id: u64,
+        instance: Term,
+        attribute: Symbol,
+        args: Option<Vec<Term>>,
+        kwargs: Option<BTreeMap<Symbol, Term>>,
+    ) -> ExternalResult<Option<Term>> {
+        let rx = self
+            .send_event_with_result(
+                call_id,
+                QueryEvent::ExternalCall {
+                    call_id,
+                    instance,
+                    attribute,
+                    args,
+                    kwargs,
+                },
+            )
+            .await;
 
         let external_value = rx.recv().await.unwrap();
         external_value.to_term()
     }
 
-
     pub async fn external_isa(&self, call_id: u64, instance: Term, class_tag: Symbol) -> bool {
-        let rx = self.send_event_with_result(call_id, QueryEvent::ExternalIsa {
-            call_id,
-            instance,
-            class_tag
-        }).await;
+        let rx = self
+            .send_event_with_result(
+                call_id,
+                QueryEvent::ExternalIsa {
+                    call_id,
+                    instance,
+                    class_tag,
+                },
+            )
+            .await;
 
-        eprintln!("isa wait external val");
+        eprintln!("==============\nisa wait external val");
         let external_value = rx.recv().await.unwrap();
         external_value.to_bool().unwrap()
     }
 
-    pub async fn external_isa_with_path(&self, call_id: u64, base_tag: Symbol, path: TermList, class_tag: Symbol) -> ExternalResult<bool> {
-        let rx = self.send_event_with_result(call_id, QueryEvent::ExternalIsaWithPath {
-            call_id,
-            base_tag,
-            path,
-            class_tag
-        }).await;
+    pub async fn external_isa_with_path(
+        &self,
+        call_id: u64,
+        base_tag: Symbol,
+        path: TermList,
+        class_tag: Symbol,
+    ) -> ExternalResult<bool> {
+        let rx = self
+            .send_event_with_result(
+                call_id,
+                QueryEvent::ExternalIsaWithPath {
+                    call_id,
+                    base_tag,
+                    path,
+                    class_tag,
+                },
+            )
+            .await;
 
         let external_value = rx.recv().await.unwrap();
         external_value.to_bool()
     }
 
-    pub async fn external_is_sub_specializer(&self, call_id: u64, instance_id: u64, left_class_tag: Symbol, right_class_tag: Symbol) -> bool {
-        let rx = self.send_event_with_result(call_id, QueryEvent::ExternalIsSubSpecializer {
-            call_id,
-            instance_id,
-            left_class_tag,
-            right_class_tag
-        }).await;
+    pub async fn external_is_sub_specializer(
+        &self,
+        call_id: u64,
+        instance_id: u64,
+        left_class_tag: Symbol,
+        right_class_tag: Symbol,
+    ) -> bool {
+        let rx = self
+            .send_event_with_result(
+                call_id,
+                QueryEvent::ExternalIsSubSpecializer {
+                    call_id,
+                    instance_id,
+                    left_class_tag,
+                    right_class_tag,
+                },
+            )
+            .await;
 
         let external_value = rx.recv().await.unwrap();
         external_value.to_bool().unwrap()
-
     }
 
-    pub async fn external_is_subclass(&self, call_id: u64, left_class_tag: Symbol, right_class_tag: Symbol) -> bool {
-        let rx = self.send_event_with_result(call_id, QueryEvent::ExternalIsSubclass {
-            call_id,
-            left_class_tag,
-            right_class_tag
-        }).await;
+    pub async fn external_is_subclass(
+        &self,
+        call_id: u64,
+        left_class_tag: Symbol,
+        right_class_tag: Symbol,
+    ) -> bool {
+        let rx = self
+            .send_event_with_result(
+                call_id,
+                QueryEvent::ExternalIsSubclass {
+                    call_id,
+                    left_class_tag,
+                    right_class_tag,
+                },
+            )
+            .await;
 
         let external_value = rx.recv().await.unwrap();
         external_value.to_bool().unwrap()
     }
 
     pub async fn external_op(&self, call_id: u64, operator: Operator, args: TermList) -> bool {
-        let rx = self.send_event_with_result(call_id, QueryEvent::ExternalOp {
-            call_id,
-            operator,
-            args
-        }).await;
+        let rx = self
+            .send_event_with_result(
+                call_id,
+                QueryEvent::ExternalOp {
+                    call_id,
+                    operator,
+                    args,
+                },
+            )
+            .await;
 
         let external_value = rx.recv().await.unwrap();
         external_value.to_bool().unwrap()
     }
 }
-
 
 /// Interface that Polar object uses.
 impl Host {
@@ -212,9 +258,9 @@ impl Host {
 
     pub fn next_event(&self) -> Option<PolarResult<QueryEvent>> {
         let mut state = self.state();
-        eprintln!("len chan {:?}", state.event_rx.len());
+        eprintln!("==============\nlen chan {:?}", state.event_rx.len());
         let ev = state.event_rx.try_recv();
-        eprintln!("next event host {:?}", ev);
+        eprintln!("==============\nnext event host\n\t{:?}", ev);
         match ev {
             Ok(r) => Some(Ok(r)),
             Err(smol::channel::TryRecvError::Empty) => None,

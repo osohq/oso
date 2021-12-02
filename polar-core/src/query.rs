@@ -19,7 +19,7 @@ pub struct Query {
     term: Term,
     done: bool,
     runtime: LocalExecutor<'static>,
-    run_spawned: bool
+    run_spawned: bool,
 }
 
 impl Query {
@@ -33,7 +33,7 @@ impl Query {
             host,
             done: false,
             runtime: LocalExecutor::new(),
-            run_spawned: false
+            run_spawned: false,
         }
     }
 
@@ -43,33 +43,35 @@ impl Query {
     }
 
     pub fn next_event(&mut self) -> PolarResult<QueryEvent> {
-        return self.async_next_event();
+        self.async_next_event()
     }
 
     fn async_next_event(&mut self) -> PolarResult<QueryEvent> {
         loop {
             if !self.run_spawned {
                 let vm = self.vm.clone();
-                eprintln!("spawn");
-                self.runtime.spawn(async move {
-                    let r = vm.run(None).await;
-                    eprintln!("fut res: {:?}", r);
-                }).detach();
+                eprintln!("==============\nspawn");
+                self.runtime
+                    .spawn(async move {
+                        let r = vm.run(None).await;
+                        eprintln!("==============\nfut res:\n\t{:?}", r);
+                    })
+                    .detach();
                 self.run_spawned = true;
             }
 
-            eprintln!("tick");
+            eprintln!("==============\ntick");
             let more = self.runtime.try_tick();
             let ev = self.host.next_event();
             if let Some(ev) = ev {
-                eprintln!("host event");
+                eprintln!("==============\nhost event:\n\t{:?}", ev);
                 return ev;
             }
 
             if let Some(ev) = self.vm.try_take_ev() {
-                eprintln!("vm event {:?}", ev);
+                eprintln!("==============\nvm event\n\t{:?}", ev);
                 self.run_spawned = false;
-                return ev.map_err(|e| self.vm.with_kb(|kb| e.with_context(kb)))
+                return ev.map_err(|e| self.vm.with_kb(|kb| e.with_context(kb)));
             }
 
             assert!(more);
@@ -86,15 +88,22 @@ impl Query {
 
     pub fn application_error(&mut self, call_id: u64, msg: String) -> PolarResult<()> {
         let vm = self.vm.vm();
-            let term = match vm.trace.last().map(|t| t.node.clone()) {
-                Some(Node::Term(t)) => Some(t),
-                _ => None,
-            };
-            let stack_trace = vm.stack_trace();
-        self.host.application_error(call_id, RuntimeError::Application { msg, stack_trace, term })
+        let term = match vm.trace.last().map(|t| t.node.clone()) {
+            Some(Node::Term(t)) => Some(t),
+            _ => None,
+        };
+        let stack_trace = vm.stack_trace();
+        self.host.application_error(
+            call_id,
+            RuntimeError::Application {
+                msg,
+                stack_trace,
+                term,
+            },
+        )
     }
 
-    pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {
+    pub fn debug_command(&mut self, _command: &str) -> PolarResult<()> {
         unimplemented!("throw");
     }
 
