@@ -28,6 +28,7 @@ use crate::numerics::*;
 use crate::partial::{simplify_bindings_opt, simplify_partial, sub_this, IsaConstraintCheck};
 use crate::rewrites::Renamer;
 use crate::rules::*;
+use crate::runtime::Host;
 use crate::sources::*;
 use crate::terms::*;
 use crate::traces::*;
@@ -212,6 +213,8 @@ pub fn compare(op: Operator, left: &Term, right: &Term, context: Option<&Term>) 
 
 #[derive(Clone)]
 pub struct PolarVirtualMachine {
+    host: Arc<Host>,
+
     /// Stacks.
     pub goals: GoalStack,
     binding_manager: BindingManager,
@@ -285,6 +288,7 @@ impl PolarVirtualMachine {
     /// Reverse the goal list for the sanity of callers.
     pub fn new(
         kb: Arc<RwLock<KnowledgeBase>>,
+        host: Arc<Host>,
         tracing: bool,
         goals: Goals,
         messages: MessageQueue,
@@ -307,6 +311,7 @@ impl PolarVirtualMachine {
         let mut vm = Self {
             goals: GoalStack::new_reversed(goals),
             binding_manager: BindingManager::new(),
+            host,
             query_start_time: None,
             query_timeout_ms,
             stack_limit: MAX_STACK_SIZE,
@@ -2811,7 +2816,7 @@ impl PolarVirtualMachine {
     /// pop them off and execute them one at a time until we have a
     /// `QueryEvent` to return. May be called multiple times to restart
     /// the machine.
-    pub fn run(&mut self, _: Option<&mut Counter>) -> Result<QueryEvent> {
+    pub async fn run(&mut self, _: Option<&mut Counter>) -> Result<QueryEvent> {
         if self.query_start_time.is_none() {
             #[cfg(not(target_arch = "wasm32"))]
             let query_start_time = Some(std::time::Instant::now());

@@ -190,7 +190,7 @@ impl Inverter {
     ///    pass the inverted partials back to the parent Runnable via a shared BindingStack, and return
     ///    true.
     /// 3. In all other cases, return false.
-    fn run(&mut self, _: Option<&mut Counter>) -> Result<QueryEvent> {
+    async fn run(&mut self, _: Option<&mut Counter>) -> Result<QueryEvent> {
         if self.follower.is_none() {
             // Binding followers are used to collect new bindings made during
             // the inversion.
@@ -199,7 +199,7 @@ impl Inverter {
 
         loop {
             // Pass most events through, but collect results and invert them.
-            match self.vm.run(None)? {
+            match self.vm.run(None).await? {
                 QueryEvent::Done { .. } => {
                     let result = self.results.is_empty();
                     if !result {
