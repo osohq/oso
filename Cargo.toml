@@ -5,6 +5,7 @@ members = [
     "polar-c-api",
     "polar-language-server",
     "polar-wasm-api",
+    "polarcoaster",
     "languages/rust/oso",
     "languages/rust/oso-derive",
 ]
