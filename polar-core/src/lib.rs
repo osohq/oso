@@ -22,6 +22,7 @@ pub mod kb;
 mod lexer;
 pub mod messages;
 mod numerics;
+mod runtime;
 pub mod parser;
 mod partial;
 pub mod polar;

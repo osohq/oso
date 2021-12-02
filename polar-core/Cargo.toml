@@ -21,6 +21,8 @@ harness = false
 lalrpop-util = { version = "0.19.6", default-features = false }
 serde = { version = "1.0.119", features = ["derive", "rc"] }
 indoc = "1.0.3"
+tokio = { version = "1.14.0", features = ["sync"] }
+
 
 [build_dependencies]
 serde_derive = "1.0"
