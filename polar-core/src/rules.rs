@@ -90,6 +90,16 @@ impl Rule {
             required: false,
         }
     }
+
+    pub fn clone_with_no_body(&self) -> Self {
+        Self {
+            name: self.name.clone(),
+            params: self.params.clone(),
+            required: self.required,
+            source_info: self.source_info.clone(),
+            body: term!(op!(And)),
+        }
+    }
 }
 
 // TODO: should this be a Set of Rules? Do we currently check for duplicate rules?

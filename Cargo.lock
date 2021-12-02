@@ -822,6 +822,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "polar-formatter"
+version = "0.24.0"
+dependencies = [
+ "polar-core",
+]
+
+[[package]]
 name = "polar-language-server"
 version = "0.24.0"
 dependencies = [

@@ -3,6 +3,7 @@
 members = [
     "polar-core",
     "polar-c-api",
+    "polar-formatter",
     "polar-language-server",
     "polar-wasm-api",
     "languages/rust/oso",

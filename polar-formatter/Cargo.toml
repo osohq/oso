@@ -1,0 +1,8 @@
+[package]
+name = "polar-formatter"
+version = "0.24.0"
+authors = ["Oso Security, Inc. <support@osohq.com>"]
+edition = "2021"
+
+[dependencies]
+polar-core = { path = "../polar-core", version = "=0.24.0" }
