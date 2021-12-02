@@ -23,6 +23,9 @@ fn main() {
     let mut last_in_level = vec![0; trace.max_depth+1];
     let mut current_level = 0;
     let mut edges = vec![];
+    // track the path of the cart
+    let mut pos = vec![];
+    let mut cart_path = vec![0];
     for (i, depthp) in trace.depths.iter().enumerate() {
         let depth = *depthp;
         num_in_level[depth] += 1;
@@ -36,13 +39,30 @@ fn main() {
         if depth == current_level {
             edges.push((last_in_level[depth], i));
             last_in_level[depth] = i;
+            pos.push(i);
+            cart_path.push(i);
         } else if depth > current_level {
             assert_eq!(depth, current_level+1);
             edges.push((last_in_level[current_level], i));
             last_in_level[depth] = i;
+            pos.push(i);
+            cart_path.push(i);
         } else if depth < current_level {
-            edges.push((last_in_level[depth-1], i));
+            let backtrack_to = last_in_level[depth-1];
+            edges.push((backtrack_to, i));
             last_in_level[depth] = i;
+
+            // backtrack
+            pos.pop();
+            while let Some(x) = pos.pop() {
+                cart_path.push(x);
+                if x == backtrack_to {
+                    pos.push(x);
+                    break
+                }
+            }
+            pos.push(i);
+            cart_path.push(i);
         }
 
         current_level = depth;
@@ -66,20 +86,14 @@ fn main() {
     let width = (width-1) as f32;
     let height = (height) as f32;
 
-
-
-    let scale = if width > height {
-        window_width*0.8 / width
-    } else {
-        window_height*0.8 / height
-    };
-    let offset = Vector2{
-        x: (window_width - (width * scale)) / 2.0,
-        y: (window_height - (height * scale)) / 2.0
-    };
     let scale = Vector2{
-        x: scale,
-        y: scale
+        x: window_width*0.6 / width,
+        y: window_height*0.8 / height
+    };
+
+    let offset = Vector2{
+        x: (window_width - (width * scale.x)) / 2.0,
+        y: (window_height - (height * scale.y)) / 2.0
     };
 
     // scale node positions
@@ -94,9 +108,27 @@ fn main() {
 
     let mut cart_from = 0;
     let mut cart_to = 1;
-    let mut cart_progress = 0.0;
+    let mut cart_progress: f32 = 0.0;
+
+    let time_per_node = 0.5;
+    let mut last_t = 0.0;
 
     while !rl.window_should_close() {
+        // theres no real simulation so we dont care about consistent time steps
+        // just compute how far along the track we are
+        let t = rl.get_time();
+        let time_passed = t - last_t;
+        let frame_progress = (time_passed / time_per_node) as f32;
+        cart_progress += frame_progress;
+        while cart_progress > 1.0 {
+            // todo: this is totally wrong, you have to compute the full path first
+            // step to the next node.
+            cart_from = (cart_from + 1) % cart_path.len();
+            cart_to = (cart_to + 1) % cart_path.len();
+            cart_progress -= 1.0;
+        }
+        last_t = t;
+
         let mut d = rl.begin_drawing(&thread);
 
         d.clear_background(Color::WHITE);
@@ -112,12 +144,19 @@ fn main() {
             d.draw_circle_v(*pos, 3.0, Color::RED);
         }
 
-        let cart_pos = node_positions[cart_from];
+        let from_node = cart_path[cart_from];
+        let to_node = cart_path[cart_to];
+        let cart_start = node_positions[from_node];
+        let cart_end = node_positions[to_node];
+        let to_next = cart_end - cart_start;
+        let cart_pos = cart_start + to_next.scale_by(cart_progress);
         let cart_size = Vector2{
             x: 10.0,
             y: 15.0
         };
-        d.draw_rectangle_v(cart_pos-(cart_size/2.0), cart_size, Color::BLUE);
+        d.draw_circle_v(cart_pos, 5.0, Color::BLUE);
+        //d.draw_rectangle_v(cart_pos-(cart_size/2.0), cart_size, Color::BLUE);
+
 
 
 
