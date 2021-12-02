@@ -959,7 +959,7 @@ impl PolarVirtualMachine {
         let sock = UdpSocket::bind(self.osc_source.unwrap()).unwrap();
         let msg = encoder::encode(&OscPacket::Message(OscMessage {
             addr: format!("/{}", name),
-            args: vec![OscType::Int(query_depth)],
+            args: vec![OscType::Int(query_depth.try_into().unwrap())],
         }))
         .unwrap();
         sock.send_to(&msg, self.osc_destination.unwrap()).ok();
@@ -3041,6 +3041,7 @@ impl Runnable for PolarVirtualMachine {
                 .collect();
         }
 
+        self.send_osc_event("result");
         Ok(QueryEvent::Result { bindings, trace })
     }
 
