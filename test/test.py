@@ -7,93 +7,100 @@ from polar.exceptions import PolarRuntimeError, UnrecognizedEOF
 from oso import Oso, OsoError, Variable
 from polar.ffi import mem_allocated
 
-print("Allocated: ", mem_allocated())
+
+def printalloc():
+    print("Allocated: ", mem_allocated())
+
+
+printalloc()
 oso = Oso()
-print("Allocated: ", mem_allocated())
+printalloc()
 del oso
 gc.collect()
 
-print("Allocated: ", mem_allocated())
+printalloc()
 
 oso = Oso()
 try:
     oso.load_str("test()")
 except OsoError as e:
-    print(e)
     del e
     pass
 
-# # Application class with default kwargs constructor, registered with the
-# # decorator.
-# class A:
-#     def __init__(self, x):
-#         self.x = x
+# Application class with default kwargs constructor, registered with the
+# decorator.
+class A:
+    def __init__(self, x):
+        self.x = x
 
-#     def foo(self):
-#         return -1
-
-
-# oso.register_class(A)
+    def foo(self):
+        return -1
 
 
-# # Test inheritance; doesn't need to be registered.
-# class D(A):
-#     pass
+oso.register_class(A)
 
 
-# # Namespaced application class (to be aliased) with custom
-# # constructor.
-# class B:
-#     class C:
-#         def __init__(self, y):
-#             self.y = y
-
-#         def foo(self):
-#             return -1
+# Test inheritance; doesn't need to be registered.
+class D(A):
+    pass
 
 
-# oso.register_class(B.C, name="C")
+# Namespaced application class (to be aliased) with custom
+# constructor.
+class B:
+    class C:
+        def __init__(self, y):
+            self.y = y
+
+        def foo(self):
+            return -1
 
 
-# class E:
-#     @staticmethod
-#     def sum(*args):
-#         return sum(*args)
+oso.register_class(B.C, name="C")
 
 
-# oso.register_class(E)
+class E:
+    @staticmethod
+    def sum(*args):
+        return sum(*args)
 
-# # Test that a custom error type is thrown.
-# exception_thrown = False
-# try:
-#     oso.load_str("missingSemicolon()")
-# except UnrecognizedEOF as e:
-#     exception_thrown = True
-#     assert str(e).startswith(
-#         "hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 19"
-#     )
-# assert exception_thrown
 
-# # Test that a built in string method can be called.
-# oso.load_str("""?= x = "hello world!" and x.endswith("world!");""")
+oso.register_class(E)
 
-# oso.clear_rules()
 
-# # Test that a constant can be called.
-# oso.register_constant(math, "MyMath")
-# oso.load_str("?= MyMath.factorial(5) == 120;")
+# Test that a custom error type is thrown.
+exception_thrown = False
+try:
+    oso.load_str("missingSemicolon()")
+except UnrecognizedEOF as e:
+    exception_thrown = True
+    assert str(e).startswith(
+        "hit the end of the file unexpectedly. Did you forget a semi-colon at line 1, column 19"
+    )
+assert exception_thrown
 
-# oso.clear_rules()
+# Test that a built in string method can be called.
+oso.load_str("""?= x = "hello world!" and x.endswith("world!");""")
 
-# # Test deref works
-# oso.load_str("?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].index(1) = 2;")
+oso.clear_rules()
 
-# oso.clear_rules()
+# Test that a constant can be called.
+oso.register_constant(math, "MyMath")
+oso.load_str("?= MyMath.factorial(5) == 120;")
 
-# polar_file = os.path.dirname(os.path.realpath(__file__)) + "/test.polar"
-# oso.load_file(polar_file)
+oso.clear_rules()
 
-# assert oso.is_allowed("a", "b", "c")
+# Test deref works
+oso.load_str("?= x = 1 and E.sum([x, 2, x]) = 4 and [3, 2, x].index(1) = 2;")
+
+oso.clear_rules()
+
+polar_file = os.path.dirname(os.path.realpath(__file__)) + "/test.polar"
+oso.load_file(polar_file)
+
+printalloc()
+
+assert oso.is_allowed("a", "b", "c")
 
 # assert list(oso.query_rule("specializers", D("hello"), B.C("hello")))
 # assert list(oso.query_rule("floatLists"))
@@ -131,26 +138,32 @@ except OsoError as e:
 # assert not list(oso.query_rule("builtinSpecializers", {"z": 1}, "DictionaryWithFields"))
 # assert list(oso.query_rule("builtinSpecializers", {"y": 1}, "DictionaryWithFields"))
 
+# printalloc()
+
 # # test iterables work
 # assert list(oso.query_rule("testIterables"))
 
-# # Test unspecialized rule ordering
-# result = oso.query_rule("testUnspecializedRuleOrder", "foo", "bar", Variable("z"))
-# assert next(result)["bindings"]["z"] == 1
-# assert next(result)["bindings"]["z"] == 2
-# assert next(result)["bindings"]["z"] == 3
+# Test unspecialized rule ordering
+result = oso.query_rule("testUnspecializedRuleOrder", "foo", "bar", Variable("z"))
+assert next(result)["bindings"]["z"] == 1
+assert next(result)["bindings"]["z"] == 2
+assert next(result)["bindings"]["z"] == 3
+del result
 
-# exception_thrown = False
-# try:
-#     next(oso.query("testUnhandledPartial()"))
-# except PolarRuntimeError as e:
-#     assert e.message.startswith("Found an unhandled partial")
-#     exception_thrown = True
+exception_thrown = False
+try:
+    next(oso.query("testUnhandledPartial()"))
+except PolarRuntimeError as e:
+    assert e.message.startswith("Found an unhandled partial")
+    exception_thrown = True
+assert exception_thrown
 
-# assert exception_thrown
 gc.collect()
 print("Allocated: ", mem_allocated())
+
+# oso.ffi_polar.__del__()
 del oso
+
 gc.collect()
 
 print("Allocated: ", mem_allocated())

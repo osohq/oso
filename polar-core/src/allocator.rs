@@ -23,8 +23,16 @@ unsafe impl GlobalAlloc for Allocator {
         // #[cfg(nightly)]
         if in_allocator == 0 {
             ALLOCATED.fetch_add(size, Ordering::Relaxed);
-            eprintln!("{}", std::backtrace::Backtrace::force_capture());
+            let bt = std::backtrace::Backtrace::force_capture().to_string();
+
             eprintln!("A {:x} {}", ptr as usize, size);
+            let frame = bt
+                .split('\n')
+                .skip_while(|f| !f.contains("polar_core::") || f.contains("polar_core::allocator"))
+                .take(2)
+                .collect::<Vec<&str>>()
+                .join("\n");
+            eprintln!("{}", frame);
         }
         NESTED_ALLOCS.fetch_sub(1, Ordering::SeqCst);
         ptr

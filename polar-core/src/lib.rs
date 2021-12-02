@@ -1,5 +1,6 @@
 #![allow(clippy::vec_init_then_push)]
 #![feature(backtrace)]
+#![feature(backtrace_frames)]
 
 #[cfg(test)]
 #[macro_use]
