@@ -1,10 +1,16 @@
 ---
-title: "Filter Data (Preview)"
+title: "Filter Data - Adapter API (Preview)"
 weight: 1
 showContentForAnyLanguage: true
+no_nav: true
 ---
 
-# New Data Filtering
+# Filter Data - Adapter API (Preview)
+
+{{% callout "Preview" %}}
+The new Adapter API is in preview for Ruby. To return to the filter plan API documentation,
+[click here](/guides/data_filtering).
+{{% /callout %}}
 
 When you call `authorize(actor, action, resource)` , Oso evaluates the allow
 rule(s) you have defined in your policy to determine if `actor` is allowed
