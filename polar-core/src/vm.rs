@@ -956,13 +956,15 @@ impl PolarVirtualMachine {
             return;
         }
         let query_depth = self.queries.len();
-        let sock = UdpSocket::bind(self.osc_source.unwrap()).unwrap();
-        let msg = encoder::encode(&OscPacket::Message(OscMessage {
-            addr: format!("/{}", name),
-            args: vec![OscType::Int(query_depth.try_into().unwrap())],
-        }))
-        .unwrap();
-        sock.send_to(&msg, self.osc_destination.unwrap()).ok();
+        if let Ok(sock) = UdpSocket::bind(self.osc_source.unwrap()) {
+            let msg = &OscPacket::Message(OscMessage {
+                addr: format!("/{}", name),
+                args: vec![OscType::Int(query_depth.try_into().unwrap())],
+            });
+            let encoded = encoder::encode(msg).unwrap();
+
+            sock.send_to(&encoded, self.osc_destination.unwrap()).ok();
+        }
     }
 }
 
@@ -976,9 +978,7 @@ impl PolarVirtualMachine {
         }
         self.log("BACKTRACK", &[]);
 
-        if self.polarcoaster {
-            //self.trace_snapshot(TraceEvent::Backtrack);
-        }
+        self.send_osc_event("backtrack");
 
         loop {
             match self.choices.pop() {
