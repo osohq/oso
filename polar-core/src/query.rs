@@ -19,7 +19,6 @@ pub struct Query {
 
 impl Query {
     pub fn new(vm: PolarVirtualMachine, term: Term) -> Self {
-        let host = Arc::new(Host::new());
         let runtime = LocalExecutor::new(vm);
 
         Self {

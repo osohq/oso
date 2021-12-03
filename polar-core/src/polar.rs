@@ -1,5 +1,7 @@
 use std::sync::{Arc, RwLock};
 
+use crate::runtime::Host;
+
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
 use super::diagnostic::Diagnostic;
 use super::error::{PolarResult, RuntimeError, ValidationError};
@@ -246,7 +248,7 @@ impl Polar {
         }
         let query = Goal::Query { term: term.clone() };
         let vm =
-            PolarVirtualMachine::new(self.kb.clone(), trace, vec![query], self.messages.clone());
+            PolarVirtualMachine::new(self.kb.clone(), Arc::new(Host::new()), trace, vec![query], self.messages.clone());
         Query::new(vm, term)
     }
 

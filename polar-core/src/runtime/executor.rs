@@ -22,7 +22,7 @@ pub struct LocalExecutor {
 
 impl LocalExecutor {
     pub fn new(vm: PolarVirtualMachine) -> Self {
-        let host = Arc::new(Host::new());
+        let host = vm.host().clone();
         let vm = Arc::new(AsyncVm::new(vm, host.clone()));
         Self { vm, host, run_spawned: false, runtime: smol::LocalExecutor::new(), done: false, last_event_vm: false }
     }

@@ -28,6 +28,7 @@ use crate::numerics::*;
 use crate::partial::{simplify_bindings_opt, simplify_partial, sub_this, IsaConstraintCheck};
 use crate::rewrites::Renamer;
 use crate::rules::*;
+use crate::runtime::Host;
 use crate::sources::*;
 use crate::terms::*;
 use crate::traces::*;
@@ -217,6 +218,7 @@ pub struct PolarVirtualMachine {
     binding_manager: BindingManager,
     choices: Choices,
     pub queries: Queries,
+    host: Arc<Host>,
 
     pub tracing: bool,
     pub trace_stack: TraceStack, // Stack of traces higher up the tree.
@@ -260,23 +262,17 @@ pub struct PolarVirtualMachine {
     pub messages: MessageQueue,
 }
 
-impl Default for PolarVirtualMachine {
-    fn default() -> Self {
-        PolarVirtualMachine::new(
-            Arc::new(RwLock::new(KnowledgeBase::default())),
-            false,
-            vec![],
-            // Messages will not be exposed, only use default() for testing.
-            MessageQueue::new(),
-        )
-    }
-}
-
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console, js_name = error)]
     fn console_error(a: &str);
+}
+
+impl Default for PolarVirtualMachine {
+    fn default() -> Self {
+        Self::new(Arc::default(), Arc::new(Host::new()), false, vec![], MessageQueue::default())
+    }
 }
 
 // Methods which aren't goals/instructions.
@@ -285,6 +281,7 @@ impl PolarVirtualMachine {
     /// Reverse the goal list for the sanity of callers.
     pub fn new(
         kb: Arc<RwLock<KnowledgeBase>>,
+        host: Arc<Host>,
         tracing: bool,
         goals: Goals,
         messages: MessageQueue,
@@ -306,6 +303,7 @@ impl PolarVirtualMachine {
             .collect::<Vec<&str>>();
         let mut vm = Self {
             goals: GoalStack::new_reversed(goals),
+            host,
             binding_manager: BindingManager::new(),
             query_start_time: None,
             query_timeout_ms,
@@ -335,6 +333,10 @@ impl PolarVirtualMachine {
         vm.bind_constants(constants);
         vm.query_contains_partial();
         vm
+    }
+
+    pub fn host(&self) -> &Arc<Host> {
+        &self.host
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -381,12 +383,12 @@ impl PolarVirtualMachine {
 
     #[cfg(test)]
     pub fn new_test(kb: Arc<RwLock<KnowledgeBase>>, tracing: bool, goals: Goals) -> Self {
-        PolarVirtualMachine::new(kb, tracing, goals, MessageQueue::new())
+        PolarVirtualMachine::new(kb, Arc::new(Host::new()), tracing, goals, MessageQueue::new())
     }
 
     /// Clone self, replacing the goal stack and retaining only the current bindings.
     pub fn clone_with_goals(&self, goals: Goals) -> Self {
-        let mut vm = Self::new(self.kb.clone(), self.tracing, goals, self.messages.clone());
+        let mut vm = Self::new(self.kb.clone(), self.host.clone(), self.tracing, goals, self.messages.clone());
         vm.binding_manager.clone_from(&self.binding_manager);
         vm.query_contains_partial = self.query_contains_partial;
         vm.debugger = self.debugger.clone();
