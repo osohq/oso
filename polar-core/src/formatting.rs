@@ -241,25 +241,6 @@ pub mod display {
                 Goal::Isa { left, right } => {
                     write!(fmt, "Isa({}, {})", left.to_polar(), right.to_polar())
                 }
-                Goal::IsMoreSpecific { left, right, args } => write!(
-                    fmt,
-                    "IsMoreSpecific({} {} ({}))",
-                    left.to_polar(),
-                    right.to_polar(),
-                    args.iter()
-                        .map(|a| a.to_polar())
-                        .collect::<Vec<String>>()
-                        .join(", ")
-                ),
-                Goal::IsSubspecializer {
-                    left, right, arg, ..
-                } => write!(
-                    fmt,
-                    "IsSubspecializer({}, {}, {})",
-                    left.to_polar(),
-                    right.to_polar(),
-                    arg.to_polar()
-                ),
                 Goal::Lookup { dict, field, value } => write!(
                     fmt,
                     "Lookup({}.{} = {})",
