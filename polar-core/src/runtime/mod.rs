@@ -19,7 +19,7 @@ type ExternalResult<T> = std::result::Result<T, RuntimeError>;
 type CallId = u64;
 
 /// Represent host language.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Host {
     // mutable state
     state: Arc<Mutex<HostState>>,

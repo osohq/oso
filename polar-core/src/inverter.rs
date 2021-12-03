@@ -191,50 +191,52 @@ impl Inverter {
     ///    true.
     /// 3. In all other cases, return false.
     fn run(&mut self, _: Option<&mut Counter>) -> Result<QueryEvent> {
-        if self.follower.is_none() {
-            // Binding followers are used to collect new bindings made during
-            // the inversion.
-            self.follower = Some(self.vm.add_binding_follower());
-        }
+        unimplemented!("idk");
 
-        loop {
-            // Pass most events through, but collect results and invert them.
-            match self.vm.run(None)? {
-                QueryEvent::Done { .. } => {
-                    let result = self.results.is_empty();
-                    if !result {
-                        // If there are results, the inversion should usually fail. However,
-                        // if those results have constraints we collect them and pass them
-                        // out to the parent VM.
-                        let constraints =
-                            results_to_constraints(self.results.drain(..).collect::<Vec<_>>());
-                        let mut bsp = Bsp::default();
-                        // Use mem swap to avoid cloning bsps.
-                        std::mem::swap(&mut self.bsp, &mut bsp);
-                        let constraints = filter_inverted_constraints(constraints, &self.vm, bsp);
+        // if self.follower.is_none() {
+        //     // Binding followers are used to collect new bindings made during
+        //     // the inversion.
+        //     self.follower = Some(self.vm.add_binding_follower());
+        // }
 
-                        if !constraints.is_empty() {
-                            // Return inverted constraints to parent VM.
-                            // TODO (dhatch): Would be nice to come up with a better way of doing this.
-                            self.add_constraints.borrow_mut().extend(constraints);
+        // loop {
+        //     // Pass most events through, but collect results and invert them.
+        //     match self.vm.run(None)? {
+        //         QueryEvent::Done { .. } => {
+        //             let result = self.results.is_empty();
+        //             if !result {
+        //                 // If there are results, the inversion should usually fail. However,
+        //                 // if those results have constraints we collect them and pass them
+        //                 // out to the parent VM.
+        //                 let constraints =
+        //                     results_to_constraints(self.results.drain(..).collect::<Vec<_>>());
+        //                 let mut bsp = Bsp::default();
+        //                 // Use mem swap to avoid cloning bsps.
+        //                 std::mem::swap(&mut self.bsp, &mut bsp);
+        //                 let constraints = filter_inverted_constraints(constraints, &self.vm, bsp);
 
-                            return Ok(QueryEvent::Done { result: true });
-                        }
-                    }
-                    return Ok(QueryEvent::Done { result });
-                }
-                QueryEvent::Result { .. } => {
-                    // Retrieve new bindings made when running inverted query.
-                    let binding_follower = self
-                        .vm
-                        .remove_binding_follower(&self.follower.unwrap())
-                        .unwrap();
-                    self.results.push(binding_follower);
-                    self.follower = Some(self.vm.add_binding_follower());
-                }
-                event => return Ok(event),
-            }
-        }
+        //                 if !constraints.is_empty() {
+        //                     // Return inverted constraints to parent VM.
+        //                     // TODO (dhatch): Would be nice to come up with a better way of doing this.
+        //                     self.add_constraints.borrow_mut().extend(constraints);
+
+        //                     return Ok(QueryEvent::Done { result: true });
+        //                 }
+        //             }
+        //             return Ok(QueryEvent::Done { result });
+        //         }
+        //         QueryEvent::Result { .. } => {
+        //             // Retrieve new bindings made when running inverted query.
+        //             let binding_follower = self
+        //                 .vm
+        //                 .remove_binding_follower(&self.follower.unwrap())
+        //                 .unwrap();
+        //             self.results.push(binding_follower);
+        //             self.follower = Some(self.vm.add_binding_follower());
+        //         }
+        //         event => return Ok(event),
+        //     }
+        // }
     }
 
     fn external_question_result(&mut self, call_id: u64, answer: bool) -> Result<()> {

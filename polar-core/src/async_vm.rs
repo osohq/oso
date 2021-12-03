@@ -51,7 +51,7 @@ impl AsyncVm {
 
         loop {
             let ev = {
-                match self.vm.lock().unwrap().run(std::option::Option::None) {
+                match self.vm.lock().unwrap().run(std::option::Option::None).await {
                     Ok(ev) => ev,
                     Err(e) => {
                         self.sync_result.set(Some(Err(e.clone())));

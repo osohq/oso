@@ -12,7 +12,6 @@ use super::vm::*;
 use crate::runtime::executor::LocalExecutor;
 
 pub struct Query {
-    host: Arc<Host>,
     term: Term,
     done: bool,
     runtime: LocalExecutor,
@@ -21,12 +20,11 @@ pub struct Query {
 impl Query {
     pub fn new(vm: PolarVirtualMachine, term: Term) -> Self {
         let host = Arc::new(Host::new());
-        let runtime = LocalExecutor::new(vm, host.clone());
+        let runtime = LocalExecutor::new(vm);
 
         Self {
             runtime,
             term,
-            host,
             done: false,
         }
     }
@@ -45,11 +43,11 @@ impl Query {
     }
 
     pub fn call_result(&mut self, call_id: u64, value: Option<Term>) -> PolarResult<()> {
-        self.host.external_call_result(call_id, value)
+        self.runtime.host().external_call_result(call_id, value)
     }
 
     pub fn question_result(&mut self, call_id: u64, result: bool) -> PolarResult<()> {
-        self.host.external_question_result(call_id, result)
+        self.runtime.host().external_question_result(call_id, result)
     }
 
     pub fn application_error(&mut self, call_id: u64, msg: String) -> PolarResult<()> {
@@ -59,7 +57,7 @@ impl Query {
             _ => None,
         };
         let stack_trace = vm.stack_trace();
-        self.host.application_error(
+        self.runtime.host().application_error(
             call_id,
             RuntimeError::Application {
                 msg,
