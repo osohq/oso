@@ -8,11 +8,14 @@ members = [
     "polarcoaster",
     "languages/rust/oso",
     "languages/rust/oso-derive",
+    "visualizer",
 ]
 
 exclude = [
     "docs/examples/quickstart/rust"
 ]
+
+resolver = "2"
 
 [profile.release]
 # Set this to true if you need to debug release builds

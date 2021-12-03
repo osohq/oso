@@ -21,7 +21,6 @@ harness = false
 lalrpop-util = { version = "0.19.6", default-features = false }
 serde = { version = "1.0.119", features = ["derive", "rc"] }
 indoc = "1.0.3"
-rosc = { version = "0.6.0" }
 serde_json = "1.0.61"
 rosc = { version = "0.6.0" }
 

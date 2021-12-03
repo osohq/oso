@@ -931,19 +931,6 @@ impl PolarVirtualMachine {
         Ok(())
     }
 
-    fn send_osc_event(&self, name: &str) {
-        if self.osc_source.is_none() || self.osc_destination.is_none() {
-            return;
-        }
-        let sock = UdpSocket::bind(self.osc_source.unwrap()).unwrap();
-        let msg = encoder::encode(&OscPacket::Message(OscMessage {
-            addr: format!("/{}", name),
-            args: vec![],
-        }))
-        .unwrap();
-        sock.send_to(&msg, self.osc_destination.unwrap()).ok();
-    }
-
     fn trace_snapshot(&mut self, event: TraceEvent) {
         let depth = self.queries.len();
         self.coaster_trace.max_depth = std::cmp::max(self.coaster_trace.max_depth, depth);
