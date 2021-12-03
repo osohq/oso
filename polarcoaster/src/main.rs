@@ -5,6 +5,7 @@ use std::fs::File;
 use std::io::{prelude, Read};
 
 fn main() {
+    // load in the dumped trace data
     let filename = "coaster.json";
     println!("Loading {}", filename);
     let mut file = File::open(filename).unwrap();
@@ -15,16 +16,17 @@ fn main() {
     let height = trace.max_depth;
     let mut width = 0;
 
-    // need to add results so I can know which paths are successful
+    // todo: need to add results so I can know which paths are successful
 
     // track how many points we have for each level.
     let mut num_in_level = vec![0; trace.max_depth+1];
-    // try to figure out track paths by keeping track of where backtracking went to
+    // try to figure out path by keeping track of where we branched from
     let mut last_in_level = vec![0; trace.max_depth+1];
     let mut current_level = 0;
     let mut edges = vec![];
-    // track the path of the cart
+    // path from the root to where we are
     let mut pos = vec![];
+    // path of the cart including backtracking
     let mut cart_path = vec![0];
     for (i, depthp) in trace.depths.iter().enumerate() {
         let depth = *depthp;
@@ -80,8 +82,8 @@ fn main() {
 
     // scale the thing to fit in the window. Not going to look good for really big or really
     // small traces but can handle that later.
-    let window_width = 640 as f32;
-    let window_height = 480 as f32;
+    let window_width = 960 as f32;
+    let window_height = 540 as f32;
 
     let width = (width-1) as f32;
     let height = (height) as f32;
@@ -103,7 +105,7 @@ fn main() {
 
     let (mut rl, thread) = raylib::init()
         .size(window_width as i32, window_height as i32)
-        .title("Hello, World")
+        .title("Polarcoaster")
         .build();
 
     let mut cart_from = 0;
@@ -121,8 +123,6 @@ fn main() {
         let frame_progress = (time_passed / time_per_node) as f32;
         cart_progress += frame_progress;
         while cart_progress > 1.0 {
-            // todo: this is totally wrong, you have to compute the full path first
-            // step to the next node.
             cart_from = (cart_from + 1) % cart_path.len();
             cart_to = (cart_to + 1) % cart_path.len();
             cart_progress -= 1.0;
@@ -133,7 +133,6 @@ fn main() {
 
         d.clear_background(Color::WHITE);
         let p = Vector2::zero()*scale+offset;
-        //d.draw_rectangle(p.x as i32, p.y as i32, (width*scale.x) as i32, (height*scale.y) as i32, Color::GRAY);
 
         for (fromp, top) in &edges {
             let from = *fromp;
@@ -150,10 +149,6 @@ fn main() {
         let cart_end = node_positions[to_node];
         let to_next = cart_end - cart_start;
         let cart_pos = cart_start + to_next.scale_by(cart_progress);
-        let cart_size = Vector2{
-            x: 10.0,
-            y: 15.0
-        };
         d.draw_circle_v(cart_pos, 5.0, Color::BLUE);
 
         let event = &trace.events[from_node];
@@ -166,8 +161,5 @@ fn main() {
             }
         };
         d.draw_text(&text, 12,12,18,Color::BLACK);
-
-        //d.draw_text("Hello, world!", 12, 12, 20, Color::BLACK);
-        //d.draw_rectangle(center_x-half_cs*scale,center_y-half_cs*scale,coaster_size*scale,coaster_size*scale, Color::RED);
     }
 }
