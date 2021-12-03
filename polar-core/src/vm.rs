@@ -942,11 +942,14 @@ impl PolarVirtualMachine {
         if self.osc_source.is_none() || self.osc_destination.is_none() {
             return;
         }
-        let query_depth = self.queries.len();
+
+        let query_depth = self.queries.len() as i32;
+        let goal_depth = self.goals.len() as i32;
+
         if let Ok(sock) = UdpSocket::bind(self.osc_source.unwrap()) {
             let msg = &OscPacket::Message(OscMessage {
                 addr: format!("/{}", name),
-                args: vec![OscType::Int(query_depth.try_into().unwrap())],
+                args: vec![OscType::Int(query_depth), OscType::Int(goal_depth)],
             });
             let encoded = encoder::encode(msg).unwrap();
 
