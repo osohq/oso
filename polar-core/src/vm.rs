@@ -1384,6 +1384,7 @@ impl PolarVirtualMachine {
         self.host
             .external_call(call_id, instance.clone(), field_name, args, kwargs)
             .await
+        // TODO stack trace is missing here.
     }
 
     pub fn next_external(&mut self, call_id: u64, iterable: &Term) -> Result<QueryEvent> {
@@ -1406,6 +1407,7 @@ impl PolarVirtualMachine {
         }
     }
 
+    // TODO add stack trace to errors somewhere else.
     pub fn check_error(&mut self) -> Result<QueryEvent> {
         if let Some(msg) = self.external_error.take() {
             let term = match self.trace.last().map(|t| t.node.clone()) {

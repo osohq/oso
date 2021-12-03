@@ -50,18 +50,12 @@ impl Query {
     }
 
     pub fn application_error(&mut self, call_id: u64, msg: String) -> PolarResult<()> {
-        let vm = self.runtime.vm();
-        let term = match vm.trace.last().map(|t| t.node.clone()) {
-            Some(Node::Term(t)) => Some(t),
-            _ => None,
-        };
-        let stack_trace = vm.stack_trace();
         self.runtime.host().application_error(
             call_id,
             RuntimeError::Application {
                 msg,
-                stack_trace,
-                term,
+                stack_trace: "".into(),
+                term: None,
             },
         )
     }
