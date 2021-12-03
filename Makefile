@@ -29,8 +29,8 @@ python-sqlalchemy-build: python-build
 	$(MAKE) -C languages/python/sqlalchemy-oso build
 
 python-test: python-build
-	$(MAKE) -C languages/python/oso test
-	cd test && python test.py
+	# TODO back out
+	cd languages/python/oso && pytest ${PYTEST_FLAGS} tests/test_polar.py
 
 python-flask-test: python-build python-flask-build
 	$(MAKE) -C languages/python/flask-oso test

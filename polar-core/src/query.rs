@@ -9,31 +9,25 @@ use super::events::*;
 use super::messages::*;
 use super::terms::*;
 use super::vm::*;
-use crate::async_vm::AsyncVm;
-
-use smol::LocalExecutor;
+use crate::runtime::executor::LocalExecutor;
 
 pub struct Query {
-    vm: Arc<AsyncVm>,
     host: Arc<Host>,
     term: Term,
     done: bool,
-    runtime: LocalExecutor<'static>,
-    run_spawned: bool,
+    runtime: LocalExecutor,
 }
 
 impl Query {
     pub fn new(vm: PolarVirtualMachine, term: Term) -> Self {
         let host = Arc::new(Host::new());
-        let async_vm = Arc::new(AsyncVm::new(vm, host.clone()));
+        let runtime = LocalExecutor::new(vm, host.clone());
 
         Self {
-            vm: async_vm,
+            runtime,
             term,
             host,
             done: false,
-            runtime: LocalExecutor::new(),
-            run_spawned: false,
         }
     }
 
@@ -47,35 +41,7 @@ impl Query {
     }
 
     fn async_next_event(&mut self) -> PolarResult<QueryEvent> {
-        loop {
-            if !self.run_spawned {
-                let vm = self.vm.clone();
-                eprintln!("==============\nspawn");
-                self.runtime
-                    .spawn(async move {
-                        let r = vm.run(None).await;
-                        eprintln!("==============\nfut res:\n\t{:?}", r);
-                    })
-                    .detach();
-                self.run_spawned = true;
-            }
-
-            eprintln!("==============\ntick");
-            let more = self.runtime.try_tick();
-            let ev = self.host.next_event();
-            if let Some(ev) = ev {
-                eprintln!("==============\nhost event:\n\t{:?}", ev);
-                return ev;
-            }
-
-            if let Some(ev) = self.vm.try_take_ev() {
-                eprintln!("==============\nvm event\n\t{:?}", ev);
-                self.run_spawned = false;
-                return ev.map_err(|e| self.vm.with_kb(|kb| e.with_context(kb)));
-            }
-
-            assert!(more);
-        }
+        self.runtime.next_event()
     }
 
     pub fn call_result(&mut self, call_id: u64, value: Option<Term>) -> PolarResult<()> {
@@ -87,7 +53,7 @@ impl Query {
     }
 
     pub fn application_error(&mut self, call_id: u64, msg: String) -> PolarResult<()> {
-        let vm = self.vm.vm();
+        let vm = self.runtime.vm();
         let term = match vm.trace.last().map(|t| t.node.clone()) {
             Some(Node::Term(t)) => Some(t),
             _ => None,
@@ -108,17 +74,17 @@ impl Query {
     }
 
     pub fn next_message(&self) -> Option<Message> {
-        self.vm.next_msg()
+        self.runtime.vm().messages.next()
     }
 
     pub fn source_info(&self) -> String {
-        self.vm.term_source(&self.term, true)
+        self.runtime.vm().term_source(&self.term, true)
     }
 
     pub fn bind(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
-        self.vm
+        self.runtime.vm()
             .bind(&name, value)
-            .map_err(|e| self.vm.with_kb(|kb| e.with_context(kb)))
+            .map_err(|e| self.runtime.with_kb(|kb| e.with_context(kb)))
     }
 }
 

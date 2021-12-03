@@ -13,6 +13,8 @@ use crate::{
     terms::{Operator, Symbol, Term, TermList},
 };
 
+pub mod executor;
+
 type ExternalResult<T> = std::result::Result<T, RuntimeError>;
 type CallId = u64;
 
