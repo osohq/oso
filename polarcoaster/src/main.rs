@@ -1,5 +1,6 @@
 use polar_core::traces::{CoasterTrace, TraceEvent};
 use raylib;
+use raylib::consts::KeyboardKey;
 use raylib::prelude::*;
 use std::fs::File;
 use std::io::{prelude, Read};
@@ -135,6 +136,11 @@ fn main() {
     }
 
     while !rl.window_should_close() {
+        if rl.is_key_pressed(KeyboardKey::KEY_R) {
+            cart_from = 0;
+            cart_to = 1;
+            cart_progress = 0.0;
+        }
         // its not a real simulation so we dont care about consistent time steps
         // just compute how far along the track we are.
         // looks pretty silly because every segment is traveled over the same
@@ -192,7 +198,7 @@ fn main() {
         d.draw_circle_v(cart_pos, 6.0, Color::RED);
 
         if !mousedraw {
-            let event = &trace.events[cart_from];
+            let event = &trace.events[from_node];
             let text = match event {
                 TraceEvent::Query { term } => {
                     polarfmt(term.to_string())
