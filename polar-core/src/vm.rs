@@ -456,7 +456,10 @@ impl PolarVirtualMachine {
                 applicable_rules,
                 unfiltered_rules,
                 args,
-            } => self.filter_rules(applicable_rules, unfiltered_rules, args).await?,
+            } => {
+                self.filter_rules(applicable_rules, unfiltered_rules, args)
+                    .await?
+            }
             Goal::TraceStackPush => {
                 self.trace_stack.push(Rc::new(self.trace.clone()));
                 self.trace = vec![];
@@ -1647,12 +1650,10 @@ impl PolarVirtualMachine {
 
                 // A goal is used here in case the result is already bound to some external
                 // instance.
-                self.append_goals(vec![
-                    Goal::Unify {
-                        left: result,
-                        right: instance,
-                    },
-                ])?;
+                self.append_goals(vec![Goal::Unify {
+                    left: result,
+                    right: instance,
+                }])?;
             }
             Operator::Cut => {
                 if self.query_contains_partial {
@@ -1865,7 +1866,11 @@ impl PolarVirtualMachine {
             (Value::ExternalInstance(_), _) | (_, Value::ExternalInstance(_)) => {
                 // Generate a symbol for the external result and bind to `false` (default).
                 let (call_id, answer) = self.new_call_var("external_op_result", false.into());
-                if !self.host.external_op(call_id, *op, vec![left.clone(), right.clone()]).await {
+                if !self
+                    .host
+                    .external_op(call_id, *op, vec![left.clone(), right.clone()])
+                    .await
+                {
                     self.push_goal(Goal::Backtrack)?;
                 }
                 Ok(QueryEvent::None)
@@ -2475,11 +2480,7 @@ impl PolarVirtualMachine {
     /// position of the candidate rule (the rule at the head of the unsorted portion of the
     /// list).
     #[allow(clippy::ptr_arg)]
-    async fn sort_rules(
-        &mut self,
-        rules: &mut Rules,
-        args: &TermList,
-    ) {
+    async fn sort_rules(&mut self, rules: &mut Rules, args: &TermList) {
         loop {
             let mut swapped = false;
 
@@ -2496,7 +2497,7 @@ impl PolarVirtualMachine {
             }
 
             if !swapped {
-                break
+                break;
             }
         }
 
@@ -2504,54 +2505,54 @@ impl PolarVirtualMachine {
     }
 
     fn call_rules(&mut self, rules: Rules, args: &TermList) -> Result<()> {
-            // TODO move rule calling logic somewhere else.
-            self.polar_log_mute = false;
-            self.log_with(
-                || {
-                    let mut rule_strs = "APPLICABLE_RULES:".to_owned();
-                    for rule in &rules {
-                        rule_strs.push_str(&format!("\n  {}", self.rule_source(rule)));
-                    }
-                    rule_strs
-                },
-                &[],
-            );
-
-            let mut alternatives = Vec::with_capacity(rules.len());
-            for rule in rules.iter() {
-                let mut goals = Vec::with_capacity(2 * args.len() + 4);
-                goals.push(Goal::TraceRule {
-                    trace: Rc::new(Trace {
-                        node: Node::Rule(rule.clone()),
-                        children: vec![],
-                    }),
-                });
-                goals.push(Goal::TraceStackPush);
-                let Rule { body, params, .. } = self.rename_rule_vars(rule);
-
-                // Unify the arguments with the formal parameters.
-                for (arg, param) in args.iter().zip(params.iter()) {
-                    goals.push(Goal::Unify {
-                        left: arg.clone(),
-                        right: param.parameter.clone(),
-                    });
-                    if let Some(specializer) = &param.specializer {
-                        goals.push(Goal::Isa {
-                            left: param.parameter.clone(),
-                            right: specializer.clone(),
-                        });
-                    }
+        // TODO move rule calling logic somewhere else.
+        self.polar_log_mute = false;
+        self.log_with(
+            || {
+                let mut rule_strs = "APPLICABLE_RULES:".to_owned();
+                for rule in &rules {
+                    rule_strs.push_str(&format!("\n  {}", self.rule_source(rule)));
                 }
+                rule_strs
+            },
+            &[],
+        );
 
-                // Query for the body clauses.
-                goals.push(Goal::Query { term: body.clone() });
-                goals.push(Goal::TraceStackPop);
+        let mut alternatives = Vec::with_capacity(rules.len());
+        for rule in rules.iter() {
+            let mut goals = Vec::with_capacity(2 * args.len() + 4);
+            goals.push(Goal::TraceRule {
+                trace: Rc::new(Trace {
+                    node: Node::Rule(rule.clone()),
+                    children: vec![],
+                }),
+            });
+            goals.push(Goal::TraceStackPush);
+            let Rule { body, params, .. } = self.rename_rule_vars(rule);
 
-                alternatives.push(goals)
+            // Unify the arguments with the formal parameters.
+            for (arg, param) in args.iter().zip(params.iter()) {
+                goals.push(Goal::Unify {
+                    left: arg.clone(),
+                    right: param.parameter.clone(),
+                });
+                if let Some(specializer) = &param.specializer {
+                    goals.push(Goal::Isa {
+                        left: param.parameter.clone(),
+                        right: specializer.clone(),
+                    });
+                }
             }
 
-            // Choose the first alternative, and push a choice for the rest.
-            self.choose(alternatives)?;
+            // Query for the body clauses.
+            goals.push(Goal::Query { term: body.clone() });
+            goals.push(Goal::TraceStackPop);
+
+            alternatives.push(goals)
+        }
+
+        // Choose the first alternative, and push a choice for the rest.
+        self.choose(alternatives)?;
         Ok(())
     }
 
@@ -2586,7 +2587,7 @@ impl PolarVirtualMachine {
                     // that aren't the same and you can compare them and ask which one is more specific
                     // to the relevant argument, you're done.
                     if left_spec != right_spec {
-                        return self.is_subspecializer(left_spec, right_spec, arg).await
+                        return self.is_subspecializer(left_spec, right_spec, arg).await;
                     }
                 }
                 // If the left rule has no specializer and the right does, it is NOT more specific,
@@ -2599,16 +2600,11 @@ impl PolarVirtualMachine {
             }
         }
         // Fail on any of the above branches that do not return
-        return false
+        return false;
     }
 
     /// Determine if `left` is a more specific specializer ("subspecializer") than `right`
-    async fn is_subspecializer(
-        &mut self,
-        left: &Term,
-        right: &Term,
-        arg: &Term,
-    ) -> bool {
+    async fn is_subspecializer(&mut self, left: &Term, right: &Term, arg: &Term) -> bool {
         let arg = self.deref(arg);
         match (arg.value(), left.value(), right.value()) {
             (
@@ -2619,11 +2615,18 @@ impl PolarVirtualMachine {
                 let call_id = self.new_call_id(&sym!(""));
                 let instance_id = instance.instance_id;
                 if left_lit.tag == right_lit.tag
-                    && !(left_lit.fields.fields.is_empty() && right_lit.fields.fields.is_empty()) {
+                    && !(left_lit.fields.fields.is_empty() && right_lit.fields.fields.is_empty())
+                {
                     left_lit.fields.fields.len() > right_lit.fields.fields.len()
-                } else  {
-                    self.host.external_is_sub_specializer(
-                        call_id, instance_id, left_lit.tag.clone(), right_lit.tag.clone()).await
+                } else {
+                    self.host
+                        .external_is_sub_specializer(
+                            call_id,
+                            instance_id,
+                            left_lit.tag.clone(),
+                            right_lit.tag.clone(),
+                        )
+                        .await
                 }
             }
             (
@@ -2642,9 +2645,7 @@ impl PolarVirtualMachine {
             (_, Value::Pattern(Pattern::Instance(_)), Value::Pattern(Pattern::Dictionary(_))) => {
                 true
             }
-            _ => {
-                false
-            }
+            _ => false,
         }
     }
 
