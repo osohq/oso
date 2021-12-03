@@ -164,20 +164,22 @@ fn main() {
             y: d.get_mouse_y() as f32
         };
 
+        let mut mousedraw = false;
         for (i, pos) in node_positions.iter().enumerate() {
             d.draw_circle_v(*pos, 4.0, Color::DARKBLUE);
             if mousep.distance_to(*pos) <= 4.0 {
+                mousedraw = true;
                 let event = &trace.events[i];
                 let text = match event {
                     TraceEvent::Query { term } => {
-                        term.to_string()
+                        polarfmt(term.to_string())
                     }
                     TraceEvent::Rule { rule } => {
                         rule.to_string()
                     }
                 };
 
-                d.draw_text(&text, 12,12,18,Color::BLACK);
+                d.draw_text(&text, 12,12,18,Color::BLUE);
             }
         }
 
@@ -188,5 +190,23 @@ fn main() {
         let to_next = cart_end - cart_start;
         let cart_pos = cart_start + to_next.scale_by(cart_progress);
         d.draw_circle_v(cart_pos, 6.0, Color::RED);
+
+        if !mousedraw {
+            let event = &trace.events[cart_from];
+            let text = match event {
+                TraceEvent::Query { term } => {
+                    polarfmt(term.to_string())
+                }
+                TraceEvent::Rule { rule } => {
+                    rule.to_string()
+                }
+            };
+
+            d.draw_text(&text, 12, 12, 18, Color::BLACK);
+        }
     }
+}
+
+fn polarfmt(polar: String) -> String {
+    polar.split("and").collect::<Vec<&str>>().join("\n  and")
 }
