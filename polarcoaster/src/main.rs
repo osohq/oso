@@ -26,7 +26,7 @@ fn main() {
     let mut edges = vec![];
     // path from the root to where we are
     let mut pos = vec![];
-    // path of the cart including backtracking
+    // path the cart travels including backtracking
     let mut cart_path = vec![0];
     for (i, depthp) in trace.depths.iter().enumerate() {
         let depth = *depthp;
@@ -40,19 +40,12 @@ fn main() {
 
         if depth == current_level {
             edges.push((last_in_level[depth], i));
-            last_in_level[depth] = i;
-            pos.push(i);
-            cart_path.push(i);
-        } else if depth > current_level {
+        } else if depth >= current_level {
             assert_eq!(depth, current_level+1);
             edges.push((last_in_level[current_level], i));
-            last_in_level[depth] = i;
-            pos.push(i);
-            cart_path.push(i);
         } else if depth < current_level {
             let backtrack_to = last_in_level[depth-1];
             edges.push((backtrack_to, i));
-            last_in_level[depth] = i;
 
             // backtrack
             pos.pop();
@@ -63,10 +56,11 @@ fn main() {
                     break
                 }
             }
-            pos.push(i);
-            cart_path.push(i);
         }
 
+        last_in_level[depth] = i;
+        pos.push(i);
+        cart_path.push(i);
         current_level = depth;
     }
 
@@ -141,8 +135,10 @@ fn main() {
     }
 
     while !rl.window_should_close() {
-        // theres no real simulation so we dont care about consistent time steps
-        // just compute how far along the track we are
+        // its not a real simulation so we dont care about consistent time steps
+        // just compute how far along the track we are.
+        // looks pretty silly because every segment is traveled over the same
+        // amount of time even though they arent the same lengths
         let t = rl.get_time();
         let time_passed = t - last_t;
         let frame_progress = (time_passed / time_per_node) as f32;
