@@ -12,6 +12,7 @@ use smol::future::Future;
 use wasm_bindgen::prelude::*;
 
 use super::visitor::{walk_term, Visitor};
+use crate::async_util::sort_by_async;
 use crate::bindings::{
     Binding, BindingManager, BindingStack, Bindings, Bsp, FollowerId, VariableState,
 };
@@ -81,12 +82,6 @@ pub enum Goal {
         args: TermList,
         applicable_rules: Rules,
         unfiltered_rules: Rules,
-    },
-    SortRules {
-        args: TermList,
-        rules: Rules,
-        outer: usize,
-        inner: usize,
     },
     TraceRule {
         trace: Rc<Trace>,
@@ -461,13 +456,7 @@ impl PolarVirtualMachine {
                 applicable_rules,
                 unfiltered_rules,
                 args,
-            } => self.filter_rules(applicable_rules, unfiltered_rules, args)?,
-            Goal::SortRules {
-                rules,
-                outer,
-                inner,
-                args,
-            } => self.sort_rules(rules, args, *outer, *inner).await?,
+            } => self.filter_rules(applicable_rules, unfiltered_rules, args).await?,
             Goal::TraceStackPush => {
                 self.trace_stack.push(Rc::new(self.trace.clone()));
                 self.trace = vec![];
@@ -2426,22 +2415,18 @@ impl PolarVirtualMachine {
 
     /// Filter rules to just those applicable to a list of arguments,
     /// then sort them by specificity.
-    #[allow(clippy::ptr_arg)]
-    fn filter_rules(
+    async fn filter_rules(
         &mut self,
         applicable_rules: &Rules,
         unfiltered_rules: &Rules,
         args: &TermList,
     ) -> Result<()> {
         if unfiltered_rules.is_empty() {
+            let mut rules = applicable_rules.clone();
+            rules.reverse();
             // The rules have been filtered. Sort them.
-
-            self.push_goal(Goal::SortRules {
-                rules: applicable_rules.iter().rev().cloned().collect(),
-                args: args.clone(),
-                outer: 1,
-                inner: 1,
-            })
+            self.sort_rules(&mut rules, args).await;
+            return self.call_rules(rules, args);
         } else {
             // Check one rule for applicability.
             let mut unfiltered_rules = unfiltered_rules.clone();
@@ -2501,65 +2486,39 @@ impl PolarVirtualMachine {
     #[allow(clippy::ptr_arg)]
     async fn sort_rules(
         &mut self,
-        rules: &Rules,
+        rules: &mut Rules,
         args: &TermList,
-        outer: usize,
-        inner: usize,
-    ) -> Result<()> {
-        if rules.is_empty() {
-            return self.push_goal(Goal::Backtrack);
-        } else if outer > rules.len() {
-            return invalid_state("bad outer index".to_string());
-        } else if inner > rules.len() {
-            return invalid_state("bad inner index".to_string());
-        } else if inner > outer {
-            return invalid_state("bad insertion sort state".to_string());
+    ) {
+        loop {
+            let mut swapped = false;
+
+            for i in 1..rules.len() {
+                let l = &rules[i - 1];
+                let r = &rules[i];
+                let gt = self.is_more_specific(&r, &l, args).await;
+                eprintln!("compare {} {}", l, r);
+                if gt {
+                    eprintln!("swap {} {}", l, r);
+                    rules.swap(i - 1, i);
+                    swapped = true;
+                }
+            }
+
+            if !swapped {
+                break
+            }
         }
 
-        let next_outer = Goal::SortRules {
-            rules: rules.clone(),
-            args: args.clone(),
-            outer: outer + 1,
-            inner: outer + 1,
-        };
-        // Because `outer` starts as `1`, if there is only one rule in the `Rules`, this check
-        // fails and we jump down to the evaluation of that lone rule.
-        if outer < rules.len() {
-            if inner > 0 {
-                let left = rules[inner].clone();
-                let right = rules[inner - 1].clone();
-                let args = args.clone();
+        eprintln!("sorted {:?}", rules);
+    }
 
-
-                let mut rules = rules.clone();
-                rules.swap(inner - 1, inner);
-                let next_inner = Goal::SortRules {
-                    rules,
-                    outer,
-                    inner: inner - 1,
-                    args: args.clone(),
-                };
-
-                if self.is_more_specific(&left, &right, &args).await {
-                    self.push_goal(next_inner)?;
-                } else {
-                    self.push_goal(next_outer)?;
-                }
-            } else {
-                if inner != 0 {
-                    return invalid_state("inner == 0".to_string());
-                }
-                self.push_goal(next_outer)?;
-            }
-        } else {
-            // We're done; the rules are sorted.
-            // Make alternatives for calling them.
-
+    fn call_rules(&mut self, rules: Rules, args: &TermList) -> Result<()> {
+            // TODO move rule calling logic somewhere else.
             self.polar_log_mute = false;
             self.log_with(
                 || {
                     let mut rule_strs = "APPLICABLE_RULES:".to_owned();
-                    for rule in rules {
+                    for rule in &rules {
                         rule_strs.push_str(&format!("\n  {}", self.rule_source(rule)));
                     }
                     rule_strs
@@ -2602,7 +2561,6 @@ impl PolarVirtualMachine {
 
             // Choose the first alternative, and push a choice for the rest.
             self.choose(alternatives)?;
-        }
         Ok(())
     }
 
@@ -2641,7 +2599,6 @@ impl PolarVirtualMachine {
                     }
                 }
                 // If the left rule has no specializer and the right does, it is NOT more specific,
-                // so we Backtrack (fail)
                 (None, Some(_)) => return false,
                 // If the left rule has a specializer and the right does not, the left IS more specific,
                 // so we return

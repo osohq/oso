@@ -260,18 +260,6 @@ pub mod display {
                     fmt_rules(applicable_rules),
                     fmt_rules(unfiltered_rules),
                 ),
-                Goal::SortRules {
-                    rules,
-                    outer,
-                    inner,
-                    ..
-                } => write!(
-                    fmt,
-                    "SortRules([{}], outer={}, inner={})",
-                    fmt_rules(rules),
-                    outer,
-                    inner,
-                ),
                 Goal::TraceRule { trace: _ } => write!(
                     fmt,
                     "TraceRule(...)" // FIXME: draw trace?
