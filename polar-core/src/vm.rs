@@ -1865,19 +1865,10 @@ impl PolarVirtualMachine {
             (Value::ExternalInstance(_), _) | (_, Value::ExternalInstance(_)) => {
                 // Generate a symbol for the external result and bind to `false` (default).
                 let (call_id, answer) = self.new_call_var("external_op_result", false.into());
-
-                // Check that the external result is `true` when we return.
-                self.push_goal(Goal::Unify {
-                    left: answer,
-                    right: Term::from(true),
-                })?;
-
-                // Emit an event for the external operation.
-                Ok(QueryEvent::ExternalOp {
-                    call_id,
-                    operator: *op,
-                    args: vec![left.clone(), right.clone()],
-                })
+                if !self.host.external_op(call_id, *op, vec![left.clone(), right.clone()]).await {
+                    self.push_goal(Goal::Backtrack)?;
+                }
+                Ok(QueryEvent::None)
             }
             _ => {
                 if !compare(*op, left, right, Some(term))? {
