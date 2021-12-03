@@ -744,7 +744,6 @@ def test_unbound_variable(polar, query):
     assert isinstance(first["x"], Variable)
 
 
-@pytest.mark.xfail(reason="application error")
 def test_return_none(polar):
     class Foo:
         def this_is_none(self):

@@ -78,17 +78,16 @@ impl AsyncVm {
                     attribute,
                     args,
                     kwargs,
-                } => {
-                    let result = self
-                        .host
-                        .external_call(call_id, instance, attribute, args, kwargs)
-                        .await;
-                    self.vm
-                        .lock()
-                        .unwrap()
-                        .external_call_result(call_id, result?)
-                        .unwrap();
-                }
+                } => self
+                    .host
+                    .external_call(call_id, instance, attribute, args, kwargs)
+                    .await
+                    .and_then(|r| self.vm.lock().unwrap().external_call_result(call_id, r))
+                    .map_err(|e| {
+                        self.sync_result.set(Some(Err(e.clone())));
+                        eprintln!("==============\ndone");
+                        e
+                    })?,
                 ExternalIsa {
                     call_id,
                     instance,
