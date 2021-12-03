@@ -115,6 +115,13 @@ fn main() {
     let time_per_node = 1.5;
     let mut last_t = 0.0;
 
+    let mut track_lines = vec![];
+    for (fromp, top) in &edges {
+        let from = *fromp;
+        let to = *top;
+        track_lines.push((node_positions[from], node_positions[to], 2.0, Color::BLACK));
+    }
+
     while !rl.window_should_close() {
         // theres no real simulation so we dont care about consistent time steps
         // just compute how far along the track we are
@@ -133,6 +140,10 @@ fn main() {
 
         d.clear_background(Color::WHITE);
         let p = Vector2::zero()*scale+offset;
+
+        for (start, end, thick, color) in &track_lines {
+            d.draw_line_ex(start, end, *thick, color);
+        }
 
         for (fromp, top) in &edges {
             let from = *fromp;
