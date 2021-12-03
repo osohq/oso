@@ -46,7 +46,9 @@ impl Query {
     }
 
     pub fn question_result(&mut self, call_id: u64, result: bool) -> PolarResult<()> {
-        self.runtime.host().external_question_result(call_id, result)
+        self.runtime
+            .host()
+            .external_question_result(call_id, result)
     }
 
     pub fn application_error(&mut self, call_id: u64, msg: String) -> PolarResult<()> {
@@ -73,7 +75,8 @@ impl Query {
     }
 
     pub fn bind(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
-        self.runtime.vm()
+        self.runtime
+            .vm()
             .bind(&name, value)
             .map_err(|e| self.runtime.with_kb(|kb| e.with_context(kb)))
     }
