@@ -92,12 +92,14 @@ impl Host {
     }
 
     pub async fn make_external(&self, instance_id: u64, constructor: Term) {
+        eprintln!("before make external");
         self.state()
             .send_event(QueryEvent::MakeExternal {
                 instance_id,
                 constructor,
             })
-            .await
+            .await;
+        eprintln!("after make external");
     }
 
     async fn send_event_with_result(

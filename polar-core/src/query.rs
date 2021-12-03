@@ -71,7 +71,7 @@ impl Query {
     }
 
     pub fn next_message(&self) -> Option<Message> {
-        self.runtime.vm().messages.next()
+        self.runtime.next_msg()
     }
 
     pub fn source_info(&self) -> String {

@@ -6,6 +6,8 @@ use std::rc::Rc;
 use std::string::ToString;
 use std::sync::{Arc, RwLock, RwLockReadGuard};
 
+use smol::future::Future;
+
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
@@ -26,6 +28,7 @@ use crate::lexer::loc_to_pos;
 use crate::messages::*;
 use crate::numerics::*;
 use crate::partial::{simplify_bindings_opt, simplify_partial, sub_this, IsaConstraintCheck};
+use crate::query::Query;
 use crate::rewrites::Renamer;
 use crate::rules::*;
 use crate::runtime::Host;
@@ -72,11 +75,6 @@ pub enum Goal {
         dict: Dictionary,
         field: Term,
         value: Term,
-    },
-    LookupExternal {
-        call_id: u64,
-        instance: Term,
-        field: Term,
     },
     IsaExternal {
         instance: Term,
@@ -245,6 +243,7 @@ pub struct PolarVirtualMachine {
     /// Rules and types.
     pub kb: Arc<RwLock<KnowledgeBase>>,
 
+    // TODO this map is no longer cleaned up properly
     /// Call ID -> result variable name table.
     call_id_symbols: HashMap<u64, Symbol>,
 
@@ -433,7 +432,7 @@ impl PolarVirtualMachine {
 
     /// Try to achieve one goal. Return `Some(QueryEvent)` if an external
     /// result is needed to achieve it, or `None` if it can run internally.
-    fn next(&mut self, goal: Rc<Goal>) -> Result<QueryEvent> {
+    async fn next(&mut self, goal: Rc<Goal>) -> Result<QueryEvent> {
         if self.log {
             self.print(&format!("{}", goal));
         }
@@ -446,7 +445,7 @@ impl PolarVirtualMachine {
             Goal::Debug { message } => return Ok(self.debug(message)),
             Goal::Halt => return Ok(self.halt()),
             Goal::Error { error } => return Err(error.clone()),
-            Goal::Isa { left, right } => self.isa(left, right)?,
+            Goal::Isa { left, right } => self.isa(left, right).await?,
             Goal::IsMoreSpecific { left, right, args } => {
                 self.is_more_specific(left, right, args)?
             }
@@ -457,11 +456,6 @@ impl PolarVirtualMachine {
                 arg,
             } => return self.is_subspecializer(answer, left, right, arg),
             Goal::Lookup { dict, field, value } => self.lookup(dict, field, value)?,
-            Goal::LookupExternal {
-                call_id,
-                instance,
-                field,
-            } => return self.lookup_external(*call_id, instance, field),
             Goal::IsaExternal { instance, literal } => return self.isa_external(instance, literal),
             Goal::MakeExternal {
                 constructor,
@@ -473,7 +467,7 @@ impl PolarVirtualMachine {
             Goal::CheckError => return self.check_error(),
             Goal::Noop => {}
             Goal::Query { term } => {
-                let result = self.query(term);
+                let result = self.query(term).await;
                 self.maybe_break(DebugEvent::Query)?;
                 return result;
             }
@@ -533,9 +527,10 @@ impl PolarVirtualMachine {
         if self.goals.len() >= self.stack_limit {
             let msg = format!("Goal stack overflow! MAX_GOALS = {}", self.stack_limit);
             Err(RuntimeError::StackOverflow { msg })
-        } else if matches!(goal, LookupExternal { call_id, ..} | NextExternal { call_id, .. } if self.variable_state(self.get_call_sym(call_id)) != Unbound)
-        {
-            invalid_state("The call_id result variables for LookupExternal and NextExternal goals must be unbound.".to_string())
+        // TODO replicate this logic somewhere
+        // } else if matches!(goal, LookupExternal { call_id, ..} | NextExternal { call_id, .. } if self.variable_state(self.get_call_sym(call_id)) != Unbound)
+        // {
+        //     invalid_state("The call_id result variables for LookupExternal and NextExternal goals must be unbound.".to_string())
         } else {
             self.goals.push(Rc::new(goal));
             Ok(())
@@ -966,7 +961,7 @@ impl PolarVirtualMachine {
 
     /// Comparison operator that essentially performs partial unification.
     #[allow(clippy::many_single_char_names)]
-    pub fn isa(&mut self, left: &Term, right: &Term) -> Result<()> {
+    pub async fn isa(&mut self, left: &Term, right: &Term) -> Result<()> {
         self.log_with(
             || format!("MATCHES: {} matches {}", left.to_polar(), right.to_polar()),
             &[left, right],
@@ -1066,17 +1061,21 @@ impl PolarVirtualMachine {
                     // Unification with the lookup result happens in `fn external_call_result()`.
                     let answer = self.kb.read().unwrap().gensym("isa_value");
                     let call_id = self.new_call_id(&answer);
-
-                    let lookup = Goal::LookupExternal {
-                        instance: left.clone(),
-                        call_id,
-                        field: right_value.clone_with_value(Value::String(field.0.clone())),
+                    let field_value = self.lookup_external(call_id, left, &Term::new_from_test(Value::String(field.0.clone()))).await
+                        // isa ignores external errors, treating them as a failure instead
+                        .unwrap_or_else(|_| None);
+                    let field_value = if let Some(fv) = field_value {
+                        fv 
+                    } else {
+                        self.backtrack()?;
+                        return Ok(());
                     };
+
                     let isa = Goal::Isa {
-                        left: Term::from(answer),
+                        left: field_value, 
                         right: right_value.clone(),
                     };
-                    self.append_goals(vec![lookup, isa])?;
+                    self.append_goals(vec![isa])?;
                 }
             }
 
@@ -1303,12 +1302,12 @@ impl PolarVirtualMachine {
     /// Return an external call event to look up a field's value
     /// in an external instance. Push a `Goal::LookupExternal` as
     /// an alternative on the last choice point to poll for results.
-    pub fn lookup_external(
+    async fn lookup_external(
         &mut self,
         call_id: u64,
         instance: &Term,
         field: &Term,
-    ) -> Result<QueryEvent> {
+    ) -> Result<Option<Term>> {
         let (field_name, args, kwargs): (
             Symbol,
             Option<Vec<Term>>,
@@ -1333,10 +1332,6 @@ impl PolarVirtualMachine {
             }
         };
 
-        // add an empty choice point; lookups return only one value
-        // but we'll want to cut if we get back nothing
-        self.push_choice(vec![])?;
-
         self.log_with(
             || {
                 let mut msg = format!("LOOKUP: {}.{}", instance, field_name);
@@ -1358,13 +1353,7 @@ impl PolarVirtualMachine {
             &[],
         );
 
-        Ok(QueryEvent::ExternalCall {
-            call_id,
-            instance: self.deref(instance),
-            attribute: field_name,
-            args,
-            kwargs,
-        })
+        self.host.external_call(call_id, instance.clone(), field_name, args, kwargs).await
     }
 
     pub fn isa_external(
@@ -1428,7 +1417,7 @@ impl PolarVirtualMachine {
     /// Creates a choice point over each rule, where each alternative
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
-    fn query(&mut self, term: &Term) -> Result<QueryEvent> {
+    async fn query(&mut self, term: &Term) -> Result<QueryEvent> {
         // Don't log if it's just a single element AND like lots of rule bodies tend to be.
         match &term.value() {
             Value::Expression(Operation {
@@ -1452,7 +1441,7 @@ impl PolarVirtualMachine {
                 self.query_for_predicate(predicate.clone())?;
             }
             Value::Expression(_) => {
-                return self.query_for_operation(term);
+                return self.query_for_operation(term).await;
             }
             Value::Variable(sym) => {
                 self.push_goal(
@@ -1531,7 +1520,7 @@ impl PolarVirtualMachine {
         self.append_goals(goals)
     }
 
-    fn query_for_operation(&mut self, term: &Term) -> Result<QueryEvent> {
+    async fn query_for_operation(&mut self, term: &Term) -> Result<QueryEvent> {
         let operation = term.value().as_expression().unwrap();
         let mut args = operation.args.clone();
         let wrong_arity = || {
@@ -1614,7 +1603,7 @@ impl PolarVirtualMachine {
                 self.push_goal(Goal::Unify { left, right })?
             }
             Operator::Dot => {
-                return self.query_op_helper(term, Self::dot_op_helper, false, false);
+                return self.query_op_helper(term, &Self::dot_op_helper, false, false).await;
             }
 
             Operator::Lt
@@ -1623,7 +1612,7 @@ impl PolarVirtualMachine {
             | Operator::Geq
             | Operator::Eq
             | Operator::Neq => {
-                return self.query_op_helper(term, Self::comparison_op_helper, true, true);
+                return self.query_op_helper(term, &Self::comparison_op_helper, true, true).await;
             }
 
             Operator::Add
@@ -1632,11 +1621,11 @@ impl PolarVirtualMachine {
             | Operator::Div
             | Operator::Mod
             | Operator::Rem => {
-                return self.query_op_helper(term, Self::arithmetic_op_helper, true, true);
+                return self.query_op_helper(term, &Self::arithmetic_op_helper, true, true).await;
             }
 
             Operator::In => {
-                return self.query_op_helper(term, Self::in_op_helper, false, true);
+                return self.query_op_helper(term, &Self::in_op_helper, false, true).await;
             }
 
             Operator::Debug => {
@@ -1765,15 +1754,16 @@ impl PolarVirtualMachine {
     ///   operand is a variable.
     /// - handle_unbound_right_var: Same as above but for the RHS. `Dot` uses this.
     #[allow(clippy::many_single_char_names)]
-    fn query_op_helper<F>(
-        &mut self,
-        term: &Term,
+    async fn query_op_helper<'a, F, R>(
+        &'a mut self,
+        term: &'a Term,
         eval: F,
         handle_unbound_left_var: bool,
         handle_unbound_right_var: bool,
     ) -> Result<QueryEvent>
     where
-        F: Fn(&mut Self, &Term) -> Result<QueryEvent>,
+        F: Fn(&'a mut Self, &'a Term) -> R,
+        R: Future<Output = Result<QueryEvent>> + 'a,
     {
         let Operation { operator: op, args } = term.value().as_expression().unwrap();
 
@@ -1857,7 +1847,7 @@ impl PolarVirtualMachine {
                 })?;
                 return Ok(QueryEvent::None);
             } else if !handle_unbound_right_var && left.value().as_symbol().is_err() {
-                return eval(self, term);
+                return eval(self, term).await;
             }
         }
 
@@ -1872,7 +1862,7 @@ impl PolarVirtualMachine {
                 })?;
                 return Ok(QueryEvent::None);
             } else if !handle_unbound_left_var && right.value().as_symbol().is_err() {
-                return eval(self, term);
+                return eval(self, term).await;
             }
         }
 
@@ -1881,11 +1871,11 @@ impl PolarVirtualMachine {
             return Ok(QueryEvent::None);
         }
 
-        eval(self, term)
+        eval(self, term).await
     }
 
     /// Evaluate comparison operations.
-    fn comparison_op_helper(&mut self, term: &Term) -> Result<QueryEvent> {
+    async fn comparison_op_helper(&mut self, term: &Term) -> Result<QueryEvent> {
         let Operation { operator: op, args } = term.value().as_expression().unwrap();
 
         if args.len() != 2 {
@@ -1927,7 +1917,7 @@ impl PolarVirtualMachine {
     // TODO(ap, dhatch): Rewrite 3-arg arithmetic ops as 2-arg + unify,
     // like we do for dots; e.g., `+(a, b, c)` → `c = +(a, b)`.
     /// Evaluate arithmetic operations.
-    fn arithmetic_op_helper(&mut self, term: &Term) -> Result<QueryEvent> {
+    async fn arithmetic_op_helper(&mut self, term: &Term) -> Result<QueryEvent> {
         let Operation { operator: op, args } = term.value().as_expression().unwrap();
 
         if args.len() != 3 {
@@ -1980,7 +1970,7 @@ impl PolarVirtualMachine {
     }
 
     /// Push appropriate goals for lookups on dictionaries and instances.
-    fn dot_op_helper(&mut self, term: &Term) -> Result<QueryEvent> {
+    async fn dot_op_helper(&mut self, term: &Term) -> Result<QueryEvent> {
         let Operation { args, .. } = term.value().as_expression().unwrap();
 
         if args.len() != 3 {
@@ -2008,18 +1998,20 @@ impl PolarVirtualMachine {
             | Value::List(_)
             | Value::Number(_)
             | Value::String(_) => {
-                let answer = self.kb.read().unwrap().gensym("lookup_value");
+                let answer = self.kb().gensym("external_value");
                 let call_id = self.new_call_id(&answer);
+                let field_value = self.lookup_external(call_id, object, field).await?;
+                let field_value = if let Some(fv) = field_value {
+                    fv
+                } else {
+                    self.backtrack()?;
+                    return Ok(QueryEvent::None)
+                };
+
                 self.append_goals(vec![
-                    Goal::LookupExternal {
-                        call_id,
-                        field: field.clone(),
-                        instance: object.clone(),
-                    },
-                    Goal::CheckError,
                     Goal::Unify {
-                        left: value.clone(),
-                        right: Term::from(answer),
+                        left: field_value,
+                        right: value.clone(),
                     },
                 ])?;
             }
@@ -2050,7 +2042,7 @@ impl PolarVirtualMachine {
         Ok(QueryEvent::None)
     }
 
-    fn in_op_helper(&mut self, term: &Term) -> Result<QueryEvent> {
+    async fn in_op_helper(&mut self, term: &Term) -> Result<QueryEvent> {
         let Operation { args, .. } = term.value().as_expression().unwrap();
 
         if args.len() != 2 {
@@ -2831,7 +2823,7 @@ impl PolarVirtualMachine {
         }
 
         while let Some(goal) = self.goals.pop() {
-            match self.next(goal.clone())? {
+            match self.next(goal.clone()).await? {
                 QueryEvent::None => (),
                 event => {
                     self.external_error = None;

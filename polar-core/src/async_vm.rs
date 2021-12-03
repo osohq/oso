@@ -1,7 +1,7 @@
 use crate::counter::Counter;
 use crate::events::QueryEvent;
 use crate::kb::KnowledgeBase;
-use crate::messages::Message;
+use crate::messages::{Message, MessageQueue};
 use crate::runtime::Host;
 use crate::terms::{Symbol, Term};
 use crate::vm::PolarVirtualMachine;
@@ -10,6 +10,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 pub struct AsyncVm {
     vm: Mutex<PolarVirtualMachine>,
+    messages: MessageQueue,
     host: Arc<Host>,
     sync_result: Cell<Option<Result<QueryEvent, crate::error::RuntimeError>>>,
 }
@@ -17,6 +18,7 @@ pub struct AsyncVm {
 impl AsyncVm {
     pub fn new(vm: PolarVirtualMachine, host: Arc<Host>) -> Self {
         Self {
+            messages: vm.messages.clone(),
             vm: Mutex::new(vm),
             host,
             sync_result: Cell::new(None),
@@ -39,7 +41,7 @@ impl AsyncVm {
     }
 
     pub fn next_msg(&self) -> Option<Message> {
-        self.vm.lock().unwrap().messages.next()
+        self.messages.next()
     }
 
     pub fn term_source(&self, term: &Term, include_info: bool) -> String {

@@ -267,14 +267,6 @@ pub mod display {
                     field.to_polar(),
                     value.to_polar()
                 ),
-                Goal::LookupExternal {
-                    instance, field, ..
-                } => write!(
-                    fmt,
-                    "LookupExternal({}.{})",
-                    instance.to_polar(),
-                    field.to_polar(),
-                ),
                 Goal::PopQuery { term } => write!(fmt, "PopQuery({})", term.to_polar()),
                 Goal::Query { term } => write!(fmt, "Query({})", term.to_polar()),
                 Goal::FilterRules {

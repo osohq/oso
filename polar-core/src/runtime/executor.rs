@@ -6,7 +6,7 @@ use crate::{
     vm::PolarVirtualMachine,
     error::PolarResult,
     events::QueryEvent,
-    runtime::Host, async_vm::AsyncVm, kb::KnowledgeBase, terms::Term
+    runtime::Host, async_vm::AsyncVm, kb::KnowledgeBase, terms::Term, messages::Message
 };
 
 
@@ -72,6 +72,10 @@ impl LocalExecutor {
             }
             e => e
         }
+    }
+
+    pub fn next_msg(&self) -> Option<Message> {
+        self.vm.next_msg()
     }
 
     pub fn vm(&self) -> MutexGuard<PolarVirtualMachine> {
