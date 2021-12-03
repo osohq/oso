@@ -9,3 +9,4 @@ resolver = "2"
 [dependencies]
 nannou = "0.18.0"
 nannou_osc = "0.18.0"
+nannou_conrod = "0.18.0"
