@@ -13,7 +13,7 @@ const OSC_SOURCE: &str = "127.0.0.1:9000";
 // UI dimensions & other variables
 const WIDTH: u32 = 600;
 const HEIGHT: u32 = 600;
-const LINE_WIDTH: f32 = 2.0;
+const LINE_WIDTH: f32 = 1.5;
 
 // model to record visualizer simulation state between redraws
 struct Model {
@@ -81,44 +81,46 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         model.backtrack_last_frame = 0;
     }
 
-    let stack_and_goal_depths: Vec<(i32, i32)> = packets
-        .iter()
-        .map(|packet| {
-            if let osc::Packet::Message(message) = packet {
-                // love to mutate other separate state while looping in a map!
-                if message.addr.contains("backtrack") && !model.backtrack {
-                    model.backtrack = true;
-                    model.backtrack_last_frame = app.elapsed_frames();
-                }
+    if !packets.is_empty() {
+        let stack_and_goal_depths: Vec<(i32, i32)> = packets
+            .iter()
+            .map(|packet| {
+                if let osc::Packet::Message(message) = packet {
+                    // love to mutate other separate state while looping in a map!
+                    if message.addr.contains("backtrack") && !model.backtrack {
+                        model.backtrack = true;
+                        model.backtrack_last_frame = app.elapsed_frames();
+                    }
 
-                if message.args.is_some() {
-                    let args = message.args.as_ref().unwrap();
-                    let args = unwrap_osc_args(args.clone());
-                    (args[0], args[1])
+                    if message.args.is_some() {
+                        let args = message.args.as_ref().unwrap();
+                        let args = unwrap_osc_args(args.clone());
+                        (args[0], args[1])
+                    } else {
+                        (1i32, 1i32)
+                    }
                 } else {
                     (1i32, 1i32)
                 }
-            } else {
-                (1i32, 1i32)
-            }
-        })
-        .collect();
+            })
+            .collect();
 
-    let cloned_values = stack_and_goal_depths.clone();
-    let max_depth = stack_and_goal_depths
-        .iter()
-        .map(|(depth, _)| depth)
-        .max()
-        .unwrap_or(&1);
+        let cloned_values = stack_and_goal_depths.clone();
+        let max_depth = stack_and_goal_depths
+            .iter()
+            .map(|(depth, _)| depth)
+            .max()
+            .unwrap_or(&1);
 
-    let max_goals = cloned_values
-        .iter()
-        .map(|(_, goals)| goals)
-        .max()
-        .unwrap_or(&1);
+        let max_goals = cloned_values
+            .iter()
+            .map(|(_, goals)| goals)
+            .max()
+            .unwrap_or(&1);
 
-    model.current_depth = *max_depth as u32;
-    model.max_goals = *max_goals as u32;
+        model.current_depth = *max_depth as u32;
+        model.max_goals = *max_goals as u32;
+    }
 }
 
 fn main() {
@@ -132,13 +134,13 @@ fn view(app: &App, model: &Model, frame: Frame) {
     let foreground = if model.backtrack { WHITE } else { BLACK };
     draw.background().color(background);
 
-    for depth in 0..model.max_goals {
-        let s = WIDTH.saturating_sub(20 * depth as u32);
+    for depth in 0..=model.max_goals {
+        let s = WIDTH.saturating_sub(10 * depth as u32);
         draw.rect()
             .no_fill()
             .stroke_weight(LINE_WIDTH)
             .stroke_color(foreground)
-            .rotate((PI * 2.0) * (1.0 / depth as f32))
+            .rotate(map_range(depth, 1, 60, 0.0, PI * 2f32))
             .w_h(s as f32, s as f32)
             .x_y(0.0, 0.0);
     }
