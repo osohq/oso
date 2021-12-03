@@ -159,8 +159,26 @@ fn main() {
             d.draw_line_ex(start, end, *thick, color);
         }
 
-        for pos in &node_positions {
+        let mousep = Vector2{
+            x: d.get_mouse_x() as f32,
+            y: d.get_mouse_y() as f32
+        };
+
+        for (i, pos) in node_positions.iter().enumerate() {
             d.draw_circle_v(*pos, 4.0, Color::DARKBLUE);
+            if mousep.distance_to(*pos) <= 4.0 {
+                let event = &trace.events[i];
+                let text = match event {
+                    TraceEvent::Query { term } => {
+                        term.to_string()
+                    }
+                    TraceEvent::Rule { rule } => {
+                        rule.to_string()
+                    }
+                };
+
+                d.draw_text(&text, 12,12,18,Color::BLACK);
+            }
         }
 
         let from_node = cart_path[cart_from];
@@ -170,16 +188,5 @@ fn main() {
         let to_next = cart_end - cart_start;
         let cart_pos = cart_start + to_next.scale_by(cart_progress);
         d.draw_circle_v(cart_pos, 6.0, Color::RED);
-
-        let event = &trace.events[from_node];
-        let text = match event {
-            TraceEvent::Query { term } => {
-                term.to_string()
-            }
-            TraceEvent::Rule { rule } => {
-                rule.to_string()
-            }
-        };
-        d.draw_text(&text, 12,12,18,Color::BLACK);
     }
 }
