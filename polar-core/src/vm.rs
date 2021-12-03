@@ -76,10 +76,6 @@ pub enum Goal {
         field: Term,
         value: Term,
     },
-    MakeExternal {
-        constructor: Term,
-        instance_id: u64,
-    },
     NextExternal {
         call_id: u64,
         iterable: Term,
@@ -470,10 +466,6 @@ impl PolarVirtualMachine {
                 arg,
             } => return self.is_subspecializer(answer, left, right, arg),
             Goal::Lookup { dict, field, value } => self.lookup(dict, field, value)?,
-            Goal::MakeExternal {
-                constructor,
-                instance_id,
-            } => return Ok(self.make_external(constructor, *instance_id)),
             Goal::NextExternal { call_id, iterable } => {
                 return self.next_external(*call_id, iterable)
             }
@@ -1400,13 +1392,6 @@ impl PolarVirtualMachine {
         })
     }
 
-    pub fn make_external(&self, constructor: &Term, instance_id: u64) -> QueryEvent {
-        QueryEvent::MakeExternal {
-            instance_id,
-            constructor: self.deref(constructor),
-        }
-    }
-
     // TODO add stack trace to errors somewhere else.
     pub fn check_error(&mut self) -> Result<QueryEvent> {
         if let Some(msg) = self.external_error.take() {
@@ -1689,16 +1674,14 @@ impl PolarVirtualMachine {
                         repr: Some(constructor.to_polar()),
                     }));
 
+                self.host.make_external(instance_id, constructor).await;
+
                 // A goal is used here in case the result is already bound to some external
                 // instance.
                 self.append_goals(vec![
                     Goal::Unify {
                         left: result,
                         right: instance,
-                    },
-                    Goal::MakeExternal {
-                        instance_id,
-                        constructor,
                     },
                 ])?;
             }
