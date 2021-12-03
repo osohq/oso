@@ -119,7 +119,25 @@ fn main() {
     for (fromp, top) in &edges {
         let from = *fromp;
         let to = *top;
-        track_lines.push((node_positions[from], node_positions[to], 2.0, Color::BLACK));
+        let from_p = node_positions[from];
+        let to_p = node_positions[to];
+        let path = to_p-from_p;
+        // Guide line for debugging
+        // track_lines.push((from_p, to_p, 2.0, Color::GREEN));
+        let unit = path.normalized();
+        let perp = Vector2{
+            x: unit.y,
+            y: -unit.x
+        };
+        let offset = perp.scale_by(3.0);
+        // outside lines
+        track_lines.push((from_p+offset, to_p+offset, 2.0, Color::BLACK));
+        track_lines.push((from_p-offset, to_p-offset, 2.0, Color::BLACK));
+        // little track bars so it looks like a train
+        for percent in [0.25, 0.5, 0.75] {
+            let p = from_p + path.scale_by(percent);
+            track_lines.push((p-offset, p+offset, 2.0, Color::BLACK));
+        }
     }
 
     while !rl.window_should_close() {
@@ -145,13 +163,8 @@ fn main() {
             d.draw_line_ex(start, end, *thick, color);
         }
 
-        for (fromp, top) in &edges {
-            let from = *fromp;
-            let to = *top;
-            d.draw_line_ex(node_positions[from], node_positions[to], 2.0, Color::BLACK);
-        }
         for pos in &node_positions {
-            d.draw_circle_v(*pos, 3.0, Color::RED);
+            d.draw_circle_v(*pos, 4.0, Color::DARKBLUE);
         }
 
         let from_node = cart_path[cart_from];
@@ -160,7 +173,7 @@ fn main() {
         let cart_end = node_positions[to_node];
         let to_next = cart_end - cart_start;
         let cart_pos = cart_start + to_next.scale_by(cart_progress);
-        d.draw_circle_v(cart_pos, 5.0, Color::BLUE);
+        d.draw_circle_v(cart_pos, 6.0, Color::RED);
 
         let event = &trace.events[from_node];
         let text = match event {

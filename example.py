@@ -72,4 +72,4 @@ oso.load_str(
 )
 
 result = list(oso.query_rule("allow", steve, "invite", osohq))
-# assert oso.is_allowed(steve, "push", oso_repo)
+#result = list(oso.query_rule("allow", steve, "push", oso_repo))
