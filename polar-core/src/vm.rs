@@ -76,10 +76,6 @@ pub enum Goal {
         field: Term,
         value: Term,
     },
-    IsaExternal {
-        instance: Term,
-        literal: InstanceLiteral,
-    },
     MakeExternal {
         constructor: Term,
         instance_id: u64,
@@ -270,7 +266,13 @@ extern "C" {
 
 impl Default for PolarVirtualMachine {
     fn default() -> Self {
-        Self::new(Arc::default(), Arc::new(Host::new()), false, vec![], MessageQueue::default())
+        Self::new(
+            Arc::default(),
+            Arc::new(Host::new()),
+            false,
+            vec![],
+            MessageQueue::default(),
+        )
     }
 }
 
@@ -382,12 +384,24 @@ impl PolarVirtualMachine {
 
     #[cfg(test)]
     pub fn new_test(kb: Arc<RwLock<KnowledgeBase>>, tracing: bool, goals: Goals) -> Self {
-        PolarVirtualMachine::new(kb, Arc::new(Host::new()), tracing, goals, MessageQueue::new())
+        PolarVirtualMachine::new(
+            kb,
+            Arc::new(Host::new()),
+            tracing,
+            goals,
+            MessageQueue::new(),
+        )
     }
 
     /// Clone self, replacing the goal stack and retaining only the current bindings.
     pub fn clone_with_goals(&self, goals: Goals) -> Self {
-        let mut vm = Self::new(self.kb.clone(), self.host.clone(), self.tracing, goals, self.messages.clone());
+        let mut vm = Self::new(
+            self.kb.clone(),
+            self.host.clone(),
+            self.tracing,
+            goals,
+            self.messages.clone(),
+        );
         vm.binding_manager.clone_from(&self.binding_manager);
         vm.query_contains_partial = self.query_contains_partial;
         vm.debugger = self.debugger.clone();
@@ -456,7 +470,6 @@ impl PolarVirtualMachine {
                 arg,
             } => return self.is_subspecializer(answer, left, right, arg),
             Goal::Lookup { dict, field, value } => self.lookup(dict, field, value)?,
-            Goal::IsaExternal { instance, literal } => return self.isa_external(instance, literal),
             Goal::MakeExternal {
                 constructor,
                 instance_id,
@@ -1061,18 +1074,24 @@ impl PolarVirtualMachine {
                     // Unification with the lookup result happens in `fn external_call_result()`.
                     let answer = self.kb.read().unwrap().gensym("isa_value");
                     let call_id = self.new_call_id(&answer);
-                    let field_value = self.lookup_external(call_id, left, &Term::new_from_test(Value::String(field.0.clone()))).await
+                    let field_value = self
+                        .lookup_external(
+                            call_id,
+                            left,
+                            &Term::new_from_test(Value::String(field.0.clone())),
+                        )
+                        .await
                         // isa ignores external errors, treating them as a failure instead
                         .unwrap_or_else(|_| None);
                     let field_value = if let Some(fv) = field_value {
-                        fv 
+                        fv
                     } else {
                         self.backtrack()?;
                         return Ok(());
                     };
 
                     let isa = Goal::Isa {
-                        left: field_value, 
+                        left: field_value,
                         right: right_value.clone(),
                     };
                     self.append_goals(vec![isa])?;
@@ -1088,10 +1107,19 @@ impl PolarVirtualMachine {
                     ))),
                 })?;
                 // Check class
-                self.push_goal(Goal::IsaExternal {
-                    instance: left.clone(),
-                    literal: right_literal.clone(),
+
+                let (call_id, answer) = self.new_call_var("isa", false.into());
+                self.push_goal(Goal::Unify {
+                    left: answer,
+                    right: Term::from(true),
                 })?;
+
+                let result = self
+                    .host()
+                    .external_isa(call_id, self.deref(left), right_literal.tag.clone())
+                    .await;
+
+                self.external_question_result(call_id, result)?;
             }
 
             // Default case: x isa y if x = y.
@@ -1353,25 +1381,9 @@ impl PolarVirtualMachine {
             &[],
         );
 
-        self.host.external_call(call_id, instance.clone(), field_name, args, kwargs).await
-    }
-
-    pub fn isa_external(
-        &mut self,
-        instance: &Term,
-        literal: &InstanceLiteral,
-    ) -> Result<QueryEvent> {
-        let (call_id, answer) = self.new_call_var("isa", false.into());
-        self.push_goal(Goal::Unify {
-            left: answer,
-            right: Term::from(true),
-        })?;
-
-        Ok(QueryEvent::ExternalIsa {
-            call_id,
-            instance: self.deref(instance),
-            class_tag: literal.tag.clone(),
-        })
+        self.host
+            .external_call(call_id, instance.clone(), field_name, args, kwargs)
+            .await
     }
 
     pub fn next_external(&mut self, call_id: u64, iterable: &Term) -> Result<QueryEvent> {
@@ -1603,7 +1615,9 @@ impl PolarVirtualMachine {
                 self.push_goal(Goal::Unify { left, right })?
             }
             Operator::Dot => {
-                return self.query_op_helper(term, &Self::dot_op_helper, false, false).await;
+                return self
+                    .query_op_helper(term, &Self::dot_op_helper, false, false)
+                    .await;
             }
 
             Operator::Lt
@@ -1612,7 +1626,9 @@ impl PolarVirtualMachine {
             | Operator::Geq
             | Operator::Eq
             | Operator::Neq => {
-                return self.query_op_helper(term, &Self::comparison_op_helper, true, true).await;
+                return self
+                    .query_op_helper(term, &Self::comparison_op_helper, true, true)
+                    .await;
             }
 
             Operator::Add
@@ -1621,11 +1637,15 @@ impl PolarVirtualMachine {
             | Operator::Div
             | Operator::Mod
             | Operator::Rem => {
-                return self.query_op_helper(term, &Self::arithmetic_op_helper, true, true).await;
+                return self
+                    .query_op_helper(term, &Self::arithmetic_op_helper, true, true)
+                    .await;
             }
 
             Operator::In => {
-                return self.query_op_helper(term, &Self::in_op_helper, false, true).await;
+                return self
+                    .query_op_helper(term, &Self::in_op_helper, false, true)
+                    .await;
             }
 
             Operator::Debug => {
@@ -2005,15 +2025,13 @@ impl PolarVirtualMachine {
                     fv
                 } else {
                     self.backtrack()?;
-                    return Ok(QueryEvent::None)
+                    return Ok(QueryEvent::None);
                 };
 
-                self.append_goals(vec![
-                    Goal::Unify {
-                        left: field_value,
-                        right: value.clone(),
-                    },
-                ])?;
+                self.append_goals(vec![Goal::Unify {
+                    left: field_value,
+                    right: value.clone(),
+                }])?;
             }
             Value::Variable(v) => {
                 if matches!(field.value(), Value::Call(_)) {
@@ -3125,13 +3143,14 @@ mod tests {
         // Querying for f(1), f(2), f(3)
         let parts = vec![f1, f2, f3];
         for permutation in permute(parts) {
-            exec.vm().push_goal(Goal::Query {
-                term: Term::new_from_test(Value::Expression(Operation {
-                    operator: Operator::And,
-                    args: permutation,
-                })),
-            })
-            .unwrap();
+            exec.vm()
+                .push_goal(Goal::Query {
+                    term: Term::new_from_test(Value::Expression(Operation {
+                        operator: Operator::And,
+                        args: permutation,
+                    })),
+                })
+                .unwrap();
             assert_query_events!(exec, [QueryEvent::Done { result: true }]);
         }
     }
@@ -3141,7 +3160,8 @@ mod tests {
         let vm = PolarVirtualMachine::default();
         let mut exec = LocalExecutor::new(vm);
 
-        exec.vm().push_goal(query!(op!(Unify, term!(1), term!(1))))
+        exec.vm()
+            .push_goal(query!(op!(Unify, term!(1), term!(1))))
             .unwrap();
 
         assert_query_events!(exec, [
@@ -3167,11 +3187,12 @@ mod tests {
         let empty_list = term!([]);
 
         // [] isa []
-        exec.vm().push_goal(Goal::Isa {
-            left: empty_list.clone(),
-            right: empty_list.clone(),
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Isa {
+                left: empty_list.clone(),
+                right: empty_list.clone(),
+            })
+            .unwrap();
         assert!(
             matches!(exec.next_event().unwrap(), QueryEvent::Result{bindings, ..} if bindings.is_empty())
         );
@@ -3182,11 +3203,12 @@ mod tests {
         assert!(exec.vm().is_halted());
 
         // [1,2] isa [1,2]
-        exec.vm().push_goal(Goal::Isa {
-            left: one_two_list.clone(),
-            right: one_two_list.clone(),
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Isa {
+                left: one_two_list.clone(),
+                right: one_two_list.clone(),
+            })
+            .unwrap();
         assert!(
             matches!(exec.next_event().unwrap(), QueryEvent::Result{bindings, ..} if bindings.is_empty())
         );
@@ -3197,11 +3219,12 @@ mod tests {
         assert!(exec.vm().is_halted());
 
         // [1,2] isNOTa [2,1]
-        exec.vm().push_goal(Goal::Isa {
-            left: one_two_list.clone(),
-            right: two_one_list,
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Isa {
+                left: one_two_list.clone(),
+                right: two_one_list,
+            })
+            .unwrap();
         assert!(matches!(
             exec.next_event().unwrap(),
             QueryEvent::Done { result: true }
@@ -3209,11 +3232,12 @@ mod tests {
         assert!(exec.vm().is_halted());
 
         // [1] isNOTa [1,2]
-        exec.vm().push_goal(Goal::Isa {
-            left: one_list.clone(),
-            right: one_two_list.clone(),
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Isa {
+                left: one_list.clone(),
+                right: one_two_list.clone(),
+            })
+            .unwrap();
         assert!(matches!(
             exec.next_event().unwrap(),
             QueryEvent::Done { result: true }
@@ -3221,11 +3245,12 @@ mod tests {
         assert!(exec.vm().is_halted());
 
         // [1,2] isNOTa [1]
-        exec.vm().push_goal(Goal::Isa {
-            left: one_two_list.clone(),
-            right: one_list.clone(),
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Isa {
+                left: one_two_list.clone(),
+                right: one_list.clone(),
+            })
+            .unwrap();
         assert!(matches!(
             exec.next_event().unwrap(),
             QueryEvent::Done { result: true }
@@ -3233,11 +3258,12 @@ mod tests {
         assert!(exec.vm().is_halted());
 
         // [1] isNOTa []
-        exec.vm().push_goal(Goal::Isa {
-            left: one_list.clone(),
-            right: empty_list.clone(),
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Isa {
+                left: one_list.clone(),
+                right: empty_list.clone(),
+            })
+            .unwrap();
         assert!(matches!(
             exec.next_event().unwrap(),
             QueryEvent::Done { result: true }
@@ -3245,11 +3271,12 @@ mod tests {
         assert!(exec.vm().is_halted());
 
         // [] isNOTa [1]
-        exec.vm().push_goal(Goal::Isa {
-            left: empty_list,
-            right: one_list.clone(),
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Isa {
+                left: empty_list,
+                right: one_list.clone(),
+            })
+            .unwrap();
         assert!(matches!(
             exec.next_event().unwrap(),
             QueryEvent::Done { result: true }
@@ -3257,11 +3284,12 @@ mod tests {
         assert!(exec.vm().is_halted());
 
         // [1] isNOTa 1
-        exec.vm().push_goal(Goal::Isa {
-            left: one_list.clone(),
-            right: one.clone(),
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Isa {
+                left: one_list.clone(),
+                right: one.clone(),
+            })
+            .unwrap();
         assert!(matches!(
             exec.next_event().unwrap(),
             QueryEvent::Done { result: true }
@@ -3269,11 +3297,12 @@ mod tests {
         assert!(exec.vm().is_halted());
 
         // 1 isNOTa [1]
-        exec.vm().push_goal(Goal::Isa {
-            left: one,
-            right: one_list,
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Isa {
+                left: one,
+                right: one_list,
+            })
+            .unwrap();
         assert!(matches!(
             exec.next_event().unwrap(),
             QueryEvent::Done { result: true }
@@ -3281,11 +3310,12 @@ mod tests {
         assert!(exec.vm().is_halted());
 
         // [1,2] isa [1, *rest]
-        exec.vm().push_goal(Goal::Isa {
-            left: one_two_list,
-            right: term!([1, Value::RestVariable(sym!("rest"))]),
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Isa {
+                left: one_two_list,
+                right: term!([1, Value::RestVariable(sym!("rest"))]),
+            })
+            .unwrap();
         assert_query_events!(exec, [
             QueryEvent::Result{hashmap!{sym!("rest") => term!([2])}},
             QueryEvent::Done { result: true }
@@ -3305,11 +3335,12 @@ mod tests {
             sym!("x") => term!(1),
             sym!("y") => term!(2),
         }));
-        exec.vm().push_goal(Goal::Isa {
-            left: dict.clone(),
-            right: dict_pattern.clone(),
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Isa {
+                left: dict.clone(),
+                right: dict_pattern.clone(),
+            })
+            .unwrap();
         assert_query_events!(exec, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Dicts with identical keys and different values DO NOT isa.
@@ -3317,55 +3348,61 @@ mod tests {
             sym!("x") => term!(2),
             sym!("y") => term!(1),
         }));
-        exec.vm().push_goal(Goal::Isa {
-            left: dict.clone(),
-            right: different_dict_pattern,
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Isa {
+                left: dict.clone(),
+                right: different_dict_pattern,
+            })
+            .unwrap();
         assert_query_events!(exec, [QueryEvent::Done { result: true }]);
 
         let empty_dict = term!(btreemap! {});
         let empty_dict_pattern = term!(pattern!(btreemap! {}));
         // {} isa {}.
-        exec.vm().push_goal(Goal::Isa {
-            left: empty_dict.clone(),
-            right: empty_dict_pattern.clone(),
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Isa {
+                left: empty_dict.clone(),
+                right: empty_dict_pattern.clone(),
+            })
+            .unwrap();
         assert_query_events!(exec, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Non-empty dicts should isa against an empty dict.
-        exec.vm().push_goal(Goal::Isa {
-            left: dict.clone(),
-            right: empty_dict_pattern,
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Isa {
+                left: dict.clone(),
+                right: empty_dict_pattern,
+            })
+            .unwrap();
         assert_query_events!(exec, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Empty dicts should NOT isa against a non-empty dict.
-        exec.vm().push_goal(Goal::Isa {
-            left: empty_dict,
-            right: dict_pattern.clone(),
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Isa {
+                left: empty_dict,
+                right: dict_pattern.clone(),
+            })
+            .unwrap();
         assert_query_events!(exec, [QueryEvent::Done { result: true }]);
 
         let subset_dict_pattern = term!(pattern!(btreemap! {sym!("x") => term!(1)}));
         // Superset dict isa subset dict.
-        exec.vm().push_goal(Goal::Isa {
-            left: dict,
-            right: subset_dict_pattern,
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Isa {
+                left: dict,
+                right: subset_dict_pattern,
+            })
+            .unwrap();
         assert_query_events!(exec, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Subset dict isNOTa superset dict.
         let subset_dict = term!(btreemap! {sym!("x") => term!(1)});
-        exec.vm().push_goal(Goal::Isa {
-            left: subset_dict,
-            right: dict_pattern,
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Isa {
+                left: subset_dict,
+                right: dict_pattern,
+            })
+            .unwrap();
         assert_query_events!(exec, [QueryEvent::Done { result: true }]);
     }
 
@@ -3383,11 +3420,12 @@ mod tests {
             sym!("x") => term!(1),
             sym!("y") => term!(2),
         });
-        exec.vm().push_goal(Goal::Unify {
-            left: left.clone(),
-            right,
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Unify {
+                left: left.clone(),
+                right,
+            })
+            .unwrap();
         assert_query_events!(exec, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Dicts with identical keys and different values DO NOT unify.
@@ -3395,27 +3433,30 @@ mod tests {
             sym!("x") => term!(2),
             sym!("y") => term!(1),
         });
-        exec.vm().push_goal(Goal::Unify {
-            left: left.clone(),
-            right,
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Unify {
+                left: left.clone(),
+                right,
+            })
+            .unwrap();
         assert_query_events!(exec, [QueryEvent::Done { result: true }]);
 
         // Empty dicts unify.
-        exec.vm().push_goal(Goal::Unify {
-            left: term!(btreemap! {}),
-            right: term!(btreemap! {}),
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Unify {
+                left: term!(btreemap! {}),
+                right: term!(btreemap! {}),
+            })
+            .unwrap();
         assert_query_events!(exec, [QueryEvent::Result { hashmap!() }, QueryEvent::Done { result: true }]);
 
         // Empty dict should not unify against a non-empty dict.
-        exec.vm().push_goal(Goal::Unify {
-            left: left.clone(),
-            right: term!(btreemap! {}),
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Unify {
+                left: left.clone(),
+                right: term!(btreemap! {}),
+            })
+            .unwrap();
         assert_query_events!(exec, [QueryEvent::Done { result: true }]);
 
         // Subset match should fail.
@@ -3454,34 +3495,37 @@ mod tests {
             sym!("x") => term!(1),
         };
         let dict = Dictionary { fields };
-        exec.vm().push_goal(Goal::Lookup {
-            dict: dict.clone(),
-            field: term!(string!("x")),
-            value: term!(1),
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Lookup {
+                dict: dict.clone(),
+                field: term!(string!("x")),
+                value: term!(1),
+            })
+            .unwrap();
 
         assert_query_events!(exec, [
             QueryEvent::Result{hashmap!{}}
         ]);
 
         // Lookup with incorrect value
-        exec.vm().push_goal(Goal::Lookup {
-            dict: dict.clone(),
-            field: term!(string!("x")),
-            value: term!(2),
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Lookup {
+                dict: dict.clone(),
+                field: term!(string!("x")),
+                value: term!(2),
+            })
+            .unwrap();
 
         assert_query_events!(exec, [QueryEvent::Done { result: true }]);
 
         // Lookup with unbound value
-        exec.vm().push_goal(Goal::Lookup {
-            dict,
-            field: term!(string!("x")),
-            value: term!(sym!("y")),
-        })
-        .unwrap();
+        exec.vm()
+            .push_goal(Goal::Lookup {
+                dict,
+                field: term!(string!("x")),
+                value: term!(sym!("y")),
+            })
+            .unwrap();
         assert_query_events!(exec, [
             QueryEvent::Result{hashmap!{sym!("y") => term!(1)}}
         ]);
@@ -3535,8 +3579,14 @@ mod tests {
         );
         let mut exec = LocalExecutor::new(vm);
         let _ = exec.next_event().unwrap();
-        assert_eq!(exec.vm().variable_state(&x), VariableState::Bound(term!(zero)));
-        assert_eq!(exec.vm().variable_state(&y), VariableState::Bound(term!(one)));
+        assert_eq!(
+            exec.vm().variable_state(&x),
+            VariableState::Bound(term!(zero))
+        );
+        assert_eq!(
+            exec.vm().variable_state(&y),
+            VariableState::Bound(term!(one))
+        );
     }
 
     #[test]
@@ -3563,20 +3613,22 @@ mod tests {
 
         // Left variable bound to value.
         exec.vm().bind(&z, one.clone()).unwrap();
-        exec.vm().append_goals(vec![Goal::Unify {
-            left: term!(z.clone()),
-            right: one.clone(),
-        }])
-        .unwrap();
+        exec.vm()
+            .append_goals(vec![Goal::Unify {
+                left: term!(z.clone()),
+                right: one.clone(),
+            }])
+            .unwrap();
         let _ = exec.next_event();
         assert_eq!(exec.vm().deref(&term!(z.clone())), one);
 
         // Left variable bound to value, unify with something else, backtrack.
-        exec.vm().append_goals(vec![Goal::Unify {
-            left: term!(z.clone()),
-            right: two,
-        }])
-        .unwrap();
+        exec.vm()
+            .append_goals(vec![Goal::Unify {
+                left: term!(z.clone()),
+                right: two,
+            }])
+            .unwrap();
         let _ = exec.next_event();
         assert_eq!(exec.vm().deref(&term!(z)), one);
     }
@@ -3661,8 +3713,8 @@ mod tests {
                 QueryEvent::ExternalOp { call_id, .. }
                 | QueryEvent::ExternalIsSubSpecializer { call_id, .. } => {
                     host.external_question_result(call_id, false).unwrap()
-                },
-                | QueryEvent::Result { .. } => (),
+                }
+                QueryEvent::Result { .. } => (),
                 e => panic!("Unexpected event: {:?}", e),
             }
         }
@@ -3680,9 +3732,9 @@ mod tests {
         for e in exec {
             match e.unwrap() {
                 QueryEvent::Done { .. } => break,
-                QueryEvent::ExternalIsa { call_id, .. } => 
+                QueryEvent::ExternalIsa { call_id, .. } => {
                     host.external_question_result(call_id, false).unwrap()
-                ,
+                }
                 QueryEvent::Result { bindings, .. } => results.push(bindings),
                 _ => panic!("Unexpected event"),
             }
@@ -3830,24 +3882,28 @@ mod tests {
         let host = exec.host().clone();
         loop {
             exec.vm().push_goal(Goal::Noop).unwrap();
-            exec.vm().push_goal(Goal::IsaExternal {
-                instance: term!(instance!("Foo")),
-                literal: instance!("Foo")
-            })
-            .unwrap();
+            exec.vm()
+                .push_goal(Goal::NextExternal {
+                    call_id: 0,
+                    iterable: term!(1),
+                })
+                .unwrap();
             let result = exec.next_event();
             eprintln!("result: {:?}", result);
             match result {
                 Ok(QueryEvent::ExternalIsa { call_id, .. }) => {
                     host.external_question_result(call_id, true).unwrap()
-                },
+                }
                 Err(err) => {
-                    assert!(matches!(err.kind, error::ErrorKind::Runtime(error::RuntimeError::QueryTimeout { .. })));
+                    assert!(matches!(
+                        err.kind,
+                        error::ErrorKind::Runtime(error::RuntimeError::QueryTimeout { .. })
+                    ));
 
                     // End test.
                     break;
                 }
-                _ => assert!(false)
+                _ => assert!(false),
             }
         }
     }
@@ -3869,11 +3925,13 @@ mod tests {
         let mut exec = LocalExecutor::new(vm);
         exec.vm().bind(&sym!("x"), term!(1)).unwrap();
         let _ = exec.next_event();
-        let _ = exec.vm().next(Rc::new(query!(call!("bar", [value!([sym!("x")])]))));
+        exec.vm()
+            .push_goal(query!(call!("bar", [value!([sym!("x")])])))
+            .unwrap();
         // After calling the query goal we should be left with the
         // prefiltered rules
         let vm = exec.vm();
-        let next_goal = vm 
+        let next_goal = vm
             .goals
             .iter()
             .find(|g| matches!(g.as_ref(), Goal::FilterRules { .. }))
@@ -3904,45 +3962,49 @@ mod tests {
         };
 
         // Check consequent path when conditional succeeds.
-        exec.vm().choose_conditional(
-            vec![Goal::Noop],
-            vec![consequent.clone()],
-            vec![alternative.clone()],
-        )
-        .unwrap();
+        exec.vm()
+            .choose_conditional(
+                vec![Goal::Noop],
+                vec![consequent.clone()],
+                vec![alternative.clone()],
+            )
+            .unwrap();
         assert_query_events!(exec, [
             QueryEvent::Debug { message } if &message[..] == "consequent" && exec.vm().is_halted(),
             QueryEvent::Done { result: true }
         ]);
 
         // Check alternative path when conditional fails.
-        exec.vm().choose_conditional(
-            vec![Goal::Backtrack],
-            vec![consequent.clone()],
-            vec![alternative.clone()],
-        )
-        .unwrap();
+        exec.vm()
+            .choose_conditional(
+                vec![Goal::Backtrack],
+                vec![consequent.clone()],
+                vec![alternative.clone()],
+            )
+            .unwrap();
         assert_query_events!(exec, [
             QueryEvent::Debug { message } if &message[..] == "alternative" && exec.vm().is_halted(),
             QueryEvent::Done { result: true }
         ]);
 
         // Ensure bindings are cleaned up after conditional.
-        exec.vm().choose_conditional(
-            vec![
-                Goal::Unify {
-                    left: term!(sym!("x")),
-                    right: term!(true),
-                },
-                query!(sym!("x")),
-            ],
-            vec![consequent],
-            vec![alternative],
-        )
-        .unwrap();
+        exec.vm()
+            .choose_conditional(
+                vec![
+                    Goal::Unify {
+                        left: term!(sym!("x")),
+                        right: term!(true),
+                    },
+                    query!(sym!("x")),
+                ],
+                vec![consequent],
+                vec![alternative],
+            )
+            .unwrap();
         assert_query_events!(exec, [
             QueryEvent::Debug { message } if &message[..] == "consequent" && exec.vm().bindings(true).is_empty() && exec.vm().is_halted(),
             QueryEvent::Done { result: true }
         ]);
     }
 }
+
