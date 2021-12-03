@@ -1,4 +1,4 @@
-use nannou::{draw::properties::SetStroke, prelude::*};
+use nannou::prelude::*;
 
 const WIDTH: u32 = 600;
 const HEIGHT: u32 = 600;
