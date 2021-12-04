@@ -3,7 +3,7 @@ use nannou_osc as osc;
 
 use std::{net::SocketAddr, str::FromStr};
 
-const BACKTRACK_FRAME_DURATION: u64 = 60;
+const BACKTRACK_FRAME_DURATION: u64 = 60_000;
 const PACKETS_PER_UPDATE: usize = 100;
 
 // OSC client configuration
@@ -128,10 +128,11 @@ fn main() {
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
-    let draw = app.draw();
+    let draw = app.draw().scale((app.time * 0.01).sin());
 
     let background = if model.backtrack { CRIMSON } else { WHITE };
     let foreground = if model.backtrack { WHITE } else { BLACK };
+
     draw.background().color(background);
 
     for depth in 0..=model.max_goals {
