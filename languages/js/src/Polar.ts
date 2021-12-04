@@ -187,11 +187,13 @@ export class Polar {
    */
   query(
     q: Predicate | string,
-    bindings?: Map<string, unknown>,
-    acceptExpression?: boolean
+    options?: {
+      bindings?: Map<string, unknown>;
+      acceptExpression?: boolean;
+    }
   ): QueryResult {
     const host = Host.clone(this.getHost());
-    host.setAcceptExpression(acceptExpression);
+    host.setAcceptExpression(options?.acceptExpression);
     let ffiQuery;
     if (isString(q)) {
       ffiQuery = this.#ffiPolar.newQueryFromStr(q);
@@ -200,18 +202,7 @@ export class Polar {
       ffiQuery = this.#ffiPolar.newQueryFromTerm(term);
     }
     this.processMessages();
-    return new Query(ffiQuery, host, bindings).results;
-  }
-
-  /**
-   * Query for a Polar predicate or string with optional
-   * acceptExpression flag
-   */
-  queryWithAcceptExpression(
-    q: Predicate | string,
-    acceptExpression?: boolean
-  ): QueryResult {
-    return this.query(q, new Map(), acceptExpression);
+    return new Query(ffiQuery, host, options?.bindings).results;
   }
 
   /**
@@ -219,25 +210,14 @@ export class Polar {
    */
   queryRuleWithBindings(
     name: string,
-    bindings: Map<string, unknown>,
+    options?: {
+      bindings: Map<string, unknown>;
+      acceptExpression?: boolean;
+    },
     ...args: unknown[]
   ): QueryResult {
-    return this.query(new Predicate(name, args), bindings);
+    return this.query(new Predicate(name, args), options);
   }
-
-  /**
-   * Query for a Polar rule with bindings with optional
-   * acceptExpression flag.
-   */
-  queryRuleWithBindingsAndAcceptExpression(
-    name: string,
-    bindings: Map<string, unknown>,
-    acceptExpression: boolean,
-    ...args: unknown[]
-  ): QueryResult {
-    return this.query(new Predicate(name, args), bindings, acceptExpression);
-  }
-
   /**
    * Query for a Polar rule.
    */

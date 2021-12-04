@@ -5,8 +5,7 @@ import {
   PolarError,
   UnregisteredClassError,
   UnregisteredInstanceError,
-  UnexpectedPolarTypeError,
-  UNEXPECTED_EXPRESSION_MESSAGE,
+  UnexpectedExpressionError,
 } from './errors';
 import {
   ancestors,
@@ -577,7 +576,7 @@ export class Host implements Required<DataFilteringQueryParams> {
       return new Variable(t.Variable);
     } else if (isPolarExpression(t)) {
       if (!this.acceptExpression) {
-        throw new UnexpectedPolarTypeError(UNEXPECTED_EXPRESSION_MESSAGE);
+        throw new UnexpectedExpressionError();
       }
       const { operator, args: argTerms } = t.Expression;
       const args = await Promise.all(argTerms.map(a => this.toJs(a)));

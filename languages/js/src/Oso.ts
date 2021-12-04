@@ -280,10 +280,12 @@ export class Oso<
     ]);
     const bindings = new Map();
     bindings.set('resource', constraint);
-    const results = this.queryRuleWithBindingsAndAcceptExpression(
+    const results = this.queryRuleWithBindings(
       'allow',
-      bindings,
-      true,
+      {
+        bindings,
+        acceptExpression: true,
+      },
       actor,
       action,
       resource

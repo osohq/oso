@@ -39,6 +39,7 @@ import {
   PolarFileNotFoundError,
   PolarFileExtensionError,
   InvalidIteratorError,
+  UnexpectedExpressionError,
 } from './errors';
 import * as rolesHelpers from '../test/rolesHelpers';
 
@@ -865,6 +866,13 @@ test('handles expressions', async () => {
   const gt = new Expression('Gt', [new Variable('_this'), 2]);
   const expected = new Expression('And', [gt]);
   expect(x).toStrictEqual(expected);
+});
+
+test('handles expressions with acceptExpression set to false', async () => {
+  const p = new Polar();
+  await p.loadStr('f(x) if x > 2;');
+  const result = query(p, 'f(x)');
+  await expect(result).rejects.toThrow(UnexpectedExpressionError);
 });
 
 // test_roles_integration

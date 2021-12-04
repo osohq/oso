@@ -130,9 +130,9 @@ export class DataFilteringConfigurationError extends PolarError {
   }
 }
 
-export class UnexpectedPolarTypeError extends PolarError {
-  constructor(message: string) {
-    super(`${message}`);
+export class UnexpectedExpressionError extends PolarError {
+  constructor() {
+    super(UNEXPECTED_EXPRESSION_MESSAGE);
   }
 }
 
