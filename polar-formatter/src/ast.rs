@@ -55,6 +55,8 @@ pub struct Rule {
 #[derive(Debug, Clone)]
 pub struct ResourceBlockDeclaration(pub Box<Node>, pub Box<Node>);
 
+pub type ShorthandRuleRelation = (Box<Node>, Box<Node>);
+
 #[derive(Debug, Clone)]
 pub struct ShorthandRule {
     /// `Term` is a `String`. E.g., `"member"` in `"member" if "owner";`.
@@ -62,7 +64,7 @@ pub struct ShorthandRule {
     /// The first `Term` is the 'implier' `String`, e.g., `"owner"` in `"member" if "owner";`. The
     /// `Option` is the optional 'relation' `Symbol` and `String`, e.g., `on "parent"` in `"member"
     /// if "owner" on "parent";`.
-    pub body: (Box<Node>, Option<(Box<Node>, Box<Node>)>),
+    pub body: (Box<Node>, Option<ShorthandRuleRelation>),
 }
 
 #[derive(Debug, Clone)]

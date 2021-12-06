@@ -13,9 +13,9 @@ pub struct PrettyContext {
     position: usize,
 }
 
-fn comments_in_content(content: &String) -> Vec<String> {
+fn comments_in_content(content: &str) -> Vec<String> {
     return content
-        .split("\n")
+        .split('\n')
         .filter(|s| s.contains('#'))
         .map(|s| {
             s.chars()
@@ -27,8 +27,8 @@ fn comments_in_content(content: &String) -> Vec<String> {
         .collect();
 }
 
-fn contains_double_line_break(content: &String) -> bool {
-    content.split("\n").filter(|s| s.trim().is_empty()).count() > 2
+fn contains_double_line_break(content: &str) -> bool {
+    content.split('\n').filter(|s| s.trim().is_empty()).count() > 2
 }
 
 impl PrettyContext {
@@ -75,13 +75,10 @@ impl ToDoc for Node {
         } else {
             RcDoc::nil()
         };
-        if comments.len() > 0 {
+        if !comments.is_empty() {
             doc = doc
                 .append(RcDoc::intersperse(
-                    comments
-                        .into_iter()
-                        .map(|c| RcDoc::text(c))
-                        .collect::<Vec<_>>(),
+                    comments.into_iter().map(RcDoc::text).collect::<Vec<_>>(),
                     RcDoc::hardline(),
                 ))
                 .append(RcDoc::hardline())
@@ -231,7 +228,7 @@ impl ToDoc for Call {
                 .chain(kwargs.iter().map(|field| field.to_doc(&mut context)))
                 .collect();
         }
-        if args_docs.len() == 0 {
+        if args_docs.is_empty() {
             return name_doc.append(RcDoc::text("()"));
         }
         name_doc.append(
@@ -270,7 +267,7 @@ impl ToDoc for List {
     }
 }
 
-fn dot_operation_to_doc<'a>(args: &'a Vec<Node>, mut context: &mut PrettyContext) -> RcDoc<'a, ()> {
+fn dot_operation_to_doc<'a>(args: &'a [Node], mut context: &mut PrettyContext) -> RcDoc<'a, ()> {
     let left_doc = to_doc_parens(Operator::Dot, &args[0], &mut context);
     let right_doc = to_doc_parens(Operator::Dot, &args[1], &mut context);
     // TODO: figure out multiline version
@@ -302,7 +299,7 @@ fn to_doc_parens<'a>(
 
 fn join_args<'a>(
     operator: Operator,
-    args: &'a Vec<Node>,
+    args: &'a [Node],
     joiner: String,
     mut context: &mut PrettyContext,
 ) -> RcDoc<'a, ()> {
