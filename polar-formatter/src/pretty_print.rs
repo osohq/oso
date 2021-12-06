@@ -17,12 +17,18 @@ fn comments_in_content(content: &String) -> Vec<String> {
     return content
         .split("\n")
         .filter(|s| s.contains('#'))
-        .map(|s| s.trim().to_string())
+        .map(|s| {
+            s.chars()
+                .skip_while(|s| *s != '#')
+                .collect::<String>()
+                .trim()
+                .to_string()
+        })
         .collect();
 }
 
 fn contains_double_line_break(content: &String) -> bool {
-    content.split("\n").count() > 2
+    content.split("\n").filter(|s| s.trim().is_empty()).count() > 2
 }
 
 impl PrettyContext {
@@ -310,10 +316,6 @@ fn join_args<'a>(
 
 impl ToDoc for Operation {
     fn to_doc(&self, mut context: &mut PrettyContext) -> RcDoc<()> {
-        // TODO: if any of args is an operation AND the precedence of the
-        // operation is LOWER than the precedence of this operation, then that
-        // arg should be wrapped in parentheses
-        // E.g. i * (y + z) => "+" is lower precedence than "*"
         use Operator::*;
         match self.operator {
             Debug => RcDoc::text("debug()"),
@@ -372,9 +374,14 @@ impl ToDoc for ResourceBlock {
         } else {
             RcDoc::nil()
         };
-        keyword_doc
+        let resource = keyword_doc
             .append(self.resource.to_doc(&mut context))
-            .append(RcDoc::space())
+            .append(RcDoc::space());
+
+        if self.lines.is_empty() {
+            return resource.append(RcDoc::text("{}"));
+        }
+        resource
             .append(RcDoc::text("{"))
             .append(
                 RcDoc::line()

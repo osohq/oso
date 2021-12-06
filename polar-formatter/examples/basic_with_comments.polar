@@ -7,6 +7,7 @@ allow(
   x + 1 = 2;
 
 allow(x);
-disallow(y, z);
+disallow(y, z) if # test
+  y + z;
 
 # Goodbye world

@@ -13,12 +13,13 @@ fn main() {
 
     let mut context = PrettyContext::new(file.clone());
 
-    let mut w = Vec::new();
+    let mut result = Vec::new();
     if let Ok(node) = node {
-        node.to_doc(&mut context).render(80, &mut w).unwrap();
+        node.to_doc(&mut context).render(80, &mut result).unwrap();
+        let output = String::from_utf8(result).unwrap();
+        println!("{}", output);
+        println!("{}", context.print_trailing_comments());
+    } else {
+        print!("{}", file);
     }
-
-    let output = String::from_utf8(w).unwrap();
-    println!("{}", output);
-    println!("{}", context.print_trailing_comments());
 }
