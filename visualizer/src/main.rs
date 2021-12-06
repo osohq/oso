@@ -3,11 +3,12 @@ use nannou_osc as osc;
 
 use std::{net::SocketAddr, str::FromStr};
 
+// constants which ultimately affect how jittery the UI is
 const BACKTRACK_FRAME_DURATION: u64 = 60_000;
 const PACKETS_PER_UPDATE: usize = 100;
 
 // OSC client configuration
-const OSC_LISTEN_PORT: u16 = 9100;
+const OSC_LISTEN_PORT: u16 = 9101;
 const OSC_SOURCE: &str = "127.0.0.1:9000";
 
 // UI dimensions & other variables
@@ -52,6 +53,7 @@ fn model(app: &App) -> Model {
         backtrack_last_frame: 0,
     }
 }
+
 fn unwrap_osc_args(args: Vec<osc::Type>) -> Vec<i32> {
     args.iter()
         .map(|a| match a {
@@ -81,6 +83,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         model.backtrack_last_frame = 0;
     }
 
+    // ugly code to calculate max_goals and current_depth
     if !packets.is_empty() {
         let stack_and_goal_depths: Vec<(i32, i32)> = packets
             .iter()
@@ -128,7 +131,7 @@ fn main() {
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
-    let draw = app.draw().scale((app.time * 0.01).sin());
+    let draw = app.draw().scale((app.time * 0.05).sin());
 
     let background = if model.backtrack { CRIMSON } else { WHITE };
     let foreground = if model.backtrack { WHITE } else { BLACK };
@@ -141,7 +144,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .no_fill()
             .stroke_weight(LINE_WIDTH)
             .stroke_color(foreground)
-            .rotate(map_range(depth, 1, 60, 0.0, PI * 2f32))
+            .rotate(map_range(depth, 1, 30, 0.0, PI * 2f32))
             .w_h(s as f32, s as f32)
             .x_y(0.0, 0.0);
     }

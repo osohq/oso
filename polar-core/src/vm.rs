@@ -276,7 +276,7 @@ pub struct PolarVirtualMachine {
 
     /// OSC outputs
     osc_source: Option<SocketAddrV4>,
-    osc_destination: Option<SocketAddrV4>,
+    osc_destinations: Option<Vec<SocketAddrV4>>,
 }
 
 impl Default for PolarVirtualMachine {
@@ -330,8 +330,13 @@ impl PolarVirtualMachine {
             None
         };
 
-        let osc_client_addr = if let Ok(addr) = std::env::var("OSC_CLIENT") {
-            SocketAddrV4::from_str(&addr).ok()
+        let osc_client_addrs = if let Ok(addrs) = std::env::var("OSC_CLIENT") {
+            Some(
+                addrs
+                    .split(",")
+                    .map(|addr| SocketAddrV4::from_str(&addr).unwrap())
+                    .collect(),
+            )
         } else {
             None
         };
@@ -370,7 +375,7 @@ impl PolarVirtualMachine {
             inverting: false,
             messages,
             osc_source: osc_host_addr,
-            osc_destination: osc_client_addr,
+            osc_destinations: osc_client_addrs,
         };
         vm.bind_constants(constants);
         vm.query_contains_partial();
@@ -939,7 +944,7 @@ impl PolarVirtualMachine {
     }
 
     fn send_osc_event(&self, name: &str) {
-        if self.osc_source.is_none() || self.osc_destination.is_none() {
+        if self.osc_source.is_none() || self.osc_destinations.is_none() {
             return;
         }
 
@@ -953,7 +958,9 @@ impl PolarVirtualMachine {
             });
             let encoded = encoder::encode(msg).unwrap();
 
-            sock.send_to(&encoded, self.osc_destination.unwrap()).ok();
+            for dest in self.osc_destinations.as_ref().unwrap() {
+                sock.send_to(&encoded, dest).ok();
+            }
         }
     }
 }
