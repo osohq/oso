@@ -575,10 +575,43 @@ Rule: Node = {
     }
 }
 
+DeclarationValue: Value = {
+  <List>,
+  <Dictionary>
+};
+Declaration: ResourceBlockLine = {
+  <keyword:Node<Variable>> "=" <value:Node<DeclarationValue>> ";" => ResourceBlockLine::Declaration(
+    ResourceBlockDeclaration(Box::new(keyword), Box::new(value))
+  )
+};
+
+OnRelation: (Box<Node>, Box<Node>) = <sym:Node<Variable>> <relation:Node<PolarString>> => (Box::new(sym), Box::new(relation));
+ShorthandRuleBody: (Box<Node>, Option<(Box<Node>, Box<Node>)>) = <implier:Node<PolarString>> <relation:OnRelation?> ";" => (Box::new(implier), relation);
+ShorthandRule: ResourceBlockLine = {
+  <head:Node<PolarString>> Define <body:ShorthandRuleBody> => ResourceBlockLine::ShorthandRule(ShorthandRule {
+    head: Box::new(head),
+    body
+  })
+};
+
+ResourceBlockProduction: Value = {
+  <Declaration> => Value::ResourceBlockLine(<>),
+  <ShorthandRule> => Value::ResourceBlockLine(<>),
+};
+
+ResourceBlockProductions: Vec<Node> = <Node<ResourceBlockProduction>*>;
+
+ResourceBlock: Value = {
+    <keyword:Node<Variable>?> <resource:Node<Variable>> "{" <lines:ResourceBlockProductions> "}" => {
+        Value::ResourceBlock(ResourceBlock { keyword: keyword.map(|k| Box::new(k)), resource: Box::new(resource), lines })
+    }
+}
+
 // RuleType: Node = "type" <BodilessRule>;
 
 Line = {
-  <Rule>,
+    <Rule>,
+    <Node<ResourceBlock>>
 }
 
 FileValue: Value = <Line*> => Value::File(File(<>));
@@ -586,37 +619,6 @@ FileValue: Value = <Line*> => Value::File(File(<>));
 pub(crate) File: Node = {
   Node<FileValue>
 }
-
-// // TODO(gj): combine this with ListTerms/List?
-// StringListTerms: Vec<Term> = {
-//     <Spanned<PolarString>> => vec![<>],
-//     <mut list:StringListTerms> "," <tail:Spanned<PolarString>?> => {
-//         if let Some(tail) = tail {
-//             list.push(tail);
-//         }
-//         list
-//     },
-// }
-// StringList: Value = {
-//     "[" "]" => Value::List(vec![]),
-//     "[" <StringListTerms> "]" => Value::List(<>),
-// }
-// DeclarationValue: Value = {
-//     <StringList> => <>,
-//     <Object<Spanned<Variable>>> => Value::Dictionary(<>),
-// };
-// Declaration: resource_block::Production = <Spanned<Variable>> "=" <Spanned<DeclarationValue>> ";" => resource_block::Production::Declaration((<>));
-
-// OnRelation: (Term, Term) = <Spanned<Variable>> <Spanned<PolarString>> => (<>);
-// ShorthandRuleBody: (Term, Option<(Term, Term)>) = <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => (<>);
-// ShorthandRule: resource_block::Production = <head:Spanned<PolarString>> Define <body:ShorthandRuleBody> => resource_block::Production::ShorthandRule(<>);
-
-// ResourceBlockProduction: resource_block::Production = {
-//     <Declaration> => <>,
-//     <ShorthandRule> => <>,
-// };
-
-// ResourceBlockProductions: Vec<resource_block::Production> = <ResourceBlockProduction*>;
 
 // Line: Line = {
 //     <Rule> => Line::Rule(<>),

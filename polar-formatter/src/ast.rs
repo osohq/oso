@@ -49,26 +49,31 @@ pub struct Rule {
     pub body: Option<Box<Node>>,
 }
 
-// #[derive(Debug, Clone)]
-// pub struct ShorthandRule {
-//     /// `Term` is a `String`. E.g., `"member"` in `"member" if "owner";`.
-//     pub head: Term,
-//     /// The first `Term` is the 'implier' `String`, e.g., `"owner"` in `"member" if "owner";`. The
-//     /// `Option` is the optional 'relation' `Symbol` and `String`, e.g., `on "parent"` in `"member"
-//     /// if "owner" on "parent";`.
-//     pub body: (Term, Option<(Term, Term)>),
-// }
+#[derive(Debug, Clone)]
+pub struct ResourceBlockDeclaration(pub Box<Node>, pub Box<Node>);
 
-// #[derive(Debug, Clone)]
-// pub enum ResourceBlockLine {
-//     Declaration(Box<Node>, Box<Node>),
-//     Rule(Box<Node>, Box<Node>),
-// }
+#[derive(Debug, Clone)]
+pub struct ShorthandRule {
+    /// `Term` is a `String`. E.g., `"member"` in `"member" if "owner";`.
+    pub head: Box<Node>,
+    /// The first `Term` is the 'implier' `String`, e.g., `"owner"` in `"member" if "owner";`. The
+    /// `Option` is the optional 'relation' `Symbol` and `String`, e.g., `on "parent"` in `"member"
+    /// if "owner" on "parent";`.
+    pub body: (Box<Node>, Option<(Box<Node>, Box<Node>)>),
+}
 
-// #[derive(Debug, Clone)]
-// pub struct ResourceBlock {
-//     pub lines: Vec<ResourceBlockLine>,
-// }
+#[derive(Debug, Clone)]
+pub enum ResourceBlockLine {
+    Declaration(ResourceBlockDeclaration),
+    ShorthandRule(ShorthandRule),
+}
+
+#[derive(Debug, Clone)]
+pub struct ResourceBlock {
+    pub keyword: Option<Box<Node>>,
+    pub resource: Box<Node>,
+    pub lines: Vec<Node>,
+}
 
 #[derive(Debug, Clone)]
 pub struct File(pub Vec<Node>);
@@ -88,8 +93,8 @@ pub enum Value {
     Expression(Operation),
     Rule(Rule),
     File(File),
-    // ResourceBlock(ResourceBlock),
-    // ResourceBlockLine(ResourceBlockLine),
+    ResourceBlock(ResourceBlock),
+    ResourceBlockLine(ResourceBlockLine),
 }
 
 #[derive(Debug, Clone)]

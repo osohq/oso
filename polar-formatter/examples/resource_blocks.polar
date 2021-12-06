@@ -5,7 +5,7 @@ resource Organization {
   "one" if "hello";
   "two" if "one";
 
-  "hello" if "world";
+  "hello" if "world" on "another";
 }
 
 has_role(user: User, role: String, org: Organization) if

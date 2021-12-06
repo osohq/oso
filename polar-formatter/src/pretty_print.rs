@@ -414,6 +414,8 @@ impl ToDoc for Value {
             Value::Symbol(s) => RcDoc::text(s),
             Value::Rule(r) => r.to_doc(&mut context),
             Value::File(file) => file.to_doc(&mut context),
+            Value::ResourceBlock(_) => RcDoc::text("TODO: RESOURCE BLOCK".to_string()),
+            Value::ResourceBlockLine(_) => RcDoc::text("TODO: RESOURCE BLOCK LINE".to_string()),
         }
     }
 }
