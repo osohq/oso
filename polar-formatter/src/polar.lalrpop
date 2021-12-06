@@ -499,12 +499,12 @@ ListTerms: Vec<Node> = {
 }
 
 List: Value = {
-    "[" "]" => Value::List(vec![]),
-    "[" <Node<RestVar>> "]" => Value::List(vec![<>]),
-    "[" <ListTerms> "]" => Value::List(<>),
+    "[" "]" => Value::List(List(vec![])),
+    "[" <Node<RestVar>> "]" => Value::List(List(vec![<>])),
+    "[" <ListTerms> "]" => Value::List(List(<>)),
     "[" <mut terms:ListTerms> "," <rest:Node<RestVar>> "]" => {
         terms.push(rest);
-        Value::List(terms)
+        Value::List(List(terms))
     }
 }
 

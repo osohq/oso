@@ -12,6 +12,9 @@ pub type Fields = Vec<Field>;
 pub struct Dictionary(pub Fields);
 
 #[derive(Debug, Clone)]
+pub struct List(pub Vec<Node>);
+
+#[derive(Debug, Clone)]
 pub struct Call {
     pub name: Box<Node>,
     pub args: Vec<Node>,
@@ -87,7 +90,7 @@ pub enum Value {
     Dictionary(Dictionary),
     Pattern(Pattern),
     Call(Call),
-    List(Vec<Node>),
+    List(List),
     Variable(Symbol),
     RestVariable(Symbol),
     Expression(Operation),

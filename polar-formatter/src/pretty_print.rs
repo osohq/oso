@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, rc::Rc};
+use std::borrow::Borrow;
 
 use crate::ast::*;
 use polar_core::{
@@ -13,12 +13,16 @@ pub struct PrettyContext {
     position: usize,
 }
 
-fn comments_in_content(content: String) -> Vec<String> {
+fn comments_in_content(content: &String) -> Vec<String> {
     return content
         .split("\n")
         .filter(|s| s.contains('#'))
         .map(|s| s.trim().to_string())
         .collect();
+}
+
+fn contains_double_line_break(content: &String) -> bool {
+    content.split("\n").count() > 2
 }
 
 impl PrettyContext {
@@ -32,142 +36,16 @@ impl PrettyContext {
     pub fn print_trailing_comments(&self) -> String {
         if self.position < self.source.len() {
             let trailing_content: String = self.source.chars().skip(self.position).collect();
-            comments_in_content(trailing_content).join("\n")
+            comments_in_content(&trailing_content).join("\n")
         } else {
             "".to_string()
         }
     }
 }
 
-// // Tree structure for pretty printing
-// pub enum Doc {
-//     // Text, followed by a doc
-//     Text(String, Box<Doc>),
-//     // Line break with a number of indents, followed by a doc
-//     Line(u32, Box<Doc>),
-//     // Blank
-//     Nil,
-//     // Multiple options to render the same doc
-//     Union(Box<Doc>, Box<Doc>),
-// }
-
-// pub trait PrettyPrint {
-//     fn to_pretty_doc(&self, _context: &PrettyPrintContext) -> Doc;
-//     // fn to_pretty_string(&self, _context: &PrettyPrintContext) -> String;
-// }
-
-// impl PrettyPrint for Term {
-//     fn to_pretty_doc(&self, context: &PrettyPrintContext) -> Doc {
-//         self.value().to_pretty_doc(context)
-//     }
-// }
-
-// impl PrettyPrint for Value {
-//     fn to_pretty_doc(&self) -> String {
-//         match self {
-//             Value::Dictionary(i) => i.to_polar(),
-//             Value::Pattern(i) => i.to_polar(),
-//             Value::Call(c) => c.to_polar(),
-//             Value::List(l) => format!("[{}]", format_args!(Operator::And, l, ", "),),
-//             Value::Variable(s) => s.to_polar(),
-//             Value::Expression(e) => e.to_polar(),
-//             val => Doc::Text(val.to_polar(), Box::new(Doc::Nil)),
-//         }
-//     }
-// }
-
-// impl PrettyPrint for ShorthandRule {
-//     fn to_polar(&self) -> String {
-//         let Self {
-//             head,
-//             body: (implier, relation),
-//         } = self;
-//         if let Some((keyword, relation)) = relation {
-//             format!(
-//                 "{} if {} {} {};",
-//                 head.to_polar(),
-//                 implier.to_polar(),
-//                 keyword.to_polar(),
-//                 relation.to_polar()
-//             )
-//         } else {
-//             format!("{} if {};", head.to_polar(), implier.to_polar())
-//         }
-//     }
-// }
-
-// impl PrettyPrint for BlockType {
-//     fn to_polar(&self) -> String {
-//         match self {
-//             Self::Actor => "actor".to_owned(),
-//             Self::Resource => "resource".to_owned(),
-//         }
-//     }
-// }
-
-// impl PrettyPrint for ResourceBlock {
-//     fn to_polar(&self) -> String {
-//         let mut s = format!(
-//             "{} {} {{\n",
-//             self.block_type.to_polar(),
-//             self.resource.to_polar()
-//         );
-//         if let Some(ref roles) = self.roles {
-//             s += &format!("  roles = {};\n", roles.to_polar());
-//         }
-//         if let Some(ref permissions) = self.permissions {
-//             s += &format!("  permissions = {};\n", permissions.to_polar());
-//         }
-//         if let Some(ref relations) = self.relations {
-//             s += &format!("  relations = {};\n", relations.to_polar());
-//         }
-//         for rule in &self.shorthand_rules {
-//             s += &format!("  {}\n", rule.to_polar());
-//         }
-//         s += "}";
-//         s
-//     }
-// }
-
-// impl PrettyPrint for Rule {
-//     fn to_pretty_doc(&self, context: &PrettyPrintContext) -> Doc {
-//         let no_body = self.clone_with_no_body();
-//         let rule_str = no_body.to_polar();
-//         let mut rule_chars = rule_str.chars();
-//         rule_chars.next_back();
-//         let mut rule_str: String = rule_chars.collect();
-//         rule_str.push_str(" if");
-//         Doc::Text(rule_str, Doc::Nest(2, &self.body.to_pretty_doc(context)));
-//     }
-// }
-
-// impl PrettyPrint for Line {
-//     fn to_pretty_string(&self, context: &PrettyPrintContext) -> String {
-//         match self {
-//             Line::Rule(rule) => rule.to_pretty_string(context),
-//             Line::ResourceBlock { .. } => "RESOURCE BLOCK".to_string(),
-//             _ => "UNKNOWN LINE".to_string(),
-//         }
-//     }
-// }
-
 pub trait ToDoc {
     fn to_doc(&self, context: &mut PrettyContext) -> RcDoc<()>;
 }
-
-// impl ToDoc for Line {
-//     fn to_doc(&self, context: &mut PrettyContext) -> RcDoc<()> {
-//         match self {
-//             Line::Rule(rule) => rule.to_doc(),
-//             Line::ResourceBlock { .. } => RcDoc::as_string("RESOURCE BLOCK".to_string())
-//                 .append(RcDoc::hardline())
-//                 .append(RcDoc::hardline()),
-//             _ => RcDoc::as_string("UNKNOWN LINE".to_string())
-//                 .append(RcDoc::hardline())
-//                 .append(RcDoc::hardline()),
-//         }
-//     }
-// }
 
 impl ToDoc for Node {
     fn to_doc(&self, mut context: &mut PrettyContext) -> RcDoc<()> {
@@ -184,17 +62,23 @@ impl ToDoc for Node {
             .skip(context.position)
             .take(self.start - context.position)
             .collect();
-        let comments = comments_in_content(content_since_last);
-        let mut doc: RcDoc<()> = RcDoc::nil();
+        let double_line_break = contains_double_line_break(&content_since_last);
+        let comments = comments_in_content(&content_since_last);
+        let mut doc: RcDoc<()> = if double_line_break {
+            RcDoc::hardline()
+        } else {
+            RcDoc::nil()
+        };
         if comments.len() > 0 {
-            doc = RcDoc::intersperse(
-                comments
-                    .into_iter()
-                    .map(|c| RcDoc::text(c))
-                    .collect::<Vec<_>>(),
-                RcDoc::hardline(),
-            )
-            .append(RcDoc::hardline())
+            doc = doc
+                .append(RcDoc::intersperse(
+                    comments
+                        .into_iter()
+                        .map(|c| RcDoc::text(c))
+                        .collect::<Vec<_>>(),
+                    RcDoc::hardline(),
+                ))
+                .append(RcDoc::hardline())
         }
         context.position = self.start;
         let result = doc.append(self.value.to_doc(&mut context));
@@ -345,17 +229,35 @@ impl ToDoc for Call {
             RcDoc::text("(")
                 .append(
                     RcDoc::line_()
-                        .append(RcDoc::intersperse(
-                            args_docs,
-                            RcDoc::text(",").append(Doc::line()),
-                        ))
-                        .nest(2)
-                        .group(),
+                        .append(
+                            RcDoc::intersperse(args_docs, RcDoc::text(",").append(Doc::line()))
+                                .group(),
+                        )
+                        .nest(2),
                 )
                 .append(Doc::line_())
                 .append(RcDoc::text(")"))
                 .group(),
         )
+    }
+}
+
+impl ToDoc for List {
+    fn to_doc(&self, mut context: &mut PrettyContext) -> RcDoc<()> {
+        let docs: Vec<RcDoc<_>> = self
+            .0
+            .iter()
+            .map(|node| node.to_doc(&mut context))
+            .collect();
+        RcDoc::text("[")
+            .append(
+                RcDoc::line_()
+                    .append(RcDoc::intersperse(docs, RcDoc::text(",").append(Doc::line())).group())
+                    .nest(2),
+            )
+            .append(Doc::line_())
+            .append(RcDoc::text("]"))
+            .group()
     }
 }
 
@@ -381,6 +283,66 @@ impl ToDoc for Operation {
     }
 }
 
+impl ToDoc for ResourceBlock {
+    fn to_doc(&self, mut context: &mut PrettyContext) -> RcDoc<()> {
+        let keyword_doc = if let Some(keyword) = &self.keyword {
+            keyword.to_doc(&mut context).append(RcDoc::space())
+        } else {
+            RcDoc::nil()
+        };
+        keyword_doc
+            .append(self.resource.to_doc(&mut context))
+            .append(RcDoc::space())
+            .append(RcDoc::text("{"))
+            .append(
+                RcDoc::line()
+                    .append(RcDoc::intersperse(
+                        self.lines
+                            .iter()
+                            .map(|l| l.to_doc(&mut context))
+                            .collect::<Vec<RcDoc<_>>>(),
+                        RcDoc::line(),
+                    ))
+                    .nest(2),
+            )
+            .append(RcDoc::line())
+            .append(RcDoc::text("}"))
+    }
+}
+
+impl ToDoc for ResourceBlockDeclaration {
+    fn to_doc(&self, mut context: &mut PrettyContext) -> RcDoc<()> {
+        self.0
+            .to_doc(&mut context)
+            .append(RcDoc::text(" = "))
+            .append(self.1.to_doc(&mut context))
+    }
+}
+
+impl ToDoc for ShorthandRule {
+    fn to_doc(&self, mut context: &mut PrettyContext) -> RcDoc<()> {
+        let head_doc = self.head.to_doc(&mut context);
+        let mut body_doc = self.body.0.to_doc(&mut context);
+        if let Some((sym, relation)) = &self.body.1 {
+            body_doc = body_doc
+                .append(RcDoc::space().append(sym.to_doc(&mut context)))
+                .append(RcDoc::space())
+                .append(relation.to_doc(&mut context));
+        }
+        head_doc.append(RcDoc::text(" if ")).append(body_doc)
+    }
+}
+
+impl ToDoc for ResourceBlockLine {
+    fn to_doc(&self, mut context: &mut PrettyContext) -> RcDoc<()> {
+        let inner = match self {
+            ResourceBlockLine::Declaration(d) => d.to_doc(&mut context),
+            ResourceBlockLine::ShorthandRule(s) => s.to_doc(&mut context),
+        };
+        inner.append(";")
+    }
+}
+
 impl ToDoc for File {
     fn to_doc(&self, mut context: &mut PrettyContext) -> RcDoc<()> {
         let docs: Vec<RcDoc<_>> = self
@@ -388,7 +350,7 @@ impl ToDoc for File {
             .iter()
             .map(|node| node.to_doc(&mut context))
             .collect();
-        RcDoc::intersperse(docs, RcDoc::hardline().append(RcDoc::hardline()))
+        RcDoc::intersperse(docs, RcDoc::hardline())
     }
 }
 
@@ -407,15 +369,15 @@ impl ToDoc for Value {
             Value::Dictionary(d) => d.to_doc(&mut context),
             Value::Pattern(p) => p.to_doc(&mut context),
             Value::Call(c) => c.to_doc(&mut context),
-            Value::List(l) => RcDoc::text("TODO: LIST".to_string()),
+            Value::List(l) => l.to_doc(&mut context),
             Value::Variable(s) => RcDoc::text(s.0.clone()),
             Value::RestVariable(s) => RcDoc::text(format!("*{}", s.0)),
             Value::Expression(e) => e.to_doc(&mut context),
             Value::Symbol(s) => RcDoc::text(s),
             Value::Rule(r) => r.to_doc(&mut context),
             Value::File(file) => file.to_doc(&mut context),
-            Value::ResourceBlock(_) => RcDoc::text("TODO: RESOURCE BLOCK".to_string()),
-            Value::ResourceBlockLine(_) => RcDoc::text("TODO: RESOURCE BLOCK LINE".to_string()),
+            Value::ResourceBlock(rb) => rb.to_doc(&mut context),
+            Value::ResourceBlockLine(rbl) => rbl.to_doc(&mut context),
         }
     }
 }
