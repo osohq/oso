@@ -36,7 +36,7 @@ pub struct Source {
 }
 
 impl Source {
-    pub(crate) fn new(filename: Option<&str>, src: &str) -> Self {
+    pub fn new(filename: Option<&str>, src: &str) -> Self {
         Self {
             filename: filename.map(Into::into),
             src: src.into(),

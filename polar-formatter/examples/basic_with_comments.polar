@@ -1,8 +1,12 @@
 # Hello world
 allow(
-  x
   # Another comment
+  x
 ) if
   # Another comment
   x + 1 = 2;
+
+allow(x);
+disallow(y, z);
+
 # Goodbye world

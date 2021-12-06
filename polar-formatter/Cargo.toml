@@ -5,4 +5,9 @@ authors = ["Oso Security, Inc. <support@osohq.com>"]
 edition = "2021"
 
 [dependencies]
+lalrpop-util = { version = "0.19.6", default-features = false }
 polar-core = { path = "../polar-core", version = "=0.24.0" }
+pretty = "=0.10.0"
+
+[build_dependencies]
+lalrpop = { version = "0.19.6", default-features = false }

@@ -1,0 +1,632 @@
+use std::str::FromStr;
+use std::collections::BTreeMap;
+
+use polar_core::lexer::{self, Token};
+use polar_core::terms::Symbol;
+// use crate::parser::Line;
+use crate::ast::*;
+use polar_core::terms::Operator;
+use polar_core::error;
+// use polar_core::rules::*;
+// use polar_core::numerics::*;
+use polar_core::resource_block;
+use super::ValueOrLogical;
+
+use lalrpop_util::ParseError;
+
+grammar(src_id: u64);
+
+extern {
+    type Location = usize;
+    type Error = error::ParseError;
+
+    enum Token {
+        "Integer" => lexer::Token::Integer(<i64>),
+        "Float" => lexer::Token::Float(<f64>),
+        "String" => lexer::Token::String(<String>),
+        "Boolean" => lexer::Token::Boolean(<bool>),
+        "Symbol" => lexer::Token::Symbol(<Symbol>),
+        ":" => lexer::Token::Colon,         // :
+        "," => lexer::Token::Comma,         // ,
+        "[" => lexer::Token::LB,            // [
+        "]" => lexer::Token::RB,            // ]
+        "(" => lexer::Token::LP,            // (
+        ")" => lexer::Token::RP,            // )
+        "{" => lexer::Token::LCB,           // {
+        "}" => lexer::Token::RCB,           // }
+        "." => lexer::Token::Dot,           // .
+        "new" => lexer::Token::New,         // new
+        "!" => lexer::Token::Bang,          // !
+        "*" => lexer::Token::Mul,           // *
+        "/" => lexer::Token::Div,           // /
+        "mod" => lexer::Token::Mod,         // mod
+        "rem" => lexer::Token::Rem,         // rem
+        "+" => lexer::Token::Add,           // +
+        "-" => lexer::Token::Sub,           // -
+        "==" => lexer::Token::Eq,           // ==
+        "!=" => lexer::Token::Neq,          // !=
+        "<=" => lexer::Token::Leq,          // <=
+        ">=" => lexer::Token::Geq,          // >=
+        "<" => lexer::Token::Lt,            // <
+        ">" => lexer::Token::Gt,            // >
+        "=" => lexer::Token::Unify,         // =
+        ":=" => lexer::Token::Assign,       // :=
+        "|" => lexer::Token::Pipe,          // |
+        ";" => lexer::Token::SemiColon,     // ;
+        "?=" => lexer::Token::Query,        // ?=
+        "cut" => lexer::Token::Cut,         // cut
+        "debug" => lexer::Token::Debug,     // debug
+        "print" => lexer::Token::Print,     // print
+        "in" => lexer::Token::In,           // in
+        "forall" => lexer::Token::ForAll,   // forall
+        "if" => lexer::Token::If,           // if
+        "and" => lexer::Token::And,         // and
+        "or" => lexer::Token::Or,           // or
+        "not" => lexer::Token::Not,         // not
+        "matches" => lexer::Token::Matches, // matches
+        "type" => lexer::Token::Type,       // type
+    }
+}
+
+ResWord: String = {
+  "type" => "type".to_owned(),
+  "cut" => "cut".to_owned(),
+  "debug" => "debug".to_owned(),
+  "print" => "print".to_owned(),
+  "in" => "in".to_owned(),
+  "forall" => "forall".to_owned(),
+  "if" => "if".to_owned(),
+  "and" => "and".to_owned(),
+  "or" => "or".to_owned(),
+  "not" => "not".to_owned(),
+  "new" => "new".to_owned(),
+  "matches" => "matches".to_owned(),
+}
+
+
+
+// ****** Values ******* //
+
+Integer: i64 = {
+    <"Integer">,
+"+" <"Integer">,
+"-" <i:"Integer"> => -i,
+}
+
+Float: f64 = {
+    <"Float">,
+"+" <"Float">,
+"-" <f:"Float"> => -f,
+}
+
+Number: Value = {
+    <Integer> => Value::Number(<>.into()),
+    <Float> => Value::Number(<>.into()),
+};
+
+PolarString: Value = <s:"String"> => {
+    Value::String(s)
+};
+
+Boolean: Value = <b:"Boolean"> => {
+    Value::Boolean(b)
+};
+
+Name: Symbol = <s:"Symbol"> => s;
+
+Variable: Value  = <n:Name> => {
+    Value::Variable(n)
+};
+
+RestVar: Value  = "*" <n:Name> => {
+    Value::RestVariable(n)
+};
+
+Call: Value = {
+    // No args.
+    <name:Node<Variable>> "("  ")" => {
+        let args = vec![];
+        let kwargs = None;
+        Value::Call(Call{name: Box::new(name), args, kwargs})
+    },
+    // Positional args only.
+    <name:Node<Variable>> "(" <mut args:(<Expression> ",")*> <arg:Expression> ")" => {
+        args.push(arg);
+        let kwargs = None;
+        Value::Call(Call{name: Box::new(name), args, kwargs})
+    },
+    // Positional args + kwargs.
+    <name:Node<Variable>> "(" <mut args:(<Expression> ",")*> <fields:(<FieldsWithoutSugar>)>")" => {
+        let kwargs = Some(fields);
+        Value::Call(Call{name: Box::new(name), args, kwargs})
+    }
+};
+
+DotCall: Value = {
+  <Call>,
+  // No args.
+  <name:Node<ResWordValue>> "("  ")" => {
+      let args = vec![];
+      let kwargs = None;
+      Value::Call(Call{name: Box::new(name), args, kwargs})
+  },
+  // Positional args only.
+  <name:Node<ResWordValue>> "(" <mut args:(<Expression> ",")*> <arg:Expression> ")" => {
+      args.push(arg);
+      let kwargs = None;
+      Value::Call(Call{name: Box::new(name), args, kwargs})
+  },
+  // Positional args + kwargs.
+  // <name:Node<ResWordValue>> "(" <mut args:(<Expression> ",")*> <fields:(<Fields>)>")" => {
+  //     let kwargs = Some(fields);
+  //     Value::Call(Call{name: Box::new(name), args, kwargs})
+  // },
+}
+
+New: Value = {
+    "new" <call:Node<Call>> => {
+        let args = vec![call];
+        let op = Operation{operator: Operator::New, args};
+        Value::Expression(op)
+    },
+};
+
+ResWordValue: Value = {
+  <ResWord> => Value::Variable(Symbol(<>))
+}
+
+Field: Field = {
+    <name:Node<Variable>> ":" <value:Expression> => Field(Box::new(name), Box::new(value)),
+    <name:Node<ResWordValue>> ":" <value:Expression> => Field(Box::new(name), Box::new(value)),
+    <name:Node<Variable>> => Field(Box::new(name.clone()), Box::new(name)),
+}
+
+Fields: Vec<Field> = {
+    <field:Field> => vec![field],
+    <loc:@L> <mut fields:Fields> "," <tail:Field?> =>? match tail {
+        None => Ok(fields),
+        Some(field) => {
+            fields.push(field);
+            Ok(fields)
+        }
+    }
+};
+
+FieldWithoutSugar: Field = {
+  <name:Node<Variable>> ":" <value:Expression> => Field(Box::new(name), Box::new(value)),
+  <name:Node<ResWordValue>> ":" <value:Expression> => Field(Box::new(name), Box::new(value)),
+}
+
+FieldsWithoutSugar: Vec<Field> = {
+  <field:FieldWithoutSugar> => vec![field],
+  <loc:@L> <mut fields:FieldsWithoutSugar> "," <tail:FieldWithoutSugar?> =>? match tail {
+      None => Ok(fields),
+      Some(field) => {
+          fields.push(field);
+          Ok(fields)
+      }
+  }
+};
+
+Dictionary: Value = {
+    "{" <fields:Fields> "}" => {
+        Value::Dictionary(Dictionary(fields))
+    },
+    "{" "}" => Value::Dictionary(Dictionary(vec![]))
+};
+
+InstanceLiteralPattern: Value = <tag:Node<Variable>> "{" <fields:Fields> "}" => {
+    let instance = InstanceLiteral{tag: Box::new(tag), fields};
+    Value::Pattern(Pattern::Instance(instance))
+};
+
+BuiltinOperator: Operator = {
+    "debug" => Operator::Debug,
+    "print" => Operator::Print,
+};
+
+BuiltinOperation: Value = {
+    <op:BuiltinOperator> "(" <mut args:(<Expression> ",")*> <arg:Expression?> ")" => {
+        match arg {
+            Some(arg) => args.push(arg),
+            None => ()
+        };
+        Value::Expression(Operation{operator: op, args: args})
+    },
+    "cut" => {
+        let args = vec![];
+        let op = Operation{operator: Operator::Cut, args};
+        Value::Expression(op)
+    },
+    "forall" "(" <arg1:Expression> "," <arg2:Expression> ")" => {
+        let args = vec![arg1, arg2];
+        let op = Operation{operator: Operator::ForAll, args};
+        Value::Expression(op)
+    },
+};
+
+RewritableOperator: Operator = {
+    "." => Operator::Dot,
+    "new" => Operator::New,
+    "in" => Operator::In,
+};
+
+RewrittenOperation: Value = {
+    <op:RewritableOperator> "(" <mut args:(<Expression> ",")*> <arg:Expression?> ")" => {
+        match arg {
+            Some(arg) => args.push(arg),
+            None => ()
+        };
+        Value::Expression(Operation{operator: op, args: args})
+    },
+};
+
+Node<T>: Node = {
+  <start:@L> <val:T> <end:@R> => Node::from_parser(val, start, end)
+}
+
+pub Expression: Node = {
+  <Exp1>,
+}
+
+// // ****** Expressions ******* //
+
+// // All ExpN & Exp productions are macros with one parameter. The parameter is the
+// // *string* "Term" or "Pattern" which controls whether the expression is over terms
+// // or patterns.  (It is a string since we need to conditionally
+// // change the expression precedence allowed in patterns versus terms depending
+// // on the parameter type, and LALRPOP does not allow conditional macros on anything
+// // other than a string.
+
+Exp10: Node = {
+    Node<Number>,
+    Node<PolarString>,
+    Node<Boolean>,
+    Node<Variable>,
+    Node<Call>,
+    Node<New>,
+    Node<Dictionary>,
+    Node<InstanceLiteralPattern>,
+    Node<BuiltinOperation>,
+    Node<RewrittenOperation>,
+    Node<List>,
+    "(" <Expression> ")", // "resets" the parsing
+}
+
+CallTerm: Value = {
+    <DotCall>,
+    <w:ResWord> => Value::Variable(Symbol(w)),
+    <s:"Symbol"> => Value::Variable(Symbol(s.0)),
+    // These provide ways to get keys that aren't
+    // expressable as `foo.bar`
+    "(" <Variable> ")",
+    "(" <PolarString> ")",
+}
+
+DotOp: Value = {
+    <head:Exp9> "." <call_term:Node<CallTerm>> => {
+        let args = vec![head, call_term];
+        let op = Operation{operator: Operator::Dot, args};
+        Value::Expression(op)
+    },
+}
+
+// .
+Exp9: Node = {
+    <Node<DotOp>>,
+    <Exp10>,
+};
+
+// in
+InExp: Value = {
+    <left:Exp8> "in" <right:Exp9> => {
+        let args = vec![left, right];
+        let op = Operation{operator: Operator::In, args};
+        Value::Expression(op)
+    },
+}
+
+Matches = {"matches"};
+// matches
+MatchExp: Value = {
+    // Symbols on the RHS are treated as class names, just like in a specializers
+    <left:Exp8> Matches <right:Exp9> => {
+        let args = vec![left, right];
+        let op = Operation{operator: Operator::Isa, args};
+        Value::Expression(op)
+    },
+}
+
+Exp8: Node = {
+    <Node<InExp>>,
+    <Node<MatchExp>>,
+    <Exp9>,
+}
+
+// * / mod rem
+Op7: Operator = {
+    "*" => Operator::Mul,
+    "/" => Operator::Div,
+    "mod" => Operator::Mod,
+    "rem" => Operator::Rem,
+}
+
+MulExp: Value = {
+    <exp7:Exp7> <operator:Op7> <exp8:Exp8> => {
+        let args = vec![exp7, exp8];
+        let op = Operation{operator, args};
+        Value::Expression(op)
+    },
+}
+Exp7: Node = {
+    <Node<MulExp>>,
+    <Exp8>,
+}
+
+// + -
+Op6: Operator = {
+    "+" => Operator::Add,
+    "-" => Operator::Sub,
+}
+AddExp: Value = {
+    <exp6:Exp6> <operator:Op6> <exp7:Exp7> => {
+        let args = vec![exp6, exp7];
+        let op = Operation{operator, args};
+        Value::Expression(op)
+    },
+}
+
+Exp6: Node = {
+    <Node<AddExp>>,
+    <Exp7>,
+}
+
+// == != <= < >= >
+Op5: Operator = {
+    "==" => Operator::Eq,
+    "!=" => Operator::Neq,
+    "<=" => Operator::Leq,
+    ">=" => Operator::Geq,
+    "<" => Operator::Lt,
+    ">" => Operator::Gt,
+}
+
+CmpExp: Value = {
+    <exp5:Exp5> <operator:Op5> <exp6:Exp6> => {
+        let args = vec![exp5, exp6];
+        let op = Operation{operator, args};
+        Value::Expression(op)
+    },
+}
+
+Exp5: Node = {
+    <Node<CmpExp>>,
+    <Exp6>,
+}
+
+// =, :=
+UnifyExp: Value = {
+    <exp4:Exp4> "=" <exp5:Exp5> => {
+        let args = vec![exp4, exp5];
+        let op = Operation{operator: Operator::Unify, args};
+        Value::Expression(op)
+    },
+    <variable:Node<Variable>> ":=" <exp5:Exp5> => {
+        let args = vec![variable, exp5];
+        let op = Operation{operator: Operator::Assign, args};
+        Value::Expression(op)
+    },
+}
+
+Exp4: Node = {
+    <Node<UnifyExp>>,
+    <Exp5>,
+}
+
+ // !
+Not = {"not"};
+NotExp: Value = {
+    Not <exp4:Exp4> => {
+        let args = vec![exp4];
+        let op = Operation{operator: Operator::Not, args};
+        Value::Expression(op)
+    },
+}
+
+Exp3: Node = {
+    <Node<NotExp>>,
+    <Exp4>,
+}
+
+And = {"and"};
+AndExp: Value = {
+    <head:Exp3> And <mut tail:Exp2> => {
+        let args = match &mut tail.value {
+            Value::Expression(Operation{operator: Operator::And, args: tail_args}) => {
+                let mut args = vec![head];
+                args.append(&mut tail_args.clone());
+                args
+            }
+            _ => {
+                vec![head, tail]
+            }
+        };
+        let op = Operation{operator: Operator::And, args};
+        Value::Expression(op)
+    },
+}
+
+Exp2: Node = {
+    <Node<AndExp>>,
+    <Exp3>,
+}
+
+
+Or = {"or"};
+OrExp: Value = {
+    <head:Exp2> Or <mut tail:Exp1> => {
+        let args = match &mut tail.value {
+            Value::Expression(Operation{operator: Operator::Or, args: tail_args}) => {
+                let mut args = vec![head];
+                args.append(&mut tail_args.clone());
+                args
+            }
+            _ => {
+                vec![head, tail]
+            }
+        };
+        let op = Operation{operator: Operator::Or, args};
+        Value::Expression(op)
+    },
+}
+
+Exp1: Node = {
+    <Node<OrExp>>,
+    <Exp2>,
+}
+
+ListTerms: Vec<Node> = {
+    <Exp6> => vec![<>],
+    <mut list:ListTerms> "," <tail:Exp6?> => {
+        match tail {
+            None => list,
+            Some(tail) => {
+                list.push(tail);
+                list
+            }
+        }
+    },
+}
+
+List: Value = {
+    "[" "]" => Value::List(vec![]),
+    "[" <Node<RestVar>> "]" => Value::List(vec![<>]),
+    "[" <ListTerms> "]" => Value::List(<>),
+    "[" <mut terms:ListTerms> "," <rest:Node<RestVar>> "]" => {
+        terms.push(rest);
+        Value::List(terms)
+    }
+}
+
+// // ****** Rules + Lines ******* //
+
+ParameterList: Vec<Parameter> = {
+    <param:Parameter> => vec![param],
+    <mut list:ParameterList> "," <param:Parameter> => {
+        list.push(param);
+        list
+    },
+};
+
+Parameter: Parameter = {
+    <parameter:Exp6> => {
+        Parameter{parameter: Box::new(parameter), specializer: None}
+    },
+    <parameter:Node<Variable>> ":" <specializer:Expression> => {
+        Parameter{parameter: Box::new(parameter), specializer: Some(Box::new(specializer))}
+        // TODO(gk): do we need this?
+        // if let Value::Variable(class_name) = specializer.value {
+        //     let fields = vec![];
+        //     let instance_literal = InstanceLiteral{tag: class_name.clone(), fields};
+        //     Parameter {
+        //         parameter,
+        //         specializer: Some(specializer.clone_with_value(Value::Pattern(Pattern::Instance(instance_literal)))),
+        //     }
+        // } else {
+
+        // }
+    },
+};
+
+RuleHead: (Node, Vec<Parameter>) = {
+    <name:Node<Variable>> "(" ")" => {
+        (name, vec![])
+    },
+    <name:Node<Variable>> "(" <params:ParameterList> ")" => {
+        (name, params)
+    }
+};
+
+Define = {"if"};
+
+BodilessRule: Node = <start:@L> <head:RuleHead> <body:@L> ";" <end:@R> => {
+    let (name, parameters) = head;
+    let op = Operation{operator: Operator::And, args: vec![]};
+    let rule = Rule { name: Box::new(name), parameters, body: None };
+    Node::from_parser(Value::Rule(rule), start, end)
+};
+
+Rule: Node = {
+    <BodilessRule>,
+    <start:@L> <head:RuleHead> Define <body:Expression> ";" <end:@R> => {
+        let (name, parameters) = head;
+        // TODO(gk): do we need this?
+        // let body = match body.value {
+        //     Value::Expression(Operation{operator: Operator::And, ..}) => {
+        //         body
+        //     },
+        //     _ => {
+        //         let op = Operation{operator: Operator::And, args: vec![body.clone()]};
+        //         body.clone_with_value(Value::Expression(op))
+        //     }
+        // };
+        let rule = Rule { name: Box::new(name), parameters, body: Some(Box::new(body)) };
+        Node::from_parser(Value::Rule(rule), start, end)
+    }
+}
+
+// RuleType: Node = "type" <BodilessRule>;
+
+Line = {
+  <Rule>,
+}
+
+FileValue: Value = <Line*> => Value::File(File(<>));
+
+pub(crate) File: Node = {
+  Node<FileValue>
+}
+
+// // TODO(gj): combine this with ListTerms/List?
+// StringListTerms: Vec<Term> = {
+//     <Spanned<PolarString>> => vec![<>],
+//     <mut list:StringListTerms> "," <tail:Spanned<PolarString>?> => {
+//         if let Some(tail) = tail {
+//             list.push(tail);
+//         }
+//         list
+//     },
+// }
+// StringList: Value = {
+//     "[" "]" => Value::List(vec![]),
+//     "[" <StringListTerms> "]" => Value::List(<>),
+// }
+// DeclarationValue: Value = {
+//     <StringList> => <>,
+//     <Object<Spanned<Variable>>> => Value::Dictionary(<>),
+// };
+// Declaration: resource_block::Production = <Spanned<Variable>> "=" <Spanned<DeclarationValue>> ";" => resource_block::Production::Declaration((<>));
+
+// OnRelation: (Term, Term) = <Spanned<Variable>> <Spanned<PolarString>> => (<>);
+// ShorthandRuleBody: (Term, Option<(Term, Term)>) = <implier:Spanned<PolarString>> <relation:OnRelation?> ";" => (<>);
+// ShorthandRule: resource_block::Production = <head:Spanned<PolarString>> Define <body:ShorthandRuleBody> => resource_block::Production::ShorthandRule(<>);
+
+// ResourceBlockProduction: resource_block::Production = {
+//     <Declaration> => <>,
+//     <ShorthandRule> => <>,
+// };
+
+// ResourceBlockProductions: Vec<resource_block::Production> = <ResourceBlockProduction*>;
+
+// Line: Line = {
+//     <Rule> => Line::Rule(<>),
+//     <RuleType> => Line::RuleType(<>),
+//     "?=" <TermExp> ";" => Line::Query(<>),
+
+//     <start:@L> <keyword:Spanned<Variable>?> <resource:Variable> "{" <productions:ResourceBlockProductions> "}" <end:@R> => {
+//         let resource = Term::new_from_parser(src_id, start, end, resource);
+//         Line::ResourceBlock { keyword, resource, productions }
+//     }
+// }
+
+// pub Lines: Vec<Line> = <Line*>;
