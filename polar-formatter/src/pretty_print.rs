@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 
 use crate::ast::*;
 use polar_core::{
-    formatting::source_lines,
+    formatting::{precedence, source_lines},
     sources::Source,
     terms::{Operator, ToPolarString},
 };
@@ -225,6 +225,9 @@ impl ToDoc for Call {
                 .chain(kwargs.iter().map(|field| field.to_doc(&mut context)))
                 .collect();
         }
+        if args_docs.len() == 0 {
+            return name_doc.append(RcDoc::text("()"));
+        }
         name_doc.append(
             RcDoc::text("(")
                 .append(
@@ -261,25 +264,104 @@ impl ToDoc for List {
     }
 }
 
+fn dot_operation_to_doc<'a>(args: &'a Vec<Node>, mut context: &mut PrettyContext) -> RcDoc<'a, ()> {
+    let left_doc = to_doc_parens(Operator::Dot, &args[0], &mut context);
+    let right_doc = to_doc_parens(Operator::Dot, &args[1], &mut context);
+    // TODO: figure out multiline version
+    // let multiline_version = left_doc.clone()append(
+    //     RcDoc::line_()
+    //         .append(RcDoc::text("."))
+    //         .append(right_doc.clone())
+    //         .nest(2),
+    // );
+    // multiline_version.union(single_line_version)
+    let single_line_version = left_doc.append(RcDoc::text(".")).append(right_doc);
+    single_line_version
+}
+
+fn to_doc_parens<'a>(
+    operator: Operator,
+    node: &'a Node,
+    mut context: &mut PrettyContext,
+) -> RcDoc<'a, ()> {
+    match &node.value {
+        Value::Expression(op) if (precedence(&op.operator) < precedence(&operator)) => {
+            RcDoc::text("(")
+                .append(node.to_doc(&mut context))
+                .append(RcDoc::text(")"))
+        }
+        _ => node.to_doc(&mut context),
+    }
+}
+
+fn join_args<'a>(
+    operator: Operator,
+    args: &'a Vec<Node>,
+    joiner: String,
+    mut context: &mut PrettyContext,
+) -> RcDoc<'a, ()> {
+    RcDoc::intersperse(
+        args.iter()
+            .map(|arg| to_doc_parens(operator, arg, &mut context)),
+        RcDoc::text(joiner).append(RcDoc::line()),
+    )
+    .group()
+}
+
 impl ToDoc for Operation {
     fn to_doc(&self, mut context: &mut PrettyContext) -> RcDoc<()> {
-        let op_str = self.operator.to_polar();
-        let arg_docs: Vec<RcDoc<_>> = self
-            .args
-            .iter()
-            .map(|arg| arg.to_doc(&mut context))
-            .collect();
         // TODO: if any of args is an operation AND the precedence of the
         // operation is LOWER than the precedence of this operation, then that
         // arg should be wrapped in parentheses
         // E.g. i * (y + z) => "+" is lower precedence than "*"
-        RcDoc::intersperse(
-            arg_docs,
-            RcDoc::space()
-                .append(RcDoc::text(op_str))
-                .append(Doc::line()),
-        )
-        .group()
+        use Operator::*;
+        match self.operator {
+            Debug => RcDoc::text("debug()"),
+            Print => RcDoc::text("print(")
+                .append(join_args(Print, &self.args, ",".to_string(), &mut context))
+                .append(RcDoc::text(")")),
+            Cut => RcDoc::text("cut"),
+            ForAll => RcDoc::text("forall(")
+                .append(join_args(And, &self.args, ",".to_string(), &mut context))
+                .append(RcDoc::text(")")),
+            New => {
+                if self.args.len() == 1 {
+                    RcDoc::text("new ").append(to_doc_parens(New, &self.args[0], &mut context))
+                } else {
+                    RcDoc::text("new (")
+                        .append(join_args(Print, &self.args, ",".to_string(), &mut context))
+                        .append(RcDoc::text(")"))
+                }
+            }
+            Dot => dot_operation_to_doc(&self.args, &mut context),
+            // Unary operators
+            Not => RcDoc::text("not ").append(self.args[0].to_doc(&mut context)),
+            // Binary operators
+            Mul | Div | Mod | Rem | Add | Sub | Eq | Geq | Leq | Neq | Gt | Lt | Unify | Isa
+            | In | Assign => match self.args.len() {
+                2 => join_args(
+                    self.operator,
+                    &self.args,
+                    format!(" {}", self.operator.to_polar()),
+                    &mut context,
+                )
+                .nest(2),
+                3 => {
+                    // format!(
+                    //     "{} {} {} = {}",
+                    //     to_polar_parens(self.operator, &self.args[0]),
+                    //     self.operator.to_polar(),
+                    //     to_polar_parens(self.operator, &self.args[1]),
+                    //     to_polar_parens(self.operator, &self.args[2]),
+                    // )
+                    RcDoc::text("TODO: ternary unify??")
+                }
+                // Invalid
+                _ => RcDoc::text("TODO: binary operator with a bunch of args??"),
+            },
+            // n-ary operators
+            And | Or => join_args(self.operator, &self.args, " and".to_string(), &mut context),
+        }
     }
 }
 

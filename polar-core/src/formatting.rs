@@ -122,7 +122,7 @@ pub fn format_rules(rules: &Rules, sep: &str) -> String {
         .join(sep)
 }
 
-fn precedence(o: &Operator) -> i32 {
+pub fn precedence(o: &Operator) -> i32 {
     match o {
         Operator::Print => 11,
         Operator::Debug => 11,
