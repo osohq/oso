@@ -5,6 +5,7 @@ Abagail
 ActiveRecord
 AdminOnlyFields
 Appleby
+Asclepius
 AuthorizationError
 Bhavik's
 Bjerk
@@ -13,6 +14,7 @@ CLI
 CTO
 Changelogs
 Cloudflare
+dataset
 DFA
 Dexec
 EMR
@@ -27,6 +29,7 @@ GDB
 GSuite
 GitClub
 Github's
+GitLab
 Gradle
 GraphQL
 Graphene
@@ -61,6 +64,7 @@ Polar's
 Postgres
 Prisma
 PyPI
+pytest
 RBAC
 REPL
 RESTful
