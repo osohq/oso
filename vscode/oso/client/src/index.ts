@@ -12,12 +12,16 @@ import {
   workspace,
   WorkspaceFolder,
   WorkspaceFoldersChangeEvent,
+  commands,
+  TextEdit,
+  Range,
 } from 'vscode';
 import {
   LanguageClient,
   LanguageClientOptions,
   TransportKind,
 } from 'vscode-languageclient/node';
+import { format } from '../../out/polar_formatter';
 
 import { enqueueEvent, flushQueue, TELEMETRY_INTERVAL } from './telemetry';
 
@@ -243,6 +247,25 @@ export async function activate(context: ExtensionContext): Promise<void> {
   // TODO(gj): what happens when someone opens the osohq/oso folder and there
   // are a ton of different Polar files in different subfolders that should
   // *not* be considered part of the same policy?
+
+  languages.registerDocumentFormattingEditProvider(
+    { language: 'polar' },
+    {
+      provideDocumentFormattingEdits(document) {
+        // return [TextEdit.replace(new Range(document))];
+        const content = document.getText();
+        const formatted = format(content);
+
+        // TODO: handle parse errors
+        if (formatted === undefined) return [];
+
+        const firstLine = document.lineAt(0);
+        const lastLine = document.lineAt(document.lineCount - 1);
+        const textRange = new Range(firstLine.range.start, lastLine.range.end);
+        return [TextEdit.replace(textRange, formatted)];
+      },
+    }
+  );
 }
 
 export async function deactivate(): Promise<void[]> {

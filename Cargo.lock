@@ -835,6 +835,7 @@ dependencies = [
  "lalrpop-util",
  "polar-core",
  "pretty",
+ "wasm-bindgen",
 ]
 
 [[package]]

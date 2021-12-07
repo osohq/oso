@@ -19,6 +19,7 @@ CARGO_FLAGS ?= --dev
 
 wasm: clean
 	$(MAKE) CARGO_FLAGS=$(CARGO_FLAGS) -C ../../polar-language-server build
+	$(MAKE) CARGO_FLAGS=$(CARGO_FLAGS) -C ../../polar-formatter build
 
 node_modules: package.json
 	yarn install
