@@ -14,7 +14,7 @@ __all__ = [
 ]
 
 try:
-    # Asyncio only supported on Python 3.6+
+    # Only load AsyncIO support is using SQLAlchemy => 1.4
     if not USING_SQLAlchemy_v1_4:
         raise ImportError
 
