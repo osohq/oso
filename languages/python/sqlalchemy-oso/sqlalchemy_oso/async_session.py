@@ -52,12 +52,6 @@ def async_authorized_sessionmaker(
     remain fixed for a given session*. This prevents authorization responses
     from changing, ensuring that the session's identity map never contains
     unauthorized objects.
-
-    NOTE: _baked_queries are disabled on SQLAlchemy 1.3 since the caching
-          mechanism can bypass authorization by using queries from the cache
-          that were previously baked without authorization applied. Note that
-          _baked_queries are deprecated as of SQLAlchemy 1.4.
-    .. _baked_queries: https://docs.sqlalchemy.org/en/14/orm/extensions/baked.html
     """
     if class_ is None:
         class_ = AsyncSession
