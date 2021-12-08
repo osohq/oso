@@ -186,22 +186,30 @@ impl<'kb> Folder for Rewriter<'kb> {
                         // used.
                         use Operator::*;
                         match (only_dots(&rewrites), arg_operator) {
-                            (true, Some(Unify)) => for rewrite in rewrites {
-                                and_append(&mut arg, rewrite);
-                            },
+                            (true, Some(Unify)) => {
+                                for rewrite in rewrites {
+                                    and_append(&mut arg, rewrite);
+                                }
+                            }
                             (true, Some(ForAll)) => {
-                                let Operation { args, .. } = arg.value().as_expression().unwrap().clone();
+                                let Operation { args, .. } =
+                                    arg.value().as_expression().unwrap().clone();
                                 rewrites.insert(0, args[1].clone());
                                 arg.replace_value(Value::Expression(Operation {
                                     operator: ForAll,
-                                    args: vec![args[0].clone(), term!(Operation {
-                                        operator: And,
-                                        args: rewrites
-                                    })],
+                                    args: vec![
+                                        args[0].clone(),
+                                        term!(Operation {
+                                            operator: And,
+                                            args: rewrites
+                                        }),
+                                    ],
                                 }));
                             }
-                            _ => for rewrite in rewrites.drain(..).rev() {
-                                and_prepend(&mut arg, rewrite);
+                            _ => {
+                                for rewrite in rewrites.drain(..).rev() {
+                                    and_prepend(&mut arg, rewrite);
+                                }
                             }
                         }
                         arg
