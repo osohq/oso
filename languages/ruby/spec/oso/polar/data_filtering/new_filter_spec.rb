@@ -13,19 +13,16 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
 
   context 'new filters' do # rubocop:disable Metrics/BlockLength
     class Sign < ActiveRecord::Base
-      self.primary_key = :name
-      has_many :people, foreign_key: :sign_name
-      belongs_to :planet, foreign_key: :planet_name
+      has_many :people
+      belongs_to :planet
     end
 
     class Person < ActiveRecord::Base
-      self.primary_key = :name
-      belongs_to :sign, foreign_key: :sign_name
+      belongs_to :sign
     end
 
     class Planet < ActiveRecord::Base
-      self.primary_key = :name
-      has_many :signs, foreign_key: :planet_name
+      has_many :signs
     end
 
     context 'astrology' do # rubocop:disable Metrics/BlockLength
@@ -35,12 +32,12 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
             Person,
             fields: {
               name: String,
-              sign_name: String,
+              sign_id: Integer,
               sign: Relation.new(
                 kind: 'one',
                 other_type: 'Sign',
-                my_field: 'sign_name',
-                other_field: 'name'
+                my_field: 'sign_id',
+                other_field: 'id'
               )
             }
           )
@@ -51,8 +48,8 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
               signs: Relation.new(
                 kind: 'many',
                 other_type: 'Sign',
-                my_field: 'name',
-                other_field: 'planet_name'
+                my_field: 'id',
+                other_field: 'planet_id'
               )
             }
           )
@@ -64,14 +61,14 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
               planet: Relation.new(
                 kind: 'one',
                 other_type: 'Planet',
-                my_field: 'planet_name',
-                other_field: 'name'
+                my_field: 'planet_id',
+                other_field: 'id'
               ),
               people: Relation.new(
                 kind: 'many',
                 other_type: 'Person',
-                my_field: 'name',
-                other_field: 'sign_name'
+                my_field: 'id',
+                other_field: 'sign_id'
               )
             }
           )
@@ -81,8 +78,8 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
             allow(_: Person, "read", _: Sign{element: "fire"});
             allow(_: Person{sign}, "read", sign);
           POL
-          query = subject.authorized_query(Person.find('sam'), 'read', Sign)
-          expected_signs = %w[pisces aries sagittarius leo].map { |n| Sign.find n }
+          query = subject.authorized_query(sam, 'read', Sign)
+          expected_signs = %w[pisces aries sagittarius leo].map { |n| Sign.find_by_name n }
           expect(query.to_a).to contain_exactly(*expected_signs)
         end
 
@@ -308,6 +305,16 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         xit 'test_ground_object_in_collection' do
         end
 
+        it 'test_inequality_operators' do
+          %w[< > <= >=].each do |op|
+            subject.clear_rules
+            subject.load_str "allow(_: Person{id:p}, _, _: Sign{id:s}) if p #{op} s;"
+            query = subject.authorized_query(leo, 'get', Sign)
+            expected = Sign.all.select { |s| eval "leo.id #{op} s.id" } # rubocop:disable Security/Eval, Style/EvalWithLocation, Lint/UnusedBlockArgument
+            expect(query.to_a).to contain_exactly(*expected)
+          end
+        end
+
         it 'test_var_in_value' do
           subject.load_str 'allow(_, _, _: Person{name}) if name in ["leo", "mercury"];'
           query = subject.authorized_query('gwen', 'get', Person)
@@ -365,22 +372,25 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         db = SQLite3::Database.new DB_FILE
         db.execute <<~SQL
           create table signs (
-            name varchar(16) not null primary key,
+            id integer primary key autoincrement,
+            name varchar(16) not null,
             element varchar(8) not null,
-            planet_name varchar(8) not null
+            planet_id int not null
           );
         SQL
 
         db.execute <<~SQL
           create table people (
-            name varchar(32) not null primary key,
-            sign_name varchar(16) not null
+            id integer primary key autoincrement,
+            name varchar(32) not null,
+            sign_id integer not null
           );
         SQL
 
         db.execute <<~SQL
           create table planets (
-            name varchar(8) not null primary key
+            id integer primary key autoincrement,
+            name varchar(8) not null
           );
         SQL
 
@@ -405,7 +415,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
          %w[capricorn earth saturn],
          %w[aquarius air saturn],
          %w[pisces water jupiter]].each do |name, element, planet|
-          Sign.create(name: name, element: element, planet: Planet.find(planet))
+          Sign.create(name: name, element: element, planet: Planet.find_by_name(planet))
         end
 
         [%w[robin scorpio],
@@ -420,14 +430,15 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
          %w[alex gemini],
          %w[sam pisces],
          %w[avery sagittarius]].each do |name, sign|
-          Person.create(name: name, sign_name: sign)
+          Person.create(name: name, sign: Sign.find_by_name(sign))
         end
       end
 
-      let(:eden) { Person.find 'eden' }
-      let(:leo) { Person.find 'leo' }
-      let(:mercury) { Person.find 'mercury' }
-      let(:mars) { Planet.find 'mars' }
+      let(:eden) { Person.find_by_name 'eden' }
+      let(:leo) { Person.find_by_name 'leo' }
+      let(:mercury) { Person.find_by_name 'mercury' }
+      let(:mars) { Planet.find_by_name 'mars' }
+      let(:sam) { Person.find_by_name 'sam' }
     end
   end
 end

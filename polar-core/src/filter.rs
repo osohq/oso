@@ -68,6 +68,11 @@ pub enum Comparison {
     Eq,
     Neq,
     In,
+    Nin,
+    Lt,
+    Leq,
+    Gt,
+    Geq,
 }
 
 /// An abstract "field reference" on a record from a named data source.
@@ -315,43 +320,59 @@ impl FilterInfo {
         })
     }
 
-    /// digest a conjunct from the partial results & add a new constraint.
-    fn add_constraint(&mut self, op: Operation) -> FilterResult<()> {
+    fn add_binary_constraint(&mut self, op: Operation) -> FilterResult<()> {
         use {Datum::*, Operator::*};
         let (left, right) = (self.term2datum(&op.args[0])?, self.term2datum(&op.args[1])?);
-        match op.operator {
-            Unify => self.add_eq_condition(left, right),
-            Neq => self.add_neq_condition(left, right),
+        let op = match op.operator {
+            Unify => Comparison::Eq,
+            Neq => Comparison::Neq,
             In => match (&left, &right) {
                 (Immediate(_), Field(Projection(_, None)))
-                | (Field(Projection(_, None)), Field(Projection(_, None))) => {
-                    self.add_eq_condition(left, right)
+                | (Field(Projection(_, None)), Field(Projection(_, None))) => Comparison::Eq,
+                _ => Comparison::In,
+            },
+            Lt => Comparison::Lt,
+            Leq => Comparison::Leq,
+            Gt => Comparison::Gt,
+            Geq => Comparison::Geq,
+            _ => return unsupported_op_error(op),
+        };
+        self.add_condition(left, op, right)
+    }
+
+    fn add_unary_constraint(&mut self, op: Operation) -> FilterResult<()> {
+        use Operator::*;
+        match op.operator {
+            Not => match op.args[0].value().as_expression() {
+                Ok(Operation { operator: In, args }) if args.len() == 2 => {
+                    let (left, right) =
+                        (self.term2datum(&op.args[0])?, self.term2datum(&op.args[1])?);
+                    self.add_condition(left, Comparison::Nin, right)
                 }
-                _ => self.add_in_condition(left, right),
+                _ => unsupported_op_error(op),
             },
             _ => unsupported_op_error(op),
         }
     }
 
-    fn add_condition(&mut self, l: Datum, op: Comparison, r: Datum) -> FilterResult<()> {
-        self.conditions.insert(Condition(l, op, r));
-        Ok(())
-    }
-
-    fn add_eq_condition(&mut self, left: Datum, right: Datum) -> FilterResult<()> {
-        // only add condition if the side aren't == (otherwise it's redundant)
-        if left != right {
-            self.add_condition(left, Comparison::Eq, right)?;
+    /// digest a conjunct from the partial results & add a new constraint.
+    fn add_constraint(&mut self, op: Operation) -> FilterResult<()> {
+        match op.args.len() {
+            2 => self.add_binary_constraint(op),
+            1 => self.add_unary_constraint(op),
+            _ => unsupported_op_error(op),
         }
+    }
+
+    fn add_condition(&mut self, left: Datum, op: Comparison, right: Datum) -> FilterResult<()> {
+        use Comparison::*;
+        match op {
+            Eq | Leq | Geq if left == right => {}
+            _ => {
+                self.conditions.insert(Condition(left, op, right));
+            }
+        };
         Ok(())
-    }
-
-    fn add_neq_condition(&mut self, left: Datum, right: Datum) -> FilterResult<()> {
-        self.add_condition(left, Comparison::Neq, right)
-    }
-
-    fn add_in_condition(&mut self, left: Datum, right: Datum) -> FilterResult<()> {
-        self.add_condition(left, Comparison::In, right)
     }
 
     /// Validate FilterInfo before constructing a Filter
@@ -504,6 +525,11 @@ impl Display for Comparison {
                 Eq => "=",
                 Neq => "!=",
                 In => "IN",
+                Nin => "NOT IN",
+                Lt => "<",
+                Gt => ">",
+                Leq => "<=",
+                Geq => ">=",
             }
         )
     }
