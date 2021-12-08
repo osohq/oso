@@ -11,6 +11,20 @@ use pretty::{Doc, RcDoc};
 pub struct PrettyContext {
     source: String,
     position: usize,
+
+    // The "next end" stack is used to keep track of when a particular node's
+    // parent ends in the source, which is used to find comments that might be
+    // necessary to include even in places where there are no nodes following
+    // those comments:
+    //
+    //   resource X {
+    //     # This comment would be ignored without next_end_stack
+    //   }
+    //
+    // In that example, the ResourceBlock node would push its END onto the next
+    // end stack and then the ResourceBlock to_doc method knows to include the
+    // comment (by calling comments_before_next_end)
+    next_end_stack: Vec<usize>,
 }
 
 fn comments_in_content(content: &str) -> Vec<String> {
@@ -36,6 +50,7 @@ impl PrettyContext {
         Self {
             source,
             position: 0,
+            next_end_stack: vec![],
         }
     }
 
@@ -51,11 +66,33 @@ impl PrettyContext {
 
 pub trait ToDoc {
     fn to_doc(&self, context: &mut PrettyContext) -> RcDoc<()>;
+
+    // Use the next end stack to print comments that come before the parent node
+    // ends.
+    fn comments_before_next_end(&self, context: &PrettyContext) -> RcDoc<()> {
+        if let Some(next_end) = context.next_end_stack.last() {
+            if context.position < *next_end {
+                let trailing_content: String = context
+                    .source
+                    .chars()
+                    .skip(context.position)
+                    .take(*next_end - context.position)
+                    .collect();
+                let comments = comments_in_content(&trailing_content);
+                if !comments.is_empty() {
+                    return RcDoc::hardline().append(RcDoc::intersperse(
+                        comments.into_iter().map(|comment| RcDoc::text(comment)),
+                        RcDoc::hardline(),
+                    ));
+                }
+            }
+        }
+        RcDoc::nil()
+    }
 }
 
 impl ToDoc for Node {
     fn to_doc(&self, mut context: &mut PrettyContext) -> RcDoc<()> {
-        // TODO: find and print comments between context.position and self.start
         if self.start < context.position {
             panic!("Nodes are being processed out of order. Make sure that to_doc(..) is called on Nodes in the order they appear in the source.\n\nError caused by this node:\n{}\nBut processing has already been completed up to here:\n{}",
                 source_lines(&Source::new(None, &context.source), self.start, 2),
@@ -84,7 +121,9 @@ impl ToDoc for Node {
                 .append(RcDoc::hardline())
         }
         context.position = self.start;
+        context.next_end_stack.push(self.end);
         let result = doc.append(self.value.to_doc(&mut context));
+        context.next_end_stack.pop().unwrap();
         context.position = self.end;
         result
     }
@@ -122,6 +161,7 @@ impl ToDoc for Rule {
             .append(body_doc)
             .nest(2)
             .group()
+            .append(self.comments_before_next_end(&context))
             .append(RcDoc::text(";"))
     }
 }
@@ -183,6 +223,7 @@ impl ToDoc for Dictionary {
         let field_doc = self.0.to_doc(&mut context);
         RcDoc::text("{")
             .append(RcDoc::line().append(field_doc).nest(2))
+            .append(self.comments_before_next_end(&context).nest(2))
             .append(RcDoc::line())
             .append(RcDoc::text("}"))
             .group()
@@ -198,6 +239,7 @@ impl ToDoc for InstanceLiteral {
                         .append(self.fields.to_doc(&mut context))
                         .nest(2),
                 )
+                .append(self.comments_before_next_end(&context).nest(2))
                 .append(RcDoc::line())
                 .append(RcDoc::text("}"))
                 .group(),
@@ -241,6 +283,7 @@ impl ToDoc for Call {
                         )
                         .nest(2),
                 )
+                .append(self.comments_before_next_end(&context).nest(2))
                 .append(Doc::line_())
                 .append(RcDoc::text(")"))
                 .group(),
@@ -261,6 +304,7 @@ impl ToDoc for List {
                     .append(RcDoc::intersperse(docs, RcDoc::text(",").append(Doc::line())).group())
                     .nest(2),
             )
+            .append(self.comments_before_next_end(&context).nest(2))
             .append(Doc::line_())
             .append(RcDoc::text("]"))
             .group()
@@ -376,7 +420,12 @@ impl ToDoc for ResourceBlock {
             .append(RcDoc::space());
 
         if self.lines.is_empty() {
-            return resource.append(RcDoc::text("{}"));
+            return resource
+                .append(RcDoc::text("{"))
+                .append(self.comments_before_next_end(&context).nest(2))
+                .append(RcDoc::line_())
+                .group()
+                .append(RcDoc::text("}"));
         }
         resource
             .append(RcDoc::text("{"))
@@ -391,6 +440,7 @@ impl ToDoc for ResourceBlock {
                     ))
                     .nest(2),
             )
+            .append(self.comments_before_next_end(&context).nest(2))
             .append(RcDoc::line())
             .append(RcDoc::text("}"))
     }
