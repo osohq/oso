@@ -57,10 +57,12 @@ impl PrettyContext {
     pub fn print_trailing_comments(&self) -> String {
         if self.position < self.source.len() {
             let trailing_content: String = self.source.chars().skip(self.position).collect();
-            comments_in_content(&trailing_content).join("\n")
-        } else {
-            "".to_string()
+            let comments = comments_in_content(&trailing_content);
+            if !comments.is_empty() {
+                return format!("\n{}", comments.join("\n"));
+            }
         }
+        "".to_string()
     }
 }
 
