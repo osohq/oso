@@ -41,9 +41,9 @@ jobs:
       - name: Run polar-language-server tests
         working-directory: "polar-language-server"
         run: make test
-      - name: Build extension
+      - name: Typecheck
         working-directory: "vscode/oso"
-        run: make build
+        run: make typecheck
       - name: Lint JS library
         working-directory: "vscode/oso"
         run: make lint
@@ -77,9 +77,6 @@ jobs:
           node-version: "12"
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      - name: Build extension
-        working-directory: "vscode/oso"
-        run: make build
       # https://github.com/microsoft/vscode-docs/blob/ad7206ed4184f5807871ecab8bd235a712208067/api/working-with-extensions/continuous-integration.md#github-actions
       - run: xvfb-run -a make test
         working-directory: "vscode/oso"

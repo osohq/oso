@@ -1,9 +1,6 @@
 use wasm_bindgen::JsValue;
 
-use polar_core::error::{
-    ErrorKind, FormattedPolarError, OperationalError, ParseError, PolarError, RuntimeError,
-    ValidationError,
-};
+use polar_core::error::{FormattedPolarError, OperationalError, PolarError};
 
 pub struct Error {
     pub kind: String,
@@ -14,54 +11,11 @@ pub fn serialization_error(msg: String) -> JsValue {
     Error::from(PolarError::from(OperationalError::Serialization { msg })).into()
 }
 
-fn kind(err: &PolarError) -> String {
-    use ErrorKind::*;
-    use OperationalError::*;
-    use ParseError::*;
-    use RuntimeError::*;
-    use ValidationError::*;
-    match err.kind {
-        Parse(IntegerOverflow { .. }) => "ParseError::IntegerOverflow",
-        Parse(InvalidTokenCharacter { .. }) => "ParseError::InvalidTokenCharacter",
-        Parse(InvalidToken { .. }) => "ParseError::InvalidToken",
-        Parse(UnrecognizedEOF { .. }) => "ParseError::UnrecognizedEOF",
-        Parse(UnrecognizedToken { .. }) => "ParseError::UnrecognizedToken",
-        Parse(ExtraToken { .. }) => "ParseError::ExtraToken",
-        Parse(ReservedWord { .. }) => "ParseError::ReservedWord",
-        Parse(InvalidFloat { .. }) => "ParseError::InvalidFloat",
-        Parse(WrongValueType { .. }) => "ParseError::WrongValueType",
-        Parse(DuplicateKey { .. }) => "ParseError::DuplicateKey",
-        Runtime(Application { .. }) => "RuntimeError::Application",
-        Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
-        Runtime(FileLoading { .. }) => "RuntimeError::FileLoading",
-        Runtime(IncompatibleBindings { .. }) => "RuntimeError::IncompatibleBindings",
-        Runtime(QueryTimeout { .. }) => "RuntimeError::QueryTimeout",
-        Runtime(StackOverflow { .. }) => "RuntimeError::StackOverflow",
-        Runtime(TypeError { .. }) => "RuntimeError::TypeError",
-        Runtime(UnhandledPartial { .. }) => "RuntimeError::UnhandledPartial",
-        Runtime(Unsupported { .. }) => "RuntimeError::Unsupported",
-        Runtime(DataFilteringFieldMissing { .. }) => "RuntimeError::DataFilteringFieldMissing",
-        Runtime(InvalidRegistration { .. }) => "RuntimeError::InvalidRegistration",
-        Runtime(InvalidState { .. }) => "RuntimeError::InvalidState",
-        Operational(Serialization { .. }) => "OperationalError::Serialization",
-        Operational(Unknown) => "OperationalError::Unknown",
-        Validation(InvalidRule { .. }) => "ValidationError::InvalidRule",
-        Validation(InvalidRuleType { .. }) => "ValidationError::InvalidRuleType",
-        Validation(ResourceBlock { .. }) => "ValidationError::ResourceBlock",
-        Validation(UndefinedRuleCall { .. }) => "ValidationError::UndefinedRuleCall",
-        Validation(SingletonVariable { .. }) => "ValidationError::SingletonVariable",
-        Validation(UnregisteredClass { .. }) => "ValidationError::UnregisteredClass",
-        Validation(MissingRequiredRule { .. }) => "ValidationError::MissingRequiredRule",
-    }
-    .to_owned()
-}
-
 impl From<PolarError> for Error {
     fn from(err: PolarError) -> Self {
-        let kind = kind(&err);
         Self {
+            kind: err.kind(),
             inner: err.into(),
-            kind,
         }
     }
 }

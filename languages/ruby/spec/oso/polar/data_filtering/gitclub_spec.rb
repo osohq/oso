@@ -240,6 +240,9 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       }
     )
 
+    subject.data_filtering_adapter =
+      ::Oso::Polar::Data::Adapter::ActiveRecordAdapter.new
+
     subject.load_files [policy_file]
   end
 end

@@ -94,8 +94,7 @@ module Oso
                  else
                    instance.__send__(attribute, *args, **kwargs)
                  end
-        result = JSON.dump(host.to_polar(result))
-        call_result(result, call_id: call_id)
+        call_result(host.to_polar(result), call_id: call_id)
       rescue ArgumentError, NoMethodError => e
         application_error(e.message)
         call_result(nil, call_id: call_id)
@@ -143,7 +142,7 @@ module Oso
           calls[call_id] = value.lazy
         end
 
-        result = JSON.dump(next_call_result(call_id))
+        result = next_call_result(call_id)
         call_result(result, call_id: call_id)
       rescue StopIteration
         call_result(nil, call_id: call_id)
@@ -245,12 +244,32 @@ module Oso
 
       def handle_relationship(call_id, instance, rel) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         typ = host.types[rel.other_type]
-        constraint = ::Oso::Polar::DataFiltering::Filter.new(
-          kind: 'Eq',
-          field: rel.other_field,
-          value: instance.send(rel.my_field)
-        )
-        res = typ.exec_query[typ.build_query[[constraint]]]
+
+        if host.use_new_data_filtering?
+          cls = typ.klass.get
+
+          condition = ::Oso::Polar::Data::Filter::Condition.new(
+            ::Oso::Polar::Data::Filter::Projection.new(cls, rel.other_field),
+            'Eq',
+            instance.send(rel.my_field)
+          )
+
+          filter = ::Oso::Polar::Data::Filter.new(
+            model: cls,
+            relations: [],
+            conditions: [[condition]],
+            types: host.types
+          )
+
+          res = host.adapter.execute_query host.adapter.build_query(filter)
+        else
+          constraint = ::Oso::Polar::DataFiltering::Filter.new(
+            kind: 'Eq',
+            field: rel.other_field,
+            value: instance.send(rel.my_field)
+          )
+          res = typ.exec_query[typ.build_query[[constraint]]]
+        end
 
         if rel.kind == 'one'
           raise "multiple parents: #{res}" unless res.length == 1
@@ -258,8 +277,7 @@ module Oso
           res = res[0]
         end
 
-        res = JSON.dump host.to_polar res
-        call_result(res, call_id: call_id)
+        call_result(host.to_polar(res), call_id: call_id)
       end
     end
   end

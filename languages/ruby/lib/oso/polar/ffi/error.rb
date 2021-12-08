@@ -6,29 +6,13 @@ module Oso
   module Polar
     module FFI
       # Wrapper class for Error FFI pointer + operations.
-      class Error < ::FFI::AutoPointer
-        def to_s
-          @to_s ||= read_string.force_encoding('UTF-8')
-        end
-
-        Rust = Module.new do
-          extend ::FFI::Library
-          ffi_lib FFI::LIB_PATH
-
-          attach_function :get, :polar_get_error, [], Error
-          attach_function :free, :string_free, [Error], :int32
-        end
-        private_constant :Rust
-
+      class Error
         # Check for an FFI error and convert it into a Ruby exception.
         #
         # @return [::Oso::Polar::Error] if there's an FFI error.
         # @return [::Oso::Polar::FFIErrorNotFound] if there isn't one.
-        def self.get(enrich_message) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
-          error = Rust.get
-          return ::Oso::Polar::FFIErrorNotFound if error.null?
-
-          error = JSON.parse(error.to_s)
+        def self.get(error_str, enrich_message) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
+          error = JSON.parse(error_str.to_s)
           msg = error['formatted']
           kind, body = error['kind'].first
 
@@ -90,7 +74,7 @@ module Oso
         # @param msg [String]
         # @param details [Hash<String, Object>]
         # @return [::Oso::Polar::PolarRuntimeError] the object converted into the expected format.
-        private_class_method def self.runtime_error(kind, msg:, details:) # rubocop:disable Metrics/MethodLength
+        private_class_method def self.runtime_error(kind, msg:, details:)
           case kind
           when 'Unsupported'
             ::Oso::Polar::UnsupportedError.new(msg, details: details)
@@ -98,8 +82,6 @@ module Oso
             ::Oso::Polar::PolarTypeError.new(msg, details: details)
           when 'StackOverflow'
             ::Oso::Polar::StackOverflowError.new(msg, details: details)
-          when 'FileLoading'
-            ::Oso::Polar::FileLoadingError.new(msg, details: details)
           else
             ::Oso::Polar::PolarRuntimeError.new(msg, details: details)
           end

@@ -3,6 +3,7 @@ use std::sync::{Arc, RwLock};
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
 use super::diagnostic::Diagnostic;
 use super::error::{PolarResult, RuntimeError, ValidationError};
+use super::filter::Filter;
 use super::kb::*;
 use super::messages::*;
 use super::parser;
@@ -15,7 +16,6 @@ use super::validations::{
     check_ambiguous_precedence, check_no_allow_rule, check_resource_blocks_missing_has_permission,
     check_singletons,
 };
-use super::vm::*;
 
 pub struct Polar {
     pub kb: Arc<RwLock<KnowledgeBase>>,
@@ -28,9 +28,6 @@ impl Default for Polar {
         Self::new()
     }
 }
-
-const MULTIPLE_LOAD_ERROR_MSG: &str =
-    "Cannot load additional Polar code -- all Polar code must be loaded at the same time.";
 
 impl Polar {
     pub fn new() -> Self {
@@ -185,8 +182,7 @@ impl Polar {
     pub fn load(&self, sources: Vec<Source>) -> PolarResult<()> {
         if let Ok(kb) = self.kb.read() {
             if kb.has_rules() {
-                let msg = MULTIPLE_LOAD_ERROR_MSG.to_owned();
-                return Err(RuntimeError::FileLoading { msg }.with_context(&*kb));
+                return Err(RuntimeError::MultipleLoadError.with_context(&*kb));
             }
         }
 
@@ -243,6 +239,7 @@ impl Polar {
     }
 
     pub fn new_query_from_term(&self, mut term: Term, trace: bool) -> Query {
+        use crate::vm::{Goal, PolarVirtualMachine};
         {
             let mut kb = self.kb.write().unwrap();
             term = rewrite_term(term, &mut kb);
@@ -288,6 +285,17 @@ impl Polar {
             .map_err(|e| e.with_context(&*self.kb.read().unwrap()))
     }
 
+    pub fn build_data_filter(
+        &self,
+        types: Types,
+        partial_results: PartialResults,
+        variable: &str,
+        class_tag: &str,
+    ) -> PolarResult<Filter> {
+        Filter::build(types, partial_results, variable, class_tag)
+            .map_err(|e| e.with_context(&*self.kb.read().unwrap()))
+    }
+
     // TODO(@gkaemmer): this is a hack and should not be used for similar cases.
     // Ideally, we'd have a single "configuration" entrypoint for both the Polar
     // and Query types.
@@ -299,7 +307,10 @@ impl Polar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::{ErrorKind::Runtime, PolarError};
+    use crate::error::{
+        ErrorKind::{Runtime, Validation},
+        PolarError,
+    };
 
     #[test]
     fn can_load_and_query() {
@@ -321,24 +332,22 @@ mod tests {
         polar.load(vec![source.clone()]).unwrap();
 
         // Loading twice is not.
-        let msg = match polar.load(vec![source]).unwrap_err() {
+        assert!(matches!(
+            polar.load(vec![source.clone()]).unwrap_err(),
             PolarError {
-                kind: Runtime(RuntimeError::FileLoading { msg }),
+                kind: Runtime(RuntimeError::MultipleLoadError),
                 ..
-            } => msg,
-            e => panic!("{}", e),
-        };
-        assert_eq!(msg, MULTIPLE_LOAD_ERROR_MSG);
+            }
+        ));
 
         // Even with load_str().
-        let msg = match polar.load_str(src).unwrap_err() {
+        assert!(matches!(
+            polar.load(vec![source]).unwrap_err(),
             PolarError {
-                kind: Runtime(RuntimeError::FileLoading { msg }),
+                kind: Runtime(RuntimeError::MultipleLoadError),
                 ..
-            } => msg,
-            e => panic!("{}", e),
-        };
-        assert_eq!(msg, MULTIPLE_LOAD_ERROR_MSG);
+            }
+        ));
     }
 
     #[test]
@@ -351,7 +360,7 @@ mod tests {
 
         let msg = match polar.load(vec![source.clone(), source]).unwrap_err() {
             PolarError {
-                kind: Runtime(RuntimeError::FileLoading { msg }),
+                kind: Validation(ValidationError::FileLoading { msg, .. }),
                 ..
             } => msg,
             e => panic!("{}", e),

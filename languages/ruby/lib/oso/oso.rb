@@ -181,27 +181,17 @@ module Oso
     # @param resource_cls The resource being accessed.
     #
     # @return A query for resources accessible to the actor.
-    def authorized_query(actor, action, resource_cls) # rubocop:disable Metrics/MethodLength
-      resource = Polar::Variable.new 'resource'
+    def authorized_query(actor, action, resource_cls)
+      if host.use_new_data_filtering?
 
-      results = query_rule(
-        'allow',
-        actor,
-        action,
-        resource,
-        bindings: { 'resource' => type_constraint(resource, resource_cls) },
-        accept_expression: true
-      )
-
-      results = results.each_with_object([]) do |result, out|
-        result.each do |key, val|
-          out.push({ 'bindings' => { key => host.to_polar(val) } })
+        unless host.types[resource_cls].build_query == ::Oso::Polar::Host::DEFAULT_BUILD_QUERY
+          warn 'Warning: redundant data filtering configuration detected'
         end
-      end
 
-      ::Oso::Polar::DataFiltering::FilterPlan
-        .parse(self, results, get_class_name(resource_cls))
-        .build_query
+        new_authorized_query(actor, action, resource_cls)
+      else
+        old_authorized_query(actor, action, resource_cls)
+      end
     end
 
     # Determine the resources of type +resource_cls+ that +actor+
@@ -213,10 +203,15 @@ module Oso
     #
     # @return A list of resources accessible to the actor.
     def authorized_resources(actor, action, resource_cls)
-      q = authorized_query actor, action, resource_cls
-      return [] if q.nil?
+      q = authorized_query(actor, action, resource_cls)
 
-      host.types[get_class_name resource_cls].exec_query[q]
+      if host.use_new_data_filtering?
+        host.adapter.execute_query q
+      elsif q.nil?
+        []
+      else
+        host.types[resource_cls].exec_query[q]
+      end
     end
 
     # Register default values for data filtering query functions.
@@ -227,6 +222,10 @@ module Oso
       host.build_query = build_query if build_query
       host.exec_query = exec_query if exec_query
       host.combine_query = combine_query if combine_query
+    end
+
+    def data_filtering_adapter=(adapter)
+      host.adapter = adapter
     end
   end
 end

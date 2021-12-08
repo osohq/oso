@@ -26,14 +26,14 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       subject.load_str <<~POL
         allow(_, _, _: Foo{id: "something"});
       POL
-      check_authz 'gwen', 'get', Foo, [something_foo]
+      check_old_authorized_query 'gwen', 'get', Foo, [something_foo]
 
       subject.clear_rules
       subject.load_str <<~POL
         allow(_, _, _: Foo{id: "something"});
         allow(_, _, _: Foo{id: "another"});
       POL
-      check_authz 'gwen', 'get', Foo, [another_foo, something_foo]
+      check_old_authorized_query 'gwen', 'get', Foo, [another_foo, something_foo]
     end
 
     it 'test_authorize_scalar_attribute_eq' do
@@ -43,7 +43,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       POL
       bars.each do |bar|
         expected = foos.select { |f| f.is_fooey || f.bar == bar }
-        check_authz bar, 'read', Foo, expected
+        check_old_authorized_query bar, 'read', Foo, expected
       end
     end
 
@@ -60,7 +60,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
             foo.bar.is_cool && foo.is_fooey ||
             !foo.bar.is_cool && bar.is_still_cool
         end
-        check_authz bar, 'read', Foo, expected
+        check_old_authorized_query bar, 'read', Foo, expected
       end
     end
 
@@ -82,7 +82,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
             bar == foo.bar ||
             (foo.bar.is_cool && [1, 2].any? { |n| foo.numbers.include? n })
         end
-        check_authz bar, 'read', Foo, expected
+        check_old_authorized_query bar, 'read', Foo, expected
       end
     end
 
@@ -92,7 +92,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       POL
       logs.each do |log|
         expected = bars.select { |bar| bar.foos.include? log.foo }
-        check_authz log, 'read', Bar, expected
+        check_old_authorized_query log, 'read', Bar, expected
       end
     end
 
@@ -105,7 +105,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         expected = bars.select do |bar|
           bar.foos.any? { |foo| foo.logs.include? log }
         end
-        check_authz log, 'read', Bar, expected
+        check_old_authorized_query log, 'read', Bar, expected
       end
     end
 
@@ -127,21 +127,21 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           expect(expected).to be_empty
         end
 
-        check_authz log, 'read', Bar, expected
+        check_old_authorized_query log, 'read', Bar, expected
       end
     end
 
     it 'test_partial_in_collection' do
       subject.load_str 'allow(bar, "read", foo: Foo) if foo in bar.foos;'
       bars.each do |bar|
-        check_authz bar, 'read', Foo, bar.foos
+        check_old_authorized_query bar, 'read', Foo, bar.foos
       end
     end
 
     it 'test_empty_constraints_in' do
       subject.load_str 'allow(_, "read", foo: Foo) if _ in foo.logs;'
       expected = foos.select { |foo| foo.logs.any? }
-      check_authz 'gwen', 'read', Foo, expected
+      check_old_authorized_query 'gwen', 'read', Foo, expected
     end
 
     it 'test_in_with_constraints_but_no_matching_object' do
@@ -149,7 +149,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         allow(_, "read", foo: Foo) if log in foo.logs and log.data = "nope";
       POL
 
-      check_authz 'gwen', 'read', Foo, []
+      check_old_authorized_query 'gwen', 'read', Foo, []
     end
 
     it 'test_redundant_in_on_same_field' do
@@ -162,7 +162,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
 
       expected = foos.select { |foo| [1, 2].all? { |n| foo.numbers.include? n } }
       expect(expected).to contain_exactly(fourth_foo)
-      check_authz 'gwen', 'get', Foo, expected
+      check_old_authorized_query 'gwen', 'get', Foo, expected
     end
 
     it 'test_unify_ins' do
@@ -175,7 +175,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
 
       expected = bars.select { |bar| bar.foos.any? }
       expect(expected).to contain_exactly(hello_bar, goodbye_bar)
-      check_authz 'gwen', 'read', Bar, expected
+      check_old_authorized_query 'gwen', 'read', Bar, expected
     end
 
     it 'test_partial_isa_with_path' do
@@ -184,7 +184,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         check(bar: Bar) if bar.id = "goodbye";   # this should match
         check(foo: Foo) if foo.bar.id = "hello"; # this shouldn't match
       POL
-      check_authz 'gwen', 'read', Foo, goodbye_bar.foos
+      check_old_authorized_query 'gwen', 'read', Foo, goodbye_bar.foos
     end
 
     it 'test_no_relationships' do
@@ -192,7 +192,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         allow(_, _, foo: Foo) if foo.is_fooey;
       POL
       expected = foos.select(&:is_fooey)
-      check_authz 'gwen', 'get', Foo, expected
+      check_old_authorized_query 'gwen', 'get', Foo, expected
     end
 
     it 'test_neq' do
@@ -202,7 +202,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
 
       bars.each do |bar|
         expected = foos.reject { |foo| foo.bar == bar }
-        check_authz 'gwen', bar.id, Foo, expected
+        check_old_authorized_query 'gwen', bar.id, Foo, expected
       end
     end
 
@@ -214,21 +214,21 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           foo.is_fooey;
       POL
       expected = foos.select { |foo| foo.bar.is_cool and foo.is_fooey }
-      check_authz 'steve', 'get', Foo, expected
+      check_old_authorized_query 'steve', 'get', Foo, expected
     end
 
     it 'test_duplex_relationship' do
       subject.load_str <<~POL
         allow(_, _, foo: Foo) if foo in foo.bar.foos;
       POL
-      check_authz 'gwen', 'get', Foo, foos
+      check_old_authorized_query 'gwen', 'get', Foo, foos
     end
 
     it 'test_scalar_in_list' do
       subject.load_str <<~POL
         allow(_, _, _: Foo{bar:bar}) if bar.is_cool in [true, false];
       POL
-      check_authz 'gwen', 'get', Foo, foos
+      check_old_authorized_query 'gwen', 'get', Foo, foos
     end
 
     it 'test_var_in_vars' do
@@ -240,25 +240,25 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       expected = foos.select do |foo|
         foo.logs.any? { |log| log.data == 'hello' }
       end
-      check_authz 'gwen', 'get', Foo, expected
+      check_old_authorized_query 'gwen', 'get', Foo, expected
     end
 
     it 'test_parent_child_cases' do
       subject.load_str <<~POL
-        allow(_: Log{foo: foo},   0, foo: Foo);
-        allow(log: Log,           1, _: Foo{logs: logs}) if log in logs;
-        allow(log: Log{foo: foo}, 2, foo: Foo{logs: logs}) if log in logs;
+        allow(_: Log{foo}, 0, foo: Foo);
+        allow(log: Log, 1, _: Foo{logs}) if log in logs;
+        allow(log: Log{foo}, 2, foo: Foo{logs}) if log in logs;
       POL
       0.upto(2) do |n|
         logs.each do |log|
-          check_authz log, n, Foo, [log.foo]
+          check_old_authorized_query log, n, Foo, [log.foo]
         end
       end
     end
 
     it 'test_specializers' do
       subject.load_str <<~POL
-        allow(foo: Foo,             "NoneNone", log) if foo = log.foo;
+        allow(foo,                  "NoneNone", log) if foo = log.foo;
         allow(foo,                  "NoneCls",  log: Log) if foo = log.foo;
         allow(foo,                  "NoneDict", _: {foo:foo});
         allow(foo,                  "NonePtn",  _: Log{foo: foo});
@@ -278,31 +278,31 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       parts = %w[None Cls Dict Ptn]
       parts.each do |a|
         parts.each do |b|
-          logs.each { |log| check_authz log.foo, a + b, Log, [log] }
+          logs.each { |log| check_old_authorized_query log.foo, a + b, Log, [log] }
         end
       end
     end
 
     it 'test_ground_object_in_collection' do
       subject.load_str 'allow(_, _, _: Foo{numbers:ns}) if 1 in ns and 2 in ns;'
-      check_authz 'gwen', 'get', Foo, [fourth_foo]
+      check_old_authorized_query 'gwen', 'get', Foo, [fourth_foo]
     end
 
     it 'test_var_in_value' do
       subject.load_str 'allow(_, _, log: Log) if log.data in ["goodbye", "world"];'
-      check_authz 'steve', 'get', Log, [third_log_b, fourth_log_a]
+      check_old_authorized_query 'steve', 'get', Log, [third_log_b, fourth_log_a]
     end
 
     it 'test_field_eq' do
       subject.load_str 'allow(_, _, _: Bar{is_cool: cool, is_still_cool: cool});'
       expected = bars.select { |bar| bar.is_cool == bar.is_still_cool }
-      check_authz 'gwen', 'get', Bar, expected
+      check_old_authorized_query 'gwen', 'get', Bar, expected
     end
 
     it 'test_field_neq' do
       subject.load_str 'allow(_, _, bar: Bar) if bar.is_cool != bar.is_still_cool;'
       expected = bars.reject { |bar| bar.is_cool == bar.is_still_cool }
-      check_authz 'gwen', 'get', Bar, expected
+      check_old_authorized_query 'gwen', 'get', Bar, expected
     end
 
     it 'test_const_in_coll' do
@@ -310,12 +310,12 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       subject.register_constant magic, name: 'magic'
       subject.load_str 'allow(_, _, foo: Foo) if magic in foo.numbers;'
       expected = foos.select { |foo| foo.numbers.include? magic }
-      check_authz 'gwen', 'get', Foo, expected
+      check_old_authorized_query 'gwen', 'get', Foo, expected
     end
 
     it 'test_param_field' do
       subject.load_str 'allow(data, id, _: Log{data: data, id: id});'
-      logs.each { |log| check_authz log.data, log.id, Log, [log] }
+      logs.each { |log| check_old_authorized_query log.data, log.id, Log, [log] }
     end
 
     # not supported
@@ -330,13 +330,13 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     it 'test_field_cmp_rel_field' do
       subject.load_str 'allow(_, _, foo: Foo) if foo.bar.is_cool = foo.is_fooey;'
       expected = foos.select { |foo| foo.bar.is_cool == foo.is_fooey }
-      check_authz 'gwen', 'get', Foo, expected
+      check_old_authorized_query 'gwen', 'get', Foo, expected
     end
 
     it 'test_field_cmp_rel_rel_field' do
       subject.load_str('allow(_, _, log: Log) if log.data = log.foo.bar.id;')
       expected = [fourth_log_a]
-      check_authz 'gwen', 'get', Log, expected
+      check_old_authorized_query 'gwen', 'get', Log, expected
     end
 
     # not supported
@@ -345,14 +345,14 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       subject.register_constant magic, name: 'magic'
       subject.load_str 'allow(_, _, foo: Foo) if not (magic in foo.numbers);'
       expected = foos.reject { |foo| foo.numbers.include? magic }
-      check_authz 'gwen', 'get', Foo, expected
+      check_old_authorized_query 'gwen', 'get', Foo, expected
     end
 
     # not supported
     xit 'test_forall_in_collection' do
       subject.load_str 'allow(_, _, bar: Bar) if forall(foo in bar.foos, foo.is_fooey = true);'
       expected = bars.select { |bar| bar.foos.all?(&:is_fooey) }
-      check_authz 'gwen', 'get', Bar, expected
+      check_old_authorized_query 'gwen', 'get', Bar, expected
     end
 
     # buggy
@@ -365,7 +365,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       POL
 
       expected = bars.select { |bar| bar.foos.length >= 2 }
-      check_authz 'gwen', 'read', Bar, expected
+      check_old_authorized_query 'gwen', 'read', Bar, expected
     end
 
     it 'test_unify_ins_field_eq' do
@@ -376,7 +376,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
             foo.id = goo.id;
       POL
       expected = bars.select { |bar| bar.foos.any? }
-      check_authz 'gwen', 'get', Bar, expected
+      check_old_authorized_query 'gwen', 'get', Bar, expected
     end
 
     # buggy
@@ -389,7 +389,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
             e in d.bar.foos and e != d;
       POL
       expected = bars.select { |bar| bar.foos.length >= 2 }
-      check_authz 'gwen', 'get', Foo, expected
+      check_old_authorized_query 'gwen', 'get', Foo, expected
     end
 
     xit 'test_in_intersection' do

@@ -88,7 +88,7 @@ get "/repos" do
   repositories = oso.authorized_resources(
     get_current_user(),
     "read",
-    Repository)
+    DF::Repository)
 
   serialize(repositories)
 end

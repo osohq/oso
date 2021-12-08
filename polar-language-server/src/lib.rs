@@ -7,14 +7,11 @@ use lsp_types::{
     },
     DeleteFilesParams, Diagnostic, DiagnosticSeverity, DidChangeTextDocumentParams,
     DidChangeWatchedFilesParams, DidOpenTextDocumentParams, FileChangeType, FileDelete, FileEvent,
-    Position, PublishDiagnosticsParams, Range, TextDocumentItem, Url,
+    NumberOrString, Position, PublishDiagnosticsParams, Range, TextDocumentItem, Url,
     VersionedTextDocumentIdentifier,
 };
-use polar_core::{
-    diagnostic::{Diagnostic as PolarDiagnostic, Range as PolarRange},
-    polar::Polar,
-    sources::Source,
-};
+use polar_core::{diagnostic::Diagnostic as PolarDiagnostic, polar::Polar, sources::Source};
+use serde::Serialize;
 use serde_wasm_bindgen::{from_value, to_value};
 use wasm_bindgen::prelude::*;
 
@@ -43,9 +40,12 @@ pub struct PolarLanguageServer {
     documents: Documents,
     polar: Polar,
     send_diagnostics_callback: js_sys::Function,
+    telemetry_callback: js_sys::Function,
 }
 
 fn range_from_polar_diagnostic_context(diagnostic: &PolarDiagnostic) -> Range {
+    use polar_core::diagnostic::Range as PolarRange;
+
     let context = match diagnostic {
         PolarDiagnostic::Error(e) => e.context.as_ref(),
         PolarDiagnostic::Warning(w) => w.context.as_ref(),
@@ -105,13 +105,17 @@ fn empty_diagnostics_for_doc(
 #[wasm_bindgen]
 impl PolarLanguageServer {
     #[wasm_bindgen(constructor)]
-    pub fn new(send_diagnostics_callback: &js_sys::Function) -> Self {
+    pub fn new(
+        send_diagnostics_callback: &js_sys::Function,
+        telemetry_callback: &js_sys::Function,
+    ) -> Self {
         console_error_panic_hook::set_once();
 
         Self {
             documents: BTreeMap::new(),
             polar: Polar::default(),
             send_diagnostics_callback: send_diagnostics_callback.clone(),
+            telemetry_callback: telemetry_callback.clone(),
         }
     }
 
@@ -265,6 +269,129 @@ impl PolarLanguageServer {
         }
     }
 
+    fn send_telemetry(&self, diagnostics: Vec<&Diagnostic>) {
+        use polar_core::parser::{parse_lines, Line};
+
+        #[derive(Default, Serialize)]
+        struct PolicyStats {
+            inline_queries: usize,
+            longhand_rules: usize,
+            polar_chars: usize,
+            polar_files: usize,
+            rule_types: usize,
+            total_rules: usize,
+        }
+
+        #[derive(Default, Serialize)]
+        struct ResourceBlockStats {
+            resource_blocks: usize,
+            actors: usize,
+            resources: usize,
+            declarations: usize,
+            roles: usize,
+            permissions: usize,
+            relations: usize,
+            shorthand_rules: usize,
+            cross_resource_shorthand_rules: usize,
+        }
+
+        #[derive(Default, Serialize)]
+        struct TelemetryEvent<'a> {
+            diagnostics: Vec<&'a Diagnostic>,
+            policy_stats: PolicyStats,
+            resource_block_stats: ResourceBlockStats,
+        }
+
+        let polar_chars = self
+            .documents
+            .values()
+            .map(|d| d.text.chars().count())
+            .sum();
+
+        let mut event = TelemetryEvent {
+            diagnostics,
+            policy_stats: PolicyStats {
+                polar_chars,
+                polar_files: self.documents.len(),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        let lines = self.documents.values();
+        let lines = lines.filter_map(|d| parse_lines(0, &d.text).ok()).flatten();
+        for line in lines {
+            match line {
+                Line::Query(_) => event.policy_stats.inline_queries += 1,
+                Line::ResourceBlock {
+                    keyword,
+                    productions,
+                    resource,
+                } => {
+                    use polar_core::resource_block::{
+                        block_type_from_keyword, validate_parsed_declaration, BlockType,
+                        ParsedDeclaration, Production,
+                    };
+
+                    event.resource_block_stats.resource_blocks += 1;
+
+                    match block_type_from_keyword(keyword, &resource) {
+                        Ok(BlockType::Actor) => event.resource_block_stats.actors += 1,
+                        Ok(BlockType::Resource) => event.resource_block_stats.resources += 1,
+                        _ => (),
+                    }
+
+                    for production in productions {
+                        match production {
+                            Production::Declaration(declaration) => {
+                                event.resource_block_stats.declarations += 1;
+
+                                if let Ok(declaration) = validate_parsed_declaration(declaration) {
+                                    match declaration {
+                                        ParsedDeclaration::Permissions(permissions) => {
+                                            event.resource_block_stats.permissions +=
+                                                permissions.value().as_list().unwrap().len();
+                                        }
+                                        ParsedDeclaration::Relations(relations) => {
+                                            event.resource_block_stats.relations +=
+                                                relations.value().as_dict().unwrap().fields.len();
+                                        }
+                                        ParsedDeclaration::Roles(roles) => {
+                                            event.resource_block_stats.roles +=
+                                                roles.value().as_list().unwrap().len();
+                                        }
+                                    }
+                                }
+                            }
+                            Production::ShorthandRule(_, (_, relation)) => {
+                                event.resource_block_stats.shorthand_rules += 1;
+                                event.policy_stats.total_rules += 1;
+
+                                if relation.is_some() {
+                                    event.resource_block_stats.cross_resource_shorthand_rules += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+                Line::RuleType(_) => event.policy_stats.rule_types += 1,
+                Line::Rule(_) => {
+                    event.policy_stats.longhand_rules += 1;
+                    event.policy_stats.total_rules += 1;
+                }
+            }
+        }
+
+        let params = &to_value(&event).unwrap();
+        let this = &JsValue::null();
+        if let Err(e) = self.telemetry_callback.call1(this, params) {
+            log(&format!(
+                "send_telemetry params:\n\t{:?}\n\tJS error: {:?}",
+                params, e
+            ));
+        }
+    }
+
     fn empty_diagnostics_for_all_documents(&self) -> Diagnostics {
         self.documents
             .iter()
@@ -333,6 +460,7 @@ impl PolarLanguageServer {
         docs.into_iter()
             .map(|doc| {
                 let diagnostic = Diagnostic {
+                    code: Some(NumberOrString::String(diagnostic.kind())),
                     range: range_from_polar_diagnostic_context(&diagnostic),
                     severity: Some(severity),
                     source: Some("Polar Language Server".to_owned()),
@@ -361,9 +489,16 @@ impl PolarLanguageServer {
     }
 
     fn get_diagnostics(&self) -> Diagnostics {
-        self.load_documents()
+        let diagnostics = self
+            .load_documents()
             .into_iter()
             .flat_map(|diagnostic| self.diagnostics_from_polar_diagnostic(diagnostic))
+            .collect::<Vec<_>>();
+
+        self.send_telemetry(diagnostics.iter().map(|(_, d)| d).collect());
+
+        diagnostics
+            .into_iter()
             .fold(Diagnostics::new(), |mut acc, (doc, diagnostic)| {
                 let params = acc.entry(doc.uri.clone()).or_insert_with(|| {
                     PublishDiagnosticsParams::new(doc.uri, vec![], Some(doc.version))
@@ -395,7 +530,7 @@ mod tests {
     #[track_caller]
     fn new_pls() -> PolarLanguageServer {
         let noop = js_sys::Function::new_with_args("_params", "");
-        let pls = PolarLanguageServer::new(&noop);
+        let pls = PolarLanguageServer::new(&noop, &noop);
         assert!(pls.reload_kb().is_empty());
         pls
     }
@@ -817,5 +952,58 @@ mod tests {
         );
         assert_eq!(diagnostic.range.start, Position::new(0, 0));
         assert_eq!(diagnostic.range.end, Position::new(0, 5));
+    }
+
+    #[wasm_bindgen_test]
+    fn test_resource_block_errors() {
+        let mut pls = new_pls();
+
+        let policy = r#"
+            resource Repo {
+              "read" if "write";
+            }
+        "#;
+        let doc = polar_doc("whatever", policy.to_owned());
+        pls.upsert_document(doc.clone());
+
+        let diagnostics = pls.reload_kb();
+        let params = diagnostics.get(&doc.uri).unwrap();
+        assert_eq!(params.uri, doc.uri);
+        assert_eq!(params.version.unwrap(), doc.version);
+        assert_eq!(params.diagnostics.len(), 1, "{:?}", params.diagnostics);
+        let undeclared_term = &params.diagnostics.get(0).unwrap().message;
+        assert!(
+            undeclared_term.starts_with("Undeclared term \"read\""),
+            "{}",
+            undeclared_term
+        );
+    }
+
+    #[wasm_bindgen_test]
+    fn test_file_loading_errors() {
+        let mut pls = new_pls();
+
+        let doc1 = polar_doc("one", "".to_owned());
+        let doc2 = polar_doc("two", "".to_owned());
+        pls.upsert_document(doc1.clone());
+        pls.upsert_document(doc2.clone());
+
+        let diagnostics = pls.reload_kb();
+        let params = diagnostics.get(&doc1.uri).unwrap();
+        assert_eq!(params.uri, doc1.uri);
+        assert_eq!(params.version.unwrap(), doc1.version);
+        assert!(params.diagnostics.is_empty(), "{:?}", params.diagnostics);
+
+        let params = diagnostics.get(&doc2.uri).unwrap();
+        assert_eq!(params.uri, doc2.uri);
+        assert_eq!(params.version.unwrap(), doc2.version);
+        assert_eq!(params.diagnostics.len(), 1, "{:?}", params.diagnostics);
+        let undeclared_term = &params.diagnostics.get(0).unwrap().message;
+        assert_eq!(
+            undeclared_term,
+            &format!("Problem loading file: A file with the same contents as {} named {} has already been loaded.", doc2.uri, doc1.uri),
+            "{}",
+            undeclared_term
+        );
     }
 }

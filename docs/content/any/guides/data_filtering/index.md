@@ -5,6 +5,15 @@ showContentForAnyLanguage: true
 ---
 # Filter Data
 
+{{< ifLang "ruby" >}}
+{{% callout "Filter Data - Adapter API (Preview)" "blue" %}}
+We are working on a new version of the data filtering internals that makes it
+easier and more performant to build adapters. It is currently in preview for
+Ruby, and you can check out the docs [`here`]({{< ref
+path="guides/data_filtering_next" lang="ruby" >}}).
+{{% /callout %}}
+{{< /ifLang >}}
+
 When you call `authorize(actor, action, resource)` , Oso evaluates the allow
 rule(s) you have defined in your policy to determine if `actor` is allowed
 to perform `action` on `resource`.  For example, if `jane` wants to `"edit"`

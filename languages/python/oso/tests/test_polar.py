@@ -49,14 +49,14 @@ def test_data_conversions(polar, qvar):
 def test_load_function(polar, query, qvar):
     """Make sure the load function works."""
     filename = Path(__file__).parent / "test_file.polar"
-    with pytest.raises(exceptions.PolarRuntimeError) as e:
+    with pytest.raises(exceptions.ValidationError) as e:
         polar.load_files([filename, filename])
     assert str(e.value).startswith(
         f"Problem loading file: File {filename} has already been loaded."
     )
 
     renamed = Path(__file__).parent / "test_file_renamed.polar"
-    with pytest.raises(exceptions.PolarRuntimeError) as e:
+    with pytest.raises(exceptions.ValidationError) as e:
         polar.load_files([filename, renamed])
     expected = f"Problem loading file: A file with the same contents as {renamed} named {filename} has already been loaded."
     assert str(e.value).startswith(expected)

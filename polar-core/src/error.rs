@@ -5,10 +5,12 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     diagnostic::{Context, Range},
+    formatting::to_polar::ToPolarString,
     kb::KnowledgeBase,
+    resource_block::Declaration,
     rules::Rule,
     sources::Source,
-    terms::{Symbol, Term},
+    terms::{Operation, Symbol, Term},
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -16,6 +18,58 @@ use super::{
 pub struct PolarError {
     pub kind: ErrorKind,
     pub context: Option<Context>,
+}
+
+impl PolarError {
+    pub fn kind(&self) -> String {
+        use ErrorKind::*;
+        use OperationalError::*;
+        use ParseError::*;
+        use RuntimeError::*;
+        use ValidationError::*;
+
+        match self.kind {
+            Parse(IntegerOverflow { .. }) => "ParseError::IntegerOverflow",
+            Parse(InvalidTokenCharacter { .. }) => "ParseError::InvalidTokenCharacter",
+            Parse(InvalidToken { .. }) => "ParseError::InvalidToken",
+            Parse(UnrecognizedEOF { .. }) => "ParseError::UnrecognizedEOF",
+            Parse(UnrecognizedToken { .. }) => "ParseError::UnrecognizedToken",
+            Parse(ExtraToken { .. }) => "ParseError::ExtraToken",
+            Parse(ReservedWord { .. }) => "ParseError::ReservedWord",
+            Parse(InvalidFloat { .. }) => "ParseError::InvalidFloat",
+            Parse(WrongValueType { .. }) => "ParseError::WrongValueType",
+            Parse(DuplicateKey { .. }) => "ParseError::DuplicateKey",
+            Runtime(Application { .. }) => "RuntimeError::Application",
+            Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
+            Runtime(IncompatibleBindings { .. }) => "RuntimeError::IncompatibleBindings",
+            Runtime(QueryTimeout { .. }) => "RuntimeError::QueryTimeout",
+            Runtime(StackOverflow { .. }) => "RuntimeError::StackOverflow",
+            Runtime(TypeError { .. }) => "RuntimeError::TypeError",
+            Runtime(UnhandledPartial { .. }) => "RuntimeError::UnhandledPartial",
+            Runtime(Unsupported { .. }) => "RuntimeError::Unsupported",
+            Runtime(DataFilteringFieldMissing { .. }) => "RuntimeError::DataFilteringFieldMissing",
+            Runtime(DataFilteringUnsupportedOp { .. }) => {
+                "RuntimeError::DataFilteringUnsupportedOp"
+            }
+            Runtime(InvalidRegistration { .. }) => "RuntimeError::InvalidRegistration",
+            Runtime(InvalidState { .. }) => "RuntimeError::InvalidState",
+            Runtime(MultipleLoadError) => "RuntimeError::MultipleLoadError",
+            Operational(Serialization { .. }) => "OperationalError::Serialization",
+            Operational(Unknown) => "OperationalError::Unknown",
+            Validation(FileLoading { .. }) => "ValidationError::FileLoading",
+            Validation(InvalidRule { .. }) => "ValidationError::InvalidRule",
+            Validation(InvalidRuleType { .. }) => "ValidationError::InvalidRuleType",
+            Validation(ResourceBlock { .. }) => "ValidationError::ResourceBlock",
+            Validation(UndefinedRuleCall { .. }) => "ValidationError::UndefinedRuleCall",
+            Validation(SingletonVariable { .. }) => "ValidationError::SingletonVariable",
+            Validation(UnregisteredClass { .. }) => "ValidationError::UnregisteredClass",
+            Validation(MissingRequiredRule { .. }) => "ValidationError::MissingRequiredRule",
+            Validation(DuplicateResourceBlockDeclaration { .. }) => {
+                "ValidationError::DuplicateResourceBlockDeclaration"
+            }
+        }
+        .to_owned()
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -220,10 +274,6 @@ pub enum RuntimeError {
         /// Option<Term> where the error arose, tracked for lexical context.
         term: Option<Term>,
     },
-    // TODO(gj): consider moving to ValidationError.
-    FileLoading {
-        msg: String,
-    },
     IncompatibleBindings {
         msg: String,
     },
@@ -236,6 +286,9 @@ pub enum RuntimeError {
         var_type: String,
         field: String,
     },
+    DataFilteringUnsupportedOp {
+        operation: Operation,
+    },
     // TODO(gj): consider moving to ValidationError.
     InvalidRegistration {
         sym: Symbol,
@@ -245,6 +298,7 @@ pub enum RuntimeError {
     InvalidState {
         msg: String,
     },
+    MultipleLoadError,
 }
 
 impl RuntimeError {
@@ -267,11 +321,12 @@ impl RuntimeError {
             // These errors never have context.
             StackOverflow { .. }
             | QueryTimeout { .. }
-            | FileLoading { .. }
             | IncompatibleBindings { .. }
             | DataFilteringFieldMissing { .. }
+            | DataFilteringUnsupportedOp { .. }
             | InvalidRegistration { .. }
-            | InvalidState { .. } => None,
+            | InvalidState { .. }
+            | MultipleLoadError => None,
         };
 
         let context = context.map(|(span, source)| Context {
@@ -283,6 +338,10 @@ impl RuntimeError {
             kind: ErrorKind::Runtime(self),
             context,
         }
+    }
+
+    pub fn unsupported<A>(msg: String, term: Term) -> Result<A, RuntimeError> {
+        Err(Self::Unsupported { msg, term })
     }
 }
 
@@ -307,7 +366,6 @@ impl fmt::Display for RuntimeError {
                 writeln!(f, "{}", stack_trace)?;
                 write!(f, "Application error: {}", msg)
             }
-            Self::FileLoading { msg } => write!(f, "Problem loading file: {}", msg),
             Self::IncompatibleBindings { msg } => {
                 write!(f, "Attempted binding was incompatible: {}", msg)
             }
@@ -350,12 +408,25 @@ The expression is: {expr}
                 );
                 write!(f, "{}", msg)
             }
+            Self::DataFilteringUnsupportedOp { operation } => {
+                let msg = formatdoc!(
+                    r#"Unsupported operation: {}
+
+                    This operation is not supported for data filtering.
+                    For more information please refer to our documentation:
+                        https://docs.osohq.com/guides/data_filtering.html
+                    "#,
+                    operation.to_polar()
+                );
+                write!(f, "{}", msg)
+            }
             Self::InvalidRegistration { sym, msg } => {
                 write!(f, "Invalid attempt to register '{}': {}", sym, msg)
             }
             // TODO(gj): move this back to `OperationalError` during The Next Great Diagnostic
             // Refactor.
             Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
+            Self::MultipleLoadError => write!(f, "Cannot load additional Polar code -- all Polar code must be loaded at the same time."),
         }
     }
 }
@@ -394,6 +465,10 @@ impl fmt::Display for OperationalError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationError {
+    FileLoading {
+        source: Source,
+        msg: String,
+    },
     MissingRequiredRule {
         rule_type: Rule,
     },
@@ -428,6 +503,14 @@ pub enum ValidationError {
         /// Term<Symbol> where the error arose, tracked for lexical context.
         term: Term,
     },
+    DuplicateResourceBlockDeclaration {
+        /// Term<Symbol> where the error arose.
+        resource: Term,
+        /// Term<String> where the error arose, tracked for lexical context.
+        declaration: Term,
+        existing: Declaration,
+        new: Declaration,
+    },
 }
 
 impl ValidationError {
@@ -439,6 +522,9 @@ impl ValidationError {
             ResourceBlock { term, .. }
             | SingletonVariable { term, .. }
             | UndefinedRuleCall { term }
+            | DuplicateResourceBlockDeclaration {
+                declaration: term, ..
+            }
             | UnregisteredClass { term, .. } => term.span().zip(kb.get_term_source(term)),
 
             // These errors track `rule`, from which we calculate the span.
@@ -457,6 +543,9 @@ impl ValidationError {
                     None
                 }
             }
+
+            // These errors always pertain to a specific file but not to a specific place therein.
+            FileLoading { source, .. } => Some(((0, 0), source.to_owned())),
         };
 
         let context = context.map(|(span, source)| Context {
@@ -474,6 +563,7 @@ impl ValidationError {
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Self::FileLoading { msg, .. } => write!(f, "Problem loading file: {}", msg),
             Self::InvalidRule { rule, msg } => {
                 write!(f, "Invalid rule: {} {}", rule, msg)
             }
@@ -495,6 +585,22 @@ impl fmt::Display for ValidationError {
             Self::UnregisteredClass { term } => {
                 write!(f, "Unregistered class: {}", term)
             }
+            Self::DuplicateResourceBlockDeclaration {
+                resource,
+                declaration,
+                existing,
+                new,
+            } => {
+                write!(
+                    f,
+                    "Cannot overwrite existing {} declaration {} in resource {} with {}",
+                    existing, declaration, resource, new
+                )
+            }
         }
     }
+}
+
+pub fn invalid_state_error<A>(msg: String) -> Result<A, RuntimeError> {
+    Err(RuntimeError::InvalidState { msg })
 }

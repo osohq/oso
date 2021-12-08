@@ -36,15 +36,13 @@ resource Issue {
   "edit" if "writer" on "parent";
 }
 
-has_role(user: User, name: String, org: Org) if
-  role in user.org_roles and
-  role matches { name: name, org: org };
+has_role(_: User{org_roles}, name: String, org: Org) if
+  r in org_roles and r matches { name, org };
 
-has_role(user: User, name: String, repo: Repo) if
-  role in user.repo_roles and
-  role matches { name: name, repo: repo };
+has_role(_: User{repo_roles}, name: String, repo: Repo) if
+  r in repo_roles and r matches { name, repo };
 
-has_relation(org: Org, "parent", _: Repo{org: org});
-has_relation(repo: Repo, "parent", _: Issue{repo: repo});
+has_relation(org: Org, "parent", _: Repo{org});
+has_relation(repo: Repo, "parent", _: Issue{repo});
 
 allow(actor, action, resource) if has_permission(actor, action, resource);
