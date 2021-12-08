@@ -359,17 +359,20 @@ export class Query {
             }
             const { message } = event.data as Debug;
             if (message) console.log(message);
-            createInterface({
-              input: process.stdin,
-              output: process.stdout,
-              prompt: 'debug> ',
-              tabSize: 4,
-            }).on('line', (line: string) => {
-              const trimmed = line.trim().replace(/;+$/, '');
-              const command = this.#host.toPolar(trimmed);
-              this.#ffiQuery.debugCommand(JSON.stringify(command));
-              this.processMessages();
+            const command = await new Promise(resolve => {
+              createInterface({
+                input: process.stdin,
+                output: process.stdout,
+                prompt: 'debug> ',
+                tabSize: 4,
+              }).on('line', (line: string) => {
+                const trimmed = line.trim().replace(/;+$/, '');
+                const command = this.#host.toPolar(trimmed);
+                resolve(command)
+              });
             });
+            this.#ffiQuery.debugCommand(JSON.stringify(command));
+            this.processMessages();
             break;
           }
           default: {
