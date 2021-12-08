@@ -1,16 +1,17 @@
-allow(actor, action, resource) if
-  has_permission(actor, action, resource);
+allow(actor, action, resource) if has_permission(actor, action, resource);
 
 # Users can see each other.
 has_permission(_: User, "read", _: User);
 
 # A User can read their own profile.
-has_permission(_: User{id: id}, "read_profile", _:User{id: id});
+has_permission(_: User{ id }, "read_profile", _: User{ id });
 
 # Any logged-in user can create a new org.
 has_permission(_: User, "create", _: Org);
 
-actor User {}
+actor User {
+  # TODO
+}
 
 resource Org {
   roles = ["owner", "member"];
@@ -20,8 +21,8 @@ resource Org {
     "list_repos",
     "create_role_assignments",
     "list_role_assignments",
-    "update_role_assignments",
-    "delete_role_assignments",
+    "update_role_assignments"
+    # "delete_role_assignments",
   ];
 
   "read" if "member";
@@ -37,8 +38,7 @@ resource Org {
 }
 
 has_role(user: User, name: String, org: Org) if
-    role in user.org_roles and
-    role matches { name: name, org: org };
+  role in user.org_roles and role matches { name, org };
 
 resource Repo {
   roles = ["admin", "maintainer", "reader"];
@@ -49,15 +49,17 @@ resource Repo {
     "create_role_assignments",
     "list_role_assignments",
     "update_role_assignments",
-    "delete_role_assignments",
+    "delete_role_assignments"
   ];
-  relations = { parent: Org };
+  relations = {
+    parent: Org
+    # parent: Org
+  };
 
   "create_role_assignments" if "admin";
   "list_role_assignments" if "admin";
   "update_role_assignments" if "admin";
   "delete_role_assignments" if "admin";
-
 
   "read" if "reader";
   "list_issues" if "reader";
@@ -68,11 +70,11 @@ resource Repo {
 
   "maintainer" if "admin";
   "reader" if "maintainer";
+  # Trailing comment
 }
 
 has_role(user: User, name: String, repo: Repo) if
-    role in user.repo_roles and
-    role matches { name: name, repo: repo };
+  role in user.repo_roles and role matches { name, repo };
 
 has_relation(org: Org, "parent", repo: Repo) if repo.org = org;
 
@@ -85,7 +87,8 @@ resource Issue {
   "close" if "creator";
 }
 
+resource Commit {}
+
 has_relation(repo: Repo, "parent", issue: Issue) if issue.repo = repo;
 
-has_role(user: User, "creator", issue: Issue) if
-    issue.creator = user;
+has_role(user: User, "creator", issue: Issue) if issue.creator = user;
