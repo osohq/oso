@@ -184,14 +184,23 @@ impl<'kb> Folder for Rewriter<'kb> {
                         //
                         // We prepend when the rewritten variable needs to be bound before it is
                         // used.
-                        if only_dots(&rewrites)
-                            && arg_operator.map_or(false, |o| o == Operator::Unify)
-                        {
-                            for rewrite in rewrites {
+                        use Operator::*;
+                        match (only_dots(&rewrites), arg_operator) {
+                            (true, Some(Unify)) => for rewrite in rewrites {
                                 and_append(&mut arg, rewrite);
+                            },
+                            (true, Some(ForAll)) => {
+                                let Operation { args, .. } = arg.value().as_expression().unwrap().clone();
+                                rewrites.insert(0, args[1].clone());
+                                arg.replace_value(Value::Expression(Operation {
+                                    operator: ForAll,
+                                    args: vec![args[0].clone(), term!(Operation {
+                                        operator: And,
+                                        args: rewrites
+                                    })],
+                                }));
                             }
-                        } else {
-                            for rewrite in rewrites.drain(..).rev() {
+                            _ => for rewrite in rewrites.drain(..).rev() {
                                 and_prepend(&mut arg, rewrite);
                             }
                         }
