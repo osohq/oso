@@ -860,7 +860,7 @@ describe('iterators', () => {
 test('handles expressions', async () => {
   const p = new Polar();
   await p.loadStr('f(x) if x > 2;');
-  const result = (await query(p, 'f(x)', true))[0];
+  const result = (await query(p, 'f(x)', { acceptExpression: true }))[0];
   const x = result.get('x');
   expect(x).toBeInstanceOf(Expression);
   const gt = new Expression('Gt', [new Variable('_this'), 2]);
@@ -868,7 +868,7 @@ test('handles expressions', async () => {
   expect(x).toStrictEqual(expected);
 });
 
-test('handles expressions with acceptExpression set to false', async () => {
+test("errors on expressions when acceptExpression isn't set", async () => {
   const p = new Polar();
   await p.loadStr('f(x) if x > 2;');
   const result = query(p, 'f(x)');

@@ -2,19 +2,17 @@ import write from 'temp-write';
 
 import type { Polar } from '../src/Polar';
 import { Predicate } from '../src/Predicate';
-import type { obj } from '../src/types';
+import type { obj, QueryOpts } from '../src/types';
 
 type Result = Map<string, unknown>;
 
 export async function query<T extends Polar>(
   x: T,
   q: string | Predicate,
-  acceptExpression?: boolean
+  opts?: QueryOpts
 ): Promise<Result[]> {
   const results = [];
-  for await (const result of x.query(q, {
-    acceptExpression: acceptExpression,
-  })) {
+  for await (const result of x.query(q, opts)) {
     results.push(result);
   }
   return results;
@@ -26,7 +24,7 @@ export async function queryRule<T extends Polar>(
   ...args: unknown[]
 ): Promise<Result[]> {
   const results = [];
-  for await (const result of x.queryRule(name, ...args)) {
+  for await (const result of x.queryRule(name, args)) {
     results.push(result);
   }
   return results;
@@ -36,10 +34,9 @@ export async function qvar<T extends Polar>(
   x: T,
   q: string | Predicate,
   prop: string,
-  one?: boolean,
-  acceptExpression?: boolean
+  one?: boolean
 ): Promise<unknown> {
-  const results = await query(x, q, acceptExpression);
+  const results = await query(x, q);
   return one ? results[0]?.get(prop) : results.map(r => r.get(prop));
 }
 

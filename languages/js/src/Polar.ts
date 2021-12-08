@@ -16,7 +16,13 @@ import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import type { Message } from './messages';
 import { processMessage } from './messages';
-import type { Class, ClassParams, Options, QueryResult } from './types';
+import type {
+  Class,
+  ClassParams,
+  Options,
+  QueryOpts,
+  QueryResult,
+} from './types';
 import {
   defaultEqualityFn,
   isString,
@@ -59,8 +65,10 @@ export class Polar {
     this.#ffiPolar.setIgnoreNoAllowWarning(
       !!process?.env.POLAR_IGNORE_NO_ALLOW_WARNING
     );
-    const equalityFn = opts.equalityFn || defaultEqualityFn;
-    this.#host = new Host(this.#ffiPolar, equalityFn);
+    this.#host = new Host(this.#ffiPolar, {
+      acceptExpression: false,
+      equalityFn: opts.equalityFn || defaultEqualityFn,
+    });
 
     // Register global constants.
     this.registerConstant(null, 'nil');
@@ -185,15 +193,11 @@ export class Polar {
   /**
    * Query for a Polar predicate or string.
    */
-  query(
-    q: Predicate | string,
-    options?: {
-      bindings?: Map<string, unknown>;
-      acceptExpression?: boolean;
-    }
-  ): QueryResult {
-    const host = Host.clone(this.getHost());
-    host.setAcceptExpression(options?.acceptExpression);
+  query(q: Predicate | string, opts?: QueryOpts): QueryResult {
+    const host = Host.clone(this.getHost(), {
+      acceptExpression: opts?.acceptExpression || false,
+    });
+
     let ffiQuery;
     if (isString(q)) {
       ffiQuery = this.#ffiPolar.newQueryFromStr(q);
@@ -202,27 +206,14 @@ export class Polar {
       ffiQuery = this.#ffiPolar.newQueryFromTerm(term);
     }
     this.processMessages();
-    return new Query(ffiQuery, host, options?.bindings).results;
+    return new Query(ffiQuery, host, opts?.bindings).results;
   }
 
   /**
-   * Query for a Polar rule with bindings.
-   */
-  queryRuleWithBindings(
-    name: string,
-    options?: {
-      bindings: Map<string, unknown>;
-      acceptExpression?: boolean;
-    },
-    ...args: unknown[]
-  ): QueryResult {
-    return this.query(new Predicate(name, args), options);
-  }
-  /**
    * Query for a Polar rule.
    */
-  queryRule(name: string, ...args: unknown[]): QueryResult {
-    return this.query(new Predicate(name, args));
+  queryRule(name: string, args: unknown[], opts?: QueryOpts): QueryResult {
+    return this.query(new Predicate(name, args), opts);
   }
 
   /**

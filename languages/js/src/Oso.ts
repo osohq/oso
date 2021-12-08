@@ -127,12 +127,11 @@ export class Oso<
     resource: Resource,
     options: { allowWildcard?: boolean } = {}
   ): Promise<Set<Action | '*'>> {
-    const results = this.queryRule(
-      'allow',
+    const results = this.queryRule('allow', [
       actor,
       new Variable('action'),
-      resource
-    );
+      resource,
+    ]);
     const actions = new Set<Action | '*'>();
     for await (const result of results) {
       const action = result.get('action');
@@ -226,13 +225,12 @@ export class Oso<
     resource: Resource,
     options: { allowWildcard?: boolean } = {}
   ): Promise<Set<Field | '*'>> {
-    const results = this.queryRule(
-      'allow_field',
+    const results = this.queryRule('allow_field', [
       actor,
       action,
       resource,
-      new Variable('field')
-    );
+      new Variable('field'),
+    ]);
     const fields = new Set<Field | '*'>();
     for await (const result of results) {
       const field = result.get('field');
@@ -280,16 +278,10 @@ export class Oso<
     ]);
     const bindings = new Map();
     bindings.set('resource', constraint);
-    const results = this.queryRuleWithBindings(
-      'allow',
-      {
-        bindings,
-        acceptExpression: true,
-      },
-      actor,
-      action,
-      resource
-    );
+    const results = this.queryRule('allow', [actor, action, resource], {
+      bindings,
+      acceptExpression: true,
+    });
 
     const queryResults: { bindings: Map<string, PolarTerm> }[] = [];
     for await (const result of results) {

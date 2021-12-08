@@ -92,31 +92,31 @@ void (async function () {
     [
       (
         await oso
-          .queryRule('specializers', new D('hello'), new B.C('hello'))
+          .queryRule('specializers', [new D('hello'), new B.C('hello')])
           .next()
       ).done,
-      (await oso.queryRule('floatLists').next()).done,
-      (await oso.queryRule('intDicts').next()).done,
-      (await oso.queryRule('comparisons').next()).done,
-      (await oso.queryRule('testForall').next()).done,
-      (await oso.queryRule('testRest').next()).done,
-      (await oso.queryRule('testMatches', new A('hello')).next()).done,
+      (await oso.queryRule('floatLists', []).next()).done,
+      (await oso.queryRule('intDicts', []).next()).done,
+      (await oso.queryRule('comparisons', []).next()).done,
+      (await oso.queryRule('testForall', []).next()).done,
+      (await oso.queryRule('testRest', []).next()).done,
+      (await oso.queryRule('testMatches', [new A('hello')]).next()).done,
       (
         await oso
-          .queryRule('testMethodCalls', new A('hello'), new B.C('hello'))
+          .queryRule('testMethodCalls', [new A('hello'), new B.C('hello')])
           .next()
       ).done,
-      (await oso.queryRule('testOr').next()).done,
-      (await oso.queryRule('testUnifyClass', A).next()).done,
+      (await oso.queryRule('testOr', []).next()).done,
+      (await oso.queryRule('testUnifyClass', [A]).next()).done,
     ].some(v => v)
   )
     throw new Error();
 
   // Test that cut doesn't return anything.
-  if (!(await oso.queryRule('testCut').next()).done) throw new Error();
+  if (!(await oso.queryRule('testCut', []).next()).done) throw new Error();
 
   // test iterables work
-  // if ((await oso.queryRule('testIterables').next()).done) throw new Error();
+  // if ((await oso.queryRule('testIterables', []).next()).done) throw new Error();
 
   // Test built-in type specializers.
   if (
@@ -180,12 +180,11 @@ void (async function () {
     throw new Error();
 
   // Test unspecialized rule ordering
-  const result = oso.queryRule(
-    'testUnspecializedRuleOrder',
+  const result = oso.queryRule('testUnspecializedRuleOrder', [
     'foo',
     'bar',
-    new Variable('z')
-  );
+    new Variable('z'),
+  ]);
   if (((await result.next()).value as Map<string, unknown>).get('z') !== 1)
     throw new Error();
   if (((await result.next()).value as Map<string, unknown>).get('z') !== 2)
