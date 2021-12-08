@@ -72,12 +72,10 @@ def async_authorized_sessionmaker(
             options.setdefault("checked_permissions", get_checked_permissions())
             super().__init__(**options)
 
-    class_.sync_session_class = Sess
-
     # We call sessionmaker here because sessionmaker adds a configure
     # method to the returned session and we want to replicate that
     # functionality.
-    return orm.sessionmaker(class_=class_, **kwargs)
+    return orm.sessionmaker(class_=class_, sync_session_class=Sess, **kwargs)
 
 
 def async_scoped_session(
