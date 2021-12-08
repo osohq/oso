@@ -1,4 +1,4 @@
-import { createInterface } from 'readline';
+import { createInterface, Interface } from 'readline';
 
 import type { Query as FfiQuery } from './polar_wasm_api';
 
@@ -272,8 +272,10 @@ export class Query {
    * @internal
    */
   private async *start(): QueryResult {
+    let rl: Interface | undefined = undefined;
     try {
       while (true) {
+        // Readline for debugging if active.
         const nextEvent = this.#ffiQuery.nextEvent(); // eslint-disable-line @typescript-eslint/no-unsafe-assignment
         this.processMessages();
         const event = parseQueryEvent(nextEvent);
@@ -286,6 +288,8 @@ export class Query {
             for (const [k, v] of bindings) {
               transformed.set(k, await this.#host.toJs(v));
             }
+            rl?.emit('exit');
+            rl = undefined;
             yield transformed;
             break;
           }
@@ -359,19 +363,43 @@ export class Query {
             }
             const { message } = event.data as Debug;
             if (message) console.log(message);
-            const command = await new Promise(resolve => {
-              createInterface({
-                input: process.stdin,
-                output: process.stdout,
-                prompt: 'debug> ',
-                tabSize: 4,
-              }).on('line', (line: string) => {
+
+            if (typeof rl === 'undefined') {
+              // @ts-ignore
+              rl = global.oso_repl_rl;
+              if (rl) {
+                const exitListeners = rl.listeners('exit') as (() => void)[];
+                rl.removeAllListeners('exit');
+
+                const lineListeners = rl.listeners('line') as (() => void)[];
+                rl.removeAllListeners('line');
+
+                const oldPrompt = rl.getPrompt();
+                rl.setPrompt('debug> ');
+
+                rl.prependOnceListener('exit', () => {
+                  rl!.setPrompt(oldPrompt);
+                  exitListeners.forEach((l) => rl!.addListener('exit', l));
+                  lineListeners.forEach((l) => rl!.addListener('line', l));
+                });
+              } else {
+                rl = createInterface({
+                  input: process.stdin,
+                  output: process.stdout,
+                  prompt: 'debug> ',
+                  tabSize: 4,
+                });
+              }
+            }
+
+            rl!.prompt();
+            const command: string = await new Promise(resolve => {
+              rl!.once('line', (line: string) => {
                 const trimmed = line.trim().replace(/;+$/, '');
-                const command = this.#host.toPolar(trimmed);
-                resolve(command)
+                resolve(trimmed)
               });
             });
-            this.#ffiQuery.debugCommand(JSON.stringify(command));
+            this.#ffiQuery.debugCommand(command);
             this.processMessages();
             break;
           }
@@ -382,6 +410,7 @@ export class Query {
         }
       }
     } finally {
+      rl?.emit('exit');
       this.#ffiQuery.free();
     }
   }

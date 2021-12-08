@@ -269,6 +269,8 @@ export class Polar {
     const repl = global.repl?.repl as REPLServer | undefined; // eslint-disable-line @typescript-eslint/no-unsafe-member-access
 
     if (repl) {
+      // @ts-ignore
+      global.oso_repl_rl = repl;
       repl.setPrompt(PROMPT);
       const evalQuery = this.evalReplInput.bind(this);
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -292,6 +294,10 @@ export class Polar {
         prompt: PROMPT,
         tabSize: 4,
       });
+
+      // @ts-ignore
+      global.oso_repl_rl = rl;
+
       rl.prompt();
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
       rl.on('line', async (line: string) => {
@@ -314,18 +320,23 @@ export class Polar {
         const ffiQuery = this.#ffiPolar.newQueryFromStr(input);
         const query = new Query(ffiQuery, this.getHost());
         const results = [];
+        let hadResults = false;
+
         for await (const result of query.results) {
-          results.push(result);
-        }
-        if (results.length === 0) {
-          return false;
-        } else {
-          for (const result of results) {
-            for (const [variable, value] of result) {
-              console.log(variable + ' = ' + repr(value));
-            }
+          hadResults = true;
+          let hadVars = false; 
+          for (const [variable, value] of result) {
+            hadVars = true;
+            console.log(variable + ' = ' + repr(value));
           }
-          return true;
+
+          if (!hadVars) {
+            console.log(true);
+          }
+        }
+
+        if (!hadResults) {
+          console.log(false);
         }
       }
     } catch (e) {
