@@ -18,9 +18,8 @@ resource Org {
   permissions = [
     "read",
     "create_repos",
-    "list_repos",
-    "create_role_assignments",
-    "list_role_assignments",
+    # "list_repos",
+    # "list_role_assignments",
     "update_role_assignments"
     # "delete_role_assignments",
   ];
