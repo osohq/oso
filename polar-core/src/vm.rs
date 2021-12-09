@@ -1565,7 +1565,7 @@ impl PolarVirtualMachine {
                 if self.queries.len() < 2 {
                     self.log_with(
                         LogLevel::Info,
-                        || format!("QUERY RULE {} ", predicate.to_polar(),),
+                        || format!("QUERY RULE: {}", predicate.to_polar()),
                         &[],
                     );
                 }
