@@ -153,21 +153,6 @@ impl<'kb> Folder for Rewriter<'kb> {
     fn fold_operation(&mut self, o: Operation) -> Operation {
         use Operator::*;
         match o.operator {
-            ForAll => Operation {
-                operator: ForAll,
-                args: {
-                    self.stack.push(vec![]);
-                    let mut forall_args = vec![self.fold_term(o.args[0].clone())];
-                    let mut and_args = self.stack.pop().unwrap();
-
-                    self.stack.push(vec![]);
-                    let test = self.fold_term(o.args[1].clone());
-                    and_args.extend(self.stack.pop().unwrap());
-
-                    forall_args.push(and_args.into_iter().fold(test, and_));
-                    forall_args
-                },
-            },
             And | Or | Not => Operation {
                 operator: fold_operator(o.operator, self),
                 args: o
@@ -204,6 +189,25 @@ impl<'kb> Folder for Rewriter<'kb> {
                     })
                     .collect(),
             },
+
+            // Temporary variables from inside a forall are reinserted into the
+            // original expression.
+            ForAll => Operation {
+                operator: ForAll,
+                args: {
+                    self.stack.push(vec![]);
+                    let mut forall_args = vec![self.fold_term(o.args[0].clone())];
+                    let mut and_args = self.stack.pop().unwrap();
+
+                    self.stack.push(vec![]);
+                    let test = self.fold_term(o.args[1].clone());
+                    and_args.extend(self.stack.pop().unwrap());
+
+                    forall_args.push(and_args.into_iter().fold(test, and_));
+                    forall_args
+                },
+            },
+
             _ => fold_operation(o, self),
         }
     }
