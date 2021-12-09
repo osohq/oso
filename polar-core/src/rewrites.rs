@@ -127,12 +127,9 @@ impl<'kb> Folder for Rewriter<'kb> {
             _ if self.stack.is_empty() => {
                 // If there is no containing conjunction, make one.
                 self.stack.push(vec![]);
-                let mut new = self.fold_term(t);
-                let mut rewrites = self.stack.pop().unwrap();
-                for rewrite in rewrites.drain(..).rev() {
-                    new = and_(rewrite, new);
-                }
-                new
+                let new = self.fold_term(t);
+                let rewrites = self.stack.pop().unwrap();
+                rewrites.into_iter().rfold(new, and_op_)
             }
             Value::Expression(o) if self.needs_rewrite(o) => {
                 // Rewrite sub-expressions, then push a temp onto the args.
@@ -202,7 +199,7 @@ impl<'kb> Folder for Rewriter<'kb> {
                         if only_dots(&rewrites) && arg_operator == Some(Operator::Unify) {
                             rewrites.into_iter().fold(arg, and_)
                         } else {
-                            rewrites.into_iter().rfold(arg, |l, r| and_(r, l))
+                            rewrites.into_iter().rfold(arg, and_op_)
                         }
                     })
                     .collect(),
@@ -236,13 +233,16 @@ fn only_dots(rewrites: &[Term]) -> bool {
     })
 }
 
+/// Sequence two expressions with an And
 fn and_(left: Term, right: Term) -> Term {
     let mut out = left.clone();
-    out.replace_value(Value::Expression(Operation {
-        operator: Operator::And,
-        args: vec![left, right],
-    }));
+    out.replace_value(Value::Expression(op!(And, left, right)));
     out
+}
+
+/// Same but with arguments flipped for use with rfold
+fn and_op_(right: Term, left: Term) -> Term {
+    and_(left, right)
 }
 
 /// Return a cloned list of arguments from And(*args).
