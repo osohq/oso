@@ -315,7 +315,6 @@ try:
                 else:
                     logger.warning(f"Policy did not return filter for entity {entity}")
 
-
 except ImportError:
     from sqlalchemy.orm.query import Query
 
