@@ -19,7 +19,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       subject.load_str('f(_foo: Foo) if 1 = 1;')
       expect do
         subject.query_rule('f', Foo.new).to_a
-      end.to output(/QUERY: f\(#{FOO_REPR}\)/).to_stdout
+      end.to output(/QUERY RULE: f\(#{FOO_REPR}\)/).to_stdout
       ENV.delete('POLAR_LOG') unless old_polar_log
     end
 
