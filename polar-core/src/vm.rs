@@ -529,7 +529,7 @@ impl PolarVirtualMachine {
             Goal::TraceRule { trace } => {
                 if let Node::Rule(rule) = &trace.node {
                     self.log_with(
-                        LogLevel::Info,
+                        LogLevel::Trace,
                         || {
                             let source_str = self.rule_source(rule);
                             format!("RULE: {}", source_str)
@@ -1470,7 +1470,7 @@ impl PolarVirtualMachine {
             }) if args.len() < 2 => (),
             _ => {
                 self.log_with(
-                    LogLevel::Info,
+                    LogLevel::Trace,
                     || format!("QUERY: {}", term.to_polar()),
                     &[term],
                 );
@@ -1545,6 +1545,17 @@ impl PolarVirtualMachine {
                         "query_for_predicate: different rule names: {} != {}",
                         generic_rule.name, predicate.name
                     ));
+                }
+
+                // Print QUERY RULE event only for the first query_for_predicate
+                // event we encounter, ignoring any subsequent calls within the
+                // execution.
+                if self.queries.len() < 2 {
+                    self.log_with(
+                        LogLevel::Info,
+                        || format!("QUERY RULE {} ", predicate.to_polar(),),
+                        &[],
+                    );
                 }
 
                 // Pre-filter rules.
