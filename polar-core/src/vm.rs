@@ -367,14 +367,26 @@ impl PolarVirtualMachine {
 
     #[cfg(target_arch = "wasm32")]
     pub fn set_logging_options(&mut self, rust_log: Option<String>, polar_log: Option<String>) {
-        self.log = rust_log.is_some();
-        if let Some(pl) = polar_log {
-            if &pl == "now" {
-                self.polar_log_stderr = true;
-            }
-            self.polar_log = match Some(pl).as_deref() {
-                None | Some("0") | Some("off") => false,
-                _ => true,
+        let polar_log = polar_log.unwrap_or("".to_string());
+        let polar_log_vars = polar_log.split(",").collect::<Vec<&str>>();
+
+        self.polar_log_stderr = polar_log_vars.contains(&"now");
+
+        // TODO: @patrickod drop `rust_log` param entirely?
+        // TODO: @patrickod consolidate log level evaluation here & in VM create
+        self.log_level = if rust_log.is_some() {
+            Some(LogLevel::Info)
+        } else {
+            None
+        };
+
+        if !polar_log_vars.is_empty() {
+            self.log_level = if polar_log_vars.contains(&"trace") {
+                Some(LogLevel::Trace)
+            } else if polar_log_vars.contains(&"debug") {
+                Some(LogLevel::Debug)
+            } else {
+                Some(LogLevel::Info)
             }
         }
     }
