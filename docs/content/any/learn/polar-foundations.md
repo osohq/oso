@@ -1,8 +1,5 @@
 ---
 date: '2021-12-02T02:46:33.217Z'
-docname: more/language/polar-foundations
-images: {}
-path: /more-language-polar-foundations
 title: The Polar Language
 aliases:
     - ../../more/language/polar-foundations.html

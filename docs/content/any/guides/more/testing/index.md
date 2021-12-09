@@ -1,14 +1,8 @@
 ---
-date: '2021-12-04T01:58:28.010Z'
-docname: using/examples/testing
-images: {}
-path: /using-examples-testing
 title: Test Your Policy
 weight: 10
 description: |
   Learn to test your Oso policies.
-aliases:
-  - ../../../using/examples/testing.html
 ---
 
 # Test your policy
