@@ -212,8 +212,17 @@ export class Polar {
   /**
    * Query for a Polar rule.
    */
-  queryRule(name: string, args: unknown[], opts?: QueryOpts): QueryResult {
-    return this.query(new Predicate(name, args), opts);
+  queryRule(opts: QueryOpts, name: string, ...args: unknown[]): QueryResult;
+  queryRule(name: string, ...args: unknown[]): QueryResult;
+  queryRule(nameOrOpts: string | QueryOpts, ...args: unknown[]): QueryResult {
+    if (typeof nameOrOpts === 'string')
+      return this.query(new Predicate(nameOrOpts, args), {});
+
+    if (typeof args[0] !== 'string')
+      throw new PolarError('Invalid call of queryRule(): missing rule name');
+
+    const [ruleName, ...ruleArgs] = args;
+    return this.query(new Predicate(ruleName, ruleArgs), nameOrOpts);
   }
 
   /**
