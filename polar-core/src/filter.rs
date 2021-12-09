@@ -320,7 +320,34 @@ impl FilterInfo {
         })
     }
 
-    fn add_binary_constraint(&mut self, op: Operation) -> FilterResult<()> {
+    /// Digest a conjunct from the partial results & add a new constraint.
+    fn add_constraint(&mut self, op: Operation) -> FilterResult<()> {
+        match op.args.len() {
+            1 => self.add_constraint_1(op),
+            2 => self.add_constraint_2(op),
+            _ => unsupported_op_error(op),
+        }
+    }
+
+    /// Handle a unary operation from the simplifier
+    fn add_constraint_1(&mut self, op: Operation) -> FilterResult<()> {
+        use Operator::*;
+        // The only case this currently handles is `not in`.
+        match op.operator {
+            Not => match op.args[0].value().as_expression() {
+                Ok(Operation { operator: In, args }) if args.len() == 2 => {
+                    let (left, right) =
+                        (self.term2datum(&args[0])?, self.term2datum(&args[1])?);
+                    self.add_condition(left, Comparison::Nin, right)
+                }
+                _ => unsupported_op_error(op),
+            },
+            _ => unsupported_op_error(op),
+        }
+    }
+
+    /// Handle a binary expression from the simplifier
+    fn add_constraint_2(&mut self, op: Operation) -> FilterResult<()> {
         use {Datum::*, Operator::*};
         let (left, right) = (self.term2datum(&op.args[0])?, self.term2datum(&op.args[1])?);
         let op = match op.operator {
@@ -338,30 +365,6 @@ impl FilterInfo {
             _ => return unsupported_op_error(op),
         };
         self.add_condition(left, op, right)
-    }
-
-    fn add_unary_constraint(&mut self, op: Operation) -> FilterResult<()> {
-        use Operator::*;
-        match op.operator {
-            Not => match op.args[0].value().as_expression() {
-                Ok(Operation { operator: In, args }) if args.len() == 2 => {
-                    let (left, right) =
-                        (self.term2datum(&op.args[0])?, self.term2datum(&op.args[1])?);
-                    self.add_condition(left, Comparison::Nin, right)
-                }
-                _ => unsupported_op_error(op),
-            },
-            _ => unsupported_op_error(op),
-        }
-    }
-
-    /// digest a conjunct from the partial results & add a new constraint.
-    fn add_constraint(&mut self, op: Operation) -> FilterResult<()> {
-        match op.args.len() {
-            2 => self.add_binary_constraint(op),
-            1 => self.add_unary_constraint(op),
-            _ => unsupported_op_error(op),
-        }
     }
 
     fn add_condition(&mut self, left: Datum, op: Comparison, right: Datum) -> FilterResult<()> {
