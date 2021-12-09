@@ -6,8 +6,11 @@ showContentForAnyLanguage: true
 # Filter Data
 
 {{< ifLang "ruby" >}}
-{{% callout "New data filtering preview" "blue" %}}
-We are working on a new version of the data filtering internals that makes it easier and more performant to build adapters. It is currently in preview for ruby and you can check out the docs [`here`]({{< ref path="guides/data_filtering_next" lang="ruby" >}})
+{{% callout "Filter Data - Adapter API (Preview)" "blue" %}}
+We are working on a new version of the data filtering internals that makes it
+easier and more performant to build adapters. It is currently in preview for
+Ruby, and you can check out the docs [`here`]({{< ref
+path="guides/data_filtering_next" lang="ruby" >}}).
 {{% /callout %}}
 {{< /ifLang >}}
 

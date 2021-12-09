@@ -8,47 +8,16 @@ description: >-
 draft: true
 ---
 
-## Oso 0.23.1
+## `oso` `NEW_VERSION`
 
 ### Core
 
 #### Other bugs & improvements
 
-- Oso now allows multiple resource blocks to be declared for the same resource type. The declarations from all resource blocks for a given type are merged together before policy evaluation. This permits rules in one block to reference declarations in another and for resource blocks to be composed over multiple files.
-- Fixed a data race in our error handling functionality which resulted in truncated error messages.
-- Fixed a regression in the logic for rule matching when using `in` with data filtering.
-
-### Rust
-
-#### Other bugs & improvements
-
-- Implemented `ExternalIsSubclass` query event. Prevents `x matches Foo and x matches Bar`
-  from panicking. Instead, this will now correctly fail when `Foo != Bar`.
-  Thanks to [`@davepacheco`](https://github.com/davepacheco) for the contribution!
-
+- Fixed a variable scope bug affecting the `forall` operator that caused affected
+  queries to fail with an `UnhandledPartial` error.
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
-
-
-### Go
-
-#### Other bugs & improvements
-- Added a `SetAcceptExpression` method to the `Query` struct which makes
-  it possible to get partially-evaluated terms back from the core.
-  This is a step towards data filtering in Go.
-  Thanks to [`@joshrotenberg`](https://github.com/joshrotenberg) for the PR!
-
-### Ruby
-
-#### New Features
-
-##### New Data Filtering API
-
-A new data filtering backend is now available in the Ruby library, which should provide
-better performance in most cases. An example ActiveRecord adapter is also included. For
-details on how to configure and use the new data filtering code, please see [our docs][new_data_filtering_docs].
-
-[new_data_filtering_docs]: https://docs.osohq.com/ruby/guides/data_filtering_next.html
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 

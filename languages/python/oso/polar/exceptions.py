@@ -57,12 +57,6 @@ class StackOverflowError(PolarRuntimeError):
     pass
 
 
-class FileLoadingError(PolarRuntimeError):
-    """Error loading a Polar file"""
-
-    pass
-
-
 class UnregisteredClassError(PolarRuntimeError):
     """Raised on attempts to reference unregistered Python classes from a Polar policy."""
 

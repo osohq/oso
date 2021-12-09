@@ -41,9 +41,9 @@ jobs:
       - name: Run polar-language-server tests
         working-directory: "polar-language-server"
         run: make test
-      - name: Build extension
+      - name: Typecheck
         working-directory: "vscode/oso"
-        run: make build
+        run: make typecheck
       - name: Lint JS library
         working-directory: "vscode/oso"
         run: make lint
