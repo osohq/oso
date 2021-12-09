@@ -88,9 +88,9 @@ describe('#registerClass', () => {
     await expect(qvar(p, 'new Foo("A").a() = x', 'x', true)).rejects.toThrow(
       `trace (most recent evaluation last):
   in query at line 1, column 1
-    new Foo("A").a() = x
+    new Foo("A")
   in query at line 1, column 1
-    new Foo("A").a() = x
+    new Foo("A").a()
   in query at line 1, column 1
     new Foo("A").a()
 Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`

@@ -2098,6 +2098,16 @@ fn test_cut() -> TestResult {
 }
 
 #[test]
+fn test_forall_with_dots_on_rhs() -> TestResult {
+    let p = polar();
+    p.load_str("goo(x, y) if forall(z in y, z.n < x);")?;
+    qeval(&p, "goo(10, [])");
+    qeval(&p, "goo(10, [{n:1}, {n:2}, {n:3}])");
+    qnull(&p, "goo(10, [{n:11}, {n:10}, {n:9}])");
+    Ok(())
+}
+
+#[test]
 fn test_forall() -> TestResult {
     let p = polar();
     p.load_str("all_ones(l) if forall(item in l, item = 1);")?;
@@ -2137,6 +2147,7 @@ fn test_forall() -> TestResult {
            test(_: {z: 1}, y) if y = 3;"#,
     )?;
     qeval(&p, "forall(test({x: 1, y: 1, z: 1}, y), y in [1, 2, 3])");
+
     Ok(())
 }
 
