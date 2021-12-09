@@ -38,6 +38,19 @@ type Result<T> = core::result::Result<T, RuntimeError>;
 pub const MAX_STACK_SIZE: usize = 10_000;
 pub const DEFAULT_TIMEOUT_MS: u64 = 30_000;
 
+#[derive(Debug, Copy, Clone, PartialOrd, PartialEq)]
+pub enum LogLevel {
+    Trace,
+    Debug,
+    Info,
+}
+
+impl LogLevel {
+    fn should_print_on_level(&self, level: LogLevel) -> bool {
+        *self <= level
+    }
+}
+
 #[derive(Debug, Clone)]
 #[must_use = "ignored goals are never accomplished"]
 #[allow(clippy::large_enum_variant)]
@@ -253,8 +266,8 @@ pub struct PolarVirtualMachine {
     call_id_symbols: HashMap<u64, Symbol>,
 
     /// Logging flag.
-    log: bool,
-    polar_log: bool,
+    log_level: Option<LogLevel>,
+
     polar_log_stderr: bool,
     polar_log_mute: bool,
 
@@ -310,6 +323,16 @@ impl PolarVirtualMachine {
             .iter()
             .flat_map(|pl| pl.split(','))
             .collect::<Vec<&str>>();
+
+        let mut log_level = None;
+        if polar_log_vars.contains(&"trace") {
+            log_level = Some(LogLevel::Trace);
+        } else if polar_log_vars.contains(&"debug") {
+            log_level = Some(LogLevel::Debug);
+        } else if polar_log_vars.contains(&"info") {
+            log_level = Some(LogLevel::Info);
+        }
+
         let mut vm = Self {
             goals: GoalStack::new_reversed(goals),
             binding_manager: BindingManager::new(),
@@ -327,10 +350,7 @@ impl PolarVirtualMachine {
             kb,
             call_id_symbols: HashMap::new(),
             // `log` controls internal VM logging
-            log: polar_log_vars.iter().any(|var| var == &"trace"),
-            // `polar_log` for tracing policy evaluation
-            polar_log: !polar_log_vars.is_empty()
-                && !polar_log_vars.iter().any(|var| ["0", "off"].contains(var)),
+            log_level,
             // `polar_log_stderr` prints things immediately to stderr
             polar_log_stderr: polar_log_vars.iter().any(|var| var == &"now"),
             polar_log_mute: false,
@@ -438,9 +458,7 @@ impl PolarVirtualMachine {
     /// Try to achieve one goal. Return `Some(QueryEvent)` if an external
     /// result is needed to achieve it, or `None` if it can run internally.
     fn next(&mut self, goal: Rc<Goal>) -> Result<QueryEvent> {
-        if self.log {
-            self.print(&format!("{}", goal));
-        }
+        self.log_with(LogLevel::Trace, || format!("{}", goal), &[]);
 
         self.check_timeout()?;
 
@@ -509,6 +527,7 @@ impl PolarVirtualMachine {
             Goal::TraceRule { trace } => {
                 if let Node::Rule(rule) = &trace.node {
                     self.log_with(
+                        LogLevel::Info,
                         || {
                             let source_str = self.rule_source(rule);
                             format!("RULE: {}", source_str)
@@ -650,9 +669,11 @@ impl PolarVirtualMachine {
 
     /// Push a binding onto the binding stack.
     pub fn bind(&mut self, var: &Symbol, val: Term) -> Result<()> {
-        if self.log {
-            self.print(&format!("⇒ bind: {} ← {}", var.to_polar(), val.to_polar()));
-        }
+        self.log_with(
+            LogLevel::Trace,
+            || format!("⇒ bind: {} ← {}", var.to_polar(), val.to_polar()),
+            &[],
+        );
         if let Some(goal) = self.binding_manager.bind(var, val)? {
             self.push_goal(goal)
         } else {
@@ -672,9 +693,11 @@ impl PolarVirtualMachine {
     /// Precondition: Operation is either binary or ternary (binary + result var),
     /// and at least one of the first two arguments is an unbound variable.
     fn add_constraint(&mut self, term: &Term) -> Result<()> {
-        if self.log {
-            self.print(&format!("⇒ add_constraint: {}", term.to_polar()));
-        }
+        self.log_with(
+            LogLevel::Trace,
+            || format!("⇒ add_constraint: {}", term.to_polar()),
+            &[],
+        );
         self.binding_manager.add_constraint(term)
     }
 
@@ -758,37 +781,39 @@ impl PolarVirtualMachine {
     }
 
     fn log(&self, message: &str, terms: &[&Term]) {
-        self.log_with(|| message, terms)
+        self.log_with(LogLevel::Info, || message, terms)
     }
 
-    fn log_with<F, R>(&self, message_fn: F, terms: &[&Term])
+    fn log_with<F, R>(&self, level: LogLevel, message_fn: F, terms: &[&Term])
     where
         F: FnOnce() -> R,
         R: AsRef<str>,
     {
-        if self.polar_log && !self.polar_log_mute {
-            let mut indent = String::new();
-            for _ in 0..=self.queries.len() {
-                indent.push_str("  ");
-            }
-            let message = message_fn();
-            let lines = message.as_ref().split('\n').collect::<Vec<&str>>();
-            if let Some(line) = lines.first() {
-                let mut msg = format!("[debug] {}{}", &indent, line);
-                if !terms.is_empty() {
-                    let relevant_bindings = self.relevant_bindings(terms);
-                    msg.push_str(&format!(
-                        ", BINDINGS: {{{}}}",
-                        relevant_bindings
-                            .iter()
-                            .map(|(var, val)| format!("{} => {}", var.0, val.to_polar()))
-                            .collect::<Vec<String>>()
-                            .join(", ")
-                    ));
+        if let Some(configured_log_level) = self.log_level {
+            if configured_log_level.should_print_on_level(level) && !self.polar_log_mute {
+                let mut indent = String::new();
+                for _ in 0..=self.queries.len() {
+                    indent.push_str("  ");
                 }
-                self.print(msg);
-                for line in &lines[1..] {
-                    self.print(format!("[debug] {}{}", &indent, line));
+                let message = message_fn();
+                let lines = message.as_ref().split('\n').collect::<Vec<&str>>();
+                if let Some(line) = lines.first() {
+                    let mut msg = format!("[{}] {}{}", level, &indent, line);
+                    if !terms.is_empty() {
+                        let relevant_bindings = self.relevant_bindings(terms);
+                        msg.push_str(&format!(
+                            ", BINDINGS: {{{}}}",
+                            relevant_bindings
+                                .iter()
+                                .map(|(var, val)| format!("{} => {}", var.0, val.to_polar()))
+                                .collect::<Vec<String>>()
+                                .join(", ")
+                        ));
+                    }
+                    self.print(msg);
+                    for line in &lines[1..] {
+                        self.print(format!("[{}] {}{}", level, &indent, line));
+                    }
                 }
             }
         }
@@ -895,10 +920,11 @@ impl PolarVirtualMachine {
     /// Remove all bindings after the last choice point, and try the
     /// next available alternative. If no choice is possible, halt.
     fn backtrack(&mut self) -> Result<()> {
-        if self.log {
-            self.print("⇒ backtrack");
-        }
-        self.log("BACKTRACK", &[]);
+        // why double logging? previously these were
+        // 1. wrapped in if self.log_trace
+        // 2. self.print which is effectively INFO
+        self.log_with(LogLevel::Trace, || "⇒ backtrack", &[]);
+        self.log_with(LogLevel::Info, || "BACKTRACK", &[]);
 
         loop {
             match self.choices.pop() {
@@ -973,6 +999,7 @@ impl PolarVirtualMachine {
     #[allow(clippy::many_single_char_names)]
     pub fn isa(&mut self, left: &Term, right: &Term) -> Result<()> {
         self.log_with(
+            LogLevel::Trace,
             || format!("MATCHES: {} matches {}", left.to_polar(), right.to_polar()),
             &[left, right],
         );
@@ -1341,6 +1368,7 @@ impl PolarVirtualMachine {
         self.push_choice(vec![])?;
 
         self.log_with(
+            LogLevel::Trace,
             || {
                 let mut msg = format!("LOOKUP: {}.{}", instance, field_name);
                 msg.push('(');
@@ -1439,7 +1467,11 @@ impl PolarVirtualMachine {
                 args,
             }) if args.len() < 2 => (),
             _ => {
-                self.log_with(|| format!("QUERY: {}", term.to_polar()), &[term]);
+                self.log_with(
+                    LogLevel::Info,
+                    || format!("QUERY: {}", term.to_polar()),
+                    &[term],
+                );
             }
         };
 
@@ -2581,6 +2613,7 @@ impl PolarVirtualMachine {
 
             self.polar_log_mute = false;
             self.log_with(
+                LogLevel::Info,
                 || {
                     let mut rule_strs = "APPLICABLE_RULES:".to_owned();
                     for rule in rules {
@@ -2853,13 +2886,9 @@ impl Runnable for PolarVirtualMachine {
             self.maybe_break(DebugEvent::Goal(goal.clone()))?;
         }
 
-        if self.log {
-            self.print("⇒ result");
-            if self.tracing {
-                for t in &self.trace {
-                    self.print(&format!("trace\n{}", t.draw(self)));
-                }
-            }
+        self.log_with(LogLevel::Trace, || &"⇒ result", &[]);
+        for t in &self.trace {
+            self.log_with(LogLevel::Trace, || format!("trace\n{}", t.draw(self)), &[]);
         }
 
         let trace = if self.tracing {
@@ -2977,7 +3006,7 @@ impl Runnable for PolarVirtualMachine {
         // For example what happens if the call asked for a field that doesn't exist?
 
         if let Some(value) = term {
-            self.log_with(|| format!("=> {}", value), &[]);
+            self.log_with(LogLevel::Trace, || format!("=> {}", value), &[]);
 
             // Fetch variable to unify with call result.
             let sym = self.get_call_sym(call_id).to_owned();
@@ -3933,5 +3962,36 @@ mod tests {
             QueryEvent::Debug { message } if &message[..] == "consequent" && vm.bindings(true).is_empty() && vm.is_halted(),
             QueryEvent::Done { result: true }
         ]);
+    }
+
+    #[test]
+    fn test_log_level_should_print_for_level() {
+        let trace = LogLevel::Trace;
+        let info = LogLevel::Info;
+        let debug = LogLevel::Debug;
+
+        // TRACE
+        assert!(trace.should_print_on_level(trace), "trace prints trace");
+        assert!(trace.should_print_on_level(debug), "trace prints debug");
+        assert!(trace.should_print_on_level(info), "trace prints info");
+
+        // DEBUG
+        assert!(
+            !debug.should_print_on_level(trace),
+            "debug does not print trace"
+        );
+        assert!(debug.should_print_on_level(debug), "debug prints debug");
+        assert!(debug.should_print_on_level(info), "debug prints info");
+
+        // INFO
+        assert!(
+            !info.should_print_on_level(trace),
+            "info does not print trace"
+        );
+        assert!(
+            !info.should_print_on_level(debug),
+            "info does not print debug"
+        );
+        assert!(info.should_print_on_level(info), "info prints info");
     }
 }

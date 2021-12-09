@@ -358,6 +358,16 @@ pub mod display {
             }
         }
     }
+
+    impl fmt::Display for LogLevel {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            match self {
+                Self::Trace => write!(f, "trace"),
+                Self::Debug => write!(f, "debug"),
+                Self::Info => write!(f, "info"),
+            }
+        }
+    }
 }
 
 pub mod to_polar {
