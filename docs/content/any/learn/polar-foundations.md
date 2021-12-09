@@ -23,7 +23,7 @@ Polar is similar. You'll write authorization *rules*, query those rules, and Pol
 
 ## Logic Programming
 
-Polar is also a [logic programming language](https://en.wikipedia.org/wiki/Logic_programming). This means that it's designed to answer questions about a set of rules. You'll see how this works in the *How Polar code executes* section*.*
+Polar is also a [logic programming language](https://en.wikipedia.org/wiki/Logic_programming). This means that it's designed to answer questions about a set of rules. You'll see how this works in the *How Polar code executes* section.
 
 ## Advantages
 
@@ -42,7 +42,7 @@ Polar is also a [logic programming language](https://en.wikipedia.org/wiki/Logic
 
 Here's one Polar rule.
 
-```
+```polar
 father("Artemis", "Zeus");
 ```
 
@@ -50,7 +50,7 @@ In words, this line means "`father` is true when it's called on the strings `"Ar
 
 We can add another rule:
 
-```
+```polar
 father("Artemis", "Zeus");
 father("Apollo", "Zeus");
 ```
@@ -64,7 +64,7 @@ Notice that these rules exist side-by-side. We can have any number of rules that
 
 Now that we've written these rules, we can *query* them. We'll need to run the program to query these rules. The easiest way to do that is to run the interactive REPL:
 
-```
+```polar
 $ python -m polar father.polar
 >> father("Artemis", "Zeus");
 True
@@ -74,7 +74,7 @@ We asked a question about the program, and got our answer: "`father` is true whe
 
 Let's ask a more open-ended question.
 
-```
+```polar
 >> father(child, "Zeus");
 child = "Artemis"
 child = "Apollo"
@@ -87,14 +87,14 @@ This asks, "what are all the values, called `child`, for which `father(child, "Z
 
 So far, we've seen rules that are simply true. We can also write rules that are conditionally true. Here's one:
 
-```python
+```polar
 grandfather(a, b) if father(a, anyPerson) and father(anyPerson, b);
 ```
 
 Like we saw above, we can use an unused word—in this case, `anyPerson`—and that word functions as a variable.
 To use this rule effectively, we'll need one more `father` rule:
 
-```python
+```polar
 father("Artemis", "Zeus");
 father("Apollo", "Zeus");
 father("Asclepius", "Apollo");
@@ -103,7 +103,7 @@ grandfather(a, b) if father(a, anyPerson) and father(anyPerson, b);
 
 Now, we can ask our programs questions about this rule.
 
-```
+```polar
 >> grandfather("Asclepius", grandpa);
 grandpa = "Zeus"
 True
