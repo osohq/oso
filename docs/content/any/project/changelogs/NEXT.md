@@ -8,6 +8,15 @@ description: >-
 draft: true
 ---
 
+## `oso` `NEW_VERSION`
+
+### Core
+
+#### Other bugs & improvements
+
+- Fixed a variable scope bug affecting the `forall` operator that caused affected
+  queries to fail with an `UnhandledPartial` error.
+
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
