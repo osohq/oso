@@ -325,12 +325,14 @@ impl PolarVirtualMachine {
             .collect::<Vec<&str>>();
 
         let mut log_level = None;
-        if polar_log_vars.contains(&"trace") {
-            log_level = Some(LogLevel::Trace);
-        } else if polar_log_vars.contains(&"debug") {
-            log_level = Some(LogLevel::Debug);
-        } else if polar_log_vars.contains(&"info") {
-            log_level = Some(LogLevel::Info);
+        if !polar_log_vars.is_empty() {
+            log_level = if polar_log_vars.contains(&"trace") {
+                Some(LogLevel::Trace)
+            } else if polar_log_vars.contains(&"debug") {
+                Some(LogLevel::Debug)
+            } else {
+                Some(LogLevel::Info)
+            }
         }
 
         let mut vm = Self {
