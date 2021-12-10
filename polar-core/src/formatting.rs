@@ -577,12 +577,15 @@ pub mod to_polar {
                     operator: Operator::And,
                     args,
                 }) => {
+                    // rule type (parameters only; no arguments defined))
                     if args.is_empty() {
                         format!(
                             "{}({});",
                             self.name.to_polar(),
                             format_params(&self.params, ", ")
                         )
+
+                    // rule (both parameters and arguments defined)
                     } else {
                         format!(
                             "{}({}) if {};",
