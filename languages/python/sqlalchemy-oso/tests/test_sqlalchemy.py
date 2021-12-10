@@ -217,7 +217,7 @@ def test_authorized_session_relationship(engine, oso, fixture_data):
 
 def test_scoped_session_with_no_checked_permissions(engine, oso, fixture_data):
     # the policy denies all requests
-    oso.load_str('allow("user", "read", _) if false;')
+    oso.load_str('allow(_, _, _) if false;')
     # but passing None skips authorization
     session = scoped_session(lambda: oso, lambda: "user", lambda: None)
     session.configure(bind=engine)
