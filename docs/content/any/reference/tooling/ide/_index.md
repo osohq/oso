@@ -1,7 +1,7 @@
 ---
 title: IDE Support
 aliases:
-    - ../more/dev-tools/ide.html
+    - ../../more/dev-tools/ide.html
 description: IDE integrations for working with Oso policies.
 ---
 
@@ -21,6 +21,12 @@ the editor and in VSCode's **Problems** pane.
 - Syntax highlighting.
 - Diagnostics (errors & warnings) from your Oso policy are displayed in-line in
   the editor and in VSCode's **Problems** pane.
+  - The extension immediately highlights errors and warnings encountered while
+    parsing and validating your policy, such as if a rule is missing a trailing
+    semi-colon, a resource block declares `"owner"` as both a role and a
+    relation, or your policy contains no `allow()` rule. You would normally see
+    this feedback when running your application, but the extension surfaces it
+    while you edit your policy.
 
 ### [Vim](https://github.com/osohq/polar.vim)
 
@@ -30,5 +36,4 @@ the editor and in VSCode's **Problems** pane.
 
 ### Want support for your IDE of choice?
 
-Let us know by using our chat on the bottom right to send us a Slack message.
 Let us know by using our chat on the bottom right to send us a message.

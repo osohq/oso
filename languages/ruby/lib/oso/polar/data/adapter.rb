@@ -13,8 +13,8 @@ module Oso
         end
 
         # Make a list of objects from a query
-        def exec_query(_query)
-          raise "exec_query not implemented for #{self}"
+        def execute_query(_query)
+          raise "execute_query not implemented for #{self}"
         end
       end
     end

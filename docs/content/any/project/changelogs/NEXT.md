@@ -8,35 +8,55 @@ description: >-
 draft: true
 ---
 
-## Oso 0.23.1
+## `oso` `NEW_VERSION`
 
 ### Core
 
 #### Other bugs & improvements
 
-- Oso now allows multiple resource blocks to be declared for the same resource type. The declarations from all resource blocks for a given type are merged together before policy evaluation. This permits rules in one block to reference declarations in another and for resource blocks to be composed over multiple files.
-- Fixed a data race in our error handling functionality which resulted in truncated error messages.
-- Fixed a regression in the logic for rule matching when using `in` with data filtering.
+- Fixed a variable scope bug affecting the `forall` operator that caused affected
+  queries to fail with an `UnhandledPartial` error.
 
-### Rust
+### Node.js
+
+#### Breaking changes
+
+{{% callout "Warning" "orange" %}}
+  This release contains breaking changes. Be sure to follow migration steps
+  before upgrading.
+{{% /callout %}}
+
+##### Second parameter of Oso.query() API changed from bindings to options
+
+Pre-seeding the Polar VM with bindings for a query is a bit of an advanced use
+case, but if you were previously passing bindings to `Oso.query()`:
+
+```js
+const bindings = new Map([['x', 1]]);
+oso.query('f(x)', bindings);
+```
+
+You'll need to update that call to pass `bindings` as a key in the new
+`QueryOpts` object:
+
+```js
+const bindings = new Map([['x', 1]]);
+oso.query('f(x)', { bindings });
+```
 
 #### Other bugs & improvements
 
-- Implemented `ExternalIsSubclass` query event. Prevents `x matches Foo and x matches Bar`
-  from panicking. Instead, this will now correctly fail when `Foo != Bar`.
-  Thanks to [`@davepacheco`](https://github.com/davepacheco) for the contribution!
+- Thanks to [`@Kn99HN`](https://github.com/Kn99HN) for adding the
+  `acceptExpression` query flag to the Node.js lib!
 
+## `sqlalchemy-oso` `NEW_VERSION`
+
+### Other bugs & improvements
+
+- `scoped_session` now correctly handles a `get_checked_permission` callback that
+  returns `None`.
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
-
-
-### Go
-
-#### Other bugs & improvements
-- Added a `SetAcceptExpression` method to the `Query` struct which makes
-  it possible to get partially-evaluated terms back from the core.
-  This is a step towards data filtering in Go.
-  Thanks to [`@joshrotenberg`](https://github.com/joshrotenberg) for the PR!
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
@@ -52,7 +72,6 @@ draft: true
 ##### Breaking change 1
 
 Summary of breaking change.
-
 Link to [migration guide]().
 
 #### New features

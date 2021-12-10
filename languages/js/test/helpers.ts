@@ -2,16 +2,17 @@ import write from 'temp-write';
 
 import type { Polar } from '../src/Polar';
 import { Predicate } from '../src/Predicate';
-import type { obj } from '../src/types';
+import type { obj, QueryOpts } from '../src/types';
 
 type Result = Map<string, unknown>;
 
 export async function query<T extends Polar>(
   x: T,
-  q: string | Predicate
+  q: string | Predicate,
+  opts?: QueryOpts
 ): Promise<Result[]> {
   const results = [];
-  for await (const result of x.query(q)) {
+  for await (const result of x.query(q, opts)) {
     results.push(result);
   }
   return results;

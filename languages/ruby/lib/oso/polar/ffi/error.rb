@@ -74,7 +74,7 @@ module Oso
         # @param msg [String]
         # @param details [Hash<String, Object>]
         # @return [::Oso::Polar::PolarRuntimeError] the object converted into the expected format.
-        private_class_method def self.runtime_error(kind, msg:, details:) # rubocop:disable Metrics/MethodLength
+        private_class_method def self.runtime_error(kind, msg:, details:)
           case kind
           when 'Unsupported'
             ::Oso::Polar::UnsupportedError.new(msg, details: details)
@@ -82,8 +82,6 @@ module Oso
             ::Oso::Polar::PolarTypeError.new(msg, details: details)
           when 'StackOverflow'
             ::Oso::Polar::StackOverflowError.new(msg, details: details)
-          when 'FileLoading'
-            ::Oso::Polar::FileLoadingError.new(msg, details: details)
           else
             ::Oso::Polar::PolarRuntimeError.new(msg, details: details)
           end

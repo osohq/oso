@@ -59,11 +59,6 @@ pub struct Class {
     /// Class methods on `T`
     class_methods: ClassMethods,
 
-    /// A method to check whether the supplied `TypeId` matches this class
-    /// (This isn't using `type_id` because we might want to register other types here
-    /// in order to check inheritance)
-    class_check: Arc<dyn Fn(TypeId) -> bool + Send + Sync>,
-
     /// A function that accepts arguments of this class and compares them for equality.
     /// Limitation: Only works on comparisons of the same type.
     equality_check: Arc<dyn Fn(&Host, &Instance, &Instance) -> crate::Result<bool> + Send + Sync>,
@@ -148,7 +143,6 @@ where
                 attributes: HashMap::new(),
                 instance_methods: InstanceMethods::new(),
                 class_methods: ClassMethods::new(),
-                class_check: Arc::new(|type_id| TypeId::of::<T>() == type_id),
                 equality_check: Arc::from(equality_not_supported()),
                 into_iter: Arc::from(iterator_not_supported()),
                 type_id: TypeId::of::<T>(),

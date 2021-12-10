@@ -5,6 +5,7 @@ Abagail
 ActiveRecord
 AdminOnlyFields
 Appleby
+Asclepius
 AuthorizationError
 Bhavik's
 Bjerk
@@ -26,7 +27,7 @@ GC
 GDB
 GSuite
 GitClub
-Github's
+GitLab
 Gradle
 GraphQL
 Graphene
@@ -59,6 +60,7 @@ ORMs
 Oso's
 Polar's
 Postgres
+Pre
 Prisma
 PyPI
 RBAC
@@ -87,6 +89,7 @@ UUID
 UUIDs
 VM
 VPN
+VSCode
 VSCode's
 WASM
 Wayfair
@@ -118,6 +121,7 @@ coroutine
 customizations
 dataloader
 dataloaders
+dataset
 declaratively
 dereference
 dereferenced
@@ -191,6 +195,7 @@ precompiled
 prefetch
 pseudocode
 py
+pytest
 quickstart
 rb
 registerClass

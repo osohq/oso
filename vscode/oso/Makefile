@@ -1,4 +1,4 @@
-.PHONY: build package wasm fmtcheck lint test clean
+.PHONY: test lint typecheck fmtcheck fmt package wasm clean
 
 test: wasm
 	yarn test
@@ -11,6 +11,9 @@ typecheck: wasm
 
 fmtcheck: clean
 	yarn fmtcheck
+
+fmt: clean
+	yarn fmtwrite
 
 package: wasm
 	yarn package
