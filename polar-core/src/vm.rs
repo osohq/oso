@@ -20,7 +20,6 @@ use crate::diagnostic::{Context, Range};
 use crate::error::{self, RuntimeError};
 use crate::events::*;
 use crate::folder::Folder;
-use crate::formatting::format_params;
 use crate::formatting::ToPolarString;
 use crate::inverter::Inverter;
 use crate::kb::*;
