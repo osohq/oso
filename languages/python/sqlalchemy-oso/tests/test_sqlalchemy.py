@@ -215,6 +215,17 @@ def test_authorized_session_relationship(engine, oso, fixture_data):
     assert post_7.created_by is None
 
 
+def test_scoped_session_with_no_checked_permissions(engine, oso, fixture_data):
+    # the policy denies all requests
+    oso.load_str("allow(_, _, _) if false;")
+    # but passing None skips authorization
+    session = scoped_session(lambda: oso, lambda: "user", lambda: None)
+    session.configure(bind=engine)
+    posts = session.query(Post)
+    # check that any posts are allowed
+    assert posts.count()
+
+
 def test_scoped_session_relationship(engine, oso, fixture_data):
     oso.load_str(
         """allow("user", "read", post: Post) if post.id = 1;

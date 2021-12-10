@@ -49,6 +49,13 @@ oso.query('f(x)', { bindings });
 - Thanks to [`@Kn99HN`](https://github.com/Kn99HN) for adding the
   `acceptExpression` query flag to the Node.js lib!
 
+## `sqlalchemy-oso` `NEW_VERSION`
+
+### Other bugs & improvements
+
+- `scoped_session` now correctly handles a `get_checked_permission` callback that
+  returns `None`.
+
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
