@@ -44,6 +44,11 @@ const bindings = new Map([['x', 1]]);
 oso.query('f(x)', { bindings });
 ```
 
+#### Other bugs & improvements
+
+- Thanks to [`@Kn99HN`](https://github.com/Kn99HN) for adding the
+  `acceptExpression` query flag to the Node.js lib!
+
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
