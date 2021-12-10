@@ -17,6 +17,13 @@ draft: true
 - Fixed a variable scope bug affecting the `forall` operator that caused affected
   queries to fail with an `UnhandledPartial` error.
 
+## `sqlalchemy-oso` `NEW_VERSION`
+
+### Other bugs & improvements
+
+- `scoped_session` now correctly handles a `get_checked_permission` callback that
+  returns `None`.
+
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
