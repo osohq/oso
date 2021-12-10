@@ -57,3 +57,14 @@ impl fmt::Display for Context {
         Ok(())
     }
 }
+
+impl Context {
+    pub fn source_file_and_line(&self) -> String {
+        let Position { row, .. } = self.range.start;
+        if let Some(filename) = &self.source.filename {
+            format!("{}:{}", filename, row)
+        } else {
+            format!(":{}", row)
+        }
+    }
+}

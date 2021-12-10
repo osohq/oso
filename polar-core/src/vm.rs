@@ -16,6 +16,7 @@ use crate::bindings::{
 use crate::counter::Counter;
 use crate::data_filtering::partition_equivs;
 use crate::debugger::{get_binding_for_var, DebugEvent, Debugger};
+use crate::diagnostic::{Context, Range};
 use crate::error::{self, RuntimeError};
 use crate::events::*;
 use crate::folder::Folder;
@@ -2656,12 +2657,17 @@ impl PolarVirtualMachine {
                     // TODO: @patrickod move this to formatting.rs alongside ToPolar impl
                     // TODO: @patrickod convert real rule.source_info
                     for rule in rules {
+                        // TODO: @patrickod confirm we we unwrap here?
+                        // TODO: @patrickod update the padding align w/ variable rule head length
+                        let source = self.kb.read().unwrap().get_rule_source(rule).unwrap();
+                        let range = Range::from_span(&source.src, rule.span().unwrap());
+                        let context = Context { source, range };
+
                         rule_strs.push_str(&format!(
-                            "\n  {}({}) on {:>20}:{}",
+                            "\n  {}({}) on {}",
                             rule.name,
                             format_params(&rule.params, ","),
-                            "main.polar",
-                            10,
+                            context.source_file_and_line()
                         ));
                     }
                     rule_strs
