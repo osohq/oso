@@ -3018,6 +3018,21 @@ impl Runnable for PolarVirtualMachine {
                 .collect();
         }
 
+        self.log_with(
+            LogLevel::Info,
+            || {
+                // https://github.com/rust-lang/rust/blob/master/library/alloc/src/string.rs#L2724-L2736
+                // these write! calls are *guaranteed* to return Ok(), permitting the use of .unwrap()
+                let mut out = "RESULT: { ".to_string(); // open with single right-padded curly
+                for (key, value) in &bindings {
+                    write!(out, "{}: {} ", key, value).unwrap(); // write right-padded key: value pairs
+                }
+                write!(out, "}}").unwrap(); // closing curly (doubled to escape)
+                out
+            },
+            &[],
+        );
+
         Ok(QueryEvent::Result { bindings, trace })
     }
 
