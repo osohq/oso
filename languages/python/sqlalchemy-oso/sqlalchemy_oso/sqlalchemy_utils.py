@@ -154,6 +154,7 @@ try:
 
         return entities
 
+
 except ImportError:
     # This code should not be called for SQLAlchemy 1.4.
     def all_entities_in_statement(statement):
