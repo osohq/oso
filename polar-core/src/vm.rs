@@ -2668,12 +2668,7 @@ impl PolarVirtualMachine {
                             },
                         );
 
-                        rule_strs.push_str(&format!(
-                            "\n  {}({}){}",
-                            rule.name,
-                            format_params(&rule.params, ","),
-                            context
-                        ));
+                        rule_strs.push_str(&format!("\n  {}{}", rule.head_as_string(), context));
                     }
                     rule_strs
                 },

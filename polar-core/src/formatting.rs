@@ -312,6 +312,16 @@ pub mod display {
         }
     }
 
+    impl Rule {
+        pub fn head_as_string(&self) -> String {
+            format!(
+                "{}({}",
+                self.name.to_polar(),
+                format_params(&self.params, ", ")
+            )
+        }
+    }
+
     impl fmt::Display for Rule {
         fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
             match &self.body.value() {
@@ -320,18 +330,12 @@ pub mod display {
                     args,
                 }) => {
                     if args.is_empty() {
-                        write!(
-                            fmt,
-                            "{}({});",
-                            self.name.to_polar(),
-                            format_params(&self.params, ", ")
-                        )
+                        write!(fmt, "{};", self.head_as_string())
                     } else {
                         write!(
                             fmt,
-                            "{}({}) if {};",
-                            self.name.to_polar(),
-                            format_params(&self.params, ", "),
+                            "{} if {};",
+                            self.head_as_string(),
                             format_args(Operator::And, args, ",\n  "),
                         )
                     }
