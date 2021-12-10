@@ -271,7 +271,7 @@ pub struct PolarVirtualMachine {
     log_level: Option<LogLevel>,
 
     polar_log_stderr: bool,
-    polar_log_mute: bool,
+    polar_trace_mute: bool,
 
     // Other flags.
     pub query_contains_partial: bool,
@@ -357,7 +357,7 @@ impl PolarVirtualMachine {
             log_level,
             // `polar_log_stderr` prints things immediately to stderr
             polar_log_stderr: polar_log_vars.iter().any(|var| var == &"now"),
-            polar_log_mute: false,
+            polar_trace_mute: false,
             query_contains_partial: false,
             inverting: false,
             messages,
@@ -806,7 +806,12 @@ impl PolarVirtualMachine {
         R: AsRef<str>,
     {
         if let Some(configured_log_level) = self.log_level {
-            if configured_log_level.should_print_on_level(level) && !self.polar_log_mute {
+            // preserve the old `polar_log_mute` behavior which omits parameter
+            // specialization checking Unify, IsA and other events from the log
+            if level == LogLevel::Trace && self.polar_trace_mute {
+                return;
+            }
+            if configured_log_level.should_print_on_level(level) {
                 let mut indent = String::new();
                 for _ in 0..=self.queries.len() {
                     indent.push_str("  ");
@@ -941,8 +946,7 @@ impl PolarVirtualMachine {
         // why double logging? previously these were
         // 1. wrapped in if self.log_trace
         // 2. self.print which is effectively INFO
-        self.log_with(LogLevel::Trace, || "⇒ backtrack", &[]);
-        self.log_with(LogLevel::Info, || "BACKTRACK", &[]);
+        self.log_with(LogLevel::Trace, || "BACKTRACK", &[]);
 
         loop {
             match self.choices.pop() {
@@ -1007,7 +1011,7 @@ impl PolarVirtualMachine {
 
     /// Halt the VM by clearing all goals and choices.
     fn halt(&mut self) -> QueryEvent {
-        self.log("HALT", &[]);
+        self.log_with(LogLevel::Trace, || "HALT", &[]);
         self.goals.clear();
         self.choices.clear();
         QueryEvent::Done { result: true }
@@ -1580,7 +1584,7 @@ impl PolarVirtualMachine {
                 let args = predicate.args.iter().map(|t| self.deref(t)).collect();
                 let pre_filter = generic_rule.get_applicable_rules(&args);
 
-                self.polar_log_mute = true;
+                self.polar_trace_mute = true;
 
                 // Filter rules by applicability.
                 vec![
@@ -2642,7 +2646,7 @@ impl PolarVirtualMachine {
             // We're done; the rules are sorted.
             // Make alternatives for calling them.
 
-            self.polar_log_mute = false;
+            self.polar_trace_mute = false;
             // as with the "QUERY RULE:" event print the first of these events
             // to INFO and subsequent queries to TRACE
             let level = if self.queries.len() == 1 {
