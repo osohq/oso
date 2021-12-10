@@ -2658,20 +2658,21 @@ impl PolarVirtualMachine {
                 level,
                 || {
                     let mut rule_strs = "APPLICABLE_RULES:".to_owned();
-                    // TODO: @patrickod move this to formatting.rs alongside ToPolar impl
-                    // TODO: @patrickod convert real rule.source_info
                     for rule in rules {
-                        // TODO: @patrickod confirm we we unwrap here?
-                        // TODO: @patrickod update the padding align w/ variable rule head length
-                        let source = self.kb.read().unwrap().get_rule_source(rule).unwrap();
-                        let range = Range::from_span(&source.src, rule.span().unwrap());
-                        let context = Context { source, range };
+                        let context = self.kb.read().unwrap().get_rule_source(rule).map_or_else(
+                            || "".to_string(),
+                            |source| {
+                                let range = Range::from_span(&source.src, rule.span().unwrap());
+                                let context = Context { source, range };
+                                context.source_file_and_line()
+                            },
+                        );
 
                         rule_strs.push_str(&format!(
-                            "\n  {}({}) on {}",
+                            "\n  {}({}){}",
                             rule.name,
                             format_params(&rule.params, ","),
-                            context.source_file_and_line()
+                            context
                         ));
                     }
                     rule_strs

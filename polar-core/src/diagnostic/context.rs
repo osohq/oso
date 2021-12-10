@@ -46,11 +46,8 @@ fn pos_to_loc(src: &str, row: usize, column: usize) -> usize {
 
 impl fmt::Display for Context {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.source_file_and_line())?;
         let Position { row, column } = self.range.start;
-        write!(f, " at line {}, column {}", row + 1, column + 1)?;
-        if let Some(ref filename) = self.source.filename {
-            write!(f, " of file {}", filename)?;
-        }
         let loc = pos_to_loc(&self.source.src, row, column);
         let lines = source_lines(&self.source, loc, 0).replace('\n', "\n\t");
         writeln!(f, ":\n\t{}", lines)?;
@@ -60,11 +57,12 @@ impl fmt::Display for Context {
 
 impl Context {
     pub fn source_file_and_line(&self) -> String {
-        let Position { row, .. } = self.range.start;
-        if let Some(filename) = &self.source.filename {
-            format!("{}:{}", filename, row)
-        } else {
-            format!(":{}", row)
+        let mut f = String::new();
+        let Position { row, column } = self.range.start;
+        f += &format!(" at line {}, column {}", row + 1, column + 1);
+        if let Some(ref filename) = &self.source.filename {
+            f += &format!(" of file {}", filename);
         }
+        f
     }
 }
