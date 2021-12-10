@@ -1474,8 +1474,21 @@ impl PolarVirtualMachine {
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
     fn query(&mut self, term: &Term) -> Result<QueryEvent> {
-        // Don't log if it's just a single element AND like lots of rule bodies tend to be.
+        // print INFO event for the first call to `query` with a rule
+        // in the policy execution, ignoring subsequent calls
+        //
+        // print TRACE event for all subsequent nested queries, filtering
+        // out "single element AND" which many rule bodies take the form of.
         match &term.value() {
+            Value::Call(predicate) => {
+                if self.queries.is_empty() {
+                    self.log_with(
+                        LogLevel::Info,
+                        || format!("QUERY RULE: {}", predicate.to_polar()),
+                        &[term],
+                    );
+                }
+            }
             Value::Expression(Operation {
                 operator: Operator::And,
                 args,
@@ -1557,17 +1570,6 @@ impl PolarVirtualMachine {
                         "query_for_predicate: different rule names: {} != {}",
                         generic_rule.name, predicate.name
                     ));
-                }
-
-                // Print QUERY RULE event only for the first query_for_predicate
-                // event we encounter, ignoring any subsequent calls within the
-                // execution.
-                if self.queries.len() < 2 {
-                    self.log_with(
-                        LogLevel::Info,
-                        || format!("QUERY RULE: {}", predicate.to_polar()),
-                        &[],
-                    );
                 }
 
                 // Pre-filter rules.
