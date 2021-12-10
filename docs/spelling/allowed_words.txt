@@ -28,7 +28,6 @@ GDB
 GSuite
 GitClub
 GitLab
-Github's
 Gradle
 GraphQL
 Graphene
