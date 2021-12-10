@@ -1482,10 +1482,11 @@ impl PolarVirtualMachine {
     /// querying for each body clause.
     fn query(&mut self, term: &Term) -> Result<QueryEvent> {
         // print INFO event for the first call to `query` with a rule
-        // in the policy execution, ignoring subsequent calls
+        // in the policy execution, ignoring subsequent nested calls
         //
-        // print TRACE event for all subsequent nested queries, filtering
-        // out "single element AND" which many rule bodies take the form of.
+        // print TRACE (a superset of INFO) event for all subsequent nested queries,
+        // taking care to filter out "single element AND" which many rule bodies
+        // take the form of.
         match &term.value() {
             Value::Call(predicate) => {
                 if self.queries.is_empty() {
@@ -2647,7 +2648,7 @@ impl PolarVirtualMachine {
 
             self.polar_trace_mute = false;
             // as with the "QUERY RULE:" event print the first of these events
-            // to INFO and subsequent queries to TRACE
+            // to INFO and subsequent queries to TRACE (a superset of INFO)
             let level = if self.queries.len() == 1 {
                 LogLevel::Info
             } else {
