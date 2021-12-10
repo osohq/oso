@@ -302,3 +302,22 @@ func (q QueryFfi) DebugCommand(command *string) error {
 func (q QueryFfi) Source() (*string, error) {
 	return checkResultString(C.polar_query_source_info(q.ptr))
 }
+
+func (q QueryFfi) Bind(name string, value *types.Term) error {
+	cName := C.CString(name)
+	defer C.free(unsafe.Pointer(cName))
+
+	f, err := json.Marshal(value)
+	fmt.Printf("%v", string(f[:]))
+
+	var s *C.char
+	//var err error
+	s, err = ffiSerialize(value)
+	defer C.free(unsafe.Pointer(s))
+	if err != nil {
+		return err
+	}
+	err = checkResultVoid(C.polar_bind(q.ptr, cName, s))
+	processMessages(q)
+	return err
+}

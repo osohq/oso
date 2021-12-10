@@ -399,6 +399,62 @@ func (o Oso) AuthorizedFields(actor interface{}, action interface{}, resource in
 }
 
 /*
+
+ */
+func (o Oso) AuthorizedQuery(actor interface{}, action interface{}, resource_type string) (interface{}, error) {
+	//results := make(map[interface{}]struct{})
+	query, err := (*o.p).queryRule("allow", actor, action, types.Variable("resource"))
+	if err != nil {
+		return nil, err
+	}
+	_ = query
+
+	query.SetAcceptExpression(true)
+
+	constraint := types.Term{
+		Value: types.Value{
+			types.ValueExpression{
+				Operator: types.Operator{types.OperatorAnd{}},
+				Args: []types.Term{
+					types.Term{
+						Value: types.Value{
+							types.ValueExpression{
+								Operator: types.Operator{types.OperatorIsa{}},
+								Args: []types.Term{
+									types.Term{
+										Value: types.Value{
+											types.ValuePattern{
+												types.PatternInstance{
+													Tag:    types.Symbol(resource_type),
+													Fields: types.Dictionary{Fields: make(map[types.Symbol]types.Term)},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					}},
+			},
+		},
+	}
+
+	query.Bind("query", &constraint)
+
+	for {
+		if v, err := query.Next(); err != nil {
+			return nil, err
+		} else if v == nil {
+			break
+		} else {
+			fmt.Printf("%v\n", v)
+		}
+	}
+
+	return nil, nil
+}
+
+/*
 Start the oso repl where you can make queries and see results printed out.
 */
 func (o Oso) Repl() error {

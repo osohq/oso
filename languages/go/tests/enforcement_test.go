@@ -1,6 +1,7 @@
 package oso_test
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -193,6 +194,24 @@ func TestAuthorizedActions(t *testing.T) {
 	}
 	if len(res) != 0 {
 		t.Error("expected no actions", res)
+	}
+}
+
+func TestAuthorizedQuery(t *testing.T) {
+	o := getOso(t)
+	var err error
+
+	o.LoadString("allow(_actor: User, \"get\", resource: Widget) if resource.Id = 1;")
+
+	actor := User{Name: "Sally"}
+	resource := Widget{Id: 1}
+	fmt.Println("is this even what the heck")
+	is, _ := o.IsAllowed(actor, "get", resource)
+	fmt.Printf("can get it: %v\n", is)
+
+	_, err = o.AuthorizedQuery(actor, "get", "Widget")
+	if err != nil {
+		t.Fatalf("Failed to get query: %v", err)
 	}
 }
 
