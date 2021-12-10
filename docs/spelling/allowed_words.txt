@@ -14,7 +14,6 @@ CLI
 CTO
 Changelogs
 Cloudflare
-dataset
 DFA
 Dexec
 EMR
@@ -28,7 +27,6 @@ GC
 GDB
 GSuite
 GitClub
-Github's
 GitLab
 Gradle
 GraphQL
@@ -62,9 +60,9 @@ ORMs
 Oso's
 Polar's
 Postgres
+Pre
 Prisma
 PyPI
-pytest
 RBAC
 REPL
 RESTful
@@ -123,6 +121,7 @@ coroutine
 customizations
 dataloader
 dataloaders
+dataset
 declaratively
 dereference
 dereferenced
@@ -196,6 +195,7 @@ precompiled
 prefetch
 pseudocode
 py
+pytest
 quickstart
 rb
 registerClass
