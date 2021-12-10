@@ -54,7 +54,7 @@ install: examples global-deps tailwind-deps webpack-deps
 global-deps: .make.global-deps.installed
 
 .make.global-deps.installed:
-	npm install -g postcss postcss-cli autoprefixer
+	npm install -g postcss@8.4.4 postcss-cli@9.0.2 autoprefixer@10.4.0
 	touch $@
 
 tailwind-deps: .make.tailwind-deps.installed
