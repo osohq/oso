@@ -19,6 +19,7 @@ use crate::debugger::{get_binding_for_var, DebugEvent, Debugger};
 use crate::error::{self, RuntimeError};
 use crate::events::*;
 use crate::folder::Folder;
+use crate::formatting::format_params;
 use crate::formatting::ToPolarString;
 use crate::inverter::Inverter;
 use crate::kb::*;
@@ -2641,12 +2642,27 @@ impl PolarVirtualMachine {
             // Make alternatives for calling them.
 
             self.polar_log_mute = false;
+            // as with the "QUERY RULE:" event print the first of these events
+            // to INFO and subsequent queries to TRACE
+            let level = if self.queries.len() == 1 {
+                LogLevel::Info
+            } else {
+                LogLevel::Trace
+            };
             self.log_with(
-                LogLevel::Info,
+                level,
                 || {
                     let mut rule_strs = "APPLICABLE_RULES:".to_owned();
+                    // TODO: @patrickod move this to formatting.rs alongside ToPolar impl
+                    // TODO: @patrickod convert real rule.source_info
                     for rule in rules {
-                        rule_strs.push_str(&format!("\n  {}", self.rule_source(rule)));
+                        rule_strs.push_str(&format!(
+                            "\n  {}({}) on {:>20}:{}",
+                            rule.name,
+                            format_params(&rule.params, ","),
+                            "main.polar",
+                            10,
+                        ));
                     }
                     rule_strs
                 },
