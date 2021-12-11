@@ -941,9 +941,6 @@ impl PolarVirtualMachine {
     /// Remove all bindings after the last choice point, and try the
     /// next available alternative. If no choice is possible, halt.
     fn backtrack(&mut self) -> Result<()> {
-        // why double logging? previously these were
-        // 1. wrapped in if self.log_trace
-        // 2. self.print which is effectively INFO
         self.log_with(LogLevel::Trace, || "BACKTRACK", &[]);
 
         loop {
@@ -1480,12 +1477,14 @@ impl PolarVirtualMachine {
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
     fn query(&mut self, term: &Term) -> Result<QueryEvent> {
-        // print INFO event for the first call to `query` with a rule
-        // in the policy execution, ignoring subsequent nested calls
+        // print INFO event for the first call `query` with a rule
+        // (`Call(predicate)`) in the policy execution, ignoring subsequent
+        // calls nested in the execution.
         //
-        // print TRACE (a superset of INFO) event for all subsequent nested queries,
-        // taking care to filter out "single element AND" which many rule bodies
-        // take the form of.
+        // print TRACE (a superset of INFO) event for all the subsequent calls
+        // We filter out "single element AND" which many rule bodies
+        // take the form of to instead log only their inner operations for
+        // readibility|brevity reasons.
         match &term.value() {
             Value::Call(predicate) => {
                 if self.queries.is_empty() {
@@ -2527,6 +2526,10 @@ impl PolarVirtualMachine {
         if unfiltered_rules.is_empty() {
             // The rules have been filtered. Sort them.
 
+            if applicable_rules.is_empty() {
+                self.log_with(LogLevel::Info, || "No matching rules found", &[]);
+            }
+
             self.push_goal(Goal::SortRules {
                 rules: applicable_rules.iter().rev().cloned().collect(),
                 args: args.clone(),
@@ -3033,7 +3036,7 @@ impl Runnable for PolarVirtualMachine {
                     for (key, value) in &bindings {
                         out.push_str(&format!("{}: {} ", key, value)); // write right-padded key: value pairs
                     }
-                    out.push_str("}"); // closing curly
+                    out.push('}'); // closing curly
                     out
                 }
             },
