@@ -3033,7 +3033,7 @@ impl Runnable for PolarVirtualMachine {
                     for (key, value) in &bindings {
                         out.push_str(&format!("{}: {} ", key, value)); // write right-padded key: value pairs
                     }
-                    out.push_str("}}"); // closing curly (doubled to escape)
+                    out.push_str("}"); // closing curly
                     out
                 }
             },
