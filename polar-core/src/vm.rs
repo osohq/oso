@@ -3027,12 +3027,16 @@ impl Runnable for PolarVirtualMachine {
         self.log_with(
             LogLevel::Info,
             || {
-                let mut out = "RESULT: { ".to_string(); // open with single right-padded curly
-                for (key, value) in &bindings {
-                    out.push_str(&format!("{}: {} ", key, value)); // write right-padded key: value pairs
+                if bindings.is_empty() {
+                    "RESULT: SUCCESS".to_string()
+                } else {
+                    let mut out = "RESULT: { ".to_string(); // open with single right-padded curly
+                    for (key, value) in &bindings {
+                        out.push_str(&format!("{}: {} ", key, value)); // write right-padded key: value pairs
+                    }
+                    out.push_str("}}"); // closing curly (doubled to escape)
+                    out
                 }
-                out.push_str("}}"); // closing curly (doubled to escape)
-                out
             },
             &[],
         );
