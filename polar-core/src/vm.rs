@@ -373,7 +373,6 @@ impl PolarVirtualMachine {
 
         self.polar_log_stderr = polar_log_vars.contains(&"now");
 
-        // TODO: @patrickod drop `rust_log` param entirely?
         // TODO: @patrickod consolidate log level evaluation here & in VM create
         self.log_level = if rust_log.is_some() {
             Some(LogLevel::Info)
