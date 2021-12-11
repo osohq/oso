@@ -5,42 +5,41 @@ on:
       - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
     branches:
       - main
-      - gj/fix-python-build-on-windows
 
 jobs:
-  # version:
-  #   name: Compute and verify the version number
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - uses: ./.github/actions/check_version
-  #     - name: Set version env
-  #       run: echo "oso_version=$(cat VERSION)" >> $GITHUB_ENV
-  #     - name: Check github ref matches
-  #       if: github.ref != 'refs/heads/main'
-  #       env:
-  #         github_ref: ${{ github.ref }}
-  #       run: grep "${github_ref/refs\/tags\/v/}" VERSION
-  #
-  # # Dispatch an oso_release event to other repos to test against this commit
-  # dispatch:
-  #   strategy:
-  #     matrix:
-  #       repo: ["osohq/oso-flask-integration"]
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Repository Dispatch
-  #       uses: peter-evans/repository-dispatch@v1
-  #       with:
-  #         token: ${{ secrets.REPO_API_TOKEN }}
-  #         repository: ${{ matrix.repo }}
-  #         event-type: oso_release
-  #         client-payload: '{"commit": "${{ github.sha }}"}'
+  version:
+    name: Compute and verify the version number
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/check_version
+      - name: Set version env
+        run: echo "oso_version=$(cat VERSION)" >> $GITHUB_ENV
+      - name: Check github ref matches
+        if: github.ref != 'refs/heads/main'
+        env:
+          github_ref: ${{ github.ref }}
+        run: grep "${github_ref/refs\/tags\/v/}" VERSION
+
+  # Dispatch an oso_release event to other repos to test against this commit
+  dispatch:
+    strategy:
+      matrix:
+        repo: ["osohq/oso-flask-integration"]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v1
+        with:
+          token: ${{ secrets.REPO_API_TOKEN }}
+          repository: ${{ matrix.repo }}
+          event-type: oso_release
+          client-payload: '{"commit": "${{ github.sha }}"}'
 
   linux_libs:
     name: Build release libraries on Linux
     runs-on: ubuntu-latest
-    # needs: [version]
+    needs: [version]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
@@ -90,7 +89,7 @@ jobs:
   macos_libs:
     name: Build release libraries on MacOS
     runs-on: macos-11
-    # needs: [version]
+    needs: [version]
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust stable toolchain
@@ -137,7 +136,7 @@ jobs:
   windows_libs:
     name: Build release libraries on Windows
     runs-on: windows-latest
-    # needs: [version]
+    needs: [version]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
@@ -295,8 +294,7 @@ jobs:
   build_linux_wheels:
     name: Build wheels on Linux
     runs-on: ubuntu-latest
-    # needs: [version, linux_libs]
-    needs: [linux_libs]
+    needs: [version, linux_libs]
     env:
       # Skip Python 2.7 and Python 3.5
       CIBW_SKIP: "cp27-* cp35-* pp27-*"
@@ -341,8 +339,7 @@ jobs:
     # May have to drop once github actions switches to macos-11 by default
     # because 3.6 isn't supported on 11.
     runs-on: macos-10.15
-    # needs: [version, macos_libs]
-    needs: [macos_libs]
+    needs: [version, macos_libs]
     env:
       # Skip Python 2.7 and Python 3.5
       CIBW_SKIP: "cp27-* cp35-* pp27-*"
@@ -384,8 +381,7 @@ jobs:
   build_macos_arm_wheels:
     name: Build macOS arm wheels
     runs-on: [self-hosted, m1]
-    # needs: [version, macos_libs]
-    needs: [macos_libs]
+    needs: [version, macos_libs]
     env:
       OSO_ENV: CI
     steps:
@@ -417,8 +413,7 @@ jobs:
   build_windows_wheels:
     name: Build wheels on Windows
     runs-on: windows-latest
-    # needs: [version, windows_libs]
-    needs: [windows_libs]
+    needs: [version, windows_libs]
     env:
       # Skip Python 2.7 and Python 3.5
       CIBW_SKIP: "cp27-* cp35-* pp27-*"
@@ -460,7 +455,7 @@ jobs:
   build_js:
     name: Build js.
     runs-on: ubuntu-latest
-    # needs: [version]
+    needs: [version]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
@@ -837,214 +832,214 @@ jobs:
         run: node dist/test/parity.js
         working-directory: oso_js_node
 
-  # test_quickstarts:
-  #   name: Test Quickstarts
-  #   runs-on: ubuntu-latest
-  #   needs: [version]
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - name: Initialize submodules
-  #       run: make -C docs/examples update-submodules
-  #     - name: Check that submodules are all up-to-date
-  #       run: |
-  #         git submodule foreach git remote update
-  #         git submodule foreach '[ -z $(git --no-pager diff origin/main main) ]'
-  #     - uses: actions/cache@v2
-  #       with:
-  #         path: |
-  #           ~/.cargo/registry
-  #           ~/.cargo/git
-  #           target
-  #         key: ${{ runner.os }}-cargo-debug-${{ hashFiles('**/Cargo.lock') }}
-  #     - name: Use Python 3.6
-  #       uses: actions/setup-python@v1
-  #       with:
-  #         python-version: "3.6"
-  #     - name: Use Ruby 2.4
-  #       uses: ruby/setup-ruby@v1
-  #       with:
-  #         bundler-cache: true
-  #         ruby-version: "2.4"
-  #         working-directory: "docs/examples/quickstart/ruby"
-  #     - name: Use Node.js 12
-  #       uses: actions/setup-node@v1
-  #       with:
-  #         node-version: "12"
-  #     - name: Use Java 10
-  #       uses: actions/setup-java@v1
-  #       with:
-  #         java-version: 10
-  #     - name: Use stable Rust
-  #       uses: actions-rs/toolchain@v1
-  #       with:
-  #         profile: minimal
-  #         toolchain: stable
-  #         override: true
-  #     - name: Use Go 1.12
-  #       uses: actions/setup-go@v2
-  #       with:
-  #         go-version: "1.12"
-  #     - name: Run quickstart tests
-  #       run: make -C docs test-quickstarts-release
-  #
-  # release:
-  #   name: Create release
-  #   runs-on: ubuntu-latest
-  #   if: github.ref != 'refs/heads/main'
-  #   needs:
-  #     [
-  #       build_linux_wheels,
-  #       build_macos_wheels,
-  #       build_windows_wheels,
-  #       build_jar,
-  #       build_gem,
-  #       build_go,
-  #       validate_python_linux,
-  #       validate_python_macos_old,
-  #       validate_python_macos_11,
-  #       validate_python_windows,
-  #       validate_python_musl,
-  #       validate_ruby,
-  #       validate_java,
-  #       validate_js,
-  #       validate_go,
-  #       test_quickstarts,
-  #     ]
-  #   steps:
-  #     - name: Set version env
-  #       id: version
-  #       env:
-  #         github_ref: ${{ github.ref }}
-  #       run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
-  #     - name: Download oso dylibs
-  #       uses: actions/download-artifact@v1
-  #       with:
-  #         name: oso_library
-  #     - name: Zip libraries
-  #       run: zip --junk-paths -r oso-lib.zip oso_library/
-  #     - name: Download oso python wheels from package run
-  #       uses: actions/download-artifact@v1
-  #       with:
-  #         name: wheel
-  #     - name: Zip wheels
-  #       run: zip --junk-paths -r oso-python.zip wheel/
-  #     - name: Download oso gem from package run
-  #       uses: actions/download-artifact@v1
-  #       with:
-  #         name: gem
-  #     - name: Zip ruby gem
-  #       run: zip --junk-paths -r oso-ruby.zip gem/
-  #     - name: Download oso jar from package run
-  #       uses: actions/download-artifact@v1
-  #       with:
-  #         name: jar
-  #     - name: Zip Java JAR
-  #       run: zip --junk-paths -r oso-java.zip jar/
-  #     - name: Download oso javascript package from package run
-  #       uses: actions/download-artifact@v1
-  #       with:
-  #         name: oso_js_node
-  #     - name: Create JS release artifact
-  #       working-directory: oso_js_node
-  #       run: npm pack
-  #     - name: Download oso go lib
-  #       uses: actions/download-artifact@v1
-  #       with:
-  #         name: go
-  #     - name: Zip Go source code
-  #       run: zip -r go-oso.zip go/
-  #     - name: Create Release
-  #       id: create_release
-  #       uses: actions/create-release@latest
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       with:
-  #         tag_name: v${{ steps.version.outputs.oso_version }}
-  #         release_name: oso ${{ steps.version.outputs.oso_version }}
-  #         body: |
-  #           oso ${{ steps.version.outputs.oso_version }}
-  #         draft: false
-  #         prerelease: true
-  #     - name: Upload Libraries
-  #       uses: actions/upload-release-asset@v1
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       with:
-  #         upload_url: ${{ steps.create_release.outputs.upload_url }}
-  #         asset_path: ./oso-lib.zip
-  #         asset_name: oso-lib-${{ steps.version.outputs.oso_version }}.zip
-  #         asset_content_type: application/zip
-  #     - name: Upload Python Package
-  #       uses: actions/upload-release-asset@v1
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       with:
-  #         upload_url: ${{ steps.create_release.outputs.upload_url }}
-  #         asset_path: ./oso-python.zip
-  #         asset_name: oso-python-${{ steps.version.outputs.oso_version }}.zip
-  #         asset_content_type: application/zip
-  #     - name: Upload Ruby Gem
-  #       uses: actions/upload-release-asset@v1
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       with:
-  #         upload_url: ${{ steps.create_release.outputs.upload_url }}
-  #         asset_path: ./oso-ruby.zip
-  #         asset_name: oso-ruby-${{ steps.version.outputs.oso_version }}.zip
-  #         asset_content_type: application/zip
-  #     - name: Upload Java Jar
-  #       uses: actions/upload-release-asset@v1
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       with:
-  #         upload_url: ${{ steps.create_release.outputs.upload_url }}
-  #         asset_path: ./oso-java.zip
-  #         asset_name: oso-java-${{ steps.version.outputs.oso_version }}.zip
-  #         asset_content_type: application/zip
-  #     - name: Upload Js Package
-  #       uses: actions/upload-release-asset@v1
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       with:
-  #         upload_url: ${{ steps.create_release.outputs.upload_url }}
-  #         asset_path: ./oso_js_node/oso-${{ steps.version.outputs.oso_version }}.tgz
-  #         asset_name: oso-js-node-${{ steps.version.outputs.oso_version }}.tgz
-  #         asset_content_type: application/gzip
-  #     - name: Upload go package
-  #       uses: actions/upload-release-asset@v1
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       with:
-  #         upload_url: ${{ steps.create_release.outputs.upload_url }}
-  #         asset_path: ./go-oso.zip
-  #         asset_name: go-oso-${{ steps.version.outputs.oso_version }}.zip
-  #         asset_content_type: application/zip
-  # # TODO(gj): update this to post to Quill or a private channel on community Slack.
-  # alert-failure:
-  #   name: Alert on failure
-  #   if: ${{ !success() }}
-  #   runs-on: ubuntu-latest
-  #   needs:
-  #     [
-  #       validate_python_linux,
-  #       validate_python_macos_old,
-  #       validate_python_macos_11,
-  #       validate_python_macos_arm,
-  #       validate_python_windows,
-  #       validate_python_musl,
-  #       validate_ruby,
-  #       validate_java,
-  #       validate_js,
-  #       validate_go,
-  #       validate_go_macos_arm,
-  #       test_quickstarts,
-  #     ]
-  #   steps:
-  #     - uses: rtCamp/action-slack-notify@master
-  #       env:
-  #         SLACK_CHANNEL: firehose
-  #         SLACK_COLOR: "danger"
-  #         SLACK_MESSAGE: "${{ github.event.head_commit.url }}"
-  #         SLACK_TITLE: "Release job failed."
-  #         SLACK_USERNAME: github-actions
-  #         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_TO_FIREHOSE }}
+  test_quickstarts:
+    name: Test Quickstarts
+    runs-on: ubuntu-latest
+    needs: [version]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Initialize submodules
+        run: make -C docs/examples update-submodules
+      - name: Check that submodules are all up-to-date
+        run: |
+          git submodule foreach git remote update
+          git submodule foreach '[ -z $(git --no-pager diff origin/main main) ]'
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-debug-${{ hashFiles('**/Cargo.lock') }}
+      - name: Use Python 3.6
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.6"
+      - name: Use Ruby 2.4
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          ruby-version: "2.4"
+          working-directory: "docs/examples/quickstart/ruby"
+      - name: Use Node.js 12
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12"
+      - name: Use Java 10
+        uses: actions/setup-java@v1
+        with:
+          java-version: 10
+      - name: Use stable Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Use Go 1.12
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.12"
+      - name: Run quickstart tests
+        run: make -C docs test-quickstarts-release
+
+  release:
+    name: Create release
+    runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/main'
+    needs:
+      [
+        build_linux_wheels,
+        build_macos_wheels,
+        build_windows_wheels,
+        build_jar,
+        build_gem,
+        build_go,
+        validate_python_linux,
+        validate_python_macos_old,
+        validate_python_macos_11,
+        validate_python_windows,
+        validate_python_musl,
+        validate_ruby,
+        validate_java,
+        validate_js,
+        validate_go,
+        test_quickstarts,
+      ]
+    steps:
+      - name: Set version env
+        id: version
+        env:
+          github_ref: ${{ github.ref }}
+        run: echo "::set-output name=oso_version::${github_ref/refs\/tags\/v/}"
+      - name: Download oso dylibs
+        uses: actions/download-artifact@v1
+        with:
+          name: oso_library
+      - name: Zip libraries
+        run: zip --junk-paths -r oso-lib.zip oso_library/
+      - name: Download oso python wheels from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: wheel
+      - name: Zip wheels
+        run: zip --junk-paths -r oso-python.zip wheel/
+      - name: Download oso gem from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: gem
+      - name: Zip ruby gem
+        run: zip --junk-paths -r oso-ruby.zip gem/
+      - name: Download oso jar from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: jar
+      - name: Zip Java JAR
+        run: zip --junk-paths -r oso-java.zip jar/
+      - name: Download oso javascript package from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: oso_js_node
+      - name: Create JS release artifact
+        working-directory: oso_js_node
+        run: npm pack
+      - name: Download oso go lib
+        uses: actions/download-artifact@v1
+        with:
+          name: go
+      - name: Zip Go source code
+        run: zip -r go-oso.zip go/
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.oso_version }}
+          release_name: oso ${{ steps.version.outputs.oso_version }}
+          body: |
+            oso ${{ steps.version.outputs.oso_version }}
+          draft: false
+          prerelease: true
+      - name: Upload Libraries
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./oso-lib.zip
+          asset_name: oso-lib-${{ steps.version.outputs.oso_version }}.zip
+          asset_content_type: application/zip
+      - name: Upload Python Package
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./oso-python.zip
+          asset_name: oso-python-${{ steps.version.outputs.oso_version }}.zip
+          asset_content_type: application/zip
+      - name: Upload Ruby Gem
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./oso-ruby.zip
+          asset_name: oso-ruby-${{ steps.version.outputs.oso_version }}.zip
+          asset_content_type: application/zip
+      - name: Upload Java Jar
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./oso-java.zip
+          asset_name: oso-java-${{ steps.version.outputs.oso_version }}.zip
+          asset_content_type: application/zip
+      - name: Upload Js Package
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./oso_js_node/oso-${{ steps.version.outputs.oso_version }}.tgz
+          asset_name: oso-js-node-${{ steps.version.outputs.oso_version }}.tgz
+          asset_content_type: application/gzip
+      - name: Upload go package
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./go-oso.zip
+          asset_name: go-oso-${{ steps.version.outputs.oso_version }}.zip
+          asset_content_type: application/zip
+  # TODO(gj): update this to post to Quill or a private channel on community Slack.
+  alert-failure:
+    name: Alert on failure
+    if: ${{ !success() }}
+    runs-on: ubuntu-latest
+    needs:
+      [
+        validate_python_linux,
+        validate_python_macos_old,
+        validate_python_macos_11,
+        validate_python_macos_arm,
+        validate_python_windows,
+        validate_python_musl,
+        validate_ruby,
+        validate_java,
+        validate_js,
+        validate_go,
+        validate_go_macos_arm,
+        test_quickstarts,
+      ]
+    steps:
+      - uses: rtCamp/action-slack-notify@master
+        env:
+          SLACK_CHANNEL: firehose
+          SLACK_COLOR: "danger"
+          SLACK_MESSAGE: "${{ github.event.head_commit.url }}"
+          SLACK_TITLE: "Release job failed."
+          SLACK_USERNAME: github-actions
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_TO_FIREHOSE }}
