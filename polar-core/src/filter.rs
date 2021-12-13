@@ -9,6 +9,7 @@ use crate::{
     error::{invalid_state_error, RuntimeError},
     events::ResultEvent,
     terms::*,
+    normalize::*,
 };
 
 use serde::Serialize;
@@ -145,10 +146,53 @@ impl Filter {
             eprintln!("\n==Bindings==")
         }
 
+        impl Term {
+            pub fn vectorize(self) -> Vec<Self> {
+                let it = self.dnf().or_of_ands();
+                eprintln!("{:?}", it.iter().map(|t|t.to_polar()).collect::<Vec<_>>());
+                it
+            }
+
+            fn or_of_ands(mut self) -> Vec<Self> {
+                use Operator::*;
+                match self.value().as_expression() {
+                    Ok(Operation { operator, args }) if *operator == Or =>{
+                        args.iter().flat_map(|or| {
+                            or.clone().or_of_ands()
+                        }).collect()
+                    },
+                    _ =>  {
+                        let args = self.clone().ands();
+                        self.replace_value(Value::Expression(Operation {
+                            operator: And,
+                            args,
+                        }));
+                        vec![self]
+                    }
+                }
+            }
+
+            fn ands(self) -> Vec<Self> {
+                use Operator::*;
+                match self.value().as_expression() {
+                    Ok(Operation { operator, args }) if *operator == And => {
+                        args.iter().flat_map(|and| {
+                            and.clone().ands()
+                        }).collect()
+                    },
+                    _ => vec![self],
+                }
+            }
+        }
+
         let var = Symbol(var.to_string());
+        let ors: Vec<Term> = ors.into_iter().map(|or| {
+            or.bindings.get(&var).unwrap().clone()
+        }).reduce(or_).unwrap().vectorize();
+
         let filter = ors
             .into_iter()
-            .map(|ands| Self::from_result_event(&types, ands, &var, class))
+            .map(|ands| Self::from_partial(&types, ands, class))
             .reduce(|l, r| Ok(l?.union(r?)))
             .unwrap_or_else(|| Ok(Self::empty(class)))?;
 
@@ -159,19 +203,8 @@ impl Filter {
         Ok(filter)
     }
 
-    fn from_result_event(
-        types: &TypeInfo,
-        ands: ResultEvent,
-        var: &Symbol,
-        class: &str,
-    ) -> FilterResult<Self> {
-        ands.bindings
-            .get(var)
-            .map(|ands| Self::from_partial(types, ands, class))
-            .unwrap_or_else(|| invalid_state_error(format!("unbound variable: {}", var.0)))
-    }
 
-    fn from_partial(types: &TypeInfo, ands: &Term, class: &str) -> FilterResult<Self> {
+    fn from_partial(types: &TypeInfo, ands: Term, class: &str) -> FilterResult<Self> {
         use {Datum::*, Operator::*, Value::*};
 
         if std::env::var("POLAR_EXPLAIN").is_ok() {
@@ -574,6 +607,8 @@ where
 mod test {
     use super::*;
 
+    type TestResult = Result<(), RuntimeError>;
+
     #[test]
     fn test_dup_reln() {
         let s = String::from;
@@ -616,7 +651,7 @@ mod test {
     }
 
     #[test]
-    fn test_in() {
+    fn test_in() -> TestResult {
         let types = hashmap! {
             String::from("Resource") => hashmap!{
                 String::from("foos") => Type::Relation {
@@ -641,7 +676,12 @@ mod test {
             ))
         })];
 
-        let filter = Filter::build(types, ors, "resource", "Resource").unwrap();
+        let filter = Filter::build(types, ors, "resource", "Resource");
+        let filter = match filter {
+            Ok(f) => f,
+            Err(e) => panic!("{}", e),
+        };
+
 
         let Filter {
             root,
@@ -650,6 +690,7 @@ mod test {
         } = filter;
 
         assert_eq!(&root, "Resource");
+
         assert_eq!(
             relations,
             hashset! {
@@ -663,5 +704,6 @@ mod test {
                 Condition(Datum::Immediate(value!(1)), Comparison::Eq, Datum::Field(Projection(String::from("Foo"), Some(String::from("y")))))
             }]
         );
+        Ok(())
     }
 }

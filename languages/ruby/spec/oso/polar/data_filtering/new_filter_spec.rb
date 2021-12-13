@@ -315,6 +315,17 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           end
         end
 
+        it 'test_forall_not_in_relation' do
+          subject.load_str <<~POL
+            allow(planet: Planet, _, person: Person) if
+              forall(sign in planet.signs, not person in sign.people);
+          POL
+#          require 'pry'; binding.pry
+          query = subject.authorized_query(mars, 'get', Person)
+          expected = Person.joins(:sign).where.not(sign: { name: %w[aries scorpio] })
+          expect(query.to_a).to contain_exactly(*expected)
+        end
+
         it 'test_var_in_value' do
           subject.load_str 'allow(_, _, _: Person{name}) if name in ["leo", "mercury"];'
           query = subject.authorized_query('gwen', 'get', Person)
