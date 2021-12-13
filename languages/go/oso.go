@@ -113,7 +113,7 @@ concrete value of the Go type and a constructor function or nil if no
 constructor is required.
 */
 func (o Oso) RegisterClass(cls interface{}, ctor interface{}) error {
-	return (*o.p).registerClass(cls, ctor, nil)
+	return (*o.p).registerClass(cls, ctor, nil, nil)
 }
 
 /*
@@ -122,7 +122,16 @@ within Polar files by that name. Accepts a concrete value of the Go type and a
 constructor function or nil if no constructor is required.
 */
 func (o Oso) RegisterClassWithName(cls interface{}, ctor interface{}, name string) error {
-	return (*o.p).registerClass(cls, ctor, &name)
+	return (*o.p).registerClass(cls, ctor, &name, nil)
+}
+
+/*
+Register a Go type under a certain name/alias so that it can be referenced
+within Polar files by that name. Accepts a concrete value of the Go type and a
+constructor function or nil if no constructor is required.
+*/
+func (o Oso) RegisterClassWithNameAndFields(cls interface{}, ctor interface{}, name string, fields map[string]interface{}) error {
+	return (*o.p).registerClass(cls, ctor, &name, fields)
 }
 
 /*
@@ -414,42 +423,56 @@ func (o Oso) AuthorizedQuery(actor interface{}, action interface{}, resource_typ
 	constraint := types.Term{
 		Value: types.Value{
 			types.ValueExpression{
-				Operator: types.Operator{types.OperatorAnd{}},
+				Operator: types.Operator{types.OperatorIsa{}},
 				Args: []types.Term{
 					types.Term{
 						Value: types.Value{
-							types.ValueExpression{
-								Operator: types.Operator{types.OperatorIsa{}},
-								Args: []types.Term{
-									types.Term{
-										Value: types.Value{
-											types.ValuePattern{
-												types.PatternInstance{
-													Tag:    types.Symbol(resource_type),
-													Fields: types.Dictionary{Fields: make(map[types.Symbol]types.Term)},
-												},
-											},
-										},
-									},
+							types.ValuePattern{
+								types.PatternInstance{
+									Tag:    types.Symbol(resource_type),
+									Fields: types.Dictionary{Fields: make(map[types.Symbol]types.Term)},
 								},
 							},
 						},
-					}},
+					},
+				},
 			},
 		},
 	}
+	query.Bind("resource", &constraint)
 
-	query.Bind("query", &constraint)
-
+	partials := make([]map[string]map[string]types.Term, 0)
 	for {
 		if v, err := query.Next(); err != nil {
 			return nil, err
 		} else if v == nil {
 			break
 		} else {
-			fmt.Printf("%v\n", v)
+			m := make(map[string]types.Term)
+			for k, v := range *v {
+				polar, err := query.host.ToPolar(v)
+				if err != nil {
+					return nil, err
+				}
+				m[k] = types.Term{Value: *polar}
+			}
+			b := make(map[string]map[string]types.Term, 0)
+			b["bindings"] = m
+			partials = append(partials, b)
 		}
 	}
+	//fmt.Printf("%v", partials)
+
+	types, err := query.host.SerializeTypes()
+	if err != nil {
+		return nil, err
+	}
+	filter, err := (*o.p).ffiPolar.BuildDataFilter(types, partials, "resource", resource_type)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("%v", filter)
+	//return (*o.p).host.BuildQuery(filter)
 
 	return nil, nil
 }

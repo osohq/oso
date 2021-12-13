@@ -21,10 +21,19 @@ func getOso(t *testing.T) oso.Oso {
 		t.Fatalf("Failed to set up Oso: %v", err)
 	}
 
-	o.RegisterClass(reflect.TypeOf(User{}), nil)
-	o.RegisterClass(reflect.TypeOf(Widget{}), nil)
-	o.RegisterClass(reflect.TypeOf(Company{}), nil)
-	o.RegisterClass(reflect.TypeOf(Request{}), nil)
+	o.RegisterClassWithNameAndFields(reflect.TypeOf(User{}), nil, "User", map[string]interface{}{
+		"Name": "String",
+	})
+	o.RegisterClassWithNameAndFields(reflect.TypeOf(Widget{}), nil, "Widget", map[string]interface{}{
+		"Id": "Integer",
+	})
+	o.RegisterClassWithNameAndFields(reflect.TypeOf(Company{}), nil, "Company", map[string]interface{}{
+		"Id": "Integer",
+	})
+	o.RegisterClassWithNameAndFields(reflect.TypeOf(Request{}), nil, "Request", map[string]interface{}{
+		"Method": "String",
+		"Path":   "String",
+	})
 
 	return o
 }
@@ -205,11 +214,10 @@ func TestAuthorizedQuery(t *testing.T) {
 
 	actor := User{Name: "Sally"}
 	resource := Widget{Id: 1}
-	fmt.Println("is this even what the heck")
-	is, _ := o.IsAllowed(actor, "get", resource)
-	fmt.Printf("can get it: %v\n", is)
+	_, _ = o.IsAllowed(actor, "get", resource)
 
-	_, err = o.AuthorizedQuery(actor, "get", "Widget")
+	results, err := o.AuthorizedQuery(actor, "get", "Widget")
+	fmt.Printf("%v\n", results)
 	if err != nil {
 		t.Fatalf("Failed to get query: %v", err)
 	}

@@ -22,6 +22,7 @@ type Host struct {
 	classes          map[string]reflect.Type
 	constructors     map[string]reflect.Value
 	instances        map[uint64]reflect.Value
+	fields           map[string]map[string]interface{}
 	acceptExpression bool
 }
 
@@ -32,11 +33,13 @@ func NewHost(polar ffi.PolarFfi) Host {
 	}
 	instances := make(map[uint64]reflect.Value)
 	constructors := make(map[string]reflect.Value)
+	fields := make(map[string]map[string]interface{})
 	return Host{
 		ffiPolar:         polar,
 		classes:          classes,
 		instances:        instances,
 		constructors:     constructors,
+		fields:           fields,
 		acceptExpression: false,
 	}
 }
@@ -54,11 +57,16 @@ func (h Host) Copy() Host {
 	for k, v := range h.constructors {
 		constructors[k] = v
 	}
+	fields := make(map[string]map[string]interface{})
+	for k, v := range h.fields {
+		fields[k] = v
+	}
 	return Host{
 		ffiPolar:     h.ffiPolar,
 		classes:      classes,
 		instances:    instances,
 		constructors: constructors,
+		fields:       fields,
 	}
 }
 
@@ -69,7 +77,7 @@ func (h Host) getClass(name string) (*reflect.Type, error) {
 	return nil, errors.NewUnregisteredClassError(name)
 }
 
-func (h Host) CacheClass(cls reflect.Type, name string, constructor reflect.Value) error {
+func (h Host) CacheClass(cls reflect.Type, name string, constructor reflect.Value, fields map[string]interface{}) error {
 	if v, ok := h.classes[name]; ok {
 		return errors.NewDuplicateClassAliasError(name, cls, v)
 	}
@@ -77,6 +85,7 @@ func (h Host) CacheClass(cls reflect.Type, name string, constructor reflect.Valu
 	if constructor.IsValid() {
 		h.constructors[name] = constructor
 	}
+	h.fields[name] = fields
 	return nil
 }
 
@@ -427,11 +436,49 @@ func (h Host) ToGo(v types.Term) (interface{}, error) {
 			Args:     args,
 		}
 		return converted, nil
+	case ValuePattern:
+		return inner, nil
 	}
-
 	return nil, fmt.Errorf("Unexpected Polar type %v", v)
 }
 
 func (h *Host) SetAcceptExpression(acceptExpression bool) {
 	h.acceptExpression = acceptExpression
+}
+
+// sorry bout the type
+func (h *Host) SerializeTypes() (map[string]map[string]map[string]map[string]string, error) {
+	type_map := make(map[string]map[string]map[string]map[string]string, 0)
+
+	fmt.Print("types")
+	for typ, fields := range h.fields {
+		fields_map := make(map[string]map[string]map[string]string, 0)
+		for k, v := range fields {
+			switch t := v.(type) {
+			case string:
+				// chill
+				fields_map[k] = map[string]map[string]string{
+					"Base": {
+						"class_tag": t,
+					},
+				}
+
+			case types.Relation:
+				// chill
+				fields_map[k] = map[string]map[string]string{
+					"Relation": {
+						"kind":            t.Kind,
+						"other_class_tag": t.OtherType,
+						"my_field":        t.MyField,
+						"other_field":     t.OtherField,
+					},
+				}
+			default:
+				// error, this aint good
+			}
+		}
+		type_map[typ] = fields_map
+	}
+
+	return type_map, nil
 }
