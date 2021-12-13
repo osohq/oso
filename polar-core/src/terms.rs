@@ -137,13 +137,34 @@ pub enum Value {
     Number(Numeric),
     String(String),
     Boolean(bool),
-    ExternalInstance(ExternalInstance),
+
     Dictionary(Dictionary),
-    Pattern(Pattern),
-    Call(Call),
     List(TermList),
+
+    // an instance in the host language that is comprised entirely of Polar
+    // primitives and collection types will NOT be serialized as an
+    // ExternalInstance.
+
+    // Classes from the host language
+    //   - Either built into the language, such as `String` in Ruby
+    //   - Or coming from some library, like `ActiveRecord::Base`
+    //   - Or user-defined, like `Organization`
+    // Instances from the host language
+    //   - of a
+    //   - any primitives from the host language that don't fall into the Number/String/Boolean buckets
+    //     - e.g., `nil` (`null` in JS / `nil` in Ruby / `None` in Python / etc.);
+    //       `undefined` in JS, which is distinct from `null`; ES6 Map/Set; Math
+    //       / any stdlib classes or instances thereof that aren't registered as
+    //       one of our primitive or collection types.
+    ExternalInstance(ExternalInstance),
+
+    Pattern(Pattern),
+
+    Call(Call), // allow() || foo.get_whatevers()
+
     Variable(Symbol),
     RestVariable(Symbol),
+
     Expression(Operation),
 }
 
