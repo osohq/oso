@@ -19,7 +19,6 @@ libs = []
 if sys.platform.startswith("win"):
     libs.append(lib_dirs[env] + "/polar.lib")
     libs.append("Ws2_32.lib")
-    libs.append("advapi32.lib")
     libs.append("userenv.lib")
     libs.append("bcrypt.lib")
 else:
