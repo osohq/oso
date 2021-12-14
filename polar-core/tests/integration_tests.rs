@@ -49,8 +49,8 @@ fn no_isa(_: Term, _: Symbol) -> bool {
     true
 }
 
-fn no_is_subspecializer(_: u64, _: Symbol, _: Symbol) -> bool {
-    false
+fn no_is_subspecializer(_: u64, a: Symbol, b: Symbol) -> bool {
+    a == b
 }
 
 #[allow(clippy::too_many_arguments)]

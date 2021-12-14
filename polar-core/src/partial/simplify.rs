@@ -1,11 +1,16 @@
-use std::collections::{HashMap, HashSet};
-use std::fmt;
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+};
 
-use crate::bindings::Bindings;
-use crate::error::RuntimeError;
-use crate::folder::{fold_term, Folder};
-use crate::formatting::ToPolarString;
-use crate::terms::*;
+use crate::{
+    bindings::Bindings,
+    error::RuntimeError,
+    filter::singleton,
+    folder::{fold_term, Folder},
+    formatting::ToPolarString,
+    terms::*,
+};
 
 use super::partial::{invert_operation, FALSE, TRUE};
 
@@ -67,6 +72,20 @@ impl Folder for VariableSubber {
     }
 }
 
+pub fn sub_vars(vars: HashMap<Symbol, Symbol>, term: Term) -> Term {
+    struct VarSub(HashMap<Symbol, Symbol>);
+    impl Folder for VarSub {
+        fn fold_variable(&mut self, v: Symbol) -> Symbol {
+            self.0.get(&v).cloned().unwrap_or(v)
+        }
+        fn fold_rest_variable(&mut self, v: Symbol) -> Symbol {
+            self.fold_variable(v)
+        }
+    }
+
+    VarSub(vars).fold_term(term)
+}
+
 /// Substitute `sym!("_this")` for a variable in a partial.
 pub fn sub_this(this: Symbol, term: Term) -> Term {
     if term
@@ -82,27 +101,24 @@ pub fn sub_this(this: Symbol, term: Term) -> Term {
 
 /// Turn `_this = x` into `x` when it's ground.
 fn simplify_trivial_constraint(this: Symbol, term: Term) -> Term {
+    use {Operator::*, Value::*};
     match term.value() {
-        Value::Expression(o) if o.operator == Operator::Unify => {
+        Expression(o) if o.operator == Unify => {
             let left = &o.args[0];
             let right = &o.args[1];
             match (left.value(), right.value()) {
-                (Value::Variable(v), Value::Variable(w))
-                | (Value::Variable(v), Value::RestVariable(w))
-                | (Value::RestVariable(v), Value::Variable(w))
-                | (Value::RestVariable(v), Value::RestVariable(w))
-                    if v == &this && w == &this =>
+                (Variable(v), Variable(w))
+                | (Variable(v), RestVariable(w))
+                | (RestVariable(v), Variable(w))
+                | (RestVariable(v), RestVariable(w))
+                    if v == w =>
                 {
                     TRUE.into()
                 }
-                (Value::Variable(l), _) | (Value::RestVariable(l), _)
-                    if l == &this && right.is_ground() =>
-                {
+                (Variable(l), _) | (RestVariable(l), _) if l == &this && right.is_ground() => {
                     right.clone()
                 }
-                (_, Value::Variable(r)) | (_, Value::RestVariable(r))
-                    if r == &this && left.is_ground() =>
-                {
+                (_, Variable(r)) | (_, RestVariable(r)) if r == &this && left.is_ground() => {
                     left.clone()
                 }
                 _ => term,
@@ -155,9 +171,7 @@ pub fn simplify_bindings_opt(bindings: Bindings, all: bool) -> Result<Option<Bin
         Value::Expression(o) => {
             assert_eq!(o.operator, Operator::And);
             let output_vars = if all {
-                let mut hs = HashSet::with_capacity(1);
-                hs.insert(var.clone());
-                hs
+                singleton(var.clone())
             } else {
                 bindings
                     .keys()

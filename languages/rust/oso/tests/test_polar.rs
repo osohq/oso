@@ -969,3 +969,26 @@ fn test_rule_types() {
         })
     ));
 }
+
+#[test]
+fn test_exclusive_isa() {
+    common::setup();
+    let mut oso = test_oso();
+    oso.qnull("x matches Integer and x matches String");
+    oso.qnull("x.a matches Integer and x.a matches String");
+    let policy = r#"
+        foo(x: Integer) if x matches String;
+        boo(x) if x.a matches String and x.a matches Integer;
+        moo(x: Integer) if y matches String and y = x;
+        goo(x) if x.a matches String and y.a matches Integer and x = y;
+
+    "#;
+    oso.load_str(policy);
+    oso.qnull("foo(x)");
+    oso.qnull("boo(x)");
+    oso.qnull("goo(x)");
+    oso.qnull("moo(x)");
+    // TODO(gw) support expressions
+    // oso.qeval("x matches Integer and y matches String");
+    // oso.qeval("x.a matches Integer and x.b matches String");
+}

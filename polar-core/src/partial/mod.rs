@@ -4,4 +4,6 @@ mod partial;
 mod simplify;
 
 pub use isa_constraint_check::IsaConstraintCheck;
-pub use simplify::{simplify_bindings, simplify_bindings_opt, simplify_partial, sub_this};
+pub use simplify::{
+    simplify_bindings, simplify_bindings_opt, simplify_partial, sub_this, sub_vars,
+};
