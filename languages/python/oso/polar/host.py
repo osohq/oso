@@ -225,8 +225,7 @@ class Host:
             instance_id = int(match[1])
             try:
                 instance = self.get_instance(instance_id)
-                unregistered = not type(instance).__name__ in self.types
-                return f"{repr(instance)} {'UNREGISTERED ' if unregistered else ''}TYPE `{type(instance).__name__}`"
+                return repr(instance)
             except UnregisteredInstanceError:
                 return match[0]
 
@@ -306,10 +305,15 @@ class Host:
                 if v in self.types:
                     instance_id = self.types[v].id
 
+            # pass the class_repr only for registered types otherwise None
+            class_repr = type(v).__name__
+            class_repr = class_repr if class_repr in self.types else None
+
             val = {
                 "ExternalInstance": {
                     "instance_id": self.cache_instance(v, instance_id),
                     "repr": None,
+                    "class_repr": class_repr
                 }
             }
         term = {"value": val}

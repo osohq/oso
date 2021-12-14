@@ -402,12 +402,20 @@ pub mod to_polar {
     impl ToPolarString for ExternalInstance {
         fn to_polar(&self) -> String {
             if let Some(ref repr) = self.repr {
-                repr.clone()
+                format!(
+                    "{} TYPE `{}`",
+                    repr.clone(),
+                    self.class_repr.as_ref().unwrap_or(&"UNKNOWN".to_string())
+                )
             } else {
                 // Print out external instances like ^{id: 123}
                 // NOTE: this format is used by host libraries to enrich output
                 // messages with native representations of the instances.
-                format!("^{{id: {}}}", self.instance_id)
+                format!(
+                    "^{{id: {}}} TYPE `{}`",
+                    self.instance_id,
+                    self.class_repr.as_ref().unwrap_or(&"UNKNOWN".to_string())
+                )
             }
         }
     }

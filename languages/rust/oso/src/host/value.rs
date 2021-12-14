@@ -110,8 +110,9 @@ This may mean you performed an operation in your policy over an unbound variable
                 let id = host.cache_instance(instance.clone(), None);
                 Value::ExternalInstance(ExternalInstance {
                     constructor: None,
-                    repr: Some(std::any::type_name::<Self>().to_owned()),
                     instance_id: id,
+                    repr: Some(std::any::type_name::<Self>().to_owned()),
+                    class_repr: None,
                 })
             }
             PolarValue::List(l) => {

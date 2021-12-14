@@ -43,6 +43,7 @@ pub struct ExternalInstance {
     pub instance_id: u64,
     pub constructor: Option<Term>,
     pub repr: Option<String>,
+    pub class_repr: Option<String>,
 }
 
 // Context stored somewhere by id.

@@ -1736,11 +1736,22 @@ impl PolarVirtualMachine {
                 let constructor = args.pop().unwrap();
 
                 let instance_id = self.new_id();
+                let class_repr = if self
+                    .kb
+                    .read()
+                    .unwrap()
+                    .is_constant(&constructor.value().as_symbol().unwrap())
+                {
+                    Some(constructor.to_polar())
+                } else {
+                    None
+                };
                 let instance =
                     constructor.clone_with_value(Value::ExternalInstance(ExternalInstance {
                         instance_id,
                         constructor: Some(constructor.clone()),
                         repr: Some(constructor.to_polar()),
+                        class_repr,
                     }));
 
                 // A goal is used here in case the result is already bound to some external

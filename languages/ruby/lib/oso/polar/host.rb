@@ -393,8 +393,7 @@ module Oso
 
       def enrich_message(msg)
         msg.gsub(/\^\{id: ([0-9]+)\}/) do
-          instance = get_instance(Regex.last_match[1].to_i)
-          "#{instance} TYPE `#{instance.class}`"
+          get_instance(Regexp.last_match[1].to_i).to_s
         end
       end
 
