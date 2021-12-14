@@ -994,7 +994,7 @@ mod test {
         assert_partial_expression!(
             next_binding(&mut q)?,
             "x",
-            "_this + 0 = __op_1_5 and _this + 0 = _this"
+            "_this + 0 = _this"
         );
         assert_query_done!(q);
         Ok(())
