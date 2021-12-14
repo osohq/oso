@@ -3073,4 +3073,11 @@ type Filter struct {
 	Relations []FilterRelation `json:"relations"`
 	// Conditions
 	Conditions [][]FilterCondition `json:"conditions"`
+	// Types
+	Types map[string]map[string]interface{}
+}
+
+type Adapter interface {
+	BuildQuery(*Filter) (interface{}, error)
+	ExecQuery(interface{}) ([]interface{}, error)
 }

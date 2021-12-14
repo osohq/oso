@@ -407,16 +407,15 @@ func (o Oso) AuthorizedFields(actor interface{}, action interface{}, resource in
 	return results, nil
 }
 
-/*
+func (o Oso) SetDataFilteringAdapter(adapter *types.Adapter) {
+	(*o.p).host.SetDataFilteringAdapter(adapter)
+}
 
- */
-func (o Oso) AuthorizedQuery(actor interface{}, action interface{}, resource_type string) (interface{}, error) {
-	//results := make(map[interface{}]struct{})
+func (o Oso) dataFilter(actor interface{}, action interface{}, resource_type string) (*Query, interface{}, error) {
 	query, err := (*o.p).queryRule("allow", actor, action, types.Variable("resource"))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	_ = query
 
 	query.SetAcceptExpression(true)
 
@@ -459,7 +458,7 @@ func (o Oso) AuthorizedQuery(actor interface{}, action interface{}, resource_typ
 	partials := make([]map[string]map[string]types.Term, 0)
 	for {
 		if v, err := query.Next(); err != nil {
-			return nil, err
+			return nil, nil, err
 		} else if v == nil {
 			break
 		} else {
@@ -467,7 +466,7 @@ func (o Oso) AuthorizedQuery(actor interface{}, action interface{}, resource_typ
 			for k, v := range *v {
 				polar, err := query.host.ToPolar(v)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 				m[k] = types.Term{Value: *polar}
 			}
@@ -477,17 +476,36 @@ func (o Oso) AuthorizedQuery(actor interface{}, action interface{}, resource_typ
 		}
 	}
 
-	types, err := query.host.SerializeTypes()
+	types, types_json, err := query.host.SerializeTypes()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	filter, err := (*o.p).ffiPolar.BuildDataFilter(types, partials, "resource", resource_type)
+	filter, err := (*o.p).ffiPolar.BuildDataFilter(types_json, partials, "resource", resource_type)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	fmt.Printf("\nFilter: %v\n", filter)
+	filter.Types = types
+	q, err := query.host.BuildQuery(filter)
+	if err != nil {
+		return nil, nil, err
+	}
+	return query, q, nil
+}
 
-	return nil, nil
+/*
+
+ */
+func (o Oso) AuthorizedQuery(actor interface{}, action interface{}, resource_type string) (interface{}, error) {
+	_, q, err := o.dataFilter(actor, action, resource_type)
+	return q, err
+}
+
+func (o Oso) AuthorizedResources(actor interface{}, action interface{}, resource_type string) ([]interface{}, error) {
+	query, q, err := o.dataFilter(actor, action, resource_type)
+	if err != nil {
+		return nil, err
+	}
+	return query.host.ExecQuery(q)
 }
 
 /*

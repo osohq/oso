@@ -24,6 +24,7 @@ type Host struct {
 	instances        map[uint64]reflect.Value
 	fields           map[string]map[string]interface{}
 	acceptExpression bool
+	adapter          *Adapter
 }
 
 func NewHost(polar ffi.PolarFfi) Host {
@@ -41,6 +42,7 @@ func NewHost(polar ffi.PolarFfi) Host {
 		constructors:     constructors,
 		fields:           fields,
 		acceptExpression: false,
+		adapter:          nil,
 	}
 }
 
@@ -67,6 +69,7 @@ func (h Host) Copy() Host {
 		instances:    instances,
 		constructors: constructors,
 		fields:       fields,
+		adapter:      h.adapter,
 	}
 }
 
@@ -447,10 +450,9 @@ func (h *Host) SetAcceptExpression(acceptExpression bool) {
 }
 
 // sorry bout the type
-func (h *Host) SerializeTypes() (map[string]map[string]map[string]map[string]string, error) {
+func (h *Host) SerializeTypes() (map[string]map[string]interface{}, map[string]map[string]map[string]map[string]string, error) {
 	type_map := make(map[string]map[string]map[string]map[string]string, 0)
 
-	fmt.Print("types")
 	for typ, fields := range h.fields {
 		fields_map := make(map[string]map[string]map[string]string, 0)
 		for k, v := range fields {
@@ -480,5 +482,25 @@ func (h *Host) SerializeTypes() (map[string]map[string]map[string]map[string]str
 		type_map[typ] = fields_map
 	}
 
-	return type_map, nil
+	return h.fields, type_map, nil
+}
+
+func (h *Host) SetDataFilteringAdapter(adapter *Adapter) {
+	h.adapter = adapter
+}
+
+func (h *Host) BuildQuery(filter *Filter) (interface{}, error) {
+	if h.adapter == nil {
+		return nil, fmt.Errorf("must register an adapter to use data filtering")
+	}
+
+	return (*h.adapter).BuildQuery(filter)
+}
+
+func (h *Host) ExecQuery(query interface{}) ([]interface{}, error) {
+	if h.adapter == nil {
+		return nil, fmt.Errorf("must register an adapter to use data filtering")
+	}
+
+	return (*h.adapter).ExecQuery(query)
 }
