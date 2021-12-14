@@ -232,8 +232,8 @@ func (p PolarFfi) RegisterMro(name string, mro []uint64) error {
 }
 
 // yeah, not ideal types yet lol
-func (p PolarFfi) BuildDataFilter(types map[string]map[string]map[string]map[string]string, partials []map[string]map[string]types.Term, resource_var string, resource_type string) (*string, error) {
-	cTypes, err := ffiSerialize(types)
+func (p PolarFfi) BuildDataFilter(user_types map[string]map[string]map[string]map[string]string, partials []map[string]map[string]types.Term, resource_var string, resource_type string) (*types.Filter, error) {
+	cTypes, err := ffiSerialize(user_types)
 	defer C.free(unsafe.Pointer(cTypes))
 	if err != nil {
 		return nil, err
@@ -247,9 +247,20 @@ func (p PolarFfi) BuildDataFilter(types map[string]map[string]map[string]map[str
 	defer C.free(unsafe.Pointer(cVar))
 	cType := C.CString(resource_type)
 	defer C.free(unsafe.Pointer(cType))
-	filter, err := checkResultString(C.polar_build_data_filter(p.ptr, cTypes, cPartials, cVar, cType))
+	filterJson, err := checkResultString(C.polar_build_data_filter(p.ptr, cTypes, cPartials, cVar, cType))
+	if err != nil {
+		panic(err)
+	}
+
 	processMessages(p)
-	return filter, err
+
+	var filter types.Filter
+	err = json.Unmarshal([]byte(*filterJson), &filter)
+	if err != nil {
+		panic(err)
+	}
+
+	return &filter, err
 }
 
 type QueryFfi struct {

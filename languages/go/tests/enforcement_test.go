@@ -7,6 +7,7 @@ import (
 
 	oso "github.com/osohq/go-oso"
 	"github.com/osohq/go-oso/errors"
+	"github.com/osohq/go-oso/types"
 )
 
 type Request struct {
@@ -26,6 +27,12 @@ func getOso(t *testing.T) oso.Oso {
 	})
 	o.RegisterClassWithNameAndFields(reflect.TypeOf(Widget{}), nil, "Widget", map[string]interface{}{
 		"Id": "Integer",
+		"Parent": types.Relation{
+			Kind:       "one",
+			OtherType:  "Company",
+			MyField:    "CompanyId",
+			OtherField: "Id",
+		},
 	})
 	o.RegisterClassWithNameAndFields(reflect.TypeOf(Company{}), nil, "Company", map[string]interface{}{
 		"Id": "Integer",
@@ -149,7 +156,7 @@ func TestAuthorizeField(t *testing.T) {
 
 	admin := User{"admin"}
 	guest := User{"guest"}
-	widget := Widget{0}
+	widget := Widget{0, 0}
 
 	if err = o.AuthorizeField(admin, "update", widget, "purpose"); err != nil {
 		t.Errorf("Authorize returned error for allowed action: %v", err)
@@ -210,7 +217,7 @@ func TestAuthorizedQuery(t *testing.T) {
 	o := getOso(t)
 	var err error
 
-	o.LoadString("allow(_actor: User, \"get\", resource: Widget) if resource.Id = 1;")
+	o.LoadString("allow(_actor: User, \"get\", resource: Widget) if resource.Parent.Id = 1;")
 
 	actor := User{Name: "Sally"}
 	resource := Widget{Id: 1}
@@ -222,7 +229,6 @@ func TestAuthorizedQuery(t *testing.T) {
 		t.Fatalf("Failed to get query: %v", err)
 	}
 }
-
 func TestAuthorizedFields(t *testing.T) {
 	o := getOso(t)
 	var res map[interface{}]struct{}
@@ -242,7 +248,7 @@ func TestAuthorizedFields(t *testing.T) {
 
 	admin := User{"admin"}
 	guest := User{"guest"}
-	widget := Widget{0}
+	widget := Widget{0, 0}
 
 	// Admins should be able to update all fields
 	res, _ = o.AuthorizedFields(admin, "update", widget, false)

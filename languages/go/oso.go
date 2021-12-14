@@ -466,7 +466,6 @@ func (o Oso) AuthorizedQuery(actor interface{}, action interface{}, resource_typ
 			m := make(map[string]types.Term)
 			for k, v := range *v {
 				polar, err := query.host.ToPolar(v)
-				fmt.Printf("\nTHE POLAR %v\n", polar)
 				if err != nil {
 					return nil, err
 				}
@@ -477,7 +476,6 @@ func (o Oso) AuthorizedQuery(actor interface{}, action interface{}, resource_typ
 			partials = append(partials, b)
 		}
 	}
-	//fmt.Printf("%v", partials)
 
 	types, err := query.host.SerializeTypes()
 	if err != nil {
@@ -487,8 +485,7 @@ func (o Oso) AuthorizedQuery(actor interface{}, action interface{}, resource_typ
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("%v", filter)
-	//return (*o.p).host.BuildQuery(filter)
+	fmt.Printf("\nFilter: %v\n", filter)
 
 	return nil, nil
 }
