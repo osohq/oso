@@ -225,7 +225,7 @@ class Host:
             instance_id = int(match[1])
             try:
                 instance = self.get_instance(instance_id)
-                return repr(instance)
+                return f"{repr(instance)} TYPE `{type(instance).__name__}`"
             except UnregisteredInstanceError:
                 return match[0]
 
@@ -298,25 +298,17 @@ class Host:
         #   }
         else:
             instance_id = None
-            class_id = None
             import inspect
 
-            # maintain IDs for registered classes
+            # maintain consistent IDs for registered classes
             if inspect.isclass(v):
                 if v in self.types:
                     instance_id = self.types[v].id
-
-
-            # determine the class|generator of the current instance value
-            instance_class = type(v).__name__
-            if instance_class in self.types:
-                class_id = self.types[instance_class].id
 
             val = {
                 "ExternalInstance": {
                     "instance_id": self.cache_instance(v, instance_id),
                     "repr": None,
-                    "class_id": class_id
                 }
             }
         term = {"value": val}
