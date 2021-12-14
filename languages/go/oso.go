@@ -420,25 +420,40 @@ func (o Oso) AuthorizedQuery(actor interface{}, action interface{}, resource_typ
 
 	query.SetAcceptExpression(true)
 
-	constraint := types.Term{
-		Value: types.Value{
-			types.ValueExpression{
-				Operator: types.Operator{types.OperatorIsa{}},
-				Args: []types.Term{
-					types.Term{
-						Value: types.Value{
-							types.ValuePattern{
-								types.PatternInstance{
-									Tag:    types.Symbol(resource_type),
-									Fields: types.Dictionary{Fields: make(map[types.Symbol]types.Term)},
+	constraint :=
+		types.Term{
+			Value: types.Value{
+				types.ValueExpression{
+					Operator: types.Operator{types.OperatorAnd{}},
+					Args: []types.Term{
+						types.Term{
+							Value: types.Value{
+								types.ValueExpression{
+									Operator: types.Operator{types.OperatorIsa{}},
+									Args: []types.Term{
+										types.Term{
+											Value: types.Value{
+												types.ValueVariable("resource"),
+											},
+										},
+										types.Term{
+											Value: types.Value{
+												types.ValuePattern{
+													types.PatternInstance{
+														Tag:    types.Symbol(resource_type),
+														Fields: types.Dictionary{Fields: make(map[types.Symbol]types.Term)},
+													},
+												},
+											},
+										},
+									},
 								},
 							},
 						},
 					},
 				},
 			},
-		},
-	}
+		}
 	query.Bind("resource", &constraint)
 
 	partials := make([]map[string]map[string]types.Term, 0)
@@ -451,6 +466,7 @@ func (o Oso) AuthorizedQuery(actor interface{}, action interface{}, resource_typ
 			m := make(map[string]types.Term)
 			for k, v := range *v {
 				polar, err := query.host.ToPolar(v)
+				fmt.Printf("\nTHE POLAR %v\n", polar)
 				if err != nil {
 					return nil, err
 				}

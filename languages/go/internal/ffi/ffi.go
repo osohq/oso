@@ -37,7 +37,6 @@ func ffiSerialize(input interface{}) (*C.char, error) {
 	if err != nil {
 		return nil, err
 	}
-	//fmt.Printf("\ninput\n%v\njson\n%v\n", input, string(json))
 	return C.CString(string(json)), nil
 }
 
@@ -248,8 +247,7 @@ func (p PolarFfi) BuildDataFilter(types map[string]map[string]map[string]map[str
 	defer C.free(unsafe.Pointer(cVar))
 	cType := C.CString(resource_type)
 	defer C.free(unsafe.Pointer(cType))
-	fmt.Printf("%v\n%v\n", cPartials, cType)
-	filter, err := checkResultString(C.polar_build_filter_plan(p.ptr, cTypes, cPartials, cVar, cType))
+	filter, err := checkResultString(C.polar_build_data_filter(p.ptr, cTypes, cPartials, cVar, cType))
 	processMessages(p)
 	return filter, err
 }
@@ -330,12 +328,9 @@ func (q QueryFfi) Bind(name string, value *types.Term) error {
 	cName := C.CString(name)
 	defer C.free(unsafe.Pointer(cName))
 
-	f, err := json.Marshal(value)
-	fmt.Printf("%v", string(f[:]))
-
 	var s *C.char
 	//var err error
-	s, err = ffiSerialize(value)
+	s, err := ffiSerialize(value)
 	defer C.free(unsafe.Pointer(s))
 	if err != nil {
 		return err
