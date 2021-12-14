@@ -323,6 +323,16 @@ pub extern "C" fn polar_get_external_id(polar_ptr: *mut Polar) -> u64 {
     polar.get_external_id()
 }
 
+#[no_mangle]
+pub extern "C" fn polar_is_registered_constant(polar_ptr: *mut Polar, name: *const c_char) -> i32 {
+    let polar = unsafe { ffi_ref!(polar_ptr) };
+    let name = unsafe { ffi_string!(name) };
+    if polar.is_registered_constant(terms::Symbol::new(name.as_ref())) {
+        return POLAR_SUCCESS;
+    }
+    POLAR_FAILURE
+}
+
 /// Required to free strings properly
 #[no_mangle]
 pub extern "C" fn string_free(s: *mut c_char) -> i32 {

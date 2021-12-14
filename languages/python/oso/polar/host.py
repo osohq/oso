@@ -225,7 +225,8 @@ class Host:
             instance_id = int(match[1])
             try:
                 instance = self.get_instance(instance_id)
-                return f"{repr(instance)} TYPE `{type(instance).__name__}`"
+                unregistered = not self.ffi_polar.is_registered_constant(type(instance).__name__)
+                return f"{repr(instance)} {'UNREGISTERED ' if unregistered else ''}TYPE `{type(instance).__name__}`"
             except UnregisteredInstanceError:
                 return match[0]
 

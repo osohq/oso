@@ -99,6 +99,10 @@ class Polar:
         self.process_messages()
         self.check_result(result)
 
+    def is_registered_constant(self, name):
+        name = to_c_str(name)
+        return lib.polar_is_registered_constant(self.ptr, name)
+
     def next_message(self):
         return lib.polar_next_polar_message(self.ptr)
 

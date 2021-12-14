@@ -260,6 +260,10 @@ impl Polar {
         self.kb.write().unwrap().register_constant(name, value)
     }
 
+    pub fn is_registered_constant(&self, name: Symbol) -> bool {
+        self.kb.read().unwrap().is_constant(&name)
+    }
+
     /// Register MRO for `name` with `mro`.
     ///
     /// Params:
