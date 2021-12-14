@@ -56,11 +56,11 @@ impl fmt::Display for Context {
 }
 
 impl Context {
-    pub fn source_file_and_line(&self) -> String {
+    pub(crate) fn source_file_and_line(&self) -> String {
         let mut f = String::new();
         let Position { row, column } = self.range.start;
         f += &format!(" at line {}, column {}", row + 1, column + 1);
-        if let Some(ref filename) = &self.source.filename {
+        if let Some(ref filename) = self.source.filename {
             f += &format!(" of file {}", filename);
         }
         f

@@ -314,11 +314,7 @@ pub mod display {
 
     impl Rule {
         pub fn head_as_string(&self) -> String {
-            format!(
-                "{}({})",
-                self.name.to_polar(),
-                format_params(&self.params, ", ")
-            )
+            format!("{}({})", self.name, format_params(&self.params, ", "))
         }
     }
 
