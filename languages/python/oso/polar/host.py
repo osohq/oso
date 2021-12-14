@@ -272,7 +272,9 @@ class Host:
                     "args": [self.to_polar(v) for v in v.args],
                 }
             }
-        # basically only used in data filtering (seeding the authorized_query() call with an initial type binding so we know what type of resources we're trying to determine access for)
+        # basically only used in data filtering (seeding the authorized_query()
+        # call with an initial type binding so we know what type of resources
+        # we're trying to determine access for)
         elif isinstance(v, Pattern):
             if v.tag is None:
                 val = {"Pattern": self.to_polar(v.fields)["value"]}
@@ -313,7 +315,7 @@ class Host:
                 "ExternalInstance": {
                     "instance_id": self.cache_instance(v, instance_id),
                     "repr": None,
-                    "class_repr": class_repr
+                    "class_repr": class_repr,
                 }
             }
         term = {"value": val}
