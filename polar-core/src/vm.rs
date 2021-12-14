@@ -794,10 +794,6 @@ impl PolarVirtualMachine {
         }
     }
 
-    fn log(&self, message: &str, terms: &[&Term]) {
-        self.log_with(LogLevel::Info, || message, terms)
-    }
-
     fn log_with<F, R>(&self, level: LogLevel, message_fn: F, terms: &[&Term])
     where
         F: FnOnce() -> R,
@@ -1736,12 +1732,9 @@ impl PolarVirtualMachine {
                 let constructor = args.pop().unwrap();
 
                 let instance_id = self.new_id();
-                let class_repr = if self
-                    .kb
-                    .read()
-                    .unwrap()
-                    .is_constant(&constructor.value().as_symbol().unwrap())
-                {
+
+                let class = &constructor.value().as_call().unwrap().name;
+                let class_repr = if self.kb.read().unwrap().is_constant(class) {
                     Some(constructor.to_polar())
                 } else {
                     None
@@ -3097,7 +3090,7 @@ impl Runnable for PolarVirtualMachine {
                 right: value,
             })?;
         } else {
-            self.log("=> No more results.", &[]);
+            self.log_with(LogLevel::Trace, || "=> No more results.", &[]);
 
             // No more results. Clean up, cut out the retry alternative,
             // and backtrack.
@@ -3755,6 +3748,7 @@ mod tests {
             instance_id: 1,
             constructor: None,
             repr: None,
+            class_repr: None,
         });
         let query = query!(call!("bar", [sym!("x")]));
         let mut vm = PolarVirtualMachine::new_test(kb.clone(), false, vec![query]);
@@ -3828,6 +3822,7 @@ mod tests {
             instance_id: 1,
             constructor: None,
             repr: None,
+            class_repr: None,
         });
 
         let mut vm = PolarVirtualMachine::new_test(
@@ -3894,6 +3889,7 @@ mod tests {
             instance_id: 1,
             constructor: None,
             repr: None,
+            class_repr: None,
         }));
         let left = term!(value!(Pattern::Instance(InstanceLiteral {
             tag: sym!("Any"),

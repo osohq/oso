@@ -270,6 +270,7 @@ mod tests {
             instance_id: 1,
             constructor: None,
             repr: None,
+            class_repr: None,
         }));
         let instance_pattern = term!(value!(Pattern::Instance(InstanceLiteral {
             tag: sym!("d"),

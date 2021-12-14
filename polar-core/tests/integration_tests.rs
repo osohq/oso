@@ -1612,6 +1612,7 @@ fn test_missing_resource_hint() -> TestResult {
         instance_id: 1,
         constructor: None,
         repr: None,
+        class_repr: None,
     };
     let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
     let repo_name = sym!("Repository");
@@ -1622,6 +1623,7 @@ fn test_missing_resource_hint() -> TestResult {
         instance_id: 2,
         constructor: None,
         repr: None,
+        class_repr: None,
     };
     let organization_term = term!(Value::ExternalInstance(organization_instance.clone()));
     let organization_name = sym!("Organization");
@@ -1632,6 +1634,7 @@ fn test_missing_resource_hint() -> TestResult {
         instance_id: 3,
         constructor: None,
         repr: None,
+        class_repr: None,
     };
     let user_term = term!(Value::ExternalInstance(user_instance.clone()));
     let user_name = sym!("User");
@@ -2529,6 +2532,7 @@ fn test_suggested_rule_specializer() -> TestResult {
         instance_id: 1,
         constructor: None,
         repr: None,
+        class_repr: None,
     };
     let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
     let repo_name = sym!("Repository");
@@ -2539,6 +2543,7 @@ fn test_suggested_rule_specializer() -> TestResult {
         instance_id: 2,
         constructor: None,
         repr: None,
+        class_repr: None,
     };
     let user_term = term!(Value::ExternalInstance(user_instance.clone()));
     let user_name = sym!("User");
@@ -2580,6 +2585,7 @@ fn test_missing_required_rule_type() -> TestResult {
         instance_id: 1,
         constructor: None,
         repr: None,
+        class_repr: None,
     };
     let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
     let repo_name = sym!("Repository");
@@ -2590,6 +2596,7 @@ fn test_missing_required_rule_type() -> TestResult {
         instance_id: 2,
         constructor: None,
         repr: None,
+        class_repr: None,
     };
     let issue_term = term!(Value::ExternalInstance(issue_instance.clone()));
     let issue_name = sym!("Issue");
@@ -2600,6 +2607,7 @@ fn test_missing_required_rule_type() -> TestResult {
         instance_id: 3,
         constructor: None,
         repr: None,
+        class_repr: None,
     };
     let user_term = term!(Value::ExternalInstance(user_instance.clone()));
     let user_name = sym!("User");
