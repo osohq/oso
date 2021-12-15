@@ -279,18 +279,18 @@ public class Host implements Cloneable {
         instanceId = classIds.get(value);
       }
 
-
       attrs.put("instance_id", cacheInstance(value, instanceId));
       attrs.put("repr", value == null ? "null" : value.toString());
 
       // pass a class_repr string *for registered types only*
       if (value != null) {
-          Class classFromValue = value.getClass();
-          String stringifiedClassFromValue = classFromValue.toString();
-          stringifiedClassFromValue = classIds.containsKey(classFromValue) ? stringifiedClassFromValue : "null";
-          attrs.put("class_repr", stringifiedClassFromValue);
-       } else {
-           attrs.put("class_repr", "null");
+        Class classFromValue = value.getClass();
+        String stringifiedClassFromValue = classFromValue.toString();
+        stringifiedClassFromValue =
+            classIds.containsKey(classFromValue) ? stringifiedClassFromValue : "null";
+        attrs.put("class_repr", stringifiedClassFromValue);
+      } else {
+        attrs.put("class_repr", "null");
       }
 
       jVal.put("ExternalInstance", attrs);
