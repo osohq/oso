@@ -232,9 +232,9 @@ impl<'kb> Folder for Rewriter<'kb> {
 fn only_pure(rewrites: &[Term]) -> bool {
     use Operator::*;
     rewrites.iter().all(|t| {
-        t.value()
-            .as_expression()
-            .map_or(false, |op| matches!(op.operator, Dot | Add | Sub | Mul | Div | Rem))
+        t.value().as_expression().map_or(false, |op| {
+            matches!(op.operator, Dot | Add | Sub | Mul | Div | Rem)
+        })
     })
 }
 

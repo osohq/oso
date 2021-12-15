@@ -6,8 +6,6 @@ use std::collections::{HashMap, HashSet};
 use crate::{
     error::RuntimeError,
     folder::{fold_list, fold_term, Folder},
-    formatting::ToPolarString,
-    partial::sub_vars,
     terms::{has_rest_var, Operation, Operator, Symbol, Term, Value},
     vm::Goal,
 };
@@ -428,98 +426,77 @@ impl BindingManager {
 }
 
 fn combine(left: &Symbol, l: Operation, right: &Symbol, r: Operation) -> Operation {
-    let unis = l
+    use Operator::*;
+    fn unifies_symbols(Operation { operator, args }: &Operation) -> bool {
+        matches!(operator, Operator::Unify if args[0].value().as_symbol().is_ok() && args[1].value().as_symbol().is_ok())
+    }
+
+    let (mut unis, others): (Vec<_>, Vec<_>) = l
         .constraints()
         .into_iter()
         .chain(r.constraints().into_iter())
-        .filter_map(|op| match op {
-            Operation {
-                operator: Operator::Unify,
-                args,
-            } if args.len() == 2
-                && args[0].value().as_symbol().is_ok()
-                && args[1].value().as_symbol().is_ok() =>
-            {
-                Some((
-                    args[0].value().as_symbol().unwrap().clone(),
-                    args[1].value().as_symbol().unwrap().clone(),
-                ))
-            }
-            _ => None,
-        })
-        .chain(std::iter::once((left.clone(), right.clone())));
-    let sub = crate::data_filtering::partition_equivs(unis)
-        .into_iter()
-        .flat_map(|cls| {
-            if let Some(rep) = cls.iter().find(|v| !v.is_temporary_var()) {
-                cls.iter()
-                    .map(|pv| (pv.clone(), rep.clone()))
-                    .collect::<Vec<_>>()
-            } else {
-                cls.iter()
-                    .map(|pv| (pv.clone(), pv.clone()))
-                    .collect::<Vec<_>>()
-            }
-        })
-        .collect::<HashMap<_, _>>();
+        .partition(unifies_symbols);
+    unis.push(op!(Unify, term!(left.clone()), term!(right.clone())));
 
-    let subbed = |o| {
-        sub_vars(sub.clone(), term!(o))
-            .value()
-            .as_expression()
-            .unwrap()
-            .clone()
-    };
-    let base = Operation {
-        operator: Operator::And,
+    let termify = |i: Vec<_>| i.into_iter().map(Term::from).collect();
+    let (unis, others) = (termify(unis), termify(others));
+    Operation {
+        operator: And,
         args: vec![],
-    };
-    base.merge_constraints(subbed(l))
-        .merge_constraints(subbed(r))
+    }
+    .merge_constraints(Operation {
+        operator: And,
+        args: unis,
+    })
+    .merge_constraints(Operation {
+        operator: And,
+        args: others,
+    })
 }
 
 // Private impls.
 impl BindingManager {
     /// Bind two variables together.
     fn bind_variables(&mut self, left: &Symbol, right: &Symbol) -> Result<Option<Goal>> {
-        if left == right {
-            return Ok(None);
-        }
-        let pc = |cy: &Vec<Symbol>| cy.iter().map(|t| t.0.clone()).collect::<Vec<_>>();
         use BindingManagerVariableState::*;
-        let mut goal = None;
         match (
+            // rebinding the variable with its state makes it possible
+            // to handle symmetric cases in one branch
             (left, self._variable_state(left)),
             (right, self._variable_state(right)),
         ) {
-            ((var, Unbound), (_, Bound(val))) | ((_, Bound(val)), (var, Unbound)) => {
-                self.add_binding(var, val);
-            }
+            // same variables, do nothing
+            _ if left == right => Ok(None),
 
-            // Cycles: one or more variables are bound together.
-            ((_, Unbound), (_, Unbound)) if left != right => {
-                // Both variables are unbound. Bind them in a new cycle,
-                // but do not create 1-cycles.
+            // free / cycle cases -- variables are unbound or bound only bound
+            // to other variables
+
+            // free x free --  create a pair of bindings var -> var
+            ((_, Unbound), (_, Unbound)) => {
                 self.add_binding(left, term!(right.clone()));
                 self.add_binding(right, term!(left.clone()));
+                Ok(None)
             }
 
+            // free x cycle, cycle x free -- create a pair of bindings var -> var
             ((var, Unbound), (cvar, Cycle(cycle))) | ((cvar, Cycle(cycle)), (var, Unbound)) => {
-                // Left is in a cycle. Extend it to include right.
                 let last = cycle.last().unwrap();
                 assert_ne!(last, cvar);
                 self.add_binding(last, term!(var.clone()));
                 self.add_binding(var, term!(cvar.clone()));
+                Ok(None)
             }
+
+            // cycle x cycle -- two cases
             ((_, Cycle(left_cycle)), (_, Cycle(right_cycle))) => {
-                // Both variables are in cycles.
                 let iter_left = left_cycle.iter().collect::<HashSet<&Symbol>>();
                 let iter_right = right_cycle.iter().collect::<HashSet<&Symbol>>();
+
+                // already the same cycle? then do nothing
                 if iter_left.intersection(&iter_right).next().is_some() {
-                    // The cycles must be the same. Do nothing.
                     assert_eq!(iter_left, iter_right);
+                // else join them with a pair of bindings var -> var
                 } else {
-                    // Join the two cycles.
                     let last_left = left_cycle.last().unwrap();
                     let last_right = right_cycle.last().unwrap();
                     assert_ne!(last_left, left);
@@ -527,39 +504,65 @@ impl BindingManager {
                     self.add_binding(last_left, term!(right.clone()));
                     self.add_binding(last_right, term!(left.clone()));
                 }
+                Ok(None)
             }
-            ((var, Cycle(_)), (_, Bound(val))) | ((_, Bound(val)), (var, Cycle(_))) => {
-                // Ground out the cycle.
+
+            // bound / partial cases -- at least one variable has a value
+            // or constraint
+            //
+            // bound x free , free x bound, bound x cycle , cycle x bound --
+            // create a binding var -> val
+            ((var, Unbound), (_, Bound(val)))
+            | ((_, Bound(val)), (var, Unbound))
+            | ((var, Cycle(_)), (_, Bound(val)))
+            | ((_, Bound(val)), (var, Cycle(_))) => {
                 self.add_binding(var, val);
+                Ok(None)
             }
 
-            ((_, Bound(l)), (_, Bound(r))) if l != r => {
-                return Err(RuntimeError::IncompatibleBindings {
-                    msg: format!("{} and {} are both bound", left, right),
-                });
+            // partial x free, free x partial, partial x cycle, cycle x partial --
+            // extend partials
+            ((_, Partial(_)), (_, Unbound))
+            | ((_, Unbound), (_, Partial(_)))
+            | ((_, Partial(_)), (_, Cycle(_)))
+            | ((_, Cycle(_)), (_, Partial(_))) => {
+                self.add_constraint(&op!(Unify, term!(left.clone()), term!(right.clone())).into())?;
+                Ok(None)
             }
 
+            // bound x bound to different values : binding fails
+            // (this error usually gets caught and turned into a backtrack)
+            ((_, Bound(l)), (_, Bound(r))) => {
+                if l == r {
+                    Ok(None)
+                } else {
+                    Err(RuntimeError::IncompatibleBindings {
+                        msg: format!("{} and {} are both bound", left, right),
+                    })
+                }
+            }
+
+            // bound x partial , partial x bound -- ground and requery
             ((_, Bound(val)), (var, Partial(p))) | ((var, Partial(p)), (_, Bound(val))) => {
                 let p = p.clone();
-                goal = Some(self.partial_bind(p, var, val)?);
+                Ok(Some(self.partial_bind(p, var, val)?))
             }
 
+            // partial x partial -- if they already overlap, do nothing.
+            // else rebind vars as a 2-cycle & requery
             ((_, Partial(lp)), (_, Partial(rp))) => {
-                let (lp, rp) = (lp.clone(), rp.clone());
-                self.add_binding(left, term!(right.clone()));
-                self.add_binding(right, term!(left.clone()));
+                if rp.variables().contains(left) {
+                    Ok(None)
+                } else {
+                    let (lp, rp) = (lp.clone(), rp.clone());
+                    self.add_binding(left, term!(right.clone()));
+                    self.add_binding(right, term!(left.clone()));
 
-                let term = term!(combine(left, lp, right, rp));
-                goal = Some(Goal::Query { term });
+                    let term = term!(combine(left, lp, right, rp));
+                    Ok(Some(Goal::Query { term }))
+                }
             }
-
-            ((_, Partial(_)), _) | (_, (_, Partial(_))) => {
-                self.add_constraint(&op!(Unify, term!(left.clone()), term!(right.clone())).into())?;
-            }
-            _ => {}
         }
-
-        Ok(goal)
     }
 
     fn add_binding(&mut self, var: &Symbol, val: Term) {

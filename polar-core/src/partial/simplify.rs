@@ -72,20 +72,6 @@ impl Folder for VariableSubber {
     }
 }
 
-pub fn sub_vars(vars: HashMap<Symbol, Symbol>, term: Term) -> Term {
-    struct VarSub(HashMap<Symbol, Symbol>);
-    impl Folder for VarSub {
-        fn fold_variable(&mut self, v: Symbol) -> Symbol {
-            self.0.get(&v).cloned().unwrap_or(v)
-        }
-        fn fold_rest_variable(&mut self, v: Symbol) -> Symbol {
-            self.fold_variable(v)
-        }
-    }
-
-    VarSub(vars).fold_term(term)
-}
-
 /// Substitute `sym!("_this")` for a variable in a partial.
 pub fn sub_this(this: Symbol, term: Term) -> Term {
     if term
