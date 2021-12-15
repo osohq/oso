@@ -323,8 +323,15 @@ module Oso
 
                   # only pass class_repr for registered types
                   class_repr = nil
-                  class_repr = value.class.to_s if types.has_key?(value.class)
-                  { 'ExternalInstance' => { 'instance_id' => cache_instance(value, id: instance_id), 'repr' => nil, 'class_repr' => class_repr } }
+                  class_repr = value.class.to_s if types.key?(value.class)
+
+                  {
+                    'ExternalInstance' => {
+                      'instance_id' => cache_instance(value, id: instance_id),
+                      'repr' => nil,
+                      'class_repr' => class_repr
+                    }
+                  }
                 end
         { 'value' => value }
       end
