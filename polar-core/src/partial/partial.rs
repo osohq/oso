@@ -990,7 +990,6 @@ mod test {
         let p = Polar::new();
         p.load_str("f(x) if x = x + 0;")?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
-        // FIXME(gw) try not to change this test ??
         assert_partial_expression!(next_binding(&mut q)?, "x", "_this + 0 = _this");
         assert_query_done!(q);
         Ok(())
