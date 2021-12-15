@@ -425,35 +425,6 @@ impl BindingManager {
     }
 }
 
-fn combine_partials(left: &Symbol, l: Operation, right: &Symbol, r: Operation) -> Operation {
-    use Operator::*;
-    fn unifies_symbols(Operation { operator, args }: &Operation) -> bool {
-        matches!(operator, Operator::Unify if args[0].value().as_symbol().is_ok() && args[1].value().as_symbol().is_ok())
-    }
-
-    let (mut var_unifys, others): (Vec<_>, Vec<_>) = l
-        .constraints()
-        .into_iter()
-        .chain(r.constraints().into_iter())
-        .partition(unifies_symbols);
-    var_unifys.push(op!(Unify, term!(left.clone()), term!(right.clone())));
-
-    let termify = |i: Vec<_>| i.into_iter().map(Term::from).collect();
-    let (var_unifys, others) = (termify(var_unifys), termify(others));
-    Operation {
-        operator: And,
-        args: vec![],
-    }
-    .merge_constraints(Operation {
-        operator: And,
-        args: var_unifys,
-    })
-    .merge_constraints(Operation {
-        operator: And,
-        args: others,
-    })
-}
-
 // Private impls.
 impl BindingManager {
     /// Bind two variables together.
@@ -558,7 +529,7 @@ impl BindingManager {
                     self.add_binding(left, term!(right.clone()));
                     self.add_binding(right, term!(left.clone()));
 
-                    let term = term!(combine_partials(left, lp, right, rp));
+                    let term = term!(op!(And, term!(lp), term!(rp)));
                     Ok(Some(Goal::Query { term }))
                 }
             }
