@@ -1172,54 +1172,42 @@ impl PolarVirtualMachine {
 
                 let simplified = simplified.value().as_expression()?;
 
-                use Operator::*;
                 // TODO (dhatch): what if there is more than one var = dot_op constraint?
                 // What if the one there is is in a not, or an or, or something
-                let mut lhss_of_matches: Vec<_> = simplified
+                let lhs_of_matches = simplified
                     .constraints()
                     .into_iter()
-                    .filter_map(|Operation { operator, args }| match operator {
+                    .find_map(|c| {
                         // If the simplified partial includes a constraint of form:
                         // `v = dot_op`, `dot_op = v`, or `v in dot_op`
                         // and the receiver of the dot operation is either
                         // `var` or an alias thereof, use the dot op as the LHS of the matches.
-                        Unify | In if
-                            matches!(args[0].value().as_symbol(), Ok(s) if names.contains(s)) &&
-                            matches!(args[1].value().as_expression(), Ok(Operation { operator: Dot, .. }))
-                            => Some(args[1].clone()),
-
-                        Unify if
-                            matches!(args[1].value().as_symbol(), Ok(s) if names.contains(s)) &&
+                        if c.operator != Operator::Unify && c.operator != Operator::In {
+                            None
+                        } else if matches!(c.args[0].value().as_symbol(), Ok(s) if names.contains(s)) &&
+                            matches!(c.args[1].value().as_expression(), Ok(o) if o.operator == Operator::Dot) {
+                            Some(c.args[1].clone())
+                        } else if c.operator == Operator::Unify && matches!(c.args[1].value().as_symbol(), Ok(s) if names.contains(s)) &&
                             // only look for var on the RHS of a unfication (i.e. not on the RHS of an `in`)
-                            matches!(args[0].value().as_expression(), Ok(Operation { operator: Dot, .. }))
-                            => Some(args[0].clone()),
-
-                        _ => None,
-                    }).collect();
-
-                // FIXME(gw) always do this?
-                if lhss_of_matches.is_empty() {
-                    lhss_of_matches.push(left.clone());
-                }
+                            matches!(c.args[0].value().as_expression(), Ok(o) if o.operator == Operator::Dot) {
+                            Some(c.args[0].clone())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or_else(|| left.clone());
 
                 // Construct field-less matches operation.
                 let tag_pattern = right.clone_with_value(value!(pattern!(instance!(tag.clone()))));
                 let type_constraint = op!(Isa, left.clone(), tag_pattern);
 
-                let new_matcheses = lhss_of_matches
-                    .into_iter()
-                    .map(|lhs| op!(Isa, lhs, right.clone()));
+                let new_matches = op!(Isa, lhs_of_matches, right.clone());
 
-                let runnables = new_matcheses
-                    .map(|new_matches| {
-                        let runnable = Box::new(IsaConstraintCheck::new(
-                            simplified.constraints(),
-                            new_matches,
-                            names.clone(),
-                        ));
-                        Goal::Run { runnable }
-                    })
-                    .collect();
+                let runnable = Box::new(IsaConstraintCheck::new(
+                    simplified.constraints(),
+                    new_matches,
+                    names,
+                ));
 
                 // Construct field constraints.
                 let field_constraints = fields.fields.iter().rev().map(|(f, v)| {
@@ -1234,7 +1222,7 @@ impl PolarVirtualMachine {
 
                 // Run compatibility check.
                 self.choose_conditional(
-                    runnables,
+                    vec![Goal::Run { runnable }],
                     add_constraints
                         .into_iter()
                         .map(|op| Goal::AddConstraint { term: op.into() })
