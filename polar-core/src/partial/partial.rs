@@ -2104,6 +2104,11 @@ mod test {
             &[|r: Bindings| {
                 assert_partial_expressions!(r,
                     "x" => "_this > 0 and _this != 1",
+                    // Right now we output "y" => "_this <= 1".
+                    // This constraint is incorrect. If x = 1, then y <= 1
+                    // (we reach the y > x constraint in the
+                    // negation). Otherwise, the query suceeds because x = 1 fails
+                    // and y > x is never reached.
                     "y" => "(_this <= 1 or _this < 3 or _this <= 5)"
                 );
                 Ok(())
