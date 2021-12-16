@@ -302,15 +302,14 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           end
         end
 
-      # not supported
-      it 'test_or' do
-        subject.load_str <<~POL
-          allow(_, _, _: Sign{name, element}) if name = "leo" or element = "air";
-        POL
-        results = subject.authorized_query 'steve', 'get', Sign
-        expected = Sign.where(name: 'leo').or(Sign.where(element: 'air'))
-        expect(results.to_a).to contain_exactly(*expected)
-      end
+        it 'test_or' do
+          subject.load_str <<~POL
+            allow(_, _, _: Sign{name, element}) if name = "leo" or element = "air";
+          POL
+          results = subject.authorized_query 'steve', 'get', Sign
+          expected = Sign.where(name: 'leo').or(Sign.where(element: 'air'))
+          expect(results.to_a).to contain_exactly(*expected)
+        end
 
         xit 'test_ground_object_in_collection' do
         end
@@ -325,15 +324,42 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           end
         end
 
+        it 'test_forall' do
+          subject.load_str <<~POL
+            allow(_: Planet{signs}, _, _: Person) if
+              forall(sign in signs, sign.element != "fire");
+          POL
+
+          result = subject.authorized_resources(saturn, 'get', Person)
+          expect(result).to contain_exactly(*Person.all)
+
+          result = subject.authorized_resources(the_sun, 'get', Person)
+          expect(result).to be_empty
+        end
+
+        it 'test_forall_forall' do
+          subject.load_str <<~POL
+            allow(_: Planet{signs}, _, _) if
+              forall(sign in signs, sign matches Sign{people} and
+                forall(person in people, person.name != "sam"));
+          POL
+          result = subject.authorized_resources(sam.sign.planet, 'get', Person)
+          expect(result).to be_empty
+          result = subject.authorized_resources(mars, 'get', Person)
+          expect(result).to contain_exactly(*Person.all)
+        end
+
         it 'test_forall_not_in_relation' do
           subject.load_str <<~POL
-            allow(planet: Planet, _, person: Person) if
-              forall(sign in planet.signs, not person in sign.people);
+            # planet can _ person if planet is not person's sign's planet
+            allow(_: Planet{signs}, _, person: Person) if
+              forall(sign in signs, not person in sign.people);
           POL
-#          require 'pry'; binding.pry
-          query = subject.authorized_query(mars, 'get', Person)
-          expected = Person.joins(:sign).where.not(sign: { name: %w[aries scorpio] })
-          expect(query.to_a).to contain_exactly(*expected)
+          Planet.all.each do |planet|
+            result = subject.authorized_resources(planet, 'get', Person)
+            expected = Person.joins(:sign).where.not(sign: planet.signs)
+            expect(result).to contain_exactly(*expected)
+          end
         end
 
         it 'test_var_in_value' do
@@ -460,6 +486,8 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       let(:mercury) { Person.find_by_name 'mercury' }
       let(:mars) { Planet.find_by_name 'mars' }
       let(:sam) { Person.find_by_name 'sam' }
+      let(:saturn) { Planet.find_by_name 'saturn' }
+      let(:the_sun) { Planet.find_by_name 'sun' }
     end
   end
 end
