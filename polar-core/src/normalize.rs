@@ -1,57 +1,49 @@
 use crate::terms::*;
 
 impl Term {
-    fn negated(mut self) -> Self {
+    fn negated(self) -> Self {
         use {Operator::*, Value::*};
         match self.value() {
+            // negate booleans
+            Boolean(b) => self.clone_with_value(Boolean(!b)),
             Expression(Operation { operator, args }) => match operator {
-                Not => {
-                    assert_eq!(args.len(), 1);
-                    let val = args[0].value().clone();
-                    self.replace_value(val)
-                }
+                // cancel double negatives
+                Not => self.clone_with_value(args[0].value().clone()),
+                // swap and/or using De Morgan's to keep the nots nested
+                // as deep as possible
                 And => {
                     assert_eq!(args.len(), 2);
                     let args = vec![args[0].clone().negated(), args[1].clone().negated()];
-                    self.replace_value(Expression(Operation { operator: Or, args }))
+                    self.clone_with_value(Expression(Operation { operator: Or, args }))
                 }
                 Or => {
                     assert_eq!(args.len(), 2);
                     let args = vec![args[0].clone().negated(), args[1].clone().negated()];
-                    self.replace_value(Expression(Operation {
+                    self.clone_with_value(Expression(Operation {
                         operator: And,
                         args,
                     }))
                 }
-                _ => self.replace_value(Expression(op!(Not, self.clone()))),
+                _ => self.clone_with_value(Expression(op!(Not, self.clone()))),
             },
-            Boolean(b) => {
-                let b = !b;
-                self.replace_value(Boolean(b))
-            }
-            _ => self.replace_value(Expression(op!(Not, self.clone()))),
+            _ => self.clone_with_value(Expression(op!(Not, self.clone()))),
         }
-        self
     }
 
-    /// Condition input for dnf/cnf transformation
-    /// - negations fully nested
-    /// - double negatives removed
-    /// - and/or nodes form a binary tree
-    fn pre_norm(self) -> Self {
-        impl Term {
-            /// binary normal form -- all `and`/`or` operations have args.len() == 2
-            fn binf(self) -> Self {
-                use Operator::*;
-                match self.value().as_expression() {
-                    Ok(Operation { operator, args })
-                        if args.len() == 1 && (*operator == And || *operator == Or) =>
-                    {
-                        args[0].clone().pre_norm()
-                    }
-                    Ok(Operation { operator, args }) if *operator == And || *operator == Or => args
+    /// binary tree normal form -- all and / or nodes form a binary tree
+    fn btnf(self) -> Self {
+        use Operator::*;
+        match self.value().as_expression() {
+            Ok(Operation { operator, args }) if *operator == And || *operator == Or => {
+                match args.len() {
+                    // empty -> boolean
+                    0 => self.clone_with_value(Value::Boolean(*operator == And)),
+                    // one -> lift it out
+                    1 => args[0].clone().btnf(),
+                    // else fold
+                    _ => args
                         .iter()
-                        .map(|a| a.clone().pre_norm())
+                        .map(|a| a.clone().btnf())
                         .reduce(|m, x| {
                             self.clone_with_value(Value::Expression(Operation {
                                 operator: *operator,
@@ -59,30 +51,29 @@ impl Term {
                             }))
                         })
                         .unwrap(),
-                    _ => self,
                 }
             }
-
-            /// negation normal form -- all `not` operators are nested inside of `and`/`or`
-            /// using De Morgan's law
-            fn nnf(self) -> Self {
-                use Operator::*;
-                match self.value().as_expression() {
-                    Ok(Operation {
-                        operator: Not,
-                        args,
-                    }) => args[0].clone().nnf().negated(),
-                    Ok(Operation { operator, args }) => {
-                        self.clone_with_value(Value::Expression(Operation {
-                            operator: *operator,
-                            args: args.iter().cloned().map(|t| t.nnf()).collect(),
-                        }))
-                    }
-                    _ => self,
-                }
-            }
+            _ => self,
         }
-        self.binf().nnf()
+    }
+
+    /// negation normal form -- all `not` operators are nested inside of `and`/`or`
+    /// using De Morgan's law
+    fn nnf(self) -> Self {
+        use Operator::*;
+        match self.value().as_expression() {
+            Ok(Operation {
+                operator: Not,
+                args,
+            }) => args[0].clone().nnf().negated(),
+            Ok(Operation { operator, args }) => {
+                self.clone_with_value(Value::Expression(Operation {
+                    operator: *operator,
+                    args: args.iter().cloned().map(|t| t.nnf()).collect(),
+                }))
+            }
+            _ => self,
+        }
     }
 
     fn lhs(&self) -> &Self {
@@ -130,6 +121,13 @@ impl Term {
         }
     }
 
+    /// Condition input for dnf/cnf transformation
+    /// - negations fully nested
+    /// - double negatives removed
+    /// - and/or nodes form a binary tree
+    fn pre_norm(self) -> Self {
+        self.btnf().nnf()
+    }
     pub fn dnf(self) -> Self {
         self.pre_norm().distribute(andp, and_, orp, or_)
     }
