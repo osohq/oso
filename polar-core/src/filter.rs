@@ -134,7 +134,7 @@ impl PathVar {
 impl Filter {
     pub fn build(
         types: TypeInfo,
-        ors: PartialResults,
+        partials: PartialResults,
         var: &str,
         class: &str,
     ) -> FilterResult<Self> {
@@ -146,15 +146,12 @@ impl Filter {
         }
 
         let sym = Symbol(var.to_string());
-        let ors: Vec<Term> = ors
+        let filter = partials
             .into_iter()
-            .map(|or| or.bindings.get(&sym).unwrap().clone())
+            .filter_map(|opt| opt.bindings.get(&sym).cloned())
             .reduce(or_)
-            .map(|x| or_of_ands(x.dnf()))
-            .unwrap_or_else(Vec::new);
-
-        let filter = ors
             .into_iter()
+            .flat_map(normalize)
             .map(|ands| Self::from_partial(&types, ands, var, class))
             .reduce(|l, r| Ok(l?.union(r?)))
             .unwrap_or_else(|| Ok(Self::empty(class)))?;
@@ -363,12 +360,12 @@ impl FilterInfo {
     fn add_condition(&mut self, left: Datum, op: Comparison, right: Datum) -> FilterResult<()> {
         use Comparison::*;
         match op {
-            Eq | Leq | Geq if left == right => {}
+            Eq | Leq | Geq if left == right => Ok(()),
             _ => {
                 self.conditions.insert(Condition(left, op, right));
+                Ok(())
             }
-        };
-        Ok(())
+        }
     }
 
     /// Validate FilterInfo before constructing a Filter
@@ -565,31 +562,35 @@ where
     std::iter::once(x).collect()
 }
 
-fn or_of_ands(mut t: Term) -> Vec<Term> {
-    use Operator::*;
-    match t.value().as_expression() {
-        Ok(Operation { operator, args }) if *operator == Or => {
-            args.iter().cloned().flat_map(or_of_ands).collect()
-        }
-        _ => {
-            let args = ands(t.clone());
-            t.replace_value(Value::Expression(Operation {
-                operator: And,
-                args,
-            }));
-            vec![t]
+fn normalize(t: Term) -> Vec<Term> {
+    fn or_of_ands(mut t: Term) -> Vec<Term> {
+        use Operator::*;
+        match t.value().as_expression() {
+            Ok(Operation { operator, args }) if *operator == Or => {
+                args.iter().cloned().flat_map(or_of_ands).collect()
+            }
+            _ => {
+                let args = ands(t.clone());
+                t.replace_value(Value::Expression(Operation {
+                    operator: And,
+                    args,
+                }));
+                vec![t]
+            }
         }
     }
-}
 
-fn ands(t: Term) -> Vec<Term> {
-    use Operator::*;
-    match t.value().as_expression() {
-        Ok(Operation { operator, args }) if *operator == And => {
-            args.iter().cloned().flat_map(ands).collect()
+    fn ands(t: Term) -> Vec<Term> {
+        use Operator::*;
+        match t.value().as_expression() {
+            Ok(Operation { operator, args }) if *operator == And => {
+                args.iter().cloned().flat_map(ands).collect()
+            }
+            _ => vec![t],
         }
-        _ => vec![t],
     }
+
+    or_of_ands(t.dnf())
 }
 
 #[cfg(test)]
@@ -600,9 +601,9 @@ mod test {
     type TestResult = Result<(), RuntimeError>;
 
     #[test]
-    fn test_normalize() -> TestResult {
-        let s = std::string::String::from;
-        let types = hashmap! {
+    fn test_or_normalization() -> TestResult {
+        let s = String::from;
+        let types = || hashmap! {
             s("Foo") => hashmap!{
                 s("id") => Type::Base {
                     class_tag: s("Integer")
@@ -610,6 +611,7 @@ mod test {
             }
         };
 
+        // two conditions behind an `or` in one result
         let ex1 = vec![ResultEvent::new(hashmap! {
             sym!("resource") =>
                 term!(op!(And,
@@ -622,29 +624,7 @@ mod test {
                             term!(2))))))),
         })];
 
-        let expected_filter = Filter {
-            root: s("Foo"),
-            relations: HashSet::new(),
-            conditions: vec![
-                singleton(Condition(
-                    Field(Projection(s("Foo"), Some(s("id")))),
-                    Eq,
-                    Immediate(Number(Integer(2))),
-                )),
-                singleton(Condition(
-                    Field(Projection(s("Foo"), Some(s("id")))),
-                    Eq,
-                    Immediate(Number(Integer(1))),
-                )),
-            ],
-        };
-
-        use {Comparison::*, Datum::*, Numeric::*, Value::*};
-        assert_eq!(
-            Filter::build(types.clone(), ex1, "resource", "Foo")?,
-            expected_filter
-        );
-
+        // two results with one condition each
         let ex2 = vec![
             ResultEvent::new(hashmap! {
                 sym!("resource") =>
@@ -661,9 +641,10 @@ mod test {
                                 term!(2))))),
             }),
         ];
+
         assert_eq!(
-            Filter::build(types, ex2, "resource", "Foo")?,
-            expected_filter
+            Filter::build(types(), ex1, "resource", "Foo")?,
+            Filter::build(types(), ex2, "resource", "Foo")?,
         );
 
         Ok(())
@@ -760,7 +741,7 @@ mod test {
     }
 
     #[test]
-    fn test_or_of_ands() {
+    fn test_normalize() {
         let ex = or_(
             not_(var!("p")),
             and_(var!("q"), not_(and_(not_(var!("r")), var!("s")))),
@@ -775,6 +756,6 @@ mod test {
         let to_s =
             |ooa: Vec<Term>| format!("{:?}", ooa.iter().map(|a| a.to_polar()).collect::<Vec<_>>());
 
-        assert_eq!(to_s(oa), to_s(or_of_ands(ex.dnf())));
+        assert_eq!(to_s(oa), to_s(normalize(ex)));
     }
 }
