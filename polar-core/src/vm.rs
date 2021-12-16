@@ -1504,7 +1504,11 @@ impl PolarVirtualMachine {
             ));
         }
         let goals = match self.kb.read().unwrap().get_generic_rule(&predicate.name) {
-            None => vec![Goal::Backtrack],
+            None => {
+                return Err(RuntimeError::UndefinedRuleError {
+                    name: predicate.name.to_string(),
+                })
+            }
             Some(generic_rule) => {
                 if generic_rule.name != predicate.name {
                     return invalid_state(format!(

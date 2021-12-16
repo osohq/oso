@@ -54,6 +54,7 @@ impl PolarError {
             Runtime(InvalidRegistration { .. }) => "RuntimeError::InvalidRegistration",
             Runtime(InvalidState { .. }) => "RuntimeError::InvalidState",
             Runtime(MultipleLoadError) => "RuntimeError::MultipleLoadError",
+            Runtime(UndefinedRuleError { .. }) => "Runtime::UndefinedRuleError",
             Operational(Serialization { .. }) => "OperationalError::Serialization",
             Operational(Unknown) => "OperationalError::Unknown",
             Validation(FileLoading { .. }) => "ValidationError::FileLoading",
@@ -299,6 +300,9 @@ pub enum RuntimeError {
         msg: String,
     },
     MultipleLoadError,
+    UndefinedRuleError {
+        name: String,
+    },
 }
 
 impl RuntimeError {
@@ -326,6 +330,7 @@ impl RuntimeError {
             | DataFilteringUnsupportedOp { .. }
             | InvalidRegistration { .. }
             | InvalidState { .. }
+            | UndefinedRuleError { .. }
             | MultipleLoadError => None,
         };
 
@@ -427,6 +432,7 @@ The expression is: {expr}
             // Refactor.
             Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
             Self::MultipleLoadError => write!(f, "Cannot load additional Polar code -- all Polar code must be loaded at the same time."),
+            Self::UndefinedRuleError { name } => write!(f, "Cannot evaluate query for undefined rule `{}`", name),
         }
     }
 }
