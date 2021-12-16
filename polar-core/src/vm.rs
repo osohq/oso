@@ -318,14 +318,17 @@ impl PolarVirtualMachine {
             .expect("cannot acquire KB read lock")
             .get_registered_constants()
             .clone();
-        // get all comma-delimited POLAR_LOG variables
-        let polar_log = std::env::var("POLAR_LOG");
-        let polar_log_vars = polar_log
-            .iter()
-            .flat_map(|pl| pl.split(','))
-            .collect::<Vec<&str>>();
 
+        // get all comma-delimited POLAR_LOG variables
+        // ignore `off` & `0` which represent the default None option.
         let mut log_level = None;
+        let polar_log = std::env::var("POLAR_LOG");
+        let mut polar_log_vars: HashSet<&str> =
+            polar_log.iter().flat_map(|pl| pl.split(',')).collect();
+
+        polar_log_vars.remove("off");
+        polar_log_vars.remove("0");
+
         if !polar_log_vars.is_empty() {
             log_level = if polar_log_vars.contains(&"trace") {
                 Some(LogLevel::Trace)
