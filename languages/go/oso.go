@@ -484,6 +484,10 @@ func (o Oso) dataFilter(actor interface{}, action interface{}, resource_type str
 	if err != nil {
 		return nil, nil, err
 	}
+	err = query.host.ParseValues(filter)
+	if err != nil {
+		return nil, nil, err
+	}
 	filter.Types = types
 	q, err := query.host.BuildQuery(filter)
 	if err != nil {

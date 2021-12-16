@@ -2972,7 +2972,9 @@ func (proj *Projection) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type Immediate struct{ Value }
+type Immediate struct {
+	Value interface{}
+}
 
 type DatumVarient interface {
 	isDatum()
@@ -3075,9 +3077,4 @@ type Filter struct {
 	Conditions [][]FilterCondition `json:"conditions"`
 	// Types
 	Types map[string]map[string]interface{}
-}
-
-type Adapter interface {
-	BuildQuery(*Filter) (interface{}, error)
-	ExecQuery(interface{}) ([]interface{}, error)
 }

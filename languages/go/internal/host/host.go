@@ -504,3 +504,29 @@ func (h *Host) ExecQuery(query interface{}) ([]interface{}, error) {
 
 	return (*h.adapter).ExecQuery(query)
 }
+
+func (h *Host) ParseValues(filter *Filter) error {
+	for i := range filter.Conditions {
+		for j := range filter.Conditions[i] {
+			switch t := filter.Conditions[i][j].Rhs.DatumVarient.(type) {
+			case Immediate:
+				go_value, err := h.ToGo(types.Term{t.Value.(Value)})
+				if err != nil {
+					return err
+				}
+				datum := Datum{Immediate{go_value}}
+				filter.Conditions[i][j].Rhs = datum
+			}
+			switch t := filter.Conditions[i][j].Lhs.DatumVarient.(type) {
+			case Immediate:
+				go_value, err := h.ToGo(types.Term{t.Value.(Value)})
+				if err != nil {
+					return err
+				}
+				datum := Datum{Immediate{go_value}}
+				filter.Conditions[i][j].Lhs = datum
+			}
+		}
+	}
+	return nil
+}
