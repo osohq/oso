@@ -16,6 +16,8 @@ draft: true
 
 - Fixed a variable scope bug affecting the `forall` operator that caused affected
   queries to fail with an `UnhandledPartial` error.
+- Subsequent unification of incompatibly type-constrained variables will now fail
+  correctly.
 
 ### Node.js
 
