@@ -420,7 +420,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         db.execute <<~SQL
           create table signs (
             id integer primary key autoincrement,
-            name varchar(16) not null,
+            name varchar(16) unique not null,
             element varchar(8) not null,
             planet_id int not null
           );
@@ -429,7 +429,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         db.execute <<~SQL
           create table people (
             id integer primary key autoincrement,
-            name varchar(32) not null,
+            name varchar(32) unique not null,
             sign_id integer not null
           );
         SQL
@@ -437,7 +437,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         db.execute <<~SQL
           create table planets (
             id integer primary key autoincrement,
-            name varchar(8) not null
+            name varchar(8) unique not null
           );
         SQL
 
