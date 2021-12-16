@@ -27,7 +27,7 @@ impl Term {
             },
             Boolean(b) => {
                 let b = !b;
-                self.replace_value(Boolean(!b))
+                self.replace_value(Boolean(b))
             }
             _ => self.replace_value(Expression(op!(Not, self.clone()))),
         }
