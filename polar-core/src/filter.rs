@@ -603,42 +603,41 @@ mod test {
     #[test]
     fn test_or_normalization() -> TestResult {
         let s = String::from;
-        let types = || hashmap! {
-            s("Foo") => hashmap!{
-                s("id") => Type::Base {
-                    class_tag: s("Integer")
-                },
+        let types = || {
+            hashmap! {
+                s("Foo") => hashmap!{
+                    s("id") => Type::Base {
+                        class_tag: s("Integer")
+                    },
+                }
             }
         };
 
         // two conditions behind an `or` in one result
         let ex1 = vec![ResultEvent::new(hashmap! {
             sym!("resource") =>
-                term!(op!(And,
                     term!(op!(Or,
                         term!(op!(Unify,
                             term!(op!(Dot, var!("_this"), str!("id"))),
                             term!(1))),
                         term!(op!(Unify,
                             term!(op!(Dot, var!("_this"), str!("id"))),
-                            term!(2))))))),
+                            term!(2))))),
         })];
 
         // two results with one condition each
         let ex2 = vec![
             ResultEvent::new(hashmap! {
                 sym!("resource") =>
-                    term!(op!(And,
                             term!(op!(Unify,
                                 term!(op!(Dot, var!("_this"), str!("id"))),
-                                term!(1))))),
+                                term!(1))),
             }),
             ResultEvent::new(hashmap! {
                 sym!("resource") =>
-                    term!(op!(And,
                             term!(op!(Unify,
                                 term!(op!(Dot, var!("_this"), str!("id"))),
-                                term!(2))))),
+                                term!(2))),
             }),
         ];
 
@@ -692,18 +691,19 @@ mod test {
 
     #[test]
     fn test_in() -> TestResult {
+        let s = String::from;
         let types = hashmap! {
-            String::from("Resource") => hashmap!{
-                String::from("foos") => Type::Relation {
-                   kind: String::from("many"),
-                   my_field: String::from("_"),
-                   other_field: String::from("_"),
-                   other_class_tag: String::from("Foo")
+            s("Resource") => hashmap!{
+                s("foos") => Type::Relation {
+                   kind: s("many"),
+                   my_field: s("_"),
+                   other_field: s("_"),
+                   other_class_tag: s("Foo")
                 }
             },
-            String::from("Foo") => hashmap!{
-                String::from("y") => Type::Base {
-                    class_tag: String::from("Integer")
+            s("Foo") => hashmap!{
+                s("y") => Type::Base {
+                    class_tag: s("Integer")
                 }
             }
         };
@@ -727,7 +727,7 @@ mod test {
         assert_eq!(
             relations,
             hashset! {
-                Relation(String::from("Resource"), String::from("foos"), String::from("Foo"))
+                Relation(s("Resource"), s("foos"), s("Foo"))
             }
         );
 
