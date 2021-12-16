@@ -1,14 +1,17 @@
 use crate::terms::*;
 
 impl Term {
+    /// intelligently negate an expression
     fn negated(self) -> Self {
         use {Operator::*, Value::*};
         match self.value() {
             // negate booleans
             Boolean(b) => self.clone_with_value(Boolean(!b)),
+
             Expression(Operation { operator, args }) => match operator {
                 // cancel double negatives
                 Not => self.clone_with_value(args[0].value().clone()),
+
                 // swap and/or using De Morgan's to keep the nots nested
                 // as deep as possible
                 And => {
@@ -57,7 +60,7 @@ impl Term {
         }
     }
 
-    /// negation normal form -- all `not` operators are nested inside of `and`/`or`
+    /// negation normal form -- all not operators are nested inside of and/or
     /// using De Morgan's law
     fn nnf(self) -> Self {
         use Operator::*;
@@ -84,6 +87,11 @@ impl Term {
         &self.value().as_expression().unwrap().args[1]
     }
 
+    /// normalize an expression by fully distributing logical connectives. the
+    /// expression must already be in btnf and nnf. the arguments are two
+    /// predicate / constructor pairs:
+    /// - p1/c1: predicate/constructor for *inner* connective (and for dnf, or for cnf)
+    /// - p2/c2: predicate/constructor for *outer* connective (or for dnf, and for cnf)
     fn distribute(
         mut self,
         p1: fn(&Term) -> bool,
@@ -128,6 +136,7 @@ impl Term {
     fn pre_norm(self) -> Self {
         self.btnf().nnf()
     }
+
     pub fn dnf(self) -> Self {
         self.pre_norm().distribute(andp, and_, orp, or_)
     }
