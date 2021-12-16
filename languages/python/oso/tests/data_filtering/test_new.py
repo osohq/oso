@@ -1,8 +1,7 @@
 import pytest
 from oso import Relation
-from polar.data_filtering import Field, _getattr
 from polar.data.adapter.sqlalchemy_adapter import SqlAlchemyAdapter
-from sqlalchemy import create_engine, not_, or_, and_, false
+from sqlalchemy import create_engine, not_
 from sqlalchemy.types import String, Boolean
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.orm import sessionmaker
@@ -93,48 +92,12 @@ binary_predicates = {
 def oso():
     oso = DfTestOso()
     oso.host.adapter = SqlAlchemyAdapter(session)
-
-    oso.set_data_filtering_query_defaults(
-        exec_query=lambda query: query.all(), combine_query=lambda q1, q2: q1.union(q2)
-    )
-
-    def get(cls):
-        def get_(fils):
-            query = session.query(cls)
-            for fil in fils:
-                if fil.field is None:
-                    field = cls.id
-                    if fil.kind != "Nin":
-                        value = fil.value.id
-                    else:
-                        value = [value.id for value in fil.value]
-                elif isinstance(fil.field, list):
-                    field = [_getattr(cls, fld) for fld in fil.field]
-                    value = fil.value
-                else:
-                    field = getattr(cls, fil.field)
-                    value = fil.value
-
-                if isinstance(value, Field):
-                    value = getattr(cls, value.field)
-
-                if isinstance(field, list):
-                    co = binary_predicates["Eq" if fil.kind == "In" else "Neq"]
-                    conds = [and_(*[co(*f) for f in zip(field, v)]) for v in value]
-                    cond = or_(*conds) if conds else false()
-                else:
-                    cond = binary_predicates[fil.kind](field, value)
-
-                query = query.filter(cond)
-            return query
-
-        return get_
+    print(oso.host.adapter)
 
     # @TODO: Somehow the session needs to get in here, didn't think about that yet... Just hack for now and use a global
     # one.
     oso.register_class(
         Bar,
-        build_query=get(Bar),
         fields={
             "id": str,
             "is_cool": bool,
@@ -147,7 +110,6 @@ def oso():
 
     oso.register_class(
         Log,
-        build_query=get(Log),
         fields={
             "id": str,
             "data": str,
@@ -159,7 +121,6 @@ def oso():
 
     oso.register_class(
         Foo,
-        build_query=get(Foo),
         fields={
             "id": str,
             "bar_id": str,

@@ -36,7 +36,7 @@ class SqlAlchemyAdapter(DataAdapter):
         )
         return query.filter(disj).distinct()
 
-    def exec_query(self, query):
+    def execute_query(self, query):
         return query.all()
 
     def sqlize(cond):

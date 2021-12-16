@@ -258,7 +258,7 @@ class Oso(Polar):
         query = self.authorized_query(actor, action, resource_cls)
 
         if self.is_new_data_filtering_configured():
-            return self.host.adapter.exec_query(query)
+            return self.host.adapter.execute_query(query)
         elif query is None:
             return []
         else:

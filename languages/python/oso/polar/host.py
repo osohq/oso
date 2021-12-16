@@ -84,6 +84,7 @@ class Host:
             types=self.types,
             instances=self.instances,
             get_field=self.get_field,
+            adapter=self.adapter,
         )
 
     def get_class(self, name):

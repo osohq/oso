@@ -320,7 +320,6 @@ class Polar:
         return filter_data(self, plan)
 
     def new_authorized_query(self, actor, action, resource_cls):
-        print("NEW")
         results = self.partial_query(actor, action, resource_cls)
 
         types = serialize_types(self.host.distinct_user_types(), self.host.types)
