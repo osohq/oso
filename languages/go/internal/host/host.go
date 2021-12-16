@@ -350,10 +350,12 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 			return nil, err
 		}
 		repr := fmt.Sprintf("%T%+v", v, v)
+		classRepr := fmt.Sprintf("%T", v)
 		inner := ValueExternalInstance{
 			InstanceId:  *instanceID,
 			Constructor: nil,
 			Repr:        &repr,
+			ClassRepr:   &classRepr,
 		}
 		return &Value{inner}, nil
 	}
