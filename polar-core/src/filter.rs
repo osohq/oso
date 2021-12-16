@@ -7,7 +7,6 @@ use std::{
 use crate::{
     data_filtering::{unregistered_field_error, unsupported_op_error, PartialResults, Type},
     error::{invalid_state_error, RuntimeError},
-    events::ResultEvent,
     normalize::*,
     terms::*,
 };
@@ -168,21 +167,11 @@ impl Filter {
     }
 
     fn from_partial(types: &TypeInfo, ands: Term, var: &str, class: &str) -> FilterResult<Self> {
-        use {Datum::*, Operator::*, Value::*};
+        use {Operator::*, Value::*};
 
         if std::env::var("POLAR_EXPLAIN").is_ok() {
             eprintln!("{}", ands.to_polar());
         }
-
-        let value2filter = |i: Value| Filter {
-            root: class.to_string(),
-            relations: HashSet::new(),
-            conditions: vec![singleton(Condition(
-                Field(Projection(class.to_string(), None)),
-                Comparison::Eq,
-                Immediate(i),
-            ))],
-        };
 
         let term2expr = |i: Term| match i.value().as_expression() {
             Ok(x) => x.clone(),
@@ -616,6 +605,7 @@ fn ands(t: Term) -> Vec<Term> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::events::ResultEvent;
 
     type TestResult = Result<(), RuntimeError>;
 

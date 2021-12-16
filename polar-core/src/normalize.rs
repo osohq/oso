@@ -7,25 +7,28 @@ impl Term {
             Expression(Operation { operator, args }) => match operator {
                 Not => {
                     assert_eq!(args.len(), 1);
-                    self.replace_value(args[0].value().clone())
+                    let val = args[0].value().clone();
+                    self.replace_value(val)
                 }
                 And => {
                     assert_eq!(args.len(), 2);
-                    self.replace_value(Expression(Operation {
-                        operator: Or,
-                        args: args.iter().cloned().map(|t| t.negated()).collect(),
-                    }))
+                    let args = vec![args[0].clone().negated(), args[1].clone().negated()];
+                    self.replace_value(Expression(Operation { operator: Or, args }))
                 }
                 Or => {
                     assert_eq!(args.len(), 2);
+                    let args = vec![args[0].clone().negated(), args[1].clone().negated()];
                     self.replace_value(Expression(Operation {
                         operator: And,
-                        args: args.iter().cloned().map(|t| t.negated()).collect(),
+                        args,
                     }))
                 }
                 _ => self.replace_value(Expression(op!(Not, self.clone()))),
             },
-            Boolean(b) => self.replace_value(Boolean(!b)),
+            Boolean(b) => {
+                let b = !b;
+                self.replace_value(Boolean(!b))
+            }
             _ => self.replace_value(Expression(op!(Not, self.clone()))),
         }
         self
@@ -35,7 +38,7 @@ impl Term {
     /// - negations fully nested
     /// - double negatives removed
     /// - and/or nodes form a binary tree
-    fn norm(self) -> Self {
+    fn pre_norm(self) -> Self {
         impl Term {
             /// binary normal form -- all `and`/`or` operations have args.len() == 2
             fn binf(self) -> Self {
@@ -44,11 +47,11 @@ impl Term {
                     Ok(Operation { operator, args })
                         if args.len() == 1 && (*operator == And || *operator == Or) =>
                     {
-                        args[0].clone().norm()
+                        args[0].clone().pre_norm()
                     }
                     Ok(Operation { operator, args }) if *operator == And || *operator == Or => args
                         .iter()
-                        .map(|a| a.clone().norm())
+                        .map(|a| a.clone().pre_norm())
                         .reduce(|m, x| {
                             self.clone_with_value(Value::Expression(Operation {
                                 operator: *operator,
@@ -90,82 +93,49 @@ impl Term {
         &self.value().as_expression().unwrap().args[1]
     }
 
-    pub fn dnf(self) -> Self {
-        impl Term {
-            fn dnf_inner(mut self) -> Self {
-                use {Operator::*, Value::*};
-                match self.value().as_expression() {
-                    Ok(Operation { operator, args }) => {
-                        let args: Vec<_> = args.iter().cloned().map(|t| t.dnf_inner()).collect();
-                        let operator = *operator;
-                        if operator == And && args[0].is_or() {
-                            or_(
-                                and_(args[0].lhs().clone(), args[1].clone()),
-                                and_(args[0].rhs().clone(), args[1].clone()),
-                            )
-                            .dnf_inner()
-                        } else if operator == And && args[1].is_or() {
-                            or_(
-                                and_(args[0].clone(), args[1].lhs().clone()),
-                                and_(args[0].clone(), args[1].rhs().clone()),
-                            )
-                            .dnf_inner()
-                        } else {
-                            self.replace_value(Expression(Operation { operator, args }));
-                            self
-                        }
-                    }
-                    _ => self,
-                }
-            }
-        }
-        self.norm().dnf_inner()
-    }
-
-    fn cnf(self) -> Self {
-        impl Term {
-            fn cnf_inner(mut self) -> Self {
-                use {Operator::*, Value::*};
-                match self.value().as_expression() {
-                    Ok(Operation { operator, args }) => {
-                        let args: Vec<_> = args.iter().cloned().map(|t| t.cnf_inner()).collect();
-                        let operator = *operator;
-                        if operator == Or && args[0].is_and() {
-                            and_(
-                                or_(args[0].lhs().clone(), args[1].clone()),
-                                or_(args[0].rhs().clone(), args[1].clone()),
-                            )
-                            .cnf_inner()
-                        } else if operator == Or && args[1].is_and() {
-                            and_(
-                                or_(args[0].clone(), args[1].lhs().clone()),
-                                or_(args[0].clone(), args[1].rhs().clone()),
-                            )
-                            .cnf_inner()
-                        } else {
-                            self.replace_value(Expression(Operation { operator, args }));
-                            self
-                        }
-                    }
-                    _ => self,
-                }
-            }
-        }
-        self.norm().cnf_inner()
-    }
-
-    fn is_and(&self) -> bool {
-        self.operator() == Some(Operator::And)
-    }
-    fn is_or(&self) -> bool {
-        self.operator() == Some(Operator::Or)
-    }
-
-    fn operator(&self) -> Option<Operator> {
+    fn distribute(
+        mut self,
+        p1: fn(&Term) -> bool,
+        c1: fn(Term, Term) -> Term,
+        p2: fn(&Term) -> bool,
+        c2: fn(Term, Term) -> Term,
+    ) -> Self {
+        use Value::*;
         match self.value().as_expression() {
-            Ok(Operation { operator, .. }) => Some(*operator),
-            _ => None,
+            Ok(Operation { operator, args }) => {
+                let args: Vec<_> = args
+                    .iter()
+                    .cloned()
+                    .map(|t| t.distribute(p1, c1, p2, c2))
+                    .collect();
+                let operator = *operator;
+                if p1(&self) && p2(&args[0]) {
+                    c2(
+                        c1(args[0].lhs().clone(), args[1].clone()),
+                        c1(args[0].rhs().clone(), args[1].clone()),
+                    )
+                    .distribute(p1, c1, p2, c2)
+                } else if p1(&self) && p2(&args[1]) {
+                    c2(
+                        c1(args[0].clone(), args[1].lhs().clone()),
+                        c1(args[0].clone(), args[1].rhs().clone()),
+                    )
+                    .distribute(p1, c1, p2, c2)
+                } else {
+                    self.replace_value(Expression(Operation { operator, args }));
+                    self
+                }
+            }
+            _ => self,
         }
+    }
+
+    pub fn dnf(self) -> Self {
+        self.pre_norm().distribute(andp, and_, orp, or_)
+    }
+
+    pub fn cnf(self) -> Self {
+        self.pre_norm().distribute(orp, or_, andp, and_)
     }
 }
 
@@ -177,6 +147,24 @@ pub fn and_(l: Term, r: Term) -> Term {
 }
 pub fn not_(t: Term) -> Term {
     term!(op!(Not, t))
+}
+fn andp(l: &Term) -> bool {
+    matches!(
+        l.value().as_expression(),
+        Ok(Operation {
+            operator: Operator::And,
+            ..
+        })
+    )
+}
+fn orp(l: &Term) -> bool {
+    matches!(
+        l.value().as_expression(),
+        Ok(Operation {
+            operator: Operator::Or,
+            ..
+        })
+    )
 }
 #[cfg(test)]
 mod test {
