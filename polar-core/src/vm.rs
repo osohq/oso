@@ -820,7 +820,7 @@ impl PolarVirtualMachine {
                 let message = message_fn();
                 let lines = message.as_ref().split('\n').collect::<Vec<&str>>();
                 if let Some(line) = lines.first() {
-                    let mut msg = format!("[{}] {}{}", level, &indent, line);
+                    let mut msg = format!("[oso][{}] {}{}", level, &indent, line);
 
                     // print BINDINGS: { .. } only for TRACE logs
                     if !terms.is_empty() && configured_log_level == LogLevel::Trace {
@@ -836,7 +836,7 @@ impl PolarVirtualMachine {
                     }
                     self.print(msg);
                     for line in &lines[1..] {
-                        self.print(format!("[{}] {}{}", level, &indent, line));
+                        self.print(format!("[oso][{}] {}{}", level, &indent, line));
                     }
                 }
             }
