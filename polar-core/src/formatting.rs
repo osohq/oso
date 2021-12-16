@@ -181,7 +181,7 @@ pub mod display {
     use crate::numerics::Numeric;
     use crate::resource_block::Declaration;
     use crate::rules::Rule;
-    use crate::terms::{Symbol, Term};
+    use crate::terms::{Call, Operator, Symbol, Term};
     use crate::vm::*;
 
     impl fmt::Display for Binding {
@@ -197,6 +197,18 @@ pub mod display {
     }
 
     impl fmt::Display for Term {
+        fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(fmt, "{}", self.to_polar())
+        }
+    }
+
+    impl fmt::Display for Call {
+        fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(fmt, "{}", self.to_polar())
+        }
+    }
+
+    impl fmt::Display for Operator {
         fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(fmt, "{}", self.to_polar())
         }
