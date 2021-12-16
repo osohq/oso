@@ -3032,9 +3032,9 @@ impl Runnable for PolarVirtualMachine {
                 if bindings.is_empty() {
                     "RESULT: SUCCESS".to_string()
                 } else {
-                    let mut out = "RESULT: { ".to_string(); // open with single right-padded curly
+                    let mut out = "RESULT: {\n".to_string(); // open curly & newline
                     for (key, value) in &bindings {
-                        out.push_str(&format!("{}: {} ", key, value)); // write right-padded key: value pairs
+                        out.push_str(&format!("  {}: {}\n", key, value)); // key-value pairs spaced w/ newlines
                     }
                     out.push('}'); // closing curly
                     out
