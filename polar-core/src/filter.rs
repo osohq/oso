@@ -444,7 +444,7 @@ impl FilterInfo {
     fn build_filter(
         type_info: TypeInfo,
         parts: Vec<Operation>,
-        _var: &str,
+        var: &str,
         class: &str,
     ) -> FilterResult<Filter> {
         // TODO(gw) check more isas in host -- rn we only check external instances
@@ -452,19 +452,9 @@ impl FilterInfo {
             .into_iter()
             .partition(|op| op.operator == Operator::Isa);
 
-        let entities = std::iter::once((PathVar::from("_this".to_string()), class.to_string()))
-            .chain(std::iter::once((
-                PathVar::from(_var.to_string()),
-                class.to_string(),
-            )))
-            /*
-            .chain(_isas.into_iter().filter_map(|i| match (PathVar::from_term(&i.args[0]), i.args[1].value().as_pattern()) {
-                (Ok(pv), Ok(Pattern::Instance(InstanceLiteral { tag: Symbol(tag), fields })))
-                    if fields.is_empty() => Some((pv, tag.clone())),
-                _ => None,
-            }))
-            */
-            .collect();
+        let mut entities = HashMap::new();
+        entities.insert(PathVar::from("_this".to_string()), class.to_string());
+        entities.insert(PathVar::from(var.to_string()), class.to_string());
 
         let Self {
             conditions,
