@@ -543,6 +543,41 @@ export type QueryResult = AsyncGenerator<
 >;
 
 /**
+ * Optional configuration for [[`Polar.query`]] and [[`Polar.queryRule`]].
+ */
+export type QueryOpts = {
+  /**
+   * Opt-in flag indicating whether [[`Host`]] can receive [[`Expression`]]s
+   * from core for duration of query. When `false`, [[`Host`]] errors on
+   * receiving [[`Expression`]] from core. Main use is for indicating whether
+   * the consumer of the result bindings is prepared to handle constraints
+   * ([[`Expression`]]s) received from core for data filtering purposes.
+   */
+  acceptExpression?: boolean;
+  /**
+   * Bind keys to values in VM for duration of query.
+   */
+  bindings?: Map<string, unknown>;
+};
+
+/**
+ * Required configuration for [[`Host`]].
+ *
+ * @internal
+ */
+export type HostOpts = {
+  /**
+   * Opt-in flag indicating whether [[`Host`]] can receive [[`Expression`]]s
+   * from core. When `false`, [[`Host`]] errors on receiving [[`Expression`]]
+   * from core. Main use is for indicating whether the consumer of the result
+   * bindings is prepared to handle constraints ([[`Expression`]]s) received
+   * from core for data filtering purposes.
+   */
+  acceptExpression: boolean;
+  equalityFn: EqualityFn;
+};
+
+/**
  * An object with string keys.
  *
  * @hidden

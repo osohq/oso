@@ -5,6 +5,7 @@ import {
   PolarError,
   UnregisteredClassError,
   UnregisteredInstanceError,
+  UnexpectedExpressionError,
 } from './errors';
 import {
   ancestors,
@@ -21,7 +22,7 @@ import { Variable } from './Variable';
 import type {
   Class,
   ClassParams,
-  EqualityFn,
+  HostOpts,
   PolarComparisonOperator,
   PolarTerm,
   UserTypeParams,
@@ -92,7 +93,8 @@ export class Host implements Required<DataFilteringQueryParams> {
   #ffiPolar: FfiPolar;
   #instances: Map<number, unknown>;
   types: Map<string | Class, UserType<any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
-  #equalityFn: EqualityFn;
+
+  #opts: HostOpts;
 
   // global data filtering config
   buildQuery: BuildQueryFn;
@@ -105,8 +107,9 @@ export class Host implements Required<DataFilteringQueryParams> {
    *
    * @internal
    */
-  static clone(host: Host): Host {
-    const clone = new Host(host.#ffiPolar, host.#equalityFn);
+  static clone(host: Host, opts: Partial<HostOpts>): Host {
+    const options = { ...host.#opts, ...opts };
+    const clone = new Host(host.#ffiPolar, options);
     clone.#instances = new Map(host.#instances);
     clone.types = new Map(host.types);
     clone.buildQuery = host.buildQuery;
@@ -116,11 +119,12 @@ export class Host implements Required<DataFilteringQueryParams> {
   }
 
   /** @internal */
-  constructor(ffiPolar: FfiPolar, equalityFn: EqualityFn) {
+  constructor(ffiPolar: FfiPolar, opts: HostOpts) {
     this.#ffiPolar = ffiPolar;
+    this.#opts = opts;
     this.#instances = new Map();
-    this.#equalityFn = equalityFn;
     this.types = new Map();
+
     this.buildQuery = () => {
       throw new DataFilteringConfigurationError('buildQuery');
     };
@@ -428,7 +432,7 @@ export class Host implements Required<DataFilteringQueryParams> {
     const right = (await this.toJs(rightTerm)) as any; // eslint-disable-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
     switch (op) {
       case 'Eq':
-        return this.#equalityFn(left, right);
+        return this.#opts.equalityFn(left, right);
       case 'Geq':
         return left >= right;
       case 'Gt':
@@ -438,7 +442,7 @@ export class Host implements Required<DataFilteringQueryParams> {
       case 'Lt':
         return left < right;
       case 'Neq':
-        return !this.#equalityFn(left, right);
+        return !this.#opts.equalityFn(left, right);
       default: {
         const _: never = op;
         return _;
@@ -571,7 +575,8 @@ export class Host implements Required<DataFilteringQueryParams> {
     } else if (isPolarVariable(t)) {
       return new Variable(t.Variable);
     } else if (isPolarExpression(t)) {
-      // TODO(gj): Only allow expressions if the flag has been frobbed.
+      if (!this.#opts.acceptExpression) throw new UnexpectedExpressionError();
+
       const { operator, args: argTerms } = t.Expression;
       const args = await Promise.all(argTerms.map(a => this.toJs(a)));
       return new Expression(operator, args);

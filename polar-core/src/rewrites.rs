@@ -181,7 +181,7 @@ impl<'kb> Folder for Rewriter<'kb> {
                         //
                         // We prepend when the rewritten variable needs to be bound before it is
                         // used.
-                        if only_dots(&rewrites) && arg_operator == Some(Operator::Unify) {
+                        if only_pure(&rewrites) && arg_operator == Some(Operator::Unify) {
                             rewrites.into_iter().fold(arg, and_)
                         } else {
                             rewrites.into_iter().rfold(arg, and_op_)
@@ -229,11 +229,12 @@ impl<'kb> Folder for Rewriter<'kb> {
     }
 }
 
-fn only_dots(rewrites: &[Term]) -> bool {
+fn only_pure(rewrites: &[Term]) -> bool {
+    use Operator::*;
     rewrites.iter().all(|t| {
-        t.value()
-            .as_expression()
-            .map_or(false, |op| op.operator == Operator::Dot)
+        t.value().as_expression().map_or(false, |op| {
+            matches!(op.operator, Dot | Add | Sub | Mul | Div | Rem)
+        })
     })
 }
 
