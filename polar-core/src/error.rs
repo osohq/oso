@@ -462,8 +462,8 @@ impl fmt::Display for OperationalError {
             Self::Serialization { msg } => write!(f, "Serialization error: {}", msg),
             Self::Unknown => write!(
                 f,
-                "We hit an unexpected error.\n\
-                Please submit a bug report at <https://github.com/osohq/oso/issues>"
+                "We hit an unexpected error:\n\
+                Please submit a bug report at <https://github.com/osohq/oso/issues>",
             ),
         }
     }

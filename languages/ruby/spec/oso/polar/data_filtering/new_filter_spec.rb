@@ -302,6 +302,16 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           end
         end
 
+      # not supported
+      it 'test_or' do
+        subject.load_str <<~POL
+          allow(_, _, _: Sign{name, element}) if name = "leo" or element = "air";
+        POL
+        results = subject.authorized_query 'steve', 'get', Sign
+        expected = Sign.where(name: 'leo').or(Sign.where(element: 'air'))
+        expect(results.to_a).to contain_exactly(*expected)
+      end
+
         xit 'test_ground_object_in_collection' do
         end
 

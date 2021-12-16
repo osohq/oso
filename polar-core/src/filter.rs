@@ -8,8 +8,8 @@ use crate::{
     data_filtering::{unregistered_field_error, unsupported_op_error, PartialResults, Type},
     error::{invalid_state_error, RuntimeError},
     events::ResultEvent,
-    terms::*,
     normalize::*,
+    terms::*,
 };
 
 use serde::Serialize;
@@ -146,53 +146,17 @@ impl Filter {
             eprintln!("\n==Bindings==")
         }
 
-        impl Term {
-            pub fn vectorize(self) -> Vec<Self> {
-                let it = self.dnf().or_of_ands();
-                eprintln!("{:?}", it.iter().map(|t|t.to_polar()).collect::<Vec<_>>());
-                it
-            }
-
-            fn or_of_ands(mut self) -> Vec<Self> {
-                use Operator::*;
-                match self.value().as_expression() {
-                    Ok(Operation { operator, args }) if *operator == Or =>{
-                        args.iter().flat_map(|or| {
-                            or.clone().or_of_ands()
-                        }).collect()
-                    },
-                    _ =>  {
-                        let args = self.clone().ands();
-                        self.replace_value(Value::Expression(Operation {
-                            operator: And,
-                            args,
-                        }));
-                        vec![self]
-                    }
-                }
-            }
-
-            fn ands(self) -> Vec<Self> {
-                use Operator::*;
-                match self.value().as_expression() {
-                    Ok(Operation { operator, args }) if *operator == And => {
-                        args.iter().flat_map(|and| {
-                            and.clone().ands()
-                        }).collect()
-                    },
-                    _ => vec![self],
-                }
-            }
-        }
-
-        let var = Symbol(var.to_string());
-        let ors: Vec<Term> = ors.into_iter().map(|or| {
-            or.bindings.get(&var).unwrap().clone()
-        }).reduce(or_).unwrap().vectorize();
+        let sym = Symbol(var.to_string());
+        let ors: Vec<Term> = ors
+            .into_iter()
+            .map(|or| or.bindings.get(&sym).unwrap().clone())
+            .reduce(or_)
+            .map(|x| or_of_ands(x.dnf()))
+            .unwrap_or_else(Vec::new);
 
         let filter = ors
             .into_iter()
-            .map(|ands| Self::from_partial(&types, ands, class))
+            .map(|ands| Self::from_partial(&types, ands, var, class))
             .reduce(|l, r| Ok(l?.union(r?)))
             .unwrap_or_else(|| Ok(Self::empty(class)))?;
 
@@ -203,13 +167,27 @@ impl Filter {
         Ok(filter)
     }
 
-
-    fn from_partial(types: &TypeInfo, ands: Term, class: &str) -> FilterResult<Self> {
+    fn from_partial(types: &TypeInfo, ands: Term, var: &str, class: &str) -> FilterResult<Self> {
         use {Datum::*, Operator::*, Value::*};
 
         if std::env::var("POLAR_EXPLAIN").is_ok() {
             eprintln!("{}", ands.to_polar());
         }
+
+        let value2filter = |i: Value| Filter {
+            root: class.to_string(),
+            relations: HashSet::new(),
+            conditions: vec![singleton(Condition(
+                Field(Projection(class.to_string(), None)),
+                Comparison::Eq,
+                Immediate(i),
+            ))],
+        };
+
+        let term2expr = |i: Term| match i.value().as_expression() {
+            Ok(x) => x.clone(),
+            _ => op!(Unify, var!(var), i),
+        };
 
         match ands.value() {
             // most of the time we're dealing with expressions from the
@@ -219,21 +197,15 @@ impl Filter {
                 args,
             }) => args
                 .iter()
-                .map(|and| Ok(and.value().as_expression()?.clone()))
+                .map(|and| Ok(term2expr(and.clone())))
                 .collect::<FilterResult<Vec<_>>>()
-                .and_then(|ands| FilterInfo::build_filter(types.clone(), ands, class)),
+                .and_then(|ands| FilterInfo::build_filter(types.clone(), ands, var, class)),
 
             // sometimes we get an instance back. that means the variable
             // is exactly this instance, so return a filter that matches it.
-            i @ ExternalInstance(_) => Ok(Filter {
-                root: class.to_string(),
-                relations: HashSet::new(),
-                conditions: vec![singleton(Condition(
-                    Field(Projection(class.to_string(), None)),
-                    Comparison::Eq,
-                    Immediate(i.clone()),
-                ))],
-            }),
+            ExternalInstance(_) => {
+                FilterInfo::build_filter(types.clone(), vec![term2expr(ands.clone())], var, class)
+            }
 
             // oops, we don't know how to handle this!
             _ => invalid_state_error(ands.to_polar()),
@@ -369,8 +341,7 @@ impl FilterInfo {
         match op.operator {
             Not => match op.args[0].value().as_expression() {
                 Ok(Operation { operator: In, args }) if args.len() == 2 => {
-                    let (left, right) =
-                        (self.term2datum(&args[0])?, self.term2datum(&args[1])?);
+                    let (left, right) = (self.term2datum(&args[0])?, self.term2datum(&args[1])?);
                     self.add_condition(left, Comparison::Nin, right)
                 }
                 _ => unsupported_op_error(op),
@@ -484,15 +455,27 @@ impl FilterInfo {
     fn build_filter(
         type_info: TypeInfo,
         parts: Vec<Operation>,
+        _var: &str,
         class: &str,
     ) -> FilterResult<Filter> {
-        let entities =
-            std::iter::once((PathVar::from(String::from("_this")), class.to_string())).collect();
-
         // TODO(gw) check more isas in host -- rn we only check external instances
         let (_isas, othas): (Set<_>, Set<_>) = parts
             .into_iter()
             .partition(|op| op.operator == Operator::Isa);
+
+        let entities = std::iter::once((PathVar::from("_this".to_string()), class.to_string()))
+            .chain(std::iter::once((
+                PathVar::from(_var.to_string()),
+                class.to_string(),
+            )))
+            /*
+            .chain(_isas.into_iter().filter_map(|i| match (PathVar::from_term(&i.args[0]), i.args[1].value().as_pattern()) {
+                (Ok(pv), Ok(Pattern::Instance(InstanceLiteral { tag: Symbol(tag), fields })))
+                    if fields.is_empty() => Some((pv, tag.clone())),
+                _ => None,
+            }))
+            */
+            .collect();
 
         let Self {
             conditions,
@@ -603,11 +586,108 @@ where
     std::iter::once(x).collect()
 }
 
+fn or_of_ands(mut t: Term) -> Vec<Term> {
+    use Operator::*;
+    match t.value().as_expression() {
+        Ok(Operation { operator, args }) if *operator == Or => {
+            args.iter().cloned().flat_map(or_of_ands).collect()
+        }
+        _ => {
+            let args = ands(t.clone());
+            t.replace_value(Value::Expression(Operation {
+                operator: And,
+                args,
+            }));
+            vec![t]
+        }
+    }
+}
+
+fn ands(t: Term) -> Vec<Term> {
+    use Operator::*;
+    match t.value().as_expression() {
+        Ok(Operation { operator, args }) if *operator == And => {
+            args.iter().cloned().flat_map(ands).collect()
+        }
+        _ => vec![t],
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
 
     type TestResult = Result<(), RuntimeError>;
+
+    #[test]
+    fn test_normalize() -> TestResult {
+        let s = std::string::String::from;
+        let types = hashmap! {
+            s("Foo") => hashmap!{
+                s("id") => Type::Base {
+                    class_tag: s("Integer")
+                },
+            }
+        };
+
+        let ex1 = vec![ResultEvent::new(hashmap! {
+            sym!("resource") =>
+                term!(op!(And,
+                    term!(op!(Or,
+                        term!(op!(Unify,
+                            term!(op!(Dot, var!("_this"), str!("id"))),
+                            term!(1))),
+                        term!(op!(Unify,
+                            term!(op!(Dot, var!("_this"), str!("id"))),
+                            term!(2))))))),
+        })];
+
+        let expected_filter = Filter {
+            root: s("Foo"),
+            relations: HashSet::new(),
+            conditions: vec![
+                singleton(Condition(
+                    Field(Projection(s("Foo"), Some(s("id")))),
+                    Eq,
+                    Immediate(Number(Integer(2))),
+                )),
+                singleton(Condition(
+                    Field(Projection(s("Foo"), Some(s("id")))),
+                    Eq,
+                    Immediate(Number(Integer(1))),
+                )),
+            ],
+        };
+
+        use {Comparison::*, Datum::*, Numeric::*, Value::*};
+        assert_eq!(
+            Filter::build(types.clone(), ex1, "resource", "Foo")?,
+            expected_filter
+        );
+
+        let ex2 = vec![
+            ResultEvent::new(hashmap! {
+                sym!("resource") =>
+                    term!(op!(And,
+                            term!(op!(Unify,
+                                term!(op!(Dot, var!("_this"), str!("id"))),
+                                term!(1))))),
+            }),
+            ResultEvent::new(hashmap! {
+                sym!("resource") =>
+                    term!(op!(And,
+                            term!(op!(Unify,
+                                term!(op!(Dot, var!("_this"), str!("id"))),
+                                term!(2))))),
+            }),
+        ];
+        assert_eq!(
+            Filter::build(types, ex2, "resource", "Foo")?,
+            expected_filter
+        );
+
+        Ok(())
+    }
 
     #[test]
     fn test_dup_reln() {
@@ -634,7 +714,6 @@ mod test {
             }
         };
 
-        // this is a great example of why i want to have shorter macros like opn! ptn! etc ...
         let ors = vec![ResultEvent::new(hashmap! {
             sym!("resource") => term!(op!(And,
                 term!(op!(Isa, var!("_this"), term!(pattern!(instance!("Resource"))))),
@@ -646,7 +725,7 @@ mod test {
         match Filter::build(types, ors, "resource", "Resource") {
             Err(RuntimeError::InvalidState { msg })
                 if &msg == "Type `Resource` occurs more than once as the target of a relation" => {}
-            _ => panic!("unexpected"),
+            x => panic!("unexpected: {:?}", x),
         }
     }
 
@@ -676,18 +755,11 @@ mod test {
             ))
         })];
 
-        let filter = Filter::build(types, ors, "resource", "Resource");
-        let filter = match filter {
-            Ok(f) => f,
-            Err(e) => panic!("{}", e),
-        };
-
-
         let Filter {
             root,
             relations,
             conditions,
-        } = filter;
+        } = Filter::build(types, ors, "resource", "Resource")?;
 
         assert_eq!(&root, "Resource");
 
@@ -705,5 +777,24 @@ mod test {
             }]
         );
         Ok(())
+    }
+
+    #[test]
+    fn test_or_of_ands() {
+        let ex = or_(
+            not_(var!("p")),
+            and_(var!("q"), not_(and_(not_(var!("r")), var!("s")))),
+        );
+
+        let oa = vec![
+            not_(var!("p")),
+            and_(var!("q"), var!("r")),
+            and_(var!("q"), not_(var!("s"))),
+        ];
+
+        let to_s =
+            |ooa: Vec<Term>| format!("{:?}", ooa.iter().map(|a| a.to_polar()).collect::<Vec<_>>());
+
+        assert_eq!(to_s(oa), to_s(or_of_ands(ex.dnf())));
     }
 }

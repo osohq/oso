@@ -1,10 +1,8 @@
-use crate::{
-    terms::*,
-};
+use crate::terms::*;
 
 impl Term {
     fn negated(mut self) -> Self {
-        use {Value::*, Operator::*};
+        use {Operator::*, Value::*};
         match self.value() {
             Expression(Operation { operator, args }) => match operator {
                 Not => {
@@ -26,13 +24,12 @@ impl Term {
                     }))
                 }
                 _ => self.replace_value(Expression(op!(Not, self.clone()))),
-            }
+            },
             Boolean(b) => self.replace_value(Boolean(!b)),
             _ => self.replace_value(Expression(op!(Not, self.clone()))),
         }
         self
     }
-
 
     /// Condition input for dnf/cnf transformation
     /// - negations fully nested
@@ -44,14 +41,21 @@ impl Term {
             fn binf(self) -> Self {
                 use Operator::*;
                 match self.value().as_expression() {
-                    Ok(Operation { operator, args }) if *operator == And || *operator == Or => {
-                        args.iter().cloned().reduce(|m, x| {
+                    Ok(Operation { operator, args })
+                        if args.len() == 1 && (*operator == And || *operator == Or) =>
+                    {
+                        args[0].clone().norm()
+                    }
+                    Ok(Operation { operator, args }) if *operator == And || *operator == Or => args
+                        .iter()
+                        .map(|a| a.clone().norm())
+                        .reduce(|m, x| {
                             self.clone_with_value(Value::Expression(Operation {
                                 operator: *operator,
                                 args: vec![m, x],
                             }))
-                        }).unwrap()
-                    }
+                        })
+                        .unwrap(),
                     _ => self,
                 }
             }
@@ -61,12 +65,16 @@ impl Term {
             fn nnf(self) -> Self {
                 use Operator::*;
                 match self.value().as_expression() {
-                    Ok(Operation { operator: Not, args }) => args[0].clone().nnf().negated(),
-                    Ok(Operation { operator, args }) =>
+                    Ok(Operation {
+                        operator: Not,
+                        args,
+                    }) => args[0].clone().nnf().negated(),
+                    Ok(Operation { operator, args }) => {
                         self.clone_with_value(Value::Expression(Operation {
                             operator: *operator,
                             args: args.iter().cloned().map(|t| t.nnf()).collect(),
-                        })),
+                        }))
+                    }
                     _ => self,
                 }
             }
@@ -85,19 +93,23 @@ impl Term {
     pub fn dnf(self) -> Self {
         impl Term {
             fn dnf_inner(mut self) -> Self {
-                use {Value::*, Operator::*};
+                use {Operator::*, Value::*};
                 match self.value().as_expression() {
                     Ok(Operation { operator, args }) => {
                         let args: Vec<_> = args.iter().cloned().map(|t| t.dnf_inner()).collect();
                         let operator = *operator;
                         if operator == And && args[0].is_or() {
-                            or_(and_(args[0].lhs().clone(), args[1].clone()),
-                                and_(args[0].rhs().clone(), args[1].clone()))
-                                .dnf_inner()
+                            or_(
+                                and_(args[0].lhs().clone(), args[1].clone()),
+                                and_(args[0].rhs().clone(), args[1].clone()),
+                            )
+                            .dnf_inner()
                         } else if operator == And && args[1].is_or() {
-                            or_(and_(args[0].clone(), args[1].lhs().clone()),
-                                and_(args[0].clone(), args[1].rhs().clone()))
-                                .dnf_inner()
+                            or_(
+                                and_(args[0].clone(), args[1].lhs().clone()),
+                                and_(args[0].clone(), args[1].rhs().clone()),
+                            )
+                            .dnf_inner()
                         } else {
                             self.replace_value(Expression(Operation { operator, args }));
                             self
@@ -113,19 +125,23 @@ impl Term {
     fn cnf(self) -> Self {
         impl Term {
             fn cnf_inner(mut self) -> Self {
-                use {Value::*, Operator::*};
+                use {Operator::*, Value::*};
                 match self.value().as_expression() {
                     Ok(Operation { operator, args }) => {
                         let args: Vec<_> = args.iter().cloned().map(|t| t.cnf_inner()).collect();
                         let operator = *operator;
                         if operator == Or && args[0].is_and() {
-                            and_(or_(args[0].lhs().clone(), args[1].clone()),
-                                 or_(args[0].rhs().clone(), args[1].clone()))
-                                .cnf_inner()
+                            and_(
+                                or_(args[0].lhs().clone(), args[1].clone()),
+                                or_(args[0].rhs().clone(), args[1].clone()),
+                            )
+                            .cnf_inner()
                         } else if operator == Or && args[1].is_and() {
-                            and_(or_(args[0].clone(), args[1].lhs().clone()),
-                                 or_(args[0].clone(), args[1].rhs().clone()))
-                                .cnf_inner()
+                            and_(
+                                or_(args[0].clone(), args[1].lhs().clone()),
+                                or_(args[0].clone(), args[1].rhs().clone()),
+                            )
+                            .cnf_inner()
                         } else {
                             self.replace_value(Expression(Operation { operator, args }));
                             self
@@ -151,86 +167,69 @@ impl Term {
             _ => None,
         }
     }
-
 }
 
-
-pub fn or_(l: Term, r: Term) -> Term { term!(op!(Or, l, r)) }
-pub fn and_(l: Term, r: Term) -> Term { term!(op!(And, l, r)) }
-pub fn not_(t: Term) -> Term { term!(op!(Not, t)) }
+pub fn or_(l: Term, r: Term) -> Term {
+    term!(op!(Or, l, r))
+}
+pub fn and_(l: Term, r: Term) -> Term {
+    term!(op!(And, l, r))
+}
+pub fn not_(t: Term) -> Term {
+    term!(op!(Not, t))
+}
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
     fn test_nnf() {
-        let ex =
-            or_(not_(var!("p")),
-                and_(var!("q"),
-                     not_(and_(not_(var!("r")),
-                               var!("s")))));
+        let ex = or_(
+            not_(var!("p")),
+            and_(var!("q"), not_(and_(not_(var!("r")), var!("s")))),
+        );
 
         assert_eq!(ex.clone().nnf(), ex.clone().nnf().nnf());
 
-        let nnf =
-            or_(not_(var!("p")),
-                and_(var!("q"),
-                     or_(var!("r"),
-                         not_(var!("s")))));
+        let nnf = or_(
+            not_(var!("p")),
+            and_(var!("q"), or_(var!("r"), not_(var!("s")))),
+        );
 
         assert_eq!(nnf, ex.nnf());
     }
 
     #[test]
     fn test_dnf() {
-        let ex =
-            or_(not_(var!("p")),
-                and_(var!("q"),
-                     not_(and_(not_(var!("r")), var!("s")))));
+        let ex = or_(
+            not_(var!("p")),
+            and_(var!("q"), not_(and_(not_(var!("r")), var!("s")))),
+        );
 
         assert_eq!(ex.clone().dnf(), ex.clone().dnf().dnf());
 
-        let dnf =
-            or_(not_(var!("p")),
-                or_(and_(var!("q"), var!("r")),
-                    and_(var!("q"), not_(var!("s")))));
+        let dnf = or_(
+            not_(var!("p")),
+            or_(and_(var!("q"), var!("r")), and_(var!("q"), not_(var!("s")))),
+        );
 
         assert_eq!(dnf, ex.dnf());
-
-
     }
 
     #[test]
     fn test_cnf() {
-        let ex =
-            or_(not_(var!("p")),
-                and_(var!("q"),
-                     not_(and_(not_(var!("r")), var!("s")))));
+        let ex = or_(
+            not_(var!("p")),
+            and_(var!("q"), not_(and_(not_(var!("r")), var!("s")))),
+        );
 
         assert_eq!(ex.clone().cnf(), ex.clone().cnf().cnf());
 
-        let cnf =
-            and_(or_(not_(var!("p")), var!("q")),
-                 or_(not_(var!("p")),
-                     or_(var!("r"), not_(var!("s")))));
+        let cnf = and_(
+            or_(not_(var!("p")), var!("q")),
+            or_(not_(var!("p")), or_(var!("r"), not_(var!("s")))),
+        );
 
         assert_eq!(cnf.to_polar(), ex.cnf().to_polar());
-    }
-
-    #[test]
-    fn test_vectorize() {
-        let ex =
-            or_(not_(var!("p")),
-                and_(var!("q"),
-                     not_(and_(not_(var!("r")), var!("s")))));
-
-
-        let oa = vec![not_(var!("p")),
-                      and_(var!("q"), var!("r")),
-                      and_(var!("q"), not_(var!("s")))];
-
-        let to_s = |ooa:Vec<Term>| format!("{:?}", ooa.iter().map(|a| a.to_polar()).collect::<Vec<_>>());
-
-        assert_eq!(to_s(oa), to_s(ex.vectorize()));
     }
 }
