@@ -306,10 +306,8 @@ impl PolarLanguageServer {
             resource_block_stats: ResourceBlockStats,
         }
 
-        let diagnostics: Vec<_> = diagnostics
-            .into_values()
-            .flat_map(|PublishDiagnosticsParams { diagnostics, .. }| diagnostics)
-            .collect();
+        let polar_files = diagnostics.len();
+        let diagnostics = diagnostics.into_values().flat_map(|ps| ps.diagnostics);
 
         let polar_chars = self
             .documents
@@ -318,10 +316,10 @@ impl PolarLanguageServer {
             .sum();
 
         let mut event = TelemetryEvent {
-            diagnostics,
+            diagnostics: diagnostics.collect(),
             policy_stats: PolicyStats {
                 polar_chars,
-                polar_files: self.documents.len(),
+                polar_files,
                 ..Default::default()
             },
             ..Default::default()
