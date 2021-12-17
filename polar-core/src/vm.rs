@@ -2651,7 +2651,7 @@ impl PolarVirtualMachine {
                 || {
                     let mut rule_strs = "APPLICABLE_RULES:".to_owned();
                     for rule in rules {
-                        let context = self.kb.read().unwrap().get_rule_source(rule).map_or_else(
+                        let context = self.kb().get_rule_source(rule).map_or_else(
                             || "".to_string(),
                             |source| {
                                 let range = Range::from_span(&source.src, rule.span().unwrap());
