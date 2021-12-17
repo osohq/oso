@@ -2084,6 +2084,13 @@ type RuntimeErrorInvalidState struct {
 
 func (RuntimeErrorInvalidState) isRuntimeError() {}
 
+// RuntimeErrorUndefinedRule struct
+type RuntimeErrorUndefinedRule struct {
+	Name string `json:"name"`
+}
+
+func (RuntimeErrorUndefinedRule) isRuntimeError() {}
+
 // RuntimeError enum
 type RuntimeErrorVariant interface {
 	isRuntimeError()
@@ -2248,6 +2255,16 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		*result = RuntimeError{variant}
 		return nil
 
+	case "UndefinedRuleError":
+		var variant RuntimeErrorUndefinedRule
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = RuntimeError{variant}
+		return nil
 	}
 
 	return fmt.Errorf("Cannot deserialize RuntimeError: %s", string(b))
@@ -2314,6 +2331,11 @@ func (variant RuntimeError) MarshalJSON() ([]byte, error) {
 	case RuntimeErrorInvalidState:
 		return json.Marshal(map[string]RuntimeErrorInvalidState{
 			"InvalidState": inner,
+		})
+
+	case RuntimeErrorUndefinedRule:
+		return json.Marshal(map[string]RuntimeErrorUndefinedRule{
+			"UndefinedRule": inner,
 		})
 
 	}
