@@ -210,7 +210,7 @@ pub fn compare(op: Operator, left: &Term, right: &Term, context: Option<&Term>) 
             Geq => Ok(left >= right),
             Eq => Ok(left == right),
             Neq => Ok(left != right),
-            _ => invalid_state(format!("`{}` is not a comparison operator", op.to_polar())),
+            _ => invalid_state(format!("`{}` is not a comparison operator", op)),
         }
     }
 
@@ -318,15 +318,19 @@ impl PolarVirtualMachine {
             .expect("cannot acquire KB read lock")
             .get_registered_constants()
             .clone();
-        // get all comma-delimited POLAR_LOG variables
-        let polar_log = std::env::var("POLAR_LOG");
-        let polar_log_vars = polar_log
-            .iter()
-            .flat_map(|pl| pl.split(','))
-            .collect::<Vec<&str>>();
 
+        // get all comma-delimited POLAR_LOG variables
+        // ignore `off` & `0` which represent the default None option.
         let mut log_level = None;
-        if !polar_log_vars.is_empty() {
+        let polar_log = std::env::var("POLAR_LOG");
+        let polar_log_vars: HashSet<&str> = polar_log.iter().flat_map(|pl| pl.split(',')).collect();
+
+        if polar_log_vars
+            .intersection(&HashSet::from(["off", "0"]))
+            .cloned()
+            .collect::<HashSet<&str>>()
+            .is_empty()
+        {
             log_level = if polar_log_vars.contains(&"trace") {
                 Some(LogLevel::Trace)
             } else if polar_log_vars.contains(&"debug") {
@@ -685,7 +689,7 @@ impl PolarVirtualMachine {
     pub fn bind(&mut self, var: &Symbol, val: Term) -> Result<()> {
         self.log_with(
             LogLevel::Trace,
-            || format!("⇒ bind: {} ← {}", var.to_polar(), val.to_polar()),
+            || format!("⇒ bind: {} ← {}", var, val),
             &[],
         );
         if let Some(goal) = self.binding_manager.bind(var, val)? {
@@ -709,7 +713,7 @@ impl PolarVirtualMachine {
     fn add_constraint(&mut self, term: &Term) -> Result<()> {
         self.log_with(
             LogLevel::Trace,
-            || format!("⇒ add_constraint: {}", term.to_polar()),
+            || format!("⇒ add_constraint: {}", term),
             &[],
         );
         self.binding_manager.add_constraint(term)
@@ -813,7 +817,7 @@ impl PolarVirtualMachine {
                 let message = message_fn();
                 let lines = message.as_ref().split('\n').collect::<Vec<&str>>();
                 if let Some(line) = lines.first() {
-                    let mut msg = format!("[{}] {}{}", level, &indent, line);
+                    let mut msg = format!("[oso][{}] {}{}", level, &indent, line);
 
                     // print BINDINGS: { .. } only for TRACE logs
                     if !terms.is_empty() && configured_log_level == LogLevel::Trace {
@@ -822,14 +826,14 @@ impl PolarVirtualMachine {
                             ", BINDINGS: {{{}}}",
                             relevant_bindings
                                 .iter()
-                                .map(|(var, val)| format!("{} => {}", var.0, val.to_polar()))
+                                .map(|(var, val)| format!("{} => {}", var.0, val))
                                 .collect::<Vec<String>>()
                                 .join(", ")
                         ));
                     }
                     self.print(msg);
                     for line in &lines[1..] {
-                        self.print(format!("[{}] {}{}", level, &indent, line));
+                        self.print(format!("[oso][{}] {}{}", level, &indent, line));
                     }
                 }
             }
@@ -876,7 +880,7 @@ impl PolarVirtualMachine {
 
                     if let Some(source) = self.source(t) {
                         if let Some(rule) = &rule {
-                            let _ = write!(st, "in rule {} ", rule.name.to_polar());
+                            let _ = write!(st, "in rule {} ", rule.name);
                         } else {
                             let _ = write!(st, "in query ");
                         }
@@ -1013,7 +1017,7 @@ impl PolarVirtualMachine {
     pub fn isa(&mut self, left: &Term, right: &Term) -> Result<()> {
         self.log_with(
             LogLevel::Trace,
-            || format!("MATCHES: {} matches {}", left.to_polar(), right.to_polar()),
+            || format!("MATCHES: {} matches {}", left, right),
             &[left, right],
         );
 
@@ -1394,7 +1398,7 @@ impl PolarVirtualMachine {
                     .clone()
                     .unwrap_or_else(BTreeMap::new)
                     .into_iter()
-                    .map(|(k, v)| format!("{}: {}", k, v.to_polar()));
+                    .map(|(k, v)| format!("{}: {}", k, v));
                 msg.push_str(&args.chain(kwargs).collect::<Vec<String>>().join(", "));
                 msg.push(')');
                 msg
@@ -1486,7 +1490,7 @@ impl PolarVirtualMachine {
                 if self.queries.is_empty() {
                     self.log_with(
                         LogLevel::Info,
-                        || format!("QUERY RULE: {}", predicate.to_polar()),
+                        || format!("QUERY RULE: {}", predicate),
                         &[term],
                     );
                 }
@@ -1496,11 +1500,7 @@ impl PolarVirtualMachine {
                 args,
             }) if args.len() < 2 => (),
             _ => {
-                self.log_with(
-                    LogLevel::Trace,
-                    || format!("QUERY: {}", term.to_polar()),
-                    &[term],
-                );
+                self.log_with(LogLevel::Trace, || format!("QUERY: {}", term), &[term]);
             }
         };
 
@@ -1546,7 +1546,7 @@ impl PolarVirtualMachine {
                     term,
                     format!(
                         "{} isn't something that is true or false so can't be a condition",
-                        term.value().to_polar()
+                        term.value()
                     ),
                 ));
             }
@@ -1561,7 +1561,7 @@ impl PolarVirtualMachine {
         if predicate.kwargs.is_some() {
             return invalid_state(format!(
                 "query_for_predicate: unexpected kwargs: {}",
-                predicate.to_polar()
+                predicate
             ));
         }
         let goals = match self.kb.read().unwrap().get_generic_rule(&predicate.name) {
@@ -1598,12 +1598,7 @@ impl PolarVirtualMachine {
     fn query_for_operation(&mut self, term: &Term) -> Result<QueryEvent> {
         let operation = term.value().as_expression().unwrap();
         let mut args = operation.args.clone();
-        let wrong_arity = || {
-            invalid_state(format!(
-                "query_for_operation: wrong arity: {}",
-                term.to_polar()
-            ))
-        };
+        let wrong_arity = || invalid_state(format!("query_for_operation: wrong arity: {}", term));
         match operation.operator {
             Operator::And => {
                 // Query for each conjunct.
@@ -1651,16 +1646,15 @@ impl PolarVirtualMachine {
                                 &left,
                                 format!(
                                     "Can only assign to unbound variables, {} is not unbound.",
-                                    var.to_polar()
+                                    var
                                 ),
                             ));
                         }
                     },
                     _ => {
-                        return Err(self.type_error(
-                            &left,
-                            format!("Cannot assign to type {}.", left.to_polar()),
-                        ))
+                        return Err(
+                            self.type_error(&left, format!("Cannot assign to type {}.", left))
+                        )
                     }
                 }
             }
@@ -2261,11 +2255,7 @@ impl PolarVirtualMachine {
             (Value::Pattern(_), _) | (_, Value::Pattern(_)) => {
                 return Err(self.type_error(
                     left,
-                    format!(
-                        "cannot unify patterns directly `{}` = `{}`",
-                        left.to_polar(),
-                        right.to_polar()
-                    ),
+                    format!("cannot unify patterns directly `{}` = `{}`", left, right),
                 ));
             }
 
@@ -3036,9 +3026,9 @@ impl Runnable for PolarVirtualMachine {
                 if bindings.is_empty() {
                     "RESULT: SUCCESS".to_string()
                 } else {
-                    let mut out = "RESULT: { ".to_string(); // open with single right-padded curly
+                    let mut out = "RESULT: {\n".to_string(); // open curly & newline
                     for (key, value) in &bindings {
-                        out.push_str(&format!("{}: {} ", key, value)); // write right-padded key: value pairs
+                        out.push_str(&format!("  {}: {}\n", key, value)); // key-value pairs spaced w/ newlines
                     }
                     out.push('}'); // closing curly
                     out

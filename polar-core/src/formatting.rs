@@ -172,7 +172,6 @@ pub fn to_polar_parens(op: Operator, t: &Term) -> String {
 }
 
 pub mod display {
-    use crate::formatting::{format_args, format_params};
     use std::fmt;
     use std::sync::Arc;
 
@@ -181,7 +180,7 @@ pub mod display {
     use crate::numerics::Numeric;
     use crate::resource_block::Declaration;
     use crate::rules::Rule;
-    use crate::terms::{Operation, Operator, Symbol, Term, Value};
+    use crate::terms::{Call, Operator, Symbol, Term};
     use crate::vm::*;
 
     impl fmt::Display for Binding {
@@ -197,6 +196,18 @@ pub mod display {
     }
 
     impl fmt::Display for Term {
+        fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(fmt, "{}", self.to_polar())
+        }
+    }
+
+    impl fmt::Display for Call {
+        fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(fmt, "{}", self.to_polar())
+        }
+    }
+
+    impl fmt::Display for Operator {
         fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(fmt, "{}", self.to_polar())
         }
@@ -312,32 +323,9 @@ pub mod display {
         }
     }
 
-    impl Rule {
-        pub fn head_as_string(&self) -> String {
-            format!("{}({})", self.name, format_params(&self.params, ", "))
-        }
-    }
-
     impl fmt::Display for Rule {
         fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-            match &self.body.value() {
-                Value::Expression(Operation {
-                    operator: Operator::And,
-                    args,
-                }) => {
-                    if args.is_empty() {
-                        write!(fmt, "{};", self.head_as_string())
-                    } else {
-                        write!(
-                            fmt,
-                            "{} if {};",
-                            self.head_as_string(),
-                            format_args(Operator::And, args, ",\n  "),
-                        )
-                    }
-                }
-                _ => panic!("Not any sorta rule I parsed"),
-            }
+            write!(fmt, "{}", self.to_polar())
         }
     }
 
@@ -579,6 +567,12 @@ pub mod to_polar {
         }
     }
 
+    impl Rule {
+        pub fn head_as_string(&self) -> String {
+            format!("{}({})", self.name, format_params(&self.params, ", "))
+        }
+    }
+
     impl ToPolarString for Rule {
         fn to_polar(&self) -> String {
             match &self.body.value() {
@@ -586,20 +580,12 @@ pub mod to_polar {
                     operator: Operator::And,
                     args,
                 }) => {
-                    // rule type (parameters only; no arguments defined))
                     if args.is_empty() {
-                        format!(
-                            "{}({});",
-                            self.name.to_polar(),
-                            format_params(&self.params, ", ")
-                        )
-
-                    // rule (both parameters and arguments defined)
+                        format!("{};", self.head_as_string())
                     } else {
                         format!(
-                            "{}({}) if {};",
-                            self.name.to_polar(),
-                            format_params(&self.params, ", "),
+                            "{} if {};",
+                            self.head_as_string(),
                             format_args(Operator::And, args, " and "),
                         )
                     }
