@@ -151,30 +151,28 @@ impl Term {
 pub fn or_(l: Term, r: Term) -> Term {
     term!(op!(Or, l, r))
 }
+
 pub fn and_(l: Term, r: Term) -> Term {
     term!(op!(And, l, r))
 }
+
 pub fn not_(t: Term) -> Term {
     term!(op!(Not, t))
 }
+
+fn opnp(l: &Term, op: Operator) -> bool {
+    matches!(l.value().as_expression(),
+        Ok(Operation { operator, .. }) if op == *operator)
+}
+
 fn andp(l: &Term) -> bool {
-    matches!(
-        l.value().as_expression(),
-        Ok(Operation {
-            operator: Operator::And,
-            ..
-        })
-    )
+    opnp(l, Operator::And)
 }
+
 fn orp(l: &Term) -> bool {
-    matches!(
-        l.value().as_expression(),
-        Ok(Operation {
-            operator: Operator::Or,
-            ..
-        })
-    )
+    opnp(l, Operator::Or)
 }
+
 #[cfg(test)]
 mod test {
     use super::*;

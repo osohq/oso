@@ -563,19 +563,17 @@ where
 }
 
 fn normalize(t: Term) -> Vec<Term> {
-    fn or_of_ands(mut t: Term) -> Vec<Term> {
+    fn or_of_ands(t: Term) -> Vec<Term> {
         use Operator::*;
         match t.value().as_expression() {
             Ok(Operation { operator, args }) if *operator == Or => {
                 args.iter().cloned().flat_map(or_of_ands).collect()
             }
             _ => {
-                let args = ands(t.clone());
-                t.replace_value(Value::Expression(Operation {
+                vec![term!(Operation {
                     operator: And,
-                    args,
-                }));
-                vec![t]
+                    args: ands(t),
+                })]
             }
         }
     }
