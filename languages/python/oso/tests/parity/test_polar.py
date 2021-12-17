@@ -58,6 +58,7 @@ def test_missing_rule(polar, qeval):
         qeval('d("apple")')
     assert "Cannot evaluate query for undefined rule `d" in str(e.value)
 
+
 def test_negation(polar, qeval):
     polar.load_str('b("apple");')
     assert qeval('b("apple")')

@@ -312,7 +312,8 @@ fn test_clear_rules() -> oso::Result<()> {
 
     assert!(matches!(oso.oso.clear_rules(), Ok(())));
 
-    oso.qnull("f(x)");
+    let err = oso.query_err("f(x)");
+    assert!(err.contains("Cannot evaluate query for undefined rule"));
     assert_eq!(oso.query("x = new Foo()").len(), 1);
 
     Ok(())

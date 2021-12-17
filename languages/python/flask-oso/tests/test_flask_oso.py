@@ -150,6 +150,7 @@ def test_route_authorization(flask_oso, oso, flask_app, app_ctx):
     """Test that route authorization middleware works."""
     flask_oso.perform_route_authorization(app=flask_app)
     flask_app.testing = True
+    oso.load_str('allow("user", "GET", _: Request) if false;')
 
     @flask_app.route("/test_route", methods=("GET",))
     def test():
@@ -159,6 +160,7 @@ def test_route_authorization(flask_oso, oso, flask_app, app_ctx):
         assert c.get("/test_route").status_code == 403
 
     # Add rule to policy.
+    oso.clear_rules()
     oso.load_str('allow("user", "GET", _: Request{path: "/test_route"});')
     with flask_app.test_client() as c:
         assert c.get("/test_route").status_code == 200
@@ -174,6 +176,7 @@ def test_route_authorization(flask_oso, oso, flask_app, app_ctx):
 def test_route_authorizaton_manual(flask_oso, oso, flask_app, app_ctx):
     """Perform route auth manually."""
     flask_app.testing = True
+    oso.load_str('allow("user", "GET", _: Request) if false;')
 
     from flask import request
 
@@ -186,6 +189,7 @@ def test_route_authorizaton_manual(flask_oso, oso, flask_app, app_ctx):
         assert c.get("/test_route").status_code == 403
 
     # Add rule
+    oso.clear_rules()
     oso.load_str('allow("user", "GET", _: Request{path: "/test_route"});')
     with flask_app.test_client() as c:
         assert c.get("/test_route").status_code == 200
@@ -193,6 +197,7 @@ def test_route_authorizaton_manual(flask_oso, oso, flask_app, app_ctx):
 
 def test_custom_unauthorize(flask_oso, oso, flask_app, app_ctx):
     """Test that a custom unauthorize handler can be provided."""
+    oso.load_str('allow("user", "GET", _: Request) if false;')
     auth_failed = False
 
     def unauth():
