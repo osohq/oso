@@ -172,7 +172,6 @@ pub fn to_polar_parens(op: Operator, t: &Term) -> String {
 }
 
 pub mod display {
-    use crate::formatting::format_params;
     use std::fmt;
     use std::sync::Arc;
 
@@ -324,12 +323,6 @@ pub mod display {
         }
     }
 
-    impl Rule {
-        pub fn head_as_string(&self) -> String {
-            format!("{}({})", self.name, format_params(&self.params, ", "))
-        }
-    }
-
     impl fmt::Display for Rule {
         fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
             write!(fmt, "{}", self.to_polar())
@@ -367,7 +360,7 @@ pub mod display {
 }
 
 pub mod to_polar {
-    use crate::formatting::{format_args, to_polar_parens};
+    use crate::formatting::{format_args, format_params, to_polar_parens};
     use crate::resource_block::{BlockType, ResourceBlock, ShorthandRule};
     use crate::rules::*;
     use crate::terms::*;
@@ -563,6 +556,12 @@ pub mod to_polar {
                 None => args,
             };
             format!("{}({})", self.name.to_polar(), combined_args)
+        }
+    }
+
+    impl Rule {
+        pub fn head_as_string(&self) -> String {
+            format!("{}({})", self.name, format_params(&self.params, ", "))
         }
     }
 
