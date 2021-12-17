@@ -176,8 +176,9 @@ def scoped_session(
     scopefunc = scopefunc or (lambda: None)
 
     def _scopefunc():
-        checked_permissions = frozenset(get_checked_permissions().items())
-        return (get_oso(), checked_permissions, get_user(), scopefunc())
+        perms = get_checked_permissions()
+        perms = frozenset() if perms is None else frozenset(perms.items())
+        return (get_oso(), perms, get_user(), scopefunc())
 
     factory = authorized_sessionmaker(
         get_oso, get_user, get_checked_permissions, **kwargs
