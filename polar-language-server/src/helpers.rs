@@ -1,7 +1,8 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use lsp_types::{Position, PublishDiagnosticsParams, Range, TextDocumentItem, Url};
 use polar_core::diagnostic::Diagnostic;
+use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -80,4 +81,24 @@ pub(crate) fn empty_diagnostics_for_doc(
 ) -> (Url, PublishDiagnosticsParams) {
     let params = PublishDiagnosticsParams::new(uri.clone(), vec![], Some(doc.version));
     (uri.clone(), params)
+}
+
+#[derive(Default, Serialize)]
+pub(crate) struct LspEvent<'a> {
+    pub(crate) lsp_method: &'a str,
+    pub(crate) lsp_file_extension_counts: HashMap<String, usize>,
+}
+
+pub(crate) fn count_extensions(uris: &[&Url]) -> HashMap<String, usize> {
+    uris.iter()
+        .filter_map(|uri| {
+            uri.to_file_path()
+                .ok()
+                .and_then(|path| path.extension().map(|ext| ext.to_string_lossy().into()))
+        })
+        .fold(HashMap::new(), |mut acc, ext| {
+            let count = acc.entry(ext).or_insert(0);
+            *count += 1;
+            acc
+        })
 }
