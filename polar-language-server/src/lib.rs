@@ -129,7 +129,8 @@ impl PolarLanguageServer {
             DidOpenTextDocument::METHOD => {
                 let DidOpenTextDocumentParams { text_document } = from_value(params).unwrap();
                 let diagnostics = self.on_did_open_text_document(text_document);
-                self.send_diagnostics(diagnostics);
+                self.send_diagnostics(&diagnostics);
+                self.send_telemetry(diagnostics);
             }
             DidChangeTextDocument::METHOD => {
                 let params: DidChangeTextDocumentParams = from_value(params).unwrap();
@@ -142,7 +143,8 @@ impl PolarLanguageServer {
                 let VersionedTextDocumentIdentifier { uri, version } = params.text_document;
                 let updated_doc = TextDocumentItem::new(uri, "polar".into(), version, change.text);
                 let diagnostics = self.on_did_change_text_document(updated_doc);
-                self.send_diagnostics(diagnostics);
+                self.send_diagnostics(&diagnostics);
+                self.send_telemetry(diagnostics);
             }
             DidChangeWatchedFiles::METHOD => {
                 let DidChangeWatchedFilesParams { changes } = from_value(params).unwrap();
@@ -151,7 +153,8 @@ impl PolarLanguageServer {
                     uri
                 });
                 let diagnostics = self.on_did_delete_files(uris.collect());
-                self.send_diagnostics(diagnostics);
+                self.send_diagnostics(&diagnostics);
+                self.send_telemetry(diagnostics);
             }
             DidDeleteFiles::METHOD => {
                 let DeleteFilesParams { files } = from_value(params).unwrap();
@@ -163,7 +166,8 @@ impl PolarLanguageServer {
                     }
                 }
                 let diagnostics = self.on_did_delete_files(uris);
-                self.send_diagnostics(diagnostics);
+                self.send_diagnostics(&diagnostics);
+                self.send_telemetry(diagnostics);
             }
             // We don't care when a document is saved -- we already have the updated state thanks
             // to `DidChangeTextDocument`.
@@ -256,9 +260,9 @@ impl PolarLanguageServer {
         in_dir.iter().map(empty_diagnostics_for_doc).collect()
     }
 
-    fn send_diagnostics(&self, diagnostics: Diagnostics) {
+    fn send_diagnostics(&self, diagnostics: &Diagnostics) {
         let this = &JsValue::null();
-        for params in diagnostics.into_values() {
+        for params in diagnostics.values() {
             let params = &to_value(&params).unwrap();
             if let Err(e) = self.send_diagnostics_callback.call1(this, params) {
                 log(&format!(
@@ -269,7 +273,7 @@ impl PolarLanguageServer {
         }
     }
 
-    fn send_telemetry(&self, diagnostics: Vec<&Diagnostic>) {
+    fn send_telemetry(&self, diagnostics: Diagnostics) {
         use polar_core::parser::{parse_lines, Line};
 
         #[derive(Default, Serialize)]
@@ -296,11 +300,16 @@ impl PolarLanguageServer {
         }
 
         #[derive(Default, Serialize)]
-        struct TelemetryEvent<'a> {
-            diagnostics: Vec<&'a Diagnostic>,
+        struct TelemetryEvent {
+            diagnostics: Vec<Diagnostic>,
             policy_stats: PolicyStats,
             resource_block_stats: ResourceBlockStats,
         }
+
+        let diagnostics: Vec<_> = diagnostics
+            .into_values()
+            .flat_map(|PublishDiagnosticsParams { diagnostics, .. }| diagnostics)
+            .collect();
 
         let polar_chars = self
             .documents
@@ -489,16 +498,9 @@ impl PolarLanguageServer {
     }
 
     fn get_diagnostics(&self) -> Diagnostics {
-        let diagnostics = self
-            .load_documents()
+        self.load_documents()
             .into_iter()
             .flat_map(|diagnostic| self.diagnostics_from_polar_diagnostic(diagnostic))
-            .collect::<Vec<_>>();
-
-        self.send_telemetry(diagnostics.iter().map(|(_, d)| d).collect());
-
-        diagnostics
-            .into_iter()
             .fold(Diagnostics::new(), |mut acc, (doc, diagnostic)| {
                 let params = acc.entry(doc.uri.clone()).or_insert_with(|| {
                     PublishDiagnosticsParams::new(doc.uri, vec![], Some(doc.version))
