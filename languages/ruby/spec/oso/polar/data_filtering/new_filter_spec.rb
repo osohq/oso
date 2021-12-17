@@ -340,8 +340,9 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         it 'test_forall_forall' do
           subject.load_str <<~POL
             allow(_: Planet{signs}, _, _) if
-              forall(sign in signs, sign matches Sign{people} and
-                forall(person in people, person.name != "sam"));
+              forall(sign in signs,
+                forall(person in sign.people,
+                  person.name != "sam"));
           POL
           result = subject.authorized_resources(sam.sign.planet, 'get', Person)
           expect(result).to be_empty
