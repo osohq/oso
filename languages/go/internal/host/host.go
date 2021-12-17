@@ -24,7 +24,7 @@ type Host struct {
 	instances        map[uint64]reflect.Value
 	fields           map[string]map[string]interface{}
 	acceptExpression bool
-	adapter          *Adapter
+	adapter          Adapter
 }
 
 func NewHost(polar ffi.PolarFfi) Host {
@@ -485,7 +485,7 @@ func (h *Host) SerializeTypes() (map[string]map[string]interface{}, map[string]m
 	return h.fields, type_map, nil
 }
 
-func (h *Host) SetDataFilteringAdapter(adapter *Adapter) {
+func (h *Host) SetDataFilteringAdapter(adapter Adapter) {
 	h.adapter = adapter
 }
 
@@ -494,21 +494,21 @@ func (h *Host) BuildQuery(filter *Filter) (interface{}, error) {
 		return nil, fmt.Errorf("must register an adapter to use data filtering")
 	}
 
-	return (*h.adapter).BuildQuery(filter)
+	return (h.adapter).BuildQuery(filter)
 }
 
-func (h *Host) ExecQuery(query interface{}) ([]interface{}, error) {
+func (h *Host) ExecQuery(query interface{}) (interface{}, error) {
 	if h.adapter == nil {
 		return nil, fmt.Errorf("must register an adapter to use data filtering")
 	}
 
-	return (*h.adapter).ExecQuery(query)
+	return (h.adapter).ExecQuery(query)
 }
 
 func (h *Host) ParseValues(filter *Filter) error {
 	for i := range filter.Conditions {
 		for j := range filter.Conditions[i] {
-			switch t := filter.Conditions[i][j].Rhs.DatumVarient.(type) {
+			switch t := filter.Conditions[i][j].Rhs.DatumVariant.(type) {
 			case Immediate:
 				go_value, err := h.ToGo(types.Term{t.Value.(Value)})
 				if err != nil {
@@ -517,7 +517,7 @@ func (h *Host) ParseValues(filter *Filter) error {
 				datum := Datum{Immediate{go_value}}
 				filter.Conditions[i][j].Rhs = datum
 			}
-			switch t := filter.Conditions[i][j].Lhs.DatumVarient.(type) {
+			switch t := filter.Conditions[i][j].Lhs.DatumVariant.(type) {
 			case Immediate:
 				go_value, err := h.ToGo(types.Term{t.Value.(Value)})
 				if err != nil {

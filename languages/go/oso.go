@@ -407,7 +407,7 @@ func (o Oso) AuthorizedFields(actor interface{}, action interface{}, resource in
 	return results, nil
 }
 
-func (o Oso) SetDataFilteringAdapter(adapter *types.Adapter) {
+func (o Oso) SetDataFilteringAdapter(adapter types.Adapter) {
 	(*o.p).host.SetDataFilteringAdapter(adapter)
 }
 
@@ -504,7 +504,7 @@ func (o Oso) AuthorizedQuery(actor interface{}, action interface{}, resource_typ
 	return q, err
 }
 
-func (o Oso) AuthorizedResources(actor interface{}, action interface{}, resource_type string) ([]interface{}, error) {
+func (o Oso) AuthorizedResources(actor interface{}, action interface{}, resource_type string) (interface{}, error) {
 	query, q, err := o.dataFilter(actor, action, resource_type)
 	if err != nil {
 		return nil, err

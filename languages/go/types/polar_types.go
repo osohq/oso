@@ -2976,12 +2976,12 @@ type Immediate struct {
 	Value interface{}
 }
 
-type DatumVarient interface {
+type DatumVariant interface {
 	isDatum()
 }
 
 type Datum struct {
-	DatumVarient
+	DatumVariant
 }
 
 func (datum *Datum) UnmarshalJSON(b []byte) error {
@@ -2998,14 +2998,14 @@ func (datum *Datum) UnmarshalJSON(b []byte) error {
 			if err != nil {
 				return err
 			}
-			datum.DatumVarient = Immediate{val}
+			datum.DatumVariant = Immediate{val}
 		case "Field":
 			var proj Projection
 			err = json.Unmarshal(*v, &proj)
 			if err != nil {
 				return err
 			}
-			datum.DatumVarient = proj
+			datum.DatumVariant = proj
 		}
 		break
 	}
