@@ -157,7 +157,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       subject.load_file(test_file)
       expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
       subject.clear_rules
-      expect(query(subject, 'f(x)')).to eq([])
+      expect { query(subject, 'f(x)') }.to raise_error Oso::Polar::PolarRuntimeError
     end
 
     it 'leaves registered classes and instances' do
