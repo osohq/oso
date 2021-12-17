@@ -92,9 +92,12 @@ def test_clear_rules(polar, query):
     polar.load_str("f(x) if x = 1;")
     assert len(query("f(1)")) == 1
     assert len(query("x = new Test()")) == 1
+
     polar.clear_rules()
-    assert len(query("f(1)")) == 0
-    assert len(query("x = new Test()")) == 1
+
+    with pytest.raises(exceptions.PolarRuntimeError) as e:
+        query(("f(1)")) == []
+    assert "Cannot evaluate query for undefined rule `f`" in str(e.value)
 
 
 def test_external(polar, qvar, qeval):

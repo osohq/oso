@@ -175,10 +175,12 @@ def test_custom_errors():
 
 def test_custom_read_action():
     oso = Oso(read_action="fetch")
+    oso.load_str('allow("different", "action", "actor");')
     with pytest.raises(NotFoundError):
         oso.authorize("graham", "frob", "bar")
 
     # Allow user to "fetch" bar
+    oso.clear_rules()
     oso.load_str("""allow("graham", "fetch", "bar");""")
     with pytest.raises(ForbiddenError):
         oso.authorize("graham", "frob", "bar")

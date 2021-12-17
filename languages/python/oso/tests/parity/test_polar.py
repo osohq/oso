@@ -54,8 +54,9 @@ def test_missing_rule(polar, qeval):
            b("apple");
            c("apple");"""
     )
-    assert not qeval('d("apple")')
-
+    with pytest.raises(PolarRuntimeError) as e:
+        qeval('d("apple")')
+    assert "Cannot evaluate query for undefined rule `d" in str(e.value)
 
 def test_negation(polar, qeval):
     polar.load_str('b("apple");')
