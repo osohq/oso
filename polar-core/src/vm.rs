@@ -319,27 +319,6 @@ impl PolarVirtualMachine {
             .get_registered_constants()
             .clone();
 
-        // get all comma-delimited POLAR_LOG variables
-        // ignore `off` & `0` which represent the default None option.
-        let mut log_level = None;
-        let polar_log = std::env::var("POLAR_LOG");
-        let polar_log_vars: HashSet<&str> = polar_log.iter().flat_map(|pl| pl.split(',')).collect();
-
-        if polar_log_vars
-            .intersection(&HashSet::from(["off", "0"]))
-            .cloned()
-            .collect::<HashSet<&str>>()
-            .is_empty()
-        {
-            log_level = if polar_log_vars.contains(&"trace") {
-                Some(LogLevel::Trace)
-            } else if polar_log_vars.contains(&"debug") {
-                Some(LogLevel::Debug)
-            } else {
-                Some(LogLevel::Info)
-            }
-        }
-
         let mut vm = Self {
             goals: GoalStack::new_reversed(goals),
             binding_manager: BindingManager::new(),
@@ -357,9 +336,9 @@ impl PolarVirtualMachine {
             kb,
             call_id_symbols: HashMap::new(),
             // `log` controls internal VM logging
-            log_level,
+            log_level: None,
             // `polar_log_stderr` prints things immediately to stderr
-            polar_log_stderr: polar_log_vars.iter().any(|var| var == &"now"),
+            polar_log_stderr: false,
             polar_trace_mute: false,
             query_contains_partial: false,
             inverting: false,
@@ -367,27 +346,30 @@ impl PolarVirtualMachine {
         };
         vm.bind_constants(constants);
         vm.query_contains_partial();
+
+        let polar_log = std::env::var("POLAR_LOG");
+        vm.set_logging_options(None, Some(polar_log.unwrap_or("".to_string())));
+
         vm
     }
 
-    #[cfg(target_arch = "wasm32")]
     pub fn set_logging_options(&mut self, rust_log: Option<String>, polar_log: Option<String>) {
         let polar_log = polar_log.unwrap_or("".to_string());
-        let polar_log_vars = polar_log.split(",").collect::<Vec<&str>>();
+        let polar_log_vars: HashSet<&str> = polar_log.split(",").collect();
 
         self.polar_log_stderr = polar_log_vars.contains(&"now");
 
-        // TODO: @patrickod consolidate log level evaluation here & in VM create
+        // TODO: @patrickod remove `RUST_LOG` from node lib & drop this option.
         self.log_level = if rust_log.is_some() {
-            Some(LogLevel::Info)
+            Some(LogLevel::Trace)
         } else {
             None
         };
 
-        if !polar_log_vars.is_empty() {
-            self.log_level = if polar_log_vars.contains(&"trace") {
+        if polar_log_vars.is_disjoint(&HashSet::from(["off", "0"])) {
+            self.log_level = if polar_log_vars.contains(LogLevel::Trace.to_string().as_str()) {
                 Some(LogLevel::Trace)
-            } else if polar_log_vars.contains(&"debug") {
+            } else if polar_log_vars.contains(LogLevel::Debug.to_string().as_str()) {
                 Some(LogLevel::Debug)
             } else {
                 Some(LogLevel::Info)
@@ -476,7 +458,7 @@ impl PolarVirtualMachine {
     /// Try to achieve one goal. Return `Some(QueryEvent)` if an external
     /// result is needed to achieve it, or `None` if it can run internally.
     fn next(&mut self, goal: Rc<Goal>) -> Result<QueryEvent> {
-        self.log_with(LogLevel::Trace, || format!("{}", goal), &[]);
+        self.log_with(LogLevel::Trace, || goal.to_string(), &[]);
 
         self.check_timeout()?;
 
@@ -821,7 +803,8 @@ impl PolarVirtualMachine {
                 let message = message_fn();
                 let lines = message.as_ref().split('\n').collect::<Vec<&str>>();
                 if let Some(line) = lines.first() {
-                    let mut msg = format!("[oso][{}] {}{}", level, &indent, line);
+                    let prefix = format!("[oso][{}] {}", level, &indent);
+                    let mut msg = format!("{}{}", prefix, line);
 
                     // print BINDINGS: { .. } only for TRACE logs
                     if !terms.is_empty() && configured_log_level == LogLevel::Trace {
@@ -837,7 +820,7 @@ impl PolarVirtualMachine {
                     }
                     self.print(msg);
                     for line in &lines[1..] {
-                        self.print(format!("[oso][{}] {}{}", level, &indent, line));
+                        self.print(format!("{}{}", prefix, line));
                     }
                 }
             }
@@ -1550,7 +1533,7 @@ impl PolarVirtualMachine {
                     term,
                     format!(
                         "{} isn't something that is true or false so can't be a condition",
-                        term.value()
+                        term
                     ),
                 ));
             }
@@ -4026,32 +4009,21 @@ mod tests {
 
     #[test]
     fn test_log_level_should_print_for_level() {
-        let trace = LogLevel::Trace;
-        let info = LogLevel::Info;
-        let debug = LogLevel::Debug;
+        use LogLevel::*;
 
         // TRACE
-        assert!(trace.should_print_on_level(trace), "trace prints trace");
-        assert!(trace.should_print_on_level(debug), "trace prints debug");
-        assert!(trace.should_print_on_level(info), "trace prints info");
+        assert!(Trace.should_print_on_level(Trace));
+        assert!(Trace.should_print_on_level(Debug));
+        assert!(Trace.should_print_on_level(Info));
 
         // DEBUG
-        assert!(
-            !debug.should_print_on_level(trace),
-            "debug does not print trace"
-        );
-        assert!(debug.should_print_on_level(debug), "debug prints debug");
-        assert!(debug.should_print_on_level(info), "debug prints info");
+        assert!(!Debug.should_print_on_level(Trace));
+        assert!(Debug.should_print_on_level(Debug));
+        assert!(Debug.should_print_on_level(Info));
 
         // INFO
-        assert!(
-            !info.should_print_on_level(trace),
-            "info does not print trace"
-        );
-        assert!(
-            !info.should_print_on_level(debug),
-            "info does not print debug"
-        );
-        assert!(info.should_print_on_level(info), "info prints info");
+        assert!(!Info.should_print_on_level(Trace));
+        assert!(!Info.should_print_on_level(Debug));
+        assert!(Info.should_print_on_level(Info));
     }
 }

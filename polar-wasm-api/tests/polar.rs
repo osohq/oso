@@ -112,7 +112,7 @@ fn new_query_from_str_errors() {
     let mut query = polar.wasm_new_query_from_str("[]").unwrap();
     let err: Error = query.wasm_next_event().unwrap_err().dyn_into().unwrap();
     assert_eq!(err.name(), "RuntimeError::TypeError");
-    assert!(err.message().starts_with("trace (most recent evaluation last):\n  in query at line 1, column 1\n    []\nType error: List([]) isn\'t something that is true or false so can\'t be a condition at line 1, column 1", 0));
+    assert!(err.message().starts_with("trace (most recent evaluation last):\n  in query at line 1, column 1\n    []\nType error: [] isn\'t something that is true or false so can\'t be a condition at line 1, column 1", 0));
 }
 
 #[wasm_bindgen_test]
