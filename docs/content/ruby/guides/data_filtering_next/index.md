@@ -96,6 +96,6 @@ data filtering docs][docs] for more details.
 
 This release doesn't include support for queries where a single resource occurs
 more than once. Therefore direct or indirect relations from a type to itself are
-prohibited. We plan to remove this limitation will in an upcoming release.
+prohibited. We plan to remove this limitation in an upcoming release.
 
 [docs]: https://docs.osohq.com/guides/data_filtering.html
