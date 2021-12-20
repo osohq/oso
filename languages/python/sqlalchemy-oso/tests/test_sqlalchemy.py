@@ -22,6 +22,7 @@ def log_queries():
 
 
 def test_authorize_query_no_access(engine, oso, fixture_data):
+    oso.load_str('allow("foo", "bar", "baz");')
     session = AuthorizedSession(oso, "user", {Post: "action"}, bind=engine)
     query = session.query(Post)
 

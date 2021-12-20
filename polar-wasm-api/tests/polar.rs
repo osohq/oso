@@ -100,6 +100,13 @@ fn register_constant_succeeds() {
 #[wasm_bindgen_test]
 fn new_query_from_str_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
+    let source = Source {
+        src: "x() if 1 == 1;\n".to_owned(),
+        filename: Some("foo.polar".to_owned()),
+    };
+    let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
+    polar.wasm_load(sources).unwrap();
+
     let mut query = polar.wasm_new_query_from_str("x()").unwrap();
 
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
@@ -118,6 +125,13 @@ fn new_query_from_str_errors() {
 #[wasm_bindgen_test]
 fn new_query_from_term_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
+    let source = Source {
+        src: "x() if 1 == 1;\n".to_owned(),
+        filename: Some("foo.polar".to_owned()),
+    };
+    let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
+    polar.wasm_load(sources).unwrap();
+
     let term = Term::from(Value::Call(Call {
         name: Symbol("x".into()),
         args: vec![],
