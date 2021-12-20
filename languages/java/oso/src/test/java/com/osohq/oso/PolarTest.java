@@ -532,7 +532,10 @@ public class PolarTest {
     assertEquals(
         List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3)), p.query("f(x)").results());
     p.clearRules();
-    assertTrue(p.query("f(x)").results().isEmpty());
+    assertThrows(
+        Exceptions.PolarRuntimeException.class,
+        () -> p.query("f(x)"),
+        "Cannot evaluate query for undefined rule `f`");
 
     // make sure classes are still registered
     assertFalse(p.query("x = new MyClass(\"test\", 1)").results().isEmpty());
