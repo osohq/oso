@@ -249,7 +249,7 @@ func (p PolarFfi) BuildDataFilter(user_types map[string]map[string]map[string]ma
 	defer C.free(unsafe.Pointer(cType))
 	filterJson, err := checkResultString(C.polar_build_data_filter(p.ptr, cTypes, cPartials, cVar, cType))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	processMessages(p)
@@ -257,7 +257,7 @@ func (p PolarFfi) BuildDataFilter(user_types map[string]map[string]map[string]ma
 	var filter types.Filter
 	err = json.Unmarshal([]byte(*filterJson), &filter)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	return &filter, err

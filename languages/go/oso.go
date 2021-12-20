@@ -509,7 +509,7 @@ func (o Oso) AuthorizedResources(actor interface{}, action interface{}, resource
 	if err != nil {
 		return nil, err
 	}
-	return query.host.ExecQuery(q)
+	return query.host.ExecuteQuery(q)
 }
 
 /*

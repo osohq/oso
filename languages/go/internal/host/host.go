@@ -476,7 +476,7 @@ func (h *Host) SerializeTypes() (map[string]map[string]interface{}, map[string]m
 					},
 				}
 			default:
-				// error, this aint good
+				return nil, nil, fmt.Errorf("type must be a string typename or a Relation struct: got %v", v)
 			}
 		}
 		type_map[typ] = fields_map
@@ -497,12 +497,12 @@ func (h *Host) BuildQuery(filter *Filter) (interface{}, error) {
 	return (h.adapter).BuildQuery(filter)
 }
 
-func (h *Host) ExecQuery(query interface{}) (interface{}, error) {
+func (h *Host) ExecuteQuery(query interface{}) (interface{}, error) {
 	if h.adapter == nil {
 		return nil, fmt.Errorf("must register an adapter to use data filtering")
 	}
 
-	return (h.adapter).ExecQuery(query)
+	return (h.adapter).ExecuteQuery(query)
 }
 
 func (h *Host) ParseValues(filter *Filter) error {
