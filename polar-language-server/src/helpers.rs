@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashSet};
 
 use lsp_types::{Position, PublishDiagnosticsParams, Range, TextDocumentItem, Url};
 use polar_core::diagnostic::Diagnostic;
@@ -86,19 +86,12 @@ pub(crate) fn empty_diagnostics_for_doc(
 #[derive(Default, Serialize)]
 pub(crate) struct LspEvent<'a> {
     pub(crate) lsp_method: &'a str,
-    pub(crate) lsp_file_extension_counts: HashMap<String, usize>,
+    pub(crate) lsp_file_extensions: HashSet<String>,
 }
 
-pub(crate) fn count_extensions(uris: &[&Url]) -> HashMap<String, usize> {
+pub(crate) fn unique_extensions(uris: &[&Url]) -> HashSet<String> {
     uris.iter()
-        .filter_map(|uri| {
-            uri.to_file_path()
-                .ok()
-                .and_then(|path| path.extension().map(|ext| ext.to_string_lossy().into()))
-        })
-        .fold(HashMap::new(), |mut acc, ext| {
-            let count = acc.entry(ext).or_insert(0);
-            *count += 1;
-            acc
-        })
+        .filter_map(|uri| uri.as_str().rsplit_once('.'))
+        .map(|(_, suffix)| suffix.into())
+        .collect()
 }

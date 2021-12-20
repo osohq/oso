@@ -154,7 +154,7 @@ function compileDiagnostics(stats: DiagnosticStats, diagnostics: Diagnostic[]) {
 
   for (const { code } of diagnostics) {
     if (typeof code !== 'string') {
-      stats.unknown_diagnostic_count++;
+      stats.unknown_diagnostic_count += 1;
     } else {
       const count = stats[`${code}_count`] || 0;
       stats[`${code}_count`] = count + 1;
@@ -164,6 +164,10 @@ function compileDiagnostics(stats: DiagnosticStats, diagnostics: Diagnostic[]) {
 
 type TelemetryEvent = {
   diagnostics: Diagnostic[];
+  lsp_event: {
+    lsp_method: LspMethod;
+    lsp_file_extensions: string[];
+  };
   policy_stats: {
     inline_queries: number;
     longhand_rules: number;
@@ -188,9 +192,56 @@ type TelemetryEvent = {
 type LoadStats = TelemetryEvent['policy_stats'] &
   TelemetryEvent['resource_block_stats'];
 
+type LspMethod =
+  | 'textDocument/didChange'
+  | 'textDocument/didOpen'
+  | 'workspace/didChangeWatchedFiles'
+  | 'workspace/didDeleteFiles';
+
+class LspStats {
+  'LSP_method_textDocument/didChange_count': number;
+  'LSP_method_textDocument/didOpen_count': number;
+  'LSP_method_workspace/didChangeWatchedFiles_count': number;
+  'LSP_method_workspace/didDeleteFiles_count': number;
+  'LSP_file_extensions': Set<string>;
+
+  constructor(method: LspMethod, extensions: string[]) {
+    this['LSP_method_textDocument/didChange_count'] = 0;
+    this['LSP_method_textDocument/didOpen_count'] = 0;
+    this['LSP_method_workspace/didChangeWatchedFiles_count'] = 0;
+    this['LSP_method_workspace/didDeleteFiles_count'] = 0;
+    this[`LSP_method_${method}_count`] = 1;
+    this['LSP_file_extensions'] = new Set(extensions);
+  }
+}
+
+function combineLspStats(first: LspStats, maybeSecond?: LspStats) {
+  if (!maybeSecond) return first;
+
+  // Combine sets of file extensions.
+  for (const ext of maybeSecond['LSP_file_extensions']) {
+    first['LSP_file_extensions'].add(ext);
+  }
+  // Combine counts of method occurrences.
+  (
+    [
+      'LSP_method_textDocument/didChange_count',
+      'LSP_method_textDocument/didOpen_count',
+      'LSP_method_workspace/didChangeWatchedFiles_count',
+      'LSP_method_workspace/didDeleteFiles_count',
+    ] as (keyof LspStats)[]
+  ).forEach(
+    lspMethodCount =>
+      ((first[lspMethodCount] as number) += maybeSecond[
+        lspMethodCount
+      ] as number)
+  );
+  return first;
+}
+
 type MixpanelLoadEvent = {
   event: typeof loadEventName;
-  properties: DiagnosticStats & LoadStats;
+  properties: DiagnosticStats & LoadStats & LspStats;
 };
 
 type MixpanelMetadata = {
@@ -202,20 +253,22 @@ type MixpanelMetadata = {
 
 type MixpanelEvent = { properties: MixpanelMetadata } & MixpanelLoadEvent;
 
-const purgatory: Map<string, [LoadStats, DiagnosticStats]> = new Map();
+const purgatory: Map<string, [LoadStats, DiagnosticStats, LspStats]> =
+  new Map();
 
 async function sendEvents(): Promise<number> {
   if (!telemetryEnabled()) return 0;
 
   // Drain all queued events, one for each workspace folder.
   const events: MixpanelEvent[] = [...purgatory.entries()].map(
-    ([folder, [loadStats, diagnosticStats]]) => ({
+    ([folder, [loadStats, diagnosticStats, lspStats]]) => ({
       event: loadEventName,
       properties: {
         distinct_id,
         workspace_folder: hash(folder),
         ...diagnosticStats,
         ...loadStats,
+        ...lspStats,
       },
     })
   );
@@ -234,14 +287,24 @@ export type TelemetryRecorder = DebouncedFunc<(event: TelemetryEvent) => void>;
 export function recordEvent(uri: Uri, event: TelemetryEvent): void {
   if (!telemetryEnabled()) return;
 
-  const { diagnostics, policy_stats, resource_block_stats } = event;
+  const { diagnostics, lsp_event, policy_stats, resource_block_stats } = event;
 
   const folder = uri.toString();
+
   const existing = purgatory.get(folder);
   const diagnosticStats = existing ? existing[1] : new DiagnosticStats();
   compileDiagnostics(diagnosticStats, diagnostics);
-  purgatory.set(folder, [
+
+  const lspStats = combineLspStats(
+    new LspStats(lsp_event.lsp_method, lsp_event.lsp_file_extensions),
+    existing?.[2]
+  );
+
+  const updatedMetrics: [LoadStats, DiagnosticStats, LspStats] = [
     { ...policy_stats, ...resource_block_stats },
     diagnosticStats,
-  ]);
+    lspStats,
+  ];
+
+  purgatory.set(folder, updatedMetrics);
 }

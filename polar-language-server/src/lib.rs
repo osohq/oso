@@ -17,7 +17,7 @@ use wasm_bindgen::prelude::*;
 
 mod helpers;
 use helpers::{
-    count_extensions, empty_diagnostics_for_doc, log, range_from_polar_diagnostic_context,
+    empty_diagnostics_for_doc, log, range_from_polar_diagnostic_context, unique_extensions,
     uri_from_polar_diagnostic_context, Diagnostics, Documents, LspEvent,
 };
 
@@ -59,7 +59,7 @@ impl PolarLanguageServer {
 
                 let event = LspEvent {
                     lsp_method: method,
-                    lsp_file_extension_counts: count_extensions(&[&text_document.uri]),
+                    lsp_file_extensions: unique_extensions(&[&text_document.uri]),
                 };
 
                 let diagnostics = self.on_did_open_text_document(text_document);
@@ -80,7 +80,7 @@ impl PolarLanguageServer {
 
                 let event = LspEvent {
                     lsp_method: method,
-                    lsp_file_extension_counts: count_extensions(&[&uri]),
+                    lsp_file_extensions: unique_extensions(&[&uri]),
                 };
 
                 let updated_doc = TextDocumentItem::new(uri, "polar".into(), version, change.text);
@@ -102,7 +102,7 @@ impl PolarLanguageServer {
 
                 let event = LspEvent {
                     lsp_method: method,
-                    lsp_file_extension_counts: count_extensions(&uris.iter().collect::<Vec<_>>()),
+                    lsp_file_extensions: unique_extensions(&uris.iter().collect::<Vec<_>>()),
                 };
 
                 let diagnostics = self.on_did_delete_files(uris);
@@ -123,7 +123,7 @@ impl PolarLanguageServer {
 
                 let event = LspEvent {
                     lsp_method: method,
-                    lsp_file_extension_counts: count_extensions(&uris.iter().collect::<Vec<_>>()),
+                    lsp_file_extensions: unique_extensions(&uris.iter().collect::<Vec<_>>()),
                 };
 
                 let diagnostics = self.on_did_delete_files(uris);
