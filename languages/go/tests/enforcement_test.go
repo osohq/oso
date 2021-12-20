@@ -213,9 +213,22 @@ func TestAuthorizedActions(t *testing.T) {
 	}
 }
 
+type TestAdapter struct {
+}
+
+func (a TestAdapter) BuildQuery(filter *types.Filter) (interface{}, error) {
+	return nil, nil
+}
+
+func (a TestAdapter) ExecuteQuery(query interface{}) (interface{}, error) {
+	return nil, nil
+}
+
 func TestAuthorizedQuery(t *testing.T) {
 	o := getOso(t)
 	var err error
+
+	o.SetDataFilteringAdapter(&TestAdapter{})
 
 	o.LoadString("allow(_actor: User, \"get\", resource: Widget) if resource.Parent.Id = 1;")
 
