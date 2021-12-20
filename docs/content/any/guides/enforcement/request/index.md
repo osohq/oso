@@ -55,7 +55,7 @@ the request.
 ## Access token scopes
 
 You can use a request-level authorization policy to protect your endpoints using
-access token scopes. This can be used to build features like Github's [OAuth
+access token scopes. This can be used to build features like GitHub's [OAuth
 Scopes](https://docs.github.com/en/developers/apps/building-oauth-apps/scopes-for-oauth-apps).
 
 

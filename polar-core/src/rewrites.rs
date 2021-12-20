@@ -127,13 +127,9 @@ impl<'kb> Folder for Rewriter<'kb> {
             _ if self.stack.is_empty() => {
                 // If there is no containing conjunction, make one.
                 self.stack.push(vec![]);
-                let mut new = self.fold_term(t);
-                let mut rewrites = self.stack.pop().unwrap();
-                for rewrite in rewrites.drain(..).rev() {
-                    and_prepend(&mut new, rewrite);
-                }
-
-                new
+                let new = self.fold_term(t);
+                let rewrites = self.stack.pop().unwrap();
+                rewrites.into_iter().rfold(new, and_op_)
             }
             Value::Expression(o) if self.needs_rewrite(o) => {
                 // Rewrite sub-expressions, then push a temp onto the args.
@@ -155,8 +151,9 @@ impl<'kb> Folder for Rewriter<'kb> {
     }
 
     fn fold_operation(&mut self, o: Operation) -> Operation {
+        use Operator::*;
         match o.operator {
-            Operator::And | Operator::Or | Operator::Not => Operation {
+            And | Or | Not => Operation {
                 operator: fold_operator(o.operator, self),
                 args: o
                     .args
@@ -165,8 +162,8 @@ impl<'kb> Folder for Rewriter<'kb> {
                         let arg_operator = arg.value().as_expression().map(|e| e.operator).ok();
 
                         self.stack.push(vec![]);
-                        let mut arg = self.fold_term(arg);
-                        let mut rewrites = self.stack.pop().unwrap();
+                        let arg = self.fold_term(arg);
+                        let rewrites = self.stack.pop().unwrap();
                         // Decide whether to prepend, or append
 
                         // If the current operator is unify and rewrites are only
@@ -184,21 +181,33 @@ impl<'kb> Folder for Rewriter<'kb> {
                         //
                         // We prepend when the rewritten variable needs to be bound before it is
                         // used.
-                        if only_dots(&rewrites)
-                            && arg_operator.map_or(false, |o| o == Operator::Unify)
-                        {
-                            for rewrite in rewrites {
-                                and_append(&mut arg, rewrite);
-                            }
+                        if only_pure(&rewrites) && arg_operator == Some(Operator::Unify) {
+                            rewrites.into_iter().fold(arg, and_)
                         } else {
-                            for rewrite in rewrites.drain(..).rev() {
-                                and_prepend(&mut arg, rewrite);
-                            }
+                            rewrites.into_iter().rfold(arg, and_op_)
                         }
-                        arg
                     })
                     .collect(),
             },
+
+            // Temporary variables from inside a forall are reinserted into the
+            // original expression.
+            ForAll => Operation {
+                operator: ForAll,
+                args: {
+                    self.stack.push(vec![]);
+                    let mut forall_args = vec![self.fold_term(o.args[0].clone())];
+                    let mut and_args = self.stack.pop().unwrap();
+
+                    self.stack.push(vec![]);
+                    let test = self.fold_term(o.args[1].clone());
+                    and_args.extend(self.stack.pop().unwrap());
+
+                    forall_args.push(and_args.into_iter().fold(test, and_));
+                    forall_args
+                },
+            },
+
             _ => fold_operation(o, self),
         }
     }
@@ -220,30 +229,25 @@ impl<'kb> Folder for Rewriter<'kb> {
     }
 }
 
-fn only_dots(rewrites: &[Term]) -> bool {
+fn only_pure(rewrites: &[Term]) -> bool {
+    use Operator::*;
     rewrites.iter().all(|t| {
-        t.value()
-            .as_expression()
-            .map_or(false, |op| op.operator == Operator::Dot)
+        t.value().as_expression().map_or(false, |op| {
+            matches!(op.operator, Dot | Add | Sub | Mul | Div | Rem)
+        })
     })
 }
 
-/// Replace the left value with And(right, left).
-fn and_prepend(left: &mut Term, right: Term) {
-    let new_value = Value::Expression(Operation {
-        operator: Operator::And,
-        args: vec![right, left.clone()],
-    });
-    left.replace_value(new_value);
+/// Sequence two expressions with an And
+fn and_(left: Term, right: Term) -> Term {
+    let mut out = left.clone();
+    out.replace_value(Value::Expression(op!(And, left, right)));
+    out
 }
 
-/// Replace the left value with And(left, right).
-fn and_append(left: &mut Term, right: Term) {
-    let new_value = Value::Expression(Operation {
-        operator: Operator::And,
-        args: vec![left.clone(), right],
-    });
-    left.replace_value(new_value);
+/// Same but with arguments flipped for use with rfold
+fn and_op_(right: Term, left: Term) -> Term {
+    and_(left, right)
 }
 
 /// Return a cloned list of arguments from And(*args).
@@ -317,6 +321,23 @@ mod tests {
         assert_eq!(
             rule.to_polar(),
             "f(_value_3) if a.b = _value_2 and _value_2.c = _value_3;"
+        );
+    }
+
+    #[test]
+    fn rewrite_forall_rhs_dots() {
+        let mut kb = KnowledgeBase::new();
+        let rules = parse_rules("foo(z, y) if forall(x in y, x.n < z);");
+        let rule = rewrite_rule(rules[0].clone(), &mut kb);
+        assert_eq!(
+            rule.to_polar(),
+            "foo(z, y) if forall(x in y, _value_1 < z and x.n = _value_1);"
+        );
+
+        let query = rewrite_term(parse_query("forall(x in y, x.n < z)"), &mut kb);
+        assert_eq!(
+            query.to_polar(),
+            "forall(x in y, _value_2 < z and x.n = _value_2)"
         );
     }
 
