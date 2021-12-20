@@ -354,9 +354,9 @@ impl PolarVirtualMachine {
     }
 
     pub fn set_logging_options(&mut self, rust_log: Option<String>, polar_log: Option<String>) {
-        let polar_log = polar_log.unwrap_or("".to_string());
+        let polar_log = polar_log.unwrap_or_else(|| "".to_string());
         let polar_log_vars: HashSet<&str> =
-            polar_log.split(",").filter(|v| !v.is_empty()).collect();
+            polar_log.split(',').filter(|v| !v.is_empty()).collect();
 
         self.polar_log_stderr = polar_log_vars.contains(&"now");
 
