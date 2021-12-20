@@ -2,9 +2,10 @@
 title: "Filter Data (Preview)"
 weight: 1
 showContentForAnyLanguage: true
+no_nav: true
 ---
 
-# New Data Filtering for Ruby
+# Filter API for Ruby
 
 This article is about the new data filtering configuration API preview in the
 Ruby library.  For other languages, or for general information about data
@@ -54,10 +55,10 @@ The four attributes of a `Filter` are:
   for the number of different things we designate a `relation`. This will be
   addressed in an upcoming release.
 - `conditions`: a list of lists of `[lhs, op, rhs]` triples, with `op` in
-  `%w[Eq Neq In Nin]`, and `lhs` and `rhs` being `Projection` objects having a
-  `source` (a resource class) and a `field` (an optional string representing a
-  column name, or `nil` indicating "object identity" according to your case
-  (for example, compare by a primary key).
+  `%w[Eq Neq In Nin]`, and `lhs` and `rhs` being either plain values or
+  `Projection` objects having a `source` (a resource class) and a `field`
+  (an optional string representing a column name, or `nil` indicating "object
+  identity" according to your case (for example, compare by a primary key).
 - `types`: a hash whose keys are class objects and their names and registered
   aliases, and whose values are Oso-defined type information needed to understand
   the `Filter`'s `relations`. This attribute may be removed in an
@@ -65,6 +66,12 @@ The four attributes of a `Filter` are:
 
 
 ## Example
+
+{{< literalInclude
+      dynPath="adapterPath"
+      from="docs: begin-adapter"
+      to="docs: end-adapter"
+      fallback="no" >}}
 
 {{< literalInclude
       dynPath="exampleBPath"
@@ -96,6 +103,6 @@ data filtering docs][docs] for more details.
 
 This release doesn't include support for queries where a single resource occurs
 more than once. Therefore direct or indirect relations from a type to itself are
-prohibited. We plan to remove this limitation will in an upcoming release.
+prohibited. We plan to remove this limitation in an upcoming release.
 
 [docs]: https://docs.osohq.com/guides/data_filtering.html

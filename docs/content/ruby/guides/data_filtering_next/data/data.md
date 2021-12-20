@@ -12,4 +12,5 @@ exampleAPath: examples/data_filtering/ruby/data_filtering_example_a.rb
 policyAPath: examples/data_filtering/policy_a.polar
 exampleBPath: examples/data_filtering/ruby/data_filtering_example_newb.rb
 policyBPath: examples/data_filtering/policy_b.polar
+adapterPath: examples/data_filtering/ruby/active_record_adapter.rb
 ---

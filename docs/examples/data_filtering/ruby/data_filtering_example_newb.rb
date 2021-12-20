@@ -80,7 +80,7 @@ end
 # docs: begin-b2
 def init_oso
   oso = Oso.new
-  oso.data_filtering_adapter = ::Oso::Polar::Data::Adapter::ActiveRecordAdapter.new
+  oso.data_filtering_adapter = ActiveRecordAdapter.new
 
   oso.register_class(
     Organization,
