@@ -3021,7 +3021,6 @@ type FilterRelation struct {
 	ToTypeName    string
 }
 
-// todo
 func (relation *FilterRelation) UnmarshalJSON(b []byte) error {
 	var fields []string
 	err := json.Unmarshal(b, &fields)
