@@ -2623,8 +2623,8 @@ impl PolarVirtualMachine {
             // Make alternatives for calling them.
 
             self.polar_trace_mute = false;
-            // as with the "QUERY RULE:" event print the first of these events
-            // to INFO and subsequent queries to TRACE (a superset of INFO)
+            // print applicable rules for the top-level query to INFO and
+            // applicable rules for subsequent queries to TRACE
             let level = if self.queries.len() == 1 {
                 LogLevel::Info
             } else {
@@ -2913,9 +2913,10 @@ impl Runnable for PolarVirtualMachine {
             self.maybe_break(DebugEvent::Goal(goal.clone()))?;
         }
 
-        self.log_with(LogLevel::Trace, || &"⇒ result", &[]);
-        for t in &self.trace {
-            self.log_with(LogLevel::Trace, || format!("trace\n{}", t.draw(self)), &[]);
+        if self.tracing {
+            for t in &self.trace {
+                self.log_with(LogLevel::Trace, || format!("trace\n{}", t.draw(self)), &[]);
+            }
         }
 
         let trace = if self.tracing {
