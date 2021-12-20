@@ -103,7 +103,7 @@ const vscodeCommonProperties = {
   extversion,
   vscodesessionid: env.sessionId,
   vscodeversion: version,
-  isnewappinstall: env.isNewAppInstall.toString(),
+  isnewappinstall: env.isNewAppInstall?.toString() || 'false',
   product: env.appHost,
   uikind: (() => {
     switch (env.uiKind) {
