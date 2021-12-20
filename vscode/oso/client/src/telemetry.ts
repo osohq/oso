@@ -1,14 +1,17 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
 
 import { createHash } from 'crypto';
+import os from 'os';
 
 import type { DebouncedFunc } from 'lodash';
-import { env, OutputChannel, Uri, workspace } from 'vscode';
+import { env, OutputChannel, UIKind, Uri, version, workspace } from 'vscode';
 import * as Mixpanel from 'mixpanel';
 import {
   Diagnostic,
   DiagnosticSeverity as Severity,
 } from 'vscode-languageclient';
+
+import { version as extversion } from '../../package.json';
 
 const ONE_HOUR_IN_MS = 1_000 * 60 * 60;
 const ONE_DAY_IN_MS = ONE_HOUR_IN_MS * 24;
@@ -90,6 +93,30 @@ const hash = (contents: { toString(): string }) =>
 
 // One-way hash of VSCode machine ID.
 const distinct_id = hash(env.machineId);
+// VS Code common telemetry properties.
+// https://github.com/microsoft/vscode-extension-telemetry/blob/188ee72da1741565a7ac80162acb7a08924c6a51/src/common/baseTelemetryReporter.ts#L134-L174
+const vscodeCommonProperties = {
+  os: os.platform(),
+  nodeArch: os.arch(),
+  platformversion: os.release().replace(/^(\d+)(\.\d+)?(\.\d+)?(.*)/, '$1$2$3'),
+  extname: 'osohq.oso',
+  extversion,
+  vscodesessionid: env.sessionId,
+  vscodeversion: version,
+  isnewappinstall: env.isNewAppInstall.toString(),
+  product: env.appHost,
+  uikind: (() => {
+    switch (env.uiKind) {
+      case UIKind.Web:
+        return 'web';
+      case UIKind.Desktop:
+        return 'desktop';
+      default:
+        return 'unknown';
+    }
+  })(),
+  remotename: env.remoteName || 'none',
+};
 
 const MIXPANEL_PROJECT_TOKEN = 'd14a9580b894059dffd19437b7ddd7be';
 const mixpanel = Mixpanel.init(MIXPANEL_PROJECT_TOKEN, { protocol: 'https' });
@@ -249,6 +276,18 @@ type MixpanelMetadata = {
   distinct_id: string;
   // One-way hash of workspace folder URI.
   workspace_folder: string;
+  // VS Code common telemetry properties.
+  os: string;
+  nodeArch: string;
+  platformversion: string;
+  extname: string;
+  extversion: string;
+  vscodesessionid: string;
+  vscodeversion: string;
+  isnewappinstall: string;
+  product: string;
+  uikind: string;
+  remotename: string;
 };
 
 type MixpanelEvent = { properties: MixpanelMetadata } & MixpanelLoadEvent;
@@ -265,6 +304,7 @@ async function sendEvents(): Promise<number> {
       event: loadEventName,
       properties: {
         distinct_id,
+        ...vscodeCommonProperties,
         workspace_folder: hash(folder),
         ...diagnosticStats,
         ...loadStats,
