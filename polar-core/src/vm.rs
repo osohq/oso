@@ -348,14 +348,15 @@ impl PolarVirtualMachine {
         vm.query_contains_partial();
 
         let polar_log = std::env::var("POLAR_LOG");
-        vm.set_logging_options(None, Some(polar_log.unwrap_or("".to_string())));
+        vm.set_logging_options(None, polar_log.ok());
 
         vm
     }
 
     pub fn set_logging_options(&mut self, rust_log: Option<String>, polar_log: Option<String>) {
         let polar_log = polar_log.unwrap_or("".to_string());
-        let polar_log_vars: HashSet<&str> = polar_log.split(",").collect();
+        let polar_log_vars: HashSet<&str> =
+            polar_log.split(",").filter(|v| !v.is_empty()).collect();
 
         self.polar_log_stderr = polar_log_vars.contains(&"now");
 
@@ -366,7 +367,7 @@ impl PolarVirtualMachine {
             None
         };
 
-        if polar_log_vars.is_disjoint(&HashSet::from(["off", "0"])) {
+        if !polar_log_vars.is_empty() && polar_log_vars.is_disjoint(&HashSet::from(["off", "0"])) {
             self.log_level = if polar_log_vars.contains(LogLevel::Trace.to_string().as_str()) {
                 Some(LogLevel::Trace)
             } else if polar_log_vars.contains(LogLevel::Debug.to_string().as_str()) {
