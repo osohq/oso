@@ -367,6 +367,8 @@ impl PolarVirtualMachine {
             None
         };
 
+        // The values `off` and `0` mute all logging and take precedence over any other coexisting value.
+        // If POLAR_LOG is specified we attempt to match the level requested, other default to INFO
         if !polar_log_vars.is_empty() && polar_log_vars.is_disjoint(&HashSet::from(["off", "0"])) {
             self.log_level = if polar_log_vars.contains(LogLevel::Trace.to_string().as_str()) {
                 Some(LogLevel::Trace)
@@ -1475,13 +1477,11 @@ impl PolarVirtualMachine {
         // readibility|brevity reasons.
         match &term.value() {
             Value::Call(predicate) => {
-                if self.queries.is_empty() {
-                    self.log_with(
-                        LogLevel::Info,
-                        || format!("QUERY RULE: {}", predicate),
-                        &[term],
-                    );
-                }
+                self.log_with(
+                    LogLevel::Info,
+                    || format!("QUERY RULE: {}", predicate),
+                    &[term],
+                );
             }
             Value::Expression(Operation {
                 operator: Operator::And,
