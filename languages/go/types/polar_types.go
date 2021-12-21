@@ -317,6 +317,8 @@ type ExternalInstance struct {
 	Constructor *Term `json:"constructor"`
 	// Repr
 	Repr *string `json:"repr"`
+	// Class Repr
+	ClassRepr *string `json:"class_repr"`
 }
 
 // FormattedPolarError struct

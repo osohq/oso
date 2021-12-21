@@ -146,6 +146,7 @@ pub fn fold_external_instance<T: Folder>(
         instance_id,
         constructor,
         repr,
+        class_repr,
     }: ExternalInstance,
     fld: &mut T,
 ) -> ExternalInstance {
@@ -153,6 +154,7 @@ pub fn fold_external_instance<T: Folder>(
         instance_id: fld.fold_instance_id(instance_id),
         constructor: constructor.map(|t| fld.fold_term(t)),
         repr: repr.map(|r| fld.fold_string(r)),
+        class_repr: class_repr.map(|r| fld.fold_string(r)),
     }
 }
 
@@ -268,6 +270,7 @@ mod tests {
             instance_id: 1,
             constructor: None,
             repr: None,
+            class_repr: None,
         }));
         let instance_pattern = term!(value!(Pattern::Instance(InstanceLiteral {
             tag: sym!("d"),

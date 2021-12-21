@@ -256,6 +256,7 @@ class Host:
             val = {
                 "Dictionary": {"fields": {k: self.to_polar(v) for k, v in v.items()}}
             }
+        # only used when you call oso.query() with a Predicate instance
         elif isinstance(v, Predicate):
             val = {
                 "Call": {
@@ -263,8 +264,10 @@ class Host:
                     "args": [self.to_polar(v) for v in v.args],
                 }
             }
+        # basically only used in data filtering or if someone intentionally manually passes in a Variable instance
         elif isinstance(v, Variable):
             val = {"Variable": v}
+        # basically only used in data filtering
         elif isinstance(v, Expression):
             val = {
                 "Expression": {
@@ -272,6 +275,9 @@ class Host:
                     "args": [self.to_polar(v) for v in v.args],
                 }
             }
+        # basically only used in data filtering (seeding the authorized_query()
+        # call with an initial type binding so we know what type of resources
+        # we're trying to determine access for)
         elif isinstance(v, Pattern):
             if v.tag is None:
                 val = {"Pattern": self.to_polar(v.fields)["value"]}
@@ -284,17 +290,35 @@ class Host:
                         }
                     }
                 }
+
+        # user queries: oso.allow(<some user instance>, "some action", <some resource instance>)
+        # Host.to_polar translates that into something like
+        #   Call {
+        #       name: String("allow"),
+        #       args: List([
+        #           ExternalInstance { instance_id: 1, repr: "<some user instance>", class_id: <user_class_id> },
+        #           String("some action"),
+        #           ExternalInstance { instance_id: 2, repr: "<some resource instance>", class_id: <resource_class_id> },
+        #       ]
+        #   }
         else:
             instance_id = None
             import inspect
 
+            # maintain consistent IDs for registered classes
             if inspect.isclass(v):
                 if v in self.types:
                     instance_id = self.types[v].id
+
+            # pass the class_repr only for registered types otherwise None
+            class_repr = type(v).__name__
+            class_repr = class_repr if class_repr in self.types else None
+
             val = {
                 "ExternalInstance": {
                     "instance_id": self.cache_instance(v, instance_id),
                     "repr": None,
+                    "class_repr": class_repr,
                 }
             }
         term = {"value": val}
