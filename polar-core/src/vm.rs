@@ -355,10 +355,13 @@ impl PolarVirtualMachine {
 
     pub fn set_logging_options(&mut self, rust_log: Option<String>, polar_log: Option<String>) {
         let polar_log = polar_log.unwrap_or_else(|| "".to_string());
-        let polar_log_vars: HashSet<&str> =
-            polar_log.split(',').filter(|v| !v.is_empty()).collect();
+        let polar_log_vars: HashSet<String> = polar_log
+            .split(',')
+            .filter(|v| !v.is_empty())
+            .map(|s| s.to_lowercase())
+            .collect();
 
-        self.polar_log_stderr = polar_log_vars.contains(&"now");
+        self.polar_log_stderr = polar_log_vars.contains(&"now".to_string());
 
         // TODO: @patrickod remove `RUST_LOG` from node lib & drop this option.
         self.log_level = if rust_log.is_some() {
@@ -369,10 +372,12 @@ impl PolarVirtualMachine {
 
         // The values `off` and `0` mute all logging and take precedence over any other coexisting value.
         // If POLAR_LOG is specified we attempt to match the level requested, other default to INFO
-        if !polar_log_vars.is_empty() && polar_log_vars.is_disjoint(&HashSet::from(["off", "0"])) {
-            self.log_level = if polar_log_vars.contains(LogLevel::Trace.to_string().as_str()) {
+        if !polar_log_vars.is_empty()
+            && polar_log_vars.is_disjoint(&HashSet::from(["off".to_string(), "0".to_string()]))
+        {
+            self.log_level = if polar_log_vars.contains(&LogLevel::Trace.to_string()) {
                 Some(LogLevel::Trace)
-            } else if polar_log_vars.contains(LogLevel::Debug.to_string().as_str()) {
+            } else if polar_log_vars.contains(&LogLevel::Debug.to_string()) {
                 Some(LogLevel::Debug)
             } else {
                 Some(LogLevel::Info)
