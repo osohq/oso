@@ -32,7 +32,7 @@ draft: true
 
 * Previously we supported `POLAR_LOG=trace` and `POLAR_LOG=1` which enabled verbose "TRACE"-level logging of the execution of queries and their constituent goals within the Polar VM.
 * `POLAR_LOG=on` was slightly less verbose than `POLAR_LOG=trace` but still produced a voluminous output which made it hard to parse and follow the execution of a particular query.
-* To enable easier query debugging we have broken out `POLAR_LOG` into new discrete `INFO` and `TRACE` levels. Specifying `POLAR_LOG=info` will cause Polar to emit a more concise log output intended to be consumed by developers as they build and debug their Polar policies. The more verbose TRACE output is still available through `POLAR_LOG=trace`
+* To enable easier query debugging we have broken out `POLAR_LOG` into new discrete `INFO` and `TRACE` levels. Specifying `POLAR_LOG=info` will cause Polar to emit a more concise log output intended to be consumed by developers as they build and debug their Polar policies. The more verbose TRACE output is still available through `POLAR_LOG=trace`. Check out our [documentation](/reference/tooling/tracing.html) for more information on tracing.
 
 ##### Second parameter of Oso.query() API changed from bindings to options
 
