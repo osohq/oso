@@ -13,6 +13,122 @@ type Call struct {
 	// Kwargs
 	Kwargs *map[Symbol]Term `json:"kwargs"`
 }
+type DeclarationRole struct{}
+
+func (DeclarationRole) isDeclaration() {}
+
+type DeclarationPermission struct{}
+
+func (DeclarationPermission) isDeclaration() {}
+
+// DeclarationRelation newtype
+type DeclarationRelation Term
+
+func (variant DeclarationRelation) MarshalJSON() ([]byte, error) {
+	return json.Marshal(Term(variant))
+}
+
+func (variant *DeclarationRelation) UnmarshalJSON(b []byte) error {
+	inner := Term(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = DeclarationRelation(inner)
+	return err
+}
+
+func (DeclarationRelation) isDeclaration() {}
+
+// Declaration enum
+type DeclarationVariant interface {
+	isDeclaration()
+}
+
+type Declaration struct {
+	DeclarationVariant
+}
+
+func (result *Declaration) UnmarshalJSON(b []byte) error {
+	var variantName string
+	var variantValue *json.RawMessage
+
+	// try and deserialize as a string first
+	err := json.Unmarshal(b, &variantName)
+	if err != nil {
+		var rawMap map[string]json.RawMessage
+		err := json.Unmarshal(b, &rawMap)
+		if err != nil {
+			return err
+		}
+		// JSON should be of form {"VariantName": {...}}
+		if len(rawMap) != 1 {
+			return errors.New("Deserializing Declaration as an enum variant; expecting a single key")
+		}
+		for k, v := range rawMap {
+			variantName = k
+			variantValue = &v
+		}
+	}
+	switch variantName {
+
+	case "Role":
+		var variant DeclarationRole
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Declaration{variant}
+		return nil
+
+	case "Permission":
+		var variant DeclarationPermission
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Declaration{variant}
+		return nil
+
+	case "Relation":
+		var variant DeclarationRelation
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Declaration{variant}
+		return nil
+
+	}
+
+	return fmt.Errorf("Cannot deserialize Declaration: %s", string(b))
+}
+
+func (variant Declaration) MarshalJSON() ([]byte, error) {
+	switch inner := variant.DeclarationVariant.(type) {
+
+	case DeclarationRole:
+		return json.Marshal(map[string]DeclarationRole{
+			"Role": inner,
+		})
+
+	case DeclarationPermission:
+		return json.Marshal(map[string]DeclarationPermission{
+			"Permission": inner,
+		})
+
+	case DeclarationRelation:
+		return json.Marshal(map[string]DeclarationRelation{
+			"Relation": inner,
+		})
+
+	}
+
+	return nil, fmt.Errorf("unexpected variant of %v", variant)
+}
 
 // Dictionary struct
 type Dictionary struct {
@@ -1982,14 +2098,6 @@ type RuntimeErrorApplication struct {
 
 func (RuntimeErrorApplication) isRuntimeError() {}
 
-// RuntimeErrorFileLoading struct
-type RuntimeErrorFileLoading struct {
-	// Msg
-	Msg string `json:"msg"`
-}
-
-func (RuntimeErrorFileLoading) isRuntimeError() {}
-
 // RuntimeErrorIncompatibleBindings struct
 type RuntimeErrorIncompatibleBindings struct {
 	// Msg
@@ -2018,6 +2126,14 @@ type RuntimeErrorDataFilteringFieldMissing struct {
 
 func (RuntimeErrorDataFilteringFieldMissing) isRuntimeError() {}
 
+// RuntimeErrorDataFilteringUnsupportedOp struct
+type RuntimeErrorDataFilteringUnsupportedOp struct {
+	// Operation
+	Operation Operation `json:"operation"`
+}
+
+func (RuntimeErrorDataFilteringUnsupportedOp) isRuntimeError() {}
+
 // RuntimeErrorInvalidRegistration struct
 type RuntimeErrorInvalidRegistration struct {
 	// Sym
@@ -2035,6 +2151,10 @@ type RuntimeErrorInvalidState struct {
 }
 
 func (RuntimeErrorInvalidState) isRuntimeError() {}
+
+type RuntimeErrorMultipleLoadError struct{}
+
+func (RuntimeErrorMultipleLoadError) isRuntimeError() {}
 
 // RuntimeError enum
 type RuntimeErrorVariant interface {
@@ -2134,17 +2254,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		*result = RuntimeError{variant}
 		return nil
 
-	case "FileLoading":
-		var variant RuntimeErrorFileLoading
-		if variantValue != nil {
-			err := json.Unmarshal(*variantValue, &variant)
-			if err != nil {
-				return err
-			}
-		}
-		*result = RuntimeError{variant}
-		return nil
-
 	case "IncompatibleBindings":
 		var variant RuntimeErrorIncompatibleBindings
 		if variantValue != nil {
@@ -2178,6 +2287,17 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		*result = RuntimeError{variant}
 		return nil
 
+	case "DataFilteringUnsupportedOp":
+		var variant RuntimeErrorDataFilteringUnsupportedOp
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = RuntimeError{variant}
+		return nil
+
 	case "InvalidRegistration":
 		var variant RuntimeErrorInvalidRegistration
 		if variantValue != nil {
@@ -2191,6 +2311,17 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 
 	case "InvalidState":
 		var variant RuntimeErrorInvalidState
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = RuntimeError{variant}
+		return nil
+
+	case "MultipleLoadError":
+		var variant RuntimeErrorMultipleLoadError
 		if variantValue != nil {
 			err := json.Unmarshal(*variantValue, &variant)
 			if err != nil {
@@ -2238,11 +2369,6 @@ func (variant RuntimeError) MarshalJSON() ([]byte, error) {
 			"Application": inner,
 		})
 
-	case RuntimeErrorFileLoading:
-		return json.Marshal(map[string]RuntimeErrorFileLoading{
-			"FileLoading": inner,
-		})
-
 	case RuntimeErrorIncompatibleBindings:
 		return json.Marshal(map[string]RuntimeErrorIncompatibleBindings{
 			"IncompatibleBindings": inner,
@@ -2258,6 +2384,11 @@ func (variant RuntimeError) MarshalJSON() ([]byte, error) {
 			"DataFilteringFieldMissing": inner,
 		})
 
+	case RuntimeErrorDataFilteringUnsupportedOp:
+		return json.Marshal(map[string]RuntimeErrorDataFilteringUnsupportedOp{
+			"DataFilteringUnsupportedOp": inner,
+		})
+
 	case RuntimeErrorInvalidRegistration:
 		return json.Marshal(map[string]RuntimeErrorInvalidRegistration{
 			"InvalidRegistration": inner,
@@ -2266,6 +2397,11 @@ func (variant RuntimeError) MarshalJSON() ([]byte, error) {
 	case RuntimeErrorInvalidState:
 		return json.Marshal(map[string]RuntimeErrorInvalidState{
 			"InvalidState": inner,
+		})
+
+	case RuntimeErrorMultipleLoadError:
+		return json.Marshal(map[string]RuntimeErrorMultipleLoadError{
+			"MultipleLoadError": inner,
 		})
 
 	}
@@ -2316,6 +2452,16 @@ type TraceResult struct {
 	// Formatted
 	Formatted string `json:"formatted"`
 }
+
+// ValidationErrorFileLoading struct
+type ValidationErrorFileLoading struct {
+	// Source
+	Source Source `json:"source"`
+	// Msg
+	Msg string `json:"msg"`
+}
+
+func (ValidationErrorFileLoading) isValidationError() {}
 
 // ValidationErrorMissingRequiredRule struct
 type ValidationErrorMissingRequiredRule struct {
@@ -2379,6 +2525,20 @@ type ValidationErrorUnregisteredClass struct {
 
 func (ValidationErrorUnregisteredClass) isValidationError() {}
 
+// ValidationErrorDuplicateResourceBlockDeclaration struct
+type ValidationErrorDuplicateResourceBlockDeclaration struct {
+	// Resource
+	Resource Term `json:"resource"`
+	// Declaration
+	Declaration Term `json:"declaration"`
+	// Existing
+	Existing Declaration `json:"existing"`
+	// New
+	New Declaration `json:"new"`
+}
+
+func (ValidationErrorDuplicateResourceBlockDeclaration) isValidationError() {}
+
 // ValidationError enum
 type ValidationErrorVariant interface {
 	isValidationError()
@@ -2410,6 +2570,17 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		}
 	}
 	switch variantName {
+
+	case "FileLoading":
+		var variant ValidationErrorFileLoading
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ValidationError{variant}
+		return nil
 
 	case "MissingRequiredRule":
 		var variant ValidationErrorMissingRequiredRule
@@ -2488,6 +2659,17 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		*result = ValidationError{variant}
 		return nil
 
+	case "DuplicateResourceBlockDeclaration":
+		var variant ValidationErrorDuplicateResourceBlockDeclaration
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ValidationError{variant}
+		return nil
+
 	}
 
 	return fmt.Errorf("Cannot deserialize ValidationError: %s", string(b))
@@ -2495,6 +2677,11 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 
 func (variant ValidationError) MarshalJSON() ([]byte, error) {
 	switch inner := variant.ValidationErrorVariant.(type) {
+
+	case ValidationErrorFileLoading:
+		return json.Marshal(map[string]ValidationErrorFileLoading{
+			"FileLoading": inner,
+		})
 
 	case ValidationErrorMissingRequiredRule:
 		return json.Marshal(map[string]ValidationErrorMissingRequiredRule{
@@ -2529,6 +2716,11 @@ func (variant ValidationError) MarshalJSON() ([]byte, error) {
 	case ValidationErrorUnregisteredClass:
 		return json.Marshal(map[string]ValidationErrorUnregisteredClass{
 			"UnregisteredClass": inner,
+		})
+
+	case ValidationErrorDuplicateResourceBlockDeclaration:
+		return json.Marshal(map[string]ValidationErrorDuplicateResourceBlockDeclaration{
+			"DuplicateResourceBlockDeclaration": inner,
 		})
 
 	}

@@ -7,7 +7,7 @@ from .exceptions import (
     InvalidConstructorError,
     PolarRuntimeError,
 )
-from .data_filtering import Relation, Filter
+from .data_filtering import Relation
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 
@@ -86,6 +86,46 @@ class Query:
             raise InvalidConstructorError()
         self.host.make_instance(cls_name, args, kwargs, id)
 
+    def handle_relation(self, instance, rel):
+        if self.host.adapter is not None:
+            from .data import DataFilter, Condition, Projection
+
+            other_cls = self.host.types[rel.other_type].cls
+            condition = Condition(
+                Projection(other_cls, rel.other_field),
+                "Eq",
+                getattr(instance, rel.my_field),
+            )
+            filter = DataFilter(other_cls, [], [[condition]], self.host.types)
+            adapter = self.host.adapter
+            query = adapter.build_query(filter)
+            results = adapter.execute_query(query)
+
+        else:
+            from .data_filtering import Filter
+
+            # Use the fetcher for the other type to traverse the relationship
+            build_query = self.host.types[rel.other_type].build_query
+            exec_query = self.host.types[rel.other_type].exec_query
+            assert build_query is not None
+            assert exec_query is not None
+            constraint = Filter(
+                kind="Eq",
+                field=rel.other_field,
+                value=getattr(instance, rel.my_field),
+            )
+            constraints = [constraint]
+            query = build_query(constraints)
+            results = exec_query(query)
+
+        if rel.kind == "one":
+            assert len(results) == 1
+            return results[0]
+        elif rel.kind == "many":
+            return results
+        else:
+            raise ValueError(rel.kind)
+
     def handle_external_call(self, data):
         call_id = data["call_id"]
         instance = self.host.to_python(data["instance"])
@@ -103,25 +143,8 @@ class Query:
                 if attribute in typ:
                     attr_typ = typ[attribute]
                     if isinstance(attr_typ, Relation):
-                        rel = attr_typ
-                        # Use the fetcher for the other type to traverse the relationship
-                        build_query = self.host.types[rel.other_type].build_query
-                        exec_query = self.host.types[rel.other_type].exec_query
-                        assert build_query is not None
-                        assert exec_query is not None
-                        constraint = Filter(
-                            kind="Eq",
-                            field=rel.other_field,
-                            value=getattr(instance, rel.my_field),
-                        )
-                        constraints = [constraint]
-                        query = build_query(constraints)
-                        results = exec_query(query)
-                        if rel.kind == "one":
-                            assert len(results) == 1
-                            attr = results[0]
-                        elif rel.kind == "many":
-                            attr = results
+                        attr = self.handle_relation(instance, attr_typ)
+
             if attr is None:
                 attr = getattr(instance, attribute)
         except AttributeError as e:
