@@ -1174,10 +1174,10 @@ impl PolarVirtualMachine {
 
                 // TODO (dhatch): what if there is more than one var = dot_op constraint?
                 // What if the one there is is in a not, or an or, or something
-                let lhs_of_matches = simplified
+                let lhss_of_matches: Vec<_> = simplified
                     .constraints()
                     .into_iter()
-                    .find_map(|c| {
+                    .filter_map(|c| {
                         // If the simplified partial includes a constraint of form:
                         // `v = dot_op`, `dot_op = v`, or `v in dot_op`
                         // and the receiver of the dot operation is either
@@ -1195,19 +1195,25 @@ impl PolarVirtualMachine {
                             None
                         }
                     })
-                    .unwrap_or_else(|| left.clone());
+                    .chain(std::iter::once(left.clone()))
+                    .collect();
 
                 // Construct field-less matches operation.
                 let tag_pattern = right.clone_with_value(value!(pattern!(instance!(tag.clone()))));
                 let type_constraint = op!(Isa, left.clone(), tag_pattern);
 
-                let new_matches = op!(Isa, lhs_of_matches, right.clone());
+                let new_matcheses = lhss_of_matches.into_iter().map(|lhs_of_matches| {
+                    op!(Isa, lhs_of_matches, right.clone())
+                });
 
-                let runnable = Box::new(IsaConstraintCheck::new(
-                    simplified.constraints(),
-                    new_matches,
-                    names,
-                ));
+                let runnables = new_matcheses.map(|new_matches| {
+                    let runnable = Box::new(IsaConstraintCheck::new(
+                        simplified.constraints(),
+                        new_matches,
+                        names.clone(),
+                    ));
+                    Goal::Run { runnable }
+                }).collect();
 
                 // Construct field constraints.
                 let field_constraints = fields.fields.iter().rev().map(|(f, v)| {
@@ -1222,7 +1228,7 @@ impl PolarVirtualMachine {
 
                 // Run compatibility check.
                 self.choose_conditional(
-                    vec![Goal::Run { runnable }],
+                    runnables,
                     add_constraints
                         .into_iter()
                         .map(|op| Goal::AddConstraint { term: op.into() })
