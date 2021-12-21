@@ -1039,132 +1039,82 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 }
 
 func (variant Operator) MarshalJSON() ([]byte, error) {
-	switch inner := variant.OperatorVariant.(type) {
+	switch variant.OperatorVariant.(type) {
 
 	case OperatorDebug:
-		return json.Marshal(map[string]OperatorDebug{
-			"Debug": inner,
-		})
+		return json.Marshal("Debug")
 
 	case OperatorPrint:
-		return json.Marshal(map[string]OperatorPrint{
-			"Print": inner,
-		})
+		return json.Marshal("Print")
 
 	case OperatorCut:
-		return json.Marshal(map[string]OperatorCut{
-			"Cut": inner,
-		})
+		return json.Marshal("Cut")
 
 	case OperatorIn:
-		return json.Marshal(map[string]OperatorIn{
-			"In": inner,
-		})
+		return json.Marshal("In")
 
 	case OperatorIsa:
-		return json.Marshal(map[string]OperatorIsa{
-			"Isa": inner,
-		})
+		return json.Marshal("Isa")
 
 	case OperatorNew:
-		return json.Marshal(map[string]OperatorNew{
-			"New": inner,
-		})
+		return json.Marshal("New")
 
 	case OperatorDot:
-		return json.Marshal(map[string]OperatorDot{
-			"Dot": inner,
-		})
+		return json.Marshal("Dot")
 
 	case OperatorNot:
-		return json.Marshal(map[string]OperatorNot{
-			"Not": inner,
-		})
+		return json.Marshal("Not")
 
 	case OperatorMul:
-		return json.Marshal(map[string]OperatorMul{
-			"Mul": inner,
-		})
+		return json.Marshal("Mul")
 
 	case OperatorDiv:
-		return json.Marshal(map[string]OperatorDiv{
-			"Div": inner,
-		})
+		return json.Marshal("Div")
 
 	case OperatorMod:
-		return json.Marshal(map[string]OperatorMod{
-			"Mod": inner,
-		})
+		return json.Marshal("Mod")
 
 	case OperatorRem:
-		return json.Marshal(map[string]OperatorRem{
-			"Rem": inner,
-		})
+		return json.Marshal("Rem")
 
 	case OperatorAdd:
-		return json.Marshal(map[string]OperatorAdd{
-			"Add": inner,
-		})
+		return json.Marshal("Add")
 
 	case OperatorSub:
-		return json.Marshal(map[string]OperatorSub{
-			"Sub": inner,
-		})
+		return json.Marshal("Sub")
 
 	case OperatorEq:
-		return json.Marshal(map[string]OperatorEq{
-			"Eq": inner,
-		})
+		return json.Marshal("Eq")
 
 	case OperatorGeq:
-		return json.Marshal(map[string]OperatorGeq{
-			"Geq": inner,
-		})
+		return json.Marshal("Geq")
 
 	case OperatorLeq:
-		return json.Marshal(map[string]OperatorLeq{
-			"Leq": inner,
-		})
+		return json.Marshal("Leq")
 
 	case OperatorNeq:
-		return json.Marshal(map[string]OperatorNeq{
-			"Neq": inner,
-		})
+		return json.Marshal("Neq")
 
 	case OperatorGt:
-		return json.Marshal(map[string]OperatorGt{
-			"Gt": inner,
-		})
+		return json.Marshal("Gt")
 
 	case OperatorLt:
-		return json.Marshal(map[string]OperatorLt{
-			"Lt": inner,
-		})
+		return json.Marshal("Lt")
 
 	case OperatorUnify:
-		return json.Marshal(map[string]OperatorUnify{
-			"Unify": inner,
-		})
+		return json.Marshal("Unify")
 
 	case OperatorOr:
-		return json.Marshal(map[string]OperatorOr{
-			"Or": inner,
-		})
+		return json.Marshal("Or")
 
 	case OperatorAnd:
-		return json.Marshal(map[string]OperatorAnd{
-			"And": inner,
-		})
+		return json.Marshal("And")
 
 	case OperatorForAll:
-		return json.Marshal(map[string]OperatorForAll{
-			"ForAll": inner,
-		})
+		return json.Marshal("ForAll")
 
 	case OperatorAssign:
-		return json.Marshal(map[string]OperatorAssign{
-			"Assign": inner,
-		})
+		return json.Marshal("Assign")
 
 	}
 
@@ -2979,4 +2929,151 @@ func (variant Value) MarshalJSON() ([]byte, error) {
 	}
 
 	return nil, fmt.Errorf("unexpected variant of %v", variant)
+}
+
+type Comparison int
+
+const (
+	Eq Comparison = iota
+	Neq
+	In
+)
+
+func (comparison *Comparison) UnmarshalJSON(b []byte) error {
+	var cmp string
+	err := json.Unmarshal(b, &cmp)
+	if err != nil {
+		return err
+	}
+	switch cmp {
+	case "Eq":
+		*comparison = Eq
+	case "Neq":
+		*comparison = Neq
+	case "In":
+		*comparison = In
+	}
+	return nil
+}
+
+type Projection struct {
+	TypeName  string
+	FieldName string
+}
+
+func (proj *Projection) UnmarshalJSON(b []byte) error {
+	var l []string
+	err := json.Unmarshal(b, &l)
+	if err != nil {
+		return err
+	}
+	proj.TypeName = l[0]
+	proj.FieldName = l[1]
+	return nil
+}
+
+type Immediate struct {
+	Value interface{}
+}
+
+type DatumVariant interface {
+	isDatum()
+}
+
+type Datum struct {
+	DatumVariant
+}
+
+func (datum *Datum) UnmarshalJSON(b []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(b, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "Immediate":
+			var val Value
+			err = json.Unmarshal(*v, &val)
+			if err != nil {
+				return err
+			}
+			datum.DatumVariant = Immediate{val}
+		case "Field":
+			var proj Projection
+			err = json.Unmarshal(*v, &proj)
+			if err != nil {
+				return err
+			}
+			datum.DatumVariant = proj
+		}
+		break
+	}
+	return nil
+}
+
+func (Projection) isDatum() {}
+func (Immediate) isDatum()  {}
+
+type FilterRelation struct {
+	FromTypeName  string
+	FromFieldName string
+	ToTypeName    string
+}
+
+func (relation *FilterRelation) UnmarshalJSON(b []byte) error {
+	var fields []string
+	err := json.Unmarshal(b, &fields)
+	if err != nil {
+		return err
+	}
+	relation.FromTypeName = fields[0]
+	relation.FromFieldName = fields[1]
+	relation.ToTypeName = fields[2]
+	return nil
+}
+
+type FilterCondition struct {
+	Lhs Datum
+	Cmp Comparison
+	Rhs Datum
+}
+
+func (relation *FilterCondition) UnmarshalJSON(b []byte) error {
+	var fields []*json.RawMessage
+
+	err := json.Unmarshal(b, &fields)
+	if err != nil {
+		return err
+	}
+	var lhs Datum
+	err = json.Unmarshal(*fields[0], &lhs)
+	if err != nil {
+		return err
+	}
+	var op Comparison
+	err = json.Unmarshal(*fields[1], &op)
+	if err != nil {
+		return err
+	}
+	var rhs Datum
+	err = json.Unmarshal(*fields[2], &rhs)
+	if err != nil {
+		return err
+	}
+	relation.Lhs = lhs
+	relation.Cmp = op
+	relation.Rhs = rhs
+	return nil
+}
+
+type Filter struct {
+	// Root
+	Root string `json:"root"`
+	// Relations
+	Relations []FilterRelation `json:"relations"`
+	// Conditions
+	Conditions [][]FilterCondition `json:"conditions"`
+	// Types
+	Types map[string]map[string]interface{}
 }

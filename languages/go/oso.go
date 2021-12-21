@@ -113,7 +113,7 @@ concrete value of the Go type and a constructor function or nil if no
 constructor is required.
 */
 func (o Oso) RegisterClass(cls interface{}, ctor interface{}) error {
-	return (*o.p).registerClass(cls, ctor, nil)
+	return (*o.p).registerClass(cls, ctor, nil, nil)
 }
 
 /*
@@ -122,7 +122,16 @@ within Polar files by that name. Accepts a concrete value of the Go type and a
 constructor function or nil if no constructor is required.
 */
 func (o Oso) RegisterClassWithName(cls interface{}, ctor interface{}, name string) error {
-	return (*o.p).registerClass(cls, ctor, &name)
+	return (*o.p).registerClass(cls, ctor, &name, nil)
+}
+
+/*
+Register a Go type under a certain name/alias so that it can be referenced
+within Polar files by that name. Accepts a concrete value of the Go type and a
+constructor function or nil if no constructor is required.
+*/
+func (o Oso) RegisterClassWithNameAndFields(cls interface{}, ctor interface{}, name string, fields map[string]interface{}) error {
+	return (*o.p).registerClass(cls, ctor, &name, fields)
 }
 
 /*
@@ -396,6 +405,111 @@ func (o Oso) AuthorizedFields(actor interface{}, action interface{}, resource in
 		}
 	}
 	return results, nil
+}
+
+func (o Oso) SetDataFilteringAdapter(adapter types.Adapter) {
+	(*o.p).host.SetDataFilteringAdapter(adapter)
+}
+
+func (o Oso) dataFilter(actor interface{}, action interface{}, resource_type string) (*Query, interface{}, error) {
+	query, err := (*o.p).queryRule("allow", actor, action, types.Variable("resource"))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	query.SetAcceptExpression(true)
+
+	constraint :=
+		types.Term{
+			Value: types.Value{
+				types.ValueExpression{
+					Operator: types.Operator{types.OperatorAnd{}},
+					Args: []types.Term{
+						types.Term{
+							Value: types.Value{
+								types.ValueExpression{
+									Operator: types.Operator{types.OperatorIsa{}},
+									Args: []types.Term{
+										types.Term{
+											Value: types.Value{
+												types.ValueVariable("resource"),
+											},
+										},
+										types.Term{
+											Value: types.Value{
+												types.ValuePattern{
+													types.PatternInstance{
+														Tag:    types.Symbol(resource_type),
+														Fields: types.Dictionary{Fields: make(map[types.Symbol]types.Term)},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	query.Bind("resource", &constraint)
+
+	partials := make([]map[string]map[string]types.Term, 0)
+	for {
+		if v, err := query.Next(); err != nil {
+			return nil, nil, err
+		} else if v == nil {
+			break
+		} else {
+			m := make(map[string]types.Term)
+			for k, v := range *v {
+				polar, err := query.host.ToPolar(v)
+				if err != nil {
+					return nil, nil, err
+				}
+				m[k] = types.Term{Value: *polar}
+			}
+			b := make(map[string]map[string]types.Term, 0)
+			b["bindings"] = m
+			partials = append(partials, b)
+		}
+	}
+
+	types, types_json, err := query.host.SerializeTypes()
+	if err != nil {
+		return nil, nil, err
+	}
+	filter, err := (*o.p).ffiPolar.BuildDataFilter(types_json, partials, "resource", resource_type)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = query.host.ParseValues(filter)
+	if err != nil {
+		return nil, nil, err
+	}
+	filter.Types = types
+	q, err := query.host.BuildQuery(filter)
+	if err != nil {
+		return nil, nil, err
+	}
+	return query, q, nil
+}
+
+/*
+
+ */
+func (o Oso) AuthorizedQuery(actor interface{}, action interface{}, resource_type string) (interface{}, error) {
+	_, q, err := o.dataFilter(actor, action, resource_type)
+	return q, err
+}
+
+func (o Oso) AuthorizedResources(actor interface{}, action interface{}, resource_type string) (interface{}, error) {
+	query, q, err := o.dataFilter(actor, action, resource_type)
+	if err != nil {
+		return nil, err
+	}
+	return query.host.ExecuteQuery(q)
 }
 
 /*
