@@ -6,6 +6,7 @@ use std::io::Write;
 use polar_core::error::*;
 use polar_core::events::QueryEvent;
 use polar_core::messages::{Message, MessageKind};
+use polar_core::resource_block::Declaration;
 use polar_core::sources::Source;
 use polar_core::terms::*;
 use polar_core::traces::{Node, Trace};
@@ -36,6 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracer.trace_type::<MessageKind>(&samples)?;
     tracer.trace_type::<Message>(&samples)?;
     tracer.trace_type::<Source>(&samples)?;
+    tracer.trace_type::<Declaration>(&samples)?;
 
     // need to provide concrete values for numeric
     tracer.trace_value(&mut samples, &Numeric::from(0i64))?;
