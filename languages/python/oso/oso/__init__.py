@@ -4,7 +4,7 @@ from polar import (
     Predicate,
     Relation,
     Filter,
-    Fil,
+    DataFilter,
 )
 from .oso import Oso
 from .exceptions import AuthorizationError, ForbiddenError, NotFoundError

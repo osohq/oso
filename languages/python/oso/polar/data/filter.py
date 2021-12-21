@@ -1,4 +1,4 @@
-class Fil:
+class DataFilter:
     def __init__(self, model, relations, conditions, types):
         self.model = model
         self.relations = relations
@@ -8,21 +8,24 @@ class Fil:
     def parse(polar, blob):
         types = polar.host.types
         model = types[blob["root"]].cls
-        relations = [Rel.parse(polar, *rel) for rel in blob["relations"]]
+        relations = [Relation.parse(polar, *rel) for rel in blob["relations"]]
         conditions = [
-            [Cond.parse(polar, *conj) for conj in disj] for disj in blob["conditions"]
+            [Condition.parse(polar, *conj) for conj in disj]
+            for disj in blob["conditions"]
         ]
 
-        return Fil(model=model, relations=relations, conditions=conditions, types=types)
+        return DataFilter(
+            model=model, relations=relations, conditions=conditions, types=types
+        )
 
 
-class Proj:
+class Projection:
     def __init__(self, source, field):
         self.source = source
         self.field = field
 
 
-class Rel:
+class Relation:
     def __init__(self, left, name, right):
         self.left = left
         self.name = name
@@ -31,19 +34,19 @@ class Rel:
     def parse(polar, left, name, right):
         left = polar.host.types[left].cls
         right = polar.host.types[right].cls
-        return Rel(left=left, name=name, right=right)
+        return Relation(left=left, name=name, right=right)
 
 
-class Cond:
+class Condition:
     def __init__(self, left, cmp, right):
         self.left = left
         self.cmp = cmp
         self.right = right
 
     def parse(polar, left, cmp, right):
-        left = Cond.parse_side(polar, left)
-        right = Cond.parse_side(polar, right)
-        return Cond(left=left, cmp=cmp, right=right)
+        left = Condition.parse_side(polar, left)
+        right = Condition.parse_side(polar, right)
+        return Condition(left=left, cmp=cmp, right=right)
 
     def parse_side(polar, side):
         key = next(iter(side.keys()))
@@ -51,7 +54,7 @@ class Cond:
         if key == "Field":
             source = polar.host.types[val[0]].cls
             field = val[1]
-            return Proj(source=source, field=field)
+            return Projection(source=source, field=field)
         elif key == "Immediate":
             return polar.host.to_python(
                 {"value": {next(iter(val.keys())): next(iter(val.values()))}}

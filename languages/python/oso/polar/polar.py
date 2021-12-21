@@ -21,7 +21,7 @@ from .predicate import Predicate
 from .variable import Variable
 from .expression import Expression, Pattern
 from .data_filtering import serialize_types, filter_data
-from .data import Fil
+from .data import DataFilter
 
 CLASSES: Dict[str, type] = {}
 
@@ -326,7 +326,7 @@ class Polar:
         class_name = self.host.types[resource_cls].name
         plan = self.ffi_polar.build_data_filter(types, results, "resource", class_name)
 
-        return self.host.adapter.build_query(Fil.parse(self, plan))
+        return self.host.adapter.build_query(DataFilter.parse(self, plan))
 
 
 def polar_class(_cls=None, *, name=None):

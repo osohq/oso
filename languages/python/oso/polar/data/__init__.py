@@ -1,2 +1,2 @@
 from .adapter import DataAdapter
-from .filter import Fil, Proj, Rel, Cond
+from .filter import DataFilter, Projection, Relation, Condition

@@ -7,8 +7,7 @@ from .exceptions import (
     InvalidConstructorError,
     PolarRuntimeError,
 )
-from .data_filtering import Relation, Filter
-from .data import Fil, Cond, Proj
+from .data_filtering import Relation
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 
@@ -89,16 +88,22 @@ class Query:
 
     def handle_relation(self, instance, rel):
         if self.host.adapter is not None:
+            from .data import DataFilter, Condition, Projection
+
             other_cls = self.host.types[rel.other_type].cls
-            condition = Cond(
-                Proj(other_cls, rel.other_field), "Eq", getattr(instance, rel.my_field)
+            condition = Condition(
+                Projection(other_cls, rel.other_field),
+                "Eq",
+                getattr(instance, rel.my_field),
             )
-            filter = Fil(other_cls, [], [[condition]], self.host.types)
+            filter = DataFilter(other_cls, [], [[condition]], self.host.types)
             adapter = self.host.adapter
             query = adapter.build_query(filter)
             results = adapter.execute_query(query)
 
         else:
+            from .data_filtering import Filter
+
             # Use the fetcher for the other type to traverse the relationship
             build_query = self.host.types[rel.other_type].build_query
             exec_query = self.host.types[rel.other_type].exec_query

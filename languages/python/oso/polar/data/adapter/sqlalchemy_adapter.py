@@ -2,7 +2,7 @@ from functools import reduce
 from sqlalchemy.inspection import inspect
 from sqlalchemy.sql import false, true
 from .adapter import DataAdapter
-from ..filter import Proj
+from ..filter import Projection
 
 
 class SqlAlchemyAdapter(DataAdapter):
@@ -53,7 +53,7 @@ class SqlAlchemyAdapter(DataAdapter):
             return lhs not in rhs
 
     def add_side(side):
-        if isinstance(side, Proj):
+        if isinstance(side, Projection):
             source = side.source
             field = side.field or inspect(source).primary_key[0].name
             return getattr(source, field)
