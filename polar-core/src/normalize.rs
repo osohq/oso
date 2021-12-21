@@ -11,47 +11,12 @@ impl Term {
         self.pre_normalize().distribute(is_or, or_, is_and, and_)
     }
 
-    /// intelligently negate an expression
-    fn negated(&self) -> Self {
-        use {Operator::*, Value::*};
-        match self.value() {
-            // negate booleans
-            Boolean(b) => self.clone_with_value(Boolean(!b)),
-
-            Expression(Operation { operator, args }) => match operator {
-                // cancel double negatives
-                Not => self.clone_with_value(args[0].value().clone()),
-
-                // swap and/or using De Morgan's to keep the nots nested
-                // as deep as possible
-                And => {
-                    assert_eq!(args.len(), 2);
-                    let args = vec![args[0].negated(), args[1].negated()];
-                    self.clone_with_value(Expression(Operation { operator: Or, args }))
-                }
-                Or => {
-                    assert_eq!(args.len(), 2);
-                    let args = vec![args[0].negated(), args[1].negated()];
-                    self.clone_with_value(Expression(Operation {
-                        operator: And,
-                        args,
-                    }))
-                }
-                _ => self.clone_with_value(Expression(op!(Not, self.clone()))),
-            },
-            _ => self.clone_with_value(Expression(op!(Not, self.clone()))),
-        }
-    }
-
-    fn _hs(&self, n: usize) -> Self {
-        self.value().as_expression().unwrap().args[n].clone()
-    }
-
-    fn lhs(&self) -> Self {
-        self._hs(0)
-    }
-    fn rhs(&self) -> Self {
-        self._hs(1)
+    /// Condition input for dnf/cnf transformation
+    /// - negations fully nested
+    /// - double negatives removed
+    /// - and/or nodes form a binary tree
+    fn pre_normalize(&self) -> Self {
+        self.as_binary_tree().negation_normal_form()
     }
 
     /// normalize an expression by fully distributing logical connectives. the
@@ -95,64 +60,97 @@ impl Term {
         }
     }
 
-    /// Condition input for dnf/cnf transformation
-    /// - negations fully nested
-    /// - double negatives removed
-    /// - and/or nodes form a binary tree
-    fn pre_normalize(&self) -> Self {
-        impl Term {
-            /// binary tree normal form -- all and / or nodes form a binary tree
-            fn as_binary_tree(&self) -> Self {
-                use Operator::*;
-                match self.value().as_expression() {
-                    Ok(Operation { operator, args }) if *operator == And || *operator == Or => {
-                        match args.len() {
-                            // empty -> boolean
-                            0 => self.clone_with_value(Value::Boolean(*operator == And)),
-                            // one -> lift it out
-                            1 => args[0].as_binary_tree(),
-                            // else fold
-                            _ => args
-                                .iter()
-                                .map(|a| a.as_binary_tree())
-                                .reduce(|m, x| {
-                                    self.clone_with_value(Value::Expression(Operation {
-                                        operator: *operator,
-                                        args: vec![m, x],
-                                    }))
-                                })
-                                .unwrap(),
-                        }
-                    }
-                    _ => self.clone(),
+    /// binary tree normal form -- all and / or nodes form a binary tree
+    fn as_binary_tree(&self) -> Self {
+        use Operator::*;
+        match self.value().as_expression() {
+            Ok(Operation { operator, args }) if *operator == And || *operator == Or => {
+                match args.len() {
+                    // empty -> boolean
+                    0 => self.clone_with_value(Value::Boolean(*operator == And)),
+                    // one -> lift it out
+                    1 => args[0].as_binary_tree(),
+                    // else fold
+                    _ => args
+                        .iter()
+                        .map(|a| a.as_binary_tree())
+                        .reduce(|m, x| {
+                            self.clone_with_value(Value::Expression(Operation {
+                                operator: *operator,
+                                args: vec![m, x],
+                            }))
+                        })
+                        .unwrap(),
                 }
             }
+            _ => self.clone(),
+        }
+    }
 
-            /// negation normal form -- all not operators are nested inside of and/or
-            /// using De Morgan's law
-            fn negation_normal_form(&self) -> Self {
-                use Operator::*;
-                match self.value().as_expression() {
-                    Err(_) => self.clone(),
-                    Ok(Operation {
-                        operator: Not,
-                        args,
-                    }) => args[0].negation_normal_form().negated(),
-                    Ok(Operation { operator, args }) => {
-                        self.clone_with_value(Value::Expression(Operation {
-                            operator: *operator,
-                            args: args
-                                .iter()
-                                .cloned()
-                                .map(|t| t.negation_normal_form())
-                                .collect(),
-                        }))
-                    }
-                }
+    /// negation normal form -- all not operators are nested inside of and/or
+    /// using De Morgan's law. must already be in btnf.
+    fn negation_normal_form(&self) -> Self {
+        use Operator::*;
+        match self.value().as_expression() {
+            Err(_) => self.clone(),
+            Ok(Operation {
+                operator: Not,
+                args,
+            }) => args[0].negation_normal_form().negated(),
+            Ok(Operation { operator, args }) => {
+                self.clone_with_value(Value::Expression(Operation {
+                    operator: *operator,
+                    args: args
+                        .iter()
+                        .cloned()
+                        .map(|t| t.negation_normal_form())
+                        .collect(),
+                }))
             }
         }
+    }
 
-        self.as_binary_tree().negation_normal_form()
+    /// negate an expression, inverting connectives to keep `not`s nested
+    /// inside
+    fn negated(&self) -> Self {
+        use {Operator::*, Value::*};
+        match self.value() {
+            // negate booleans
+            Boolean(b) => self.clone_with_value(Boolean(!b)),
+
+            Expression(Operation { operator, args }) => match operator {
+                // cancel double negatives
+                Not => self.clone_with_value(args[0].value().clone()),
+
+                // swap and/or
+                And => {
+                    assert_eq!(args.len(), 2);
+                    let args = vec![args[0].negated(), args[1].negated()];
+                    self.clone_with_value(Expression(Operation { operator: Or, args }))
+                }
+                Or => {
+                    assert_eq!(args.len(), 2);
+                    let args = vec![args[0].negated(), args[1].negated()];
+                    self.clone_with_value(Expression(Operation {
+                        operator: And,
+                        args,
+                    }))
+                }
+                _ => self.clone_with_value(Expression(op!(Not, self.clone()))),
+            },
+            _ => self.clone_with_value(Expression(op!(Not, self.clone()))),
+        }
+    }
+
+    fn _hs(&self, n: usize) -> Self {
+        self.value().as_expression().unwrap().args[n].clone()
+    }
+
+    fn lhs(&self) -> Self {
+        self._hs(0)
+    }
+    fn rhs(&self) -> Self {
+        self._hs(1)
     }
 }
 
@@ -168,17 +166,17 @@ pub fn not_(t: Term) -> Term {
     term!(op!(Not, t))
 }
 
-fn opnp(l: &Term, op: Operator) -> bool {
+fn is_op(l: &Term, op: Operator) -> bool {
     matches!(l.value().as_expression(),
         Ok(Operation { operator, .. }) if op == *operator)
 }
 
 fn is_and(l: &Term) -> bool {
-    opnp(l, Operator::And)
+    is_op(l, Operator::And)
 }
 
 fn is_or(l: &Term) -> bool {
-    opnp(l, Operator::Or)
+    is_op(l, Operator::Or)
 }
 
 #[cfg(test)]
