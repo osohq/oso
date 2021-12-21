@@ -591,19 +591,17 @@ def test_complex_isa(oso):
         allow(_, "read", _n: Network);
 
         has_permission(u: User, "read", a: Article{group}) if
-        a matches Article and
-            group matches Group and
             has_permission(u, "read", group);
 
         has_permission(u: User, "read", g: Group{network}) if
-        g matches Group and
-            network matches Network and
             has_role(u, "member", network);
 
         allow(actor, action, resource) if has_permission(actor, action, resource);
 
         has_role(_: User{id:user_id}, role: String, _: Network{members}) if
-            r in members and r matches NetworkMember{role, user_id};
+            r in members and
+            r.role = role and
+            r.user_id = user_id;
     """
 
     args = {"exec_query": lambda q: q, "combine_query": lambda a, b: (a, b)}
