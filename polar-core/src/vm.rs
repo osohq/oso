@@ -1236,18 +1236,20 @@ impl PolarVirtualMachine {
                 let tag_pattern = right.clone_with_value(value!(pattern!(instance!(tag.clone()))));
                 let type_constraint = op!(Isa, left.clone(), tag_pattern);
 
-                let new_matcheses = lhss_of_matches.into_iter().map(|lhs_of_matches| {
-                    op!(Isa, lhs_of_matches, right.clone())
-                });
+                let new_matcheses = lhss_of_matches
+                    .into_iter()
+                    .map(|lhs_of_matches| op!(Isa, lhs_of_matches, right.clone()));
 
-                let runnables = new_matcheses.map(|new_matches| {
-                    let runnable = Box::new(IsaConstraintCheck::new(
-                        simplified.constraints(),
-                        new_matches,
-                        names.clone(),
-                    ));
-                    Goal::Run { runnable }
-                }).collect();
+                let runnables = new_matcheses
+                    .map(|new_matches| {
+                        let runnable = Box::new(IsaConstraintCheck::new(
+                            simplified.constraints(),
+                            new_matches,
+                            names.clone(),
+                        ));
+                        Goal::Run { runnable }
+                    })
+                    .collect();
 
                 // Construct field constraints.
                 let field_constraints = fields.fields.iter().rev().map(|(f, v)| {
