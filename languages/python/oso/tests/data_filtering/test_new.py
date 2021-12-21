@@ -91,8 +91,7 @@ binary_predicates = {
 @pytest.fixture
 def oso():
     oso = DfTestOso()
-    oso.host.adapter = SqlAlchemyAdapter(session)
-    print(oso.host.adapter)
+    oso.set_data_filtering_adapter(SqlAlchemyAdapter(session))
 
     # @TODO: Somehow the session needs to get in here, didn't think about that yet... Just hack for now and use a global
     # one.

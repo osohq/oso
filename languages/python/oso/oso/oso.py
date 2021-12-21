@@ -278,6 +278,10 @@ class Oso(Polar):
         if combine_query is not None:
             self.host.combine_query = combine_query
 
+    def set_data_filtering_adapter(self, adapter):
+        """Set a global adapter for the new data filtering interface."""
+        self.host.adapter = adapter
+
     def _print_polar_log_message(self):
         if os.environ.get("POLAR_LOG", "0") not in ("off", "0"):
             print(
