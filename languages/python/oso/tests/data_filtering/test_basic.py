@@ -3,6 +3,7 @@ import pytest
 from oso import Relation
 from helpers import unord_eq, filter_array, DfTestOso
 from dataclasses import dataclass
+from functools import partial
 
 
 @dataclass
@@ -555,3 +556,145 @@ def test_nested_properties(oso):
 
     result = oso.authorized_resources("gwen", "read", Qux)
     assert len(result) == 1
+
+
+def test_complex_isa(oso):
+    """Failing example from user @moea"""
+
+    policy = """
+        actor User {}
+
+        resource Group {
+            relations = {network: Network};
+            permissions = ["read"];
+            roles = ["host", "member"];
+
+            "read" if "member";
+            "member" if "host";
+        }
+
+        resource Network {
+          relations = {members: NetworkMember};
+          permissions = ["read"];
+          roles = ["member"];
+
+        }
+        resource NetworkMember {
+            relations = {user: User};
+        }
+
+        resource Article {
+          relations = {group: Group};
+          permissions = ["read"];
+        }
+
+        allow(_, "read", _n: Network);
+
+        has_permission(u: User, "read", _: Article{group}) if
+            has_permission(u, "read", group);
+
+        has_permission(u: User, "read", _: Group{network}) if
+            has_role(u, "member", network);
+
+        allow(actor, action, resource) if has_permission(actor, action, resource);
+
+        has_role(_: User{id:user_id}, role: String, _: Network{members}) if
+            r in members and
+            r.role = role and
+            r.user_id = user_id;
+    """
+
+    args = {"exec_query": lambda q: q, "combine_query": lambda a, b: (a, b)}
+
+    def build_query(table, filt):
+        if table == "networks__users":
+            for f in filt:
+                if f.kind == "Eq" and f.field == "role":
+                    assert f.value == "member", "Network doesn't have role " + f.value
+
+        class Something:
+            def __getattr__(self, x):
+                return self
+
+            def __iter__(self):
+                return iter([self])
+
+        return Something()
+
+    @dataclass
+    class User:
+        id: str
+
+    oso.register_class(
+        User, fields={"id": str}, build_query=partial(build_query, "users"), **args
+    )
+
+    class Network:
+        pass
+
+    oso.register_class(
+        Network,
+        fields={
+            "id": str,
+            "members": Relation(
+                kind="many",
+                my_field="id",
+                other_type="NetworkMember",
+                other_field="network_id",
+            ),
+        },
+        build_query=partial(build_query, "networks"),
+        **args
+    )
+
+    class NetworkMember:
+        pass
+
+    oso.register_class(
+        NetworkMember,
+        fields={
+            "user": Relation(
+                other_type="User", kind="one", my_field="user_id", other_field="id"
+            ),
+            "role": str,
+            "user_id": str,
+        },
+        build_query=partial(build_query, "networks__users"),
+        **args
+    )
+
+    class Group:
+        pass
+
+    oso.register_class(
+        Group,
+        fields={
+            "id": str,
+            "network": Relation(
+                kind="one",
+                my_field="network_id",
+                other_field="id",
+                other_type="Network",
+            ),
+        },
+        build_query=partial(build_query, "networks"),
+        **args
+    )
+
+    class Article:
+        pass
+
+    oso.register_class(
+        Article,
+        fields={
+            "group": Relation(
+                other_type="Group", kind="one", my_field="group_id", other_field="id"
+            ),
+            "group_id": str,
+        },
+        build_query=partial(build_query, "articles"),
+        **args
+    )
+
+    oso.load_str(policy)
+    assert len(list(oso.authorized_query(User(id="xyz"), "read", Article))) == 1
