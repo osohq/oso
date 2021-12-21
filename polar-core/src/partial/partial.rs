@@ -12,6 +12,7 @@ pub const FALSE: Operation = op!(Or);
 
 /// Invert operators.
 pub fn invert_operation(Operation { operator, args }: Operation) -> Operation {
+    use Operator::*;
     fn invert_args(args: Vec<Term>) -> Vec<Term> {
         args.into_iter()
             .map(|t| {
@@ -23,50 +24,52 @@ pub fn invert_operation(Operation { operator, args }: Operation) -> Operation {
     }
 
     match operator {
-        Operator::And => Operation {
-            operator: Operator::Or,
+        // noop
+        Debug | Print | New | Dot => Operation { operator, args },
+
+        // de morgan
+        And => Operation {
+            operator: Or,
             args: invert_args(args),
         },
-        Operator::Or => Operation {
-            operator: Operator::And,
+        Or => Operation {
+            operator: And,
             args: invert_args(args),
         },
-        Operator::Unify | Operator::Eq => Operation {
-            operator: Operator::Neq,
+
+        // opposite operator
+        Unify | Eq => Operation {
+            operator: Neq,
             args,
         },
-        Operator::Neq => Operation {
-            operator: Operator::Unify,
+        Neq => Operation {
+            operator: Unify,
             args,
         },
-        Operator::Gt => Operation {
-            operator: Operator::Leq,
+        Gt => Operation {
+            operator: Leq,
             args,
         },
-        Operator::Geq => Operation {
-            operator: Operator::Lt,
+        Geq => Operation { operator: Lt, args },
+        Lt => Operation {
+            operator: Geq,
             args,
         },
-        Operator::Lt => Operation {
-            operator: Operator::Geq,
-            args,
-        },
-        Operator::Leq => Operation {
-            operator: Operator::Gt,
-            args,
-        },
-        Operator::Debug | Operator::Print | Operator::New | Operator::Dot => {
-            Operation { operator, args }
-        }
-        Operator::Isa => Operation {
-            operator: Operator::Not,
-            args: vec![term!(op!(Isa, args[0].clone(), args[1].clone()))],
-        },
-        Operator::Not => args[0]
+        Leq => Operation { operator: Gt, args },
+
+        // double negative
+        Not => args[0]
             .value()
             .as_expression()
             .expect("negated expression")
             .clone(),
+
+        // preserve the not
+        Isa | In => Operation {
+            operator: Not,
+            args: vec![term!(Operation { operator, args })],
+        },
+
         _ => todo!("negate {:?}", operator),
     }
 }

@@ -18,6 +18,8 @@ draft: true
   queries to fail with an `UnhandledPartial` error.
 - Subsequent unification of incompatibly type-constrained variables will now fail
   correctly.
+- The operators `not`, `forall`, `or`, `<`, `<=`, `>`, and `>=` can now be used
+  with data filtering.
 
 ### Node.js
 

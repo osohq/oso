@@ -29,7 +29,8 @@ module Oso
           end
 
           OPS = {
-            'Eq' => '=', 'In' => 'IN', 'Nin' => 'NOT IN', 'Neq' => '!='
+            'Eq' => '=', 'In' => 'IN', 'Nin' => 'NOT IN', 'Neq' => '!=',
+            'Lt' => '<', 'Gt' => '>', 'Leq' => '<=', 'Geq' => '>='
           }.freeze
 
           private
