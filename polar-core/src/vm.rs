@@ -466,7 +466,7 @@ impl PolarVirtualMachine {
     /// Try to achieve one goal. Return `Some(QueryEvent)` if an external
     /// result is needed to achieve it, or `None` if it can run internally.
     fn next(&mut self, goal: Rc<Goal>) -> Result<QueryEvent> {
-        self.log_with(LogLevel::Trace, || goal.to_string(), &[]);
+        self.log(LogLevel::Trace, || goal.to_string(), &[]);
 
         self.check_timeout()?;
 
@@ -534,7 +534,7 @@ impl PolarVirtualMachine {
             }
             Goal::TraceRule { trace } => {
                 if let Node::Rule(rule) = &trace.node {
-                    self.log_with(
+                    self.log(
                         LogLevel::Trace,
                         || {
                             let source_str = self.rule_source(rule);
@@ -677,7 +677,7 @@ impl PolarVirtualMachine {
 
     /// Push a binding onto the binding stack.
     pub fn bind(&mut self, var: &Symbol, val: Term) -> Result<()> {
-        self.log_with(
+        self.log(
             LogLevel::Trace,
             || format!("⇒ bind: {} ← {}", var, val),
             &[],
@@ -701,7 +701,7 @@ impl PolarVirtualMachine {
     /// Precondition: Operation is either binary or ternary (binary + result var),
     /// and at least one of the first two arguments is an unbound variable.
     fn add_constraint(&mut self, term: &Term) -> Result<()> {
-        self.log_with(
+        self.log(
             LogLevel::Trace,
             || format!("⇒ add_constraint: {}", term),
             &[],
@@ -788,7 +788,7 @@ impl PolarVirtualMachine {
         }
     }
 
-    fn log_with<F, R>(&self, level: LogLevel, message_fn: F, terms: &[&Term])
+    fn log<F, R>(&self, level: LogLevel, message_fn: F, terms: &[&Term])
     where
         F: FnOnce() -> R,
         R: AsRef<str>,
@@ -932,7 +932,7 @@ impl PolarVirtualMachine {
     /// Remove all bindings after the last choice point, and try the
     /// next available alternative. If no choice is possible, halt.
     fn backtrack(&mut self) -> Result<()> {
-        self.log_with(LogLevel::Trace, || "BACKTRACK", &[]);
+        self.log(LogLevel::Trace, || "BACKTRACK", &[]);
 
         loop {
             match self.choices.pop() {
@@ -997,7 +997,7 @@ impl PolarVirtualMachine {
 
     /// Halt the VM by clearing all goals and choices.
     fn halt(&mut self) -> QueryEvent {
-        self.log_with(LogLevel::Trace, || "HALT", &[]);
+        self.log(LogLevel::Trace, || "HALT", &[]);
         self.goals.clear();
         self.choices.clear();
         QueryEvent::Done { result: true }
@@ -1006,7 +1006,7 @@ impl PolarVirtualMachine {
     /// Comparison operator that essentially performs partial unification.
     #[allow(clippy::many_single_char_names)]
     pub fn isa(&mut self, left: &Term, right: &Term) -> Result<()> {
-        self.log_with(
+        self.log(
             LogLevel::Trace,
             || format!("MATCHES: {} matches {}", left, right),
             &[left, right],
@@ -1375,7 +1375,7 @@ impl PolarVirtualMachine {
         // but we'll want to cut if we get back nothing
         self.push_choice(vec![])?;
 
-        self.log_with(
+        self.log(
             LogLevel::Trace,
             || {
                 let mut msg = format!("LOOKUP: {}.{}", instance, field_name);
@@ -1474,7 +1474,7 @@ impl PolarVirtualMachine {
         //   log only their inner operations for readibility|brevity reasons.
         match &term.value() {
             Value::Call(predicate) => {
-                self.log_with(
+                self.log(
                     LogLevel::Info,
                     || format!("QUERY RULE: {}", predicate),
                     &[term],
@@ -1485,7 +1485,7 @@ impl PolarVirtualMachine {
                 args,
             }) if args.len() < 2 => (),
             _ => {
-                self.log_with(LogLevel::Trace, || format!("QUERY: {}", term), &[term]);
+                self.log(LogLevel::Trace, || format!("QUERY: {}", term), &[term]);
             }
         };
 
@@ -2506,7 +2506,7 @@ impl PolarVirtualMachine {
             // The rules have been filtered. Sort them.
 
             if applicable_rules.is_empty() {
-                self.log_with(LogLevel::Info, || "No matching rules found", &[]);
+                self.log(LogLevel::Info, || "No matching rules found", &[]);
             }
 
             self.push_goal(Goal::SortRules {
@@ -2635,7 +2635,7 @@ impl PolarVirtualMachine {
             } else {
                 LogLevel::Trace
             };
-            self.log_with(
+            self.log(
                 level,
                 || {
                     let mut rule_strs = "APPLICABLE_RULES:".to_owned();
@@ -2920,7 +2920,7 @@ impl Runnable for PolarVirtualMachine {
 
         if self.tracing {
             for t in &self.trace {
-                self.log_with(LogLevel::Trace, || format!("trace\n{}", t.draw(self)), &[]);
+                self.log(LogLevel::Trace, || format!("trace\n{}", t.draw(self)), &[]);
             }
         }
 
@@ -3006,7 +3006,7 @@ impl Runnable for PolarVirtualMachine {
                 .collect();
         }
 
-        self.log_with(
+        self.log(
             LogLevel::Info,
             || {
                 if bindings.is_empty() {
@@ -3056,7 +3056,7 @@ impl Runnable for PolarVirtualMachine {
         // For example what happens if the call asked for a field that doesn't exist?
 
         if let Some(value) = term {
-            self.log_with(LogLevel::Trace, || format!("=> {}", value), &[]);
+            self.log(LogLevel::Trace, || format!("=> {}", value), &[]);
 
             // Fetch variable to unify with call result.
             let sym = self.get_call_sym(call_id).to_owned();
@@ -3066,7 +3066,7 @@ impl Runnable for PolarVirtualMachine {
                 right: value,
             })?;
         } else {
-            self.log_with(LogLevel::Trace, || "=> No more results.", &[]);
+            self.log(LogLevel::Trace, || "=> No more results.", &[]);
 
             // No more results. Clean up, cut out the retry alternative,
             // and backtrack.
