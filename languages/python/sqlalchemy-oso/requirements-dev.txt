@@ -1,4 +1,4 @@
-black==21.5b0
+black~=21.12b
 flake8==3.9.2
 mypy==0.812
 sqlalchemy-stubs==0.4

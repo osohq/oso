@@ -1215,7 +1215,7 @@ mod test {
         p.register_constant(sym!("y"), term!(value!(op!(And))))?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
-        assert_partial_expressions!(next, "x" => "_this = y", "y" => "x = _this");
+        assert_eq!(next[&sym!("x")], var!("y"));
         let next = next_binding(&mut q)?;
         assert_eq!(next[&sym!("x")], term!(1));
         assert_eq!(next[&sym!("y")], term!(1));

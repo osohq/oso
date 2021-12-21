@@ -129,3 +129,16 @@ export class DataFilteringConfigurationError extends PolarError {
     );
   }
 }
+
+export class UnexpectedExpressionError extends PolarError {
+  constructor() {
+    super(
+      `Received Expression from Polar VM. The Expression type is only supported when
+  using data filtering features. Did you perform an
+  operation over an unbound variable in your policy?
+
+  To silence this error and receive an Expression result, pass the
+  \`{ acceptExpression: true }\` option to \`Oso.query()\` or \`Oso.queryRule()\`.`
+    );
+  }
+}

@@ -177,7 +177,6 @@ impl Runnable for IsaConstraintCheck {
                 self.alternative_check = None;
             } else if self.alternative_check.is_none() {
                 // If both checks fail, we fail.
-                //
                 return Ok(QueryEvent::Done { result: false });
             }
         }
