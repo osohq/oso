@@ -33,6 +33,7 @@ It will print out `[oso][info]` messages for many notable points of the query ex
 
 * Showing values returned from calls into the application.
 
+* All query evaluations; not limited to rules like `POLAR_LOG=info`.
 
 ### Example
 
