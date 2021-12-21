@@ -442,7 +442,6 @@ fn test_forall_with_dot_lookup() -> TestResult {
     qeval(&p, "boo({ys: [9, 8, 7]})");
     qnull(&p, "boo({ys: [-2, -1, 0]})");
 
-
     Ok(())
 }
 
