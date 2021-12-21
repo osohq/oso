@@ -1467,13 +1467,10 @@ impl PolarVirtualMachine {
     /// consists of unifying the rule head with the arguments, then
     /// querying for each body clause.
     fn query(&mut self, term: &Term) -> Result<QueryEvent> {
-        // print INFO event for call `query` with a rule (`Call(predicate)`) in
-        // the policy execution
-        //
-        // print TRACE (a superset of INFO) event for other queries
-        // We filter out "single element AND" which many rule bodies
-        // take the form of to instead log only their inner operations for
-        // readibility|brevity reasons.
+        // - Print INFO event for queries for rules.
+        // - Print TRACE (a superset of INFO) event for all other queries.
+        // - We filter out single-element ANDs, which many rule bodies take the form of, to instead
+        //   log only their inner operations for readibility|brevity reasons.
         match &term.value() {
             Value::Call(predicate) => {
                 self.log_with(
