@@ -363,6 +363,17 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           end
         end
 
+        it 'test_not_in_relation' do
+          subject.load_str <<~POL
+            allow(_: Sign{people}, _, person: Person) if not person in people;
+          POL
+          Sign.all.each do |sign|
+            result = subject.authorized_resources(sign, 'get', Person)
+            expected = Person.joins(:sign).where.not(sign: sign)
+            expect(result).to contain_exactly(*expected)
+          end
+        end
+
         it 'test_var_in_value' do
           subject.load_str 'allow(_, _, _: Person{name}) if name in ["leo", "mercury"];'
           query = subject.authorized_query('gwen', 'get', Person)
