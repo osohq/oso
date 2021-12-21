@@ -1174,7 +1174,7 @@ impl PolarVirtualMachine {
 
                 // TODO (dhatch): what if there is more than one var = dot_op constraint?
                 // What if the one there is is in a not, or an or, or something
-                let mut lhss_of_matches: Vec<_> = simplified
+                let lhss_of_matches: Vec<_> = simplified
                     .constraints()
                     .into_iter()
                     .filter_map(|c| {
@@ -1197,10 +1197,6 @@ impl PolarVirtualMachine {
                     })
                     .chain(std::iter::once(left.clone()))
                     .collect();
-
-//                if lhss_of_matches.is_empty() {
-//                    lhss_of_matches.push(left.clone());
-//                }
 
                 // Construct field-less matches operation.
                 let tag_pattern = right.clone_with_value(value!(pattern!(instance!(tag.clone()))));
