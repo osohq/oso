@@ -45,7 +45,7 @@ func newPolar() (*Polar, error) {
 	}
 
 	for k, v := range builtinClasses {
-		err := polar.registerClass(v, nil, &k)
+		err := polar.registerClass(v, nil, &k, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -205,7 +205,7 @@ Register a Go type with Polar so that it can be referenced within Polar files.
 Accepts a concrete value of the Go type, a constructor function (or nil), and a
 name (or nil).
 */
-func (p Polar) registerClass(cls interface{}, ctor interface{}, name *string) error {
+func (p Polar) registerClass(cls interface{}, ctor interface{}, name *string, fields map[string]interface{}) error {
 	// Get constructor
 	constructor := reflect.ValueOf(nil)
 	if ctor != nil {
@@ -232,7 +232,7 @@ func (p Polar) registerClass(cls interface{}, ctor interface{}, name *string) er
 		className = *name
 	}
 
-	err := p.host.CacheClass(realType, className, constructor)
+	err := p.host.CacheClass(realType, className, constructor, fields)
 	if err != nil {
 		return err
 	}

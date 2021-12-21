@@ -7,7 +7,7 @@ package ffi
 // #cgo linux,amd64 LDFLAGS: ${SRCDIR}/native/linux/libpolar.a -ldl -lm
 // #cgo darwin,amd64 LDFLAGS: ${SRCDIR}/native/macos/amd64/libpolar.a -ldl -lm
 // #cgo darwin,arm64 LDFLAGS: ${SRCDIR}/native/macos/arm64/libpolar.a -ldl -lm
-// #cgo windows,amd64 LDFLAGS: ${SRCDIR}/native/windows/libpolar.a -lm -lws2_32 -luserenv
+// #cgo windows,amd64 LDFLAGS: ${SRCDIR}/native/windows/libpolar.a -lm -lws2_32 -luserenv -lbcrypt
 import "C"
 
 import (
@@ -231,6 +231,38 @@ func (p PolarFfi) RegisterMro(name string, mro []uint64) error {
 	return err
 }
 
+// yeah, not ideal types yet lol
+func (p PolarFfi) BuildDataFilter(user_types map[string]map[string]map[string]map[string]string, partials []map[string]map[string]types.Term, resource_var string, resource_type string) (*types.Filter, error) {
+	cTypes, err := ffiSerialize(user_types)
+	defer C.free(unsafe.Pointer(cTypes))
+	if err != nil {
+		return nil, err
+	}
+	cPartials, err := ffiSerialize(partials)
+	defer C.free(unsafe.Pointer(cPartials))
+	if err != nil {
+		return nil, err
+	}
+	cVar := C.CString(resource_var)
+	defer C.free(unsafe.Pointer(cVar))
+	cType := C.CString(resource_type)
+	defer C.free(unsafe.Pointer(cType))
+	filterJson, err := checkResultString(C.polar_build_data_filter(p.ptr, cTypes, cPartials, cVar, cType))
+	if err != nil {
+		return nil, err
+	}
+
+	processMessages(p)
+
+	var filter types.Filter
+	err = json.Unmarshal([]byte(*filterJson), &filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return &filter, err
+}
+
 type QueryFfi struct {
 	ptr *C.polar_Query
 }
@@ -301,4 +333,20 @@ func (q QueryFfi) DebugCommand(command *string) error {
 
 func (q QueryFfi) Source() (*string, error) {
 	return checkResultString(C.polar_query_source_info(q.ptr))
+}
+
+func (q QueryFfi) Bind(name string, value *types.Term) error {
+	cName := C.CString(name)
+	defer C.free(unsafe.Pointer(cName))
+
+	var s *C.char
+	//var err error
+	s, err := ffiSerialize(value)
+	defer C.free(unsafe.Pointer(s))
+	if err != nil {
+		return err
+	}
+	err = checkResultVoid(C.polar_bind(q.ptr, cName, s))
+	processMessages(q)
+	return err
 }
