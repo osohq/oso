@@ -590,10 +590,10 @@ def test_complex_isa(oso):
 
         allow(_, "read", _n: Network);
 
-        has_permission(u: User, "read", a: Article{group}) if
+        has_permission(u: User, "read", _: Article{group}) if
             has_permission(u, "read", group);
 
-        has_permission(u: User, "read", g: Group{network}) if
+        has_permission(u: User, "read", _: Group{network}) if
             has_role(u, "member", network);
 
         allow(actor, action, resource) if has_permission(actor, action, resource);
