@@ -410,12 +410,18 @@ The expression is: {expr}
             }
             Self::DataFilteringUnsupportedOp { operation } => {
                 let msg = formatdoc!(
-                    r#"Unsupported operation: {}
+                    r#"Unsupported operation:
+                        {:?}/{}
+                    in the expression:
+                        {}
+                    in a data filtering query.
 
-                    This operation is not supported for data filtering.
+                    This operation is not currently supported for data filtering.
                     For more information please refer to our documentation:
                         https://docs.osohq.com/guides/data_filtering.html
                     "#,
+                    operation.operator,
+                    operation.args.len(),
                     operation.to_polar()
                 );
                 write!(f, "{}", msg)
