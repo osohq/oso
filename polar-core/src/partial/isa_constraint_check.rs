@@ -3,6 +3,7 @@ use crate::error::RuntimeError;
 use crate::events::QueryEvent;
 use crate::runnable::Runnable;
 use crate::terms::{Operation, Operator, Pattern, Symbol, Term, Value};
+use crate::formatting::to_polar::ToPolarString;
 
 use std::collections::HashSet;
 
@@ -48,6 +49,19 @@ impl IsaConstraintCheck {
         }
     }
 
+    fn paths_match(&self, l: &[Term], r: &[Term]) -> bool {
+        if l[1..].iter().zip(r[1..].iter()).any(|(a, b)| a != b) {
+            false
+        } else if l[0] == r[0] {
+            true
+        } else {
+            match (l[0].value().as_symbol(), r[0].value().as_symbol()) {
+                (Ok(l), Ok(r)) => self.proposed_names.contains(l) && self.proposed_names.contains(r),
+                _ => false,
+            }
+        }
+    }
+
     /// Check if existing constraints are compatible with the proposed constraint.
     ///
     /// If either the existing or proposed constraint is not a type constraint or if they are
@@ -64,6 +78,7 @@ impl IsaConstraintCheck {
         // TODO(gj): check non-`Isa` constraints, e.g., `(Unify, partial, 1)` against `(Isa,
         // partial, Integer)`.
         if constraint.operator != Operator::Isa {
+            eprintln!("{}", line!());
             return Check::None;
         }
 
@@ -73,6 +88,7 @@ impl IsaConstraintCheck {
         // Not comparable b/c one of the matches statements has a LHS that isn't a variable or dot
         // op.
         if constraint_path.is_empty() || proposed_path.is_empty() {
+            eprintln!("{}", line!());
             return Check::None;
         }
 
@@ -85,29 +101,30 @@ impl IsaConstraintCheck {
         if just_vars {
             let sym = constraint.args[0].value().as_symbol().unwrap();
             if !self.proposed_names.contains(sym) {
+            eprintln!("{}", line!());
                 return Check::None;
             }
-        } else if constraint_path
-            // a.b.c vs. d
-            .iter()
-            .zip(proposed_path.iter())
-            .any(|(a, b)| a != b)
-        // FIXME(gw): is this right? what if the first elements are aliases?
+        } else if !self.paths_match(&constraint_path, &proposed_path)
         {
+            eprintln!("{}", line!());
             return Check::None;
         }
 
         let existing = constraint.args.last().unwrap();
 
         if constraint_path == proposed_path {
+            eprintln!("{}", line!());
             // x matches A{} vs. x matches B{}
             self.subclass_compare(existing, counter)
         } else if constraint_path.len() < proposed_path.len() {
+            eprintln!("{}", line!());
             // Proposed path is a superset of existing path.
             self.path_compare(proposed_path, constraint_path, existing, counter)
         } else if just_vars {
+            eprintln!("{}", line!());
             self.subclass_compare(existing, counter)
         } else {
+            eprintln!("{}", line!());
             // Comparing existing `x.a.b matches B{}` vs. `proposed x.a matches A{}`.
             Check::None
         }
@@ -171,11 +188,13 @@ impl IsaConstraintCheck {
 
 impl Runnable for IsaConstraintCheck {
     fn run(&mut self, counter: Option<&mut Counter>) -> Result<QueryEvent, RuntimeError> {
+        eprintln!("ISA/CC {} : {} : {:?}", self.proposed.to_polar(), self.existing.iter().map(|t|t.to_polar()).collect::<Vec<_>>().join(" and "), self.proposed_names);
         if let Some(result) = self.result.take() {
             if result {
                 // If the primary check succeeds, there's no need to check the alternative.
                 self.alternative_check = None;
             } else if self.alternative_check.is_none() {
+                eprintln!("ISA/CC :: FAIL");
                 // If both checks fail, we fail.
                 return Ok(QueryEvent::Done { result: false });
             }
@@ -189,15 +208,27 @@ impl Runnable for IsaConstraintCheck {
         let counter = counter.expect("IsaConstraintCheck requires a Counter");
         loop {
             match self.existing.pop() {
-                None => return Ok(QueryEvent::Done { result: true }),
-                Some(constraint) => match self.check_constraint(constraint, counter) {
-                    Check::None => (),
-                    Check::One(a) => return Ok(a),
-                    Check::Two(a, b) => {
-                        self.alternative_check = Some(b);
-                        return Ok(a);
+                None => {
+                    eprintln!("ISA/CC :: PASS");
+                    return Ok(QueryEvent::Done { result: true });
+                }
+                Some(constraint) => {
+                    eprintln!("con {}", constraint.to_polar());
+                    match self.check_constraint(constraint, counter) {
+                        Check::None => {
+                            eprintln!("none");
+                        },
+                        Check::One(a) => {
+                            eprintln!("one");
+                            return Ok(a);
+                        }
+                        Check::Two(a, b) => {
+                            eprintln!("two");
+                            self.alternative_check = Some(b);
+                            return Ok(a);
+                        }
                     }
-                },
+                }
             }
         }
     }
