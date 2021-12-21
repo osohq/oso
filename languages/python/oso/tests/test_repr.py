@@ -20,7 +20,7 @@ def test_repr_when_logging(polar, capsys):
     polar.load_str("f(_foo: Foo) if 1 = 1;")
     list(polar.query_rule("f", Foo()))
     captured = capsys.readouterr()
-    assert f"QUERY: f({FOO_REPR})" in captured.out
+    assert f"QUERY RULE: f({FOO_REPR})" in captured.out
     if not old_polar_log:
         os.unsetenv("POLAR_LOG")
 
