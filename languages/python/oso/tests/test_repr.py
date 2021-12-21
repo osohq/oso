@@ -20,7 +20,7 @@ def test_repr_when_logging(polar, capsys):
     polar.load_str("f(_foo: Foo) if 1 = 1;")
     list(polar.query_rule("f", Foo()))
     captured = capsys.readouterr()
-    assert f"QUERY: f({FOO_REPR})" in captured.out
+    assert f"QUERY RULE: f({FOO_REPR} TYPE `Foo`)" in captured.out
     if not old_polar_log:
         os.unsetenv("POLAR_LOG")
 
@@ -31,7 +31,7 @@ def test_repr_in_error(polar):
     polar.load_str("f(foo: Foo) if foo.hello;")
     with pytest.raises(PolarRuntimeError) as excinfo:
         list(polar.query_rule("f", Foo()))
-    assert f"f({FOO_REPR})" in excinfo.value.stack_trace
+    assert f"f({FOO_REPR} TYPE `Foo`)" in excinfo.value.stack_trace
 
 
 def test_repr_when_debugging(polar, monkeypatch, capsys):
@@ -40,4 +40,4 @@ def test_repr_when_debugging(polar, monkeypatch, capsys):
     monkeypatch.setattr("sys.stdin", io.StringIO("bindings"))
     list(polar.query_rule("f", Foo()))
     captured = capsys.readouterr()
-    assert re.search(rf"_foo_[0-9]+ = {FOO_REPR}", captured.out)
+    assert re.search(rf"_foo_[0-9]+ = {FOO_REPR} TYPE `Foo`", captured.out)

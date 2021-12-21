@@ -493,7 +493,7 @@ mod test {
         // NOTE(gj): only one permutation remains parse-able.
         p.load_str("m(x) if [_y] matches [x];")?;
         let mut q = p.new_query_from_term(term!(call!("m", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "__y_34 matches _this");
+        assert_partial_expression!(next_binding(&mut q)?, "x", "__y_36 matches _this");
         assert_query_done!(q);
 
         // TODO(gj): Make the below work.
@@ -1110,7 +1110,7 @@ mod test {
         assert_partial_expression!(
             next_binding(&mut q),
             "x",
-            "_this matches A{} and _b_74 in _this.b and _b_74 matches B{} and 1 = _b_74.foo"
+            "_this matches A{} and _b_81 in _this.b and _b_81 matches B{} and 1 = _b_81.foo"
         );
         assert_query_done!(q);
 
@@ -1118,7 +1118,7 @@ mod test {
         assert_partial_expression!(
             next_binding(&mut q),
             "x",
-            "_this matches A{} and _b_84 in _this.b and _b_84 matches B{} and _b_84.c matches C{} and 1 = _b_84.c.bar"
+            "_this matches A{} and _b_92 in _this.b and _b_92 matches B{} and _b_92.c matches C{} and 1 = _b_92.c.bar"
         );
         assert_query_done!(q);
 
@@ -1126,7 +1126,7 @@ mod test {
         assert_partial_expression!(
             next_binding(&mut q),
             "x",
-            "_this matches A{} and _b_104 in _this.b and _b_104.c matches C{} and 1 = _b_104.c.bar"
+            "_this matches A{} and _b_115 in _this.b and _b_115.c matches C{} and 1 = _b_115.c.bar"
         );
         // @TODO(sam): this result is incorrect. We *could* know
         // that `_b_104` matches B{} by checking `a.b` first
@@ -1134,7 +1134,7 @@ mod test {
         assert_partial_expression!(
             next_binding(&mut q),
             "x",
-            "_this matches A{} and _b_104 in _this.b and _b_104.c matches D{} and 2 = _b_104.c.bar"
+            "_this matches A{} and _b_115 in _this.b and _b_115.c matches D{} and 2 = _b_115.c.bar"
         );
         assert_query_done!(q);
         Ok(())

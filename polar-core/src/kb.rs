@@ -959,7 +959,8 @@ mod tests {
                 term!(Value::ExternalInstance(ExternalInstance {
                     instance_id,
                     constructor: None,
-                    repr: None
+                    repr: None,
+                    class_repr: None,
                 })),
             )
             .unwrap();
@@ -1400,7 +1401,8 @@ mod tests {
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 1,
                 constructor: None,
-                repr: None
+                repr: None,
+                class_repr: None,
             })),
         )
         .unwrap();
@@ -1409,7 +1411,8 @@ mod tests {
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 2,
                 constructor: None,
-                repr: None
+                repr: None,
+                class_repr: None,
             })),
         )
         .unwrap();
@@ -1418,7 +1421,8 @@ mod tests {
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 3,
                 constructor: None,
-                repr: None
+                repr: None,
+                class_repr: None,
             })),
         )
         .unwrap();
@@ -1485,7 +1489,8 @@ mod tests {
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 1,
                 constructor: None,
-                repr: None
+                repr: None,
+                class_repr: None,
             })),
         )
         .unwrap();
@@ -1494,7 +1499,8 @@ mod tests {
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 2,
                 constructor: None,
-                repr: None
+                repr: None,
+                class_repr: None,
             })),
         )
         .unwrap();
@@ -1503,7 +1509,8 @@ mod tests {
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 3,
                 constructor: None,
-                repr: None
+                repr: None,
+                class_repr: None,
             })),
         )
         .unwrap();
@@ -1513,7 +1520,8 @@ mod tests {
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 4,
                 constructor: None,
-                repr: None
+                repr: None,
+                class_repr: None,
             })),
         )
         .unwrap();
