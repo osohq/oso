@@ -415,6 +415,37 @@ fn test_jealous() -> TestResult {
 }
 
 #[test]
+fn test_forall_with_dot_lookup() -> TestResult {
+    let p = polar();
+    p.load_str(
+        r#"
+        foo(x) if forall(y in x.ys, y != 0);
+        moo({ys}) if forall(y in ys, y != 0);
+        goo(x) if forall(x matches {ys} and y in ys, y != 0);
+        boo(x) if forall(y in x.ys, y != 0 and y != 1);
+    "#,
+    )?;
+
+    qeval(&p, "foo({ys: []})");
+    qeval(&p, "moo({ys: []})");
+    qeval(&p, "goo({ys: []})");
+
+    qeval(&p, "foo({ys: [9, 8, 7]})");
+    qeval(&p, "moo({ys: [8, 7, 6]})");
+    qeval(&p, "goo({ys: [7, 8, 9]})");
+
+    qnull(&p, "foo({ys: [-1, 0, 1]})");
+    qnull(&p, "moo({ys: [0, 1, 2]})");
+    qnull(&p, "goo({ys: [2, 1, 0]})");
+
+    qeval(&p, "boo({ys: []})");
+    qeval(&p, "boo({ys: [9, 8, 7]})");
+    qnull(&p, "boo({ys: [-2, -1, 0]})");
+
+    Ok(())
+}
+
+#[test]
 fn test_trace() -> TestResult {
     let p = polar();
     p.load_str(

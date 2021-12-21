@@ -7,7 +7,7 @@ use std::{
 use crate::{
     data_filtering::{unregistered_field_error, unsupported_op_error, PartialResults, Type},
     error::{invalid_state_error, RuntimeError},
-    events::ResultEvent,
+    normalize::*,
     terms::*,
 };
 
@@ -68,6 +68,11 @@ pub enum Comparison {
     Eq,
     Neq,
     In,
+    Nin,
+    Lt,
+    Leq,
+    Gt,
+    Geq,
 }
 
 /// An abstract "field reference" on a record from a named data source.
@@ -129,7 +134,7 @@ impl PathVar {
 impl Filter {
     pub fn build(
         types: TypeInfo,
-        ors: PartialResults,
+        partials: PartialResults,
         var: &str,
         class: &str,
     ) -> FilterResult<Self> {
@@ -140,10 +145,14 @@ impl Filter {
             eprintln!("\n==Bindings==")
         }
 
-        let var = Symbol(var.to_string());
-        let filter = ors
+        let sym = Symbol(var.to_string());
+        let filter = partials
             .into_iter()
-            .map(|ands| Self::from_result_event(&types, ands, &var, class))
+            .filter_map(|opt| opt.bindings.get(&sym).cloned())
+            .reduce(or_)
+            .into_iter()
+            .flat_map(vec_of_ands)
+            .map(|ands| Self::from_partial(&types, ands, var, class))
             .reduce(|l, r| Ok(l?.union(r?)))
             .unwrap_or_else(|| Ok(Self::empty(class)))?;
 
@@ -154,24 +163,17 @@ impl Filter {
         Ok(filter)
     }
 
-    fn from_result_event(
-        types: &TypeInfo,
-        ands: ResultEvent,
-        var: &Symbol,
-        class: &str,
-    ) -> FilterResult<Self> {
-        ands.bindings
-            .get(var)
-            .map(|ands| Self::from_partial(types, ands, class))
-            .unwrap_or_else(|| invalid_state_error(format!("unbound variable: {}", var.0)))
-    }
-
-    fn from_partial(types: &TypeInfo, ands: &Term, class: &str) -> FilterResult<Self> {
-        use {Datum::*, Operator::*, Value::*};
+    fn from_partial(types: &TypeInfo, ands: Term, var: &str, class: &str) -> FilterResult<Self> {
+        use {Operator::*, Value::*};
 
         if std::env::var("POLAR_EXPLAIN").is_ok() {
             eprintln!("{}", ands.to_polar());
         }
+
+        let term2expr = |i: Term| match i.value().as_expression() {
+            Ok(x) => x.clone(),
+            _ => op!(Unify, var!(var), i),
+        };
 
         match ands.value() {
             // most of the time we're dealing with expressions from the
@@ -181,21 +183,15 @@ impl Filter {
                 args,
             }) => args
                 .iter()
-                .map(|and| Ok(and.value().as_expression()?.clone()))
+                .map(|and| Ok(term2expr(and.clone())))
                 .collect::<FilterResult<Vec<_>>>()
-                .and_then(|ands| FilterInfo::build_filter(types.clone(), ands, class)),
+                .and_then(|ands| FilterInfo::build_filter(types.clone(), ands, var, class)),
 
             // sometimes we get an instance back. that means the variable
             // is exactly this instance, so return a filter that matches it.
-            i @ ExternalInstance(_) => Ok(Filter {
-                root: class.to_string(),
-                relations: HashSet::new(),
-                conditions: vec![singleton(Condition(
-                    Field(Projection(class.to_string(), None)),
-                    Comparison::Eq,
-                    Immediate(i.clone()),
-                ))],
-            }),
+            ExternalInstance(_) => {
+                FilterInfo::build_filter(types.clone(), vec![term2expr(ands.clone())], var, class)
+            }
 
             // oops, we don't know how to handle this!
             _ => invalid_state_error(ands.to_polar()),
@@ -315,43 +311,61 @@ impl FilterInfo {
         })
     }
 
-    /// digest a conjunct from the partial results & add a new constraint.
+    /// Digest a conjunct from the partial results & add a new constraint.
     fn add_constraint(&mut self, op: Operation) -> FilterResult<()> {
-        use {Datum::*, Operator::*};
-        let (left, right) = (self.term2datum(&op.args[0])?, self.term2datum(&op.args[1])?);
+        match op.args.len() {
+            1 => self.add_constraint_1(op),
+            2 => self.add_constraint_2(op),
+            _ => unsupported_op_error(op),
+        }
+    }
+
+    /// Handle a unary operation from the simplifier
+    fn add_constraint_1(&mut self, op: Operation) -> FilterResult<()> {
+        use Operator::*;
+        // The only case this currently handles is `not in`.
         match op.operator {
-            Unify => self.add_eq_condition(left, right),
-            Neq => self.add_neq_condition(left, right),
-            In => match (&left, &right) {
-                (Immediate(_), Field(Projection(_, None)))
-                | (Field(Projection(_, None)), Field(Projection(_, None))) => {
-                    self.add_eq_condition(left, right)
+            Not => match op.args[0].value().as_expression() {
+                Ok(Operation { operator: In, args }) if args.len() == 2 => {
+                    let (left, right) = (self.term2datum(&args[0])?, self.term2datum(&args[1])?);
+                    self.add_condition(left, Comparison::Nin, right)
                 }
-                _ => self.add_in_condition(left, right),
+                _ => unsupported_op_error(op),
             },
             _ => unsupported_op_error(op),
         }
     }
 
-    fn add_condition(&mut self, l: Datum, op: Comparison, r: Datum) -> FilterResult<()> {
-        self.conditions.insert(Condition(l, op, r));
-        Ok(())
+    /// Handle a binary expression from the simplifier
+    fn add_constraint_2(&mut self, op: Operation) -> FilterResult<()> {
+        use {Datum::*, Operator::*};
+        let (left, right) = (self.term2datum(&op.args[0])?, self.term2datum(&op.args[1])?);
+        let op = match op.operator {
+            Unify => Comparison::Eq,
+            Neq => Comparison::Neq,
+            In => match (&left, &right) {
+                (Immediate(_), Field(Projection(_, None)))
+                | (Field(Projection(_, None)), Field(Projection(_, None))) => Comparison::Eq,
+                _ => Comparison::In,
+            },
+            Lt => Comparison::Lt,
+            Leq => Comparison::Leq,
+            Gt => Comparison::Gt,
+            Geq => Comparison::Geq,
+            _ => return unsupported_op_error(op),
+        };
+        self.add_condition(left, op, right)
     }
 
-    fn add_eq_condition(&mut self, left: Datum, right: Datum) -> FilterResult<()> {
-        // only add condition if the side aren't == (otherwise it's redundant)
-        if left != right {
-            self.add_condition(left, Comparison::Eq, right)?;
+    fn add_condition(&mut self, left: Datum, op: Comparison, right: Datum) -> FilterResult<()> {
+        use Comparison::*;
+        match op {
+            Eq | Leq | Geq if left == right => Ok(()),
+            _ => {
+                self.conditions.insert(Condition(left, op, right));
+                Ok(())
+            }
         }
-        Ok(())
-    }
-
-    fn add_neq_condition(&mut self, left: Datum, right: Datum) -> FilterResult<()> {
-        self.add_condition(left, Comparison::Neq, right)
-    }
-
-    fn add_in_condition(&mut self, left: Datum, right: Datum) -> FilterResult<()> {
-        self.add_condition(left, Comparison::In, right)
     }
 
     /// Validate FilterInfo before constructing a Filter
@@ -427,15 +441,17 @@ impl FilterInfo {
     fn build_filter(
         type_info: TypeInfo,
         parts: Vec<Operation>,
+        var: &str,
         class: &str,
     ) -> FilterResult<Filter> {
-        let entities =
-            std::iter::once((PathVar::from(String::from("_this")), class.to_string())).collect();
-
         // TODO(gw) check more isas in host -- rn we only check external instances
         let (_isas, othas): (Set<_>, Set<_>) = parts
             .into_iter()
             .partition(|op| op.operator == Operator::Isa);
+
+        let mut entities = HashMap::new();
+        entities.insert(PathVar::from("_this".to_string()), class.to_string());
+        entities.insert(PathVar::from(var.to_string()), class.to_string());
 
         let Self {
             conditions,
@@ -504,6 +520,11 @@ impl Display for Comparison {
                 Eq => "=",
                 Neq => "!=",
                 In => "IN",
+                Nin => "NOT IN",
+                Lt => "<",
+                Gt => ">",
+                Leq => "<=",
+                Geq => ">=",
             }
         )
     }
@@ -541,9 +562,90 @@ where
     std::iter::once(x).collect()
 }
 
+fn vec_of_ands(t: Term) -> Vec<Term> {
+    fn or_of_ands(t: Term) -> Vec<Term> {
+        use Operator::*;
+        match t.value().as_expression() {
+            Ok(Operation { operator, args }) if *operator == Or => {
+                args.iter().cloned().flat_map(or_of_ands).collect()
+            }
+            _ => {
+                vec![term!(Operation {
+                    operator: And,
+                    args: ands(t),
+                })]
+            }
+        }
+    }
+
+    fn ands(t: Term) -> Vec<Term> {
+        use Operator::*;
+        match t.value().as_expression() {
+            Ok(Operation { operator, args }) if *operator == And => {
+                args.iter().cloned().flat_map(ands).collect()
+            }
+            _ => vec![t],
+        }
+    }
+
+    or_of_ands(t.disjunctive_normal_form())
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::events::ResultEvent;
+
+    type TestResult = Result<(), RuntimeError>;
+
+    #[test]
+    fn test_or_normalization() -> TestResult {
+        let s = String::from;
+        let types = || {
+            hashmap! {
+                s("Foo") => hashmap!{
+                    s("id") => Type::Base {
+                        class_tag: s("Integer")
+                    },
+                }
+            }
+        };
+
+        // two conditions behind an `or` in one result
+        let ex1 = vec![ResultEvent::new(hashmap! {
+            sym!("resource") =>
+                    term!(op!(Or,
+                        term!(op!(Unify,
+                            term!(op!(Dot, var!("_this"), str!("id"))),
+                            term!(1))),
+                        term!(op!(Unify,
+                            term!(op!(Dot, var!("_this"), str!("id"))),
+                            term!(2))))),
+        })];
+
+        // two results with one condition each
+        let ex2 = vec![
+            ResultEvent::new(hashmap! {
+                sym!("resource") =>
+                            term!(op!(Unify,
+                                term!(op!(Dot, var!("_this"), str!("id"))),
+                                term!(1))),
+            }),
+            ResultEvent::new(hashmap! {
+                sym!("resource") =>
+                            term!(op!(Unify,
+                                term!(op!(Dot, var!("_this"), str!("id"))),
+                                term!(2))),
+            }),
+        ];
+
+        assert_eq!(
+            Filter::build(types(), ex1, "resource", "Foo")?,
+            Filter::build(types(), ex2, "resource", "Foo")?,
+        );
+
+        Ok(())
+    }
 
     #[test]
     fn test_dup_reln() {
@@ -570,7 +672,6 @@ mod test {
             }
         };
 
-        // this is a great example of why i want to have shorter macros like opn! ptn! etc ...
         let ors = vec![ResultEvent::new(hashmap! {
             sym!("resource") => term!(op!(And,
                 term!(op!(Isa, var!("_this"), term!(pattern!(instance!("Resource"))))),
@@ -582,24 +683,25 @@ mod test {
         match Filter::build(types, ors, "resource", "Resource") {
             Err(RuntimeError::InvalidState { msg })
                 if &msg == "Type `Resource` occurs more than once as the target of a relation" => {}
-            _ => panic!("unexpected"),
+            x => panic!("unexpected: {:?}", x),
         }
     }
 
     #[test]
-    fn test_in() {
+    fn test_in() -> TestResult {
+        let s = String::from;
         let types = hashmap! {
-            String::from("Resource") => hashmap!{
-                String::from("foos") => Type::Relation {
-                   kind: String::from("many"),
-                   my_field: String::from("_"),
-                   other_field: String::from("_"),
-                   other_class_tag: String::from("Foo")
+            s("Resource") => hashmap!{
+                s("foos") => Type::Relation {
+                   kind: s("many"),
+                   my_field: s("_"),
+                   other_field: s("_"),
+                   other_class_tag: s("Foo")
                 }
             },
-            String::from("Foo") => hashmap!{
-                String::from("y") => Type::Base {
-                    class_tag: String::from("Integer")
+            s("Foo") => hashmap!{
+                s("y") => Type::Base {
+                    class_tag: s("Integer")
                 }
             }
         };
@@ -612,19 +714,18 @@ mod test {
             ))
         })];
 
-        let filter = Filter::build(types, ors, "resource", "Resource").unwrap();
-
         let Filter {
             root,
             relations,
             conditions,
-        } = filter;
+        } = Filter::build(types, ors, "resource", "Resource")?;
 
         assert_eq!(&root, "Resource");
+
         assert_eq!(
             relations,
             hashset! {
-                Relation(String::from("Resource"), String::from("foos"), String::from("Foo"))
+                Relation(s("Resource"), s("foos"), s("Foo"))
             }
         );
 
@@ -634,5 +735,25 @@ mod test {
                 Condition(Datum::Immediate(value!(1)), Comparison::Eq, Datum::Field(Projection(String::from("Foo"), Some(String::from("y")))))
             }]
         );
+        Ok(())
+    }
+
+    #[test]
+    fn test_vec_of_ands() {
+        let ex = or_(
+            not_(var!("p")),
+            and_(var!("q"), not_(and_(not_(var!("r")), var!("s")))),
+        );
+
+        let oa = vec![
+            not_(var!("p")),
+            and_(var!("q"), var!("r")),
+            and_(var!("q"), not_(var!("s"))),
+        ];
+
+        let to_s =
+            |ooa: Vec<Term>| format!("{:?}", ooa.iter().map(|a| a.to_polar()).collect::<Vec<_>>());
+
+        assert_eq!(to_s(oa), to_s(vec_of_ands(ex)));
     }
 }
