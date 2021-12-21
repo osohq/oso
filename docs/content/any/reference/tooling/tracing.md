@@ -11,7 +11,7 @@ Polar's tracing support prints logs of how a query is evaluated. It is available
 
 ## Enabling `INFO` output 
 
-`INFO` traces are viewed by setting the environment variable: `POLAR_LOG=info`. The `INFO` output is a more concise subset of `TRACE`, and is intended to by used by those developing and debugging polar policies in their local environment. 
+`INFO` traces are viewed by setting the environment variable: `POLAR_LOG=info`. The `INFO` output is a more concise subset of `TRACE` and is intended to by used by those developing and debugging polar policies in their local environment. 
 
 It will print out `[oso][info]` messages for many notable points of the query execution, for example:
 
