@@ -15,7 +15,7 @@ Polar's tracing support prints logs of how a query is evaluated. It is available
 
 It will print out `[oso][info]` messages for many notable points of the query execution, for example:
 
- * Queries and sub-query evaluations.
+ * Queries for rules.
  
  * Source information for the rules which were applicable to each query, and a warning if none were found to be applicable. 
  
