@@ -39,4 +39,4 @@ It will print out `[oso][info]` messages for many notable points of the query ex
 {{<literalInclude path="reference/tooling/info" tabGroup="tracing">}}
 {{<literalInclude path="reference/tooling/trace" tabGroup="tracing">}}
 
-All trace output can be disabled by setting `POLAR_LOG=0` or `POLAR_LOG=off`.
+All `POLAR_LOG` output can be disabled by setting `POLAR_LOG=0` or `POLAR_LOG=off`.
