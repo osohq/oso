@@ -27,7 +27,7 @@ It will print out `[oso][info]` messages for many notable points of the query ex
 
 `POLAR_LOG=trace` exposes a more verbose view of a query execution in Polar and extends the contents of `POLAR_LOG=info`. The `POLAR_LOG=trace` traces will emit a log for every Goal encountered by the Polar virtual machine during the query execution. Notable examples include:
 
-* Showing parameter type checking information during query applicability tests
+* Showing parameter type checking information during query applicability tests.
 
 * Showing values that are bound to variables for each expression.
 
