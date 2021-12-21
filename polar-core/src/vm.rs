@@ -1707,9 +1707,9 @@ impl PolarVirtualMachine {
 
                 let instance_id = self.new_id();
 
-                let class = &constructor.value().as_call().unwrap().name;
-                let class_repr = if self.kb.read().unwrap().is_constant(class) {
-                    Some(constructor.to_polar())
+                let class = &constructor.value().as_call()?.name;
+                let class_repr = if self.kb().is_constant(class) {
+                    Some(class.0.clone())
                 } else {
                     None
                 };
