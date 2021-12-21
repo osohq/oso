@@ -151,7 +151,7 @@ impl Filter {
             .filter_map(|opt| opt.bindings.get(&sym).cloned())
             .reduce(or_)
             .into_iter()
-            .flat_map(normalize)
+            .flat_map(vec_of_ands)
             .map(|ands| Self::from_partial(&types, ands, var, class))
             .reduce(|l, r| Ok(l?.union(r?)))
             .unwrap_or_else(|| Ok(Self::empty(class)))?;
@@ -562,7 +562,7 @@ where
     std::iter::once(x).collect()
 }
 
-fn normalize(t: Term) -> Vec<Term> {
+fn vec_of_ands(t: Term) -> Vec<Term> {
     fn or_of_ands(t: Term) -> Vec<Term> {
         use Operator::*;
         match t.value().as_expression() {
@@ -588,7 +588,7 @@ fn normalize(t: Term) -> Vec<Term> {
         }
     }
 
-    or_of_ands(t.dnf())
+    or_of_ands(t.disjunctive_normal_form())
 }
 
 #[cfg(test)]
@@ -739,7 +739,7 @@ mod test {
     }
 
     #[test]
-    fn test_normalize() {
+    fn test_vec_of_ands() {
         let ex = or_(
             not_(var!("p")),
             and_(var!("q"), not_(and_(not_(var!("r")), var!("s")))),
@@ -754,6 +754,6 @@ mod test {
         let to_s =
             |ooa: Vec<Term>| format!("{:?}", ooa.iter().map(|a| a.to_polar()).collect::<Vec<_>>());
 
-        assert_eq!(to_s(oa), to_s(normalize(ex)));
+        assert_eq!(to_s(oa), to_s(vec_of_ands(ex)));
     }
 }

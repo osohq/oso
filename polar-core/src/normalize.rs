@@ -1,6 +1,16 @@
 use crate::terms::*;
 
 impl Term {
+    /// convert expression to disjunctive normal form
+    pub fn disjunctive_normal_form(&self) -> Self {
+        self.pre_normalize().distribute(is_and, and_, is_or, or_)
+    }
+
+    /// convert expression to conjunctive normal form
+    pub fn conjunctive_normal_form(&self) -> Self {
+        self.pre_normalize().distribute(is_or, or_, is_and, and_)
+    }
+
     /// intelligently negate an expression
     fn negated(&self) -> Self {
         use {Operator::*, Value::*};
@@ -30,52 +40,6 @@ impl Term {
                 _ => self.clone_with_value(Expression(op!(Not, self.clone()))),
             },
             _ => self.clone_with_value(Expression(op!(Not, self.clone()))),
-        }
-    }
-
-    /// binary tree normal form -- all and / or nodes form a binary tree
-    fn btnf(&self) -> Self {
-        use Operator::*;
-        match self.value().as_expression() {
-            Ok(Operation { operator, args }) if *operator == And || *operator == Or => {
-                match args.len() {
-                    // empty -> boolean
-                    0 => self.clone_with_value(Value::Boolean(*operator == And)),
-                    // one -> lift it out
-                    1 => args[0].btnf(),
-                    // else fold
-                    _ => args
-                        .iter()
-                        .map(|a| a.btnf())
-                        .reduce(|m, x| {
-                            self.clone_with_value(Value::Expression(Operation {
-                                operator: *operator,
-                                args: vec![m, x],
-                            }))
-                        })
-                        .unwrap(),
-                }
-            }
-            _ => self.clone(),
-        }
-    }
-
-    /// negation normal form -- all not operators are nested inside of and/or
-    /// using De Morgan's law
-    fn nnf(&self) -> Self {
-        use Operator::*;
-        match self.value().as_expression() {
-            Err(_) => self.clone(),
-            Ok(Operation {
-                operator: Not,
-                args,
-            }) => args[0].nnf().negated(),
-            Ok(Operation { operator, args }) => {
-                self.clone_with_value(Value::Expression(Operation {
-                    operator: *operator,
-                    args: args.iter().cloned().map(|t| t.nnf()).collect(),
-                }))
-            }
         }
     }
 
@@ -135,16 +99,60 @@ impl Term {
     /// - negations fully nested
     /// - double negatives removed
     /// - and/or nodes form a binary tree
-    fn pre_norm(&self) -> Self {
-        self.btnf().nnf()
-    }
+    fn pre_normalize(&self) -> Self {
+        impl Term {
+            /// binary tree normal form -- all and / or nodes form a binary tree
+            fn as_binary_tree(&self) -> Self {
+                use Operator::*;
+                match self.value().as_expression() {
+                    Ok(Operation { operator, args }) if *operator == And || *operator == Or => {
+                        match args.len() {
+                            // empty -> boolean
+                            0 => self.clone_with_value(Value::Boolean(*operator == And)),
+                            // one -> lift it out
+                            1 => args[0].as_binary_tree(),
+                            // else fold
+                            _ => args
+                                .iter()
+                                .map(|a| a.as_binary_tree())
+                                .reduce(|m, x| {
+                                    self.clone_with_value(Value::Expression(Operation {
+                                        operator: *operator,
+                                        args: vec![m, x],
+                                    }))
+                                })
+                                .unwrap(),
+                        }
+                    }
+                    _ => self.clone(),
+                }
+            }
 
-    pub fn dnf(&self) -> Self {
-        self.pre_norm().distribute(andp, and_, orp, or_)
-    }
+            /// negation normal form -- all not operators are nested inside of and/or
+            /// using De Morgan's law
+            fn negation_normal_form(&self) -> Self {
+                use Operator::*;
+                match self.value().as_expression() {
+                    Err(_) => self.clone(),
+                    Ok(Operation {
+                        operator: Not,
+                        args,
+                    }) => args[0].negation_normal_form().negated(),
+                    Ok(Operation { operator, args }) => {
+                        self.clone_with_value(Value::Expression(Operation {
+                            operator: *operator,
+                            args: args
+                                .iter()
+                                .cloned()
+                                .map(|t| t.negation_normal_form())
+                                .collect(),
+                        }))
+                    }
+                }
+            }
+        }
 
-    pub fn cnf(&self) -> Self {
-        self.pre_norm().distribute(orp, or_, andp, and_)
+        self.as_binary_tree().negation_normal_form()
     }
 }
 
@@ -165,11 +173,11 @@ fn opnp(l: &Term, op: Operator) -> bool {
         Ok(Operation { operator, .. }) if op == *operator)
 }
 
-fn andp(l: &Term) -> bool {
+fn is_and(l: &Term) -> bool {
     opnp(l, Operator::And)
 }
 
-fn orp(l: &Term) -> bool {
+fn is_or(l: &Term) -> bool {
     opnp(l, Operator::Or)
 }
 
@@ -202,15 +210,15 @@ mod test {
     }
 
     #[test]
-    fn test_nnf() {
+    fn test_pre_normalize() {
         let ex = ex1();
         let nnf = or_(
             not_(var!("p")),
             and_(var!("q"), or_(var!("r"), not_(var!("s")))),
         );
 
-        assert_eq!(ex.nnf(), ex.nnf().nnf()); // should be idempotent
-        assert_eq!(nnf, ex.nnf());
+        assert_eq!(ex.pre_normalize(), ex.pre_normalize().pre_normalize()); // should be idempotent
+        assert_eq!(nnf, ex.pre_normalize());
     }
 
     #[test]
@@ -221,8 +229,11 @@ mod test {
             or_(not_(var!("p")), or_(var!("r"), not_(var!("s")))),
         );
 
-        assert_eq!(ex.cnf(), ex.cnf().cnf());
-        assert_eq!(cnf, ex.cnf());
+        assert_eq!(
+            ex.conjunctive_normal_form(),
+            ex.conjunctive_normal_form().conjunctive_normal_form()
+        );
+        assert_eq!(cnf, ex.conjunctive_normal_form());
 
         let ex = ex2();
         let cnf = and_(
@@ -236,8 +247,11 @@ mod test {
             ),
         );
 
-        assert_eq!(ex.cnf(), ex.cnf().cnf());
-        assert_eq!(cnf, ex.cnf());
+        assert_eq!(
+            ex.conjunctive_normal_form(),
+            ex.conjunctive_normal_form().conjunctive_normal_form()
+        );
+        assert_eq!(cnf, ex.conjunctive_normal_form());
     }
 
     #[test]
@@ -248,8 +262,11 @@ mod test {
             or_(and_(var!("q"), var!("r")), and_(var!("q"), not_(var!("s")))),
         );
 
-        assert_eq!(ex.dnf(), ex.dnf().dnf());
-        assert_eq!(dnf, ex.dnf());
+        assert_eq!(
+            ex.disjunctive_normal_form(),
+            ex.disjunctive_normal_form().disjunctive_normal_form()
+        );
+        assert_eq!(dnf, ex.disjunctive_normal_form());
 
         let ex = ex2();
         let dnf = or_(
@@ -260,8 +277,11 @@ mod test {
             ),
         );
 
-        assert_eq!(ex.dnf(), ex.dnf().dnf());
-        assert_eq!(dnf, ex.dnf());
+        assert_eq!(
+            ex.disjunctive_normal_form(),
+            ex.disjunctive_normal_form().disjunctive_normal_form()
+        );
+        assert_eq!(dnf, ex.disjunctive_normal_form());
 
         let ex = ex3();
         let dnf = or_(
@@ -311,7 +331,10 @@ mod test {
             ),
         );
 
-        assert_eq!(ex.dnf(), ex.dnf().dnf());
-        assert_eq!(dnf, ex.dnf());
+        assert_eq!(
+            ex.disjunctive_normal_form(),
+            ex.disjunctive_normal_form().disjunctive_normal_form()
+        );
+        assert_eq!(dnf, ex.disjunctive_normal_form());
     }
 }
