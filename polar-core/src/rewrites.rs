@@ -196,15 +196,16 @@ impl<'kb> Folder for Rewriter<'kb> {
                 operator: ForAll,
                 args: {
                     self.stack.push(vec![]);
-                    let mut forall_args = vec![self.fold_term(o.args[0].clone())];
-                    let mut and_args = self.stack.pop().unwrap();
+                    let quant = self.fold_term(o.args[0].clone());
+                    let lhs_rws = self.stack.pop().unwrap();
 
                     self.stack.push(vec![]);
                     let test = self.fold_term(o.args[1].clone());
-                    and_args.extend(self.stack.pop().unwrap());
+                    let rhs_rws = self.stack.pop().unwrap();
 
-                    forall_args.push(and_args.into_iter().fold(test, and_));
-                    forall_args
+                    let quant = lhs_rws.into_iter().fold(quant, and_);
+                    let test = rhs_rws.into_iter().fold(test, and_);
+                    vec![quant, test]
                 },
             },
 
