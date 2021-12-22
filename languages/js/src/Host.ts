@@ -508,13 +508,23 @@ export class Host implements Required<DataFilteringQueryParams> {
       default: {
         let instanceId: number | undefined = undefined;
         if (isConstructor(v)) instanceId = this.getType(v)?.id;
+
+        // pass a string class repr *for registered types only*, otherwise pass
+        // undefined (allow core to differentiate registered or not)
+        const v_cast = v as NullishOrHasConstructor;
+        let classRepr: string | undefined = v_cast?.constructor?.name;
+        if (classRepr !== undefined && !this.types.has(classRepr)) {
+          classRepr = undefined;
+        }
+
         const instance_id = this.cacheInstance(v, instanceId);
         return {
           value: {
             ExternalInstance: {
               instance_id,
-              repr: repr(v),
               constructor: undefined,
+              repr: repr(v),
+              class_repr: classRepr,
             },
           },
         };

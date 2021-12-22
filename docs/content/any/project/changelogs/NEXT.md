@@ -8,56 +8,6 @@ description: >-
 draft: true
 ---
 
-## `oso` `NEW_VERSION`
-
-### Core
-
-#### Other bugs & improvements
-
-- Fixed a variable scope bug affecting the `forall` operator that caused affected
-  queries to fail with an `UnhandledPartial` error.
-- Subsequent unification of incompatibly type-constrained variables will now fail
-  correctly.
-
-### Node.js
-
-#### Breaking changes
-
-{{% callout "Warning" "orange" %}}
-  This release contains breaking changes. Be sure to follow migration steps
-  before upgrading.
-{{% /callout %}}
-
-##### Second parameter of Oso.query() API changed from bindings to options
-
-Pre-seeding the Polar VM with bindings for a query is a bit of an advanced use
-case, but if you were previously passing bindings to `Oso.query()`:
-
-```js
-const bindings = new Map([['x', 1]]);
-oso.query('f(x)', bindings);
-```
-
-You'll need to update that call to pass `bindings` as a key in the new
-`QueryOpts` object:
-
-```js
-const bindings = new Map([['x', 1]]);
-oso.query('f(x)', { bindings });
-```
-
-#### Other bugs & improvements
-
-- Thanks to [`@Kn99HN`](https://github.com/Kn99HN) for adding the
-  `acceptExpression` query flag to the Node.js lib!
-
-## `sqlalchemy-oso` `NEW_VERSION`
-
-### Other bugs & improvements
-
-- `scoped_session` now correctly handles a `get_checked_permission` callback that
-  returns `None`.
-
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
@@ -74,6 +24,7 @@ oso.query('f(x)', { bindings });
 ##### Breaking change 1
 
 Summary of breaking change.
+
 Link to [migration guide]().
 
 #### New features

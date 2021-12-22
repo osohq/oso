@@ -179,6 +179,7 @@ interface PolarInstance {
   ExternalInstance: {
     instance_id: number;
     repr: string;
+    class_repr?: string;
     constructor?: PolarTerm;
   };
 }

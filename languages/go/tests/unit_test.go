@@ -230,7 +230,8 @@ type User struct {
 }
 
 type Widget struct {
-	Id int
+	Id        int
+	CompanyId int
 }
 
 type Company struct {

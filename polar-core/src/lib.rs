@@ -21,6 +21,7 @@ mod inverter;
 pub mod kb;
 mod lexer;
 pub mod messages;
+pub mod normalize;
 mod numerics;
 pub mod parser;
 mod partial;

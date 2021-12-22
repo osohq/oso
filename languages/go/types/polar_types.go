@@ -13,6 +13,122 @@ type Call struct {
 	// Kwargs
 	Kwargs *map[Symbol]Term `json:"kwargs"`
 }
+type DeclarationRole struct{}
+
+func (DeclarationRole) isDeclaration() {}
+
+type DeclarationPermission struct{}
+
+func (DeclarationPermission) isDeclaration() {}
+
+// DeclarationRelation newtype
+type DeclarationRelation Term
+
+func (variant DeclarationRelation) MarshalJSON() ([]byte, error) {
+	return json.Marshal(Term(variant))
+}
+
+func (variant *DeclarationRelation) UnmarshalJSON(b []byte) error {
+	inner := Term(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = DeclarationRelation(inner)
+	return err
+}
+
+func (DeclarationRelation) isDeclaration() {}
+
+// Declaration enum
+type DeclarationVariant interface {
+	isDeclaration()
+}
+
+type Declaration struct {
+	DeclarationVariant
+}
+
+func (result *Declaration) UnmarshalJSON(b []byte) error {
+	var variantName string
+	var variantValue *json.RawMessage
+
+	// try and deserialize as a string first
+	err := json.Unmarshal(b, &variantName)
+	if err != nil {
+		var rawMap map[string]json.RawMessage
+		err := json.Unmarshal(b, &rawMap)
+		if err != nil {
+			return err
+		}
+		// JSON should be of form {"VariantName": {...}}
+		if len(rawMap) != 1 {
+			return errors.New("Deserializing Declaration as an enum variant; expecting a single key")
+		}
+		for k, v := range rawMap {
+			variantName = k
+			variantValue = &v
+		}
+	}
+	switch variantName {
+
+	case "Role":
+		var variant DeclarationRole
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Declaration{variant}
+		return nil
+
+	case "Permission":
+		var variant DeclarationPermission
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Declaration{variant}
+		return nil
+
+	case "Relation":
+		var variant DeclarationRelation
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = Declaration{variant}
+		return nil
+
+	}
+
+	return fmt.Errorf("Cannot deserialize Declaration: %s", string(b))
+}
+
+func (variant Declaration) MarshalJSON() ([]byte, error) {
+	switch inner := variant.DeclarationVariant.(type) {
+
+	case DeclarationRole:
+		return json.Marshal(map[string]DeclarationRole{
+			"Role": inner,
+		})
+
+	case DeclarationPermission:
+		return json.Marshal(map[string]DeclarationPermission{
+			"Permission": inner,
+		})
+
+	case DeclarationRelation:
+		return json.Marshal(map[string]DeclarationRelation{
+			"Relation": inner,
+		})
+
+	}
+
+	return nil, fmt.Errorf("unexpected variant of %v", variant)
+}
 
 // Dictionary struct
 type Dictionary struct {
@@ -201,6 +317,8 @@ type ExternalInstance struct {
 	Constructor *Term `json:"constructor"`
 	// Repr
 	Repr *string `json:"repr"`
+	// Class Repr
+	ClassRepr *string `json:"class_repr"`
 }
 
 // FormattedPolarError struct
@@ -1039,132 +1157,82 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 }
 
 func (variant Operator) MarshalJSON() ([]byte, error) {
-	switch inner := variant.OperatorVariant.(type) {
+	switch variant.OperatorVariant.(type) {
 
 	case OperatorDebug:
-		return json.Marshal(map[string]OperatorDebug{
-			"Debug": inner,
-		})
+		return json.Marshal("Debug")
 
 	case OperatorPrint:
-		return json.Marshal(map[string]OperatorPrint{
-			"Print": inner,
-		})
+		return json.Marshal("Print")
 
 	case OperatorCut:
-		return json.Marshal(map[string]OperatorCut{
-			"Cut": inner,
-		})
+		return json.Marshal("Cut")
 
 	case OperatorIn:
-		return json.Marshal(map[string]OperatorIn{
-			"In": inner,
-		})
+		return json.Marshal("In")
 
 	case OperatorIsa:
-		return json.Marshal(map[string]OperatorIsa{
-			"Isa": inner,
-		})
+		return json.Marshal("Isa")
 
 	case OperatorNew:
-		return json.Marshal(map[string]OperatorNew{
-			"New": inner,
-		})
+		return json.Marshal("New")
 
 	case OperatorDot:
-		return json.Marshal(map[string]OperatorDot{
-			"Dot": inner,
-		})
+		return json.Marshal("Dot")
 
 	case OperatorNot:
-		return json.Marshal(map[string]OperatorNot{
-			"Not": inner,
-		})
+		return json.Marshal("Not")
 
 	case OperatorMul:
-		return json.Marshal(map[string]OperatorMul{
-			"Mul": inner,
-		})
+		return json.Marshal("Mul")
 
 	case OperatorDiv:
-		return json.Marshal(map[string]OperatorDiv{
-			"Div": inner,
-		})
+		return json.Marshal("Div")
 
 	case OperatorMod:
-		return json.Marshal(map[string]OperatorMod{
-			"Mod": inner,
-		})
+		return json.Marshal("Mod")
 
 	case OperatorRem:
-		return json.Marshal(map[string]OperatorRem{
-			"Rem": inner,
-		})
+		return json.Marshal("Rem")
 
 	case OperatorAdd:
-		return json.Marshal(map[string]OperatorAdd{
-			"Add": inner,
-		})
+		return json.Marshal("Add")
 
 	case OperatorSub:
-		return json.Marshal(map[string]OperatorSub{
-			"Sub": inner,
-		})
+		return json.Marshal("Sub")
 
 	case OperatorEq:
-		return json.Marshal(map[string]OperatorEq{
-			"Eq": inner,
-		})
+		return json.Marshal("Eq")
 
 	case OperatorGeq:
-		return json.Marshal(map[string]OperatorGeq{
-			"Geq": inner,
-		})
+		return json.Marshal("Geq")
 
 	case OperatorLeq:
-		return json.Marshal(map[string]OperatorLeq{
-			"Leq": inner,
-		})
+		return json.Marshal("Leq")
 
 	case OperatorNeq:
-		return json.Marshal(map[string]OperatorNeq{
-			"Neq": inner,
-		})
+		return json.Marshal("Neq")
 
 	case OperatorGt:
-		return json.Marshal(map[string]OperatorGt{
-			"Gt": inner,
-		})
+		return json.Marshal("Gt")
 
 	case OperatorLt:
-		return json.Marshal(map[string]OperatorLt{
-			"Lt": inner,
-		})
+		return json.Marshal("Lt")
 
 	case OperatorUnify:
-		return json.Marshal(map[string]OperatorUnify{
-			"Unify": inner,
-		})
+		return json.Marshal("Unify")
 
 	case OperatorOr:
-		return json.Marshal(map[string]OperatorOr{
-			"Or": inner,
-		})
+		return json.Marshal("Or")
 
 	case OperatorAnd:
-		return json.Marshal(map[string]OperatorAnd{
-			"And": inner,
-		})
+		return json.Marshal("And")
 
 	case OperatorForAll:
-		return json.Marshal(map[string]OperatorForAll{
-			"ForAll": inner,
-		})
+		return json.Marshal("ForAll")
 
 	case OperatorAssign:
-		return json.Marshal(map[string]OperatorAssign{
-			"Assign": inner,
-		})
+		return json.Marshal("Assign")
 
 	}
 
@@ -2030,14 +2098,6 @@ type RuntimeErrorApplication struct {
 
 func (RuntimeErrorApplication) isRuntimeError() {}
 
-// RuntimeErrorFileLoading struct
-type RuntimeErrorFileLoading struct {
-	// Msg
-	Msg string `json:"msg"`
-}
-
-func (RuntimeErrorFileLoading) isRuntimeError() {}
-
 // RuntimeErrorIncompatibleBindings struct
 type RuntimeErrorIncompatibleBindings struct {
 	// Msg
@@ -2066,6 +2126,14 @@ type RuntimeErrorDataFilteringFieldMissing struct {
 
 func (RuntimeErrorDataFilteringFieldMissing) isRuntimeError() {}
 
+// RuntimeErrorDataFilteringUnsupportedOp struct
+type RuntimeErrorDataFilteringUnsupportedOp struct {
+	// Operation
+	Operation Operation `json:"operation"`
+}
+
+func (RuntimeErrorDataFilteringUnsupportedOp) isRuntimeError() {}
+
 // RuntimeErrorInvalidRegistration struct
 type RuntimeErrorInvalidRegistration struct {
 	// Sym
@@ -2083,6 +2151,10 @@ type RuntimeErrorInvalidState struct {
 }
 
 func (RuntimeErrorInvalidState) isRuntimeError() {}
+
+type RuntimeErrorMultipleLoadError struct{}
+
+func (RuntimeErrorMultipleLoadError) isRuntimeError() {}
 
 // RuntimeError enum
 type RuntimeErrorVariant interface {
@@ -2182,17 +2254,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		*result = RuntimeError{variant}
 		return nil
 
-	case "FileLoading":
-		var variant RuntimeErrorFileLoading
-		if variantValue != nil {
-			err := json.Unmarshal(*variantValue, &variant)
-			if err != nil {
-				return err
-			}
-		}
-		*result = RuntimeError{variant}
-		return nil
-
 	case "IncompatibleBindings":
 		var variant RuntimeErrorIncompatibleBindings
 		if variantValue != nil {
@@ -2226,6 +2287,17 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		*result = RuntimeError{variant}
 		return nil
 
+	case "DataFilteringUnsupportedOp":
+		var variant RuntimeErrorDataFilteringUnsupportedOp
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = RuntimeError{variant}
+		return nil
+
 	case "InvalidRegistration":
 		var variant RuntimeErrorInvalidRegistration
 		if variantValue != nil {
@@ -2239,6 +2311,17 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 
 	case "InvalidState":
 		var variant RuntimeErrorInvalidState
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = RuntimeError{variant}
+		return nil
+
+	case "MultipleLoadError":
+		var variant RuntimeErrorMultipleLoadError
 		if variantValue != nil {
 			err := json.Unmarshal(*variantValue, &variant)
 			if err != nil {
@@ -2286,11 +2369,6 @@ func (variant RuntimeError) MarshalJSON() ([]byte, error) {
 			"Application": inner,
 		})
 
-	case RuntimeErrorFileLoading:
-		return json.Marshal(map[string]RuntimeErrorFileLoading{
-			"FileLoading": inner,
-		})
-
 	case RuntimeErrorIncompatibleBindings:
 		return json.Marshal(map[string]RuntimeErrorIncompatibleBindings{
 			"IncompatibleBindings": inner,
@@ -2306,6 +2384,11 @@ func (variant RuntimeError) MarshalJSON() ([]byte, error) {
 			"DataFilteringFieldMissing": inner,
 		})
 
+	case RuntimeErrorDataFilteringUnsupportedOp:
+		return json.Marshal(map[string]RuntimeErrorDataFilteringUnsupportedOp{
+			"DataFilteringUnsupportedOp": inner,
+		})
+
 	case RuntimeErrorInvalidRegistration:
 		return json.Marshal(map[string]RuntimeErrorInvalidRegistration{
 			"InvalidRegistration": inner,
@@ -2314,6 +2397,11 @@ func (variant RuntimeError) MarshalJSON() ([]byte, error) {
 	case RuntimeErrorInvalidState:
 		return json.Marshal(map[string]RuntimeErrorInvalidState{
 			"InvalidState": inner,
+		})
+
+	case RuntimeErrorMultipleLoadError:
+		return json.Marshal(map[string]RuntimeErrorMultipleLoadError{
+			"MultipleLoadError": inner,
 		})
 
 	}
@@ -2364,6 +2452,16 @@ type TraceResult struct {
 	// Formatted
 	Formatted string `json:"formatted"`
 }
+
+// ValidationErrorFileLoading struct
+type ValidationErrorFileLoading struct {
+	// Source
+	Source Source `json:"source"`
+	// Msg
+	Msg string `json:"msg"`
+}
+
+func (ValidationErrorFileLoading) isValidationError() {}
 
 // ValidationErrorMissingRequiredRule struct
 type ValidationErrorMissingRequiredRule struct {
@@ -2427,6 +2525,20 @@ type ValidationErrorUnregisteredClass struct {
 
 func (ValidationErrorUnregisteredClass) isValidationError() {}
 
+// ValidationErrorDuplicateResourceBlockDeclaration struct
+type ValidationErrorDuplicateResourceBlockDeclaration struct {
+	// Resource
+	Resource Term `json:"resource"`
+	// Declaration
+	Declaration Term `json:"declaration"`
+	// Existing
+	Existing Declaration `json:"existing"`
+	// New
+	New Declaration `json:"new"`
+}
+
+func (ValidationErrorDuplicateResourceBlockDeclaration) isValidationError() {}
+
 // ValidationError enum
 type ValidationErrorVariant interface {
 	isValidationError()
@@ -2458,6 +2570,17 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		}
 	}
 	switch variantName {
+
+	case "FileLoading":
+		var variant ValidationErrorFileLoading
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ValidationError{variant}
+		return nil
 
 	case "MissingRequiredRule":
 		var variant ValidationErrorMissingRequiredRule
@@ -2536,6 +2659,17 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		*result = ValidationError{variant}
 		return nil
 
+	case "DuplicateResourceBlockDeclaration":
+		var variant ValidationErrorDuplicateResourceBlockDeclaration
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ValidationError{variant}
+		return nil
+
 	}
 
 	return fmt.Errorf("Cannot deserialize ValidationError: %s", string(b))
@@ -2543,6 +2677,11 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 
 func (variant ValidationError) MarshalJSON() ([]byte, error) {
 	switch inner := variant.ValidationErrorVariant.(type) {
+
+	case ValidationErrorFileLoading:
+		return json.Marshal(map[string]ValidationErrorFileLoading{
+			"FileLoading": inner,
+		})
 
 	case ValidationErrorMissingRequiredRule:
 		return json.Marshal(map[string]ValidationErrorMissingRequiredRule{
@@ -2577,6 +2716,11 @@ func (variant ValidationError) MarshalJSON() ([]byte, error) {
 	case ValidationErrorUnregisteredClass:
 		return json.Marshal(map[string]ValidationErrorUnregisteredClass{
 			"UnregisteredClass": inner,
+		})
+
+	case ValidationErrorDuplicateResourceBlockDeclaration:
+		return json.Marshal(map[string]ValidationErrorDuplicateResourceBlockDeclaration{
+			"DuplicateResourceBlockDeclaration": inner,
 		})
 
 	}
@@ -2979,4 +3123,151 @@ func (variant Value) MarshalJSON() ([]byte, error) {
 	}
 
 	return nil, fmt.Errorf("unexpected variant of %v", variant)
+}
+
+type Comparison int
+
+const (
+	Eq Comparison = iota
+	Neq
+	In
+)
+
+func (comparison *Comparison) UnmarshalJSON(b []byte) error {
+	var cmp string
+	err := json.Unmarshal(b, &cmp)
+	if err != nil {
+		return err
+	}
+	switch cmp {
+	case "Eq":
+		*comparison = Eq
+	case "Neq":
+		*comparison = Neq
+	case "In":
+		*comparison = In
+	}
+	return nil
+}
+
+type Projection struct {
+	TypeName  string
+	FieldName string
+}
+
+func (proj *Projection) UnmarshalJSON(b []byte) error {
+	var l []string
+	err := json.Unmarshal(b, &l)
+	if err != nil {
+		return err
+	}
+	proj.TypeName = l[0]
+	proj.FieldName = l[1]
+	return nil
+}
+
+type Immediate struct {
+	Value interface{}
+}
+
+type DatumVariant interface {
+	isDatum()
+}
+
+type Datum struct {
+	DatumVariant
+}
+
+func (datum *Datum) UnmarshalJSON(b []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(b, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "Immediate":
+			var val Value
+			err = json.Unmarshal(*v, &val)
+			if err != nil {
+				return err
+			}
+			datum.DatumVariant = Immediate{val}
+		case "Field":
+			var proj Projection
+			err = json.Unmarshal(*v, &proj)
+			if err != nil {
+				return err
+			}
+			datum.DatumVariant = proj
+		}
+		break
+	}
+	return nil
+}
+
+func (Projection) isDatum() {}
+func (Immediate) isDatum()  {}
+
+type FilterRelation struct {
+	FromTypeName  string
+	FromFieldName string
+	ToTypeName    string
+}
+
+func (relation *FilterRelation) UnmarshalJSON(b []byte) error {
+	var fields []string
+	err := json.Unmarshal(b, &fields)
+	if err != nil {
+		return err
+	}
+	relation.FromTypeName = fields[0]
+	relation.FromFieldName = fields[1]
+	relation.ToTypeName = fields[2]
+	return nil
+}
+
+type FilterCondition struct {
+	Lhs Datum
+	Cmp Comparison
+	Rhs Datum
+}
+
+func (relation *FilterCondition) UnmarshalJSON(b []byte) error {
+	var fields []*json.RawMessage
+
+	err := json.Unmarshal(b, &fields)
+	if err != nil {
+		return err
+	}
+	var lhs Datum
+	err = json.Unmarshal(*fields[0], &lhs)
+	if err != nil {
+		return err
+	}
+	var op Comparison
+	err = json.Unmarshal(*fields[1], &op)
+	if err != nil {
+		return err
+	}
+	var rhs Datum
+	err = json.Unmarshal(*fields[2], &rhs)
+	if err != nil {
+		return err
+	}
+	relation.Lhs = lhs
+	relation.Cmp = op
+	relation.Rhs = rhs
+	return nil
+}
+
+type Filter struct {
+	// Root
+	Root string `json:"root"`
+	// Relations
+	Relations []FilterRelation `json:"relations"`
+	// Conditions
+	Conditions [][]FilterCondition `json:"conditions"`
+	// Types
+	Types map[string]map[string]interface{}
 }
