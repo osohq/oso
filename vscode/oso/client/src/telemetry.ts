@@ -91,7 +91,7 @@ const hash = (contents: { toString(): string }) =>
     .update(`oso-vscode-telemetry:${contents.toString()}`)
     .digest('base64');
 
-// One-way hash of VSCode machine ID.
+// One-way hash of VS Code machine ID.
 const distinct_id = hash(env.machineId);
 // VS Code common telemetry properties.
 // https://github.com/microsoft/vscode-extension-telemetry/blob/188ee72da1741565a7ac80162acb7a08924c6a51/src/common/baseTelemetryReporter.ts#L134-L174
@@ -137,14 +137,14 @@ function telemetryEnabled() {
   if (setting === 'on') return true;
   if (setting === 'off') return false;
 
-  // Otherwise, default to VSCode's telemetry setting.
+  // Otherwise, default to VS Code's telemetry setting.
 
-  // VSCode >=1.55
+  // VS Code >=1.55
   //
   // https://code.visualstudio.com/updates/v1_55#_telemetry-enablement-api
   if (env.isTelemetryEnabled !== undefined) return env.isTelemetryEnabled;
 
-  // VSCode <1.55
+  // VS Code <1.55
   const config = workspace.getConfiguration('telemetry');
   const enabled = config.get<boolean>('enableTelemetry');
   return enabled;
@@ -272,7 +272,7 @@ type MixpanelLoadEvent = {
 };
 
 type MixpanelMetadata = {
-  // One-way hash of VSCode machine ID.
+  // One-way hash of VS Code machine ID.
   distinct_id: string;
   // One-way hash of workspace folder URI.
   workspace_folder: string;
