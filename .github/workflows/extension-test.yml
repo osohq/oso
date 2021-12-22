@@ -76,7 +76,7 @@ jobs:
         with:
           node-version: "12"
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        run: cargo install wasm-pack
       # https://github.com/microsoft/vscode-docs/blob/ad7206ed4184f5807871ecab8bd235a712208067/api/working-with-extensions/continuous-integration.md#github-actions
       - run: xvfb-run -a make test
         working-directory: "vscode/oso"
