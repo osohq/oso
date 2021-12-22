@@ -39,7 +39,7 @@ connection.onInitialize(() => {
         // I thought we might be able to listen for `willDelete` since it
         // shouldn't suffer from the same limitation, but for some reason
         // `willDelete` isn't firing when I delete directories or files via the
-        // VSCode interface.
+        // VS Code interface.
         //
         // Once [the associated PR][2] ships, we should be able to update the
         // version of `vscode-languageserver` we depend on and then uncomment

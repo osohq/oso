@@ -89,7 +89,7 @@ function polarFilesInWorkspaceFolderPattern(folder: WorkspaceFolder) {
 // Alternatives: we could (A) do a file system walk on the server or (B)
 // `workspace.findFiles()` in the client and then send the list of files to the
 // server for it to load. However, by doing it this way, we delegate the
-// responibility for content retrieval to VSCode, which means we can piggyback
+// responibility for content retrieval to VS Code, which means we can piggyback
 // on their capabilities for, e.g., loading non-`file://` schemes if we wanted
 // to do that at some point in the future.
 //
@@ -139,8 +139,8 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   // Watch `FileChangeType.Deleted` events for Polar files in the current
   // workspace, including those not open in any editor in the workspace.
   //
-  // NOTE(gj): Due to a current limitation in VSCode, when a parent directory
-  // is deleted, VSCode's file watcher does not emit events for matching files
+  // NOTE(gj): Due to a current limitation in VS Code, when a parent directory
+  // is deleted, VS Code's file watcher does not emit events for matching files
   // nested inside that parent. For more information, see this GitHub issue:
   // https://github.com/microsoft/vscode/issues/60813. If that behavior is
   // fixed in the future, we should be able to remove the
@@ -194,14 +194,14 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   // Start client and mark it for cleanup when the extension is deactivated.
   context.subscriptions.push(client.start());
 
-  // When a Polar document in `folder` (even documents not currently open in
-  // VSCode) is created or changed, trigger a `workspace.onDidOpenTextDocument`
+  // When a Polar document in `folder` (even documents not currently open in VS
+  // Code) is created or changed, trigger a `workspace.onDidOpenTextDocument`
   // event that the language server is listening for.
   context.subscriptions.push(createChangeWatcher.onDidCreate(reloadDocument));
   context.subscriptions.push(createChangeWatcher.onDidChange(reloadDocument));
 
   // Transmit the initial file system state for `folder` (including files not
-  // currently open in VSCode) to the server.
+  // currently open in VS Code) to the server.
   await openPolarFilesInWorkspaceFolder(folder);
 
   clients.set(folder.uri.toString(), [client, recordTelemetry]);
@@ -234,7 +234,7 @@ function updateClients(context: ExtensionContext) {
 let persistState: (state: TelemetryCounters) => Promise<void> = async () => {}; // eslint-disable-line @typescript-eslint/no-empty-function
 
 export async function activate(context: ExtensionContext): Promise<void> {
-  // Seed extension-local state from persisted VSCode memento-backed state.
+  // Seed extension-local state from persisted VS Code memento-backed state.
   seedState(context.globalState.get<TelemetryCounters>(TELEMETRY_STATE_KEY));
 
   // Capturing `context.globalState` in this closure since we won't have access
