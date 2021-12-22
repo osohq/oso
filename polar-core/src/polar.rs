@@ -301,6 +301,8 @@ impl Polar {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::*;
     use crate::error::{
         ErrorKind::{Runtime, Validation},
@@ -392,5 +394,66 @@ mod tests {
             next
         );
         assert!(!polar.kb.read().unwrap().has_rules());
+    }
+
+    #[test]
+    fn test_valid_shorthand_rules_rewritten_in_presence_of_other_issues() {
+        let polar = Polar::new();
+        let src = r#"
+            allow(actor, action, resource) if
+              has_permission(actor, action, resource);
+
+            has_role(_: Actor, _: String, _: Resource);
+
+            actor User {}
+
+            resource Company {}
+
+            resource Location {
+              permissions = ["read"];
+              roles = ["admin"];
+              relations = { company: Company };
+
+              "read" if "admin";
+            }
+
+            has_relation(_: Company, "company", _: Location);
+        "#;
+        let source = Source {
+            src: src.to_owned(),
+            filename: None,
+        };
+
+        let diagnostics = polar.diagnostic_load(vec![source]);
+        assert_eq!(diagnostics.len(), 7);
+
+        // Partition diagnostics based on whether they depend on app data.
+        let (dependent, not_dependent): (Vec<_>, Vec<_>) = diagnostics.into_iter().partition(|d| {
+            use crate::error::{ErrorKind::*, ValidationError::*};
+            use crate::warning::{PolarWarning, ValidationWarning::UnknownSpecializer};
+
+            matches!(
+                d,
+                Diagnostic::Error(PolarError {
+                    kind: Validation(UnregisteredClass { .. } | SingletonVariable { .. }),
+                    ..
+                }) | Diagnostic::Warning(PolarWarning {
+                    kind: UnknownSpecializer { .. },
+                    ..
+                })
+            )
+        });
+
+        assert_eq!(dependent.len(), 7);
+        assert!(not_dependent.is_empty());
+        let kb = polar.kb.read().unwrap();
+        let rules: HashSet<_> = kb.get_rules().keys().map(|s| s.0.as_str()).collect();
+
+        // Despite the errors, we still should've rewritten the shorthand rule, adding a
+        // `has_permission/3` rule to the KB.
+        assert_eq!(
+            rules,
+            hashset! { "allow", "has_role", "has_relation", "has_permission" }
+        );
     }
 }
