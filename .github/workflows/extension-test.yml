@@ -76,7 +76,12 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: "12"
+      # TODO(gj): remove once https://github.com/rustwasm/wasm-pack/issues/1097 is resolved
+      - name: Install wasm-pack 0.10.1
+        if: runner.os == 'Windows'
+        run: curl https://raw.githubusercontent.com/rustwasm/wasm-pack/1dc41bc09745b5c5f87fca9eddfb65b5b3586ddc/docs/_installer/init.sh -sSf | sed 's/$VERSION/v0.10.1/g' | sh
       - name: Install wasm-pack
+        if: runner.os != 'Windows'
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       # https://github.com/microsoft/vscode-docs/blob/ad7206ed4184f5807871ecab8bd235a712208067/api/working-with-extensions/continuous-integration.md#github-actions
       - run: xvfb-run -a make test
