@@ -5,17 +5,17 @@ description: Information about metrics collected by IDE integrations.
 
 # IDE Metrics
 
-## VSCode
+## VS Code
 
-The VSCode extension collects **non-identifiable** metrics that we use to
+The VS Code extension collects **non-identifiable** metrics that we use to
 improve Oso. We collect data into un-timestamped batches instead of sending it
 on every policy load since we care about aggregate statistics, not tracking
 your personal development behavior. **We will never sell this data**.
 
 | Data collected | Link to code | Purpose |
 | -------------- | ------------ | ------- |
-| One-way hash of VSCode [`machineId`][machineId] | [link](https://github.com/osohq/oso/blob/1a7a0ab130696a7849c04de5b8a869eda32d3998/vscode/oso/client/src/telemetry.ts#L79) | Distinguish users in a non-identifiable way. This helps us distinguish 1 user encountering the same error 10,000 times from 1,000 users each encountering it 10 times. |
-| One-way hash of VSCode [workspace URI][uri] | [link](https://github.com/osohq/oso/blob/1a7a0ab130696a7849c04de5b8a869eda32d3998/vscode/oso/client/src/telemetry.ts#L84) | Distinguish errors occurring in project A from errors occurring in project B. |
+| One-way hash of VS Code [`machineId`][machineId] | [link](https://github.com/osohq/oso/blob/1a7a0ab130696a7849c04de5b8a869eda32d3998/vscode/oso/client/src/telemetry.ts#L79) | Distinguish users in a non-identifiable way. This helps us distinguish 1 user encountering the same error 10,000 times from 1,000 users each encountering it 10 times. |
+| One-way hash of VS Code [workspace URI][uri] | [link](https://github.com/osohq/oso/blob/1a7a0ab130696a7849c04de5b8a869eda32d3998/vscode/oso/client/src/telemetry.ts#L84) | Distinguish errors occurring in project A from errors occurring in project B. |
 | VS Code [common metrics][] | [link](https://github.com/osohq/oso/blob/075af46d93361296453936de42f5d6aed03ee31c/vscode/oso/client/src/telemetry.ts#L96-L119) | Help us debug issues with the extension by isolating them to particular platforms, versions of the extension, etc. |
 | # of diagnostics encountered for a particular load event | [link](https://github.com/osohq/oso/blob/1a7a0ab130696a7849c04de5b8a869eda32d3998/vscode/oso/client/src/telemetry.ts#L59) | Feature usage stats. |
 | # of errors encountered for a particular load event | [link](https://github.com/osohq/oso/blob/1a7a0ab130696a7849c04de5b8a869eda32d3998/vscode/oso/client/src/telemetry.ts#L60) | Feature usage stats. |
