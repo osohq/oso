@@ -61,7 +61,7 @@
             "off"
           ],
           "markdownEnumDescriptions": [
-            "Default to VSCode's `#telemetry.telemetryLevel#` setting",
+            "Default to VS Code's `#telemetry.telemetryLevel#` setting",
             "Enable metrics",
             "Disable metrics"
           ],
