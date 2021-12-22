@@ -1,14 +1,17 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
 
 import { createHash } from 'crypto';
+import os from 'os';
 
 import type { DebouncedFunc } from 'lodash';
-import { env, OutputChannel, Uri, workspace } from 'vscode';
+import { env, OutputChannel, UIKind, Uri, version, workspace } from 'vscode';
 import * as Mixpanel from 'mixpanel';
 import {
   Diagnostic,
   DiagnosticSeverity as Severity,
 } from 'vscode-languageclient';
+
+import { version as extversion } from '../../package.json';
 
 const ONE_HOUR_IN_MS = 1_000 * 60 * 60;
 const ONE_DAY_IN_MS = ONE_HOUR_IN_MS * 24;
@@ -88,8 +91,32 @@ const hash = (contents: { toString(): string }) =>
     .update(`oso-vscode-telemetry:${contents.toString()}`)
     .digest('base64');
 
-// One-way hash of VSCode machine ID.
+// One-way hash of VS Code machine ID.
 const distinct_id = hash(env.machineId);
+// VS Code common telemetry properties.
+// https://github.com/microsoft/vscode-extension-telemetry/blob/188ee72da1741565a7ac80162acb7a08924c6a51/src/common/baseTelemetryReporter.ts#L134-L174
+const vscodeCommonProperties = {
+  os: os.platform(),
+  nodeArch: os.arch(),
+  platformversion: os.release().replace(/^(\d+)(\.\d+)?(\.\d+)?(.*)/, '$1$2$3'),
+  extname: 'osohq.oso',
+  extversion,
+  vscodesessionid: env.sessionId,
+  vscodeversion: version,
+  isnewappinstall: env.isNewAppInstall?.toString() || 'false',
+  product: env.appHost,
+  uikind: (() => {
+    switch (env.uiKind) {
+      case UIKind.Web:
+        return 'web';
+      case UIKind.Desktop:
+        return 'desktop';
+      default:
+        return 'unknown';
+    }
+  })(),
+  remotename: env.remoteName || 'none',
+};
 
 const MIXPANEL_PROJECT_TOKEN = 'd14a9580b894059dffd19437b7ddd7be';
 const mixpanel = Mixpanel.init(MIXPANEL_PROJECT_TOKEN, { protocol: 'https' });
@@ -110,14 +137,14 @@ function telemetryEnabled() {
   if (setting === 'on') return true;
   if (setting === 'off') return false;
 
-  // Otherwise, default to VSCode's telemetry setting.
+  // Otherwise, default to VS Code's telemetry setting.
 
-  // VSCode >=1.55
+  // VS Code >=1.55
   //
   // https://code.visualstudio.com/updates/v1_55#_telemetry-enablement-api
   if (env.isTelemetryEnabled !== undefined) return env.isTelemetryEnabled;
 
-  // VSCode <1.55
+  // VS Code <1.55
   const config = workspace.getConfiguration('telemetry');
   const enabled = config.get<boolean>('enableTelemetry');
   return enabled;
@@ -154,7 +181,7 @@ function compileDiagnostics(stats: DiagnosticStats, diagnostics: Diagnostic[]) {
 
   for (const { code } of diagnostics) {
     if (typeof code !== 'string') {
-      stats.unknown_diagnostic_count++;
+      stats.unknown_diagnostic_count += 1;
     } else {
       const count = stats[`${code}_count`] || 0;
       stats[`${code}_count`] = count + 1;
@@ -164,6 +191,10 @@ function compileDiagnostics(stats: DiagnosticStats, diagnostics: Diagnostic[]) {
 
 type TelemetryEvent = {
   diagnostics: Diagnostic[];
+  lsp_event: {
+    lsp_method: LspMethod;
+    lsp_file_extensions: string[];
+  };
   policy_stats: {
     inline_queries: number;
     longhand_rules: number;
@@ -188,34 +219,96 @@ type TelemetryEvent = {
 type LoadStats = TelemetryEvent['policy_stats'] &
   TelemetryEvent['resource_block_stats'];
 
+type LspMethod =
+  | 'textDocument/didChange'
+  | 'textDocument/didOpen'
+  | 'workspace/didChangeWatchedFiles'
+  | 'workspace/didDeleteFiles';
+
+class LspStats {
+  'LSP_method_textDocument/didChange_count': number;
+  'LSP_method_textDocument/didOpen_count': number;
+  'LSP_method_workspace/didChangeWatchedFiles_count': number;
+  'LSP_method_workspace/didDeleteFiles_count': number;
+  'LSP_file_extensions': Set<string>;
+
+  constructor(method: LspMethod, extensions: string[]) {
+    this['LSP_method_textDocument/didChange_count'] = 0;
+    this['LSP_method_textDocument/didOpen_count'] = 0;
+    this['LSP_method_workspace/didChangeWatchedFiles_count'] = 0;
+    this['LSP_method_workspace/didDeleteFiles_count'] = 0;
+    this[`LSP_method_${method}_count`] = 1;
+    this['LSP_file_extensions'] = new Set(extensions);
+  }
+}
+
+function combineLspStats(first: LspStats, maybeSecond?: LspStats) {
+  if (!maybeSecond) return first;
+
+  // Combine sets of file extensions.
+  for (const ext of maybeSecond['LSP_file_extensions']) {
+    first['LSP_file_extensions'].add(ext);
+  }
+  // Combine counts of method occurrences.
+  (
+    [
+      'LSP_method_textDocument/didChange_count',
+      'LSP_method_textDocument/didOpen_count',
+      'LSP_method_workspace/didChangeWatchedFiles_count',
+      'LSP_method_workspace/didDeleteFiles_count',
+    ] as (keyof LspStats)[]
+  ).forEach(
+    lspMethodCount =>
+      ((first[lspMethodCount] as number) += maybeSecond[
+        lspMethodCount
+      ] as number)
+  );
+  return first;
+}
+
 type MixpanelLoadEvent = {
   event: typeof loadEventName;
-  properties: DiagnosticStats & LoadStats;
+  properties: DiagnosticStats & LoadStats & LspStats;
 };
 
 type MixpanelMetadata = {
-  // One-way hash of VSCode machine ID.
+  // One-way hash of VS Code machine ID.
   distinct_id: string;
   // One-way hash of workspace folder URI.
   workspace_folder: string;
+  // VS Code common telemetry properties.
+  os: string;
+  nodeArch: string;
+  platformversion: string;
+  extname: string;
+  extversion: string;
+  vscodesessionid: string;
+  vscodeversion: string;
+  isnewappinstall: string;
+  product: string;
+  uikind: string;
+  remotename: string;
 };
 
 type MixpanelEvent = { properties: MixpanelMetadata } & MixpanelLoadEvent;
 
-const purgatory: Map<string, [LoadStats, DiagnosticStats]> = new Map();
+const purgatory: Map<string, [LoadStats, DiagnosticStats, LspStats]> =
+  new Map();
 
 async function sendEvents(): Promise<number> {
   if (!telemetryEnabled()) return 0;
 
   // Drain all queued events, one for each workspace folder.
   const events: MixpanelEvent[] = [...purgatory.entries()].map(
-    ([folder, [loadStats, diagnosticStats]]) => ({
+    ([folder, [loadStats, diagnosticStats, lspStats]]) => ({
       event: loadEventName,
       properties: {
         distinct_id,
+        ...vscodeCommonProperties,
         workspace_folder: hash(folder),
         ...diagnosticStats,
         ...loadStats,
+        ...lspStats,
       },
     })
   );
@@ -234,14 +327,24 @@ export type TelemetryRecorder = DebouncedFunc<(event: TelemetryEvent) => void>;
 export function recordEvent(uri: Uri, event: TelemetryEvent): void {
   if (!telemetryEnabled()) return;
 
-  const { diagnostics, policy_stats, resource_block_stats } = event;
+  const { diagnostics, lsp_event, policy_stats, resource_block_stats } = event;
 
   const folder = uri.toString();
+
   const existing = purgatory.get(folder);
   const diagnosticStats = existing ? existing[1] : new DiagnosticStats();
   compileDiagnostics(diagnosticStats, diagnostics);
-  purgatory.set(folder, [
+
+  const lspStats = combineLspStats(
+    new LspStats(lsp_event.lsp_method, lsp_event.lsp_file_extensions),
+    existing?.[2]
+  );
+
+  const updatedMetrics: [LoadStats, DiagnosticStats, LspStats] = [
     { ...policy_stats, ...resource_block_stats },
     diagnosticStats,
-  ]);
+    lspStats,
+  ];
+
+  purgatory.set(folder, updatedMetrics);
 }

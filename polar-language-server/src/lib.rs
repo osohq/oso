@@ -7,7 +7,7 @@ use lsp_types::{
     },
     DeleteFilesParams, Diagnostic, DiagnosticSeverity, DidChangeTextDocumentParams,
     DidChangeWatchedFilesParams, DidOpenTextDocumentParams, FileChangeType, FileDelete, FileEvent,
-    NumberOrString, Position, PublishDiagnosticsParams, Range, TextDocumentItem, Url,
+    NumberOrString, PublishDiagnosticsParams, TextDocumentItem, Url,
     VersionedTextDocumentIdentifier,
 };
 use polar_core::{diagnostic::Diagnostic as PolarDiagnostic, polar::Polar, sources::Source};
@@ -15,25 +15,11 @@ use serde::Serialize;
 use serde_wasm_bindgen::{from_value, to_value};
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = console, js_name = log)]
-    fn console_log(s: &str);
-}
-
-#[cfg(not(test))]
-fn log(s: &str) {
-    #[allow(unused_unsafe)]
-    unsafe {
-        console_log(&("[pls] ".to_owned() + s))
-    }
-}
-
-#[cfg(test)]
-fn log(_: &str) {}
-
-type Documents = BTreeMap<Url, TextDocumentItem>;
-type Diagnostics = BTreeMap<Url, PublishDiagnosticsParams>;
+mod helpers;
+use helpers::{
+    empty_diagnostics_for_doc, log, range_from_polar_diagnostic_context, unique_extensions,
+    uri_from_polar_diagnostic_context, Diagnostics, Documents, LspEvent,
+};
 
 #[wasm_bindgen]
 pub struct PolarLanguageServer {
@@ -41,64 +27,6 @@ pub struct PolarLanguageServer {
     polar: Polar,
     send_diagnostics_callback: js_sys::Function,
     telemetry_callback: js_sys::Function,
-}
-
-fn range_from_polar_diagnostic_context(diagnostic: &PolarDiagnostic) -> Range {
-    use polar_core::diagnostic::Range as PolarRange;
-
-    let context = match diagnostic {
-        PolarDiagnostic::Error(e) => e.context.as_ref(),
-        PolarDiagnostic::Warning(w) => w.context.as_ref(),
-    };
-
-    if let Some(PolarRange { start, end }) = context.map(|c| c.range) {
-        let start = Position {
-            line: start.row as _,
-            character: start.column as _,
-        };
-        let end = Position {
-            line: end.row as _,
-            character: end.column as _,
-        };
-        Range { start, end }
-    } else {
-        Range::default()
-    }
-}
-
-fn uri_from_polar_diagnostic_context(diagnostic: &PolarDiagnostic) -> Option<Url> {
-    let context = match diagnostic {
-        PolarDiagnostic::Error(e) => e.context.as_ref(),
-        PolarDiagnostic::Warning(w) => w.context.as_ref(),
-    };
-    if let Some(context) = context {
-        if let Some(filename) = context.source.filename.as_ref() {
-            match Url::parse(filename) {
-                Ok(uri) => return Some(uri),
-                Err(err) => {
-                    log(&format!(
-                        "Url::parse error: {}\n\tFilename: {}\n\tDiagnostic: {}",
-                        err, filename, diagnostic
-                    ));
-                }
-            }
-        } else {
-            log(&format!(
-                "source missing filename:\n\t{:?}\n\tDiagnostic: {}",
-                context.source, diagnostic
-            ));
-        }
-    } else {
-        log(&format!("missing context:\n\t{:?}", diagnostic));
-    }
-    None
-}
-
-fn empty_diagnostics_for_doc(
-    (uri, doc): (&Url, &TextDocumentItem),
-) -> (Url, PublishDiagnosticsParams) {
-    let params = PublishDiagnosticsParams::new(uri.clone(), vec![], Some(doc.version));
-    (uri.clone(), params)
 }
 
 /// Public API exposed via WASM.
@@ -128,9 +56,18 @@ impl PolarLanguageServer {
         match method {
             DidOpenTextDocument::METHOD => {
                 let DidOpenTextDocumentParams { text_document } = from_value(params).unwrap();
+
+                let event = LspEvent {
+                    lsp_method: method,
+                    lsp_file_extensions: unique_extensions(&[&text_document.uri]),
+                };
+
                 let diagnostics = self.on_did_open_text_document(text_document);
-                self.send_diagnostics(diagnostics);
+                self.send_diagnostics(&diagnostics);
+
+                self.send_telemetry(event, diagnostics);
             }
+
             DidChangeTextDocument::METHOD => {
                 let params: DidChangeTextDocumentParams = from_value(params).unwrap();
 
@@ -140,19 +77,40 @@ impl PolarLanguageServer {
                 assert!(change.range.is_none());
 
                 let VersionedTextDocumentIdentifier { uri, version } = params.text_document;
+
+                let event = LspEvent {
+                    lsp_method: method,
+                    lsp_file_extensions: unique_extensions(&[&uri]),
+                };
+
                 let updated_doc = TextDocumentItem::new(uri, "polar".into(), version, change.text);
                 let diagnostics = self.on_did_change_text_document(updated_doc);
-                self.send_diagnostics(diagnostics);
+                self.send_diagnostics(&diagnostics);
+
+                self.send_telemetry(event, diagnostics);
             }
+
             DidChangeWatchedFiles::METHOD => {
                 let DidChangeWatchedFilesParams { changes } = from_value(params).unwrap();
-                let uris = changes.into_iter().map(|FileEvent { uri, typ }| {
-                    assert_eq!(typ, FileChangeType::Deleted); // We only watch for `Deleted` events.
-                    uri
-                });
-                let diagnostics = self.on_did_delete_files(uris.collect());
-                self.send_diagnostics(diagnostics);
+                let uris: Vec<_> = changes
+                    .into_iter()
+                    .map(|FileEvent { uri, typ }| {
+                        assert_eq!(typ, FileChangeType::Deleted); // We only watch for `Deleted` events.
+                        uri
+                    })
+                    .collect();
+
+                let event = LspEvent {
+                    lsp_method: method,
+                    lsp_file_extensions: unique_extensions(&uris.iter().collect::<Vec<_>>()),
+                };
+
+                let diagnostics = self.on_did_delete_files(uris);
+                self.send_diagnostics(&diagnostics);
+
+                self.send_telemetry(event, diagnostics);
             }
+
             DidDeleteFiles::METHOD => {
                 let DeleteFilesParams { files } = from_value(params).unwrap();
                 let mut uris = vec![];
@@ -162,9 +120,18 @@ impl PolarLanguageServer {
                         Err(e) => log(&format!("Failed to parse URI: {}", e)),
                     }
                 }
+
+                let event = LspEvent {
+                    lsp_method: method,
+                    lsp_file_extensions: unique_extensions(&uris.iter().collect::<Vec<_>>()),
+                };
+
                 let diagnostics = self.on_did_delete_files(uris);
-                self.send_diagnostics(diagnostics);
+                self.send_diagnostics(&diagnostics);
+
+                self.send_telemetry(event, diagnostics);
             }
+
             // We don't care when a document is saved -- we already have the updated state thanks
             // to `DidChangeTextDocument`.
             DidSaveTextDocument::METHOD => (),
@@ -173,6 +140,7 @@ impl PolarLanguageServer {
             DidCloseTextDocument::METHOD => (),
             // Nothing to do when we receive the `Initialized` notification.
             Initialized::METHOD => (),
+
             _ => log(&format!("on_notification {} {:?}", method, params)),
         }
     }
@@ -256,9 +224,9 @@ impl PolarLanguageServer {
         in_dir.iter().map(empty_diagnostics_for_doc).collect()
     }
 
-    fn send_diagnostics(&self, diagnostics: Diagnostics) {
+    fn send_diagnostics(&self, diagnostics: &Diagnostics) {
         let this = &JsValue::null();
-        for params in diagnostics.into_values() {
+        for params in diagnostics.values() {
             let params = &to_value(&params).unwrap();
             if let Err(e) = self.send_diagnostics_callback.call1(this, params) {
                 log(&format!(
@@ -269,7 +237,7 @@ impl PolarLanguageServer {
         }
     }
 
-    fn send_telemetry(&self, diagnostics: Vec<&Diagnostic>) {
+    fn send_telemetry(&self, lsp_event: LspEvent, diagnostics: Diagnostics) {
         use polar_core::parser::{parse_lines, Line};
 
         #[derive(Default, Serialize)]
@@ -297,10 +265,14 @@ impl PolarLanguageServer {
 
         #[derive(Default, Serialize)]
         struct TelemetryEvent<'a> {
-            diagnostics: Vec<&'a Diagnostic>,
+            diagnostics: Vec<Diagnostic>,
+            lsp_event: LspEvent<'a>,
             policy_stats: PolicyStats,
             resource_block_stats: ResourceBlockStats,
         }
+
+        let polar_files = diagnostics.len();
+        let diagnostics = diagnostics.into_values().flat_map(|ps| ps.diagnostics);
 
         let polar_chars = self
             .documents
@@ -309,10 +281,11 @@ impl PolarLanguageServer {
             .sum();
 
         let mut event = TelemetryEvent {
-            diagnostics,
+            diagnostics: diagnostics.collect(),
+            lsp_event,
             policy_stats: PolicyStats {
                 polar_chars,
-                polar_files: self.documents.len(),
+                polar_files,
                 ..Default::default()
             },
             ..Default::default()
@@ -489,16 +462,9 @@ impl PolarLanguageServer {
     }
 
     fn get_diagnostics(&self) -> Diagnostics {
-        let diagnostics = self
-            .load_documents()
+        self.load_documents()
             .into_iter()
             .flat_map(|diagnostic| self.diagnostics_from_polar_diagnostic(diagnostic))
-            .collect::<Vec<_>>();
-
-        self.send_telemetry(diagnostics.iter().map(|(_, d)| d).collect());
-
-        diagnostics
-            .into_iter()
             .fold(Diagnostics::new(), |mut acc, (doc, diagnostic)| {
                 let params = acc.entry(doc.uri.clone()).or_insert_with(|| {
                     PublishDiagnosticsParams::new(doc.uri, vec![], Some(doc.version))
@@ -523,6 +489,7 @@ impl PolarLanguageServer {
 
 #[cfg(test)]
 mod tests {
+    use lsp_types::Position;
     use wasm_bindgen_test::*;
 
     use super::*;
