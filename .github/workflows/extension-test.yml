@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - gj/fix-wasm-pack-on-windows
   pull_request:
     types: [opened, synchronize, reopened]
 
