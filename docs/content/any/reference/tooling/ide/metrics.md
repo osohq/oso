@@ -16,6 +16,7 @@ your personal development behavior. **We will never sell this data**.
 | -------------- | ------------ | ------- |
 | One-way hash of VSCode [`machineId`][machineId] | [link](https://github.com/osohq/oso/blob/1a7a0ab130696a7849c04de5b8a869eda32d3998/vscode/oso/client/src/telemetry.ts#L79) | Distinguish users in a non-identifiable way. This helps us distinguish 1 user encountering the same error 10,000 times from 1,000 users each encountering it 10 times. |
 | One-way hash of VSCode [workspace URI][uri] | [link](https://github.com/osohq/oso/blob/1a7a0ab130696a7849c04de5b8a869eda32d3998/vscode/oso/client/src/telemetry.ts#L84) | Distinguish errors occurring in project A from errors occurring in project B. |
+| VS Code [common metrics][] | [link](https://github.com/osohq/oso/blob/075af46d93361296453936de42f5d6aed03ee31c/vscode/oso/client/src/telemetry.ts#L96-L119) | Help us debug issues with the extension by isolating them to particular platforms, versions of the extension, etc. |
 | # of diagnostics encountered for a particular load event | [link](https://github.com/osohq/oso/blob/1a7a0ab130696a7849c04de5b8a869eda32d3998/vscode/oso/client/src/telemetry.ts#L59) | Feature usage stats. |
 | # of errors encountered for a particular load event | [link](https://github.com/osohq/oso/blob/1a7a0ab130696a7849c04de5b8a869eda32d3998/vscode/oso/client/src/telemetry.ts#L60) | Feature usage stats. |
 | # of warnings encountered for a particular load event | [link](https://github.com/osohq/oso/blob/1a7a0ab130696a7849c04de5b8a869eda32d3998/vscode/oso/client/src/telemetry.ts#L63) | Feature usage stats. |
@@ -36,5 +37,6 @@ your personal development behavior. **We will never sell this data**.
 | # of shorthand rules in loaded policy | [link](https://github.com/osohq/oso/blob/1a7a0ab130696a7849c04de5b8a869eda32d3998/vscode/oso/client/src/telemetry.ts#L122) | Feature usage stats. |
 | # of shorthand rules that cross resource boundaries in loaded policy | [link](https://github.com/osohq/oso/blob/1a7a0ab130696a7849c04de5b8a869eda32d3998/vscode/oso/client/src/telemetry.ts#L123) | Feature usage stats. |
 
+[common metrics]: https://github.com/microsoft/vscode-extension-telemetry/blob/188ee72da1741565a7ac80162acb7a08924c6a51/src/common/baseTelemetryReporter.ts#L134-L174
 [machineId]: https://code.visualstudio.com/api/references/vscode-api#3252
 [uri]: https://code.visualstudio.com/api/references/vscode-api#2515
