@@ -35,8 +35,19 @@ runs:
         grep "^version = \"$oso_version\"$" polar-c-api/Cargo.toml
         grep "^version = \"$oso_version\"$" polar-wasm-api/Cargo.toml
       shell: bash
-    - name: Check VSCode extension version matches
+    - name: Check VS Code extension version matches
       run: |
         grep "^version = \"$oso_version\"$" polar-language-server/Cargo.toml
-        grep "\"version\": \"$oso_version\"" vscode/oso/package.json
+        # Until we come up with a better versioning strategy for the VS Code
+        # extension, we only care about keeping its major version in-sync with
+        # the major version of the Oso library. Note that this synchronization
+        # is not totally accurate since we currently release the VS Code
+        # extension more often than `polar_core` and breaking changes might
+        # have been merged into `polar_core` since the last extension release.
+        # E.g., if `polar_core` is on major version 0.N.0 and the next release
+        # will be 0.(N+1).0 but we want to release a new extension version
+        # before cutting the next `polar_core` release, the new extension
+        # version should technically be 0.(N+1).0 since it will contain the
+        # as-yet-unreleased breaking changes to `polar_core`.
+        grep "\"version\": \"${oso_version%.*}.[[:digit:]]\+\"" vscode/oso/package.json
       shell: bash
