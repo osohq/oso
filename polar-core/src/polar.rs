@@ -301,8 +301,6 @@ impl Polar {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
     use super::*;
     use crate::error::{
         ErrorKind::{Runtime, Validation},
@@ -397,27 +395,19 @@ mod tests {
     }
 
     #[test]
-    fn test_valid_shorthand_rules_rewritten_in_presence_of_other_issues() {
+    fn test_valid_shorthand_rules_still_rewritten_in_presence_of_invalid_shorthand_rules() {
         let polar = Polar::new();
         let src = r#"
             allow(actor, action, resource) if
               has_permission(actor, action, resource);
 
-            has_role(_: Actor, _: String, _: Resource);
+            resource Fields {
+              permissions = ["till"];
+              roles = ["farmer"];
 
-            actor User {}
-
-            resource Company {}
-
-            resource Location {
-              permissions = ["read"];
-              roles = ["admin"];
-              relations = { company: Company };
-
-              "read" if "admin";
+              "till" if "farmer";
+              "burn" if "farmer";
             }
-
-            has_relation(_: Company, "company", _: Location);
         "#;
         let source = Source {
             src: src.to_owned(),
@@ -425,35 +415,34 @@ mod tests {
         };
 
         let diagnostics = polar.diagnostic_load(vec![source]);
-        assert_eq!(diagnostics.len(), 7);
+        assert_eq!(diagnostics.len(), 2, "{:#?}", diagnostics);
 
-        // Partition diagnostics based on whether they depend on app data.
-        let (dependent, not_dependent): (Vec<_>, Vec<_>) = diagnostics.into_iter().partition(|d| {
-            use crate::error::{ErrorKind::*, ValidationError::*};
-            use crate::warning::{PolarWarning, ValidationWarning::UnknownSpecializer};
-
-            matches!(
-                d,
-                Diagnostic::Error(PolarError {
-                    kind: Validation(UnregisteredClass { .. } | SingletonVariable { .. }),
-                    ..
-                }) | Diagnostic::Warning(PolarWarning {
-                    kind: UnknownSpecializer { .. },
-                    ..
-                })
-            )
-        });
-
-        assert_eq!(dependent.len(), 7);
-        assert!(not_dependent.is_empty());
-        let kb = polar.kb.read().unwrap();
-        let rules: HashSet<_> = kb.get_rules().keys().map(|s| s.0.as_str()).collect();
-
-        // Despite the errors, we still should've rewritten the shorthand rule, adding a
-        // `has_permission/3` rule to the KB.
-        assert_eq!(
-            rules,
-            hashset! { "allow", "has_role", "has_relation", "has_permission" }
+        let mut diagnostics = diagnostics.into_iter();
+        let next = diagnostics.next().unwrap();
+        assert!(matches!(next, Diagnostic::Error(_)));
+        assert!(
+            next.to_string().starts_with("Unregistered class: Fields"),
+            "{}",
+            next
         );
+
+        let next = diagnostics.next().unwrap();
+        assert!(matches!(next, Diagnostic::Error(_)));
+        assert!(
+            next.to_string().starts_with("Undeclared term \"burn\""),
+            "{}",
+            next
+        );
+
+        // After loading, we expect to have rewritten the `has_permission(_, "till", _) if ...;`
+        // shorthand rule into the KB but not the `has_permission(_, "burn", _) if ...;` rule.
+        let kb = polar.kb.read().unwrap();
+        let rules = kb.get_rules().values().flat_map(|g| g.rules.values());
+        let has_permission_rules = rules
+            .filter(|r| r.name.0 == "has_permission")
+            .collect::<Vec<_>>();
+        assert_eq!(has_permission_rules.len(), 1, "{:#?}", has_permission_rules);
+        let has_permission_rule = has_permission_rules.into_iter().next().unwrap();
+        assert_eq!(has_permission_rule.params[1].parameter, term!("till"));
     }
 }
