@@ -127,7 +127,6 @@ impl Polar {
         // will result in a second error when rewriting a shorthand rule involving the relation
         // that would only distract from the _actual_ error (the invalid `relations` declaration).
         if diagnostics.iter().any(Diagnostic::is_unrecoverable) {
-            kb.clear_rules();
             return diagnostics;
         }
 
@@ -147,7 +146,6 @@ impl Polar {
         // laid out in the well-parsed file but *would have* conformed to the shapes laid out in
         // the file that failed to parse.
         if diagnostics.iter().any(Diagnostic::is_unrecoverable) {
-            kb.clear_rules();
             return diagnostics;
         }
 
@@ -169,11 +167,6 @@ impl Polar {
         if let Some(w) = check_resource_blocks_missing_has_permission(&kb) {
             diagnostics.push(Diagnostic::Warning(w.with_context(&*kb)))
         };
-
-        // If we've encountered any errors, clear the KB.
-        if diagnostics.iter().any(Diagnostic::is_error) {
-            kb.clear_rules();
-        }
 
         diagnostics
     }
@@ -198,6 +191,8 @@ impl Polar {
             .extend(warnings.into_iter().map(Message::warning));
 
         if let Some(e) = errors.into_iter().next() {
+            // If we've encountered any errors, clear the KB.
+            self.clear_rules();
             return Err(e);
         }
         Ok(())
@@ -396,6 +391,57 @@ mod tests {
             "{}",
             next
         );
-        assert!(!polar.kb.read().unwrap().has_rules());
+    }
+
+    #[test]
+    fn test_valid_shorthand_rules_still_rewritten_in_presence_of_invalid_shorthand_rules() {
+        let polar = Polar::new();
+        let src = r#"
+            allow(actor, action, resource) if
+              has_permission(actor, action, resource);
+
+            resource Fields {
+              permissions = ["till"];
+              roles = ["farmer"];
+
+              "till" if "farmer";
+              "burn" if "farmer";
+            }
+        "#;
+        let source = Source {
+            src: src.to_owned(),
+            filename: None,
+        };
+
+        let diagnostics = polar.diagnostic_load(vec![source]);
+        assert_eq!(diagnostics.len(), 2, "{:#?}", diagnostics);
+
+        let mut diagnostics = diagnostics.into_iter();
+        let next = diagnostics.next().unwrap();
+        assert!(matches!(next, Diagnostic::Error(_)));
+        assert!(
+            next.to_string().starts_with("Unregistered class: Fields"),
+            "{}",
+            next
+        );
+
+        let next = diagnostics.next().unwrap();
+        assert!(matches!(next, Diagnostic::Error(_)));
+        assert!(
+            next.to_string().starts_with("Undeclared term \"burn\""),
+            "{}",
+            next
+        );
+
+        // After loading, we expect to have rewritten the `has_permission(_, "till", _) if ...;`
+        // shorthand rule into the KB but not the `has_permission(_, "burn", _) if ...;` rule.
+        let kb = polar.kb.read().unwrap();
+        let rules = kb.get_rules().values().flat_map(|g| g.rules.values());
+        let has_permission_rules = rules
+            .filter(|r| r.name.0 == "has_permission")
+            .collect::<Vec<_>>();
+        assert_eq!(has_permission_rules.len(), 1, "{:#?}", has_permission_rules);
+        let has_permission_rule = has_permission_rules.into_iter().next().unwrap();
+        assert_eq!(has_permission_rule.params[1].parameter, term!("till"));
     }
 }

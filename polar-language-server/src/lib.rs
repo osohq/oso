@@ -457,6 +457,7 @@ impl PolarLanguageServer {
     }
 
     fn load_documents(&self) -> Vec<PolarDiagnostic> {
+        self.polar.clear_rules();
         self.polar
             .diagnostic_load(self.documents_to_polar_sources())
     }
@@ -480,7 +481,6 @@ impl PolarLanguageServer {
     /// NOTE(gj): we republish 'empty' diagnostics for all documents in order to purge stale
     /// diagnostics.
     fn reload_kb(&self) -> Diagnostics {
-        self.polar.clear_rules();
         let mut diagnostics = self.empty_diagnostics_for_all_documents();
         diagnostics.extend(self.get_diagnostics());
         diagnostics
