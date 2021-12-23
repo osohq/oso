@@ -391,7 +391,6 @@ mod tests {
             "{}",
             next
         );
-        assert!(!polar.kb.read().unwrap().has_rules());
     }
 
     #[test]
