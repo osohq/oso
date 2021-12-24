@@ -230,7 +230,7 @@ class LspStats {
   'LSP_method_textDocument/didOpen_count': number;
   'LSP_method_workspace/didChangeWatchedFiles_count': number;
   'LSP_method_workspace/didDeleteFiles_count': number;
-  'LSP_file_extensions': Set<string>;
+  'LSP_file_extensions': string[];
 
   constructor(method: LspMethod, extensions: string[]) {
     this['LSP_method_textDocument/didChange_count'] = 0;
@@ -238,7 +238,7 @@ class LspStats {
     this['LSP_method_workspace/didChangeWatchedFiles_count'] = 0;
     this['LSP_method_workspace/didDeleteFiles_count'] = 0;
     this[`LSP_method_${method}_count`] = 1;
-    this['LSP_file_extensions'] = new Set(extensions);
+    this['LSP_file_extensions'] = [...new Set(extensions)];
   }
 }
 
@@ -246,9 +246,12 @@ function combineLspStats(first: LspStats, maybeSecond?: LspStats) {
   if (!maybeSecond) return first;
 
   // Combine sets of file extensions.
-  for (const ext of maybeSecond['LSP_file_extensions']) {
-    first['LSP_file_extensions'].add(ext);
-  }
+  first['LSP_file_extensions'] = [
+    ...new Set([
+      ...first['LSP_file_extensions'],
+      ...maybeSecond['LSP_file_extensions'],
+    ]),
+  ];
   // Combine counts of method occurrences.
   (
     [
