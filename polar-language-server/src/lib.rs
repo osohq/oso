@@ -53,6 +53,8 @@ impl PolarLanguageServer {
     /// appropriate handler function based on `method`.
     #[wasm_bindgen(js_class = PolarLanguageServer, js_name = onNotification)]
     pub fn on_notification(&mut self, method: &str, params: JsValue) {
+        log(method);
+
         match method {
             DidOpenTextDocument::METHOD => {
                 let DidOpenTextDocumentParams { text_document } = from_value(params).unwrap();
@@ -139,7 +141,7 @@ impl PolarLanguageServer {
                 for FileDelete { uri } in files {
                     match Url::parse(&uri) {
                         Ok(uri) => uris.push(uri),
-                        Err(e) => log(&format!("Failed to parse URI: {}", e)),
+                        Err(e) => log(&format!("\tfailed to parse URI: {}", e)),
                     }
                 }
 
@@ -163,7 +165,7 @@ impl PolarLanguageServer {
             // Nothing to do when we receive the `Initialized` notification.
             Initialized::METHOD => (),
 
-            _ => log(&format!("on_notification {} {:?}", method, params)),
+            _ => log("unexpected notification"),
         }
     }
 }
@@ -171,8 +173,9 @@ impl PolarLanguageServer {
 /// Individual LSP notification handlers.
 impl PolarLanguageServer {
     fn on_did_open_text_document(&mut self, doc: TextDocumentItem) -> Diagnostics {
-        if let Some(TextDocumentItem { uri, .. }) = self.upsert_document(doc) {
-            log(&format!("reopened tracked doc: {}", uri));
+        log(&format!("\topening: {}", doc.uri));
+        if self.upsert_document(doc).is_some() {
+            log("\t\treopened tracked doc");
         }
         self.reload_kb()
     }
@@ -180,7 +183,7 @@ impl PolarLanguageServer {
     fn on_did_change_text_document(&mut self, doc: TextDocumentItem) -> Diagnostics {
         let uri = doc.uri.clone();
         if self.upsert_document(doc).is_none() {
-            log(&format!("updated untracked doc: {}", uri));
+            log(&format!("\tupdated untracked doc: {}", uri));
         }
         self.reload_kb()
     }
@@ -189,13 +192,18 @@ impl PolarLanguageServer {
         let mut diagnostics = Diagnostics::new();
 
         for uri in uris {
-            log(&format!("deleting file: {}", uri));
+            log(&format!("\tdeleting: {}", uri));
 
+            // If this returns `None`, `uri` was already removed from the local set of tracked
+            // documents. An easy way to encounter this is to right-click delete a Polar file via
+            // the VS Code UI, which races the `DidDeleteFiles` and `DidChangeWatchedFiles` events.
             if let Some(removed) = self.remove_document(&uri) {
                 let (_, empty_diagnostics) = empty_diagnostics_for_doc((&uri, &removed));
                 if diagnostics.insert(uri, empty_diagnostics).is_some() {
-                    log("\tduplicate watched file event");
+                    log("\t\tduplicate URIs in event payload");
                 }
+            } else {
+                log("\t\tcannot delete untracked doc");
             }
         }
 
@@ -208,19 +216,18 @@ impl PolarLanguageServer {
         let mut diagnostics = Diagnostics::new();
 
         for uri in uris {
+            // If `removed` is empty, `uri` wasn't a directory containing tracked Polar files or
+            // `uri` itself was a Polar file that was already removed via `DidChangeWatchedFiles`.
             let removed = self.remove_documents_in_dir(&uri);
-            if removed.is_empty() {
-                if uri.as_str().ends_with(".polar") {
-                    log(&format!("cannot remove untracked doc: {}", uri));
-                }
-            } else {
-                log(&format!("deleting dir: {}", uri));
+            if !removed.is_empty() {
+                log(&format!("\tdeleting: {}", uri));
 
                 for (uri, params) in removed {
-                    log(&format!("\tremoving dir member: {}", uri));
+                    log(&format!("\t\tdeleted: {}", uri));
 
+                    // NOTE(gj): fairly sure this will never be true.
                     if diagnostics.insert(uri, params).is_some() {
-                        log("\t\tduplicate watched file event");
+                        log("\t\t\tmultiple deletions of same doc");
                     }
                 }
             }
