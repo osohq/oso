@@ -22,7 +22,10 @@ connection.onInitialize(() => {
     capabilities: {
       textDocumentSync: {
         openClose: true,
-        save: true,
+        // NOTE(gj): we should set this to `{ includeText: true }` if we care
+        // about `didSave` events in the future. For now, we don't care about
+        // them b/c we already have the updated state thanks to `didChange`.
+        save: false,
         change: TextDocumentSyncKind.Full,
       },
       workspace: {
