@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
 
+/*
+ * - restart all clients when ignore files change
+ * - what if the user opens an ignored file?
+ */
+
 import { join } from 'path';
 
 import { debounce } from 'lodash';
@@ -84,58 +89,38 @@ function polarFilesInWorkspaceFolderPattern(folder: WorkspaceFolder) {
   return new RelativePattern(folder, '**/*.polar');
 }
 
-// Trigger a [`didOpen`][didOpen] event for every not-already-open Polar file
-// in `folder` as a somewhat hacky means of transmitting the initial file
-// system state to the server. Alternatives: we could (A) do a file system walk
-// on the server or (B) `workspace.findFiles()` in the client and then send the
-// list of files to the server for it to load. However, by doing it this way,
-// we delegate the responibility for content retrieval to VS Code, which means
-// we can piggyback on their capabilities for, e.g., loading non-`file://`
-// schemes if we wanted to do that at some point in the future.
-//
-// Relevant issues:
-// - https://github.com/microsoft/vscode/issues/15723
-// - https://github.com/microsoft/vscode/issues/33046
-//
-// [didOpen]: https://code.visualstudio.com/api/references/vscode-api#workspace.onDidOpenTextDocument
-async function openPolarFilesInWorkspaceFolder(folder: WorkspaceFolder) {
-  const pattern = polarFilesInWorkspaceFolderPattern(folder);
-
-  type ExclusionValue = boolean | { when: string };
-  type Exclusions = { [glob: string]: ExclusionValue };
+function getExclusions(): string {
+  // The value type for exclusions is `boolean | { when: string }`, but VS
+  // Code's configuration-fetching API seems to only return exclusions where
+  // the value is `true`.
+  type Exclusions = { [glob: string]: true };
 
   const exclusions = [
-    // Deduplicate exclusions.
     ...new Set(
-      // For the `files.exclude` and `search.exclude` VS Code configuration
-      // properties...
-      ['files', 'search']
-        .map(p => workspace.getConfiguration(p).get<Exclusions>('exclude', {}))
-        .flatMap<[string, ExclusionValue]>(Object.entries)
-        // ...if the exclusion's value is `true`, exclude it. If the
-        // exclusion's value is `false`, don't exclude it. If the exclusion's
-        // value is `{ "when": ... }`, don't exclude it since it's a
-        // conditional exclusion and I don't feel like figuring out how to
-        // represent that in VS Code's glob syntax.
-        .flatMap(([pattern, value]) => (value === true ? [pattern] : []))
+      [
+        workspace.getConfiguration('files').get<Exclusions>('exclude', {}),
+        workspace.getConfiguration('search').get<Exclusions>('exclude', {}),
+      ].flatMap(Object.keys)
     ),
   ];
 
-  const searchExclusions = Object.entries(
-    workspace.getConfiguration('search').get<Exclusions>('exclude', {})
-  ).flatMap(([pattern, value]) => (value === true ? [pattern] : []));
-
-  const filesExclusions = Object.entries(
-    workspace.getConfiguration('files').get<Exclusions>('exclude', {})
-  ).flatMap(([pattern, value]) => (value === true ? [pattern] : []));
-
-  outputChannel.appendLine(`search.exclude: ${inspect(searchExclusions)}`);
-  outputChannel.appendLine(`files.exclude: ${inspect(filesExclusions)}`);
-
   outputChannel.appendLine(`combined exclusions: ${inspect(exclusions)}`);
 
-  const uris = await workspace.findFiles(pattern);
-  return Promise.all(uris.map(openDocument));
+  // Comma-separated exclusions enclosed in curly braces to please VS Code:
+  // https://github.com/microsoft/vscode/issues/48674#issuecomment-422950502
+  return `{${exclusions.join(',')}}`;
+}
+
+// Won't work b/c files need to be segregated by workspace folder.
+const polarFilesInWorkspaceFolder: Uri[] = [];
+async function updatePolarFilesInWorkspaceFolder(folder: WorkspaceFolder) {
+  const pattern = polarFilesInWorkspaceFolderPattern(folder);
+  const uris = await workspace.findFiles(pattern, getExclusions());
+  polarFilesInWorkspaceFolder.splice(
+    0,
+    polarFilesInWorkspaceFolder.length,
+    ...uris
+  );
 }
 
 // Trigger a [`didOpen`][didOpen] event if `uri` is not already open.
@@ -221,11 +206,28 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   // [didOpen]: https://code.visualstudio.com/api/references/vscode-api#workspace.onDidOpenTextDocument
   // [didChange]: https://code.visualstudio.com/api/references/vscode-api#workspace.onDidChangeTextDocument
   context.subscriptions.push(createChangeWatcher.onDidCreate(openDocument));
-  context.subscriptions.push(createChangeWatcher.onDidChange(openDocument));
+  context.subscriptions
+    .push
+    // createChangeWatcher.onDidChange(uri => polarFilesInWorkspaceFolder
+    // openDocument(uri))
+    ();
 
-  // Transmit the initial file system state for `folder` (including files not
-  // currently open in VS Code) to the server.
-  await openPolarFilesInWorkspaceFolder(folder);
+  // Trigger a [`didOpen`][didOpen] event for every not-already-open Polar file
+  // in `folder` as a somewhat hacky means of transmitting the initial file
+  // system state to the server. Alternatives: we could (A) do a file system walk
+  // on the server or (B) `workspace.findFiles()` in the client and then send the
+  // list of files to the server for it to load. However, by doing it this way,
+  // we delegate the responibility for content retrieval to VS Code, which means
+  // we can piggyback on their capabilities for, e.g., loading non-`file://`
+  // schemes if we wanted to do that at some point in the future.
+  //
+  // Relevant issues:
+  // - https://github.com/microsoft/vscode/issues/15723
+  // - https://github.com/microsoft/vscode/issues/33046
+  //
+  // [didOpen]: https://code.visualstudio.com/api/references/vscode-api#workspace.onDidOpenTextDocument
+  await updatePolarFilesInWorkspaceFolder(folder);
+  await Promise.all(polarFilesInWorkspaceFolder.map(openDocument));
 
   clients.set(folder.uri.toString(), [client, recordTelemetry]);
 }
