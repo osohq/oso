@@ -29,6 +29,7 @@ import {
   TELEMETRY_STATE_KEY,
   TELEMETRY_INTERVAL,
 } from './telemetry';
+import { inspect } from 'util';
 
 // TODO(gj): think about what it would take to support `load_str()` via
 // https://code.visualstudio.com/api/language-extensions/embedded-languages
@@ -99,6 +100,40 @@ function polarFilesInWorkspaceFolderPattern(folder: WorkspaceFolder) {
 // [didOpen]: https://code.visualstudio.com/api/references/vscode-api#workspace.onDidOpenTextDocument
 async function openPolarFilesInWorkspaceFolder(folder: WorkspaceFolder) {
   const pattern = polarFilesInWorkspaceFolderPattern(folder);
+
+  type ExclusionValue = boolean | { when: string };
+  type Exclusions = { [glob: string]: ExclusionValue };
+
+  const exclusions = [
+    // Deduplicate exclusions.
+    ...new Set(
+      // For the `files.exclude` and `search.exclude` VS Code configuration
+      // properties...
+      ['files', 'search']
+        .map(p => workspace.getConfiguration(p).get<Exclusions>('exclude', {}))
+        .flatMap<[string, ExclusionValue]>(Object.entries)
+        // ...if the exclusion's value is `true`, exclude it. If the
+        // exclusion's value is `false`, don't exclude it. If the exclusion's
+        // value is `{ "when": ... }`, don't exclude it since it's a
+        // conditional exclusion and I don't feel like figuring out how to
+        // represent that in VS Code's glob syntax.
+        .flatMap(([pattern, value]) => (value === true ? [pattern] : []))
+    ),
+  ];
+
+  const searchExclusions = Object.entries(
+    workspace.getConfiguration('search').get<Exclusions>('exclude', {})
+  ).flatMap(([pattern, value]) => (value === true ? [pattern] : []));
+
+  const filesExclusions = Object.entries(
+    workspace.getConfiguration('files').get<Exclusions>('exclude', {})
+  ).flatMap(([pattern, value]) => (value === true ? [pattern] : []));
+
+  outputChannel.appendLine(`search.exclude: ${inspect(searchExclusions)}`);
+  outputChannel.appendLine(`files.exclude: ${inspect(filesExclusions)}`);
+
+  outputChannel.appendLine(`combined exclusions: ${inspect(exclusions)}`);
+
   const uris = await workspace.findFiles(pattern);
   return Promise.all(uris.map(openDocument));
 }
