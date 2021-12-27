@@ -1,10 +1,16 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
 
+/*
+ * TODO(gj): when projectRoots are declared, search for *all* Polar files and
+ * warn if any aren't included in *any* policies.
+ */
+
 import { join } from 'path';
 
 import { debounce } from 'lodash';
 import {
   ExtensionContext,
+  FileType,
   RelativePattern,
   TextDocument,
   Uri,
@@ -29,6 +35,7 @@ import {
   TELEMETRY_STATE_KEY,
   TELEMETRY_INTERVAL,
 } from './telemetry';
+import { inspect } from 'util';
 
 // TODO(gj): think about what it would take to support `load_str()` via
 // https://code.visualstudio.com/api/language-extensions/embedded-languages
@@ -49,11 +56,18 @@ import {
 const extensionName = 'Polar Language Server';
 const outputChannel = window.createOutputChannel(extensionName);
 
-// One client per workspace folder.
+// Bi-level map from workspaceFolder -> projectRoot -> client & metrics
+// recorder.
+//
+// We default to one client per workspace folder but allow users to specify
+// multiple Oso roots in a workspace folder via the
+// `oso.polarLanguageServer.projectRoots` configuration parameter.
 //
 // TODO(gj): handle 'Untitled' docs like this example?
 // https://github.com/microsoft/vscode-extension-samples/blob/355d5851a8e87301cf814a3d20f3918cb162ff73/lsp-multi-server-sample/client/src/extension.ts#L62-L79
-const clients: Map<string, [LanguageClient, TelemetryRecorder]> = new Map();
+type WorkspaceFolderClient = [LanguageClient, TelemetryRecorder];
+type WorkspaceFolderClients = Map<string, WorkspaceFolderClient>;
+const clients: Map<string, WorkspaceFolderClients> = new Map();
 
 // TODO(gj): nested workspace folders:
 //     folderA/
@@ -79,7 +93,7 @@ const clients: Map<string, [LanguageClient, TelemetryRecorder]> = new Map();
 // If the user only opens `folderA`, then we'll treat `a.polar` & `b.polar` as
 // part of the same policy.
 
-function polarFilesInWorkspaceFolderPattern(folder: WorkspaceFolder) {
+function polarFilesInFolderPattern(folder: Uri) {
   return new RelativePattern(folder, '**/*.polar');
 }
 
@@ -97,8 +111,8 @@ function polarFilesInWorkspaceFolderPattern(folder: WorkspaceFolder) {
 // - https://github.com/microsoft/vscode/issues/33046
 //
 // [didOpen]: https://code.visualstudio.com/api/references/vscode-api#workspace.onDidOpenTextDocument
-async function openPolarFilesInWorkspaceFolder(folder: WorkspaceFolder) {
-  const pattern = polarFilesInWorkspaceFolderPattern(folder);
+async function openPolarFilesInFolder(folder: Uri) {
+  const pattern = polarFilesInFolderPattern(folder);
   const uris = await workspace.findFiles(pattern);
   return Promise.all(uris.map(openDocument));
 }
@@ -115,104 +129,154 @@ async function openDocument(uri: Uri) {
   if (doc === undefined) await workspace.openTextDocument(uri);
 }
 
-async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
+export const osoConfigKey = 'oso.polarLanguageServer';
+const projectRootsKey = 'projectRoots';
+const fullProjectRootsKey = `${osoConfigKey}.${projectRootsKey}`;
+
+async function startClients(
+  workspaceFolder: WorkspaceFolder,
+  context: ExtensionContext
+) {
   const server = context.asAbsolutePath(join('out', 'server.js'));
 
-  // Watch `FileChangeType.Deleted` events for Polar files in the current
-  // workspace, including those not open in any editor in the workspace.
-  //
-  // NOTE(gj): Due to a current limitation in VS Code, when a parent directory
-  // is deleted, VS Code's file watcher does not emit events for matching files
-  // nested inside that parent. For more information, see this GitHub issue:
-  // https://github.com/microsoft/vscode/issues/60813. If that behavior is
-  // fixed in the future, we should be able to remove the
-  // `workspace.fileOperations.didDelete` handler on the server and go back to
-  // a single watcher for files matching '**/*.polar'.
-  const deleteWatcher = workspace.createFileSystemWatcher(
-    polarFilesInWorkspaceFolderPattern(folder),
-    true, // ignoreCreateEvents
-    true, // ignoreChangeEvents
-    false // ignoreDeleteEvents
-  );
-  // Watch `FileChangeType.Created` and `FileChangeType.Changed` events for
-  // files in the current workspace, including those not open in any editor in
-  // the workspace.
-  const createChangeWatcher = workspace.createFileSystemWatcher(
-    polarFilesInWorkspaceFolderPattern(folder),
-    false, // ignoreCreateEvents
-    false, // ignoreChangeEvents
-    true // ignoreDeleteEvents
+  const rawProjectRoots = workspace
+    .getConfiguration(osoConfigKey, workspaceFolder)
+    .get<string[]>(projectRootsKey, []);
+  outputChannel.appendLine(
+    `${fullProjectRootsKey} setting: ${inspect(rawProjectRoots)}`
   );
 
-  // Clean up watchers when extension is deactivated.
-  context.subscriptions.push(deleteWatcher);
-  context.subscriptions.push(createChangeWatcher);
+  type InvalidProjectRootReason = "isn't a directory" | "doesn't exist";
 
-  const debugOpts = {
-    execArgv: ['--nolazy', `--inspect=${6011 + clients.size}`],
-  };
-  const serverOpts = {
-    run: { module: server, transport: TransportKind.ipc },
-    debug: { module: server, transport: TransportKind.ipc, options: debugOpts },
-  };
-  const clientOpts: LanguageClientOptions = {
-    // TODO(gj): seems like I should be able to use a RelativePattern here, but
-    // the TS type for DocumentFilter.pattern doesn't seem to like that.
-    documentSelector: [
-      { language: 'polar', pattern: `${folder.uri.fsPath}/**/*.polar` },
-    ],
-    synchronize: { fileEvents: deleteWatcher },
-    diagnosticCollectionName: extensionName,
-    workspaceFolder: folder,
-    outputChannel,
-  };
-  const client = new LanguageClient(extensionName, serverOpts, clientOpts);
+  const projectRoots = [];
+  const errors: [InvalidProjectRootReason, string][] = [];
+  for (const path of [...new Set(rawProjectRoots)]) {
+    const uri = workspaceFolder.uri.with({ path });
+    try {
+      const { type } = await workspace.fs.stat(uri);
+      if (type === FileType.Directory) {
+        projectRoots.push(uri);
+      } else {
+        errors.push(["isn't a directory", path]);
+      }
+    } catch (e) {
+      errors.push(["doesn't exist", path]);
+    }
+  }
 
-  const recordTelemetry = debounce(
-    event => recordEvent(folder.uri, event),
-    1_000
-  );
-  context.subscriptions.push(client.onTelemetry(recordTelemetry));
+  // Display any errors and early return.
+  if (errors.length > 0) {
+    errors.forEach(
+      ([reason, path]) =>
+        void window.showErrorMessage(
+          `Invalid ${fullProjectRootsKey} configuration — path ${reason}: ${path}`
+        )
+    );
+    return;
+  }
 
-  // Start client and mark it for cleanup when the extension is deactivated.
-  context.subscriptions.push(client.start());
+  // If no project roots were specified, default to treating the workspace
+  // folder as the root.
+  if (projectRoots.length === 0) projectRoots.push(workspaceFolder.uri);
 
-  // When a Polar document in `folder` (even documents not currently open in VS
-  // Code) is created or changed, trigger a [`didOpen`][didOpen] event if the
-  // document is not already open. This will transmit the current state of the
-  // newly created or changed document to the Language Server, and subsequent
-  // changes to it will be relayed via [`didChange`][didChange] events.
-  //
-  // [didOpen]: https://code.visualstudio.com/api/references/vscode-api#workspace.onDidOpenTextDocument
-  // [didChange]: https://code.visualstudio.com/api/references/vscode-api#workspace.onDidChangeTextDocument
-  context.subscriptions.push(createChangeWatcher.onDidCreate(openDocument));
-  context.subscriptions.push(createChangeWatcher.onDidChange(openDocument));
+  const workspaceFolderClients: WorkspaceFolderClients = new Map();
 
-  // Transmit the initial file system state for `folder` (including files not
-  // currently open in VS Code) to the server.
-  await openPolarFilesInWorkspaceFolder(folder);
+  for (const root of projectRoots) {
+    // Watch `FileChangeType.Deleted` events for Polar files in the current
+    // workspace, including those not open in any editor in the workspace.
+    //
+    // NOTE(gj): Due to a current limitation in VS Code, when a parent directory
+    // is deleted, VS Code's file watcher does not emit events for matching files
+    // nested inside that parent. For more information, see this GitHub issue:
+    // https://github.com/microsoft/vscode/issues/60813. If that behavior is
+    // fixed in the future, we should be able to remove the
+    // `workspace.fileOperations.didDelete` handler on the server and go back to
+    // a single watcher for files matching '**/*.polar'.
+    const deleteWatcher = workspace.createFileSystemWatcher(
+      polarFilesInFolderPattern(root),
+      true, // ignoreCreateEvents
+      true, // ignoreChangeEvents
+      false // ignoreDeleteEvents
+    );
+    // Watch `FileChangeType.Created` and `FileChangeType.Changed` events for
+    // files in the current workspace, including those not open in any editor in
+    // the workspace.
+    const createChangeWatcher = workspace.createFileSystemWatcher(
+      polarFilesInFolderPattern(root),
+      false, // ignoreCreateEvents
+      false, // ignoreChangeEvents
+      true // ignoreDeleteEvents
+    );
 
-  clients.set(folder.uri.toString(), [client, recordTelemetry]);
+    // Clean up watchers when extension is deactivated.
+    context.subscriptions.push(deleteWatcher);
+    context.subscriptions.push(createChangeWatcher);
+
+    const serverOpts = { module: server, transport: TransportKind.ipc };
+    const clientOpts: LanguageClientOptions = {
+      // TODO(gj): seems like I should be able to use a RelativePattern here, but
+      // the TS type for DocumentFilter.pattern doesn't seem to like that.
+      documentSelector: [
+        { language: 'polar', pattern: `${root.fsPath}/**/*.polar` },
+      ],
+      synchronize: { fileEvents: deleteWatcher },
+      diagnosticCollectionName: extensionName,
+      workspaceFolder,
+      outputChannel,
+    };
+    const client = new LanguageClient(extensionName, serverOpts, clientOpts);
+
+    const recordTelemetry = debounce(event => recordEvent(root, event), 1_000);
+    context.subscriptions.push(client.onTelemetry(recordTelemetry));
+
+    // Start client and mark it for cleanup when the extension is deactivated.
+    context.subscriptions.push(client.start());
+
+    // When a Polar document in `root` (even documents not currently open in VS
+    // Code) is created or changed, trigger a [`didOpen`][didOpen] event if the
+    // document is not already open. This will transmit the current state of the
+    // newly created or changed document to the Language Server, and subsequent
+    // changes to it will be relayed via [`didChange`][didChange] events.
+    //
+    // [didOpen]: https://code.visualstudio.com/api/references/vscode-api#workspace.onDidOpenTextDocument
+    // [didChange]: https://code.visualstudio.com/api/references/vscode-api#workspace.onDidChangeTextDocument
+    context.subscriptions.push(createChangeWatcher.onDidCreate(openDocument));
+    context.subscriptions.push(createChangeWatcher.onDidChange(openDocument));
+
+    // Transmit the initial file system state for `root` (including files not
+    // currently open in VS Code) to the server.
+    await openPolarFilesInFolder(root);
+
+    workspaceFolderClients.set(root.toString(), [client, recordTelemetry]);
+  }
+
+  clients.set(workspaceFolder.uri.toString(), workspaceFolderClients);
 }
 
-async function stopClient(folder: string) {
-  const exists = clients.get(folder);
-  if (exists) {
-    const [client, recordTelemetry] = exists;
-    // Try flushing latest event in case one's in the chamber.
-    recordTelemetry.flush();
-    await client.stop();
+function stopClient([client, recordTelemetry]: WorkspaceFolderClient) {
+  // Clear any outstanding diagnostics.
+  client.diagnostics?.clear();
+  // Try flushing latest event in case one's in the chamber.
+  recordTelemetry.flush();
+  return client.stop();
+}
+
+async function stopClients(workspaceFolder: string) {
+  const workspaceFolderClients = clients.get(workspaceFolder);
+  if (workspaceFolderClients) {
+    for (const client of workspaceFolderClients.values())
+      await stopClient(client);
   }
-  clients.delete(folder);
+  clients.delete(workspaceFolder);
 }
 
 function updateClients(context: ExtensionContext) {
   return async function ({ added, removed }: WorkspaceFoldersChangeEvent) {
     // Clean up clients for removed folders.
-    for (const folder of removed) await stopClient(folder.uri.toString());
+    for (const folder of removed) await stopClients(folder.uri.toString());
 
     // Create clients for added folders.
-    for (const folder of added) await startClient(folder, context);
+    for (const folder of added) await startClients(folder, context);
   };
 }
 
@@ -241,11 +305,23 @@ export async function activate(context: ExtensionContext): Promise<void> {
   // Clear interval when extension is deactivated.
   context.subscriptions.push({ dispose: () => clearInterval(interval) });
 
-  // Start a client for every folder in the workspace.
-  for (const folder of folders) await startClient(folder, context);
+  // Start clients for every folder in the workspace.
+  for (const folder of folders) await startClients(folder, context);
 
   // Update clients when workspace folders change.
   workspace.onDidChangeWorkspaceFolders(updateClients(context));
+
+  // If a `projectRoots` configuration change affects any workspace folders,
+  // restart all of the corresponding clients.
+  context.subscriptions.push(
+    workspace.onDidChangeConfiguration(async e => {
+      const affected = folders.filter(folder =>
+        e.affectsConfiguration(fullProjectRootsKey, folder)
+      );
+
+      await updateClients(context)({ added: affected, removed: affected });
+    })
+  );
 
   // TODO(gj): is it possible to go from workspace -> no workspace? What about
   // from no workspace -> workspace?
@@ -263,11 +339,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
 export async function deactivate(): Promise<void> {
   await Promise.all(
-    [...clients.values()].map(([client, recordTelemetry]) => {
-      // Try flushing latest event in case one's in the chamber.
-      recordTelemetry.flush();
-      return client.stop();
-    })
+    [...clients.values()]
+      .flatMap(workspaceFolderClients => [...workspaceFolderClients.values()])
+      .map(stopClient)
   );
 
   // Flush telemetry queue on shutdown.

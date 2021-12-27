@@ -12,6 +12,7 @@ import {
 } from 'vscode-languageclient';
 
 import { version as extversion } from '../../package.json';
+import { osoConfigKey } from './index';
 
 const ONE_HOUR_IN_MS = 1_000 * 60 * 60;
 const ONE_DAY_IN_MS = ONE_HOUR_IN_MS * 24;
@@ -130,7 +131,7 @@ const trackBatch = (events: Mixpanel.Event[]) =>
 
 function telemetryEnabled() {
   const setting = workspace
-    .getConfiguration('oso.polarLanguageServer.telemetry')
+    .getConfiguration(`${osoConfigKey}.telemetry`)
     .get<'default' | 'on' | 'off' | undefined>('enabled');
 
   // Check if user explicitly enabled or disabled telemetry.

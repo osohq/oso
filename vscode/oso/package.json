@@ -67,6 +67,15 @@
           ],
           "default": "default",
           "markdownDescription": "Share usage data to help us make Oso better. Defaults to the `#telemetry.telemetryLevel#` setting."
+        },
+        "oso.polarLanguageServer.projectRoots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "default": [],
+          "markdownDescription": "asdfasdfasdfasdf"
         }
       }
     }
