@@ -15,7 +15,7 @@ pub enum OsoError {
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error(transparent)]
-    Polar(#[from] polar::PolarError),
+    Polar(polar::PolarError),
     #[error("failed to convert type from Polar")]
     FromPolar,
     #[error("policy files must have the .polar extension. {filename} does not.")]

@@ -635,7 +635,7 @@ mod tests {
     use permute::permute;
 
     use std::collections::HashSet;
-    use std::sync::Arc;
+    use std::rc::Rc;
 
     use super::*;
     use crate::diagnostic::Diagnostic;
@@ -1324,7 +1324,7 @@ mod tests {
                 policy += &permutation.join("\n");
                 policy += "}";
                 assert!(equal(
-                    &parse_lines(Arc::new(Source::new(policy))).unwrap()[0],
+                    &parse_lines(Rc::new(Source::new(policy))).unwrap()[0],
                     expected
                 ));
             }

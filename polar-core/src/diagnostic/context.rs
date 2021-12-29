@@ -1,5 +1,5 @@
 use std::fmt;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
 
@@ -37,7 +37,7 @@ impl Position {
 // of usizes.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Context {
-    pub source: Arc<Source>,
+    pub source: Rc<Source>,
     pub range: Range,
 }
 

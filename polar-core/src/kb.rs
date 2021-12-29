@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 use std::sync::Arc;
 
 pub use super::bindings::Bindings;
@@ -34,7 +35,7 @@ pub struct KnowledgeBase {
     mro: HashMap<Symbol, Vec<u64>>,
 
     /// Map from filename to source ID for files loaded into the KB.
-    loaded_files: HashMap<String, Arc<Source>>,
+    loaded_files: HashMap<String, Source>,
     /// Map from contents to filename for files loaded into the KB.
     loaded_content: HashMap<String, String>,
 
@@ -642,12 +643,15 @@ impl KnowledgeBase {
     // TODO(gj): should be able to assert that a Source *must* have a filename, like
     // WithFilename<Source> or something.
     // TODO(gj): new name for function
-    pub fn add_source(&mut self, filename: &str, source: Arc<Source>) -> PolarResult<()> {
+    pub fn add_source(&mut self, filename: &str, source: Rc<Source>) -> PolarResult<()> {
         match (
             self.loaded_content
                 .insert(source.src.clone(), filename.to_owned()),
             self.loaded_files
-                .insert(filename.to_owned(), source.clone())
+                .insert(
+                    filename.to_owned(),
+                    Source::new_with_name(filename, &source.src),
+                )
                 .is_some(),
         ) {
             (Some(other_file), true) if other_file == filename => {
@@ -862,7 +866,7 @@ mod tests {
     #[test]
     /// Test validation implemented in `check_file()`.
     fn test_add_source_file_validation() {
-        fn expect_error(kb: &mut KnowledgeBase, name: &str, source: Arc<Source>, expected: &str) {
+        fn expect_error(kb: &mut KnowledgeBase, name: &str, source: Rc<Source>, expected: &str) {
             let msg = match kb.add_source(name, source).unwrap_err().kind {
                 Validation(ValidationError::FileLoading { msg, .. }) => msg,
                 e => panic!("Unexpected error: {}", e),
@@ -876,7 +880,7 @@ mod tests {
         let filename2 = "g";
 
         // Load source1.
-        let source1 = Arc::new(Source::new_with_name(filename1, src));
+        let source1 = Rc::new(Source::new_with_name(filename1, src));
         kb.add_source(filename1, source1.clone()).unwrap();
 
         // Cannot load source1 a second time.

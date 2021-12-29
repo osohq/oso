@@ -276,7 +276,7 @@ pub fn rewrite_rule(rule: Rule, kb: &mut KnowledgeBase) -> Rule {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    use std::rc::Rc;
 
     use super::*;
     use crate::formatting::ToPolarString;
@@ -284,11 +284,11 @@ mod tests {
 
     // Re-defined here for convenience
     fn parse_query(src: &str) -> Term {
-        crate::parser::parse_query(Arc::new(Source::new(src))).unwrap()
+        crate::parser::parse_query(Rc::new(Source::new(src))).unwrap()
     }
 
     fn parse_rules(src: &str) -> Vec<Rule> {
-        crate::parser::parse_rules(Arc::new(Source::new(src))).unwrap()
+        crate::parser::parse_rules(Rc::new(Source::new(src))).unwrap()
     }
 
     #[test]

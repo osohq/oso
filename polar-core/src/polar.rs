@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use std::sync::{Arc, RwLock};
 
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
@@ -50,7 +51,7 @@ impl Polar {
         // so that any errors returned with `?` are captured
         fn load_source(source: Source, kb: &mut KnowledgeBase) -> PolarResult<Vec<Diagnostic>> {
             // TODO(gj): should we also check for duplicate content across sources w/o a filename?
-            let source = Arc::new(source);
+            let source = Rc::new(source);
             if let Some(ref filename) = source.filename {
                 kb.add_source(filename, source.clone())?;
             }
@@ -214,7 +215,7 @@ impl Polar {
     }
 
     pub fn new_query(&self, src: &str, trace: bool) -> PolarResult<Query> {
-        let source = Arc::new(Source::new(src));
+        let source = Rc::new(Source::new(src));
         let term = parser::parse_query(source.clone()).map_err(|e| e.with_context(source))?;
         Ok(self.new_query_from_term(term, trace))
     }

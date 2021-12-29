@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
+use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::sources::Source;
@@ -45,7 +46,7 @@ impl Rule {
         self.params.iter().all(|p| p.is_ground())
     }
 
-    pub fn parsed_source_info(&self) -> Option<(&Arc<Source>, &usize, &usize)> {
+    pub fn parsed_source_info(&self) -> Option<(&Rc<Source>, &usize, &usize)> {
         if let SourceInfo::Parser {
             source,
             left,
@@ -70,7 +71,7 @@ impl Rule {
 
     /// Creates a new term from the parser
     pub fn new_from_parser(
-        source: Arc<Source>,
+        source: Rc<Source>,
         left: usize,
         right: usize,
         name: Symbol,

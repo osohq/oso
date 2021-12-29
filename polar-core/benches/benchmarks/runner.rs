@@ -1,10 +1,10 @@
-use std::sync::Arc;
+use std::rc::Rc;
 
 use polar_core::{events::*, kb::Bindings, parser, polar::Polar, query::Query, sources::Source};
 
 pub fn runner_from_query(q: &str) -> Runner {
     let polar = Polar::new();
-    let query_term = parser::parse_query(Arc::new(Source::new(q))).unwrap();
+    let query_term = parser::parse_query(Rc::new(Source::new(q))).unwrap();
     let query = polar.new_query_from_term(query_term, false);
     Runner::new(polar, query)
 }
