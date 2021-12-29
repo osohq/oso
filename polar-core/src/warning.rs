@@ -3,7 +3,6 @@ use std::fmt;
 use indoc::indoc;
 
 use super::diagnostic::{Context, Range};
-use super::kb::KnowledgeBase;
 use super::terms::{InstanceLiteral, Pattern, Symbol, Term, Value};
 
 #[derive(Debug)]
@@ -51,19 +50,19 @@ pub enum ValidationWarning {
 }
 
 impl ValidationWarning {
-    pub fn with_context(self, kb: &KnowledgeBase) -> PolarWarning {
+    pub fn with_context(self) -> PolarWarning {
         use ValidationWarning::*;
 
         let context = match &self {
             AmbiguousPrecedence { term } | UnknownSpecializer { term, .. } => {
-                term.span().zip(kb.get_term_source(term))
+                term.parsed_source_info()
             }
             MissingAllowRule | MissingHasPermissionRule => None,
         };
 
-        let context = context.map(|(span, source)| Context {
-            range: Range::from_span(&source.src, span),
-            source,
+        let context = context.map(|(source, left, right)| Context {
+            range: Range::from_span(&source.src, (*left, *right)),
+            source: source.clone(),
         });
 
         PolarWarning {

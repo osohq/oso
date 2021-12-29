@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, str::Split};
+use std::{collections::BTreeMap, str::Split, sync::Arc};
 
 use lsp_types::{
     notification::{
@@ -343,7 +343,9 @@ impl PolarLanguageServer {
         };
 
         let lines = self.documents.values();
-        let lines = lines.filter_map(|d| parse_lines(0, &d.text).ok()).flatten();
+        let lines = lines
+            .filter_map(|d| parse_lines(Arc::new(Source::new_with_name(&d.uri, &d.text))).ok())
+            .flatten();
         for line in lines {
             match line {
                 Line::Query(_) => event.policy_stats.inline_queries += 1,
@@ -500,10 +502,7 @@ impl PolarLanguageServer {
     fn documents_to_polar_sources(&self) -> Vec<Source> {
         self.documents
             .values()
-            .map(|doc| Source {
-                filename: Some(doc.uri.to_string()),
-                src: doc.text.clone(),
-            })
+            .map(|doc| Source::new_with_name(&doc.uri, &doc.text))
             .collect()
     }
 

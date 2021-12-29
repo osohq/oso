@@ -30,7 +30,6 @@ use crate::partial::{simplify_bindings_opt, simplify_partial, sub_this, IsaConst
 use crate::rewrites::Renamer;
 use crate::rules::*;
 use crate::runnable::Runnable;
-use crate::sources::*;
 use crate::terms::*;
 use crate::traces::*;
 
@@ -831,10 +830,6 @@ impl PolarVirtualMachine {
         }
     }
 
-    pub fn source(&self, term: &Term) -> Option<Source> {
-        self.kb().get_term_source(term)
-    }
-
     /// Get the query stack as a string for printing in error messages.
     pub fn stack_trace(&self) -> String {
         let mut trace_stack = self.trace_stack.clone();
@@ -869,15 +864,16 @@ impl PolarVirtualMachine {
                     }
                     let _ = write!(st, "\n  ");
 
-                    if let Some(source) = self.source(t) {
+                    // TODO(gj): this looks pretty similar to Debugger::debug_command#stack
+                    if let Some((source, left, _)) = t.parsed_source_info() {
                         if let Some(rule) = &rule {
                             let _ = write!(st, "in rule {} ", rule.name);
                         } else {
                             let _ = write!(st, "in query ");
                         }
-                        let (row, column) = loc_to_pos(&source.src, t.offset());
+                        let (row, column) = loc_to_pos(&source.src, *left);
                         let _ = write!(st, "at line {}, column {}", row + 1, column + 1);
-                        if let Some(filename) = source.filename {
+                        if let Some(filename) = &source.filename {
                             let _ = write!(st, " in file {}", filename);
                         }
                         let _ = writeln!(st);
@@ -2643,11 +2639,16 @@ impl PolarVirtualMachine {
                 || {
                     let mut rule_strs = "APPLICABLE_RULES:".to_owned();
                     for rule in rules {
-                        let context = self.kb().get_rule_source(rule).map_or_else(
+                        let context = rule.parsed_source_info().map_or_else(
                             || "".to_string(),
-                            |source| {
-                                let range = Range::from_span(&source.src, rule.span().unwrap());
-                                let context = Context { source, range };
+                            |(source, left, right)| {
+                                // TODO(gj): `Context::from_parsed_source_info` or `impl
+                                // From<SourceInfo> for Context` or something similar?
+                                let range = Range::from_span(&source.src, (*left, *right));
+                                let context = Context {
+                                    source: source.clone(),
+                                    range,
+                                };
                                 context.source_file_and_line()
                             },
                         );
@@ -2835,22 +2836,19 @@ impl PolarVirtualMachine {
     }
 
     pub fn term_source(&self, term: &Term, include_info: bool) -> String {
-        let source = self.source(term);
-        let span = term.span();
+        let source_info = term.parsed_source_info();
 
-        let mut source_string = match (&source, &span) {
-            (Some(source), Some((left, right))) => {
-                source.src.chars().take(*right).skip(*left).collect()
-            }
-            _ => term.to_polar(),
+        let mut source_string = if let Some((source, left, right)) = source_info {
+            source.src.chars().take(*right).skip(*left).collect()
+        } else {
+            term.to_polar()
         };
 
         if include_info {
-            if let Some(source) = source {
-                let offset = term.offset();
-                let (row, column) = crate::lexer::loc_to_pos(&source.src, offset);
+            if let Some((source, left, _)) = source_info {
+                let (row, column) = crate::lexer::loc_to_pos(&source.src, *left);
                 source_string.push_str(&format!(" at line {}, column {}", row + 1, column));
-                if let Some(filename) = source.filename {
+                if let Some(filename) = &source.filename {
                     source_string.push_str(&format!(" in file {}", filename));
                 }
             }
@@ -2962,17 +2960,16 @@ impl Runnable for PolarVirtualMachine {
                     // For a future refactor, we might consider using the `Term::clone_with_value`
                     // API to preserve source context when initially binding a variable to an
                     // `Expression`.
-                    fn try_to_add_context(kb: &KnowledgeBase, t: &Term, simplified: Term) -> Term {
+                    fn try_to_add_context(t: &Term, simplified: Term) -> Term {
                         /// `GetSource` walks a term & returns the _1st_ piece of source info it finds.
-                        struct GetSource<'kb> {
-                            kb: &'kb KnowledgeBase,
+                        struct GetSource {
                             term: Option<Term>,
                         }
 
-                        impl<'kb> Visitor for GetSource<'kb> {
+                        impl Visitor for GetSource {
                             fn visit_term(&mut self, t: &Term) {
                                 if self.term.is_none() {
-                                    if self.kb.get_term_source(t).is_none() {
+                                    if t.parsed_source_info().is_none() {
                                         walk_term(self, t)
                                     } else {
                                         self.term = Some(t.clone())
@@ -2981,7 +2978,7 @@ impl Runnable for PolarVirtualMachine {
                             }
                         }
 
-                        let mut source_getter = GetSource { kb, term: None };
+                        let mut source_getter = GetSource { term: None };
                         source_getter.visit_term(t);
                         if let Some(term_with_context) = source_getter.term {
                             term_with_context.clone_with_value(simplified.value().clone())
@@ -2994,7 +2991,7 @@ impl Runnable for PolarVirtualMachine {
                     // grab the context from the variable that was defined and
                     // set the context before returning
                     return Err(RuntimeError::UnhandledPartial {
-                        term: try_to_add_context(&*self.kb(), &term, simplified),
+                        term: try_to_add_context(&term, simplified),
                         var: original_var_name,
                     });
                 }

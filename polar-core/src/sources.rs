@@ -1,12 +1,14 @@
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::sync::Arc;
 
-#[derive(Debug, Clone, Hash)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone)]
 pub enum SourceInfo {
+    // TODO(gj): why is this not just `Parser(Context)`?
+    //
     // From the parser
     Parser {
-        /// Index into the source map stored in the knowledge base
-        src_id: u64,
+        source: Arc<Source>,
 
         /// Location of the term within the source map
         left: usize,
@@ -29,46 +31,26 @@ impl SourceInfo {
     }
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+// TODO(gj): why is this Serialize? At a minimum I don't think we need to serialize the full source
+// text.
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Source {
     pub filename: Option<String>,
     pub src: String,
 }
 
 impl Source {
-    pub(crate) fn new(filename: Option<&str>, src: &str) -> Self {
+    pub fn new<T: AsRef<str>>(src: T) -> Self {
         Self {
-            filename: filename.map(Into::into),
-            src: src.into(),
+            filename: None,
+            src: src.as_ref().into(),
         }
     }
-}
 
-pub struct Sources {
-    /// Map from term ID to `Source`.
-    sources: HashMap<u64, Source>,
-}
-
-impl Default for Sources {
-    fn default() -> Self {
-        let mut sources = HashMap::new();
-        sources.insert(
-            0,
-            Source {
-                filename: None,
-                src: "<Unknown>".to_string(),
-            },
-        );
-        Self { sources }
-    }
-}
-
-impl Sources {
-    pub fn add_source(&mut self, source: Source, id: u64) {
-        self.sources.insert(id, source);
-    }
-
-    pub fn get_source(&self, src_id: u64) -> Option<Source> {
-        self.sources.get(&src_id).cloned()
+    pub fn new_with_name<T: AsRef<str>, U: AsRef<str>>(filename: T, src: U) -> Self {
+        Self {
+            filename: Some(filename.as_ref().into()),
+            src: src.as_ref().into(),
+        }
     }
 }

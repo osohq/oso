@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, sync::Arc};
 
 use indoc::formatdoc;
 use serde::{Deserialize, Serialize};
@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use super::{
     diagnostic::{Context, Range},
     formatting::to_polar::ToPolarString,
-    kb::KnowledgeBase,
     resource_block::Declaration,
     rules::Rule,
     sources::Source,
@@ -168,7 +167,7 @@ pub enum ParseError {
 }
 
 impl ParseError {
-    pub fn with_context(self, source: Source) -> PolarError {
+    pub fn with_context(self, source: Arc<Source>) -> PolarError {
         use ParseError::*;
 
         let span = match &self {
@@ -188,7 +187,10 @@ impl ParseError {
             }
 
             // These errors track `term`, from which we calculate the span.
-            WrongValueType { term, .. } => term.span().expect("always from parser"),
+            WrongValueType { term, .. } => term
+                .parsed_source_info()
+                .map(|(_, left, right)| (*left, *right))
+                .expect("always from parser"),
         };
         let range = Range::from_span(&source.src, span);
 
@@ -308,21 +310,18 @@ pub enum RuntimeError {
 }
 
 impl RuntimeError {
-    pub fn with_context(self, kb: &KnowledgeBase) -> PolarError {
+    pub fn with_context(self) -> PolarError {
         use RuntimeError::*;
 
         let context = match &self {
             // These errors sometimes track `term`, from which we derive context.
-            Application { term, .. } => term
-                .as_ref()
-                .and_then(Term::span)
-                .zip(term.as_ref().and_then(|t| kb.get_term_source(t))),
+            Application { term, .. } => term.as_ref().and_then(Term::parsed_source_info),
 
             // These errors track `term`, from which we derive the context.
             ArithmeticError { term }
             | TypeError { term, .. }
             | UnhandledPartial { term, .. }
-            | Unsupported { term, .. } => term.span().zip(kb.get_term_source(term)),
+            | Unsupported { term, .. } => term.parsed_source_info(),
 
             // These errors never have context.
             StackOverflow { .. }
@@ -336,9 +335,9 @@ impl RuntimeError {
             | MultipleLoadError => None,
         };
 
-        let context = context.map(|(span, source)| Context {
-            range: Range::from_span(&source.src, span),
-            source,
+        let context = context.map(|(source, left, right)| Context {
+            range: Range::from_span(&source.src, (*left, *right)),
+            source: source.clone(),
         });
 
         PolarError {
@@ -480,7 +479,7 @@ impl fmt::Display for OperationalError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationError {
     FileLoading {
-        source: Source,
+        source: Arc<Source>,
         msg: String,
     },
     MissingRequiredRule {
@@ -530,7 +529,7 @@ pub enum ValidationError {
 }
 
 impl ValidationError {
-    pub fn with_context(self, kb: &KnowledgeBase) -> PolarError {
+    pub fn with_context(self) -> PolarError {
         use ValidationError::*;
 
         let context = match &self {
@@ -541,18 +540,18 @@ impl ValidationError {
             | DuplicateResourceBlockDeclaration {
                 declaration: term, ..
             }
-            | UnregisteredClass { term, .. } => term.span().zip(kb.get_term_source(term)),
+            | UnregisteredClass { term, .. } => term.parsed_source_info(),
 
             // These errors track `rule`, from which we calculate the span.
             InvalidRule { rule, .. }
             | InvalidRuleType {
                 rule_type: rule, ..
-            } => rule.span().zip(kb.get_rule_source(rule)),
+            } => rule.parsed_source_info(),
 
             // These errors track `rule_type`, from which we sometimes calculate the span.
             MissingRequiredRule { rule_type } => {
                 if rule_type.name.0 == "has_relation" {
-                    rule_type.span().zip(kb.get_rule_source(rule_type))
+                    rule_type.parsed_source_info()
                 } else {
                     // TODO(gj): copy source info from the appropriate resource block term for
                     // `has_role()` rule type we create.
@@ -561,12 +560,13 @@ impl ValidationError {
             }
 
             // These errors always pertain to a specific file but not to a specific place therein.
-            FileLoading { source, .. } => Some(((0, 0), source.to_owned())),
+            FileLoading { source, .. } => Some((source, &0, &0)),
         };
 
-        let context = context.map(|(span, source)| Context {
-            range: Range::from_span(&source.src, span),
-            source,
+        // TODO(gj): `From<SourceInfo> for Context`
+        let context = context.map(|(source, left, right)| Context {
+            range: Range::from_span(&source.src, (*left, *right)),
+            source: source.clone(),
         });
 
         PolarError {

@@ -1,4 +1,7 @@
+use std::sync::Arc;
+
 use crate::lexer::Token;
+use crate::sources::Source;
 use lalrpop_util::{lalrpop_mod, ParseError};
 
 /// Used to denote whether an enclosed value is a value or a logical operator
@@ -57,22 +60,22 @@ fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> erro
     }
 }
 
-pub fn parse_lines(src_id: u64, src: &str) -> Result<Vec<Line>, error::ParseError> {
+pub fn parse_lines(source: Arc<Source>) -> Result<Vec<Line>, error::ParseError> {
     polar::LinesParser::new()
-        .parse(src_id, Lexer::new(src))
+        .parse(&source, Lexer::new(&source.src))
         .map_err(to_parse_error)
 }
 
-pub fn parse_query(src_id: u64, src: &str) -> Result<Term, error::ParseError> {
+pub fn parse_query(source: Arc<Source>) -> Result<Term, error::ParseError> {
     polar::TermParser::new()
-        .parse(src_id, Lexer::new(src))
+        .parse(&source, Lexer::new(&source.src))
         .map_err(to_parse_error)
 }
 
 #[cfg(test)]
-pub fn parse_rules(src_id: u64, src: &str) -> Result<Vec<Rule>, error::ParseError> {
+pub fn parse_rules(source: Arc<Source>) -> Result<Vec<Rule>, error::ParseError> {
     polar::RulesParser::new()
-        .parse(src_id, Lexer::new(src))
+        .parse(&source, Lexer::new(&source.src))
         .map_err(to_parse_error)
 }
 
@@ -85,22 +88,32 @@ mod tests {
 
     #[track_caller]
     fn parse_term(src: &str) -> Term {
-        polar::TermParser::new().parse(0, Lexer::new(src)).unwrap()
+        super::parse_query(Arc::new(Source::new(src))).unwrap()
     }
 
     #[track_caller]
-    fn parse_query(src: &str) -> Term {
-        super::parse_query(0, src).unwrap()
+    fn parse_term_error(src: &str) -> error::ParseError {
+        super::parse_query(Arc::new(Source::new(src))).unwrap_err()
+    }
+
+    #[track_caller]
+    fn parse_rules(src: &str) -> Result<Vec<Rule>, error::ParseError> {
+        super::parse_rules(Arc::new(Source::new(src)))
     }
 
     #[track_caller]
     fn parse_rule(src: &str) -> Rule {
-        parse_rules(0, src).unwrap().pop().unwrap()
+        parse_rules(src).unwrap().pop().unwrap()
     }
 
     #[track_caller]
     fn parse_lines(src: &str) -> Vec<Line> {
-        super::parse_lines(0, src).unwrap()
+        super::parse_lines(Arc::new(Source::new(src))).unwrap()
+    }
+
+    #[track_caller]
+    fn parse_lines_error(src: &str) -> error::ParseError {
+        super::parse_lines(Arc::new(Source::new(src))).unwrap_err()
     }
 
     #[test]
@@ -113,7 +126,7 @@ mod tests {
     fn try_it_with_macros() {
         let int = parse_term(" 123");
         assert_eq!(int, term!(123));
-        assert_eq!(int.offset(), 1);
+        assert_eq!(int.parsed_source_info().map(|(_, left, _)| *left), Some(1));
         let s = parse_term(r#""string literal""#);
         assert_eq!(s, term!("string literal"));
 
@@ -126,7 +139,7 @@ mod tests {
         let l = parse_term(r#"[foo, bar, baz]"#);
         assert_eq!(l, term!([sym!("foo"), sym!("bar"), sym!("baz")]));
 
-        parse_rules(0, r#"bar(a, c) if foo(a, b(c), "d")"#).expect_err("parse error");
+        parse_rules(r#"bar(a, c) if foo(a, b(c), "d")"#).expect_err("parse error");
 
         let exp2 = parse_term(r#"foo.a(b)"#);
         assert_eq!(
@@ -143,30 +156,30 @@ mod tests {
 
     #[test]
     fn parse_booleans() {
-        assert_eq!(parse_query("true"), term!(true));
-        assert_eq!(parse_query("false"), term!(false));
+        assert_eq!(parse_term("true"), term!(true));
+        assert_eq!(parse_term("false"), term!(false));
     }
 
     #[test]
     fn parse_integers() {
-        assert_eq!(parse_query("123"), term!(123));
-        assert_eq!(parse_query("0"), term!(0));
-        assert_eq!(parse_query("+123"), term!(123));
-        assert_eq!(parse_query("-123"), term!(-123));
+        assert_eq!(parse_term("123"), term!(123));
+        assert_eq!(parse_term("0"), term!(0));
+        assert_eq!(parse_term("+123"), term!(123));
+        assert_eq!(parse_term("-123"), term!(-123));
     }
 
     #[test]
     fn parse_floats() {
-        assert_eq!(parse_query("0.123"), term!(0.123));
-        assert_eq!(parse_query("1.234"), term!(1.234));
-        assert_eq!(parse_query("+1.234"), term!(1.234));
-        assert_eq!(parse_query("-1.234"), term!(-1.234));
-        assert_eq!(parse_query("-1.234e-56"), term!(-1.234e-56));
-        assert_eq!(parse_query("-1.234e56"), term!(-1.234e56));
-        assert_eq!(parse_query("inf"), term!(f64::INFINITY));
-        assert_eq!(parse_query("-inf"), term!(f64::NEG_INFINITY));
+        assert_eq!(parse_term("0.123"), term!(0.123));
+        assert_eq!(parse_term("1.234"), term!(1.234));
+        assert_eq!(parse_term("+1.234"), term!(1.234));
+        assert_eq!(parse_term("-1.234"), term!(-1.234));
+        assert_eq!(parse_term("-1.234e-56"), term!(-1.234e-56));
+        assert_eq!(parse_term("-1.234e56"), term!(-1.234e56));
+        assert_eq!(parse_term("inf"), term!(f64::INFINITY));
+        assert_eq!(parse_term("-inf"), term!(f64::NEG_INFINITY));
         assert!(
-            matches!(parse_query("nan").value(), Value::Number(crate::numerics::Numeric::Float(f)) if f.is_nan())
+            matches!(parse_term("nan").value(), Value::Number(crate::numerics::Numeric::Float(f)) if f.is_nan())
         );
     }
 
@@ -191,7 +204,7 @@ mod tests {
         let f = r#"
         a(1);b(2);c(3);
         "#;
-        let results = parse_rules(0, f).unwrap();
+        let results = parse_rules(f).unwrap();
         assert_eq!(results[0].to_polar(), r#"a(1);"#);
         assert_eq!(results[1].to_polar(), r#"b(2);"#);
         assert_eq!(results[2].to_polar(), r#"c(3);"#);
@@ -221,92 +234,92 @@ mod tests {
     #[test]
     fn test_rule_type_error() {
         let rule_type = r#"type f(x: String) if x = "bad";"#;
-        super::parse_lines(0, rule_type).expect_err("parse error");
+        parse_lines_error(rule_type);
     }
 
     #[test]
     fn test_parse_new() {
         let f = r#"a(x) if x = new Foo(a: 1);"#;
-        let results = parse_rules(0, f).unwrap();
+        let results = parse_rules(f).unwrap();
         assert_eq!(results[0].to_polar(), r#"a(x) if x = new Foo(a: 1);"#);
     }
 
     #[test]
     fn test_parse_new_boa_constructor() {
         let f = r#"a(x) if x = new Foo(1, 2);"#;
-        let results = parse_rules(0, f).unwrap();
+        let results = parse_rules(f).unwrap();
         assert_eq!(results[0].to_polar(), r#"a(x) if x = new Foo(1, 2);"#);
 
         // test trailing comma
         let f = r#"a(x) if x = new Foo(1,);"#;
-        parse_rules(0, f).expect_err("parse error");
+        parse_rules(f).expect_err("parse error");
     }
 
     #[test]
     fn test_parse_new_mixed_args() {
         let f = r#"a(x) if x = new Foo(1, 2, bar: 3, baz:4);"#;
-        let results = parse_rules(0, f).unwrap();
+        let results = parse_rules(f).unwrap();
         assert_eq!(
             results[0].to_polar(),
             r#"a(x) if x = new Foo(1, 2, bar: 3, baz: 4);"#
         );
         let f = r#"a(x) if x = new Foo(bar: 3, baz: 4);"#;
-        let results = parse_rules(0, f).unwrap();
+        let results = parse_rules(f).unwrap();
         assert_eq!(
             results[0].to_polar(),
             r#"a(x) if x = new Foo(bar: 3, baz: 4);"#
         );
 
         let f = r#"a(x) if x = new Foo(bar: 3, baz: 4, 1, 2);"#;
-        parse_rules(0, f).expect_err("parse error");
+        parse_rules(f).expect_err("parse error");
 
         // Don't allow kwargs in calls or dot ops.
         let f = r#"a(x) if f(x: 1)"#;
-        parse_rules(0, f).expect_err("parse error");
+        parse_rules(f).expect_err("parse error");
         let f = r#"a(x) if x.f(x: 1)"#;
-        parse_rules(0, f).expect_err("parse error");
+        parse_rules(f).expect_err("parse error");
     }
 
     #[test]
     fn test_parse_matches() {
-        let term = parse_query("{} matches {}");
+        let term = parse_term("{} matches {}");
         assert_eq!(term.to_polar(), "{} matches {}");
-        let term = parse_query("{x: 1} matches {}");
+        let term = parse_term("{x: 1} matches {}");
         assert_eq!(term.to_polar(), "{x: 1} matches {}");
     }
 
     #[test]
     fn test_parse_rest_vars() {
         let q = "[1, 2, *x] = [*rest]";
-        assert_eq!(parse_query(q).to_polar(), q);
+        assert_eq!(parse_term(q).to_polar(), q);
 
-        let e = super::parse_query(0, "[1, 2, 3] = [*rest, 3]").expect_err("parse error");
+        let e = parse_term_error("[1, 2, 3] = [*rest, 3]");
         assert!(matches!(e, UnrecognizedToken { .. }));
 
-        let e = super::parse_query(0, "[1, 2, *3] = [*rest]").expect_err("parse error");
+        let e = parse_term_error("[1, 2, *3] = [*rest]");
         assert!(matches!(e, UnrecognizedToken { .. }));
 
-        let e = super::parse_query(0, "[1, *x, *y] = [*rest]").expect_err("parse error");
+        let e = parse_term_error("[1, *x, *y] = [*rest]");
         assert!(matches!(e, UnrecognizedToken { .. }));
 
         let q = "[1, 2, 3] matches [1, 2, 3]";
-        assert_eq!(parse_query(q).to_polar(), q, "{} -- {}", q, parse_query(q));
+        assert_eq!(parse_term(q).to_polar(), q, "{} -- {}", q, parse_term(q));
 
         let q = "[1, 2, 3] matches [1, *rest]";
-        assert_eq!(parse_query(q).to_polar(), q, "{} -- {}", q, parse_query(q));
+        assert_eq!(parse_term(q).to_polar(), q, "{} -- {}", q, parse_term(q));
     }
 
     #[test]
     fn test_primitive_methods() {
         let q = r#""abc".startswith("a")"#;
         assert_eq!(
-            parse_query(q),
+            parse_term(q),
             term!(op!(Dot, term!("abc"), term!(call!("startswith", ["a"])))),
         );
 
         let q = r#"x.("invalid-key")"#;
         assert_eq!(
-            parse_query(q),
+            parse_term(q),
             term!(op!(Dot, term!(sym!("x")), term!("invalid-key"))),
         );
     }
@@ -335,8 +348,7 @@ mod tests {
             "x = (not x)",
             "y matches z = x",
         ] {
-            let e = super::parse_query(0, bad_query).expect_err("parse error");
-            assert!(matches!(e, WrongValueType { .. }));
+            assert!(matches!(parse_term_error(bad_query), WrongValueType { .. }));
         }
     }
 
@@ -351,7 +363,7 @@ mod tests {
         assert_eq!(parse_term(q), list);
 
         assert_eq!(
-            parse_query(r#"{a: 1,} = [1, 2,]"#),
+            parse_term(r#"{a: 1,} = [1, 2,]"#),
             term!(op!(Unify, dict, list))
         );
     }
@@ -359,7 +371,6 @@ mod tests {
     #[test]
     fn duplicate_keys() {
         let q = r#"{a: 1, a: 2}"#;
-        let e = super::parse_query(0, q).expect_err("parse error");
-        assert!(matches!(e, DuplicateKey { .. }));
+        assert!(matches!(parse_term_error(q), DuplicateKey { .. }));
     }
 }

@@ -6,6 +6,8 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
+use crate::sources::Source;
+
 use super::error::RuntimeError::{self, InvalidState};
 pub use super::formatting::ToPolarString;
 pub use super::numerics::Numeric;
@@ -361,10 +363,10 @@ impl Term {
     }
 
     /// Creates a new term from the parser
-    pub fn new_from_parser(src_id: u64, left: usize, right: usize, value: Value) -> Self {
+    pub fn new_from_parser(source: Arc<Source>, left: usize, right: usize, value: Value) -> Self {
         Self {
             source_info: SourceInfo::Parser {
-                src_id,
+                source,
                 left,
                 right,
             },
@@ -394,17 +396,16 @@ impl Term {
         self.value = Arc::new(value);
     }
 
-    pub fn offset(&self) -> usize {
-        if let SourceInfo::Parser { left, .. } = self.source_info {
-            left
-        } else {
-            0
-        }
-    }
-
-    pub fn span(&self) -> Option<(usize, usize)> {
-        if let SourceInfo::Parser { left, right, .. } = self.source_info {
-            Some((left, right))
+    // TODO(gj): Parsed<T> type (or something) so we can remove this meaningless distinction
+    // between terms & rules.
+    pub fn parsed_source_info(&self) -> Option<(&Arc<Source>, &usize, &usize)> {
+        if let SourceInfo::Parser {
+            source,
+            left,
+            right,
+        } = &self.source_info
+        {
+            Some((source, left, right))
         } else {
             None
         }
@@ -486,14 +487,6 @@ impl Term {
         let mut hasher = DefaultHasher::new();
         self.hash(&mut hasher);
         hasher.finish()
-    }
-
-    pub fn get_source_id(&self) -> Option<u64> {
-        if let SourceInfo::Parser { src_id, .. } = self.source_info {
-            Some(src_id)
-        } else {
-            None
-        }
     }
 
     pub fn is_actor_union(&self) -> bool {

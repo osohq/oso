@@ -276,16 +276,19 @@ pub fn rewrite_rule(rule: Rule, kb: &mut KnowledgeBase) -> Rule {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use super::*;
     use crate::formatting::ToPolarString;
+    use crate::sources::Source;
 
     // Re-defined here for convenience
     fn parse_query(src: &str) -> Term {
-        crate::parser::parse_query(0, src).unwrap()
+        crate::parser::parse_query(Arc::new(Source::new(src))).unwrap()
     }
 
     fn parse_rules(src: &str) -> Vec<Rule> {
-        crate::parser::parse_rules(0, src).unwrap()
+        crate::parser::parse_rules(Arc::new(Source::new(src))).unwrap()
     }
 
     #[test]

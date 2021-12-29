@@ -1,5 +1,6 @@
 use std::str::FromStr;
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use crate::lexer::{self, Token};
 use crate::parser::Line;
@@ -9,11 +10,13 @@ use crate::rules::*;
 use crate::terms::*;
 use crate::numerics::*;
 use crate::resource_block;
+use crate::sources::Source;
+
 use super::ValueOrLogical;
 
 use lalrpop_util::ParseError;
 
-grammar(src_id: u64);
+grammar(source: &Arc<Source>);
 
 extern {
     type Location = usize;
@@ -627,7 +630,7 @@ Value: ValueOrLogical = {
 
 // ****** Terms + Patterns ******* //
 
-Spanned<T>: Term = <start:@L> <value:T> <end:@R> =>  Term::new_from_parser(src_id, start, end, value);
+Spanned<T>: Term = <start:@L> <value:T> <end:@R> => Term::new_from_parser(source.clone(), start, end, value);
 
 pub Term = TermExp;
 
@@ -677,8 +680,8 @@ Define = {"if"};
 BodilessRule: Rule = <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";" => {
     let (name, params) = head;
     let op = Operation{operator: Operator::And, args: vec![]};
-    let body = Term::new_from_parser(src_id, start, end, Value::Expression(op));
-    Rule::new_from_parser(src_id, start_head, start, name, params, body)
+    let body = Term::new_from_parser(source.clone(), start, end, Value::Expression(op));
+    Rule::new_from_parser(source.clone(), start_head, start, name, params, body)
 };
 
 Rule: Rule = {
@@ -694,7 +697,7 @@ Rule: Rule = {
                 body.clone_with_value(Value::Expression(op))
             }
         };
-        Rule::new_from_parser(src_id, start_head, end_head, name, params, body)
+        Rule::new_from_parser(source.clone(), start_head, end_head, name, params, body)
     }
 }
 
@@ -739,7 +742,7 @@ Line: Line = {
     "?=" <TermExp> ";" => Line::Query(<>),
 
     <start:@L> <keyword:Spanned<Variable>?> <resource:Variable> "{" <productions:ResourceBlockProductions> "}" <end:@R> => {
-        let resource = Term::new_from_parser(src_id, start, end, resource);
+        let resource = Term::new_from_parser(source.clone(), start, end, resource);
         Line::ResourceBlock { keyword, resource, productions }
     }
 }

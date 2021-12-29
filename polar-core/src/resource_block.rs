@@ -199,17 +199,20 @@ pub struct ShorthandRule {
 impl ShorthandRule {
     pub fn as_rule(&self, resource_name: &Term, blocks: &ResourceBlocks) -> Result<Rule> {
         let Self { head, body } = self;
-        // Copy SourceInfo from head of shorthand rule.
-        // TODO(gj): assert these can only be None in tests.
-        let src_id = head.get_source_id().unwrap_or(0);
-        let (start, end) = head.span().unwrap_or((0, 0));
-
         let name = blocks.get_rule_name_for_declaration_in_resource_block(head, resource_name)?;
         let params = shorthand_rule_head_to_params(head, resource_name);
         let body = shorthand_rule_body_to_rule_body(body, resource_name, blocks)?;
 
+        // Copy SourceInfo from head of shorthand rule.
+        // TODO(gj): assert these can only be None in tests.
+        let (source, start, end) = head.parsed_source_info().expect("must be parsed"); //.unwrap_or((0, 0));
         Ok(Rule::new_from_parser(
-            src_id, start, end, name, params, body,
+            source.clone(),
+            *start,
+            *end,
+            name,
+            params,
+            body,
         ))
     }
 }
@@ -632,6 +635,7 @@ mod tests {
     use permute::permute;
 
     use std::collections::HashSet;
+    use std::sync::Arc;
 
     use super::*;
     use crate::diagnostic::Diagnostic;
@@ -642,6 +646,7 @@ mod tests {
     use crate::events::QueryEvent;
     use crate::parser::{parse_lines, Line};
     use crate::polar::Polar;
+    use crate::sources::Source;
 
     #[track_caller]
     fn expect_error(p: &Polar, policy: &str, expected: &str) {
@@ -1318,7 +1323,10 @@ mod tests {
                 let mut policy = "resource Repo {\n".to_owned();
                 policy += &permutation.join("\n");
                 policy += "}";
-                assert!(equal(&parse_lines(0, &policy).unwrap()[0], expected));
+                assert!(equal(
+                    &parse_lines(Arc::new(Source::new(policy))).unwrap()[0],
+                    expected
+                ));
             }
         };
 

@@ -4,7 +4,6 @@ use std::rc::Rc;
 use super::error::RuntimeError;
 use super::formatting::{source_lines, ToPolarString};
 use super::partial::simplify_bindings;
-use super::sources::*;
 use super::terms::*;
 use super::traces::*;
 
@@ -90,14 +89,11 @@ pub struct Debugger {
 impl Debugger {
     /// Retrieve the original source line (and, optionally, additional lines of context) for the
     /// current query.
-    fn query_source(&self, query: &Term, sources: &Sources, num_lines: usize) -> String {
-        query
-            .get_source_id()
-            .and_then(|id| sources.get_source(id))
-            .map_or_else(
-                || "".to_string(),
-                |source| source_lines(&source, query.offset(), num_lines),
-            )
+    fn query_source(&self, query: &Term, num_lines: usize) -> String {
+        query.parsed_source_info().map_or_else(
+            || "".to_string(),
+            |(source, left, _)| source_lines(source, *left, num_lines),
+        )
     }
 
     /// When the [`VM`](../vm/struct.PolarVirtualMachine.html) hits a breakpoint, check if
@@ -146,7 +142,7 @@ impl Debugger {
                     args,
                 }) if args.len() == 1 => None,
                 _ => {
-                    let source = self.query_source(q, &vm.kb.read().unwrap().sources, 3);
+                    let source = self.query_source(q, 3);
                     Some(format!("{}\n\n{}\n", vm.query_summary(q), source))
                 }
             },
@@ -217,7 +213,7 @@ impl Debugger {
                 return Some(Goal::Debug {
                     message: vm.queries.last().map_or_else(
                         || "".to_string(),
-                        |query| self.query_source(query, &vm.kb.read().unwrap().sources, lines),
+                        |query| self.query_source(query, lines),
                     ),
                 });
             }
@@ -287,15 +283,15 @@ impl Debugger {
                             let _ = write!(st, "{}: {}", i-1, vm.term_source(t, false));
                             i -= 1;
                             let _ = write!(st, "\n  ");
-                            if let Some(source) = vm.source(t) {
+                            if let Some((source, left, _)) = t.parsed_source_info() {
                                 if let Some(rule) = &rule {
                                     let _ = write!(st, "in rule {} ", rule.name.to_polar());
                                 } else {
                                     let _ = write!(st, "in query ");
                                 }
-                                let (row, column) = crate::lexer::loc_to_pos(&source.src, t.offset());
+                                let (row, column) = crate::lexer::loc_to_pos(&source.src, *left);
                                 let _ = write!(st, "at line {}, column {}", row + 1, column + 1);
-                                if let Some(filename) = source.filename {
+                                if let Some(filename) = &source.filename {
                                     let _ = write!(st, " in file {}", filename);
                                 }
                                 let _ = writeln!(st);
