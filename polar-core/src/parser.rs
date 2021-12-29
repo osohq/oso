@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::lexer::Token;
 use crate::sources::Source;
@@ -60,20 +60,20 @@ fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> erro
     }
 }
 
-pub fn parse_lines(source: Rc<Source>) -> Result<Vec<Line>, error::ParseError> {
+pub fn parse_lines(source: Arc<Source>) -> Result<Vec<Line>, error::ParseError> {
     polar::LinesParser::new()
         .parse(&source, Lexer::new(&source.src))
         .map_err(to_parse_error)
 }
 
-pub fn parse_query(source: Rc<Source>) -> Result<Term, error::ParseError> {
+pub fn parse_query(source: Arc<Source>) -> Result<Term, error::ParseError> {
     polar::TermParser::new()
         .parse(&source, Lexer::new(&source.src))
         .map_err(to_parse_error)
 }
 
 #[cfg(test)]
-pub fn parse_rules(source: Rc<Source>) -> Result<Vec<Rule>, error::ParseError> {
+pub fn parse_rules(source: Arc<Source>) -> Result<Vec<Rule>, error::ParseError> {
     polar::RulesParser::new()
         .parse(&source, Lexer::new(&source.src))
         .map_err(to_parse_error)
@@ -88,17 +88,17 @@ mod tests {
 
     #[track_caller]
     fn parse_term(src: &str) -> Term {
-        super::parse_query(Rc::new(Source::new(src))).unwrap()
+        super::parse_query(Arc::new(Source::new(src))).unwrap()
     }
 
     #[track_caller]
     fn parse_term_error(src: &str) -> error::ParseError {
-        super::parse_query(Rc::new(Source::new(src))).unwrap_err()
+        super::parse_query(Arc::new(Source::new(src))).unwrap_err()
     }
 
     #[track_caller]
     fn parse_rules(src: &str) -> Result<Vec<Rule>, error::ParseError> {
-        super::parse_rules(Rc::new(Source::new(src)))
+        super::parse_rules(Arc::new(Source::new(src)))
     }
 
     #[track_caller]
@@ -108,12 +108,12 @@ mod tests {
 
     #[track_caller]
     fn parse_lines(src: &str) -> Vec<Line> {
-        super::parse_lines(Rc::new(Source::new(src))).unwrap()
+        super::parse_lines(Arc::new(Source::new(src))).unwrap()
     }
 
     #[track_caller]
     fn parse_lines_error(src: &str) -> error::ParseError {
-        super::parse_lines(Rc::new(Source::new(src))).unwrap_err()
+        super::parse_lines(Arc::new(Source::new(src))).unwrap_err()
     }
 
     #[test]

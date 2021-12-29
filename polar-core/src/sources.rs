@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
@@ -8,7 +8,7 @@ pub enum SourceInfo {
     //
     // From the parser
     Parser {
-        source: Rc<Source>,
+        source: Arc<Source>,
 
         /// Location of the term within the source map
         left: usize,

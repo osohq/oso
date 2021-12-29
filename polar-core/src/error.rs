@@ -1,4 +1,4 @@
-use std::{fmt, rc::Rc};
+use std::{fmt, sync::Arc};
 
 use indoc::formatdoc;
 use serde::{Deserialize, Serialize};
@@ -167,7 +167,7 @@ pub enum ParseError {
 }
 
 impl ParseError {
-    pub fn with_context(self, source: Rc<Source>) -> PolarError {
+    pub fn with_context(self, source: Arc<Source>) -> PolarError {
         use ParseError::*;
 
         let span = match &self {
@@ -479,7 +479,7 @@ impl fmt::Display for OperationalError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationError {
     FileLoading {
-        source: Rc<Source>,
+        source: Arc<Source>,
         msg: String,
     },
     MissingRequiredRule {

@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, rc::Rc, str::Split};
+use std::{collections::BTreeMap, str::Split, sync::Arc};
 
 use lsp_types::{
     notification::{
@@ -344,7 +344,7 @@ impl PolarLanguageServer {
 
         let lines = self.documents.values();
         let lines = lines
-            .filter_map(|d| parse_lines(Rc::new(Source::new_with_name(&d.uri, &d.text))).ok())
+            .filter_map(|d| parse_lines(Arc::new(Source::new_with_name(&d.uri, &d.text))).ok())
             .flatten();
         for line in lines {
             match line {

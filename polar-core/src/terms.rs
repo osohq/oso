@@ -2,7 +2,6 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::hash::{Hash, Hasher};
-use std::rc::Rc;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -364,7 +363,7 @@ impl Term {
     }
 
     /// Creates a new term from the parser
-    pub fn new_from_parser(source: Rc<Source>, left: usize, right: usize, value: Value) -> Self {
+    pub fn new_from_parser(source: Arc<Source>, left: usize, right: usize, value: Value) -> Self {
         Self {
             source_info: SourceInfo::Parser {
                 source,
@@ -399,7 +398,7 @@ impl Term {
 
     // TODO(gj): Parsed<T> type (or something) so we can remove this meaningless distinction
     // between terms & rules.
-    pub fn parsed_source_info(&self) -> Option<(&Rc<Source>, &usize, &usize)> {
+    pub fn parsed_source_info(&self) -> Option<(&Arc<Source>, &usize, &usize)> {
         if let SourceInfo::Parser {
             source,
             left,
