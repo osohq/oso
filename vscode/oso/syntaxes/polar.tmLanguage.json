@@ -80,7 +80,7 @@
     },
     "resource-block": {
       "name": "meta.resource-block",
-      "begin": "(resource|actor)\\s*([a-zA-Z][a-zA-Z0-9:-_]*)\\s*\\{",
+      "begin": "(resource|actor)\\s*([a-zA-Z][a-zA-Z0-9:_]*)\\s*\\{",
       "beginCaptures": {
         "1": {
           "name": "keyword.control"
