@@ -103,6 +103,9 @@ func TestClearRules(t *testing.T) {
 	if err = <-errors; err == nil {
 		t.Error("Expected query for undefined rule to throw error")
 	}
+	if !strings.Contains(err.Error(), "Query for undefined rule `f`") {
+		t.Errorf("Received error does not match expected type: %v", err)
+	}
 
 	if r := <-results; r != nil {
 		t.Error("Got result; expected none")
@@ -190,8 +193,12 @@ func TestQueryRule(t *testing.T) {
 	}
 
 	results, errors = o.QueryRule("v", 1)
-	if e := <-errors; e == nil {
+	e := <-errors
+	if e == nil {
 		t.Error("Expected query for undefined rule to throw error")
+	}
+	if !strings.Contains(e.Error(), "Query for undefined rule `v`") {
+		t.Errorf("Received error does not match expected type: %v", err)
 	}
 	if r := <-results; r != nil {
 		t.Error("Got result; expected none")

@@ -2156,13 +2156,13 @@ type RuntimeErrorMultipleLoadError struct{}
 
 func (RuntimeErrorMultipleLoadError) isRuntimeError() {}
 
-// RuntimeErrorUndefinedRuleError struct
-type RuntimeErrorUndefinedRuleError struct {
+// RuntimeErrorQueryForUndefinedRule struct
+type RuntimeErrorQueryForUndefinedRule struct {
 	// Name
 	Name string `json:"name"`
 }
 
-func (RuntimeErrorUndefinedRuleError) isRuntimeError() {}
+func (RuntimeErrorQueryForUndefinedRule) isRuntimeError() {}
 
 // RuntimeError enum
 type RuntimeErrorVariant interface {
@@ -2339,8 +2339,8 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		*result = RuntimeError{variant}
 		return nil
 
-	case "UndefinedRuleError":
-		var variant RuntimeErrorUndefinedRuleError
+	case "QueryForUndefinedRule":
+		var variant RuntimeErrorQueryForUndefinedRule
 		if variantValue != nil {
 			err := json.Unmarshal(*variantValue, &variant)
 			if err != nil {
@@ -2423,9 +2423,9 @@ func (variant RuntimeError) MarshalJSON() ([]byte, error) {
 			"MultipleLoadError": inner,
 		})
 
-	case RuntimeErrorUndefinedRuleError:
-		return json.Marshal(map[string]RuntimeErrorUndefinedRuleError{
-			"UndefinedRuleError": inner,
+	case RuntimeErrorQueryForUndefinedRule:
+		return json.Marshal(map[string]RuntimeErrorQueryForUndefinedRule{
+			"QueryForUndefinedRule": inner,
 		})
 
 	}
