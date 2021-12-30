@@ -1,3 +1,5 @@
+use polar_core::data_filtering::{ConstraintKind, ConstraintValue, FilterPlan, Type};
+use polar_core::filter::{Comparison, Datum, Filter};
 use serde_reflection::{Samples, Tracer, TracerConfig};
 
 use std::fs::File;
@@ -38,6 +40,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracer.trace_type::<Message>(&samples)?;
     tracer.trace_type::<Source>(&samples)?;
     tracer.trace_type::<Declaration>(&samples)?;
+    tracer.trace_type::<Filter>(&samples)?;
+    tracer.trace_type::<FilterPlan>(&samples)?;
+    tracer.trace_type::<Comparison>(&samples)?;
+    tracer.trace_type::<ConstraintKind>(&samples)?;
+    tracer.trace_type::<ConstraintValue>(&samples)?;
+    tracer.trace_type::<Datum>(&samples)?;
+    tracer.trace_type::<Type>(&samples)?;
+    
 
     // need to provide concrete values for numeric
     tracer.trace_value(&mut samples, &Numeric::from(0i64))?;

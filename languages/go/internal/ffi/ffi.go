@@ -231,7 +231,7 @@ func (p PolarFfi) RegisterMro(name string, mro []uint64) error {
 }
 
 // yeah, not ideal types yet lol
-func (p PolarFfi) BuildDataFilter(user_types map[string]map[string]map[string]map[string]string, partials []map[string]map[string]types.Term, resource_var string, resource_type string) (*types.Filter, error) {
+func (p PolarFfi) BuildDataFilter(user_types types.TypeMap, partials []map[string]map[string]types.Term, resource_var string, resource_type string) (*types.Filter, error) {
 	cTypes, err := ffiSerialize(user_types)
 	defer C.free(unsafe.Pointer(cTypes))
 	if err != nil {
