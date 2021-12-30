@@ -91,6 +91,7 @@ fn register_constant_succeeds() {
             instance_id: 1,
             constructor: None,
             repr: None,
+            class_repr: None,
         })))
         .unwrap(),
     );

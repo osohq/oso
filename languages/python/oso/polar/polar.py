@@ -18,6 +18,10 @@ from .ffi import Polar as FfiPolar, PolarSource as Source
 from .host import Host
 from .query import Query
 from .predicate import Predicate
+from .variable import Variable
+from .expression import Expression, Pattern
+from .data_filtering import serialize_types, filter_data
+from .data import DataFilter
 
 CLASSES: Dict[str, type] = {}
 
@@ -280,6 +284,49 @@ class Polar:
         :raises UnregisteredClassError: If the class is not registered.
         """
         return self.host.get_class(name)
+
+    def partial_query(self, actor, action, resource_cls):
+        resource = Variable("resource")
+        class_name = self.host.types[resource_cls].name
+        constraint = Expression(
+            "And", [Expression("Isa", [resource, Pattern(class_name, {})])]
+        )
+
+        query = self.query_rule(
+            "allow",
+            actor,
+            action,
+            resource,
+            bindings={"resource": constraint},
+            accept_expression=True,
+        )
+
+        return [
+            {"bindings": {k: self.host.to_polar(v)}}
+            for result in query
+            for k, v in result["bindings"].items()
+        ]
+
+    def is_new_data_filtering_configured(self):
+        return self.host.adapter is not None
+
+    def old_authorized_query(self, actor, action, resource_cls):
+        results = self.partial_query(actor, action, resource_cls)
+
+        types = serialize_types(self.host.distinct_user_types(), self.host.types)
+        class_name = self.host.types[resource_cls].name
+        plan = self.ffi_polar.build_filter_plan(types, results, "resource", class_name)
+
+        return filter_data(self, plan)
+
+    def new_authorized_query(self, actor, action, resource_cls):
+        results = self.partial_query(actor, action, resource_cls)
+
+        types = serialize_types(self.host.distinct_user_types(), self.host.types)
+        class_name = self.host.types[resource_cls].name
+        plan = self.ffi_polar.build_data_filter(types, results, "resource", class_name)
+
+        return self.host.adapter.build_query(DataFilter.parse(self, plan))
 
 
 def polar_class(_cls=None, *, name=None):

@@ -22,7 +22,10 @@ connection.onInitialize(() => {
     capabilities: {
       textDocumentSync: {
         openClose: true,
-        save: true,
+        // NOTE(gj): we should set this to `{ includeText: true }` if we care
+        // about `didSave` events in the future. For now, we don't care about
+        // them b/c we already have the updated state thanks to `didChange`.
+        save: false,
         change: TextDocumentSyncKind.Full,
       },
       workspace: {
@@ -39,7 +42,7 @@ connection.onInitialize(() => {
         // I thought we might be able to listen for `willDelete` since it
         // shouldn't suffer from the same limitation, but for some reason
         // `willDelete` isn't firing when I delete directories or files via the
-        // VSCode interface.
+        // VS Code interface.
         //
         // Once [the associated PR][2] ships, we should be able to update the
         // version of `vscode-languageserver` we depend on and then uncomment

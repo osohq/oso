@@ -47,6 +47,7 @@ replApi: |
     const oso = new Oso();
     oso.registerClass(Expense);
     oso.registerClass(User);
+    await oso.loadFiles(["alice.polar"])
     await oso.repl();
     ```
 ---

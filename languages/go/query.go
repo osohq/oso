@@ -138,6 +138,10 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 
 }
 
+func (q *Query) Bind(name string, value *types.Term) error {
+	return q.ffiQuery.Bind(name, value)
+}
+
 /*
 Set whether the Host accepts Expression types from Polar, or raises an error.
 */

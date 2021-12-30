@@ -181,7 +181,7 @@ impl<'kb> Folder for Rewriter<'kb> {
                         //
                         // We prepend when the rewritten variable needs to be bound before it is
                         // used.
-                        if only_dots(&rewrites) && arg_operator == Some(Operator::Unify) {
+                        if only_pure(&rewrites) && arg_operator == Some(Operator::Unify) {
                             rewrites.into_iter().fold(arg, and_)
                         } else {
                             rewrites.into_iter().rfold(arg, and_op_)
@@ -196,15 +196,16 @@ impl<'kb> Folder for Rewriter<'kb> {
                 operator: ForAll,
                 args: {
                     self.stack.push(vec![]);
-                    let mut forall_args = vec![self.fold_term(o.args[0].clone())];
-                    let mut and_args = self.stack.pop().unwrap();
+                    let quant = self.fold_term(o.args[0].clone());
+                    let lhs_rws = self.stack.pop().unwrap();
 
                     self.stack.push(vec![]);
                     let test = self.fold_term(o.args[1].clone());
-                    and_args.extend(self.stack.pop().unwrap());
+                    let rhs_rws = self.stack.pop().unwrap();
 
-                    forall_args.push(and_args.into_iter().fold(test, and_));
-                    forall_args
+                    let quant = lhs_rws.into_iter().fold(quant, and_);
+                    let test = rhs_rws.into_iter().fold(test, and_);
+                    vec![quant, test]
                 },
             },
 
@@ -229,11 +230,12 @@ impl<'kb> Folder for Rewriter<'kb> {
     }
 }
 
-fn only_dots(rewrites: &[Term]) -> bool {
+fn only_pure(rewrites: &[Term]) -> bool {
+    use Operator::*;
     rewrites.iter().all(|t| {
-        t.value()
-            .as_expression()
-            .map_or(false, |op| op.operator == Operator::Dot)
+        t.value().as_expression().map_or(false, |op| {
+            matches!(op.operator, Dot | Add | Sub | Mul | Div | Rem)
+        })
     })
 }
 

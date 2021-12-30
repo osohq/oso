@@ -10,7 +10,7 @@ description: IDE integrations for working with Oso policies.
 Oso’s IDE (Integrated Development Environment) integrations provide syntax
 highlighting for `.polar` files. Additionally, our Visual Studio Code extension
 will display diagnostics (errors & warnings) from your Oso policy in-line in
-the editor and in VSCode's **Problems** pane.
+the editor and in VS Code's **Problems** pane.
 
 ## Supported IDEs
 
@@ -20,7 +20,7 @@ the editor and in VSCode's **Problems** pane.
 
 - Syntax highlighting.
 - Diagnostics (errors & warnings) from your Oso policy are displayed in-line in
-  the editor and in VSCode's **Problems** pane.
+  the editor and in VS Code's **Problems** pane.
   - The extension immediately highlights errors and warnings encountered while
     parsing and validating your policy, such as if a rule is missing a trailing
     semi-colon, a resource block declares `"owner"` as both a role and a

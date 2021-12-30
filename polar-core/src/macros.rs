@@ -240,6 +240,7 @@ impl From<u64> for ExternalInstance {
             instance_id,
             constructor: None,
             repr: None,
+            class_repr: None,
         }
     }
 }

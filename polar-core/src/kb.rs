@@ -723,11 +723,9 @@ impl KnowledgeBase {
             }
         }
 
-        if errors.is_empty() {
-            // Add the rewritten rules to the KB.
-            for rule in rules {
-                self.add_rule(rule);
-            }
+        // Add the rewritten rules to the KB.
+        for rule in rules {
+            self.add_rule(rule);
         }
 
         errors
@@ -959,7 +957,8 @@ mod tests {
                 term!(Value::ExternalInstance(ExternalInstance {
                     instance_id,
                     constructor: None,
-                    repr: None
+                    repr: None,
+                    class_repr: None,
                 })),
             )
             .unwrap();
@@ -1400,7 +1399,8 @@ mod tests {
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 1,
                 constructor: None,
-                repr: None
+                repr: None,
+                class_repr: None,
             })),
         )
         .unwrap();
@@ -1409,7 +1409,8 @@ mod tests {
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 2,
                 constructor: None,
-                repr: None
+                repr: None,
+                class_repr: None,
             })),
         )
         .unwrap();
@@ -1418,7 +1419,8 @@ mod tests {
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 3,
                 constructor: None,
-                repr: None
+                repr: None,
+                class_repr: None,
             })),
         )
         .unwrap();
@@ -1485,7 +1487,8 @@ mod tests {
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 1,
                 constructor: None,
-                repr: None
+                repr: None,
+                class_repr: None,
             })),
         )
         .unwrap();
@@ -1494,7 +1497,8 @@ mod tests {
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 2,
                 constructor: None,
-                repr: None
+                repr: None,
+                class_repr: None,
             })),
         )
         .unwrap();
@@ -1503,7 +1507,8 @@ mod tests {
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 3,
                 constructor: None,
-                repr: None
+                repr: None,
+                class_repr: None,
             })),
         )
         .unwrap();
@@ -1513,7 +1518,8 @@ mod tests {
             term!(Value::ExternalInstance(ExternalInstance {
                 instance_id: 4,
                 constructor: None,
-                repr: None
+                repr: None,
+                class_repr: None,
             })),
         )
         .unwrap();
