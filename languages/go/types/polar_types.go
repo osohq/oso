@@ -317,7 +317,7 @@ type ExternalInstance struct {
 	Constructor *Term `json:"constructor"`
 	// Repr
 	Repr *string `json:"repr"`
-	// Class Repr
+	// ClassRepr
 	ClassRepr *string `json:"class_repr"`
 }
 
@@ -2152,16 +2152,17 @@ type RuntimeErrorInvalidState struct {
 
 func (RuntimeErrorInvalidState) isRuntimeError() {}
 
-// RuntimeErrorUndefinedRule struct
-type RuntimeErrorUndefinedRule struct {
-	Name string `json:"name"`
-}
-
-func (RuntimeErrorUndefinedRule) isRuntimeError() {}
-
 type RuntimeErrorMultipleLoadError struct{}
 
 func (RuntimeErrorMultipleLoadError) isRuntimeError() {}
+
+// RuntimeErrorUndefinedRuleError struct
+type RuntimeErrorUndefinedRuleError struct {
+	// Name
+	Name string `json:"name"`
+}
+
+func (RuntimeErrorUndefinedRuleError) isRuntimeError() {}
 
 // RuntimeError enum
 type RuntimeErrorVariant interface {
@@ -2327,8 +2328,8 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		*result = RuntimeError{variant}
 		return nil
 
-	case "UndefinedRuleError":
-		var variant RuntimeErrorUndefinedRule
+	case "MultipleLoadError":
+		var variant RuntimeErrorMultipleLoadError
 		if variantValue != nil {
 			err := json.Unmarshal(*variantValue, &variant)
 			if err != nil {
@@ -2338,8 +2339,8 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		*result = RuntimeError{variant}
 		return nil
 
-	case "MultipleLoadError":
-		var variant RuntimeErrorMultipleLoadError
+	case "UndefinedRuleError":
+		var variant RuntimeErrorUndefinedRuleError
 		if variantValue != nil {
 			err := json.Unmarshal(*variantValue, &variant)
 			if err != nil {
@@ -2417,14 +2418,14 @@ func (variant RuntimeError) MarshalJSON() ([]byte, error) {
 			"InvalidState": inner,
 		})
 
-	case RuntimeErrorUndefinedRule:
-		return json.Marshal(map[string]RuntimeErrorUndefinedRule{
-			"UndefinedRule": inner,
-		})
-
 	case RuntimeErrorMultipleLoadError:
 		return json.Marshal(map[string]RuntimeErrorMultipleLoadError{
 			"MultipleLoadError": inner,
+		})
+
+	case RuntimeErrorUndefinedRuleError:
+		return json.Marshal(map[string]RuntimeErrorUndefinedRuleError{
+			"UndefinedRuleError": inner,
 		})
 
 	}
