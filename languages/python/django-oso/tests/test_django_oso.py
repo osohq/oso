@@ -235,7 +235,7 @@ def test_authorize_query_no_access(rf, load_additional_str):
     request.user = "test_user"
 
     # No matching rules for Post.
-    load_additional_str('allow(_, _, _: test_app::User);')
+    load_additional_str("allow(_, _, _: test_app::User);")
 
     q = Post.objects.authorize(request, action="get")
     assert q.count() == 0

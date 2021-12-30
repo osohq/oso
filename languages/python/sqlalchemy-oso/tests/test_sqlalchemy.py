@@ -23,7 +23,7 @@ def log_queries():
 
 def test_authorize_query_no_access(engine, oso, fixture_data):
     # No matching rules for Post.
-    oso.load_str('allow(_, _, _: User);')
+    oso.load_str("allow(_, _, _: User);")
     session = AuthorizedSession(oso, "user", {Post: "action"}, bind=engine)
     query = session.query(Post)
 
