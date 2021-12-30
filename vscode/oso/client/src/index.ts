@@ -130,17 +130,18 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   // a single watcher for files matching '**/*.polar'.
   const deleteWatcher = workspace.createFileSystemWatcher(
     polarFilesInWorkspaceFolderPattern(folder),
-    true,
-    true
+    true, // ignoreCreateEvents
+    true, // ignoreChangeEvents
+    false // ignoreDeleteEvents
   );
   // Watch `FileChangeType.Created` and `FileChangeType.Changed` events for
   // files in the current workspace, including those not open in any editor in
   // the workspace.
   const createChangeWatcher = workspace.createFileSystemWatcher(
     polarFilesInWorkspaceFolderPattern(folder),
-    false,
-    false,
-    true
+    false, // ignoreCreateEvents
+    false, // ignoreChangeEvents
+    true // ignoreDeleteEvents
   );
 
   // Clean up watchers when extension is deactivated.

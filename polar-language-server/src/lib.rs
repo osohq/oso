@@ -53,6 +53,8 @@ impl PolarLanguageServer {
     /// appropriate handler function based on `method`.
     #[wasm_bindgen(js_class = PolarLanguageServer, js_name = onNotification)]
     pub fn on_notification(&mut self, method: &str, params: JsValue) {
+        log(method);
+
         match method {
             DidOpenTextDocument::METHOD => {
                 let DidOpenTextDocumentParams { text_document } = from_value(params).unwrap();
@@ -90,6 +92,9 @@ impl PolarLanguageServer {
                 self.send_telemetry(event, diagnostics);
             }
 
+            // This is the type of event we'll receive when a Polar file is deleted, either via the
+            // VS Code UI (right-click delete) or otherwise (e.g., `rm blah.polar` in a terminal).
+            // The event comes from the `deleteWatcher` file watcher in the extension client.
             DidChangeWatchedFiles::METHOD => {
                 let DidChangeWatchedFilesParams { changes } = from_value(params).unwrap();
                 let uris: Vec<_> = changes
@@ -105,19 +110,38 @@ impl PolarLanguageServer {
                     lsp_file_extensions: unique_extensions(&uris.iter().collect::<Vec<_>>()),
                 };
 
-                let diagnostics = self.on_did_delete_files(uris);
+                let diagnostics = self.on_did_change_watched_files(uris);
                 self.send_diagnostics(&diagnostics);
 
                 self.send_telemetry(event, diagnostics);
             }
 
+            // This is the type of event we'll receive when *any* file or folder is deleted via the
+            // VS Code UI (right-click delete). These events are triggered by the
+            // `workspace.fileOperations.didDelete.filters[0].glob = '**'` capability we send from
+            // the TS server -> client, which then sends us `didDelete` events for *all files and
+            // folders within the current workspace*. This is how we are notified of directory
+            // deletions that might contain Polar files, since they won't get picked up by the
+            // `deleteWatcher` created in the client for reasons elaborated below.
+            //
+            // We can ignore any Polar file URIs received via this handler since they'll already be
+            // covered by a corresponding `DidChangeWatchedFiles` event emitted by the
+            // `deleteWatcher` file watcher in the extension client that watches for any
+            // `**/*.polar` files deleted in the current workspace.
+            //
+            // In this handler we only care about *non-Polar* URIs, which we treat as potential
+            // deletions of directories containing Polar files since those won't get picked up by
+            // the `deleteWatcher` due to [a limitation of VS Code's file watching
+            // capabilities][0].
+            //
+            // [0]: https://github.com/microsoft/vscode/issues/60813
             DidDeleteFiles::METHOD => {
                 let DeleteFilesParams { files } = from_value(params).unwrap();
                 let mut uris = vec![];
                 for FileDelete { uri } in files {
                     match Url::parse(&uri) {
                         Ok(uri) => uris.push(uri),
-                        Err(e) => log(&format!("Failed to parse URI: {}", e)),
+                        Err(e) => log(&format!("\tfailed to parse URI: {}", e)),
                     }
                 }
 
@@ -126,10 +150,10 @@ impl PolarLanguageServer {
                     lsp_file_extensions: unique_extensions(&uris.iter().collect::<Vec<_>>()),
                 };
 
-                let diagnostics = self.on_did_delete_files(uris);
-                self.send_diagnostics(&diagnostics);
-
-                self.send_telemetry(event, diagnostics);
+                if let Some(diagnostics) = self.on_did_delete_files(uris) {
+                    self.send_diagnostics(&diagnostics);
+                    self.send_telemetry(event, diagnostics);
+                }
             }
 
             // We don't care when a document is saved -- we already have the updated state thanks
@@ -141,7 +165,7 @@ impl PolarLanguageServer {
             // Nothing to do when we receive the `Initialized` notification.
             Initialized::METHOD => (),
 
-            _ => log(&format!("on_notification {} {:?}", method, params)),
+            _ => log("unexpected notification"),
         }
     }
 }
@@ -149,8 +173,9 @@ impl PolarLanguageServer {
 /// Individual LSP notification handlers.
 impl PolarLanguageServer {
     fn on_did_open_text_document(&mut self, doc: TextDocumentItem) -> Diagnostics {
-        if let Some(TextDocumentItem { uri, .. }) = self.upsert_document(doc) {
-            log(&format!("reopened tracked doc: {}", uri));
+        log(&format!("\topening: {}", doc.uri));
+        if self.upsert_document(doc).is_some() {
+            log("\t\treopened tracked doc");
         }
         self.reload_kb()
     }
@@ -158,43 +183,69 @@ impl PolarLanguageServer {
     fn on_did_change_text_document(&mut self, doc: TextDocumentItem) -> Diagnostics {
         let uri = doc.uri.clone();
         if self.upsert_document(doc).is_none() {
-            log(&format!("updated untracked doc: {}", uri));
+            log(&format!("\tupdated untracked doc: {}", uri));
         }
         self.reload_kb()
     }
 
-    fn on_did_delete_files(&mut self, uris: Vec<Url>) -> Diagnostics {
+    // This is (currently) only used to handle deletions of Polar *files*. `DidChangeWatchedFiles`
+    // events come from the `deleteWatcher` filesystem watcher in the extension client. Due to [a
+    // limitation of VS Code's filesystem watcher][0], we don't receive deletion events for Polar
+    // files nested inside of a deleted directory. See corresponding comments on `DidDeleteFiles`
+    // and `DidChangeWatchedFiles` in `PolarLanguageServer::on_notification`.
+    //
+    // [0]: https://github.com/microsoft/vscode/issues/60813
+    fn on_did_change_watched_files(&mut self, uris: Vec<Url>) -> Diagnostics {
         let mut diagnostics = Diagnostics::new();
 
         for uri in uris {
-            let mut msg = format!("deleting URI: {}", uri);
+            log(&format!("\tdeleting: {}", uri));
 
+            // If this returns `None`, `uri` was already removed from the local set of tracked
+            // documents. An easy way to encounter this is to right-click delete a Polar file via
+            // the VS Code UI, which races the `DidDeleteFiles` and `DidChangeWatchedFiles` events.
             if let Some(removed) = self.remove_document(&uri) {
                 let (_, empty_diagnostics) = empty_diagnostics_for_doc((&uri, &removed));
                 if diagnostics.insert(uri, empty_diagnostics).is_some() {
-                    msg += "\n\tduplicate watched file event";
+                    log("\t\tduplicate URIs in event payload");
                 }
             } else {
-                msg += "\n\tchecking if URI is dir";
-                let removed = self.remove_documents_in_dir(&uri);
-                if removed.is_empty() {
-                    if uri.as_str().ends_with(".polar") {
-                        msg += "\n\tcannot remove untracked doc";
-                    }
-                } else {
-                    for (uri, params) in removed {
-                        msg += &format!("\n\t\tremoving dir member: {}", uri);
-                        if diagnostics.insert(uri, params).is_some() {
-                            msg += "\n\t\tduplicate watched file event";
-                        }
-                    }
-                }
+                log("\t\tcannot delete untracked doc");
             }
-            log(&msg);
         }
 
         diagnostics.append(&mut self.reload_kb());
         diagnostics
+    }
+
+    // Returns `None` if no Polar files were deleted.
+    fn on_did_delete_files(&mut self, uris: Vec<Url>) -> Option<Diagnostics> {
+        let mut diagnostics = Diagnostics::new();
+
+        for uri in uris {
+            // If `removed` is empty, `uri` wasn't a directory containing tracked Polar files or
+            // `uri` itself was a Polar file that was already removed via `DidChangeWatchedFiles`.
+            let removed = self.remove_documents_in_dir(&uri);
+            if !removed.is_empty() {
+                log(&format!("\tdeleting: {}", uri));
+
+                for (uri, params) in removed {
+                    log(&format!("\t\tdeleted: {}", uri));
+
+                    // NOTE(gj): fairly sure this will never be true.
+                    if diagnostics.insert(uri, params).is_some() {
+                        log("\t\t\tmultiple deletions of same doc");
+                    }
+                }
+            }
+        }
+
+        if diagnostics.is_empty() {
+            None
+        } else {
+            diagnostics.append(&mut self.reload_kb());
+            Some(diagnostics)
+        }
     }
 }
 
@@ -677,20 +728,20 @@ mod tests {
         let mut pls = new_pls();
 
         // Empty event has no effect.
-        let diagnostics0 = pls.on_did_delete_files(vec![]);
+        let diagnostics0 = pls.on_did_change_watched_files(vec![]);
         assert!(diagnostics0.is_empty());
         assert!(pls.documents.is_empty());
 
         // Deleting untracked doc has no effect.
         let events1 = vec![polar_uri("apple")];
-        let diagnostics1 = pls.on_did_delete_files(events1);
+        let diagnostics1 = pls.on_did_change_watched_files(events1);
         assert!(diagnostics1.is_empty());
         assert!(pls.documents.is_empty());
 
         // Deleting tracked doc w/o error.
         let a2 = add_doc_with_no_errors(&mut pls, "apple");
         let events2 = vec![a2.uri.clone()];
-        let diagnostics2 = pls.on_did_delete_files(events2);
+        let diagnostics2 = pls.on_did_change_watched_files(events2);
         assert_eq!(diagnostics2.len(), 1);
         assert_no_errors(&diagnostics2, vec![&a2]);
         assert!(pls.documents.is_empty());
@@ -698,7 +749,7 @@ mod tests {
         // Deleting tracked doc w/ error.
         let a3 = add_doc_with_missing_semicolon(&mut pls, "apple");
         let events3 = vec![a3.uri.clone()];
-        let diagnostics3 = pls.on_did_delete_files(events3);
+        let diagnostics3 = pls.on_did_change_watched_files(events3);
         assert_eq!(diagnostics3.len(), 1);
         assert_no_errors(&diagnostics3, vec![&a3]);
         assert!(pls.documents.is_empty());
@@ -707,7 +758,7 @@ mod tests {
         let a4 = add_doc_with_no_errors(&mut pls, "apple");
         let b4 = add_doc_with_no_errors(&mut pls, "banana");
         let events4 = vec![a4.uri.clone()];
-        let diagnostics4 = pls.on_did_delete_files(events4);
+        let diagnostics4 = pls.on_did_change_watched_files(events4);
         assert_eq!(diagnostics4.len(), 2);
         assert_no_errors(&diagnostics4, vec![&a4]);
         assert_missing_allow_rule_warning(&diagnostics4, vec![&b4]);
@@ -718,7 +769,7 @@ mod tests {
         let a5 = add_doc_with_missing_semicolon(&mut pls, "apple");
         let b5 = add_doc_with_no_errors(&mut pls, "banana");
         let events5 = vec![a5.uri.clone()];
-        let diagnostics5 = pls.on_did_delete_files(events5);
+        let diagnostics5 = pls.on_did_change_watched_files(events5);
         assert_eq!(diagnostics5.len(), 2);
         assert_no_errors(&diagnostics4, vec![&a5]);
         assert_missing_allow_rule_warning(&diagnostics5, vec![&b5]);
@@ -729,7 +780,7 @@ mod tests {
         let a6 = add_doc_with_no_errors(&mut pls, "apple");
         let b6 = add_doc_with_missing_semicolon(&mut pls, "banana");
         let events6 = vec![a6.uri.clone()];
-        let diagnostics6 = pls.on_did_delete_files(events6);
+        let diagnostics6 = pls.on_did_change_watched_files(events6);
         assert_eq!(diagnostics6.len(), 2);
         assert_no_errors(&diagnostics6, vec![&a6]);
         assert_missing_semicolon_error(&diagnostics6, vec![&b6]);
@@ -740,7 +791,7 @@ mod tests {
         let a7 = add_doc_with_missing_semicolon(&mut pls, "apple");
         let b7 = add_doc_with_missing_semicolon(&mut pls, "banana");
         let events7 = vec![a7.uri.clone()];
-        let diagnostics7 = pls.on_did_delete_files(events7);
+        let diagnostics7 = pls.on_did_change_watched_files(events7);
         assert_eq!(diagnostics7.len(), 2);
         assert_no_errors(&diagnostics7, vec![&a7]);
         assert_missing_semicolon_error(&diagnostics7, vec![&b7]);
@@ -760,7 +811,7 @@ mod tests {
             d8.uri.clone(),
             e8.uri.clone(),
         ];
-        let diagnostics8 = pls.on_did_delete_files(events8);
+        let diagnostics8 = pls.on_did_change_watched_files(events8);
         assert_eq!(diagnostics8.len(), 6);
         // No 'missing allow rule' warnings b/c the parse error halts validation before reaching
         // that check.
@@ -784,7 +835,7 @@ mod tests {
         let d_dir = Url::parse(d9.uri.as_str().strip_suffix("/date.polar").unwrap()).unwrap();
         let events9a = vec![d_dir];
         assert_eq!(pls.documents.len(), 8);
-        let diagnostics9a = pls.on_did_delete_files(events9a);
+        let diagnostics9a = pls.on_did_delete_files(events9a).unwrap();
         assert_eq!(diagnostics9a.len(), 8);
         assert_missing_semicolon_error(&diagnostics9a, vec![&a9]);
         // No 'missing allow rule' warnings b/c the parse error halts validation before reaching
@@ -802,7 +853,7 @@ mod tests {
         let ch_dir = Url::parse(ch_dir.unwrap()).unwrap();
         let events9b = vec![ca_dir, ch_dir];
         assert_eq!(pls.documents.len(), 5);
-        let diagnostics9b = pls.on_did_delete_files(events9b);
+        let diagnostics9b = pls.on_did_delete_files(events9b).unwrap();
         assert_eq!(diagnostics9b.len(), 5);
         assert_missing_semicolon_error(&diagnostics9b, vec![&a9]);
         // No 'missing allow rule' warnings b/c the parse error halts validation before reaching
@@ -815,7 +866,7 @@ mod tests {
         let a_dir = Url::parse(a_dir.unwrap()).unwrap();
         let events9c = vec![a_dir];
         assert_eq!(pls.documents.len(), 2);
-        let diagnostics9c = pls.on_did_delete_files(events9c);
+        let diagnostics9c = pls.on_did_delete_files(events9c).unwrap();
         assert_eq!(diagnostics9c.len(), 2);
         assert_missing_semicolon_error(&diagnostics9c, vec![&a9]);
         // No 'missing allow rule' warnings b/c the parse error halts validation before reaching
