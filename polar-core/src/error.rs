@@ -54,7 +54,7 @@ impl PolarError {
             Runtime(InvalidRegistration { .. }) => "RuntimeError::InvalidRegistration",
             Runtime(InvalidState { .. }) => "RuntimeError::InvalidState",
             Runtime(MultipleLoadError) => "RuntimeError::MultipleLoadError",
-            Runtime(UndefinedRuleError { .. }) => "Runtime::UndefinedRuleError",
+            Runtime(QueryForUndefinedRule { .. }) => "RuntimeError::QueryForUndefinedRule",
             Operational(Serialization { .. }) => "OperationalError::Serialization",
             Operational(Unknown) => "OperationalError::Unknown",
             Validation(FileLoading { .. }) => "ValidationError::FileLoading",
@@ -300,7 +300,9 @@ pub enum RuntimeError {
         msg: String,
     },
     MultipleLoadError,
-    UndefinedRuleError {
+    /// The user queried for an undefined rule. This is the runtime analogue of
+    /// `ValidationError::UndefinedRuleCall`.
+    QueryForUndefinedRule {
         name: String,
     },
 }
@@ -330,7 +332,7 @@ impl RuntimeError {
             | DataFilteringUnsupportedOp { .. }
             | InvalidRegistration { .. }
             | InvalidState { .. }
-            | UndefinedRuleError { .. }
+            | QueryForUndefinedRule { .. }
             | MultipleLoadError => None,
         };
 
@@ -438,7 +440,7 @@ The expression is: {expr}
             // Refactor.
             Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
             Self::MultipleLoadError => write!(f, "Cannot load additional Polar code -- all Polar code must be loaded at the same time."),
-            Self::UndefinedRuleError { name } => write!(f, "Cannot evaluate query for undefined rule `{}`", name),
+            Self::QueryForUndefinedRule { name } => write!(f, "Cannot evaluate query for undefined rule `{}`", name),
         }
     }
 }
@@ -494,6 +496,8 @@ pub enum ValidationError {
         rule_type: Rule,
         msg: String,
     },
+    /// The policy contains a call to an undefined rule. This is the validation analogue of
+    /// `RuntimeError::QueryForUndefinedRule`.
     UndefinedRuleCall {
         /// Term<Call> where the error arose, tracked for lexical context.
         term: Term,

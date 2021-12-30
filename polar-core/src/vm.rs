@@ -1557,7 +1557,7 @@ impl PolarVirtualMachine {
         }
         let goals = match self.kb.read().unwrap().get_generic_rule(&predicate.name) {
             None => {
-                return Err(RuntimeError::UndefinedRuleError {
+                return Err(RuntimeError::QueryForUndefinedRule {
                     name: predicate.name.to_string(),
                 })
             }
