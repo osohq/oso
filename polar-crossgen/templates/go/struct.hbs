@@ -5,3 +5,35 @@ type {{name}} struct {
     {{this.variable}} {{this.type_name}} `json:"{{( snake-case this.variable )}}"`
     {{/each}}
 }
+
+{{#if (containsEnum fields) }}
+func (result *{{name}}) UnmarshalJSON(b []byte) error {
+
+    type Raw{{name}} struct {
+        {{#each fields}}
+        // {{this.variable}}
+        {{#if (isEnum this.variant) }}
+        {{this.variable}} {{this.type_name}}Deserializer `json:"{{( snake-case this.variable )}}"`
+        {{else}}
+        {{this.variable}} {{this.type_name}} `json:"{{( snake-case this.variable )}}"`
+        {{/if}}
+        {{/each}}
+    }
+    var intermediate Raw{{name}}
+    err := json.Unmarshal(b, &intermediate)
+    if err != nil {
+        return err
+    }
+
+    *result = {{name}} {
+        {{#each fields}}
+        {{#if (isEnum this.variant) }}
+        {{this.variable}}: intermediate.{{this.variable}}.Inner,
+        {{else}}
+        {{this.variable}}: intermediate.{{this.variable}},  
+        {{/if}}
+        {{/each}}
+    }
+    return nil
+}
+{{/if}}

@@ -7,7 +7,21 @@ type {{name}} struct {
     {{name}}Variant
 }
 
+type {{name}}Deserializer struct {
+   Inner {{name}}
+}
+
 func (result *{{name}}) UnmarshalJSON(b []byte) error {
+    var deserializer {{name}}Deserializer
+    err := json.Unmarshal(b, &deserializer)
+    if err != nil {
+        return err
+    }
+    *result = deserializer.Inner
+    return nil
+}
+
+func (result *{{name}}Deserializer) UnmarshalJSON(b []byte) error {
     var variantName string
     var variantValue *json.RawMessage
 
@@ -38,7 +52,7 @@ func (result *{{name}}) UnmarshalJSON(b []byte) error {
                 return err
             }
         }
-        *result = {{../name}} { variant }
+        *result = {{../name}}Deserializer { Inner: {{../name}} { variant } }
         return nil
     {{/each}}
     }

@@ -1,0 +1,35 @@
+// {{name}} struct
+type {{name}} struct {
+    {{#each fields}}
+    // {{this.variable}}
+    V{{this.variable}} {{this.type_name}}
+    {{/each}}
+}
+
+func (result *{{name}}) UnmarshalJSON(b []byte) error {
+    var jsonFields []json.RawMessage
+    json.Unmarshal(b, &jsonFields)
+
+    if (len(jsonFields) != {{len fields}}) {
+        return fmt.Errorf("incorrect length for tuple. Expected %d, got %#v", {{len fields}}, jsonFields)
+    }
+
+    var err error
+    {{#each fields}}
+    err = json.Unmarshal(jsonFields[{{this.variable}}], &result.V{{this.variable}})
+    if err != nil {
+        return err
+    }
+    {{/each}}
+    return nil
+}
+
+func (variant {{name}}) MarshalJSON() ([]byte, error) {
+    fieldArray := []interface{}{
+        {{#each fields}}
+        variant.V{{this.variable}},
+        {{/each}}
+    }
+
+    return json.Marshal(fieldArray)
+}

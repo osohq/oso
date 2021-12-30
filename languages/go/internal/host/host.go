@@ -22,9 +22,13 @@ type Host struct {
 	classes          map[string]reflect.Type
 	constructors     map[string]reflect.Value
 	instances        map[uint64]reflect.Value
-	fields           map[string]map[string]interface{}
+	fields           TypeMap
 	acceptExpression bool
 	adapter          Adapter
+}
+
+func (h Host) Fields() TypeMap {
+	return h.fields
 }
 
 func NewHost(polar ffi.PolarFfi) Host {
@@ -34,7 +38,7 @@ func NewHost(polar ffi.PolarFfi) Host {
 	}
 	instances := make(map[uint64]reflect.Value)
 	constructors := make(map[string]reflect.Value)
-	fields := make(map[string]map[string]interface{})
+	fields := make(TypeMap)
 	return Host{
 		ffiPolar:         polar,
 		classes:          classes,
@@ -59,7 +63,7 @@ func (h Host) Copy() Host {
 	for k, v := range h.constructors {
 		constructors[k] = v
 	}
-	fields := make(map[string]map[string]interface{})
+	fields := make(TypeMap)
 	for k, v := range h.fields {
 		fields[k] = v
 	}
@@ -80,15 +84,28 @@ func (h Host) getClass(name string) (*reflect.Type, error) {
 	return nil, errors.NewUnregisteredClassError(name)
 }
 
-func (h Host) CacheClass(cls reflect.Type, name string, constructor reflect.Value, fields map[string]interface{}) error {
-	if v, ok := h.classes[name]; ok {
-		return errors.NewDuplicateClassAliasError(name, cls, v)
+func (h Host) CacheClass(cls reflect.Type, className string, constructor reflect.Value, fields map[string]interface{}) error {
+	if v, ok := h.classes[className]; ok {
+		return errors.NewDuplicateClassAliasError(className, cls, v)
 	}
-	h.classes[name] = cls
+	h.classes[className] = cls
 	if constructor.IsValid() {
-		h.constructors[name] = constructor
+		h.constructors[className] = constructor
 	}
-	h.fields[name] = fields
+
+	classFields := make(TypeFields)
+	// convert fields to correct types
+	for fieldName, v := range fields {
+		switch fieldType := v.(type) {
+		case types.TypeRelation:
+			classFields[fieldName] = types.Type{fieldType}
+		case string:
+			classFields[fieldName] = types.Type{types.TypeBase{ClassTag: fieldType}}
+		default:
+			return fmt.Errorf("fields must be either a type *name* (i.e. a string), or types.TypeRelation")
+		}
+	}
+	h.fields[className] = classFields
 	return nil
 }
 
@@ -451,42 +468,6 @@ func (h *Host) SetAcceptExpression(acceptExpression bool) {
 	h.acceptExpression = acceptExpression
 }
 
-// sorry bout the type
-func (h *Host) SerializeTypes() (map[string]map[string]interface{}, map[string]map[string]map[string]map[string]string, error) {
-	type_map := make(map[string]map[string]map[string]map[string]string, 0)
-
-	for typ, fields := range h.fields {
-		fields_map := make(map[string]map[string]map[string]string, 0)
-		for k, v := range fields {
-			switch t := v.(type) {
-			case string:
-				// chill
-				fields_map[k] = map[string]map[string]string{
-					"Base": {
-						"class_tag": t,
-					},
-				}
-
-			case types.Relation:
-				// chill
-				fields_map[k] = map[string]map[string]string{
-					"Relation": {
-						"kind":            t.Kind,
-						"other_class_tag": t.OtherType,
-						"my_field":        t.MyField,
-						"other_field":     t.OtherField,
-					},
-				}
-			default:
-				return nil, nil, fmt.Errorf("type must be a string typename or a Relation struct: got %v", v)
-			}
-		}
-		type_map[typ] = fields_map
-	}
-
-	return h.fields, type_map, nil
-}
-
 func (h *Host) SetDataFilteringAdapter(adapter Adapter) {
 	h.adapter = adapter
 }
@@ -496,7 +477,7 @@ func (h *Host) BuildQuery(filter *Filter) (interface{}, error) {
 		return nil, fmt.Errorf("must register an adapter to use data filtering")
 	}
 
-	return (h.adapter).BuildQuery(filter)
+	return (h.adapter).BuildQuery(h.fields, filter)
 }
 
 func (h *Host) ExecuteQuery(query interface{}) (interface{}, error) {
@@ -505,30 +486,4 @@ func (h *Host) ExecuteQuery(query interface{}) (interface{}, error) {
 	}
 
 	return (h.adapter).ExecuteQuery(query)
-}
-
-func (h *Host) ParseValues(filter *Filter) error {
-	for i := range filter.Conditions {
-		for j := range filter.Conditions[i] {
-			switch t := filter.Conditions[i][j].Rhs.DatumVariant.(type) {
-			case Immediate:
-				go_value, err := h.ToGo(types.Term{t.Value.(Value)})
-				if err != nil {
-					return err
-				}
-				datum := Datum{Immediate{go_value}}
-				filter.Conditions[i][j].Rhs = datum
-			}
-			switch t := filter.Conditions[i][j].Lhs.DatumVariant.(type) {
-			case Immediate:
-				go_value, err := h.ToGo(types.Term{t.Value.(Value)})
-				if err != nil {
-					return err
-				}
-				datum := Datum{Immediate{go_value}}
-				filter.Conditions[i][j].Lhs = datum
-			}
-		}
-	}
-	return nil
 }

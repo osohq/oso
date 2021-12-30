@@ -45,6 +45,7 @@ enum TypeVariant {
     Enum,
     NewType,
     Struct,
+    Tuple,
     UnitVariant,
     Unknown,
 }
@@ -56,6 +57,7 @@ impl fmt::Display for TypeVariant {
             Self::Enum => "enum",
             Self::NewType => "newtype",
             Self::Struct => "struct",
+            Self::Tuple => "tuple",
             Self::UnitVariant => "unit_variant",
             Self::Unknown => "unknown",
         };
@@ -148,6 +150,22 @@ impl<'a> Codegen<'a> {
         )
     }
 
+    fn output_tuple(&mut self, name: &str, fields: &[Format]) -> anyhow::Result<()> {
+        self.render(
+            "tuple",
+            &json!({"name": name, "fields": fields
+                .iter()
+                .enumerate()
+                .map(|(i, f)| Named {
+                    name: format!("{}", i),
+                    value: f.clone(),
+                })
+                .map(|f| self.get_field(&f))
+                .collect::<Vec<Field>>()
+            }),
+        )
+    }
+
     fn output_container(&mut self, name: &str, format: &ContainerFormat) -> anyhow::Result<()> {
         use ContainerFormat::*;
         match format {
@@ -161,14 +179,7 @@ impl<'a> Codegen<'a> {
                     }),
                 )?;
             }
-            // TupleStruct(formats) => formats
-            //     .iter()
-            //     .enumerate()
-            //     .map(|(i, f)| Named {
-            //         name: format!("Field{}", i),
-            //         value: f.clone(),
-            //     })
-            //     .collect(),
+            TupleStruct(formats) => self.output_tuple(name, formats)?,
             Struct(fields) => self.output_struct(name, fields)?,
             Enum(variants) => {
                 for (_, variant) in variants.iter() {
@@ -184,7 +195,6 @@ impl<'a> Codegen<'a> {
                     }),
                 )?;
             }
-            _ => todo!("{:?}", format),
         };
         Ok(())
     }
@@ -198,15 +208,7 @@ impl<'a> Codegen<'a> {
                 NewTypeStruct(_) => TypeVariant::NewType,
                 Struct(_) => TypeVariant::Struct,
                 Enum(_) => TypeVariant::Enum,
-                // TupleStruct(formats) => formats
-                //     .iter()
-                //     .enumerate()
-                //     .map(|(i, f)| Named {
-                //         name: format!("Field{}", i),
-                //         value: f.clone(),
-                //     })
-                //     .collect(),
-                _ => todo!("{:?}", format),
+                TupleStruct(_) => TypeVariant::Tuple,
             },
         );
         Ok(())
