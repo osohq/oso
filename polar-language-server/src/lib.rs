@@ -188,6 +188,13 @@ impl PolarLanguageServer {
         self.reload_kb()
     }
 
+    // This is (currently) only used to handle deletions of Polar *files*. `DidChangeWatchedFiles`
+    // events come from the `deleteWatcher` filesystem watcher in the extension client. Due to [a
+    // limitation of VS Code's filesystem watcher][0], we don't receive deletion events for Polar
+    // files nested inside of a deleted directory. See corresponding comments on `DidDeleteFiles`
+    // and `DidChangeWatchedFiles` in `PolarLanguageServer::on_notification`.
+    //
+    // [0]: https://github.com/microsoft/vscode/issues/60813
     fn on_did_change_watched_files(&mut self, uris: Vec<Url>) -> Diagnostics {
         let mut diagnostics = Diagnostics::new();
 
