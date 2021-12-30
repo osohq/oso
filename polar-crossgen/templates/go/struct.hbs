@@ -1,6 +1,7 @@
 // {{name}} struct
 type {{name}} struct {
-    {{~#each fields}}
+    {{#each fields}}
     // {{this.variable}}
-    {{this.variable}} {{this.type_name}} `json:"{{( snake-case this.variable )}}"`{{/each}}
+    {{this.variable}} {{this.type_name}} `json:"{{( snake-case this.variable )}}"`
+    {{/each}}
 }

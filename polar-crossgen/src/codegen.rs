@@ -2,15 +2,19 @@
 
 use handlebars::{handlebars_helper, Handlebars};
 use handlebars::{Context, Helper, Output, RenderContext, RenderError};
-use heck::{CamelCase, SnakeCase};
+use heck::{ToSnakeCase, ToUpperCamelCase};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use serde_reflection::{ContainerFormat, Format, Named, Registry, VariantFormat};
+
+use std::collections::HashMap;
+use std::fmt;
 
 pub struct Codegen<'a> {
     handlebars: Handlebars<'a>,
     output: String,
     typemap: &'static dyn TypeMapping,
+    types: HashMap<String, TypeVariant>,
 }
 
 pub trait TypeMapping {
@@ -35,15 +39,51 @@ fn format_helper(
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-struct TypeInfo {
+#[serde(rename_all = "snake_case")]
+enum TypeVariant {
+    EnumVariant,
+    Enum,
+    NewType,
+    Struct,
+    UnitVariant,
+    Unknown,
+}
+
+impl fmt::Display for TypeVariant {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let r = match self {
+            Self::EnumVariant => "enum_variant",
+            Self::Enum => "enum",
+            Self::NewType => "newtype",
+            Self::Struct => "struct",
+            Self::UnitVariant => "unit_variant",
+            Self::Unknown => "unknown",
+        };
+        write!(f, "{}", r)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct Field {
     variable: String,
     type_name: String,
+    variant: TypeVariant,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct EnumVariant {
+    name: String,
+    variant: VariantFormat,
 }
 
 impl<'a> Codegen<'a> {
     pub fn new(lang: &str, typemap: &'static dyn TypeMapping) -> anyhow::Result<Self> {
         handlebars_helper!(snake_case: |s: str| s.to_snake_case());
-        handlebars_helper!(camel_case: |s: str| s.to_camel_case());
+        handlebars_helper!(camel_case: |s: str| s.to_upper_camel_case());
+        handlebars_helper!(isEnum: |s: str| s == TypeVariant::Enum.to_string());
+        handlebars_helper!(containsEnum: |fields: Vec<Field>| {
+            fields.iter().any(|f| matches!(f.variant, TypeVariant::Enum))
+        });
 
         let mut handlebars = Handlebars::new();
         handlebars.register_escape_fn(handlebars::no_escape);
@@ -51,15 +91,21 @@ impl<'a> Codegen<'a> {
         handlebars.register_helper("format", Box::new(format_helper));
         handlebars.register_helper("snake-case", Box::new(snake_case));
         handlebars.register_helper("camel-case", Box::new(camel_case));
+        handlebars.register_helper("isEnum", Box::new(isEnum));
+        handlebars.register_helper("containsEnum", Box::new(containsEnum));
         handlebars.set_strict_mode(true);
         let output = handlebars.render("preamble", &())?;
         Ok(Self {
             handlebars,
             output,
             typemap,
+            types: Default::default(),
         })
     }
     pub fn output(&mut self, registry: &Registry) -> anyhow::Result<String> {
+        for (name, format) in registry {
+            self.generate_type_info(name, format)?;
+        }
         for (name, format) in registry {
             self.output_container(name, format)?;
         }
@@ -76,11 +122,18 @@ impl<'a> Codegen<'a> {
         Ok(())
     }
 
-    fn type_info(&self, field: &Named<Format>) -> TypeInfo {
-        TypeInfo {
+    fn get_field(&self, field: &Named<Format>) -> Field {
+        let type_name = self.quote_type(&field.value);
+        let variant = self
+            .types
+            .get(&type_name)
+            .cloned()
+            .unwrap_or(TypeVariant::Unknown);
+        Field {
             // TODO: This wont be camel case for non-Go language
-            variable: field.name.to_camel_case(),
-            type_name: self.quote_type(&field.value),
+            variable: field.name.to_upper_camel_case(),
+            variant,
+            type_name,
         }
     }
 
@@ -89,8 +142,8 @@ impl<'a> Codegen<'a> {
             "struct",
             &json!({"name": name, "fields": fields
                 .iter()
-                .map(|f| self.type_info(&f))
-                .collect::<Vec<TypeInfo>>()
+                .map(|f| self.get_field(f))
+                .collect::<Vec<Field>>()
             }),
         )
     }
@@ -121,13 +174,41 @@ impl<'a> Codegen<'a> {
                 for (_, variant) in variants.iter() {
                     self.output_variant(name, &variant.name, &variant.value)?;
                 }
-                self.render("enum", &json!({
-                    "name": name,
-                    "variants": variants.iter().map(|(_, var)| var.name.clone() ).collect::<Vec<String>>()
-                }))?;
+                self.render(
+                    "enum",
+                    &json!({
+                        "name": name,
+                        "variants": variants.clone().into_iter().map(|(_, var)| {
+                            EnumVariant { name: var.name, variant: var.value }
+                        }).collect::<Vec<EnumVariant>>()
+                    }),
+                )?;
             }
             _ => todo!("{:?}", format),
         };
+        Ok(())
+    }
+
+    fn generate_type_info(&mut self, name: &str, format: &ContainerFormat) -> anyhow::Result<()> {
+        use ContainerFormat::*;
+        self.types.insert(
+            name.to_owned(),
+            match format {
+                UnitStruct => TypeVariant::UnitVariant,
+                NewTypeStruct(_) => TypeVariant::NewType,
+                Struct(_) => TypeVariant::Struct,
+                Enum(_) => TypeVariant::Enum,
+                // TupleStruct(formats) => formats
+                //     .iter()
+                //     .enumerate()
+                //     .map(|(i, f)| Named {
+                //         name: format!("Field{}", i),
+                //         value: f.clone(),
+                //     })
+                //     .collect(),
+                _ => todo!("{:?}", format),
+            },
+        );
         Ok(())
     }
 

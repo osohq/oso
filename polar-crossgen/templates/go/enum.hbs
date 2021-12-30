@@ -21,7 +21,7 @@ func (result *{{name}}) UnmarshalJSON(b []byte) error {
         }
          // JSON should be of form {"VariantName": {...}}
         if len(rawMap) != 1 {
-            return errors.New("Deserializing {{name}} as an enum variant; expecting a single key")
+            return errors.New("deserializing {{name}} as an enum variant; expecting a single key")
         }
         for k, v := range rawMap {
             variantName = k
@@ -30,8 +30,8 @@ func (result *{{name}}) UnmarshalJSON(b []byte) error {
     }
     switch variantName {
     {{#each variants}}
-    case "{{this}}":
-        var variant {{../name}}{{this}}
+    case "{{this.name}}":
+        var variant {{../name}}{{this.name}}
         if variantValue != nil {
             err := json.Unmarshal(*variantValue, &variant);
             if err != nil {
@@ -43,19 +43,24 @@ func (result *{{name}}) UnmarshalJSON(b []byte) error {
     {{/each}}
     }
 
-    return fmt.Errorf("Cannot deserialize {{../name}}: %s", string(b))
+    return fmt.Errorf("cannot deserialize {{../name}}: %s", string(b))
 }
 
 
 func (variant {{name}}) MarshalJSON() ([]byte, error) {
     switch inner := variant.{{name}}Variant.(type) {
     {{#each variants}}
-    case {{../name}}{{this}}:
-        return json.Marshal(map[string]{{../name}}{{this}} {
-            "{{this}}": inner,
+    case {{../name}}{{this.name}}:
+        {{#if (eq this.variant "UNIT")}}
+        return json.Marshal("{{this.name}}")
+        {{else}}
+        return json.Marshal(map[string]{{../name}}{{this.name}} {
+            "{{this.name}}": inner,
         });
+        {{/if}}
     {{/each}}
+    default:
+        return nil, fmt.Errorf("unexpected variant %#v of %v", inner, variant)
     }
 
-    return nil, fmt.Errorf("unexpected variant of %v", variant)
 }

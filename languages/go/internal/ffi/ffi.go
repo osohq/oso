@@ -35,7 +35,7 @@ func readStr(cStr *C.char) *string {
 func ffiSerialize(input interface{}) (*C.char, error) {
 	json, err := json.Marshal(input)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to serialize `%#v`:\n%s", json, err)
 	}
 	return C.CString(string(json)), nil
 }

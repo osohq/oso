@@ -8,8 +8,8 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.36"
-handlebars = { version = "3", features = ["dir_source"] }
-heck = "0.3.1"
+handlebars = { version = "4.1.6", features = ["dir_source"] }
+heck = "0.4.0"
 log = "0.4.11"
 maplit = "1.0.2"
 polar-core = { path = "../polar-core" }

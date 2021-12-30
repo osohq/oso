@@ -24,6 +24,26 @@ func TestSerialize(t *testing.T) {
 		t.Fatal(fmt.Errorf("expected %#v got %#v", expected, string(s)))
 	}
 
+	expected = `{"Expression":{"operator":"Add","args":[{"value":{"Number":{"Integer":123}}},{"value":{"Number":{"Integer":234}}}]}}`
+	term = Value{ValueExpression{
+		Operator: Operator{OperatorAdd{}},
+		Args: []Term{
+			Term{Value{ValueNumber{
+				NumericInteger(123),
+			}}},
+			Term{Value{ValueNumber{
+				NumericInteger(234),
+			}}},
+		},
+	}}
+	s, err = json.Marshal(term)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(s) != expected {
+		t.Fatal(fmt.Errorf("expected %#v got %#v. Diff: %s", expected, string(s), cmp.Diff(expected, string(s))))
+	}
+
 }
 
 func TestDeserialize(t *testing.T) {
