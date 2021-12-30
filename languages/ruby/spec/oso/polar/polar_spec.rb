@@ -157,7 +157,10 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       subject.load_file(test_file)
       expect(qvar(subject, 'f(x)', 'x')).to eq([1, 2, 3])
       subject.clear_rules
-      expect { query(subject, 'f(x)') }.to raise_error Oso::Polar::PolarRuntimeError
+      expect { query(subject, 'f(x)') }.to raise_error do |e|
+        expect(e).to be_an Oso::Polar::PolarRuntimeError
+        expect(e.message).to start_with "Cannot evaluate query for undefined rule `f`"
+      end
     end
 
     it 'leaves registered classes and instances' do
