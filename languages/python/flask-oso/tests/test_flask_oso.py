@@ -150,17 +150,17 @@ def test_route_authorization(flask_oso, oso, flask_app, app_ctx):
     """Test that route authorization middleware works."""
     flask_oso.perform_route_authorization(app=flask_app)
     flask_app.testing = True
-    oso.load_str('allow("user", "GET", _: Request) if false;')
 
     @flask_app.route("/test_route", methods=("GET",))
     def test():
         return "Test"
 
     with flask_app.test_client() as c:
-        assert c.get("/test_route").status_code == 403
+        with pytest.raises(OsoError) as e:
+            c.get("/test_route")
+        assert "Cannot evaluate query for undefined rule `allow`" in str(e)
 
     # Add rule to policy.
-    oso.clear_rules()
     oso.load_str('allow("user", "GET", _: Request{path: "/test_route"});')
     with flask_app.test_client() as c:
         assert c.get("/test_route").status_code == 200
@@ -176,7 +176,6 @@ def test_route_authorization(flask_oso, oso, flask_app, app_ctx):
 def test_route_authorizaton_manual(flask_oso, oso, flask_app, app_ctx):
     """Perform route auth manually."""
     flask_app.testing = True
-    oso.load_str('allow("user", "GET", _: Request) if false;')
 
     from flask import request
 
@@ -186,10 +185,11 @@ def test_route_authorizaton_manual(flask_oso, oso, flask_app, app_ctx):
         return "authed"
 
     with flask_app.test_client() as c:
-        assert c.get("/test_route").status_code == 403
+        with pytest.raises(OsoError) as e:
+            c.get("/test_route")
+        assert "Cannot evaluate query for undefined rule `allow`" in str(e)
 
     # Add rule
-    oso.clear_rules()
     oso.load_str('allow("user", "GET", _: Request{path: "/test_route"});')
     with flask_app.test_client() as c:
         assert c.get("/test_route").status_code == 200
@@ -197,7 +197,6 @@ def test_route_authorizaton_manual(flask_oso, oso, flask_app, app_ctx):
 
 def test_custom_unauthorize(flask_oso, oso, flask_app, app_ctx):
     """Test that a custom unauthorize handler can be provided."""
-    oso.load_str('allow("user", "GET", _: Request) if false;')
     auth_failed = False
 
     def unauth():
@@ -205,8 +204,11 @@ def test_custom_unauthorize(flask_oso, oso, flask_app, app_ctx):
         auth_failed = True
 
     flask_oso.set_unauthorized_action(unauth)
-    flask_oso.authorize(resource="fail!", action="bad")
 
+    # Add rule
+    oso.load_str('allow(_, "not bad", _);')
+
+    flask_oso.authorize(resource="fail!", action="bad")
     assert auth_failed
 
 
