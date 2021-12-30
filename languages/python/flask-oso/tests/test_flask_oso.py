@@ -158,7 +158,7 @@ def test_route_authorization(flask_oso, oso, flask_app, app_ctx):
     with flask_app.test_client() as c:
         with pytest.raises(OsoError) as e:
             c.get("/test_route")
-        assert "Cannot evaluate query for undefined rule `allow`" in str(e)
+        assert "Query for undefined rule `allow`" in str(e)
 
     # Add rule to policy.
     oso.load_str('allow("user", "GET", _: Request{path: "/test_route"});')
@@ -187,7 +187,7 @@ def test_route_authorizaton_manual(flask_oso, oso, flask_app, app_ctx):
     with flask_app.test_client() as c:
         with pytest.raises(OsoError) as e:
             c.get("/test_route")
-        assert "Cannot evaluate query for undefined rule `allow`" in str(e)
+        assert "Query for undefined rule `allow`" in str(e)
 
     # Add rule
     oso.load_str('allow("user", "GET", _: Request{path: "/test_route"});')

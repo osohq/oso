@@ -458,7 +458,7 @@ describe('#clearRules', () => {
     expect(await qvar(p, 'f(x)', 'x')).toStrictEqual([1, 2, 3]);
     p.clearRules();
     await expect(query(p, 'f(x)')).rejects.toThrow(
-      'Cannot evaluate query for undefined rule `f`'
+      'Query for undefined rule `f`'
     );
   });
 

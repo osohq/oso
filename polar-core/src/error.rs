@@ -440,7 +440,7 @@ The expression is: {expr}
             // Refactor.
             Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
             Self::MultipleLoadError => write!(f, "Cannot load additional Polar code -- all Polar code must be loaded at the same time."),
-            Self::QueryForUndefinedRule { name } => write!(f, "Cannot evaluate query for undefined rule `{}`", name),
+            Self::QueryForUndefinedRule { name } => write!(f, "Query for undefined rule `{}`", name),
         }
     }
 }

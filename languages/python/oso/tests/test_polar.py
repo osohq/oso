@@ -97,7 +97,7 @@ def test_clear_rules(polar, query):
 
     with pytest.raises(exceptions.PolarRuntimeError) as e:
         query(("f(1)")) == []
-    assert "Cannot evaluate query for undefined rule `f`" in str(e.value)
+    assert "Query for undefined rule `f`" in str(e.value)
     assert len(query("x = new Test()")) == 1
 
 

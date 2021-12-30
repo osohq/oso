@@ -159,7 +159,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       subject.clear_rules
       expect { query(subject, 'f(x)') }.to raise_error do |e|
         expect(e).to be_an Oso::Polar::PolarRuntimeError
-        expect(e.message).to start_with "Cannot evaluate query for undefined rule `f`"
+        expect(e.message).to start_with "Query for undefined rule `f`"
       end
     end
 

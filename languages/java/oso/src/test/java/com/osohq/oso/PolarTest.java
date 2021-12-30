@@ -535,7 +535,7 @@ public class PolarTest {
     assertThrows(
         Exceptions.PolarRuntimeException.class,
         () -> p.query("f(x)"),
-        "Cannot evaluate query for undefined rule `f`");
+        "Query for undefined rule `f`");
 
     // make sure classes are still registered
     assertFalse(p.query("x = new MyClass(\"test\", 1)").results().isEmpty());
