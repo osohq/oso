@@ -2,7 +2,7 @@ use std::sync::{Arc, RwLock};
 
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
 use super::diagnostic::Diagnostic;
-use super::error::{ParseError, PolarResult, RuntimeError, ValidationError};
+use super::error::{PolarError, PolarResult, RuntimeError, ValidationError};
 use super::filter::Filter;
 use super::kb::*;
 use super::messages::*;
@@ -55,7 +55,7 @@ impl Polar {
                 kb.add_source(filename, source.clone())?;
             }
             // TODO(gj): we still bomb out at the first ParseError.
-            let mut lines = parser::parse_lines(&source).map_err(ParseError::with_context)?;
+            let mut lines = parser::parse_lines(&source).map_err(PolarError::Parse)?;
             lines.reverse();
             let mut diagnostics = vec![];
             while let Some(line) = lines.pop() {
@@ -81,13 +81,12 @@ impl Polar {
                                 }
                             ) if args.is_empty()
                         ) {
-                            diagnostics.push(Diagnostic::Error(
+                            diagnostics.push(Diagnostic::Error(PolarError::Validation(
                                 ValidationError::InvalidRuleType {
                                     rule_type,
                                     msg: "Rule types cannot contain dot lookups.".to_owned(),
-                                }
-                                .with_context(),
-                            ));
+                                },
+                            )));
                         } else {
                             kb.add_rule_type(rule_type);
                         }
@@ -102,7 +101,8 @@ impl Polar {
                         errors.append(&mut block.add_to_kb(kb));
                         let errors = errors
                             .into_iter()
-                            .map(|e| Diagnostic::Error(e.with_context()));
+                            .map(PolarError::Validation)
+                            .map(Diagnostic::Error);
                         diagnostics.append(&mut errors.collect());
                     }
                 }
@@ -133,7 +133,8 @@ impl Polar {
             &mut kb
                 .rewrite_shorthand_rules()
                 .into_iter()
-                .map(|e| Diagnostic::Error(e.with_context()))
+                .map(PolarError::Validation)
+                .map(Diagnostic::Error)
                 .collect(),
         );
 
@@ -173,7 +174,7 @@ impl Polar {
     pub fn load(&self, sources: Vec<Source>) -> PolarResult<()> {
         if let Ok(kb) = self.kb.read() {
             if kb.has_rules() {
-                return Err(RuntimeError::MultipleLoadError.with_context());
+                return Err(PolarError::Runtime(RuntimeError::MultipleLoadError));
             }
         }
 
@@ -214,7 +215,7 @@ impl Polar {
 
     pub fn new_query(&self, src: &str, trace: bool) -> PolarResult<Query> {
         let source = Arc::new(Source::new(src));
-        let term = parser::parse_query(&source).map_err(ParseError::with_context)?;
+        let term = parser::parse_query(&source).map_err(PolarError::Parse)?;
         Ok(self.new_query_from_term(term, trace))
     }
 
@@ -261,8 +262,7 @@ impl Polar {
         variable: &str,
         class_tag: &str,
     ) -> PolarResult<FilterPlan> {
-        build_filter_plan(types, partial_results, variable, class_tag)
-            .map_err(RuntimeError::with_context)
+        build_filter_plan(types, partial_results, variable, class_tag).map_err(PolarError::Runtime)
     }
 
     pub fn build_data_filter(
@@ -272,8 +272,7 @@ impl Polar {
         variable: &str,
         class_tag: &str,
     ) -> PolarResult<Filter> {
-        Filter::build(types, partial_results, variable, class_tag)
-            .map_err(RuntimeError::with_context)
+        Filter::build(types, partial_results, variable, class_tag).map_err(PolarError::Runtime)
     }
 
     // TODO(@gkaemmer): this is a hack and should not be used for similar cases.
@@ -287,10 +286,7 @@ impl Polar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::{
-        ErrorKind::{Runtime, Validation},
-        PolarError,
-    };
+    use crate::error::PolarError::{Runtime, Validation};
 
     #[test]
     fn can_load_and_query() {
@@ -310,19 +306,13 @@ mod tests {
         // Loading twice is not.
         assert!(matches!(
             polar.load(vec![Source::new(src)]).unwrap_err(),
-            PolarError {
-                kind: Runtime(RuntimeError::MultipleLoadError),
-                ..
-            }
+            Runtime(RuntimeError::MultipleLoadError),
         ));
 
         // Even with load_str().
         assert!(matches!(
             polar.load(vec![Source::new(src)]).unwrap_err(),
-            PolarError {
-                kind: Runtime(RuntimeError::MultipleLoadError),
-                ..
-            }
+            Runtime(RuntimeError::MultipleLoadError),
         ));
     }
 
@@ -337,10 +327,7 @@ mod tests {
             ])
             .unwrap_err()
         {
-            PolarError {
-                kind: Validation(ValidationError::FileLoading { msg, .. }),
-                ..
-            } => msg,
+            Validation(ValidationError::FileLoading { msg, .. }) => msg,
             e => panic!("{}", e),
         };
         assert_eq!(msg, "File file has already been loaded.");

@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use super::diagnostic::Diagnostic;
-use super::error::ValidationError;
+use super::error::{PolarError, ValidationError};
 use super::kb::*;
 use super::rules::*;
 use super::terms::*;
@@ -29,7 +29,7 @@ impl<'kb> SingletonVisitor<'kb> {
             .flat_map(|(sym, term)| term.map(|t| (sym, t)))
             .collect::<Vec<_>>();
         singletons
-            .sort_by_key(|(_, term)| term.parsed_source_info().map_or(0, |(_, left, _)| *left));
+            .sort_by_key(|(_, term)| term.parsed_source_info().map_or(0, |(_, left, _)| left));
         singletons
             .into_iter()
             .map(|(sym, term)| {
@@ -38,7 +38,9 @@ impl<'kb> SingletonVisitor<'kb> {
                         ValidationWarning::UnknownSpecializer { term, sym }.with_context(),
                     )
                 } else {
-                    Diagnostic::Error(ValidationError::SingletonVariable { term }.with_context())
+                    Diagnostic::Error(PolarError::Validation(ValidationError::SingletonVariable {
+                        term,
+                    }))
                 }
             })
             .collect()
@@ -113,7 +115,7 @@ impl Visitor for AndOrPrecendenceCheck {
                 //
                 // check if source _before_ the term contains an opening
                 // parenthesis
-                if !source.src[..*left].trim().ends_with('(') {
+                if !source.src[..left].trim().ends_with('(') {
                     self.unparenthesized_expr.push(term.clone());
                 }
             }
@@ -231,7 +233,8 @@ pub fn check_undefined_rule_calls(kb: &KnowledgeBase) -> Vec<Diagnostic> {
     visitor
         .errors()
         .into_iter()
-        .map(|e| Diagnostic::Error(e.with_context()))
+        .map(PolarError::Validation)
+        .map(Diagnostic::Error)
         .collect()
 }
 

@@ -24,15 +24,14 @@ impl Diagnostic {
     /// second `ResourceBlock` error when rewriting a shorthand rule involving the relation.
     pub fn is_unrecoverable(&self) -> bool {
         use super::error::{
-            ErrorKind::{Parse, Validation},
+            PolarError::{Parse, Validation},
             ValidationError::{FileLoading, ResourceBlock},
         };
         matches!(
             self,
-            Diagnostic::Error(PolarError {
-                kind: Parse(_) | Validation(FileLoading { .. }) | Validation(ResourceBlock { .. }),
-                ..
-            })
+            Diagnostic::Error(
+                Parse(_) | Validation(FileLoading { .. }) | Validation(ResourceBlock { .. }),
+            )
         )
     }
 

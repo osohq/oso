@@ -92,7 +92,7 @@ impl Debugger {
     fn query_source(&self, query: &Term, num_lines: usize) -> String {
         query.parsed_source_info().map_or_else(
             || "".to_string(),
-            |(source, left, _)| source_lines(source, *left, num_lines),
+            |(source, left, _)| source_lines(source, left, num_lines),
         )
     }
 
@@ -289,7 +289,7 @@ impl Debugger {
                                 } else {
                                     let _ = write!(st, "in query ");
                                 }
-                                let (row, column) = crate::lexer::loc_to_pos(&source.src, *left);
+                                let (row, column) = crate::lexer::loc_to_pos(&source.src, left);
                                 let _ = write!(st, "at line {}, column {}", row + 1, column + 1);
                                 if let Some(filename) = &source.filename {
                                     let _ = write!(st, " in file {}", filename);

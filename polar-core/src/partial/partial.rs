@@ -302,7 +302,7 @@ mod test {
     use super::*;
 
     use crate::bindings::Bindings;
-    use crate::error::{ErrorKind, PolarError, RuntimeError};
+    use crate::error::{PolarError, RuntimeError};
     use crate::events::QueryEvent;
     use crate::formatting::ToPolarString;
     use crate::polar::Polar;
@@ -1008,10 +1008,7 @@ mod test {
         let error = q.next_event().unwrap_err();
         assert!(matches!(
             error,
-            PolarError {
-                kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }),
-                ..
-            }
+            PolarError::Runtime(RuntimeError::Unsupported { .. }),
         ));
         Ok(())
     }
@@ -1766,10 +1763,7 @@ mod test {
         let error = q.next_event().unwrap_err();
         assert!(matches!(
             error,
-            PolarError {
-                kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }),
-                ..
-            }
+            PolarError::Runtime(RuntimeError::Unsupported { .. }),
         ));
         Ok(())
     }
@@ -2348,10 +2342,7 @@ mod test {
             assert!(
                 matches!(
                     res,
-                    Err(PolarError {
-                        kind: ErrorKind::Runtime(RuntimeError::UnhandledPartial { .. }),
-                        ..
-                    })
+                    Err(PolarError::Runtime(RuntimeError::UnhandledPartial { .. }),)
                 ),
                 "unexpected result: {:#?} for {}",
                 res,

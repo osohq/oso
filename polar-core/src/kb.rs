@@ -4,7 +4,7 @@ use std::sync::Arc;
 pub use super::bindings::Bindings;
 use super::counter::Counter;
 use super::diagnostic::Diagnostic;
-use super::error::{PolarResult, RuntimeError, ValidationError};
+use super::error::{PolarError, PolarResult, RuntimeError, ValidationError};
 use super::resource_block::{ResourceBlocks, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
 use super::sources::Source;
@@ -105,7 +105,7 @@ impl KnowledgeBase {
         let mut diagnostics = vec![];
 
         if let Err(e) = self.validate_rule_types() {
-            diagnostics.push(Diagnostic::Error(e.with_context()));
+            diagnostics.push(Diagnostic::Error(PolarError::Validation(e)));
         }
 
         diagnostics.append(&mut self.validate_rule_calls());
@@ -587,11 +587,10 @@ impl KnowledgeBase {
     /// special meaning in policies that use resource blocks.
     pub fn register_constant(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
         if name.0 == ACTOR_UNION_NAME || name.0 == RESOURCE_UNION_NAME {
-            return Err(RuntimeError::InvalidRegistration {
+            return Err(PolarError::Runtime(RuntimeError::InvalidRegistration {
                 msg: format!("'{}' is a built-in specializer.", name),
                 sym: name,
-            }
-            .with_context());
+            }));
         }
         self.constants.insert(name, value);
         Ok(())
@@ -624,7 +623,7 @@ impl KnowledgeBase {
         // Confirm name is a registered class
         if !self.is_constant(&name) {
             let msg = format!("Cannot add MRO for unregistered class {}", name);
-            return Err(RuntimeError::InvalidState { msg }.with_context());
+            return Err(PolarError::Runtime(RuntimeError::InvalidState { msg }));
         }
         self.mro.insert(name, mro);
         Ok(())
@@ -672,7 +671,7 @@ impl KnowledgeBase {
             }),
             _ => Ok(()),
         }
-        .map_err(|e| e.with_context())
+        .map_err(PolarError::Validation)
     }
 
     /// Check that all relations declared across all resource blocks have been registered as
@@ -811,7 +810,7 @@ impl KnowledgeBase {
 
             // TODO(gj): `Parsed<T>::clone_source_info` or something
             let (source, left, right) = relation.parsed_source_info().expect("must be parsed");
-            let mut rule = Rule::new_from_parser(source.clone(), *left, *right, sym!("has_relation"), params, body);
+            let mut rule = Rule::new_from_parser(source, left, right, sym!("has_relation"), params, body);
 
             rule.required = required;
             rule
@@ -857,13 +856,13 @@ impl KnowledgeBase {
 mod tests {
     use super::*;
 
-    use crate::error::{ErrorKind::Validation, PolarError};
+    use crate::error::PolarError::Validation;
 
     #[test]
     /// Test validation implemented in `check_file()`.
     fn test_add_source_file_validation() {
         fn expect_error(kb: &mut KnowledgeBase, name: &str, source: Arc<Source>, expected: &str) {
-            let msg = match kb.add_source(name, source).unwrap_err().kind {
+            let msg = match kb.add_source(name, source).unwrap_err() {
                 Validation(ValidationError::FileLoading { msg, .. }) => msg,
                 e => panic!("Unexpected error: {}", e),
             };
@@ -1392,10 +1391,7 @@ mod tests {
         assert_eq!(diagnostics.len(), 1);
         assert!(matches!(
             diagnostics.first().unwrap(),
-            Diagnostic::Error(PolarError {
-                kind: Validation(ValidationError::InvalidRule { .. }),
-                ..
-            })
+            Diagnostic::Error(Validation(ValidationError::InvalidRule { .. }))
         ));
 
         // Rule type does not apply if it doesn't have the same name as a rule
@@ -1412,10 +1408,7 @@ mod tests {
 
         assert!(matches!(
             kb.validate_rules().first().unwrap(),
-            Diagnostic::Error(PolarError {
-                kind: Validation(ValidationError::InvalidRule { .. }),
-                ..
-            })
+            Diagnostic::Error(Validation(ValidationError::InvalidRule { .. }))
         ));
 
         // Multiple templates can exist for the same name but only one needs to match

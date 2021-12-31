@@ -363,10 +363,10 @@ impl Term {
     }
 
     /// Creates a new term from the parser
-    pub fn new_from_parser(source: Arc<Source>, left: usize, right: usize, value: Value) -> Self {
+    pub fn new_from_parser(source: &Arc<Source>, left: usize, right: usize, value: Value) -> Self {
         Self {
             source_info: SourceInfo::Parser {
-                source,
+                source: source.clone(),
                 left,
                 right,
             },
@@ -398,14 +398,14 @@ impl Term {
 
     // TODO(gj): Parsed<T> type (or something) so we can remove this meaningless distinction
     // between terms & rules.
-    pub fn parsed_source_info(&self) -> Option<(&Arc<Source>, &usize, &usize)> {
+    pub fn parsed_source_info(&self) -> Option<(&Arc<Source>, usize, usize)> {
         if let SourceInfo::Parser {
             source,
             left,
             right,
         } = &self.source_info
         {
-            Some((source, left, right))
+            Some((source, *left, *right))
         } else {
             None
         }

@@ -338,29 +338,28 @@ fn qvars(p: &Polar, query_str: &str, variables: &[&str], expected: Vec<Vec<Value
 }
 
 #[track_caller]
-fn _qruntime(p: &Polar, query_str: &str) -> ErrorKind {
+fn _qruntime(p: &Polar, query_str: &str) -> PolarError {
     p.new_query(query_str, false)
         .unwrap()
         .next_event()
         .unwrap_err()
-        .kind
 }
 
 macro_rules! qruntime {
     ($query:tt, $err:pat $(, $cond:expr)?) => {
-        assert!(matches!(_qruntime(&polar(), $query), ErrorKind::Runtime($err) $(if $cond)?));
+        assert!(matches!(_qruntime(&polar(), $query), PolarError::Runtime($err) $(if $cond)?));
     };
 
     ($polar:expr, $query:tt, $err:pat $(, $cond:expr)?) => {
-        assert!(matches!(_qruntime($polar, $query), ErrorKind::Runtime($err) $(if $cond)?));
+        assert!(matches!(_qruntime($polar, $query), PolarError::Runtime($err) $(if $cond)?));
     };
 }
 
 macro_rules! qparse {
     ($query:expr, $err:pat) => {
         assert!(matches!(
-            polar().load_str($query).unwrap_err().kind,
-            ErrorKind::Parse($err)
+            polar().load_str($query).unwrap_err(),
+            PolarError::Parse($err)
         ));
     };
 }
@@ -1595,10 +1594,10 @@ fn test_anonymous_vars() {
 fn test_singleton_vars() {
     let pol = "f(x,y,z) if y = z;";
     let err = polar().load_str(pol).unwrap_err();
-    assert!(err.context.is_some());
+    assert!(err.get_context().is_some());
     assert!(matches!(
-        err.kind,
-        ErrorKind::Validation(ValidationError::SingletonVariable { .. })
+        err,
+        PolarError::Validation(ValidationError::SingletonVariable { .. })
     ))
 }
 
@@ -1634,7 +1633,7 @@ has_role(user: User, "owner", organization: Organization) if
     organization.owner_id = user.id;
 "#;
     let err = p.load_str(policy).expect_err("Expected validation error");
-    assert!(matches!(&err.kind, ErrorKind::Validation(_)));
+    assert!(matches!(&err, PolarError::Validation(_)));
     assert!(format!("{}", err)
         .contains("Perhaps you meant to add an actor block to the top of your policy, like this:"));
 
@@ -1695,8 +1694,8 @@ has_role(user: User, "owner", repository: Repository) if
 "#;
     let err = p.load_str(policy).expect_err("Expected validation error");
     assert!(matches!(
-        &err.kind,
-        ErrorKind::Validation(ValidationError::InvalidRule { .. })
+        &err,
+        PolarError::Validation(ValidationError::InvalidRule { .. })
     ));
     assert!(err
         .to_string()
@@ -2525,19 +2524,19 @@ fn test_default_rule_types() -> TestResult {
     let e = p
         .load_str(r#"has_permission("leina", "eat", "food");"#)
         .expect_err("Expected validation error");
-    assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    assert!(matches!(e, PolarError::Validation(_)));
     let e = p
         .load_str(r#"allow("leina", "food");"#)
         .expect_err("Expected validation error");
-    assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    assert!(matches!(e, PolarError::Validation(_)));
     let e = p
         .load_str(r#"allow_field("leina", "food");"#)
         .expect_err("Expected validation error");
-    assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    assert!(matches!(e, PolarError::Validation(_)));
     let e = p
         .load_str(r#"allow_request("leina", "eat", "food");"#)
         .expect_err("Expected validation error");
-    assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    assert!(matches!(e, PolarError::Validation(_)));
 
     // This should succeed
     // TODO: should we emit warnings if rules with union specializers are loaded
@@ -2603,7 +2602,7 @@ has_role(actor: User, role_name, repository: Repository) if
 "#;
 
     let err = p.load_str(policy).expect_err("Expected validation error");
-    assert!(matches!(&err.kind, ErrorKind::Validation(_)));
+    assert!(matches!(&err, PolarError::Validation(_)));
     assert!(format!("{}", err).contains(
         "Failed to match because: Parameter `role_name` expects a String type constraint."
     ));
@@ -2668,8 +2667,8 @@ allow(actor, action, resource) if has_permission(actor, action, resource);
 
     let err = p.load_str(policy).expect_err("Expected validation error");
     assert!(matches!(
-        &err.kind,
-        ErrorKind::Validation(ValidationError::MissingRequiredRule { .. })
+        &err,
+        PolarError::Validation(ValidationError::MissingRequiredRule { .. })
     ));
     assert!(err
         .to_string()

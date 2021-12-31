@@ -61,7 +61,7 @@ impl ValidationWarning {
         };
 
         let context = context.map(|(source, left, right)| Context {
-            range: Range::from_span(&source.src, (*left, *right)),
+            range: Range::from_span(&source.src, (left, right)),
             source: source.clone(),
         });
 

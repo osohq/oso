@@ -12,22 +12,15 @@ use super::{
     terms::{Operation, Symbol, Term},
 };
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(into = "FormattedPolarError")]
-pub struct PolarError {
-    pub kind: ErrorKind,
-    pub context: Option<Context>,
-}
-
 impl PolarError {
     pub fn kind(&self) -> String {
-        use ErrorKind::*;
         use OperationalError::*;
         use ParseError::*;
+        use PolarError::*;
         use RuntimeError::*;
         use ValidationError::*;
 
-        match self.kind {
+        match self {
             Parse(IntegerOverflow { .. }) => "ParseError::IntegerOverflow",
             Parse(InvalidTokenCharacter { .. }) => "ParseError::InvalidTokenCharacter",
             Parse(InvalidToken { .. }) => "ParseError::InvalidToken",
@@ -74,7 +67,7 @@ impl PolarError {
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct FormattedPolarError {
-    pub kind: ErrorKind,
+    pub kind: PolarError,
     pub formatted: String,
 }
 
@@ -82,13 +75,14 @@ impl From<PolarError> for FormattedPolarError {
     fn from(other: PolarError) -> Self {
         Self {
             formatted: other.to_string(),
-            kind: other.kind,
+            kind: other,
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ErrorKind {
+#[serde(into = "FormattedPolarError")]
+pub enum PolarError {
     Parse(ParseError),
     Runtime(RuntimeError),
     Operational(OperationalError),
@@ -99,22 +93,15 @@ pub type PolarResult<T> = std::result::Result<T, PolarError>;
 
 impl std::error::Error for PolarError {}
 
-impl fmt::Display for ErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ErrorKind::Parse(e) => write!(f, "{}", e)?,
-            ErrorKind::Runtime(e) => write!(f, "{}", e)?,
-            ErrorKind::Operational(e) => write!(f, "{}", e)?,
-            ErrorKind::Validation(e) => write!(f, "{}", e)?,
-        }
-        Ok(())
-    }
-}
-
 impl fmt::Display for PolarError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.kind)?;
-        if let Some(ref context) = self.context {
+        match self {
+            Self::Parse(e) => write!(f, "{}", e)?,
+            Self::Runtime(e) => write!(f, "{}", e)?,
+            Self::Operational(e) => write!(f, "{}", e)?,
+            Self::Validation(e) => write!(f, "{}", e)?,
+        }
+        if let Some(context) = self.get_context() {
             write!(f, "{}", context)?;
         }
         Ok(())
@@ -176,45 +163,99 @@ pub enum ParseError {
     },
 }
 
-impl ParseError {
-    pub fn with_context(self) -> PolarError {
+impl PolarError {
+    pub fn get_context(&self) -> Option<Context> {
         use ParseError::*;
+        use RuntimeError::*;
+        use ValidationError::*;
 
-        let (source, left, right) = match &self {
-            // These errors track `loc` (left bound) and `token`, and we calculate right bound
-            // as `loc + token.len()`.
-            DuplicateKey {
-                key: token,
-                loc,
-                source,
-            }
-            | ExtraToken { token, loc, source }
-            | IntegerOverflow { token, loc, source }
-            | InvalidFloat { token, loc, source }
-            | ReservedWord { token, loc, source }
-            | UnrecognizedToken { token, loc, source } => (source.clone(), *loc, loc + token.len()),
+        let context = match &self {
+            Self::Parse(e) => Some(match e {
+                // These errors track `loc` (left bound) and `token`, and we calculate right bound
+                // as `loc + token.len()`.
+                DuplicateKey {
+                    key: token,
+                    loc,
+                    source,
+                }
+                | ExtraToken { token, loc, source }
+                | IntegerOverflow { token, loc, source }
+                | InvalidFloat { token, loc, source }
+                | ReservedWord { token, loc, source }
+                | UnrecognizedToken { token, loc, source } => (source, *loc, loc + token.len()),
 
-            // These errors track `loc` and only pertain to a single character, so right bound
-            // of span is also `loc`.
-            InvalidTokenCharacter { loc, source, .. }
-            | InvalidToken { loc, source }
-            | UnrecognizedEOF { loc, source } => (source.clone(), *loc, *loc),
+                // These errors track `loc` and only pertain to a single character, so right bound
+                // of span is also `loc`.
+                InvalidTokenCharacter { loc, source, .. }
+                | InvalidToken { loc, source }
+                | UnrecognizedEOF { loc, source } => (source, *loc, *loc),
 
-            // These errors track `term`, from which we calculate the span.
-            WrongValueType { term, .. } => term
-                .parsed_source_info()
-                .map(|(source, left, right)| (source.clone(), *left, *right))
-                .expect("always from parser"),
+                // These errors track `term`, from which we calculate the span.
+                WrongValueType { term, .. } => {
+                    term.parsed_source_info().expect("always from parser")
+                }
+            }),
+
+            Self::Runtime(e) => match e {
+                // These errors sometimes track `term`, from which we derive context.
+                Application { term, .. } => term.as_ref().and_then(Term::parsed_source_info),
+
+                // These errors track `term`, from which we derive the context.
+                ArithmeticError { term }
+                | TypeError { term, .. }
+                | UnhandledPartial { term, .. }
+                | Unsupported { term, .. } => term.parsed_source_info(),
+
+                // These errors never have context.
+                StackOverflow { .. }
+                | QueryTimeout { .. }
+                | IncompatibleBindings { .. }
+                | DataFilteringFieldMissing { .. }
+                | DataFilteringUnsupportedOp { .. }
+                | InvalidRegistration { .. }
+                | InvalidState { .. }
+                | QueryForUndefinedRule { .. }
+                | MultipleLoadError => None,
+            },
+
+            Self::Validation(e) => match e {
+                // These errors track `term`, from which we calculate the span.
+                ResourceBlock { term, .. }
+                | SingletonVariable { term, .. }
+                | UndefinedRuleCall { term }
+                | DuplicateResourceBlockDeclaration {
+                    declaration: term, ..
+                }
+                | UnregisteredClass { term, .. } => term.parsed_source_info(),
+
+                // These errors track `rule`, from which we calculate the span.
+                InvalidRule { rule, .. }
+                | InvalidRuleType {
+                    rule_type: rule, ..
+                } => rule.parsed_source_info(),
+
+                // These errors track `rule_type`, from which we sometimes calculate the span.
+                MissingRequiredRule { rule_type } => {
+                    if rule_type.name.0 == "has_relation" {
+                        rule_type.parsed_source_info()
+                    } else {
+                        // TODO(gj): copy source info from the appropriate resource block term for
+                        // `has_role()` rule type we create.
+                        None
+                    }
+                }
+
+                // These errors always pertain to a specific file but not to a specific place therein.
+                FileLoading { source, .. } => Some((source, 0, 0)),
+            },
+
+            Self::Operational(_) => None,
         };
-        let context = Context {
+
+        context.map(|(source, left, right)| Context {
             range: Range::from_span(&source.src, (left, right)),
-            source,
-        };
-
-        PolarError {
-            context: Some(context),
-            kind: ErrorKind::Parse(self),
-        }
+            source: source.clone(),
+        })
     }
 }
 
@@ -327,42 +368,6 @@ pub enum RuntimeError {
 }
 
 impl RuntimeError {
-    pub fn with_context(self) -> PolarError {
-        use RuntimeError::*;
-
-        let context = match &self {
-            // These errors sometimes track `term`, from which we derive context.
-            Application { term, .. } => term.as_ref().and_then(Term::parsed_source_info),
-
-            // These errors track `term`, from which we derive the context.
-            ArithmeticError { term }
-            | TypeError { term, .. }
-            | UnhandledPartial { term, .. }
-            | Unsupported { term, .. } => term.parsed_source_info(),
-
-            // These errors never have context.
-            StackOverflow { .. }
-            | QueryTimeout { .. }
-            | IncompatibleBindings { .. }
-            | DataFilteringFieldMissing { .. }
-            | DataFilteringUnsupportedOp { .. }
-            | InvalidRegistration { .. }
-            | InvalidState { .. }
-            | QueryForUndefinedRule { .. }
-            | MultipleLoadError => None,
-        };
-
-        let context = context.map(|(source, left, right)| Context {
-            range: Range::from_span(&source.src, (*left, *right)),
-            source: source.clone(),
-        });
-
-        PolarError {
-            kind: ErrorKind::Runtime(self),
-            context,
-        }
-    }
-
     pub fn unsupported<A>(msg: String, term: Term) -> Result<A, RuntimeError> {
         Err(Self::Unsupported { msg, term })
     }
@@ -473,10 +478,7 @@ pub enum OperationalError {
 
 impl From<OperationalError> for PolarError {
     fn from(err: OperationalError) -> Self {
-        Self {
-            kind: ErrorKind::Operational(err),
-            context: None,
-        }
+        Self::Operational(err)
     }
 }
 
@@ -543,54 +545,6 @@ pub enum ValidationError {
         existing: Declaration,
         new: Declaration,
     },
-}
-
-impl ValidationError {
-    pub fn with_context(self) -> PolarError {
-        use ValidationError::*;
-
-        let context = match &self {
-            // These errors track `term`, from which we calculate the span.
-            ResourceBlock { term, .. }
-            | SingletonVariable { term, .. }
-            | UndefinedRuleCall { term }
-            | DuplicateResourceBlockDeclaration {
-                declaration: term, ..
-            }
-            | UnregisteredClass { term, .. } => term.parsed_source_info(),
-
-            // These errors track `rule`, from which we calculate the span.
-            InvalidRule { rule, .. }
-            | InvalidRuleType {
-                rule_type: rule, ..
-            } => rule.parsed_source_info(),
-
-            // These errors track `rule_type`, from which we sometimes calculate the span.
-            MissingRequiredRule { rule_type } => {
-                if rule_type.name.0 == "has_relation" {
-                    rule_type.parsed_source_info()
-                } else {
-                    // TODO(gj): copy source info from the appropriate resource block term for
-                    // `has_role()` rule type we create.
-                    None
-                }
-            }
-
-            // These errors always pertain to a specific file but not to a specific place therein.
-            FileLoading { source, .. } => Some((source, &0, &0)),
-        };
-
-        // TODO(gj): `From<SourceInfo> for Context`
-        let context = context.map(|(source, left, right)| Context {
-            range: Range::from_span(&source.src, (*left, *right)),
-            source: source.clone(),
-        });
-
-        PolarError {
-            kind: ErrorKind::Validation(self),
-            context,
-        }
-    }
 }
 
 impl fmt::Display for ValidationError {

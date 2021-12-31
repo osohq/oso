@@ -45,14 +45,14 @@ impl Rule {
         self.params.iter().all(|p| p.is_ground())
     }
 
-    pub fn parsed_source_info(&self) -> Option<(&Arc<Source>, &usize, &usize)> {
+    pub fn parsed_source_info(&self) -> Option<(&Arc<Source>, usize, usize)> {
         if let SourceInfo::Parser {
             source,
             left,
             right,
         } = &self.source_info
         {
-            Some((source, left, right))
+            Some((source, *left, *right))
         } else {
             None
         }
@@ -70,7 +70,7 @@ impl Rule {
 
     /// Creates a new term from the parser
     pub fn new_from_parser(
-        source: Arc<Source>,
+        source: &Arc<Source>,
         left: usize,
         right: usize,
         name: Symbol,
@@ -82,7 +82,7 @@ impl Rule {
             params,
             body,
             source_info: SourceInfo::Parser {
-                source,
+                source: source.clone(),
                 left,
                 right,
             },

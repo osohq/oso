@@ -17,7 +17,7 @@ use crate::counter::Counter;
 use crate::data_filtering::partition_equivs;
 use crate::debugger::{get_binding_for_var, DebugEvent, Debugger};
 use crate::diagnostic::{Context, Range};
-use crate::error::{self, RuntimeError};
+use crate::error::RuntimeError;
 use crate::events::*;
 use crate::folder::Folder;
 use crate::formatting::ToPolarString;
@@ -871,7 +871,7 @@ impl PolarVirtualMachine {
                         } else {
                             let _ = write!(st, "in query ");
                         }
-                        let (row, column) = loc_to_pos(&source.src, *left);
+                        let (row, column) = loc_to_pos(&source.src, left);
                         let _ = write!(st, "at line {}, column {}", row + 1, column + 1);
                         if let Some(filename) = &source.filename {
                             let _ = write!(st, " in file {}", filename);
@@ -911,7 +911,7 @@ impl PolarVirtualMachine {
 
         let elapsed = self.query_duration();
         if elapsed > self.query_timeout_ms {
-            return Err(error::RuntimeError::QueryTimeout {
+            return Err(RuntimeError::QueryTimeout {
                 msg: format!(
                     "Query running for {}ms, which exceeds the timeout of {}ms. To disable timeouts, set the POLAR_TIMEOUT_MS environment variable to 0.",
                     elapsed, self.query_timeout_ms
@@ -2644,7 +2644,7 @@ impl PolarVirtualMachine {
                             |(source, left, right)| {
                                 // TODO(gj): `Context::from_parsed_source_info` or `impl
                                 // From<SourceInfo> for Context` or something similar?
-                                let range = Range::from_span(&source.src, (*left, *right));
+                                let range = Range::from_span(&source.src, (left, right));
                                 let context = Context {
                                     source: source.clone(),
                                     range,
@@ -2839,14 +2839,14 @@ impl PolarVirtualMachine {
         let source_info = term.parsed_source_info();
 
         let mut source_string = if let Some((source, left, right)) = source_info {
-            source.src.chars().take(*right).skip(*left).collect()
+            source.src.chars().take(right).skip(left).collect()
         } else {
             term.to_polar()
         };
 
         if include_info {
             if let Some((source, left, _)) = source_info {
-                let (row, column) = crate::lexer::loc_to_pos(&source.src, *left);
+                let (row, column) = crate::lexer::loc_to_pos(&source.src, left);
                 source_string.push_str(&format!(" at line {}, column {}", row + 1, column));
                 if let Some(filename) = &source.filename {
                     source_string.push_str(&format!(" in file {}", filename));
@@ -3917,7 +3917,7 @@ mod tests {
             match result {
                 Ok(event) => assert!(matches!(event, QueryEvent::MakeExternal { .. })),
                 Err(err) => {
-                    assert!(matches!(err, error::RuntimeError::QueryTimeout { .. },));
+                    assert!(matches!(err, RuntimeError::QueryTimeout { .. },));
 
                     // End test.
                     break;
