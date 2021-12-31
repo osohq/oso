@@ -199,16 +199,14 @@ pub struct ShorthandRule {
 impl ShorthandRule {
     pub fn as_rule(&self, resource_name: &Term, blocks: &ResourceBlocks) -> Result<Rule> {
         let Self { head, body } = self;
-        let name = blocks.get_rule_name_for_declaration_in_resource_block(head, resource_name)?;
-        let params = shorthand_rule_head_to_params(head, resource_name);
-        let body = shorthand_rule_body_to_rule_body(body, resource_name, blocks)?;
-
-        // Copy SourceInfo from head of shorthand rule.
-        // TODO(gj): assert these can only be None in tests.
-        let (source, start, end) = head.parsed_source_info().expect("must be parsed"); //.unwrap_or((0, 0));
-        Ok(Rule::new_from_parser(
-            source, start, end, name, params, body,
-        ))
+        Ok(Rule {
+            name: blocks.get_rule_name_for_declaration_in_resource_block(head, resource_name)?,
+            params: shorthand_rule_head_to_params(head, resource_name),
+            body: shorthand_rule_body_to_rule_body(body, resource_name, blocks)?,
+            // Copy SourceInfo from head of shorthand rule.
+            source_info: head.source_info().clone(),
+            required: false,
+        })
     }
 }
 

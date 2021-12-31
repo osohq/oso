@@ -396,14 +396,18 @@ impl Term {
         self.value = Arc::new(value);
     }
 
+    pub(crate) fn source_info(&self) -> &SourceInfo {
+        &self.source_info
+    }
+
     // TODO(gj): Parsed<T> type (or something) so we can remove this meaningless distinction
     // between terms & rules.
-    pub fn parsed_source_info(&self) -> Option<(&Arc<Source>, usize, usize)> {
+    pub(crate) fn parsed_source_info(&self) -> Option<(&Arc<Source>, usize, usize)> {
         if let SourceInfo::Parser {
             source,
             left,
             right,
-        } = &self.source_info
+        } = self.source_info()
         {
             Some((source, *left, *right))
         } else {
