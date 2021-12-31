@@ -29,8 +29,9 @@ pub(crate) fn range_from_polar_diagnostic_context(diagnostic: &Diagnostic) -> Ra
     use polar_core::diagnostic::Range as PolarRange;
 
     let context = match diagnostic {
-        Diagnostic::Error(e) => e.context.as_ref(),
-        Diagnostic::Warning(w) => w.context.as_ref(),
+        Diagnostic::Error(e) => e.get_context(),
+        // TODO(gj): remove clone() and add PolarWarning::get_context
+        Diagnostic::Warning(w) => w.context.clone(),
     };
 
     if let Some(PolarRange { start, end }) = context.map(|c| c.range) {
@@ -50,8 +51,9 @@ pub(crate) fn range_from_polar_diagnostic_context(diagnostic: &Diagnostic) -> Ra
 
 pub(crate) fn uri_from_polar_diagnostic_context(diagnostic: &Diagnostic) -> Option<Url> {
     let context = match diagnostic {
-        Diagnostic::Error(e) => e.context.as_ref(),
-        Diagnostic::Warning(w) => w.context.as_ref(),
+        Diagnostic::Error(e) => e.get_context(),
+        // TODO(gj): remove clone() and add PolarWarning::get_context
+        Diagnostic::Warning(w) => w.context.clone(),
     };
     if let Some(context) = context {
         if let Some(filename) = context.source.filename.as_ref() {

@@ -344,7 +344,7 @@ impl PolarLanguageServer {
 
         let lines = self.documents.values();
         let lines = lines
-            .filter_map(|d| parse_lines(Arc::new(Source::new_with_name(&d.uri, &d.text))).ok())
+            .filter_map(|d| parse_lines(&Arc::new(Source::new_with_name(&d.uri, &d.text))).ok())
             .flatten();
         for line in lines {
             match line {
@@ -450,12 +450,12 @@ impl PolarLanguageServer {
         &self,
         diagnostic: PolarDiagnostic,
     ) -> Vec<(TextDocumentItem, Diagnostic)> {
-        use polar_core::error::{ErrorKind::Validation, ValidationError::*};
+        use polar_core::error::{PolarError::Validation, ValidationError::*};
         use polar_core::warning::ValidationWarning::UnknownSpecializer;
 
         // Ignore diagnostics that depend on app data.
         match &diagnostic {
-            PolarDiagnostic::Error(e) => match e.kind {
+            PolarDiagnostic::Error(e) => match e {
                 Validation(UnregisteredClass { .. }) | Validation(SingletonVariable { .. }) => {
                     return vec![];
                 }
@@ -470,7 +470,7 @@ impl PolarLanguageServer {
         // NOTE(gj): We stringify the error / warning variant instead of the full `PolarError` /
         // `PolarWarning` because we don't want source context as part of the error message.
         let (message, severity) = match &diagnostic {
-            PolarDiagnostic::Error(e) => (e.kind.to_string(), DiagnosticSeverity::Error),
+            PolarDiagnostic::Error(e) => (e.to_string(), DiagnosticSeverity::Error),
             PolarDiagnostic::Warning(w) => (w.kind.to_string(), DiagnosticSeverity::Warning),
         };
 
