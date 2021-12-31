@@ -457,7 +457,9 @@ describe('#clearRules', () => {
     await p.loadFiles([await tempFileFx()]);
     expect(await qvar(p, 'f(x)', 'x')).toStrictEqual([1, 2, 3]);
     p.clearRules();
-    expect(await query(p, 'f(x)')).toStrictEqual([]);
+    await expect(query(p, 'f(x)')).rejects.toThrow(
+      'Query for undefined rule `f`'
+    );
   });
 
   test('does not clear registered classes', async () => {

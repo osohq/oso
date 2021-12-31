@@ -611,7 +611,13 @@ fn test_multi_arg_method_ordering() -> TestResult {
 #[test]
 fn test_no_applicable_rules() -> TestResult {
     let p = polar();
-    qnull(&p, "f()");
+
+    qruntime!(
+        "f()",
+        RuntimeError::QueryForUndefinedRule { name },
+        name == "f"
+    );
+
     p.load_str("f(_);")?;
     qnull(&p, "f()");
     Ok(())

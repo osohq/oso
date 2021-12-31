@@ -100,16 +100,15 @@ func TestClearRules(t *testing.T) {
 	o.ClearRules()
 	results, errors := o.QueryStr("f(x)")
 
-	if err = <-errors; err != nil {
-		t.Error(err.Error())
-	} else {
-		var got []map[string]interface{}
-		for elem := range results {
-			got = append(got, elem)
-		}
-		if len(got) > 0 {
-			t.Errorf("Received too many results: %v", got)
-		}
+	if err = <-errors; err == nil {
+		t.Error("Expected query for undefined rule to throw error")
+	}
+	if !strings.Contains(err.Error(), "Query for undefined rule `f`") {
+		t.Errorf("Received error does not match expected type: %v", err)
+	}
+
+	if r := <-results; r != nil {
+		t.Error("Got result; expected none")
 	}
 }
 
@@ -194,11 +193,15 @@ func TestQueryRule(t *testing.T) {
 	}
 
 	results, errors = o.QueryRule("v", 1)
+	e := <-errors
+	if e == nil {
+		t.Error("Expected query for undefined rule to throw error")
+	}
+	if !strings.Contains(e.Error(), "Query for undefined rule `v`") {
+		t.Errorf("Received error does not match expected type: %v", err)
+	}
 	if r := <-results; r != nil {
 		t.Error("Got result; expected none")
-	}
-	if e := <-errors; e != nil {
-		t.Error(e)
 	}
 
 }

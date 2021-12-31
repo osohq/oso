@@ -317,7 +317,7 @@ type ExternalInstance struct {
 	Constructor *Term `json:"constructor"`
 	// Repr
 	Repr *string `json:"repr"`
-	// Class Repr
+	// ClassRepr
 	ClassRepr *string `json:"class_repr"`
 }
 
@@ -2156,6 +2156,14 @@ type RuntimeErrorMultipleLoadError struct{}
 
 func (RuntimeErrorMultipleLoadError) isRuntimeError() {}
 
+// RuntimeErrorQueryForUndefinedRule struct
+type RuntimeErrorQueryForUndefinedRule struct {
+	// Name
+	Name string `json:"name"`
+}
+
+func (RuntimeErrorQueryForUndefinedRule) isRuntimeError() {}
+
 // RuntimeError enum
 type RuntimeErrorVariant interface {
 	isRuntimeError()
@@ -2331,6 +2339,17 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		*result = RuntimeError{variant}
 		return nil
 
+	case "QueryForUndefinedRule":
+		var variant RuntimeErrorQueryForUndefinedRule
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = RuntimeError{variant}
+		return nil
+
 	}
 
 	return fmt.Errorf("Cannot deserialize RuntimeError: %s", string(b))
@@ -2402,6 +2421,11 @@ func (variant RuntimeError) MarshalJSON() ([]byte, error) {
 	case RuntimeErrorMultipleLoadError:
 		return json.Marshal(map[string]RuntimeErrorMultipleLoadError{
 			"MultipleLoadError": inner,
+		})
+
+	case RuntimeErrorQueryForUndefinedRule:
+		return json.Marshal(map[string]RuntimeErrorQueryForUndefinedRule{
+			"QueryForUndefinedRule": inner,
 		})
 
 	}
