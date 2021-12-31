@@ -804,16 +804,13 @@ impl KnowledgeBase {
             let relation_name = relation.value().as_string().expect("must be string");
             let object_specializer = pattern!(instance!(&object.value().as_symbol().expect("must be symbol").0));
 
+            let name = sym!("has_relation");
             let mut params = args!("subject"; subject_specializer, relation_name, "object"; object_specializer);
             params.reverse();
             let body = term!(op!(And));
-
-            // TODO(gj): `Parsed<T>::clone_source_info` or something
-            let (source, left, right) = relation.parsed_source_info().expect("must be parsed");
-            let mut rule = Rule::new_from_parser(source, left, right, sym!("has_relation"), params, body);
-
-            rule.required = required;
-            rule
+            // Copy SourceInfo from implier or relation in shorthand rule.
+            let source_info = relation.source_info().clone();
+            Rule { name, params, body, source_info, required }
         }).collect::<Vec<_>>();
 
         // If there are any Relation::Role declarations in *any* of our resource
