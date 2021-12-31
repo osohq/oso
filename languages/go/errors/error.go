@@ -111,7 +111,7 @@ type KwargsError struct {
 }
 
 func (e *KwargsError) Error() string {
-	return fmt.Sprintf("Go does not support keyword arguments")
+	return "Go does not support keyword arguments"
 }
 
 type PolarFileExtensionError struct {
@@ -174,24 +174,12 @@ func (e *UnregisteredInstanceError) Error() string {
 	return fmt.Sprintf("Unregistered instance: %d.", e.id)
 }
 
-// FormattedPolarError struct
-type FormattedPolarError struct {
-	// Kind
-	Kind types.ErrorKind `json:"kind"`
-	// Formatted
-	Formatted string `json:"formatted"`
-}
-
-func (e *FormattedPolarError) Error() string {
-	return fmt.Sprintf("Error: %#v\n%s", e.Kind.ErrorKindVariant, e.Formatted)
-}
-
 type ErrorWithAdditionalInfo struct {
 	Inner error
 	Info  string
 }
 
-func (e *ErrorWithAdditionalInfo) Error() string {
+func (e ErrorWithAdditionalInfo) Error() string {
 	return fmt.Sprintf("%s\n%s", e.Info, e.Inner)
 }
 

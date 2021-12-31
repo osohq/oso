@@ -422,7 +422,7 @@ func String(s string) *string {
 	return &s
 }
 
-func (tc TestCase) setupTest(o oso.Oso, t *testing.T) (error, []string) {
+func (tc TestCase) setupTest(o oso.Oso, t *testing.T) []string {
 	var CONSTRUCTORS = map[string]interface{}{
 		"UnitClass":    NewUnitClass,
 		"ValueFactory": NewValueFactory,
@@ -462,12 +462,15 @@ func (tc TestCase) setupTest(o oso.Oso, t *testing.T) (error, []string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return nil, policies
+	return policies
 }
 
 func (tc TestCase) RunTest(t *testing.T) {
 	for _, c := range tc.Cases {
 		testName := tc.Name + "\n" + tc.Description + "\n"
+		if c.Query == "" {
+			t.Fatal("Test case must not have an empty query")
+		}
 		if c.Description != nil {
 			testName += *c.Description
 		} else {
@@ -481,10 +484,7 @@ func (tc TestCase) RunTest(t *testing.T) {
 			if o, err = oso.NewOso(); err != nil {
 				t.Fatalf("Failed to setup Oso: %s", err.Error())
 			}
-			err, policies := tc.setupTest(o, t)
-			if err != nil {
-				t.Fatal(err)
-			}
+			policies := tc.setupTest(o, t)
 			var testQuery *oso.Query
 			var queryErr error
 			if c.Inputs == nil {
@@ -496,6 +496,9 @@ func (tc TestCase) RunTest(t *testing.T) {
 					Inputs[idx] = input
 				}
 				testQuery, queryErr = o.NewQueryFromRule(c.Query, Inputs...)
+			}
+			if queryErr != nil {
+				t.Error(queryErr)
 			}
 
 			expectedResults := make([]map[string]Result, 0)

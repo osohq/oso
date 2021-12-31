@@ -9,7 +9,6 @@ import (
 
 	"github.com/osohq/go-oso/errors"
 	"github.com/osohq/go-oso/internal/ffi"
-	"github.com/osohq/go-oso/types"
 	. "github.com/osohq/go-oso/types"
 )
 
@@ -97,12 +96,12 @@ func (h Host) CacheClass(cls reflect.Type, className string, constructor reflect
 	// convert fields to correct types
 	for fieldName, v := range fields {
 		switch fieldType := v.(type) {
-		case types.TypeRelation:
-			classFields[fieldName] = types.Type{fieldType}
+		case TypeRelation:
+			classFields[fieldName] = Type{fieldType}
 		case string:
-			classFields[fieldName] = types.Type{types.TypeBase{ClassTag: fieldType}}
+			classFields[fieldName] = Type{TypeBase{ClassTag: fieldType}}
 		default:
-			return fmt.Errorf("fields must be either a type *name* (i.e. a string), or types.TypeRelation")
+			return fmt.Errorf("fields must be either a type *name* (i.e. a string), or TypeRelation")
 		}
 	}
 	h.fields[className] = classFields
@@ -112,7 +111,7 @@ func (h Host) CacheClass(cls reflect.Type, className string, constructor reflect
 func (h Host) RegisterMros() error {
 	// Go does not support inheritance, so all MROs are empty
 	var err error
-	for name, _ := range h.classes {
+	for name := range h.classes {
 		err = h.ffiPolar.RegisterMro(name, []uint64{})
 		if err != nil {
 			return err
@@ -128,7 +127,7 @@ func (h Host) getInstance(id uint64) (*reflect.Value, error) {
 	return nil, errors.NewUnregisteredInstanceError(id)
 }
 
-func (h Host) MakeInstance(call types.ValueCall, id uint64) error {
+func (h Host) MakeInstance(call ValueCall, id uint64) error {
 	// Check for duplicate instance
 	if _, ok := h.instances[id]; ok {
 		return errors.NewDuplicateInstanceRegistrationError(id)
@@ -138,28 +137,28 @@ func (h Host) MakeInstance(call types.ValueCall, id uint64) error {
 
 	cls, err := h.getClass(name)
 	if err != nil {
-		return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(types.Value{ValueVariant: call}), Info: err.Error()}
+		return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(Value{ValueVariant: call}), Info: err.Error()}
 	}
 	if constructor, ok := h.constructors[name]; ok {
 		results, err := h.CallFunction(constructor, args)
 		if err != nil {
-			return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(types.Value{ValueVariant: call}), Info: err.Error()}
+			return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(Value{ValueVariant: call}), Info: err.Error()}
 		}
 		if len(results) != 1 {
-			return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(types.Value{ValueVariant: call}), Info: fmt.Sprintf("Constructor must retun 1 result; returned %v", len(results))}
+			return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(Value{ValueVariant: call}), Info: fmt.Sprintf("Constructor must retun 1 result; returned %v", len(results))}
 		}
 		instance := results[0]
 		if instance.Type() != *cls {
-			return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(types.Value{ValueVariant: call}), Info: fmt.Sprintf("Expected constructor to return %v; returned %v", *cls, instance.Type())}
+			return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(Value{ValueVariant: call}), Info: fmt.Sprintf("Expected constructor to return %v; returned %v", *cls, instance.Type())}
 		}
 		h.cacheInstance(instance.Interface(), &id)
 		return nil
 	} else {
-		return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(types.Value{ValueVariant: call}), Info: fmt.Sprintf("Missing constructor for class %v", name)}
+		return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(Value{ValueVariant: call}), Info: fmt.Sprintf("Missing constructor for class %v", name)}
 	}
 }
 
-func (h Host) CallFunction(fn reflect.Value, termArgs []types.Term) ([]reflect.Value, error) {
+func (h Host) CallFunction(fn reflect.Value, termArgs []Term) ([]reflect.Value, error) {
 	if fn.Kind() != reflect.Func {
 		panic(fmt.Errorf("CallFunction expects a reflect.Func value; got: %v", fn.Kind()))
 	}
@@ -222,7 +221,7 @@ func (h Host) cacheInstance(instance interface{}, id *uint64) (*uint64, error) {
 	return &instanceID, nil
 }
 
-func (h Host) Isa(value types.Term, classTag string) (bool, error) {
+func (h Host) Isa(value Term, classTag string) (bool, error) {
 	instance, err := h.ToGo(value)
 	if err != nil {
 		return false, err
@@ -285,11 +284,11 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 		case uint64:
 			uintVal := uint64(vv)
 			if uintVal > uint64(math.MaxInt64) {
-				return nil, fmt.Errorf("Invalid integer %v, max %v", v, math.MaxInt64)
+				return nil, fmt.Errorf("invalid integer %v, max %v", v, math.MaxInt64)
 			}
 			intVal = int64(vv)
 		}
-		inner := ValueNumber{types.NumericInteger(intVal)}
+		inner := ValueNumber{NumericInteger(intVal)}
 		return &Value{inner}, nil
 	case float32, float64:
 		var floatVal float64
@@ -299,7 +298,7 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 		case float64:
 			floatVal = float64(vv)
 		}
-		inner := ValueNumber{types.NumericInteger(floatVal)}
+		inner := ValueNumber{NumericInteger(floatVal)}
 		return &Value{inner}, nil
 	case string:
 		inner := ValueString(v)
@@ -308,7 +307,7 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 		return &Value{ValueVariable(v)}, nil
 	case Expression:
 		// Make a new array of values
-		args := make([]types.Term, len(v.Args))
+		args := make([]Term, len(v.Args))
 		for i, arg := range v.Args {
 			// call toPolar on each element
 			converted, err := h.ToPolar(arg)
@@ -344,19 +343,19 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 	switch rt.Kind() {
 	case reflect.Slice, reflect.Array:
 		// Make a new array of values
-		slice := make([]types.Term, rt.Len())
+		slice := make([]Term, rt.Len())
 		for i := 0; i < rt.Len(); i++ {
 			// call toPolar on each element
 			converted, err := h.ToPolar(rt.Index(i).Interface())
 			if err != nil {
 				return nil, err
 			}
-			slice[i] = types.Term{*converted}
+			slice[i] = Term{*converted}
 		}
 		inner := ValueList(slice)
 		return &Value{inner}, nil
 	case reflect.Map:
-		fields := make(map[types.Symbol]types.Term)
+		fields := make(map[Symbol]Term)
 		iter := rt.MapRange()
 		for iter.Next() {
 			// TODO(gj): error on maps w/o string keys since we're just gonna
@@ -369,7 +368,7 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 			if err != nil {
 				return nil, err
 			}
-			fields[types.Symbol(k)] = types.Term{*converted}
+			fields[Symbol(k)] = Term{*converted}
 		}
 		inner := ValueDictionary{Fields: fields}
 		return &Value{inner}, nil
@@ -390,7 +389,7 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 	}
 }
 
-func (h Host) ListToGo(v []types.Term) ([]interface{}, error) {
+func (h Host) ListToGo(v []Term) ([]interface{}, error) {
 	retList := make([]interface{}, len(v))
 	for idx, v := range v {
 		ret, err := h.ToGo(v)
@@ -402,7 +401,7 @@ func (h Host) ListToGo(v []types.Term) ([]interface{}, error) {
 	return retList, nil
 }
 
-func (h Host) ToGo(v types.Term) (interface{}, error) {
+func (h Host) ToGo(v Term) (interface{}, error) {
 	switch inner := v.Value.ValueVariant.(type) {
 	case ValueBoolean:
 		return bool(inner), nil
@@ -461,7 +460,7 @@ func (h Host) ToGo(v types.Term) (interface{}, error) {
 	case ValuePattern:
 		return inner, nil
 	}
-	return nil, fmt.Errorf("Unexpected Polar type %v", v)
+	return nil, fmt.Errorf("unexpected Polar type %v", v)
 }
 
 func (h *Host) SetAcceptExpression(acceptExpression bool) {

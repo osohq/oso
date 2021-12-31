@@ -20,7 +20,7 @@ func SetFieldTo(field reflect.Value, input interface{}) error {
 		inputArray, ok := input.([]interface{})
 		field.Set(reflect.MakeSlice(field.Type(), len(inputArray), len(inputArray)))
 		if !ok {
-			return fmt.Errorf("Cannot assign to array from %s", reflect.TypeOf(input).Kind())
+			return fmt.Errorf("cannot assign to array from %s", reflect.TypeOf(input).Kind())
 		}
 		for idx, v := range inputArray {
 			err := SetFieldTo(field.Index(idx), v)
