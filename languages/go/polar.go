@@ -142,14 +142,14 @@ func (p Polar) queryRule(name string, args ...interface{}) (*Query, error) {
 		if err != nil {
 			return nil, err
 		}
-		polarArgs[idx] = Term{*converted}
+		polarArgs[idx] = Term{converted}
 	}
 	query := Call{
 		Name: Symbol(name),
 		Args: polarArgs,
 	}
 	inner := ValueCall(query)
-	ffiQuery, err := p.ffiPolar.NewQueryFromTerm(Term{Value{inner}})
+	ffiQuery, err := p.ffiPolar.NewQueryFromTerm(Term{inner})
 	if err != nil {
 		return nil, err
 	}
@@ -245,5 +245,5 @@ func (p Polar) registerConstant(value interface{}, name string) error {
 	if err != nil {
 		return err
 	}
-	return p.ffiPolar.RegisterConstant(Term{*polarValue}, name)
+	return p.ffiPolar.RegisterConstant(Term{polarValue}, name)
 }

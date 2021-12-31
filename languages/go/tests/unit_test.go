@@ -341,7 +341,7 @@ func TestZeroValueRepr(t *testing.T) {
 	if err != nil {
 		t.Fatalf("host.ToPolar failed: %v", err)
 	}
-	switch variant := polarValue.ValueVariant.(type) {
+	switch variant := polarValue.(type) {
 	case ValueExternalInstance:
 		expected := "oso_test.Foo{Name: Num:0}"
 		if *variant.Repr != expected {
@@ -355,7 +355,7 @@ func TestZeroValueRepr(t *testing.T) {
 	if err != nil {
 		t.Fatalf("host.ToPolar failed: %v", err)
 	}
-	switch variant := polarValue.ValueVariant.(type) {
+	switch variant := polarValue.(type) {
 	case ValueExternalInstance:
 		expected := "oso_test.Foo{Name:Zooey Num:42}"
 		if *variant.Repr != expected {
@@ -494,14 +494,14 @@ func TestPartial(t *testing.T) {
 
 		got := (*first)["x"]
 		expected := Expression{
-			Operator: Operator{OperatorAnd{}},
+			Operator: OperatorAnd{},
 			Args: []interface{}{
 				Expression{
-					Operator: Operator{OperatorUnify{}},
+					Operator: OperatorUnify{},
 					Args: []interface{}{
 						int64(1),
 						Expression{
-							Operator: Operator{OperatorDot{}},
+							Operator: OperatorDot{},
 							Args: []interface{}{
 								Variable("_this"),
 								"bar",
@@ -510,11 +510,11 @@ func TestPartial(t *testing.T) {
 					},
 				},
 				Expression{
-					Operator: Operator{OperatorUnify{}},
+					Operator: OperatorUnify{},
 					Args: []interface{}{
 						int64(2),
 						Expression{
-							Operator: Operator{OperatorDot{}},
+							Operator: OperatorDot{},
 							Args: []interface{}{
 								Variable("_this"),
 								"baz",

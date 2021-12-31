@@ -97,9 +97,9 @@ func (h Host) CacheClass(cls reflect.Type, className string, constructor reflect
 	for fieldName, v := range fields {
 		switch fieldType := v.(type) {
 		case TypeRelation:
-			classFields[fieldName] = Type{fieldType}
+			classFields[fieldName] = fieldType
 		case string:
-			classFields[fieldName] = Type{TypeBase{ClassTag: fieldType}}
+			classFields[fieldName] = TypeBase{ClassTag: fieldType}
 		default:
 			return fmt.Errorf("fields must be either a type *name* (i.e. a string), or TypeRelation")
 		}
@@ -137,24 +137,24 @@ func (h Host) MakeInstance(call ValueCall, id uint64) error {
 
 	cls, err := h.getClass(name)
 	if err != nil {
-		return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(Value{ValueVariant: call}), Info: err.Error()}
+		return errors.NewInvalidConstructorError(call)
 	}
 	if constructor, ok := h.constructors[name]; ok {
 		results, err := h.CallFunction(constructor, args)
 		if err != nil {
-			return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(Value{ValueVariant: call}), Info: err.Error()}
+			return errors.NewInvalidConstructorError(call)
 		}
 		if len(results) != 1 {
-			return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(Value{ValueVariant: call}), Info: fmt.Sprintf("Constructor must retun 1 result; returned %v", len(results))}
+			return errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(call), Info: fmt.Sprintf("Constructor must retun 1 result; returned %v", len(results))}
 		}
 		instance := results[0]
 		if instance.Type() != *cls {
-			return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(Value{ValueVariant: call}), Info: fmt.Sprintf("Expected constructor to return %v; returned %v", *cls, instance.Type())}
+			return errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(call), Info: fmt.Sprintf("Expected constructor to return %v; returned %v", *cls, instance.Type())}
 		}
 		h.cacheInstance(instance.Interface(), &id)
 		return nil
 	} else {
-		return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(Value{ValueVariant: call}), Info: fmt.Sprintf("Missing constructor for class %v", name)}
+		return errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(call), Info: fmt.Sprintf("Missing constructor for class %v", name)}
 	}
 }
 
@@ -252,14 +252,13 @@ func (h Host) IsSubspecializer(instanceID int, leftTag string, rightTag string) 
 	return false, nil
 }
 
-func (h Host) ToPolar(v interface{}) (*Value, error) {
+func (h Host) ToPolar(v interface{}) (Value, error) {
 	if v == nil {
 		return h.ToPolar(None{})
 	}
 	switch v := v.(type) {
 	case bool:
-		inner := ValueBoolean(v)
-		return &Value{inner}, nil
+		return ValueBoolean(v), nil
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		var intVal int64
 		switch vv := v.(type) {
@@ -288,8 +287,7 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 			}
 			intVal = int64(vv)
 		}
-		inner := ValueNumber{NumericInteger(intVal)}
-		return &Value{inner}, nil
+		return ValueNumber{NumericInteger(intVal)}, nil
 	case float32, float64:
 		var floatVal float64
 		switch vv := v.(type) {
@@ -298,13 +296,11 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 		case float64:
 			floatVal = float64(vv)
 		}
-		inner := ValueNumber{NumericInteger(floatVal)}
-		return &Value{inner}, nil
+		return ValueNumber{NumericInteger(floatVal)}, nil
 	case string:
-		inner := ValueString(v)
-		return &Value{inner}, nil
+		return ValueString(v), nil
 	case Variable:
-		return &Value{ValueVariable(v)}, nil
+		return ValueVariable(v), nil
 	case Expression:
 		// Make a new array of values
 		args := make([]Term, len(v.Args))
@@ -314,18 +310,14 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 			if err != nil {
 				return nil, err
 			}
-			args[i] = Term{*converted}
+			args[i] = Term{converted}
 		}
-		inner := ValueExpression{
+		return ValueExpression{
 			Operator: v.Operator,
 			Args:     args,
-		}
-		return &Value{inner}, nil
+		}, nil
 	case Value:
-		return &v, nil
-	case ValueVariant:
-		// if its already a variant, return that
-		return &Value{v}, nil
+		return v, nil
 	}
 
 	// check composite types
@@ -350,10 +342,9 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 			if err != nil {
 				return nil, err
 			}
-			slice[i] = Term{*converted}
+			slice[i] = Term{converted}
 		}
-		inner := ValueList(slice)
-		return &Value{inner}, nil
+		return ValueList(slice), nil
 	case reflect.Map:
 		fields := make(map[Symbol]Term)
 		iter := rt.MapRange()
@@ -368,10 +359,9 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 			if err != nil {
 				return nil, err
 			}
-			fields[Symbol(k)] = Term{*converted}
+			fields[Symbol(k)] = Term{converted}
 		}
-		inner := ValueDictionary{Fields: fields}
-		return &Value{inner}, nil
+		return ValueDictionary{fields}, nil
 	default:
 		instanceID, err := h.cacheInstance(v, nil)
 		if err != nil {
@@ -385,7 +375,7 @@ func (h Host) ToPolar(v interface{}) (*Value, error) {
 			Repr:        &repr,
 			ClassRepr:   &classRepr,
 		}
-		return &Value{inner}, nil
+		return inner, nil
 	}
 }
 
@@ -402,11 +392,11 @@ func (h Host) ListToGo(v []Term) ([]interface{}, error) {
 }
 
 func (h Host) ToGo(v Term) (interface{}, error) {
-	switch inner := v.Value.ValueVariant.(type) {
+	switch inner := v.Value.(type) {
 	case ValueBoolean:
 		return bool(inner), nil
 	case ValueNumber:
-		switch number := inner.NumericVariant.(type) {
+		switch number := inner.Numeric.(type) {
 		case NumericInteger:
 			return int64(number), nil
 		case NumericFloat:

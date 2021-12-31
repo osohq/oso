@@ -8,7 +8,8 @@ type {{name}} struct {
 
 {{#if (containsEnum fields) }}
 func (result *{{name}}) UnmarshalJSON(b []byte) error {
-
+    // This struct contains enums which need to be deserialized using the intermediate
+    // <TypeName>Deserializer structs
     type Raw{{name}} struct {
         {{#each fields}}
         // {{this.variable}}
@@ -28,12 +29,42 @@ func (result *{{name}}) UnmarshalJSON(b []byte) error {
     *result = {{name}} {
         {{#each fields}}
         {{#if (isEnum this.variant) }}
-        {{this.variable}}: intermediate.{{this.variable}}.Inner,
+        {{this.variable}}: intermediate.{{this.variable}}.{{this.type_name}},
         {{else}}
         {{this.variable}}: intermediate.{{this.variable}},  
         {{/if}}
         {{/each}}
     }
     return nil
+}
+{{/if}}
+
+
+{{#if (containsEnum fields) }}
+func (v {{name}}) MarshalJSON() ([]byte, error) {
+
+    // This struct contains enums which need to be serialized using the intermediate
+    // <TypeName>Deserializer structs
+    type Raw{{name}} struct {
+        {{#each fields}}
+        // {{this.variable}}
+        {{#if (isEnum this.variant) }}
+        {{this.variable}} {{this.type_name}}Deserializer `json:"{{( snake-case this.variable )}}"`
+        {{else}}
+        {{this.variable}} {{this.type_name}} `json:"{{( snake-case this.variable )}}"`
+        {{/if}}
+        {{/each}}
+    }
+    intermediate := Raw{{name}} {
+        {{#each fields}}
+        {{#if (isEnum this.variant) }}
+        {{this.variable}}: {{this.type_name}}Deserializer { {{this.type_name}}: v.{{this.variable}} },
+        {{else}}
+        {{this.variable}}: v.{{this.variable}},  
+        {{/if}}
+        {{/each}}
+    }
+    {{!-- fmt.Printf("%#v\n\n%#v\n\n\n\n\n", v, intermediate) --}}
+    return json.Marshal(intermediate)
 }
 {{/if}}

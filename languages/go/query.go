@@ -2,7 +2,6 @@ package oso
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"os"
 	"reflect"
@@ -89,13 +88,12 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		var event QueryEvent
-		err = json.Unmarshal([]byte(*ffiEvent), &event)
+		event, err := DeserializeQueryEvent([]byte(*ffiEvent))
 		if err != nil {
 			return nil, err
 		}
 
-		switch ev := event.QueryEventVariant.(type) {
+		switch ev := (*event).(type) {
 		case QueryEventDone:
 			defer q.Cleanup()
 			return nil, nil
@@ -150,7 +148,7 @@ func (q *Query) SetAcceptExpression(acceptExpression bool) {
 
 func (q Query) handleMakeExternal(event QueryEventMakeExternal) error {
 	id := uint64(event.InstanceId)
-	call, _ := event.Constructor.Value.ValueVariant.(ValueCall)
+	call, _ := event.Constructor.Value.(ValueCall)
 	if call.Kwargs != nil {
 		return &errors.KwargsError{}
 	}
@@ -216,7 +214,7 @@ func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 	if err != nil {
 		return err
 	}
-	return q.ffiQuery.CallResult(event.CallId, &Term{*polarValue})
+	return q.ffiQuery.CallResult(event.CallId, &Term{polarValue})
 }
 func (q Query) handleExternalIsa(event QueryEventExternalIsa) error {
 	isa, err := q.host.Isa(event.Instance, string(event.ClassTag))
@@ -257,7 +255,7 @@ func (q Query) handleExternalOp(event QueryEventExternalOp) error {
 
 	leftCmp, leftOk := left.(interfaces.Comparer)
 	rightCmp, rightOk := right.(interfaces.Comparer)
-	op := event.Operator.OperatorVariant
+	op := event.Operator
 
 	// this logic is kind of weird!
 	// the reason why we need so many different comparison
@@ -288,7 +286,7 @@ func (q Query) answer(ev QueryEventExternalOp, b bool) error {
 func (q Query) handleCmpL(
 	ev QueryEventExternalOp,
 	l interfaces.Comparer,
-	op OperatorVariant,
+	op Operator,
 	r interface{}) error {
 
 	switch op.(type) {
@@ -308,7 +306,7 @@ func (q Query) handleCmpL(
 func (q Query) handleCmpR(
 	ev QueryEventExternalOp,
 	l interface{},
-	op OperatorVariant,
+	op Operator,
 	r interfaces.Comparer) error {
 
 	switch op.(type) {
@@ -328,7 +326,7 @@ func (q Query) handleCmpR(
 func (q Query) handleCmpLR(
 	ev QueryEventExternalOp,
 	l interfaces.Comparer,
-	op OperatorVariant,
+	op Operator,
 	r interfaces.Comparer) error {
 
 	switch op.(type) {
@@ -352,7 +350,7 @@ func (q Query) handleCmpLR(
 func (q Query) handleCmp(
 	ev QueryEventExternalOp,
 	l interface{},
-	op OperatorVariant,
+	op Operator,
 	r interface{}) error {
 
 	switch op.(type) {
@@ -387,7 +385,7 @@ func (q Query) handleNextExternal(event QueryEventNextExternal) error {
 	if err != nil {
 		return err
 	}
-	return q.ffiQuery.CallResult(event.CallId, &Term{*retValue})
+	return q.ffiQuery.CallResult(event.CallId, &Term{retValue})
 }
 
 func (q Query) handleDebug(event QueryEventDebug) error {

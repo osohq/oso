@@ -421,31 +421,22 @@ func (o Oso) dataFilter(actor interface{}, action interface{}, resource_type str
 
 	constraint :=
 		types.Term{
-			Value: types.Value{
-				types.ValueExpression{
-					Operator: types.Operator{types.OperatorAnd{}},
-					Args: []types.Term{
-						{
-							Value: types.Value{
-								types.ValueExpression{
-									Operator: types.Operator{types.OperatorIsa{}},
-									Args: []types.Term{
-										{
-											Value: types.Value{
-												types.ValueVariable("resource"),
-											},
-										},
-										{
-											Value: types.Value{
-												types.ValuePattern{
-													types.PatternInstance{
-														Tag:    types.Symbol(resource_type),
-														Fields: types.Dictionary{Fields: make(map[types.Symbol]types.Term)},
-													},
-												},
-											},
-										},
+			types.ValueExpression{
+				Operator: types.OperatorAnd{},
+				Args: []types.Term{
+					{
+						types.ValueExpression{
+							Operator: types.OperatorIsa{},
+							Args: []types.Term{
+								{
+									types.ValueVariable("resource"),
+								},
+								{types.ValuePattern{
+									types.PatternInstance{
+										Tag:    types.Symbol(resource_type),
+										Fields: types.Dictionary{Fields: make(map[types.Symbol]types.Term)},
 									},
+								},
 								},
 							},
 						},
@@ -468,7 +459,7 @@ func (o Oso) dataFilter(actor interface{}, action interface{}, resource_type str
 				if err != nil {
 					return nil, nil, err
 				}
-				m[k] = types.Term{Value: *polar}
+				m[k] = types.Term{polar}
 			}
 			b := make(map[string]map[string]types.Term)
 			b["bindings"] = m

@@ -1,13 +1,37 @@
-// {{name}} newtype
+{{#if (eq variant "enum")}}
+// {{name}} is a newtype struct wrapping a Rust enum
+// Since we convert enums to Go interfaces, it's
+// a little easier for us to wrap the inner {{type}}
+// as a field on a struct.
+type {{name}} struct { {{type}} }
+
+func (variant {{name}}) MarshalJSON() ([]byte, error) {
+    return Serialize{{type}}(variant.{{type}})
+}
+
+func (result *{{name}}) UnmarshalJSON(b []byte) error {
+    v, err := Deserialize{{type}}(b)
+    if err != nil {
+        return err
+    }
+    *result = {{name}} { {{type}}: *v }
+    return nil
+}
+{{else}}
 type {{name}} {{type}}
 
 func (variant {{name}}) MarshalJSON() ([]byte, error) {
-    return json.Marshal({{type}}(variant))
+    return json.Marshal(({{type}})(variant))
 }
 
-func (variant *{{name}}) UnmarshalJSON(b []byte) (error) {
-    inner := {{type}}(*variant)
+func (result *{{name}}) UnmarshalJSON(b []byte) error {
+    var inner {{type}}
     err := json.Unmarshal(b, &inner)
-    *variant = {{name}}(inner)
-    return err
+    if err != nil {
+        return err
+    }
+    *result = {{name}}(inner)
+    return nil
 }
+{{/if}}
+

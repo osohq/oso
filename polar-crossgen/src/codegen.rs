@@ -124,13 +124,17 @@ impl<'a> Codegen<'a> {
         Ok(())
     }
 
-    fn get_field(&self, field: &Named<Format>) -> Field {
-        let type_name = self.quote_type(&field.value);
-        let variant = self
-            .types
+    fn get_type_variant(&self, format: &Format) -> TypeVariant {
+        let type_name = self.quote_type(format);
+        self.types
             .get(&type_name)
             .cloned()
-            .unwrap_or(TypeVariant::Unknown);
+            .unwrap_or(TypeVariant::Unknown)
+    }
+
+    fn get_field(&self, field: &Named<Format>) -> Field {
+        let type_name = self.quote_type(&field.value);
+        let variant = self.get_type_variant(&field.value);
         Field {
             // TODO: This wont be camel case for non-Go language
             variable: field.name.to_upper_camel_case(),
@@ -176,6 +180,7 @@ impl<'a> Codegen<'a> {
                     &json!({
                         "name": name,
                         "type": self.quote_type(format),
+                        "variant": self.get_type_variant(format)
                     }),
                 )?;
             }
@@ -235,6 +240,7 @@ impl<'a> Codegen<'a> {
                     &json!({
                         "name": base.to_owned() + name,
                         "type": self.quote_type(format),
+                        "variant": self.get_type_variant(format),
                     }),
                 )?;
             }

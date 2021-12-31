@@ -1,24 +1,31 @@
 // {{name}} enum
-type {{name}}Variant interface {
+//
+// The Rust enum type {{name}} is represented in Go with an interfact
+// this allows us to mimic the sum type by accepting any variant
+// of {{name}} as a possibility for {{name}}.
+//
+// To make this clear, we prefix all variants with {{name}}
+//
+// The downside of this approach is that you cannot directly
+// serialize or deserialize instances of {{name}}. Instead, you
+// _must_ call Deserialize{{name}}.
+type {{name}} interface {
     is{{name}}()
 }
 
-type {{name}} struct {
-    {{name}}Variant
-}
-
 type {{name}}Deserializer struct {
-   Inner {{name}}
+   {{name}}
 }
 
-func (result *{{name}}) UnmarshalJSON(b []byte) error {
+func Deserialize{{name}}(b []byte) (*{{name}}, error) {
     var deserializer {{name}}Deserializer
+    var result {{name}}
     err := json.Unmarshal(b, &deserializer)
     if err != nil {
-        return err
+        return nil, err
     }
-    *result = deserializer.Inner
-    return nil
+    result = deserializer.{{name}}
+    return &result, nil
 }
 
 func (result *{{name}}Deserializer) UnmarshalJSON(b []byte) error {
@@ -42,6 +49,7 @@ func (result *{{name}}Deserializer) UnmarshalJSON(b []byte) error {
             variantValue = &v
         }
     }
+
     switch variantName {
     {{#each variants}}
     case "{{this.name}}":
@@ -52,7 +60,8 @@ func (result *{{name}}Deserializer) UnmarshalJSON(b []byte) error {
                 return err
             }
         }
-        *result = {{../name}}Deserializer { Inner: {{../name}} { variant } }
+
+        *result = {{../name}}Deserializer { variant }
         return nil
     {{/each}}
     }
@@ -60,9 +69,12 @@ func (result *{{name}}Deserializer) UnmarshalJSON(b []byte) error {
     return fmt.Errorf("cannot deserialize {{../name}}: %s", string(b))
 }
 
+func (v {{name}}Deserializer) MarshalJSON() ([]byte, error) {
+    return Serialize{{name}}(v.{{name}})
+}
 
-func (variant {{name}}) MarshalJSON() ([]byte, error) {
-    switch inner := variant.{{name}}Variant.(type) {
+func Serialize{{name}}(variant {{name}} ) ([]byte, error) {
+    switch inner := variant.(type) {
     {{#each variants}}
     case {{../name}}{{this.name}}:
         {{#if (eq this.variant "UNIT")}}

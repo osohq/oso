@@ -13,9 +13,9 @@ import (
 func TestSerialize(t *testing.T) {
 	expected := `{"value":{"Number":{"Integer":123}}}`
 	var term Term
-	term = Term{Value{ValueNumber{
+	term = Term{ValueNumber{
 		NumericInteger(123),
-	}}}
+	}}
 	s, err := json.Marshal(term)
 	if err != nil {
 		t.Fatal(err)
@@ -25,17 +25,17 @@ func TestSerialize(t *testing.T) {
 	}
 
 	expected = `{"value":{"Expression":{"operator":"Add","args":[{"value":{"Number":{"Integer":123}}},{"value":{"Number":{"Integer":234}}}]}}}`
-	term = Term{Value{ValueExpression{
-		Operator: Operator{OperatorAdd{}},
+	term = Term{ValueExpression{
+		Operator: OperatorAdd{},
 		Args: []Term{
-			{Value{ValueNumber{
+			{ValueNumber{
 				NumericInteger(123),
-			}}},
-			{Value{ValueNumber{
+			}},
+			{ValueNumber{
 				NumericInteger(234),
-			}}},
+			}},
 		},
-	}}}
+	}}
 	s, err = json.Marshal(term)
 	if err != nil {
 		t.Fatal(err)
@@ -63,14 +63,14 @@ func TestDeserialize(t *testing.T) {
 		t.Fatal(err)
 	}
 	kwargs := make(map[Symbol]Term)
-	kwargs[Symbol("bar")] = Term{Value{ValueNumber{NumericInteger(1)}}}
-	expectedCall := Term{Value{ValueCall{
+	kwargs[Symbol("bar")] = Term{ValueNumber{NumericInteger(1)}}
+	expectedCall := Term{ValueCall{
 		Name: "foo",
 		Args: []Term{{
-			Value{ValueNumber{NumericInteger(0)}}},
+			ValueNumber{NumericInteger(0)}},
 		},
 		Kwargs: &kwargs,
-	}}}
+	}}
 	expected := expectedCall
 	if !cmp.Equal(term, expected) || !reflect.DeepEqual(term, expected) {
 		t.Error(fmt.Errorf("Result differs from expected:\n%s", cmp.Diff(term, expected)))
@@ -83,13 +83,13 @@ func TestDeserialize(t *testing.T) {
 		t.Fatal(err)
 	}
 	expectedErr := FormattedPolarError{
-		Kind: ErrorKind{ErrorKindParse{
+		Kind: ErrorKindParse{
 			ParseErrorInvalidTokenCharacter{
 				Token: "this is not",
 				C:     "\n",
 				Loc:   24,
 			},
-		}},
+		},
 		Formatted: "'\\n' is not a valid character. Found in this is not at line 1, column 25",
 	}
 	if !cmp.Equal(errTerm, expectedErr) {

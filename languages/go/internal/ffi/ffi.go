@@ -146,7 +146,7 @@ func processMessages(i ffiInterface) {
 		if err != nil {
 			panic(err)
 		}
-		switch messageStruct.Kind.MessageKindVariant.(type) {
+		switch messageStruct.Kind.(type) {
 		case types.MessageKindPrint:
 			fmt.Printf("%s\n", messageStruct.Msg)
 		case types.MessageKindWarning:
@@ -319,7 +319,7 @@ func (q QueryFfi) NextEvent() (*string, error) {
 }
 
 func (q QueryFfi) DebugCommand(command *string) error {
-	term := types.Term{types.Value{types.ValueString(*command)}}
+	term := types.Term{types.ValueString(*command)}
 	cStr, err := ffiSerialize(term)
 	defer C.free(unsafe.Pointer(cStr))
 	if err != nil {
