@@ -7,19 +7,23 @@ cases:
     load: >
       f(a) if a = 18446744073709551616;
     err: caused an integer overflow
+    query: 1 = 1
   - description: invalid newline
     load: |
       f(a) if a = "this is not
         allowed";
     err: is not a valid character
+    query: 1 = 1
   - description: missing semi-colon
     load: >
       f(a)
     err: hit the end of the file unexpectedly. Did you forget a semi-colon
+    query: 1 = 1
   - description: unexpected token
     load: |
       1;
     err: did not expect to find the token
+    query: 1 = 1
 
 
   # runtime errors

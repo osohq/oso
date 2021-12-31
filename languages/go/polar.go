@@ -211,7 +211,7 @@ func (p Polar) registerClass(cls interface{}, ctor interface{}, name *string, fi
 	if ctor != nil {
 		constructor = reflect.ValueOf(ctor)
 		if constructor.Type().Kind() != reflect.Func {
-			return fmt.Errorf("Constructor must be a function, got: %v", constructor.Type().Kind())
+			return fmt.Errorf("constructor must be a function, got: %v", constructor.Type().Kind())
 		}
 	}
 
