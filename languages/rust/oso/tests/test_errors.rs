@@ -2,9 +2,7 @@
 mod common;
 
 use common::OsoTest;
-use oso::errors::polar::{
-    ErrorKind as PolarErrorKind, PolarError, RuntimeError as PolarRuntimeError,
-};
+use oso::errors::polar::{PolarError, RuntimeError};
 use oso::{Oso, OsoError, PolarClass, PolarValue};
 
 // TODO in all tests, check type of error & message
@@ -134,11 +132,7 @@ fn test_attribute_does_not_exist() -> oso::Result<()> {
     )?;
     let error = query.next().unwrap().unwrap_err();
 
-    if let OsoError::Polar(PolarError {
-        kind: PolarErrorKind::Runtime(PolarRuntimeError::Application { msg, .. }),
-        ..
-    }) = &error
-    {
+    if let OsoError::Polar(PolarError::Runtime(RuntimeError::Application { msg, .. })) = &error {
         assert_eq!(msg, "Attribute bar not found on type Foo.");
     } else {
         panic!("Error {} doesn't match expected type", error);
@@ -173,11 +167,7 @@ fn test_method_does_not_exist() -> oso::Result<()> {
     let mut query = oso.oso.query_rule("getmethod_b", (Foo, 1))?;
     let error = query.next().unwrap().unwrap_err();
 
-    if let OsoError::Polar(PolarError {
-        kind: PolarErrorKind::Runtime(PolarRuntimeError::Application { msg, .. }),
-        ..
-    }) = &error
-    {
+    if let OsoError::Polar(PolarError::Runtime(RuntimeError::Application { msg, .. })) = &error {
         assert_eq!(msg, "Method b not found on type Foo.");
     } else {
         panic!("Error {} was not the expected type", error);
@@ -212,11 +202,7 @@ fn test_class_method_does_not_exist() -> oso::Result<()> {
     let mut query = oso.oso.query_rule("getmethod_b", (1,))?;
     let error = query.next().unwrap().unwrap_err();
 
-    if let OsoError::Polar(PolarError {
-        kind: PolarErrorKind::Runtime(PolarRuntimeError::Application { msg, .. }),
-        ..
-    }) = &error
-    {
+    if let OsoError::Polar(PolarError::Runtime(RuntimeError::Application { msg, .. })) = &error {
         assert_eq!(msg, "Class method b not found on type Foo.");
     } else {
         panic!("Error {} was not the expected type", error);
