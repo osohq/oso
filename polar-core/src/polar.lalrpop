@@ -195,7 +195,7 @@ Fields<T>: BTreeMap<Symbol, Term> = {
         Some((name, value)) => {
             let existing = fields.insert(name.clone(), value);
             if existing.is_some() {
-                return Err(ParseError::User { error: error::ParseError::DuplicateKey { loc, key: name.0 } })
+                return Err(ParseError::User { error: error::ParseError::DuplicateKey { loc, key: name.0, source: source.clone() } })
             }
             Ok(fields)
         }
@@ -218,7 +218,7 @@ Kwargs<T>: BTreeMap<Symbol, Term> = {
         Some((name, value)) => {
             let existing = fields.insert(name.clone(), value);
             if existing.is_some() {
-                return Err(ParseError::User { error: error::ParseError::DuplicateKey { loc, key: name.0 } })
+                return Err(ParseError::User { error: error::ParseError::DuplicateKey { loc, key: name.0, source: source.clone() } })
             }
             Ok(fields)
         }
@@ -352,7 +352,7 @@ ExpectValue<T>: Term = {
     <loc:@L> <term:T> =>? {
         match term {
             ValueOrLogical::Logical(term) => {
-                Err(ParseError::User { error: error::ParseError::WrongValueType { loc, term, expected: "value".to_string() } })
+                Err(ParseError::User { error: error::ParseError::WrongValueType { loc, term, expected: "value".to_string(), source: source.clone() } })
             },
             ValueOrLogical::Value(t) | ValueOrLogical::Either(t) => Ok(t)
         }
@@ -363,7 +363,7 @@ ExpectLogical<T>: Term = {
     <loc:@L> <term:T> =>? {
         match term {
             ValueOrLogical::Value(term) => {
-                Err(ParseError::User { error: error::ParseError::WrongValueType { loc, term, expected: "logical expression".to_string() } })
+                Err(ParseError::User { error: error::ParseError::WrongValueType { loc, term, expected: "logical expression".to_string(), source: source.clone() } })
             },
             ValueOrLogical::Logical(t) | ValueOrLogical::Either(t) => Ok(t)
         }

@@ -1323,10 +1323,7 @@ mod tests {
                 let mut policy = "resource Repo {\n".to_owned();
                 policy += &permutation.join("\n");
                 policy += "}";
-                assert!(equal(
-                    &parse_lines(Arc::new(Source::new(policy))).unwrap()[0],
-                    expected
-                ));
+                assert!(equal(&parse_lines(&source!(policy)).unwrap()[0], expected));
             }
         };
 

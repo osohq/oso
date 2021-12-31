@@ -33,7 +33,7 @@ impl SourceInfo {
 
 // TODO(gj): why is this Serialize? At a minimum I don't think we need to serialize the full source
 // text.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Source {
     pub filename: Option<String>,
     pub src: String,

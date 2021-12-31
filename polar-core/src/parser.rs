@@ -34,49 +34,59 @@ pub enum Line {
     },
 }
 
-fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> error::ParseError {
+fn lalrpop_error_to_polar_error(
+    e: ParseError<usize, lexer::Token, error::ParseError>,
+    source: &Arc<Source>,
+) -> error::ParseError {
     match e {
-        ParseError::InvalidToken { location: loc } => error::ParseError::InvalidToken { loc },
-        ParseError::UnrecognizedEOF { location: loc, .. } => {
-            error::ParseError::UnrecognizedEOF { loc }
-        }
+        ParseError::InvalidToken { location: loc } => error::ParseError::InvalidToken {
+            loc,
+            source: source.clone(),
+        },
+        ParseError::UnrecognizedEOF { location: loc, .. } => error::ParseError::UnrecognizedEOF {
+            loc,
+            source: source.clone(),
+        },
         ParseError::UnrecognizedToken {
             token: (loc, t, _), ..
         } => match t {
             Token::Debug | Token::Cut | Token::In | Token::New => error::ParseError::ReservedWord {
                 token: t.to_string(),
                 loc,
+                source: source.clone(),
             },
             _ => error::ParseError::UnrecognizedToken {
                 token: t.to_string(),
                 loc,
+                source: source.clone(),
             },
         },
         ParseError::ExtraToken { token: (loc, t, _) } => error::ParseError::ExtraToken {
             token: t.to_string(),
             loc,
+            source: source.clone(),
         },
         ParseError::User { error } => error,
     }
 }
 
-pub fn parse_lines(source: Arc<Source>) -> Result<Vec<Line>, error::ParseError> {
+pub fn parse_lines(source: &Arc<Source>) -> Result<Vec<Line>, error::ParseError> {
     polar::LinesParser::new()
-        .parse(&source, Lexer::new(&source.src))
-        .map_err(to_parse_error)
+        .parse(source, Lexer::new(source))
+        .map_err(|e| lalrpop_error_to_polar_error(e, source))
 }
 
-pub fn parse_query(source: Arc<Source>) -> Result<Term, error::ParseError> {
+pub fn parse_query(source: &Arc<Source>) -> Result<Term, error::ParseError> {
     polar::TermParser::new()
-        .parse(&source, Lexer::new(&source.src))
-        .map_err(to_parse_error)
+        .parse(source, Lexer::new(source))
+        .map_err(|e| lalrpop_error_to_polar_error(e, source))
 }
 
 #[cfg(test)]
-pub fn parse_rules(source: Arc<Source>) -> Result<Vec<Rule>, error::ParseError> {
+pub fn parse_rules(source: &Arc<Source>) -> Result<Vec<Rule>, error::ParseError> {
     polar::RulesParser::new()
-        .parse(&source, Lexer::new(&source.src))
-        .map_err(to_parse_error)
+        .parse(source, Lexer::new(source))
+        .map_err(|e| lalrpop_error_to_polar_error(e, source))
 }
 
 #[cfg(test)]
@@ -88,17 +98,17 @@ mod tests {
 
     #[track_caller]
     fn parse_term(src: &str) -> Term {
-        super::parse_query(Arc::new(Source::new(src))).unwrap()
+        super::parse_query(&source!(src)).unwrap()
     }
 
     #[track_caller]
     fn parse_term_error(src: &str) -> error::ParseError {
-        super::parse_query(Arc::new(Source::new(src))).unwrap_err()
+        super::parse_query(&source!(src)).unwrap_err()
     }
 
     #[track_caller]
     fn parse_rules(src: &str) -> Result<Vec<Rule>, error::ParseError> {
-        super::parse_rules(Arc::new(Source::new(src)))
+        super::parse_rules(&source!(src))
     }
 
     #[track_caller]
@@ -108,12 +118,12 @@ mod tests {
 
     #[track_caller]
     fn parse_lines(src: &str) -> Vec<Line> {
-        super::parse_lines(Arc::new(Source::new(src))).unwrap()
+        super::parse_lines(&source!(src)).unwrap()
     }
 
     #[track_caller]
     fn parse_lines_error(src: &str) -> error::ParseError {
-        super::parse_lines(Arc::new(Source::new(src))).unwrap_err()
+        super::parse_lines(&source!(src)).unwrap_err()
     }
 
     #[test]

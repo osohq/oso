@@ -1,8 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
+    use std::{collections::BTreeMap, sync::Arc};
 
-    use polar_core::{error::*, events::*, rules::*, term, terms::*, value};
+    use polar_core::{
+        error::*, events::*, rules::*, source, sources::Source, term, terms::*, value,
+    };
 
     #[test]
     fn serialize_test() {
@@ -61,10 +63,12 @@ mod tests {
         fields.insert(Symbol::new("foo"), list_of);
         let dict = Term::new_from_test(Value::Dictionary(Dictionary { fields }));
         eprintln!("{}", serde_json::to_string(&dict).unwrap());
+        let source = source!("");
         let e = ParseError::InvalidTokenCharacter {
             token: "Integer".to_owned(),
             c: 'x',
             loc: 99,
+            source,
         };
         let err = PolarError {
             kind: ErrorKind::Parse(e),

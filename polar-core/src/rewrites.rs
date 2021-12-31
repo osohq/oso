@@ -284,11 +284,11 @@ mod tests {
 
     // Re-defined here for convenience
     fn parse_query(src: &str) -> Term {
-        crate::parser::parse_query(Arc::new(Source::new(src))).unwrap()
+        crate::parser::parse_query(&source!(src)).unwrap()
     }
 
     fn parse_rules(src: &str) -> Vec<Rule> {
-        crate::parser::parse_rules(Arc::new(Source::new(src))).unwrap()
+        crate::parser::parse_rules(&source!(src)).unwrap()
     }
 
     #[test]

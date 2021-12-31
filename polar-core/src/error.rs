@@ -124,78 +124,95 @@ impl fmt::Display for PolarError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ParseError {
     IntegerOverflow {
+        source: Arc<Source>,
         token: String,
         loc: usize,
     },
     InvalidTokenCharacter {
+        source: Arc<Source>,
         token: String,
         c: char,
         loc: usize,
     },
     InvalidToken {
+        source: Arc<Source>,
         loc: usize,
     },
     #[allow(clippy::upper_case_acronyms)]
     UnrecognizedEOF {
+        source: Arc<Source>,
         loc: usize,
     },
     UnrecognizedToken {
+        source: Arc<Source>,
         token: String,
         loc: usize,
     },
     ExtraToken {
+        source: Arc<Source>,
         token: String,
         loc: usize,
     },
     ReservedWord {
+        source: Arc<Source>,
         token: String,
         loc: usize,
     },
     InvalidFloat {
+        source: Arc<Source>,
         token: String,
         loc: usize,
     },
     WrongValueType {
+        source: Arc<Source>,
         loc: usize,
         term: Term,
         expected: String,
     },
     DuplicateKey {
+        source: Arc<Source>,
         loc: usize,
         key: String,
     },
 }
 
 impl ParseError {
-    pub fn with_context(self, source: Arc<Source>) -> PolarError {
+    pub fn with_context(self) -> PolarError {
         use ParseError::*;
 
-        let span = match &self {
+        let (source, left, right) = match &self {
             // These errors track `loc` (left bound) and `token`, and we calculate right bound
             // as `loc + token.len()`.
-            DuplicateKey { key: token, loc }
-            | ExtraToken { token, loc }
-            | IntegerOverflow { token, loc }
-            | InvalidFloat { token, loc }
-            | ReservedWord { token, loc }
-            | UnrecognizedToken { token, loc } => (*loc, loc + token.len()),
+            DuplicateKey {
+                key: token,
+                loc,
+                source,
+            }
+            | ExtraToken { token, loc, source }
+            | IntegerOverflow { token, loc, source }
+            | InvalidFloat { token, loc, source }
+            | ReservedWord { token, loc, source }
+            | UnrecognizedToken { token, loc, source } => (source.clone(), *loc, loc + token.len()),
 
             // These errors track `loc` and only pertain to a single character, so right bound
             // of span is also `loc`.
-            InvalidTokenCharacter { loc, .. } | InvalidToken { loc } | UnrecognizedEOF { loc } => {
-                (*loc, *loc)
-            }
+            InvalidTokenCharacter { loc, source, .. }
+            | InvalidToken { loc, source }
+            | UnrecognizedEOF { loc, source } => (source.clone(), *loc, *loc),
 
             // These errors track `term`, from which we calculate the span.
             WrongValueType { term, .. } => term
                 .parsed_source_info()
-                .map(|(_, left, right)| (*left, *right))
+                .map(|(source, left, right)| (source.clone(), *left, *right))
                 .expect("always from parser"),
         };
-        let range = Range::from_span(&source.src, span);
+        let context = Context {
+            range: Range::from_span(&source.src, (left, right)),
+            source,
+        };
 
         PolarError {
-            context: Some(Context { range, source }),
+            context: Some(context),
             kind: ErrorKind::Parse(self),
         }
     }

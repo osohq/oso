@@ -2,7 +2,7 @@ use std::sync::{Arc, RwLock};
 
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
 use super::diagnostic::Diagnostic;
-use super::error::{PolarResult, RuntimeError, ValidationError};
+use super::error::{ParseError, PolarResult, RuntimeError, ValidationError};
 use super::filter::Filter;
 use super::kb::*;
 use super::messages::*;
@@ -54,9 +54,8 @@ impl Polar {
             if let Some(ref filename) = source.filename {
                 kb.add_source(filename, source.clone())?;
             }
-            let mut lines = parser::parse_lines(source.clone())
-                // TODO(gj): we still bomb out at the first ParseError.
-                .map_err(|e| e.with_context(source))?;
+            // TODO(gj): we still bomb out at the first ParseError.
+            let mut lines = parser::parse_lines(&source).map_err(ParseError::with_context)?;
             lines.reverse();
             let mut diagnostics = vec![];
             while let Some(line) = lines.pop() {
@@ -215,7 +214,7 @@ impl Polar {
 
     pub fn new_query(&self, src: &str, trace: bool) -> PolarResult<Query> {
         let source = Arc::new(Source::new(src));
-        let term = parser::parse_query(source.clone()).map_err(|e| e.with_context(source))?;
+        let term = parser::parse_query(&source).map_err(ParseError::with_context)?;
         Ok(self.new_query_from_term(term, trace))
     }
 
