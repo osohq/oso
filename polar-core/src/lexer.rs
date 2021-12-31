@@ -577,15 +577,11 @@ mod tests {
 
     #[test]
     fn test_symbol_with_trailing_question_mark() {
-        let s = source!("foo?");
+        let s = source!("foo??");
         let mut lexer = Lexer::new(&s);
         assert!(
             matches!(lexer.next(), Some(Ok((0, Token::Symbol(question), 4))) if question == Symbol::new("foo?"))
         );
-
-        let s = source!("foo??");
-        let mut lexer = Lexer::new(&s);
-        lexer.next();
         assert!(matches!(
             lexer.next(),
             Some(Err(ParseError::InvalidTokenCharacter {
@@ -627,24 +623,6 @@ mod tests {
                 loc: 4,
                 source,
             })) if &x == "foo::" && source == s
-        ));
-    }
-
-    #[test]
-    fn test_symbol_question_marks() {
-        let s = source!("foo??");
-        let mut lexer = Lexer::new(&s);
-        assert!(
-            matches!(lexer.next(), Some(Ok((0, Token::Symbol(x), 4))) if x == Symbol::new("foo?"))
-        );
-        assert!(matches!(
-            lexer.next(),
-            Some(Err(ParseError::InvalidTokenCharacter {
-                token: x,
-                c: '\u{0}',
-                loc: 5,
-                source,
-            })) if &x == "?=" && source == s
         ));
     }
 
