@@ -67,15 +67,15 @@ impl PolarError {
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct FormattedPolarError {
-    pub kind: PolarError,
-    pub formatted: String,
+    pub kind: String,
+    pub message: String,
 }
 
 impl From<PolarError> for FormattedPolarError {
     fn from(other: PolarError) -> Self {
         Self {
-            formatted: other.to_string(),
-            kind: other,
+            kind: other.kind(),
+            message: other.to_string(),
         }
     }
 }
