@@ -1,21 +1,19 @@
-use std::collections::hash_map::DefaultHasher;
-use std::collections::{BTreeMap, HashSet};
-use std::fmt;
-use std::hash::{Hash, Hasher};
-use std::sync::Arc;
+use std::{
+    collections::{hash_map::DefaultHasher, BTreeMap, HashSet},
+    fmt,
+    hash::{Hash, Hasher},
+    sync::Arc,
+};
 
 use serde::{Deserialize, Serialize};
 
-use crate::sources::Source;
-
-use super::error::RuntimeError::{self, InvalidState};
+use super::error::{invalid_state, PolarResult};
 pub use super::formatting::ToPolarString;
 pub use super::numerics::Numeric;
 use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
+use super::sources::Source;
 use super::sources::SourceInfo;
 use super::visitor::{walk_operation, walk_term, Visitor};
-
-type Result<T> = core::result::Result<T, RuntimeError>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {
@@ -151,67 +149,53 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn as_symbol(&self) -> Result<&Symbol> {
+    pub fn as_symbol(&self) -> PolarResult<&Symbol> {
         match self {
             Value::Variable(name) => Ok(name),
             Value::RestVariable(name) => Ok(name),
-            _ => Err(InvalidState {
-                msg: format!("Expected symbol, got: {}", self),
-            }),
+            _ => invalid_state(format!("Expected symbol, got: {}", self)),
         }
     }
 
-    pub fn as_string(&self) -> Result<&str> {
+    pub fn as_string(&self) -> PolarResult<&str> {
         match self {
             Value::String(string) => Ok(string.as_ref()),
-            _ => Err(InvalidState {
-                msg: format!("Expected string, got: {}", self),
-            }),
+            _ => invalid_state(format!("Expected string, got: {}", self)),
         }
     }
 
-    pub fn as_expression(&self) -> Result<&Operation> {
+    pub fn as_expression(&self) -> PolarResult<&Operation> {
         match self {
             Value::Expression(op) => Ok(op),
-            _ => Err(InvalidState {
-                msg: format!("Expected expression, got: {}", self),
-            }),
+            _ => invalid_state(format!("Expected expression, got: {}", self)),
         }
     }
 
-    pub fn as_call(&self) -> Result<&Call> {
+    pub fn as_call(&self) -> PolarResult<&Call> {
         match self {
             Value::Call(pred) => Ok(pred),
-            _ => Err(InvalidState {
-                msg: format!("Expected call, got: {}", self),
-            }),
+            _ => invalid_state(format!("Expected call, got: {}", self)),
         }
     }
 
-    pub fn as_pattern(&self) -> Result<&Pattern> {
+    pub fn as_pattern(&self) -> PolarResult<&Pattern> {
         match self {
             Value::Pattern(p) => Ok(p),
-            _ => Err(InvalidState {
-                msg: format!("Expected pattern, got: {}", self),
-            }),
+            _ => invalid_state(format!("Expected pattern, got: {}", self)),
         }
     }
 
-    pub fn as_list(&self) -> Result<&TermList> {
+    pub fn as_list(&self) -> PolarResult<&TermList> {
         match self {
             Value::List(l) => Ok(l),
-            _ => Err(InvalidState {
-                msg: format!("Expected list, got: {}", self),
-            }),
+            _ => invalid_state(format!("Expected list, got: {}", self)),
         }
     }
 
-    pub fn as_dict(&self) -> Result<&Dictionary> {
+    pub fn as_dict(&self) -> PolarResult<&Dictionary> {
         match self {
             Value::Dictionary(d) => Ok(d),
-            _ => Err(InvalidState {
-                msg: format!("Expected dictionary, got: {}", self),
-            }),
+            _ => invalid_state(format!("Expected dictionary, got: {}", self)),
         }
     }
 

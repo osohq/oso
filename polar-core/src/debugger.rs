@@ -1,14 +1,13 @@
 use std::fmt::Write;
 use std::rc::Rc;
 
-use super::error::RuntimeError;
+use super::bindings::Binding;
+use super::error::{PolarError, PolarResult};
 use super::formatting::{source_lines, ToPolarString};
+use super::kb::KnowledgeBase;
 use super::partial::simplify_bindings;
 use super::terms::*;
 use super::traces::*;
-
-use super::bindings::Binding;
-use super::kb::KnowledgeBase;
 use super::vm::*;
 
 impl PolarVirtualMachine {
@@ -25,7 +24,7 @@ impl PolarVirtualMachine {
 
     /// If the inner [`Debugger`](struct.Debugger.html) returns a [`Goal`](../vm/enum.Goal.html),
     /// push it onto the goal stack.
-    pub fn maybe_break(&mut self, event: DebugEvent) -> Result<bool, RuntimeError> {
+    pub fn maybe_break(&mut self, event: DebugEvent) -> PolarResult<bool> {
         self.debugger.maybe_break(event, self).map_or_else(
             || Ok(false),
             |goal| {
@@ -70,7 +69,7 @@ pub enum DebugEvent {
     Goal(Rc<Goal>),
     Query,
     Pop,
-    Error(RuntimeError),
+    Error(PolarError),
     Rule,
 }
 

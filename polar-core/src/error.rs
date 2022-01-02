@@ -44,9 +44,9 @@ impl PolarError {
                 "RuntimeError::DataFilteringUnsupportedOp"
             }
             Runtime(InvalidRegistration { .. }) => "RuntimeError::InvalidRegistration",
-            Runtime(InvalidState { .. }) => "RuntimeError::InvalidState",
             Runtime(MultipleLoadError) => "RuntimeError::MultipleLoadError",
             Runtime(QueryForUndefinedRule { .. }) => "RuntimeError::QueryForUndefinedRule",
+            Operational(InvalidState { .. }) => "OperationalError::InvalidState",
             Operational(Serialization { .. }) => "OperationalError::Serialization",
             Operational(Unknown) => "OperationalError::Unknown",
             Validation(FileLoading { .. }) => "ValidationError::FileLoading",
@@ -163,6 +163,12 @@ pub enum ParseError {
     },
 }
 
+impl From<ParseError> for PolarError {
+    fn from(err: ParseError) -> Self {
+        Self::Parse(err)
+    }
+}
+
 impl PolarError {
     pub fn get_context(&self) -> Option<Context> {
         use ParseError::*;
@@ -213,7 +219,6 @@ impl PolarError {
                 | DataFilteringFieldMissing { .. }
                 | DataFilteringUnsupportedOp { .. }
                 | InvalidRegistration { .. }
-                | InvalidState { .. }
                 | QueryForUndefinedRule { .. }
                 | MultipleLoadError => None,
             },
@@ -355,16 +360,18 @@ pub enum RuntimeError {
         sym: Symbol,
         msg: String,
     },
-    /// An invariant has been broken internally.
-    InvalidState {
-        msg: String,
-    },
     MultipleLoadError,
     /// The user queried for an undefined rule. This is the runtime analogue of
     /// `ValidationError::UndefinedRuleCall`.
     QueryForUndefinedRule {
         name: String,
     },
+}
+
+impl From<RuntimeError> for PolarError {
+    fn from(err: RuntimeError) -> Self {
+        Self::Runtime(err)
+    }
 }
 
 impl RuntimeError {
@@ -457,21 +464,18 @@ The expression is: {expr}
             Self::InvalidRegistration { sym, msg } => {
                 write!(f, "Invalid attempt to register '{}': {}", sym, msg)
             }
-            // TODO(gj): move this back to `OperationalError` during The Next Great Diagnostic
-            // Refactor.
-            Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
             Self::MultipleLoadError => write!(f, "Cannot load additional Polar code -- all Polar code must be loaded at the same time."),
             Self::QueryForUndefinedRule { name } => write!(f, "Query for undefined rule `{}`", name),
         }
     }
 }
 
-// NOTE(gj): both of these errors are only constructed/used in the `polar-c-api` crate.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OperationalError {
-    Serialization {
-        msg: String,
-    },
+    /// An invariant has been broken internally.
+    InvalidState { msg: String },
+    /// Serialization errors in the `polar-c-api` crate.
+    Serialization { msg: String },
     /// Rust panics caught in the `polar-c-api` crate.
     Unknown,
 }
@@ -485,6 +489,7 @@ impl From<OperationalError> for PolarError {
 impl fmt::Display for OperationalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
             Self::Serialization { msg } => write!(f, "Serialization error: {}", msg),
             Self::Unknown => write!(
                 f,
@@ -547,6 +552,12 @@ pub enum ValidationError {
     },
 }
 
+impl From<ValidationError> for PolarError {
+    fn from(err: ValidationError) -> Self {
+        Self::Validation(err)
+    }
+}
+
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -588,6 +599,10 @@ impl fmt::Display for ValidationError {
     }
 }
 
-pub fn invalid_state_error<A>(msg: String) -> Result<A, RuntimeError> {
-    Err(RuntimeError::InvalidState { msg })
+pub(crate) fn invalid_state<T, U>(msg: T) -> PolarResult<U>
+where
+    T: AsRef<str>,
+{
+    let msg = msg.as_ref().into();
+    Err(OperationalError::InvalidState { msg }.into())
 }

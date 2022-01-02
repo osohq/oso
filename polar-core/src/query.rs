@@ -1,4 +1,4 @@
-use super::error::{PolarError, PolarResult};
+use super::error::PolarResult;
 use super::events::*;
 use super::messages::*;
 use super::runnable::Runnable;
@@ -38,10 +38,7 @@ impl Query {
         let mut counter = self.vm.id_counter();
         let qe = match self.top_runnable().run(Some(&mut counter)) {
             Ok(e) => e,
-            Err(e) => self
-                .top_runnable()
-                .handle_error(e)
-                .map_err(PolarError::Runtime)?,
+            Err(e) => self.top_runnable().handle_error(e)?,
         };
         self.recv_event(qe)
     }
@@ -56,8 +53,7 @@ impl Query {
             QueryEvent::Done { result } => {
                 if let Some((_, result_call_id)) = self.pop_runnable() {
                     self.top_runnable()
-                        .external_question_result(result_call_id, result)
-                        .map_err(PolarError::Runtime)?;
+                        .external_question_result(result_call_id, result)?;
                     self.next_event()
                 } else {
                     // VM is done.
@@ -85,25 +81,20 @@ impl Query {
     }
 
     pub fn call_result(&mut self, call_id: u64, value: Option<Term>) -> PolarResult<()> {
-        self.top_runnable()
-            .external_call_result(call_id, value)
-            .map_err(PolarError::Runtime)
+        self.top_runnable().external_call_result(call_id, value)
     }
 
     pub fn question_result(&mut self, call_id: u64, result: bool) -> PolarResult<()> {
         self.top_runnable()
             .external_question_result(call_id, result)
-            .map_err(PolarError::Runtime)
     }
 
     pub fn application_error(&mut self, message: String) -> PolarResult<()> {
-        self.vm.external_error(message).map_err(PolarError::Runtime)
+        self.vm.external_error(message)
     }
 
     pub fn debug_command(&mut self, command: &str) -> PolarResult<()> {
-        self.top_runnable()
-            .debug_command(command)
-            .map_err(PolarError::Runtime)
+        self.top_runnable().debug_command(command)
     }
 
     pub fn next_message(&self) -> Option<Message> {
@@ -115,7 +106,7 @@ impl Query {
     }
 
     pub fn bind(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
-        self.vm.bind(&name, value).map_err(PolarError::Runtime)
+        self.vm.bind(&name, value)
     }
 }
 

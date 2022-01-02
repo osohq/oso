@@ -6,14 +6,12 @@ use std::{
 
 use crate::{
     data_filtering::{unregistered_field_error, unsupported_op_error, PartialResults, Type},
-    error::{invalid_state_error, RuntimeError},
+    error::{invalid_state, PolarResult},
     normalize::*,
     terms::*,
 };
 
 use serde::Serialize;
-
-type FilterResult<A> = core::result::Result<A, RuntimeError>;
 
 type TypeName = String;
 type FieldName = String;
@@ -113,7 +111,7 @@ impl From<Projection> for PathVar {
 }
 
 impl PathVar {
-    fn from_term(t: &Term) -> FilterResult<Self> {
+    fn from_term(t: &Term) -> PolarResult<Self> {
         use Value::*;
         match t.value() {
             Expression(Operation {
@@ -126,7 +124,7 @@ impl PathVar {
                 Ok(pv)
             }
             Variable(Symbol(var)) => Ok(var.clone().into()),
-            _ => invalid_state_error(format!("PathVar::from_term({})", t.to_polar())),
+            _ => invalid_state(format!("PathVar::from_term({})", t)),
         }
     }
 }
@@ -137,7 +135,7 @@ impl Filter {
         partials: PartialResults,
         var: &str,
         class: &str,
-    ) -> FilterResult<Self> {
+    ) -> PolarResult<Self> {
         let explain = std::env::var("POLAR_EXPLAIN").is_ok();
 
         if explain {
@@ -163,11 +161,11 @@ impl Filter {
         Ok(filter)
     }
 
-    fn from_partial(types: &TypeInfo, ands: Term, var: &str, class: &str) -> FilterResult<Self> {
+    fn from_partial(types: &TypeInfo, ands: Term, var: &str, class: &str) -> PolarResult<Self> {
         use {Operator::*, Value::*};
 
         if std::env::var("POLAR_EXPLAIN").is_ok() {
-            eprintln!("{}", ands.to_polar());
+            eprintln!("{}", ands);
         }
 
         let term2expr = |i: Term| match i.value().as_expression() {
@@ -184,7 +182,7 @@ impl Filter {
             }) => args
                 .iter()
                 .map(|and| Ok(term2expr(and.clone())))
-                .collect::<FilterResult<Vec<_>>>()
+                .collect::<PolarResult<Vec<_>>>()
                 .and_then(|ands| FilterInfo::build_filter(types.clone(), ands, var, class)),
 
             // sometimes we get an instance back. that means the variable
@@ -194,7 +192,7 @@ impl Filter {
             }
 
             // oops, we don't know how to handle this!
-            _ => invalid_state_error(ands.to_polar()),
+            _ => invalid_state(ands.to_polar()),
         }
     }
 
@@ -237,14 +235,14 @@ impl FilterInfo {
 
     /// turn a pathvar into a projection.
     /// populates relations as a side effect
-    fn pathvar2proj(&mut self, pv: PathVar) -> FilterResult<Projection> {
+    fn pathvar2proj(&mut self, pv: PathVar) -> PolarResult<Projection> {
         let PathVar { mut path, var } = pv;
         // new var with empty path
         let mut pv = PathVar::from(var);
         // what type is the base variable?
         let mut typ = match self.get_type(pv.clone()) {
             Some(typ) => typ,
-            _ => return invalid_state_error(format!("unknown type for `{}`", pv.var)),
+            _ => return invalid_state(format!("unknown type for `{}`", pv.var)),
         };
 
         // the last part of the path is always allowed not to be a relation.
@@ -284,7 +282,7 @@ impl FilterInfo {
         }
     }
 
-    fn term2datum(&mut self, x: &Term) -> FilterResult<Datum> {
+    fn term2datum(&mut self, x: &Term) -> PolarResult<Datum> {
         use Datum::*;
         match PathVar::from_term(x) {
             Ok(pv) => Ok(Field(self.pathvar2proj(pv)?)),
@@ -312,7 +310,7 @@ impl FilterInfo {
     }
 
     /// Digest a conjunct from the partial results & add a new constraint.
-    fn add_constraint(&mut self, op: Operation) -> FilterResult<()> {
+    fn add_constraint(&mut self, op: Operation) -> PolarResult<()> {
         match op.args.len() {
             1 => self.add_constraint_1(op),
             2 => self.add_constraint_2(op),
@@ -321,14 +319,15 @@ impl FilterInfo {
     }
 
     /// Handle a unary operation from the simplifier
-    fn add_constraint_1(&mut self, op: Operation) -> FilterResult<()> {
+    fn add_constraint_1(&mut self, op: Operation) -> PolarResult<()> {
         use Operator::*;
         // The only case this currently handles is `not in`.
         match op.operator {
             Not => match op.args[0].value().as_expression() {
                 Ok(Operation { operator: In, args }) if args.len() == 2 => {
                     let (left, right) = (self.term2datum(&args[0])?, self.term2datum(&args[1])?);
-                    self.add_condition(left, Comparison::Nin, right)
+                    self.add_condition(left, Comparison::Nin, right);
+                    Ok(())
                 }
                 _ => unsupported_op_error(op),
             },
@@ -337,7 +336,7 @@ impl FilterInfo {
     }
 
     /// Handle a binary expression from the simplifier
-    fn add_constraint_2(&mut self, op: Operation) -> FilterResult<()> {
+    fn add_constraint_2(&mut self, op: Operation) -> PolarResult<()> {
         use {Datum::*, Operator::*};
         let (left, right) = (self.term2datum(&op.args[0])?, self.term2datum(&op.args[1])?);
         let op = match op.operator {
@@ -354,26 +353,26 @@ impl FilterInfo {
             Geq => Comparison::Geq,
             _ => return unsupported_op_error(op),
         };
-        self.add_condition(left, op, right)
+        self.add_condition(left, op, right);
+        Ok(())
     }
 
-    fn add_condition(&mut self, left: Datum, op: Comparison, right: Datum) -> FilterResult<()> {
+    fn add_condition(&mut self, left: Datum, op: Comparison, right: Datum) {
         use Comparison::*;
         match op {
-            Eq | Leq | Geq if left == right => Ok(()),
+            Eq | Leq | Geq if left == right => (),
             _ => {
                 self.conditions.insert(Condition(left, op, right));
-                Ok(())
             }
         }
     }
 
     /// Validate FilterInfo before constructing a Filter
-    fn validate(self, root: &str) -> FilterResult<Self> {
+    fn validate(self, root: &str) -> PolarResult<Self> {
         let mut set = singleton(root);
         for Relation(_, _, dst) in self.relations.iter() {
             if set.contains(dst as &str) {
-                return invalid_state_error(format!(
+                return invalid_state(format!(
                     "Type `{}` occurs more than once as the target of a relation",
                     dst
                 ));
@@ -385,7 +384,7 @@ impl FilterInfo {
     }
 
     /// populate conditions and relations on an initialized FilterInfo
-    fn with_constraints(mut self, ops: Set<Operation>, class: &str) -> FilterResult<Self> {
+    fn with_constraints(mut self, ops: Set<Operation>, class: &str) -> PolarResult<Self> {
         // find pairs of implicitly equal variables
         let equivs = ops.iter().filter_map(|Operation { operator, args }| {
             use Operator::*;
@@ -443,7 +442,7 @@ impl FilterInfo {
         parts: Vec<Operation>,
         var: &str,
         class: &str,
-    ) -> FilterResult<Filter> {
+    ) -> PolarResult<Filter> {
         // TODO(gw) check more isas in host -- rn we only check external instances
         let (_isas, othas): (Set<_>, Set<_>) = parts
             .into_iter()
@@ -534,7 +533,7 @@ impl Display for Datum {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         use Datum::*;
         match self {
-            Immediate(val) => write!(f, "{}", val.to_polar()),
+            Immediate(val) => write!(f, "{}", val),
             Field(Projection(typ, None)) => write!(f, "{}", typ),
             Field(Projection(typ, Some(field))) => write!(f, "{}.{}", typ, field),
         }
@@ -594,12 +593,11 @@ fn vec_of_ands(t: Term) -> Vec<Term> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::error::{OperationalError, PolarError};
     use crate::events::ResultEvent;
 
-    type TestResult = Result<(), RuntimeError>;
-
     #[test]
-    fn test_or_normalization() -> TestResult {
+    fn test_or_normalization() -> PolarResult<()> {
         let s = String::from;
         let types = || {
             hashmap! {
@@ -681,14 +679,14 @@ mod test {
         })];
 
         match Filter::build(types, ors, "resource", "Resource") {
-            Err(RuntimeError::InvalidState { msg })
+            Err(PolarError::Operational(OperationalError::InvalidState { msg }))
                 if &msg == "Type `Resource` occurs more than once as the target of a relation" => {}
             x => panic!("unexpected: {:?}", x),
         }
     }
 
     #[test]
-    fn test_in() -> TestResult {
+    fn test_in() -> PolarResult<()> {
         let s = String::from;
         let types = hashmap! {
             s("Resource") => hashmap!{

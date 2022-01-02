@@ -13,6 +13,12 @@ pub enum Diagnostic {
     Warning(PolarWarning),
 }
 
+impl From<PolarError> for Diagnostic {
+    fn from(err: PolarError) -> Self {
+        Self::Error(err)
+    }
+}
+
 impl Diagnostic {
     pub fn is_error(&self) -> bool {
         matches!(self, Diagnostic::Error(_))

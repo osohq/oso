@@ -55,7 +55,7 @@ impl Polar {
                 kb.add_source(filename, source.clone())?;
             }
             // TODO(gj): we still bomb out at the first ParseError.
-            let mut lines = parser::parse_lines(&source).map_err(PolarError::Parse)?;
+            let mut lines = parser::parse_lines(&source)?;
             lines.reverse();
             let mut diagnostics = vec![];
             while let Some(line) = lines.pop() {
@@ -81,12 +81,13 @@ impl Polar {
                                 }
                             ) if args.is_empty()
                         ) {
-                            diagnostics.push(Diagnostic::Error(PolarError::Validation(
+                            diagnostics.push(Diagnostic::Error(
                                 ValidationError::InvalidRuleType {
                                     rule_type,
                                     msg: "Rule types cannot contain dot lookups.".to_owned(),
-                                },
-                            )));
+                                }
+                                .into(),
+                            ));
                         } else {
                             kb.add_rule_type(rule_type);
                         }
@@ -99,10 +100,7 @@ impl Polar {
                         let (block, mut errors) =
                             resource_block_from_productions(keyword, resource, productions);
                         errors.append(&mut block.add_to_kb(kb));
-                        let errors = errors
-                            .into_iter()
-                            .map(PolarError::Validation)
-                            .map(Diagnostic::Error);
+                        let errors = errors.into_iter().map(Into::into).map(Diagnostic::Error);
                         diagnostics.append(&mut errors.collect());
                     }
                 }
@@ -133,7 +131,6 @@ impl Polar {
             &mut kb
                 .rewrite_shorthand_rules()
                 .into_iter()
-                .map(PolarError::Validation)
                 .map(Diagnostic::Error)
                 .collect(),
         );
@@ -150,7 +147,9 @@ impl Polar {
 
         // Generate appropriate rule_type definitions using the types contained in policy resource
         // blocks.
-        kb.create_resource_specific_rule_types();
+        if let Err(e) = kb.create_resource_specific_rule_types() {
+            diagnostics.push(e.into());
+        }
 
         // check rules are valid against rule types
         diagnostics.append(&mut kb.validate_rules());
@@ -215,7 +214,7 @@ impl Polar {
 
     pub fn new_query(&self, src: &str, trace: bool) -> PolarResult<Query> {
         let source = Arc::new(Source::new(src));
-        let term = parser::parse_query(&source).map_err(PolarError::Parse)?;
+        let term = parser::parse_query(&source)?;
         Ok(self.new_query_from_term(term, trace))
     }
 
@@ -262,7 +261,7 @@ impl Polar {
         variable: &str,
         class_tag: &str,
     ) -> PolarResult<FilterPlan> {
-        build_filter_plan(types, partial_results, variable, class_tag).map_err(PolarError::Runtime)
+        build_filter_plan(types, partial_results, variable, class_tag)
     }
 
     pub fn build_data_filter(
@@ -272,7 +271,7 @@ impl Polar {
         variable: &str,
         class_tag: &str,
     ) -> PolarResult<Filter> {
-        Filter::build(types, partial_results, variable, class_tag).map_err(PolarError::Runtime)
+        Filter::build(types, partial_results, variable, class_tag)
     }
 
     // TODO(@gkaemmer): this is a hack and should not be used for similar cases.
