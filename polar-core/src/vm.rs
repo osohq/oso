@@ -533,14 +533,7 @@ impl PolarVirtualMachine {
             }
             Goal::TraceRule { trace } => {
                 if let Node::Rule(rule) = &trace.node {
-                    self.log(
-                        LogLevel::Info,
-                        || {
-                            let source_str = self.rule_source(rule);
-                            format!("RULE: {}", source_str)
-                        },
-                        &[],
-                    );
+                    self.log(LogLevel::Info, || format!("RULE: {}", rule), &[]);
                 }
                 self.trace.push(trace.clone());
                 self.maybe_break(DebugEvent::Rule)?;
@@ -2844,10 +2837,6 @@ impl PolarVirtualMachine {
         }
 
         source_string
-    }
-
-    pub fn rule_source(&self, rule: &Rule) -> String {
-        rule.to_polar()
     }
 
     fn type_error<T>(&self, term: &Term, msg: String) -> PolarResult<T> {

@@ -145,7 +145,7 @@ impl Debugger {
                     Some(format!("{}\n\n{}\n", vm.query_summary(q), source))
                 }
             },
-            Node::Rule(ref r) => Some(vm.rule_source(r)),
+            Node::Rule(ref r) => Some(r.to_string()),
         })
     }
 
