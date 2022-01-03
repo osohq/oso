@@ -2934,7 +2934,7 @@ impl Runnable for PolarVirtualMachine {
                     // TODO(gj): `t` is a partial constructed in the VM, so we don't have any
                     // source context for it. We make a best effort to track down some relevant
                     // context by walking `t` in search of the first piece of source context we
-                    // find (verified by calling the `KnowledgeBase::get_term_source` API).
+                    // find.
                     //
                     // For a future refactor, we might consider using the `Term::clone_with_value`
                     // API to preserve source context when initially binding a variable to an
