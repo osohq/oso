@@ -105,7 +105,7 @@ fn test_failing_inline_query() {
         Err(e @ OsoError::InlineQueryFailedError { .. }) => {
             assert_eq!(
                 format!("{}", e),
-                "Inline query failed 1 == 0 at line 2, column 3"
+                "Inline query failed 1 == 0 at line 2, column 4"
             )
         }
         Err(_) => panic!("returned unexpected error"),
