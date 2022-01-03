@@ -136,7 +136,7 @@ mod tests {
     fn try_it_with_macros() {
         let int = parse_term(" 123");
         assert_eq!(int, term!(123));
-        assert_eq!(int.parsed_source_info().map(|(_, left, _)| left), Some(1));
+        assert_eq!(int.parsed_context().map(|context| context.left), Some(1));
         let s = parse_term(r#""string literal""#);
         assert_eq!(s, term!("string literal"));
 

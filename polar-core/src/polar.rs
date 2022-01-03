@@ -163,7 +163,7 @@ impl Polar {
 
         // Check for has_permission calls alongside resource block definitions
         if let Some(w) = check_resource_blocks_missing_has_permission(&kb) {
-            diagnostics.push(Diagnostic::Warning(w.with_context()))
+            diagnostics.push(Diagnostic::Warning(w.into()))
         };
 
         diagnostics

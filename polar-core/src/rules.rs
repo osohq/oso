@@ -1,10 +1,9 @@
-use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
 
-use crate::sources::Source;
+use serde::{Deserialize, Serialize};
 
-use super::sources::SourceInfo;
+use super::sources::{Context, Source, SourceInfo};
 use super::terms::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -45,14 +44,9 @@ impl Rule {
         self.params.iter().all(|p| p.is_ground())
     }
 
-    pub fn parsed_source_info(&self) -> Option<(&Arc<Source>, usize, usize)> {
-        if let SourceInfo::Parser {
-            source,
-            left,
-            right,
-        } = &self.source_info
-        {
-            Some((source, *left, *right))
+    pub(crate) fn parsed_context(&self) -> Option<&Context> {
+        if let SourceInfo::Parser(context) = &self.source_info {
+            Some(context)
         } else {
             None
         }
@@ -68,7 +62,7 @@ impl Rule {
         }
     }
 
-    /// Creates a new term from the parser
+    /// Creates a new rule from the parser
     pub fn new_from_parser(
         source: &Arc<Source>,
         left: usize,
@@ -81,11 +75,7 @@ impl Rule {
             name,
             params,
             body,
-            source_info: SourceInfo::Parser {
-                source: source.clone(),
-                left,
-                right,
-            },
+            source_info: SourceInfo::parser(source, left, right),
             required: false,
         }
     }

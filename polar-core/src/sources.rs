@@ -1,19 +1,52 @@
-use std::sync::Arc;
+use std::{fmt, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 
+use crate::{formatting::source_lines, lexer::loc_to_pos};
+
+/// Parsed source context.
+#[derive(Clone, Debug)]
+pub struct Context {
+    pub source: Arc<Source>,
+    /// Start location within `source`.
+    pub left: usize,
+    /// End location within `source`.
+    pub right: usize,
+}
+
+impl fmt::Display for Context {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.source_position())?;
+        let lines = source_lines(&self.source, self.left, 0).replace('\n', "\n\t");
+        writeln!(f, ":\n\t{}", lines)?;
+        Ok(())
+    }
+}
+
+impl Context {
+    pub(crate) fn new(source: &Arc<Source>, left: usize, right: usize) -> Self {
+        Self {
+            source: source.clone(),
+            left,
+            right,
+        }
+    }
+
+    pub(crate) fn source_position(&self) -> String {
+        let mut f = String::new();
+        let (row, column) = loc_to_pos(&self.source.src, self.left);
+        f += &format!(" at line {}, column {}", row + 1, column + 1);
+        if let Some(ref filename) = self.source.filename {
+            f += &format!(" of file {}", filename);
+        }
+        f
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum SourceInfo {
-    // TODO(gj): why is this not just `Parser(Context)`?
-    //
     // From the parser
-    Parser {
-        source: Arc<Source>,
-
-        /// Location of the term within the source map
-        left: usize,
-        right: usize,
-    },
+    Parser(Context),
 
     /// Created as a temporary variable
     TemporaryVariable,
@@ -28,6 +61,10 @@ pub enum SourceInfo {
 impl SourceInfo {
     pub fn ffi() -> Self {
         Self::Ffi
+    }
+
+    pub(crate) fn parser(source: &Arc<Source>, left: usize, right: usize) -> Self {
+        Self::Parser(Context::new(source, left, right))
     }
 }
 

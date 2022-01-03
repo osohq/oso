@@ -89,9 +89,9 @@ impl Debugger {
     /// Retrieve the original source line (and, optionally, additional lines of context) for the
     /// current query.
     fn query_source(&self, query: &Term, num_lines: usize) -> String {
-        query.parsed_source_info().map_or_else(
+        query.parsed_context().map_or_else(
             || "".to_string(),
-            |(source, left, _)| source_lines(source, left, num_lines),
+            |context| source_lines(&context.source, context.left, num_lines),
         )
     }
 
@@ -283,17 +283,13 @@ impl Debugger {
                             let _ = write!(st, "{}: {}", i-1, vm.term_source(t, false));
                             i -= 1;
                             let _ = write!(st, "\n  ");
-                            if let Some((source, left, _)) = t.parsed_source_info() {
+                            if let Some(context) = t.parsed_context() {
                                 if let Some(rule) = &rule {
-                                    let _ = write!(st, "in rule {} ", rule.name.to_polar());
+                                    let _ = write!(st, "in rule {}", rule.name.to_polar());
                                 } else {
-                                    let _ = write!(st, "in query ");
+                                    let _ = write!(st, "in query");
                                 }
-                                let (row, column) = crate::lexer::loc_to_pos(&source.src, left);
-                                let _ = write!(st, "at line {}, column {}", row + 1, column + 1);
-                                if let Some(filename) = &source.filename {
-                                    let _ = write!(st, " in file {}", filename);
-                                }
+                                let _ = write!(st, "{}", context.source_position());
                                 let _ = writeln!(st);
                             };
                         }

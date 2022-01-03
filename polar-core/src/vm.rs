@@ -15,20 +15,19 @@ use crate::bindings::{
 use crate::counter::Counter;
 use crate::data_filtering::partition_equivs;
 use crate::debugger::{get_binding_for_var, DebugEvent, Debugger};
-use crate::diagnostic::{Context, Range};
 use crate::error::{invalid_state, unsupported, PolarError, PolarResult, RuntimeError};
 use crate::events::*;
 use crate::folder::Folder;
 use crate::formatting::ToPolarString;
 use crate::inverter::Inverter;
 use crate::kb::*;
-use crate::lexer::loc_to_pos;
 use crate::messages::*;
 use crate::numerics::*;
 use crate::partial::{simplify_bindings_opt, simplify_partial, sub_this, IsaConstraintCheck};
 use crate::rewrites::Renamer;
 use crate::rules::*;
 use crate::runnable::Runnable;
+use crate::sources::Context;
 use crate::terms::*;
 use crate::traces::*;
 use crate::visitor::{walk_term, Visitor};
@@ -854,17 +853,13 @@ impl PolarVirtualMachine {
                     }
                     let _ = write!(st, "\n  ");
 
-                    if let Some((source, left, _)) = t.parsed_source_info() {
+                    if let Some(context) = t.parsed_context() {
                         if let Some(rule) = &rule {
-                            let _ = write!(st, "in rule {} ", rule.name);
+                            let _ = write!(st, "in rule {}", rule.name);
                         } else {
-                            let _ = write!(st, "in query ");
+                            let _ = write!(st, "in query");
                         }
-                        let (row, column) = loc_to_pos(&source.src, left);
-                        let _ = write!(st, "at line {}, column {}", row + 1, column + 1);
-                        if let Some(filename) = &source.filename {
-                            let _ = write!(st, " in file {}", filename);
-                        }
+                        let _ = write!(st, "{}", context.source_position());
                         let _ = writeln!(st);
                     };
                     let _ = write!(st, "    {}", self.term_source(t, false));
@@ -2597,19 +2592,9 @@ impl PolarVirtualMachine {
                 || {
                     let mut rule_strs = "APPLICABLE_RULES:".to_owned();
                     for rule in rules {
-                        let context = rule.parsed_source_info().map_or_else(
-                            || "".to_string(),
-                            |(source, left, right)| {
-                                // TODO(gj): `Context::from_parsed_source_info` or `impl
-                                // From<SourceInfo> for Context` or something similar?
-                                let range = Range::from_span(&source.src, (left, right));
-                                let context = Context {
-                                    source: source.clone(),
-                                    range,
-                                };
-                                context.source_file_and_line()
-                            },
-                        );
+                        let context = rule
+                            .parsed_context()
+                            .map_or_else(|| "".into(), Context::source_position);
 
                         rule_strs.push_str(&format!("\n  {}{}", rule.head_as_string(), context));
                     }
@@ -2794,21 +2779,18 @@ impl PolarVirtualMachine {
     }
 
     pub fn term_source(&self, term: &Term, include_info: bool) -> String {
-        let source_info = term.parsed_source_info();
+        let source_info = term.parsed_context();
 
-        let mut source_string = if let Some((source, left, right)) = source_info {
-            source.src.chars().take(right).skip(left).collect()
+        let mut source_string = if let Some(context) = source_info {
+            let chars = context.source.src.chars();
+            chars.take(context.right).skip(context.left).collect()
         } else {
             term.to_polar()
         };
 
         if include_info {
-            if let Some((source, left, _)) = source_info {
-                let (row, column) = crate::lexer::loc_to_pos(&source.src, left);
-                source_string.push_str(&format!(" at line {}, column {}", row + 1, column));
-                if let Some(filename) = &source.filename {
-                    source_string.push_str(&format!(" in file {}", filename));
-                }
+            if let Some(context) = source_info {
+                source_string += &context.source_position();
             }
         }
 
@@ -2924,7 +2906,7 @@ impl Runnable for PolarVirtualMachine {
                         impl Visitor for GetSource {
                             fn visit_term(&mut self, t: &Term) {
                                 if self.term.is_none() {
-                                    if t.parsed_source_info().is_none() {
+                                    if t.parsed_context().is_none() {
                                         walk_term(self, t)
                                     } else {
                                         self.term = Some(t.clone())

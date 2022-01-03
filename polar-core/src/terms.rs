@@ -11,8 +11,7 @@ use super::error::{invalid_state, PolarResult};
 pub use super::formatting::ToPolarString;
 pub use super::numerics::Numeric;
 use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
-use super::sources::Source;
-use super::sources::SourceInfo;
+use super::sources::{Context, Source, SourceInfo};
 use super::visitor::{walk_operation, walk_term, Visitor};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
@@ -44,15 +43,6 @@ pub struct ExternalInstance {
     pub constructor: Option<Term>,
     pub repr: Option<String>,
     pub class_repr: Option<String>,
-}
-
-// Context stored somewhere by id.
-
-// parser outputs
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Context {
-    pub file: String,
 }
 
 pub type TermList = Vec<Term>;
@@ -349,11 +339,7 @@ impl Term {
     /// Creates a new term from the parser
     pub fn new_from_parser(source: &Arc<Source>, left: usize, right: usize, value: Value) -> Self {
         Self {
-            source_info: SourceInfo::Parser {
-                source: source.clone(),
-                left,
-                right,
-            },
+            source_info: SourceInfo::parser(source, left, right),
             value: Arc::new(value),
         }
     }
@@ -386,14 +372,9 @@ impl Term {
 
     // TODO(gj): Parsed<T> type (or something) so we can remove this meaningless distinction
     // between terms & rules.
-    pub(crate) fn parsed_source_info(&self) -> Option<(&Arc<Source>, usize, usize)> {
-        if let SourceInfo::Parser {
-            source,
-            left,
-            right,
-        } = self.source_info()
-        {
-            Some((source, *left, *right))
+    pub(crate) fn parsed_context(&self) -> Option<&Context> {
+        if let SourceInfo::Parser(context) = self.source_info() {
+            Some(context)
         } else {
             None
         }

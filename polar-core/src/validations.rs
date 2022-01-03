@@ -28,15 +28,12 @@ impl<'kb> SingletonVisitor<'kb> {
             .into_iter()
             .flat_map(|(sym, term)| term.map(|t| (sym, t)))
             .collect::<Vec<_>>();
-        singletons
-            .sort_by_key(|(_, term)| term.parsed_source_info().map_or(0, |(_, left, _)| left));
+        singletons.sort_by_key(|(_, term)| term.parsed_context().map_or(0, |context| context.left));
         singletons
             .into_iter()
             .map(|(sym, term)| {
                 if let Value::Pattern(_) = term.value() {
-                    Diagnostic::Warning(
-                        ValidationWarning::UnknownSpecializer { term, sym }.with_context(),
-                    )
+                    Diagnostic::Warning(ValidationWarning::UnknownSpecializer { term, sym }.into())
                 } else {
                     Diagnostic::Error(ValidationError::SingletonVariable { term }.into())
                 }
@@ -87,9 +84,7 @@ impl AndOrPrecendenceCheck {
     fn warnings(self) -> Vec<Diagnostic> {
         self.unparenthesized_expr
             .into_iter()
-            .map(|term| {
-                Diagnostic::Warning(ValidationWarning::AmbiguousPrecedence { term }.with_context())
-            })
+            .map(|term| Diagnostic::Warning(ValidationWarning::AmbiguousPrecedence { term }.into()))
             .collect()
     }
 }
@@ -107,13 +102,13 @@ impl Visitor for AndOrPrecendenceCheck {
                 )
             }) {
                 // TODO(gj): are these `.unwrap()`s chill?
-                let (source, left, _) = term.parsed_source_info().unwrap();
+                let context = term.parsed_context().unwrap();
 
                 // TODO(gj): is this unchecked indexing operation chill?
                 //
                 // check if source _before_ the term contains an opening
                 // parenthesis
-                if !source.src[..left].trim().ends_with('(') {
+                if !context.source.src[..context.left].trim().ends_with('(') {
                     self.unparenthesized_expr.push(term.clone());
                 }
             }
@@ -136,7 +131,7 @@ pub fn check_no_allow_rule(kb: &KnowledgeBase) -> Option<Diagnostic> {
         None
     } else {
         Some(Diagnostic::Warning(
-            ValidationWarning::MissingAllowRule.with_context(),
+            ValidationWarning::MissingAllowRule.into(),
         ))
     }
 }

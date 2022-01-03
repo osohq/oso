@@ -5,11 +5,10 @@ use serde::Serialize;
 use strum_macros::AsRefStr;
 
 use super::{
-    diagnostic::{Context, Range},
     formatting::to_polar::ToPolarString,
     resource_block::Declaration,
     rules::Rule,
-    sources::Source,
+    sources::{Context, Source},
     terms::{Operation, Symbol, Term},
 };
 
@@ -72,8 +71,8 @@ impl PolarError {
         use RuntimeError::*;
         use ValidationError::*;
 
-        let context = match &self.0 {
-            Parse(e) => Some(match e {
+        match &self.0 {
+            Parse(e) => match e {
                 // These errors track `loc` (left bound) and `token`, and we calculate right bound
                 // as `loc + token.len()`.
                 DuplicateKey {
@@ -85,29 +84,29 @@ impl PolarError {
                 | IntegerOverflow { token, loc, source }
                 | InvalidFloat { token, loc, source }
                 | ReservedWord { token, loc, source }
-                | UnrecognizedToken { token, loc, source } => (source, *loc, loc + token.len()),
+                | UnrecognizedToken { token, loc, source } => {
+                    Some(Context::new(source, *loc, loc + token.len()))
+                }
 
                 // These errors track `loc` and only pertain to a single character, so right bound
                 // of span is also `loc`.
                 InvalidTokenCharacter { loc, source, .. }
                 | InvalidToken { loc, source }
-                | UnrecognizedEOF { loc, source } => (source, *loc, *loc),
+                | UnrecognizedEOF { loc, source } => Some(Context::new(source, *loc, *loc)),
 
                 // These errors track `term`, from which we calculate the span.
-                WrongValueType { term, .. } => {
-                    term.parsed_source_info().expect("always from parser")
-                }
-            }),
+                WrongValueType { term, .. } => term.parsed_context().cloned(),
+            },
 
             Runtime(e) => match e {
                 // These errors sometimes track `term`, from which we derive context.
-                Application { term, .. } => term.as_ref().and_then(Term::parsed_source_info),
+                Application { term, .. } => term.as_ref().and_then(Term::parsed_context).cloned(),
 
                 // These errors track `term`, from which we derive the context.
                 ArithmeticError { term }
                 | TypeError { term, .. }
                 | UnhandledPartial { term, .. }
-                | Unsupported { term, .. } => term.parsed_source_info(),
+                | Unsupported { term, .. } => term.parsed_context().cloned(),
 
                 // These errors never have context.
                 StackOverflow { .. }
@@ -128,18 +127,18 @@ impl PolarError {
                 | DuplicateResourceBlockDeclaration {
                     declaration: term, ..
                 }
-                | UnregisteredClass { term, .. } => term.parsed_source_info(),
+                | UnregisteredClass { term, .. } => term.parsed_context().cloned(),
 
                 // These errors track `rule`, from which we calculate the span.
                 InvalidRule { rule, .. }
                 | InvalidRuleType {
                     rule_type: rule, ..
-                } => rule.parsed_source_info(),
+                } => rule.parsed_context().cloned(),
 
                 // These errors track `rule_type`, from which we sometimes calculate the span.
                 MissingRequiredRule { rule_type } => {
                     if rule_type.name.0 == "has_relation" {
-                        rule_type.parsed_source_info()
+                        rule_type.parsed_context().cloned()
                     } else {
                         // TODO(gj): copy source info from the appropriate resource block term for
                         // `has_role()` rule type we create.
@@ -148,16 +147,11 @@ impl PolarError {
                 }
 
                 // These errors always pertain to a specific file but not to a specific place therein.
-                FileLoading { source, .. } => Some((source, 0, 0)),
+                FileLoading { source, .. } => Some(Context::new(source, 0, 0)),
             },
 
             Operational(_) => None,
-        };
-
-        context.map(|(source, left, right)| Context {
-            range: Range::from_span(&source.src, (left, right)),
-            source: source.clone(),
-        })
+        }
     }
 }
 
