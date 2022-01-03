@@ -427,11 +427,11 @@ impl PolarVirtualMachine {
         self.stack_limit = limit;
     }
 
-    pub fn kb(&self) -> RwLockReadGuard<KnowledgeBase> {
+    fn kb(&self) -> RwLockReadGuard<KnowledgeBase> {
         self.kb.read().unwrap()
     }
 
-    pub fn new_id(&self) -> u64 {
+    fn new_id(&self) -> u64 {
         self.kb().new_id()
     }
 
@@ -738,7 +738,7 @@ impl PolarVirtualMachine {
     }
 
     /// Investigate the current state of a variable and return a variable state variant.
-    pub fn variable_state(&self, variable: &Symbol) -> VariableState {
+    fn variable_state(&self, variable: &Symbol) -> VariableState {
         self.binding_manager.variable_state(variable)
     }
 
@@ -820,7 +820,7 @@ impl PolarVirtualMachine {
     }
 
     /// Get the query stack as a string for printing in error messages.
-    pub fn stack_trace(&self) -> String {
+    fn stack_trace(&self) -> String {
         let mut trace_stack = self.trace_stack.clone();
         let mut trace = self.trace.clone();
 
@@ -985,7 +985,7 @@ impl PolarVirtualMachine {
 
     /// Comparison operator that essentially performs partial unification.
     #[allow(clippy::many_single_char_names)]
-    pub fn isa(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
+    fn isa(&mut self, left: &Term, right: &Term) -> PolarResult<()> {
         self.log(
             LogLevel::Trace,
             || format!("MATCHES: {} matches {}", left, right),
@@ -1284,7 +1284,7 @@ impl PolarVirtualMachine {
         self.choose(member_isas)
     }
 
-    pub fn lookup(&mut self, dict: &Dictionary, field: &Term, value: &Term) -> PolarResult<()> {
+    fn lookup(&mut self, dict: &Dictionary, field: &Term, value: &Term) -> PolarResult<()> {
         let field = self.deref(field);
         match field.value() {
             Value::Variable(_) => {
@@ -1327,7 +1327,7 @@ impl PolarVirtualMachine {
     /// Return an external call event to look up a field's value
     /// in an external instance. Push a `Goal::LookupExternal` as
     /// an alternative on the last choice point to poll for results.
-    pub fn lookup_external(
+    fn lookup_external(
         &mut self,
         call_id: u64,
         instance: &Term,
@@ -1392,7 +1392,7 @@ impl PolarVirtualMachine {
         })
     }
 
-    pub fn isa_external(
+    fn isa_external(
         &mut self,
         instance: &Term,
         literal: &InstanceLiteral,
@@ -1410,7 +1410,7 @@ impl PolarVirtualMachine {
         })
     }
 
-    pub fn next_external(&mut self, call_id: u64, iterable: &Term) -> PolarResult<QueryEvent> {
+    fn next_external(&mut self, call_id: u64, iterable: &Term) -> PolarResult<QueryEvent> {
         // add another choice point for the next result
         self.push_choice(vec![vec![Goal::NextExternal {
             call_id,
@@ -1423,14 +1423,14 @@ impl PolarVirtualMachine {
         })
     }
 
-    pub fn make_external(&self, constructor: &Term, instance_id: u64) -> QueryEvent {
+    fn make_external(&self, constructor: &Term, instance_id: u64) -> QueryEvent {
         QueryEvent::MakeExternal {
             instance_id,
             constructor: self.deref(constructor),
         }
     }
 
-    pub fn check_error(&mut self) -> PolarResult<QueryEvent> {
+    fn check_error(&mut self) -> PolarResult<QueryEvent> {
         if let Some(msg) = self.external_error.take() {
             let term = match self.trace.last().map(|t| t.node.clone()) {
                 Some(Node::Term(t)) => Some(t),
