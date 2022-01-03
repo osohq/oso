@@ -246,6 +246,7 @@ impl Debugger {
                     })
                 }
             }
+            // TODO(gj): this looks pretty similar to VM::stack_trace().
             "stack" | "trace" => {
                 let mut trace_stack = vm.trace_stack.clone();
                 let mut trace = vm.trace.clone();

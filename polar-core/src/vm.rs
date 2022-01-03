@@ -9,7 +9,6 @@ use std::sync::{Arc, RwLock, RwLockReadGuard};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
-use super::visitor::{walk_term, Visitor};
 use crate::bindings::{
     Binding, BindingManager, BindingStack, Bindings, Bsp, FollowerId, VariableState,
 };
@@ -32,6 +31,7 @@ use crate::rules::*;
 use crate::runnable::Runnable;
 use crate::terms::*;
 use crate::traces::*;
+use crate::visitor::{walk_term, Visitor};
 
 pub const MAX_STACK_SIZE: usize = 10_000;
 pub const DEFAULT_TIMEOUT_MS: u64 = 30_000;
@@ -819,6 +819,7 @@ impl PolarVirtualMachine {
         }
     }
 
+    // TODO(gj): this method looks pretty similar to Debugger::debug_command#stack.
     /// Get the query stack as a string for printing in error messages.
     fn stack_trace(&self) -> String {
         let mut trace_stack = self.trace_stack.clone();
@@ -853,7 +854,6 @@ impl PolarVirtualMachine {
                     }
                     let _ = write!(st, "\n  ");
 
-                    // TODO(gj): this looks pretty similar to Debugger::debug_command#stack
                     if let Some((source, left, _)) = t.parsed_source_info() {
                         if let Some(rule) = &rule {
                             let _ = write!(st, "in rule {} ", rule.name);
