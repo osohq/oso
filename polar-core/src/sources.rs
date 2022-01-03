@@ -31,8 +31,8 @@ impl SourceInfo {
     }
 }
 
-// TODO(gj): why is this Serialize? At a minimum I don't think we need to serialize the full source
-// text.
+// TODO(gj): `Serialize` makes some `polar-wasm-api` tests easier to write. We could look into
+// https://serde.rs/remote-derive.html if we cared to preserve that while removing this impl.
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Source {
     pub filename: Option<String>,

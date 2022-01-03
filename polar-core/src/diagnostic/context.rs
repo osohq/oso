@@ -35,7 +35,7 @@ impl Position {
 // TODO(gj): ton of overlap between `Context` and `SourceInfo::Parser`. `SourceInfo::Parser` is a
 // bit more space efficient since it stores a single position usize instead of a (column, row) pair
 // of usizes.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug)]
 pub struct Context {
     pub source: Arc<Source>,
     pub range: Range,

@@ -1,7 +1,7 @@
 use std::{borrow::Borrow, fmt, sync::Arc};
 
 use indoc::formatdoc;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use strum_macros::AsRefStr;
 
 use super::{
@@ -25,7 +25,7 @@ impl PolarError {
     }
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Serialize)]
 pub struct FormattedPolarError {
     pub kind: ErrorKind,
     pub formatted: String,
@@ -40,7 +40,7 @@ impl From<PolarError> for FormattedPolarError {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 pub enum ErrorKind {
     Parse(ParseError),
     Runtime(RuntimeError),
@@ -64,7 +64,7 @@ impl fmt::Display for ErrorKind {
 // `PolarError` were the enum (without `ErrorKind`), then `PolarError` would serialize into
 // `FormattedPolarError`, which has a field of type `PolarError`... etc. There's probably a better
 // way to structure this, but for now this is the path of least resistance.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(into = "FormattedPolarError")]
 pub struct PolarError(pub ErrorKind);
 
@@ -82,55 +82,65 @@ pub type PolarResult<T> = Result<T, PolarError>;
 
 impl std::error::Error for PolarError {}
 
-#[derive(AsRefStr, Clone, Debug, Deserialize, Serialize)]
+#[derive(AsRefStr, Clone, Debug, Serialize)]
 pub enum ParseError {
     IntegerOverflow {
+        #[serde(skip_serializing)]
         source: Arc<Source>,
         token: String,
         loc: usize,
     },
     InvalidTokenCharacter {
+        #[serde(skip_serializing)]
         source: Arc<Source>,
         token: String,
         c: char,
         loc: usize,
     },
     InvalidToken {
+        #[serde(skip_serializing)]
         source: Arc<Source>,
         loc: usize,
     },
     #[allow(clippy::upper_case_acronyms)]
     UnrecognizedEOF {
+        #[serde(skip_serializing)]
         source: Arc<Source>,
         loc: usize,
     },
     UnrecognizedToken {
+        #[serde(skip_serializing)]
         source: Arc<Source>,
         token: String,
         loc: usize,
     },
     ExtraToken {
+        #[serde(skip_serializing)]
         source: Arc<Source>,
         token: String,
         loc: usize,
     },
     ReservedWord {
+        #[serde(skip_serializing)]
         source: Arc<Source>,
         token: String,
         loc: usize,
     },
     InvalidFloat {
+        #[serde(skip_serializing)]
         source: Arc<Source>,
         token: String,
         loc: usize,
     },
     WrongValueType {
+        #[serde(skip_serializing)]
         source: Arc<Source>,
         loc: usize,
         term: Term,
         expected: String,
     },
     DuplicateKey {
+        #[serde(skip_serializing)]
         source: Arc<Source>,
         loc: usize,
         key: String,
@@ -286,7 +296,7 @@ impl fmt::Display for ParseError {
     }
 }
 
-#[derive(AsRefStr, Clone, Debug, Deserialize, Serialize)]
+#[derive(AsRefStr, Clone, Debug, Serialize)]
 pub enum RuntimeError {
     ArithmeticError {
         /// Term<Operation> where the error arose, tracked for lexical context.
@@ -440,7 +450,7 @@ The expression is: {expr}
     }
 }
 
-#[derive(AsRefStr, Clone, Debug, Deserialize, Serialize)]
+#[derive(AsRefStr, Clone, Debug, Serialize)]
 pub enum OperationalError {
     /// An invariant has been broken internally.
     InvalidState { msg: String },
@@ -470,9 +480,10 @@ impl fmt::Display for OperationalError {
     }
 }
 
-#[derive(AsRefStr, Clone, Debug, Deserialize, Serialize)]
+#[derive(AsRefStr, Clone, Debug, Serialize)]
 pub enum ValidationError {
     FileLoading {
+        #[serde(skip_serializing)]
         source: Arc<Source>,
         msg: String,
     },
