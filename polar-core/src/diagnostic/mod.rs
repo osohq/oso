@@ -1,7 +1,6 @@
 use std::fmt;
 
-use super::error::PolarError;
-use super::warning::PolarWarning;
+use super::{error::PolarError, sources::Context, warning::PolarWarning};
 
 #[derive(Debug)]
 pub enum Diagnostic {
@@ -41,6 +40,13 @@ impl Diagnostic {
         match self {
             Diagnostic::Error(e) => e.kind(),
             Diagnostic::Warning(w) => w.kind(),
+        }
+    }
+
+    pub fn get_context(&self) -> Option<Context> {
+        match self {
+            Diagnostic::Error(e) => e.get_context(),
+            Diagnostic::Warning(w) => w.get_context(),
         }
     }
 }

@@ -7,7 +7,7 @@ use super::sources::Context;
 use super::terms::{InstanceLiteral, Pattern, Symbol, Term, Value};
 
 #[derive(Debug)]
-pub struct PolarWarning(ValidationWarning);
+pub struct PolarWarning(pub ValidationWarning);
 
 impl PolarWarning {
     pub fn kind(&self) -> String {

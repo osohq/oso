@@ -26,36 +26,22 @@ pub(crate) type Documents = BTreeMap<Url, TextDocumentItem>;
 pub(crate) type Diagnostics = BTreeMap<Url, PublishDiagnosticsParams>;
 
 pub(crate) fn range_from_polar_diagnostic_context(diagnostic: &Diagnostic) -> Range {
-    use polar_core::diagnostic::Range as PolarRange;
+    use polar_core::loc_to_pos;
 
-    let context = match diagnostic {
-        Diagnostic::Error(e) => e.get_context(),
-        // TODO(gj): remove clone() and add PolarWarning::get_context
-        Diagnostic::Warning(w) => w.context.clone(),
-    };
-
-    if let Some(PolarRange { start, end }) = context.map(|c| c.range) {
-        let start = Position {
-            line: start.row as _,
-            character: start.column as _,
-        };
-        let end = Position {
-            line: end.row as _,
-            character: end.column as _,
-        };
-        Range { start, end }
-    } else {
-        Range::default()
-    }
+    diagnostic
+        .get_context()
+        .map(|context| {
+            let (row, column) = loc_to_pos(&context.source.src, context.left);
+            let start = Position::new(row as _, column as _);
+            let (row, column) = loc_to_pos(&context.source.src, context.right);
+            let end = Position::new(row as _, column as _);
+            Range { start, end }
+        })
+        .unwrap_or_default()
 }
 
 pub(crate) fn uri_from_polar_diagnostic_context(diagnostic: &Diagnostic) -> Option<Url> {
-    let context = match diagnostic {
-        Diagnostic::Error(e) => e.get_context(),
-        // TODO(gj): remove clone() and add PolarWarning::get_context
-        Diagnostic::Warning(w) => w.context.clone(),
-    };
-    if let Some(context) = context {
+    if let Some(context) = diagnostic.get_context() {
         if let Some(filename) = context.source.filename.as_ref() {
             match Url::parse(filename) {
                 Ok(uri) => return Some(uri),

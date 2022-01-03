@@ -461,7 +461,7 @@ impl PolarLanguageServer {
                 }
                 _ => (),
             },
-            PolarDiagnostic::Warning(w) if matches!(w.kind, UnknownSpecializer { .. }) => {
+            PolarDiagnostic::Warning(w) if matches!(w.0, UnknownSpecializer { .. }) => {
                 return vec![];
             }
             _ => (),
@@ -471,7 +471,7 @@ impl PolarLanguageServer {
         // `PolarWarning` because we don't want source context as part of the error message.
         let (message, severity) = match &diagnostic {
             PolarDiagnostic::Error(e) => (e.0.to_string(), DiagnosticSeverity::Error),
-            PolarDiagnostic::Warning(w) => (w.kind.to_string(), DiagnosticSeverity::Warning),
+            PolarDiagnostic::Warning(w) => (w.0.to_string(), DiagnosticSeverity::Warning),
         };
 
         // If the diagnostic applies to a single doc, use it; otherwise, default to emitting a
