@@ -307,7 +307,8 @@ pub enum RuntimeError {
         msg: String,
     },
     QueryTimeout {
-        msg: String,
+        elapsed: u64,
+        timeout: u64,
     },
     Application {
         msg: String,
@@ -363,7 +364,7 @@ impl fmt::Display for RuntimeError {
             Self::StackOverflow { msg } => {
                 write!(f, "{}", msg)
             }
-            Self::QueryTimeout { msg } => write!(f, "Query timeout: {}", msg),
+            Self::QueryTimeout { elapsed, timeout } => write!(f, "Query timeout: Query running for {}ms, which exceeds the timeout of {}ms. To disable timeouts, set the POLAR_TIMEOUT_MS environment variable to 0.", elapsed, timeout),
             Self::Application {
                 msg, stack_trace, ..
             } => {

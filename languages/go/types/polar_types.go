@@ -2124,8 +2124,10 @@ func (RuntimeErrorStackOverflow) isRuntimeError() {}
 
 // RuntimeErrorQueryTimeout struct
 type RuntimeErrorQueryTimeout struct {
-	// Msg
-	Msg string `json:"msg"`
+	// Elapsed
+	Elapsed uint64 `json:"elapsed"`
+	// Timeout
+	Timeout uint64 `json:"timeout"`
 }
 
 func (RuntimeErrorQueryTimeout) isRuntimeError() {}

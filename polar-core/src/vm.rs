@@ -899,14 +899,9 @@ impl PolarVirtualMachine {
         }
 
         let elapsed = self.query_duration();
-        if elapsed > self.query_timeout_ms {
-            return Err(RuntimeError::QueryTimeout {
-                msg: format!(
-                    "Query running for {}ms, which exceeds the timeout of {}ms. To disable timeouts, set the POLAR_TIMEOUT_MS environment variable to 0.",
-                    elapsed, self.query_timeout_ms
-                ),
-            }.into()
-            );
+        let timeout = self.query_timeout_ms;
+        if elapsed > timeout {
+            return Err(RuntimeError::QueryTimeout { elapsed, timeout }.into());
         }
         Ok(())
     }
