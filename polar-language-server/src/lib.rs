@@ -470,7 +470,7 @@ impl PolarLanguageServer {
         // NOTE(gj): We stringify the error / warning variant instead of the full `PolarError` /
         // `PolarWarning` because we don't want source context as part of the error message.
         let (message, severity) = match &diagnostic {
-            PolarDiagnostic::Error(e) => (e.to_string(), DiagnosticSeverity::Error),
+            PolarDiagnostic::Error(e) => (e.0.to_string(), DiagnosticSeverity::Error),
             PolarDiagnostic::Warning(w) => (w.kind.to_string(), DiagnosticSeverity::Warning),
         };
 
