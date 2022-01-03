@@ -2,6 +2,7 @@ use std::{fmt, sync::Arc};
 
 use indoc::formatdoc;
 use serde::{Deserialize, Serialize};
+use strum_macros::AsRefStr;
 
 use super::{
     diagnostic::{Context, Range},
@@ -15,53 +16,12 @@ use super::{
 impl PolarError {
     pub fn kind(&self) -> String {
         use ErrorKind::*;
-        use OperationalError::*;
-        use ParseError::*;
-        use RuntimeError::*;
-        use ValidationError::*;
-
         match &self.0 {
-            Parse(IntegerOverflow { .. }) => "ParseError::IntegerOverflow",
-            Parse(InvalidTokenCharacter { .. }) => "ParseError::InvalidTokenCharacter",
-            Parse(InvalidToken { .. }) => "ParseError::InvalidToken",
-            Parse(UnrecognizedEOF { .. }) => "ParseError::UnrecognizedEOF",
-            Parse(UnrecognizedToken { .. }) => "ParseError::UnrecognizedToken",
-            Parse(ExtraToken { .. }) => "ParseError::ExtraToken",
-            Parse(ReservedWord { .. }) => "ParseError::ReservedWord",
-            Parse(InvalidFloat { .. }) => "ParseError::InvalidFloat",
-            Parse(WrongValueType { .. }) => "ParseError::WrongValueType",
-            Parse(DuplicateKey { .. }) => "ParseError::DuplicateKey",
-            Runtime(Application { .. }) => "RuntimeError::Application",
-            Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
-            Runtime(IncompatibleBindings { .. }) => "RuntimeError::IncompatibleBindings",
-            Runtime(QueryTimeout { .. }) => "RuntimeError::QueryTimeout",
-            Runtime(StackOverflow { .. }) => "RuntimeError::StackOverflow",
-            Runtime(TypeError { .. }) => "RuntimeError::TypeError",
-            Runtime(UnhandledPartial { .. }) => "RuntimeError::UnhandledPartial",
-            Runtime(Unsupported { .. }) => "RuntimeError::Unsupported",
-            Runtime(DataFilteringFieldMissing { .. }) => "RuntimeError::DataFilteringFieldMissing",
-            Runtime(DataFilteringUnsupportedOp { .. }) => {
-                "RuntimeError::DataFilteringUnsupportedOp"
-            }
-            Runtime(InvalidRegistration { .. }) => "RuntimeError::InvalidRegistration",
-            Runtime(MultipleLoadError) => "RuntimeError::MultipleLoadError",
-            Runtime(QueryForUndefinedRule { .. }) => "RuntimeError::QueryForUndefinedRule",
-            Operational(InvalidState { .. }) => "OperationalError::InvalidState",
-            Operational(Serialization { .. }) => "OperationalError::Serialization",
-            Operational(Unknown) => "OperationalError::Unknown",
-            Validation(FileLoading { .. }) => "ValidationError::FileLoading",
-            Validation(InvalidRule { .. }) => "ValidationError::InvalidRule",
-            Validation(InvalidRuleType { .. }) => "ValidationError::InvalidRuleType",
-            Validation(ResourceBlock { .. }) => "ValidationError::ResourceBlock",
-            Validation(UndefinedRuleCall { .. }) => "ValidationError::UndefinedRuleCall",
-            Validation(SingletonVariable { .. }) => "ValidationError::SingletonVariable",
-            Validation(UnregisteredClass { .. }) => "ValidationError::UnregisteredClass",
-            Validation(MissingRequiredRule { .. }) => "ValidationError::MissingRequiredRule",
-            Validation(DuplicateResourceBlockDeclaration { .. }) => {
-                "ValidationError::DuplicateResourceBlockDeclaration"
-            }
+            Operational(o) => "OperationalError::".to_string() + o.as_ref(),
+            Parse(p) => "ParseError::".to_string() + p.as_ref(),
+            Runtime(r) => "RuntimeError::".to_string() + r.as_ref(),
+            Validation(v) => "ValidationError::".to_string() + v.as_ref(),
         }
-        .to_owned()
     }
 }
 
@@ -122,7 +82,7 @@ pub type PolarResult<T> = Result<T, PolarError>;
 
 impl std::error::Error for PolarError {}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(AsRefStr, Clone, Debug, Deserialize, Serialize)]
 pub enum ParseError {
     IntegerOverflow {
         source: Arc<Source>,
@@ -326,7 +286,7 @@ impl fmt::Display for ParseError {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(AsRefStr, Clone, Debug, Deserialize, Serialize)]
 pub enum RuntimeError {
     ArithmeticError {
         /// Term<Operation> where the error arose, tracked for lexical context.
@@ -485,7 +445,7 @@ The expression is: {expr}
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(AsRefStr, Clone, Debug, Deserialize, Serialize)]
 pub enum OperationalError {
     /// An invariant has been broken internally.
     InvalidState { msg: String },
@@ -515,7 +475,7 @@ impl fmt::Display for OperationalError {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(AsRefStr, Clone, Debug, Deserialize, Serialize)]
 pub enum ValidationError {
     FileLoading {
         source: Arc<Source>,
