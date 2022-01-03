@@ -65,7 +65,7 @@ has_relation(subject: A, "a", object: Aprime) if
         [Expression("Isa", [Variable("resource"), Pattern("Aprime", {})])],
     )
 
-    # Unhandled partial raised here.
+    # Unhandled partial was raised here before fix.
     results = list(
         oso.query_rule(
             "allow",
