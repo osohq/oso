@@ -535,7 +535,7 @@ impl PolarVirtualMachine {
             Goal::TraceRule { trace } => {
                 if let Node::Rule(rule) = &trace.node {
                     self.log(
-                        LogLevel::Trace,
+                        LogLevel::Info,
                         || {
                             let source_str = self.rule_source(rule);
                             format!("RULE: {}", source_str)
@@ -2638,15 +2638,8 @@ impl PolarVirtualMachine {
             // Make alternatives for calling them.
 
             self.polar_trace_mute = false;
-            // print applicable rules for the top-level query to INFO and
-            // applicable rules for subsequent queries to TRACE
-            let level = if self.queries.len() == 1 {
-                LogLevel::Info
-            } else {
-                LogLevel::Trace
-            };
             self.log(
-                level,
+                LogLevel::Info,
                 || {
                     let mut rule_strs = "APPLICABLE_RULES:".to_owned();
                     for rule in rules {
