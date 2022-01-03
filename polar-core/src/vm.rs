@@ -3091,6 +3091,7 @@ mod tests {
     use permute::permute;
 
     use super::*;
+    use crate::error::ErrorKind;
     use crate::rewrites::unwrap_and;
 
     impl PolarVirtualMachine {
@@ -3898,8 +3899,8 @@ mod tests {
                 Ok(event) => assert!(matches!(event, QueryEvent::MakeExternal { .. })),
                 Err(err) => {
                     assert!(matches!(
-                        err,
-                        PolarError::Runtime(RuntimeError::QueryTimeout { .. })
+                        err.0,
+                        ErrorKind::Runtime(RuntimeError::QueryTimeout { .. })
                     ));
 
                     // End test.

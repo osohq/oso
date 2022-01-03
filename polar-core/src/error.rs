@@ -14,13 +14,13 @@ use super::{
 
 impl PolarError {
     pub fn kind(&self) -> String {
+        use ErrorKind::*;
         use OperationalError::*;
         use ParseError::*;
-        use PolarError::*;
         use RuntimeError::*;
         use ValidationError::*;
 
-        match self {
+        match &self.0 {
             Parse(IntegerOverflow { .. }) => "ParseError::IntegerOverflow",
             Parse(InvalidTokenCharacter { .. }) => "ParseError::InvalidTokenCharacter",
             Parse(InvalidToken { .. }) => "ParseError::InvalidToken",
@@ -67,46 +67,60 @@ impl PolarError {
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct FormattedPolarError {
-    pub kind: String,
-    pub message: String,
+    pub kind: ErrorKind,
+    pub formatted: String,
 }
 
 impl From<PolarError> for FormattedPolarError {
     fn from(other: PolarError) -> Self {
         Self {
-            kind: other.kind(),
-            message: other.to_string(),
+            formatted: other.to_string(),
+            kind: other.0,
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(into = "FormattedPolarError")]
-pub enum PolarError {
+pub enum ErrorKind {
     Parse(ParseError),
     Runtime(RuntimeError),
     Operational(OperationalError),
     Validation(ValidationError),
 }
 
-pub type PolarResult<T> = std::result::Result<T, PolarError>;
+impl fmt::Display for ErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Parse(e) => write!(f, "{}", e),
+            Self::Runtime(e) => write!(f, "{}", e),
+            Self::Operational(e) => write!(f, "{}", e),
+            Self::Validation(e) => write!(f, "{}", e),
+        }
+    }
+}
 
-impl std::error::Error for PolarError {}
+// NOTE(gj): `ErrorKind` is a layer of indirection so we can avoid infinite recursion when
+// serializing `PolarError` into `FormattedPolarError`, which references the error kind. If
+// `PolarError` were the enum (without `ErrorKind`), then `PolarError` would serialize into
+// `FormattedPolarError`, which has a field of type `PolarError`... etc. There's probably a better
+// way to structure this, but for now this is the path of least resistance.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(into = "FormattedPolarError")]
+pub struct PolarError(pub ErrorKind);
 
 impl fmt::Display for PolarError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Parse(e) => write!(f, "{}", e)?,
-            Self::Runtime(e) => write!(f, "{}", e)?,
-            Self::Operational(e) => write!(f, "{}", e)?,
-            Self::Validation(e) => write!(f, "{}", e)?,
-        }
+        write!(f, "{}", self.0)?;
         if let Some(context) = self.get_context() {
             write!(f, "{}", context)?;
         }
         Ok(())
     }
 }
+
+pub type PolarResult<T> = Result<T, PolarError>;
+
+impl std::error::Error for PolarError {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ParseError {
@@ -165,18 +179,19 @@ pub enum ParseError {
 
 impl From<ParseError> for PolarError {
     fn from(err: ParseError) -> Self {
-        Self::Parse(err)
+        Self(ErrorKind::Parse(err))
     }
 }
 
 impl PolarError {
     pub fn get_context(&self) -> Option<Context> {
+        use ErrorKind::*;
         use ParseError::*;
         use RuntimeError::*;
         use ValidationError::*;
 
-        let context = match &self {
-            Self::Parse(e) => Some(match e {
+        let context = match &self.0 {
+            Parse(e) => Some(match e {
                 // These errors track `loc` (left bound) and `token`, and we calculate right bound
                 // as `loc + token.len()`.
                 DuplicateKey {
@@ -202,7 +217,7 @@ impl PolarError {
                 }
             }),
 
-            Self::Runtime(e) => match e {
+            Runtime(e) => match e {
                 // These errors sometimes track `term`, from which we derive context.
                 Application { term, .. } => term.as_ref().and_then(Term::parsed_source_info),
 
@@ -223,7 +238,7 @@ impl PolarError {
                 | MultipleLoadError => None,
             },
 
-            Self::Validation(e) => match e {
+            Validation(e) => match e {
                 // These errors track `term`, from which we calculate the span.
                 ResourceBlock { term, .. }
                 | SingletonVariable { term, .. }
@@ -254,7 +269,7 @@ impl PolarError {
                 FileLoading { source, .. } => Some((source, 0, 0)),
             },
 
-            Self::Operational(_) => None,
+            Operational(_) => None,
         };
 
         context.map(|(source, left, right)| Context {
@@ -370,7 +385,7 @@ pub enum RuntimeError {
 
 impl From<RuntimeError> for PolarError {
     fn from(err: RuntimeError) -> Self {
-        Self::Runtime(err)
+        Self(ErrorKind::Runtime(err))
     }
 }
 
@@ -482,7 +497,7 @@ pub enum OperationalError {
 
 impl From<OperationalError> for PolarError {
     fn from(err: OperationalError) -> Self {
-        Self::Operational(err)
+        Self(ErrorKind::Operational(err))
     }
 }
 
@@ -554,7 +569,7 @@ pub enum ValidationError {
 
 impl From<ValidationError> for PolarError {
     fn from(err: ValidationError) -> Self {
-        Self::Validation(err)
+        Self(ErrorKind::Validation(err))
     }
 }
 

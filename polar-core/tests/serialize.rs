@@ -69,7 +69,7 @@ mod tests {
             loc: 15,
             source: source!("CinnabarVinegarInteger"),
         };
-        let err = PolarError::Parse(e);
+        let err = PolarError::from(e);
         eprintln!("{}", serde_json::to_string(&err).unwrap());
         let rule = Rule::new_from_test(
             Symbol::new("foo"),

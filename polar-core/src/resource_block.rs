@@ -641,7 +641,7 @@ mod tests {
     use super::*;
     use crate::diagnostic::Diagnostic;
     use crate::error::{
-        PolarError::{Runtime, Validation},
+        ErrorKind::{Runtime, Validation},
         RuntimeError,
     };
     use crate::events::QueryEvent;
@@ -652,7 +652,7 @@ mod tests {
     #[track_caller]
     fn expect_error(p: &Polar, policy: &str, expected: &str) {
         let error = p.load_str(policy).unwrap_err();
-        let msg = match error {
+        let msg = match error.0 {
             Validation(ValidationError::ResourceBlock { msg, .. }) => msg,
             Validation(ValidationError::UnregisteredClass { .. })
             | Validation(ValidationError::DuplicateResourceBlockDeclaration { .. }) => {
@@ -1477,7 +1477,7 @@ mod tests {
         let p = Polar::new();
         let q = p.new_query(&format!("new {}()", ACTOR_UNION_NAME), false);
         let msg = match q {
-            Err(Validation(ValidationError::ResourceBlock { msg, .. })) => msg,
+            Err(PolarError(Validation(ValidationError::ResourceBlock { msg, .. }))) => msg,
             Err(e) => panic!("{}", e),
             _ => panic!("succeeded when I should've failed"),
         };
@@ -1524,7 +1524,7 @@ mod tests {
             .register_constant(sym!(ACTOR_UNION_NAME), term!("unimportant"))
             .expect_err("Expected register_constant to throw error.");
         assert!(matches!(
-            err,
+            err.0,
             Runtime(RuntimeError::InvalidRegistration { .. })
         ));
     }
@@ -1602,7 +1602,7 @@ mod tests {
         kb.add_rule(rule!("f", ["x"; instance!(sym!(ACTOR_UNION_NAME))]));
         assert!(matches!(
             kb.validate_rules().first().unwrap(),
-            Diagnostic::Error(Validation(ValidationError::InvalidRule { .. }),)
+            Diagnostic::Error(PolarError(Validation(ValidationError::InvalidRule { .. })))
         ));
 
         kb.clear_rules();
@@ -1626,7 +1626,7 @@ mod tests {
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Citrus"))]));
         assert!(matches!(
             kb.validate_rules().first().unwrap(),
-            Diagnostic::Error(Validation(ValidationError::InvalidRule { .. }),)
+            Diagnostic::Error(PolarError(Validation(ValidationError::InvalidRule { .. })))
         ));
 
         kb.clear_rules();
@@ -1647,7 +1647,7 @@ mod tests {
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Fruit"))]));
         assert!(matches!(
             kb.validate_rules().first().unwrap(),
-            Diagnostic::Error(Validation(ValidationError::InvalidRule { .. }),)
+            Diagnostic::Error(PolarError(Validation(ValidationError::InvalidRule { .. })))
         ));
 
         // kb.clear_rules();

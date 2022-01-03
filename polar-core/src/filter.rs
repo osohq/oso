@@ -593,7 +593,7 @@ fn vec_of_ands(t: Term) -> Vec<Term> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::error::{OperationalError, PolarError};
+    use crate::error::{ErrorKind, OperationalError, PolarError};
     use crate::events::ResultEvent;
 
     #[test]
@@ -679,7 +679,7 @@ mod test {
         })];
 
         match Filter::build(types, ors, "resource", "Resource") {
-            Err(PolarError::Operational(OperationalError::InvalidState { msg }))
+            Err(PolarError(ErrorKind::Operational(OperationalError::InvalidState { msg })))
                 if &msg == "Type `Resource` occurs more than once as the target of a relation" => {}
             x => panic!("unexpected: {:?}", x),
         }

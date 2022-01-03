@@ -581,10 +581,11 @@ impl KnowledgeBase {
     /// special meaning in policies that use resource blocks.
     pub fn register_constant(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
         if name.0 == ACTOR_UNION_NAME || name.0 == RESOURCE_UNION_NAME {
-            return Err(PolarError::Runtime(RuntimeError::InvalidRegistration {
+            return Err(RuntimeError::InvalidRegistration {
                 msg: format!("'{}' is a built-in specializer.", name),
                 sym: name,
-            }));
+            }
+            .into());
         }
         self.constants.insert(name, value);
         Ok(())
@@ -850,13 +851,13 @@ impl KnowledgeBase {
 mod tests {
     use super::*;
 
-    use crate::error::PolarError::Validation;
+    use crate::error::ErrorKind::Validation;
 
     #[test]
     /// Test validation implemented in `check_file()`.
     fn test_add_source_file_validation() {
         fn expect_error(kb: &mut KnowledgeBase, name: &str, source: Arc<Source>, expected: &str) {
-            let msg = match kb.add_source(name, source).unwrap_err() {
+            let msg = match kb.add_source(name, source).unwrap_err().0 {
                 Validation(ValidationError::FileLoading { msg, .. }) => msg,
                 e => panic!("Unexpected error: {}", e),
             };
@@ -1385,7 +1386,7 @@ mod tests {
         assert_eq!(diagnostics.len(), 1);
         assert!(matches!(
             diagnostics.first().unwrap(),
-            Diagnostic::Error(Validation(ValidationError::InvalidRule { .. }))
+            Diagnostic::Error(PolarError(Validation(ValidationError::InvalidRule { .. })))
         ));
 
         // Rule type does not apply if it doesn't have the same name as a rule
@@ -1402,7 +1403,7 @@ mod tests {
 
         assert!(matches!(
             kb.validate_rules().first().unwrap(),
-            Diagnostic::Error(Validation(ValidationError::InvalidRule { .. }))
+            Diagnostic::Error(PolarError(Validation(ValidationError::InvalidRule { .. })))
         ));
 
         // Multiple templates can exist for the same name but only one needs to match

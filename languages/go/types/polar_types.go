@@ -136,6 +136,179 @@ type Dictionary struct {
 	Fields map[Symbol]Term `json:"fields"`
 }
 
+// ErrorKindParse newtype
+type ErrorKindParse ParseError
+
+func (variant ErrorKindParse) MarshalJSON() ([]byte, error) {
+	return json.Marshal(ParseError(variant))
+}
+
+func (variant *ErrorKindParse) UnmarshalJSON(b []byte) error {
+	inner := ParseError(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ErrorKindParse(inner)
+	return err
+}
+
+func (ErrorKindParse) isErrorKind() {}
+
+// ErrorKindRuntime newtype
+type ErrorKindRuntime RuntimeError
+
+func (variant ErrorKindRuntime) MarshalJSON() ([]byte, error) {
+	return json.Marshal(RuntimeError(variant))
+}
+
+func (variant *ErrorKindRuntime) UnmarshalJSON(b []byte) error {
+	inner := RuntimeError(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ErrorKindRuntime(inner)
+	return err
+}
+
+func (ErrorKindRuntime) isErrorKind() {}
+
+// ErrorKindOperational newtype
+type ErrorKindOperational OperationalError
+
+func (variant ErrorKindOperational) MarshalJSON() ([]byte, error) {
+	return json.Marshal(OperationalError(variant))
+}
+
+func (variant *ErrorKindOperational) UnmarshalJSON(b []byte) error {
+	inner := OperationalError(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ErrorKindOperational(inner)
+	return err
+}
+
+func (ErrorKindOperational) isErrorKind() {}
+
+// ErrorKindValidation newtype
+type ErrorKindValidation ValidationError
+
+func (variant ErrorKindValidation) MarshalJSON() ([]byte, error) {
+	return json.Marshal(ValidationError(variant))
+}
+
+func (variant *ErrorKindValidation) UnmarshalJSON(b []byte) error {
+	inner := ValidationError(*variant)
+	err := json.Unmarshal(b, &inner)
+	*variant = ErrorKindValidation(inner)
+	return err
+}
+
+func (ErrorKindValidation) isErrorKind() {}
+
+// ErrorKind enum
+type ErrorKindVariant interface {
+	isErrorKind()
+}
+
+type ErrorKind struct {
+	ErrorKindVariant
+}
+
+func (result *ErrorKind) UnmarshalJSON(b []byte) error {
+	var variantName string
+	var variantValue *json.RawMessage
+
+	// try and deserialize as a string first
+	err := json.Unmarshal(b, &variantName)
+	if err != nil {
+		var rawMap map[string]json.RawMessage
+		err := json.Unmarshal(b, &rawMap)
+		if err != nil {
+			return err
+		}
+		// JSON should be of form {"VariantName": {...}}
+		if len(rawMap) != 1 {
+			return errors.New("Deserializing ErrorKind as an enum variant; expecting a single key")
+		}
+		for k, v := range rawMap {
+			variantName = k
+			variantValue = &v
+		}
+	}
+	switch variantName {
+
+	case "Parse":
+		var variant ErrorKindParse
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ErrorKind{variant}
+		return nil
+
+	case "Runtime":
+		var variant ErrorKindRuntime
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ErrorKind{variant}
+		return nil
+
+	case "Operational":
+		var variant ErrorKindOperational
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ErrorKind{variant}
+		return nil
+
+	case "Validation":
+		var variant ErrorKindValidation
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = ErrorKind{variant}
+		return nil
+
+	}
+
+	return fmt.Errorf("Cannot deserialize ErrorKind: %s", string(b))
+}
+
+func (variant ErrorKind) MarshalJSON() ([]byte, error) {
+	switch inner := variant.ErrorKindVariant.(type) {
+
+	case ErrorKindParse:
+		return json.Marshal(map[string]ErrorKindParse{
+			"Parse": inner,
+		})
+
+	case ErrorKindRuntime:
+		return json.Marshal(map[string]ErrorKindRuntime{
+			"Runtime": inner,
+		})
+
+	case ErrorKindOperational:
+		return json.Marshal(map[string]ErrorKindOperational{
+			"Operational": inner,
+		})
+
+	case ErrorKindValidation:
+		return json.Marshal(map[string]ErrorKindValidation{
+			"Validation": inner,
+		})
+
+	}
+
+	return nil, fmt.Errorf("unexpected variant of %v", variant)
+}
+
 // ExternalInstance struct
 type ExternalInstance struct {
 	// InstanceId
@@ -151,9 +324,9 @@ type ExternalInstance struct {
 // FormattedPolarError struct
 type FormattedPolarError struct {
 	// Kind
-	Kind string `json:"kind"`
-	// Message
-	Message string `json:"message"`
+	Kind ErrorKind `json:"kind"`
+	// Formatted
+	Formatted string `json:"formatted"`
 }
 
 // InstanceLiteral struct

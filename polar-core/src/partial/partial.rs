@@ -302,7 +302,7 @@ mod test {
     use super::*;
 
     use crate::bindings::Bindings;
-    use crate::error::{PolarError, RuntimeError};
+    use crate::error::{ErrorKind, PolarError, RuntimeError};
     use crate::events::QueryEvent;
     use crate::formatting::ToPolarString;
     use crate::polar::Polar;
@@ -1007,8 +1007,8 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("a")])), false);
         let error = q.next_event().unwrap_err();
         assert!(matches!(
-            error,
-            PolarError::Runtime(RuntimeError::Unsupported { .. }),
+            error.0,
+            ErrorKind::Runtime(RuntimeError::Unsupported { .. }),
         ));
         Ok(())
     }
@@ -1762,8 +1762,8 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         let error = q.next_event().unwrap_err();
         assert!(matches!(
-            error,
-            PolarError::Runtime(RuntimeError::Unsupported { .. }),
+            error.0,
+            ErrorKind::Runtime(RuntimeError::Unsupported { .. }),
         ));
         Ok(())
     }
@@ -2342,7 +2342,9 @@ mod test {
             assert!(
                 matches!(
                     res,
-                    Err(PolarError::Runtime(RuntimeError::UnhandledPartial { .. }),)
+                    Err(PolarError(ErrorKind::Runtime(
+                        RuntimeError::UnhandledPartial { .. }
+                    )))
                 ),
                 "unexpected result: {:#?} for {}",
                 res,

@@ -2,7 +2,7 @@ use std::sync::{Arc, RwLock};
 
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
 use super::diagnostic::Diagnostic;
-use super::error::{PolarError, PolarResult, RuntimeError, ValidationError};
+use super::error::{PolarResult, RuntimeError, ValidationError};
 use super::filter::Filter;
 use super::kb::*;
 use super::messages::*;
@@ -173,7 +173,7 @@ impl Polar {
     pub fn load(&self, sources: Vec<Source>) -> PolarResult<()> {
         if let Ok(kb) = self.kb.read() {
             if kb.has_rules() {
-                return Err(PolarError::Runtime(RuntimeError::MultipleLoadError));
+                return Err(RuntimeError::MultipleLoadError.into());
             }
         }
 
@@ -285,7 +285,7 @@ impl Polar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::PolarError::{Runtime, Validation};
+    use crate::error::ErrorKind::{Runtime, Validation};
 
     #[test]
     fn can_load_and_query() {
@@ -304,13 +304,13 @@ mod tests {
 
         // Loading twice is not.
         assert!(matches!(
-            polar.load(vec![Source::new(src)]).unwrap_err(),
+            polar.load(vec![Source::new(src)]).unwrap_err().0,
             Runtime(RuntimeError::MultipleLoadError),
         ));
 
         // Even with load_str().
         assert!(matches!(
-            polar.load(vec![Source::new(src)]).unwrap_err(),
+            polar.load(vec![Source::new(src)]).unwrap_err().0,
             Runtime(RuntimeError::MultipleLoadError),
         ));
     }
@@ -325,6 +325,7 @@ mod tests {
                 Source::new_with_name(filename, src),
             ])
             .unwrap_err()
+            .0
         {
             Validation(ValidationError::FileLoading { msg, .. }) => msg,
             e => panic!("{}", e),

@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use super::diagnostic::Diagnostic;
-use super::error::{PolarError, ValidationError};
+use super::error::ValidationError;
 use super::kb::*;
 use super::rules::*;
 use super::terms::*;
@@ -38,9 +38,7 @@ impl<'kb> SingletonVisitor<'kb> {
                         ValidationWarning::UnknownSpecializer { term, sym }.with_context(),
                     )
                 } else {
-                    Diagnostic::Error(PolarError::Validation(ValidationError::SingletonVariable {
-                        term,
-                    }))
+                    Diagnostic::Error(ValidationError::SingletonVariable { term }.into())
                 }
             })
             .collect()
@@ -233,7 +231,7 @@ pub fn check_undefined_rule_calls(kb: &KnowledgeBase) -> Vec<Diagnostic> {
     visitor
         .errors()
         .into_iter()
-        .map(PolarError::Validation)
+        .map(Into::into)
         .map(Diagnostic::Error)
         .collect()
 }

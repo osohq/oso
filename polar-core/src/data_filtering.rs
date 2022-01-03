@@ -1013,7 +1013,7 @@ mod test {
     use super::*;
     use crate::{
         bindings::Bindings,
-        error::{PolarError, RuntimeError::*},
+        error::{ErrorKind, RuntimeError::*},
     };
 
     impl From<Bindings> for ResultEvent {
@@ -1111,8 +1111,8 @@ mod test {
         };
 
         let err = build_filter_plan(types, vec![bindings], "resource", "A").unwrap_err();
-        match err {
-            PolarError::Runtime(DataFilteringFieldMissing { var_type, field })
+        match err.0 {
+            ErrorKind::Runtime(DataFilteringFieldMissing { var_type, field })
                 if var_type == "A" && field == "field" => {}
             _ => panic!("unexpected {:?}", err),
         }
@@ -1146,8 +1146,8 @@ mod test {
     #[test]
     fn test_unsupported_op_msgs() {
         let err = Vars::from_op(&op!(Dot)).expect_err("should've failed");
-        match err {
-            PolarError::Runtime(DataFilteringUnsupportedOp {
+        match err.0 {
+            ErrorKind::Runtime(DataFilteringUnsupportedOp {
                 operation:
                     Operation {
                         operator: Operator::Dot,

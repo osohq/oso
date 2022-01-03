@@ -347,11 +347,11 @@ fn _qruntime(p: &Polar, query_str: &str) -> PolarError {
 
 macro_rules! qruntime {
     ($query:tt, $err:pat $(, $cond:expr)?) => {
-        assert!(matches!(_qruntime(&polar(), $query), PolarError::Runtime($err) $(if $cond)?));
+        assert!(matches!(_qruntime(&polar(), $query), PolarError(ErrorKind::Runtime($err)) $(if $cond)?));
     };
 
     ($polar:expr, $query:tt, $err:pat $(, $cond:expr)?) => {
-        assert!(matches!(_qruntime($polar, $query), PolarError::Runtime($err) $(if $cond)?));
+        assert!(matches!(_qruntime($polar, $query), PolarError(ErrorKind::Runtime($err)) $(if $cond)?));
     };
 }
 
@@ -359,12 +359,12 @@ macro_rules! qparse {
     ($query:expr, $err:pat) => {
         assert!(matches!(
             polar().load_str($query).unwrap_err(),
-            PolarError::Parse($err)
+            PolarError(ErrorKind::Parse($err))
         ));
     };
 }
 
-type TestResult = Result<(), PolarError>;
+type TestResult = PolarResult<()>;
 
 /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
 #[test]
@@ -1599,8 +1599,8 @@ fn test_singleton_vars() {
     let err = polar().load_str(pol).unwrap_err();
     assert!(err.get_context().is_some());
     assert!(matches!(
-        err,
-        PolarError::Validation(ValidationError::SingletonVariable { .. })
+        err.0,
+        ErrorKind::Validation(ValidationError::SingletonVariable { .. })
     ))
 }
 
@@ -1636,7 +1636,7 @@ has_role(user: User, "owner", organization: Organization) if
     organization.owner_id = user.id;
 "#;
     let err = p.load_str(policy).expect_err("Expected validation error");
-    assert!(matches!(&err, PolarError::Validation(_)));
+    assert!(matches!(&err.0, ErrorKind::Validation(_)));
     assert!(format!("{}", err)
         .contains("Perhaps you meant to add an actor block to the top of your policy, like this:"));
 
@@ -1697,8 +1697,8 @@ has_role(user: User, "owner", repository: Repository) if
 "#;
     let err = p.load_str(policy).expect_err("Expected validation error");
     assert!(matches!(
-        &err,
-        PolarError::Validation(ValidationError::InvalidRule { .. })
+        &err.0,
+        ErrorKind::Validation(ValidationError::InvalidRule { .. })
     ));
     assert!(err
         .to_string()
@@ -2527,19 +2527,19 @@ fn test_default_rule_types() -> TestResult {
     let e = p
         .load_str(r#"has_permission("leina", "eat", "food");"#)
         .expect_err("Expected validation error");
-    assert!(matches!(e, PolarError::Validation(_)));
+    assert!(matches!(e.0, ErrorKind::Validation(_)));
     let e = p
         .load_str(r#"allow("leina", "food");"#)
         .expect_err("Expected validation error");
-    assert!(matches!(e, PolarError::Validation(_)));
+    assert!(matches!(e.0, ErrorKind::Validation(_)));
     let e = p
         .load_str(r#"allow_field("leina", "food");"#)
         .expect_err("Expected validation error");
-    assert!(matches!(e, PolarError::Validation(_)));
+    assert!(matches!(e.0, ErrorKind::Validation(_)));
     let e = p
         .load_str(r#"allow_request("leina", "eat", "food");"#)
         .expect_err("Expected validation error");
-    assert!(matches!(e, PolarError::Validation(_)));
+    assert!(matches!(e.0, ErrorKind::Validation(_)));
 
     // This should succeed
     // TODO: should we emit warnings if rules with union specializers are loaded
@@ -2605,7 +2605,7 @@ has_role(actor: User, role_name, repository: Repository) if
 "#;
 
     let err = p.load_str(policy).expect_err("Expected validation error");
-    assert!(matches!(&err, PolarError::Validation(_)));
+    assert!(matches!(&err.0, ErrorKind::Validation(_)));
     assert!(format!("{}", err).contains(
         "Failed to match because: Parameter `role_name` expects a String type constraint."
     ));
@@ -2670,8 +2670,8 @@ allow(actor, action, resource) if has_permission(actor, action, resource);
 
     let err = p.load_str(policy).expect_err("Expected validation error");
     assert!(matches!(
-        &err,
-        PolarError::Validation(ValidationError::MissingRequiredRule { .. })
+        &err.0,
+        ErrorKind::Validation(ValidationError::MissingRequiredRule { .. })
     ));
     assert!(err
         .to_string()

@@ -1,5 +1,5 @@
 use oso::{ClassBuilder, Oso, PolarClass};
-use polar_core::error::{PolarError, RuntimeError};
+use polar_core::error::{ErrorKind, PolarError, RuntimeError};
 
 macro_rules! res {
     ($res:expr) => {
@@ -148,9 +148,9 @@ fn test() {
     assert!(
         matches!(
             res,
-            Err(oso::OsoError::Polar(PolarError::Runtime(
+            Err(oso::OsoError::Polar(PolarError(ErrorKind::Runtime(
                 RuntimeError::UnhandledPartial { .. }
-            ))),
+            )))),
         ),
         "Expected unhandled partial error, got: {:#?}",
         res

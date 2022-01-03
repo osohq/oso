@@ -450,12 +450,12 @@ impl PolarLanguageServer {
         &self,
         diagnostic: PolarDiagnostic,
     ) -> Vec<(TextDocumentItem, Diagnostic)> {
-        use polar_core::error::{PolarError::Validation, ValidationError::*};
+        use polar_core::error::{ErrorKind::Validation, ValidationError::*};
         use polar_core::warning::ValidationWarning::UnknownSpecializer;
 
         // Ignore diagnostics that depend on app data.
         match &diagnostic {
-            PolarDiagnostic::Error(e) => match e {
+            PolarDiagnostic::Error(e) => match e.0 {
                 Validation(UnregisteredClass { .. }) | Validation(SingletonVariable { .. }) => {
                     return vec![];
                 }
