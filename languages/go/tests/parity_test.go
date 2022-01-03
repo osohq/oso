@@ -145,12 +145,15 @@ func (MethodVariants) GetEmptyIter() interfaces.Iterator {
 	return IterableClass{}
 }
 
-// TODO: I don't think these make sense. Maybe as interfaces?
 type ParentClass struct{}
 
-type ChildClass struct{}
+// TODO: this kind of inheritance doesn't fit Go conventions
+// There is not way to use this kind of subclassing for composition, and
+// so it doesn't fit with our model of inheritance. Leaving for posterity
+// but these are not tested
+type ChildClass ParentClass
 
-type GrandchildClass struct{}
+type GrandchildClass ChildClass
 
 type Animal struct {
 	Species string
