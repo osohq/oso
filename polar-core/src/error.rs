@@ -13,32 +13,7 @@ use super::{
     terms::{Operation, Symbol, Term},
 };
 
-impl PolarError {
-    pub fn kind(&self) -> String {
-        use ErrorKind::*;
-        match &self.0 {
-            Operational(o) => "OperationalError::".to_string() + o.as_ref(),
-            Parse(p) => "ParseError::".to_string() + p.as_ref(),
-            Runtime(r) => "RuntimeError::".to_string() + r.as_ref(),
-            Validation(v) => "ValidationError::".to_string() + v.as_ref(),
-        }
-    }
-}
-
-#[derive(Clone, Serialize)]
-pub struct FormattedPolarError {
-    pub kind: ErrorKind,
-    pub formatted: String,
-}
-
-impl From<PolarError> for FormattedPolarError {
-    fn from(other: PolarError) -> Self {
-        Self {
-            formatted: other.to_string(),
-            kind: other.0,
-        }
-    }
-}
+pub type PolarResult<T> = Result<T, PolarError>;
 
 #[derive(Debug, Clone, Serialize)]
 pub enum ErrorKind {
@@ -68,6 +43,8 @@ impl fmt::Display for ErrorKind {
 #[serde(into = "FormattedPolarError")]
 pub struct PolarError(pub ErrorKind);
 
+impl std::error::Error for PolarError {}
+
 impl fmt::Display for PolarError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)?;
@@ -78,82 +55,17 @@ impl fmt::Display for PolarError {
     }
 }
 
-pub type PolarResult<T> = Result<T, PolarError>;
-
-impl std::error::Error for PolarError {}
-
-#[derive(AsRefStr, Clone, Debug, Serialize)]
-pub enum ParseError {
-    IntegerOverflow {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        token: String,
-        loc: usize,
-    },
-    InvalidTokenCharacter {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        token: String,
-        c: char,
-        loc: usize,
-    },
-    InvalidToken {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        loc: usize,
-    },
-    #[allow(clippy::upper_case_acronyms)]
-    UnrecognizedEOF {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        loc: usize,
-    },
-    UnrecognizedToken {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        token: String,
-        loc: usize,
-    },
-    ExtraToken {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        token: String,
-        loc: usize,
-    },
-    ReservedWord {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        token: String,
-        loc: usize,
-    },
-    InvalidFloat {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        token: String,
-        loc: usize,
-    },
-    WrongValueType {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        loc: usize,
-        term: Term,
-        expected: String,
-    },
-    DuplicateKey {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        loc: usize,
-        key: String,
-    },
-}
-
-impl From<ParseError> for PolarError {
-    fn from(err: ParseError) -> Self {
-        Self(ErrorKind::Parse(err))
-    }
-}
-
 impl PolarError {
+    pub fn kind(&self) -> String {
+        use ErrorKind::*;
+        match &self.0 {
+            Operational(o) => "OperationalError::".to_string() + o.as_ref(),
+            Parse(p) => "ParseError::".to_string() + p.as_ref(),
+            Runtime(r) => "RuntimeError::".to_string() + r.as_ref(),
+            Validation(v) => "ValidationError::".to_string() + v.as_ref(),
+        }
+    }
+
     pub fn get_context(&self) -> Option<Context> {
         use ErrorKind::*;
         use ParseError::*;
@@ -246,6 +158,92 @@ impl PolarError {
             range: Range::from_span(&source.src, (left, right)),
             source: source.clone(),
         })
+    }
+}
+
+#[derive(Clone, Serialize)]
+pub struct FormattedPolarError {
+    pub kind: ErrorKind,
+    pub formatted: String,
+}
+
+impl From<PolarError> for FormattedPolarError {
+    fn from(other: PolarError) -> Self {
+        Self {
+            formatted: other.to_string(),
+            kind: other.0,
+        }
+    }
+}
+
+#[derive(AsRefStr, Clone, Debug, Serialize)]
+pub enum ParseError {
+    IntegerOverflow {
+        #[serde(skip_serializing)]
+        source: Arc<Source>,
+        token: String,
+        loc: usize,
+    },
+    InvalidTokenCharacter {
+        #[serde(skip_serializing)]
+        source: Arc<Source>,
+        token: String,
+        c: char,
+        loc: usize,
+    },
+    InvalidToken {
+        #[serde(skip_serializing)]
+        source: Arc<Source>,
+        loc: usize,
+    },
+    #[allow(clippy::upper_case_acronyms)]
+    UnrecognizedEOF {
+        #[serde(skip_serializing)]
+        source: Arc<Source>,
+        loc: usize,
+    },
+    UnrecognizedToken {
+        #[serde(skip_serializing)]
+        source: Arc<Source>,
+        token: String,
+        loc: usize,
+    },
+    ExtraToken {
+        #[serde(skip_serializing)]
+        source: Arc<Source>,
+        token: String,
+        loc: usize,
+    },
+    ReservedWord {
+        #[serde(skip_serializing)]
+        source: Arc<Source>,
+        token: String,
+        loc: usize,
+    },
+    InvalidFloat {
+        #[serde(skip_serializing)]
+        source: Arc<Source>,
+        token: String,
+        loc: usize,
+    },
+    WrongValueType {
+        #[serde(skip_serializing)]
+        source: Arc<Source>,
+        loc: usize,
+        term: Term,
+        expected: String,
+    },
+    DuplicateKey {
+        #[serde(skip_serializing)]
+        source: Arc<Source>,
+        loc: usize,
+        key: String,
+    },
+}
+
+impl From<ParseError> for PolarError {
+    fn from(err: ParseError) -> Self {
+        Self(ErrorKind::Parse(err))
     }
 }
 
