@@ -2,7 +2,7 @@ import pytest
 
 
 def test_unhandled_partial():
-    """Spurious unhandled partial needs fix."""
+    """Spurious unhandled partial."""
     POLICY = """\
 actor User {}
 
