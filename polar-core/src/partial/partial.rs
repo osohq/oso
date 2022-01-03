@@ -2329,4 +2329,25 @@ mod test {
         assert_query_done!(q);
         Ok(())
     }
+
+    /// Test a case that previously caused an unhandled partial.
+    ///
+    /// Fixed in: https://github.com/osohq/oso/pull/1467
+    #[test]
+    fn test_unhandled_partial_regression_gh1467() -> TestResult {
+        let p = Polar::new();
+        p.load_str(
+            r#"
+            f(a) if b(a, b) and b.id = 0;
+            b(a, b) if a = b;
+            "#)?;
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
+        assert_partial_expressions!(
+            next_binding(&mut q)?,
+            "x" => "0 = _this.id"
+        );
+
+        assert_query_done!(q);
+        Ok(())
+    }
 }
