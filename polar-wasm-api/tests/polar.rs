@@ -27,10 +27,7 @@ fn is_result_event(event: Object) -> bool {
 #[wasm_bindgen_test]
 fn load_file_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let source = Source {
-        src: "x() if 1 == 1;\n".to_owned(),
-        filename: Some("foo.polar".to_owned()),
-    };
+    let source = Source::new_with_name("foo.polar", "x() if 1 == 1;\n");
     let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
     let res = polar.wasm_load(sources);
     assert!(matches!(res, Ok(())));
@@ -39,10 +36,7 @@ fn load_file_succeeds() {
 #[wasm_bindgen_test]
 fn load_file_errors() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let source = Source {
-        src: ";".to_owned(),
-        filename: None,
-    };
+    let source = Source::new(";");
     let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
     let err = polar.wasm_load(sources).unwrap_err();
     let err: Error = err.dyn_into().unwrap();
@@ -56,10 +50,7 @@ fn load_file_errors() {
 #[wasm_bindgen_test]
 fn next_inline_query_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let source = Source {
-        src: "?= 1 = 1;".to_owned(),
-        filename: None,
-    };
+    let source = Source::new("?= 1 = 1;");
     let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
     let res = polar.wasm_load(sources);
     assert!(matches!(res, Ok(())));
@@ -77,10 +68,7 @@ fn next_inline_query_succeeds() {
 #[wasm_bindgen_test]
 fn next_inline_query_errors() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let source = Source {
-        src: "?= 1 = 2;".to_owned(),
-        filename: None,
-    };
+    let source = Source::new("?= 1 = 2;");
     let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
     let res = polar.wasm_load(sources);
     assert!(matches!(res, Ok(())));
@@ -111,10 +99,7 @@ fn register_constant_succeeds() {
 #[wasm_bindgen_test]
 fn new_query_from_str_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let source = Source {
-        src: "x(1);".to_owned(),
-        filename: None,
-    };
+    let source = Source::new("x(1);");
     let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
     polar.wasm_load(sources).unwrap();
 
@@ -139,10 +124,7 @@ fn new_query_from_str_errors() {
 #[wasm_bindgen_test]
 fn new_query_from_term_succeeds() {
     let polar = polar_wasm_api::Polar::wasm_new();
-    let source = Source {
-        src: "x(1);".to_owned(),
-        filename: None,
-    };
+    let source = Source::new("x(1);");
     let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
     polar.wasm_load(sources).unwrap();
 

@@ -36,10 +36,7 @@ fn call_result_succeeds() {
     }));
     let term = serde_wasm_bindgen::to_value(&term).unwrap();
     polar.wasm_register_constant("y", term).unwrap();
-    let source = Source {
-        src: "x() if y.z;".to_owned(),
-        filename: None,
-    };
+    let source = Source::new("x() if y.z;");
     let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
     polar.wasm_load(sources).unwrap();
     let mut query = polar.wasm_new_query_from_str("x()").unwrap();
@@ -74,10 +71,7 @@ fn app_error_succeeds() {
     }));
     let term = serde_wasm_bindgen::to_value(&term).unwrap();
     polar.wasm_register_constant("y", term).unwrap();
-    let source = Source {
-        src: "x() if y.z;".to_owned(),
-        filename: None,
-    };
+    let source = Source::new("x() if y.z;");
     let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
     polar.wasm_load(sources).unwrap();
     let mut query = polar.wasm_new_query_from_str("x()").unwrap();
