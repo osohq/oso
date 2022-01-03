@@ -17,7 +17,7 @@ use crate::counter::Counter;
 use crate::data_filtering::partition_equivs;
 use crate::debugger::{get_binding_for_var, DebugEvent, Debugger};
 use crate::diagnostic::{Context, Range};
-use crate::error::{invalid_state, PolarError, PolarResult, RuntimeError};
+use crate::error::{invalid_state, unsupported, PolarError, PolarResult, RuntimeError};
 use crate::events::*;
 use crate::folder::Folder;
 use crate::formatting::ToPolarString;
@@ -220,11 +220,7 @@ pub fn compare(
         (String(l), String(r)) => compare(op, l, r),
         _ => {
             let context = context.expect("should only be None in Grounder, where we unwrap anyway");
-            Err(RuntimeError::Unsupported {
-                msg: context.to_string(),
-                term: context.clone(),
-            }
-            .into())
+            unsupported(context.to_string(), context)
         }
     }
 }
@@ -1548,7 +1544,7 @@ impl PolarVirtualMachine {
         let goals = match self.kb.read().unwrap().get_generic_rule(&predicate.name) {
             None => {
                 return Err(RuntimeError::QueryForUndefinedRule {
-                    name: predicate.name.to_string(),
+                    name: predicate.name.0.clone(),
                 }
                 .into())
             }
@@ -1738,11 +1734,7 @@ impl PolarVirtualMachine {
             }
             Operator::Cut => {
                 if self.query_contains_partial {
-                    return Err(RuntimeError::Unsupported {
-                        msg: "cannot use cut with partial evaluation".to_owned(),
-                        term: term.clone(),
-                    }
-                    .into());
+                    return unsupported("cannot use cut with partial evaluation", term);
                 }
 
                 // Remove all choices created before this cut that are in the
@@ -1993,13 +1985,7 @@ impl PolarVirtualMachine {
                     Operator::Div => *left / *right,
                     Operator::Mod => (*left).modulo(*right),
                     Operator::Rem => *left % *right,
-                    _ => {
-                        return Err(RuntimeError::Unsupported {
-                            msg: format!("numeric operation {}", op),
-                            term: term.clone(),
-                        }
-                        .into());
-                    }
+                    _ => return unsupported(format!("numeric operation {}", op), term),
                 } {
                     self.push_goal(Goal::Unify {
                         left: term.clone_with_value(Value::Number(answer)),
@@ -2010,11 +1996,7 @@ impl PolarVirtualMachine {
                     Err(RuntimeError::ArithmeticError { term: term.clone() }.into())
                 }
             }
-            (_, _) => Err(RuntimeError::Unsupported {
-                msg: format!("unsupported arithmetic operands: {}", term),
-                term: term.clone(),
-            }
-            .into()),
+            (_, _) => unsupported(format!("unsupported arithmetic operands: {}", term), term),
         }
     }
 
@@ -2064,11 +2046,10 @@ impl PolarVirtualMachine {
             }
             Value::Variable(v) => {
                 if matches!(field.value(), Value::Call(_)) {
-                    return Err(RuntimeError::Unsupported {
-                        msg: format!("cannot call method on unbound variable {}", v),
-                        term: object.clone(),
-                    }
-                    .into());
+                    return unsupported(
+                        format!("cannot call method on unbound variable {}", v),
+                        object,
+                    );
                 }
 
                 // Translate `.(object, field, value)` → `value = .(object, field)`.

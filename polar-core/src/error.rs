@@ -1,4 +1,4 @@
-use std::{fmt, sync::Arc};
+use std::{borrow::Borrow, fmt, sync::Arc};
 
 use indoc::formatdoc;
 use serde::{Deserialize, Serialize};
@@ -349,12 +349,6 @@ impl From<RuntimeError> for PolarError {
     }
 }
 
-impl RuntimeError {
-    pub fn unsupported<A>(msg: String, term: Term) -> Result<A, RuntimeError> {
-        Err(Self::Unsupported { msg, term })
-    }
-}
-
 impl fmt::Display for RuntimeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -580,4 +574,14 @@ where
 {
     let msg = msg.as_ref().into();
     Err(OperationalError::InvalidState { msg }.into())
+}
+
+pub(crate) fn unsupported<T, U, V>(msg: T, term: U) -> PolarResult<V>
+where
+    T: AsRef<str>,
+    U: Borrow<Term>,
+{
+    let msg = msg.as_ref().into();
+    let term = term.borrow().clone();
+    Err(RuntimeError::Unsupported { msg, term }.into())
 }
