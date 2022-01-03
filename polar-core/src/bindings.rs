@@ -533,7 +533,7 @@ impl BindingManager {
 
                     // Unification from lv = rv (remember that vars are equal so that the
                     // simplifier can later choose the correct one). We do this
-                    // after the partial bind so that we don't recurisvely query the unification.
+                    // after the partial bind so that we don't recursively query the unification.
                     let unify = term!(op!(Unify, term!(lv.clone()), term!(rv.clone())));
                     self.add_constraint(&unify)?;
                     Ok(Some(goal))
