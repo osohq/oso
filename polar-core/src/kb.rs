@@ -582,7 +582,7 @@ impl KnowledgeBase {
     ///
     /// Error on attempts to register the "union" types (Actor & Resource) since those types have
     /// special meaning in policies that use resource blocks.
-    pub fn register_constant(&mut self, name: Symbol, value: Term) -> PolarResult<()> {
+    pub fn register_constant(&mut self, name: Symbol, value: Term) -> PolarResult<u64> {
         if name.0 == ACTOR_UNION_NAME || name.0 == RESOURCE_UNION_NAME {
             return Err(RuntimeError::InvalidRegistration {
                 msg: format!("'{}' is a built-in specializer.", name),
@@ -590,12 +590,9 @@ impl KnowledgeBase {
             }
             .with_context(&*self));
         }
-        if let Value::ExternalInstance(ExternalInstance { class_id, .. }) = *value.value() {
-            self.constants.insert(name, value, class_id)
-        } else {
-            self.constants.insert(name, value, None);
-        }
-        Ok(())
+        let id = self.new_id();
+        self.constants.insert(name, value);
+        Ok(id)
     }
 
     /// Return true if a constant with the given name has been defined.
