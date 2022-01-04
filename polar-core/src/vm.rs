@@ -1733,6 +1733,7 @@ impl PolarVirtualMachine {
                         constructor: Some(constructor.clone()),
                         repr: Some(constructor.to_string()),
                         class_repr,
+                        class_id: None,
                     }));
 
                 // A goal is used here in case the result is already bound to some external
@@ -3714,6 +3715,7 @@ mod tests {
             constructor: None,
             repr: None,
             class_repr: None,
+            class_id: None,
         });
         let query = query!(call!("bar", [sym!("x")]));
         let mut vm = PolarVirtualMachine::new_test(kb.clone(), false, vec![query]);
@@ -3788,6 +3790,7 @@ mod tests {
             constructor: None,
             repr: None,
             class_repr: None,
+            class_id: None,
         });
 
         let mut vm = PolarVirtualMachine::new_test(
@@ -3855,6 +3858,7 @@ mod tests {
             constructor: None,
             repr: None,
             class_repr: None,
+            class_id: None,
         }));
         let left = term!(value!(Pattern::Instance(InstanceLiteral {
             tag: sym!("Any"),

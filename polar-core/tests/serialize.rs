@@ -54,6 +54,7 @@ mod tests {
             constructor: None,
             repr: None,
             class_repr: None,
+            class_id: None,
         }));
         let list_of = Term::new_from_test(Value::List(vec![external]));
         eprintln!("{}", serde_json::to_string(&list_of).unwrap());

@@ -108,6 +108,7 @@ class Host:
         self,
         cls,
         name=None,
+        id=None,
         fields=None,
         build_query=None,
         exec_query=None,
@@ -121,7 +122,7 @@ class Host:
         self.types[name] = self.types[cls] = UserType(
             name=name,
             cls=cls,
-            id=self.cache_instance(cls),
+            id=self.cache_instance(cls, id=id),
             fields=fields or {},
             build_query=build_query or self.build_query,
             exec_query=exec_query or self.exec_query,
@@ -318,11 +319,15 @@ class Host:
             class_repr = type(v).__name__
             class_repr = class_repr if class_repr in self.types else None
 
+            # pass the class_id for registered types, otherwise None
+            class_id = self.types[class_repr].id if class_repr in self.types else None
+
             val = {
                 "ExternalInstance": {
                     "instance_id": self.cache_instance(v, instance_id),
                     "repr": None,
                     "class_repr": class_repr,
+                    "class_id": class_id,
                 }
             }
         term = {"value": val}

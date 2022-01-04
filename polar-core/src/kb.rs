@@ -955,6 +955,7 @@ mod tests {
                     constructor: None,
                     repr: None,
                     class_repr: None,
+                    class_id: None,
                 })),
             )
             .unwrap();
@@ -1397,6 +1398,7 @@ mod tests {
                 constructor: None,
                 repr: None,
                 class_repr: None,
+                class_id: None,
             })),
         )
         .unwrap();
@@ -1407,6 +1409,7 @@ mod tests {
                 constructor: None,
                 repr: None,
                 class_repr: None,
+                class_id: None,
             })),
         )
         .unwrap();
@@ -1417,6 +1420,7 @@ mod tests {
                 constructor: None,
                 repr: None,
                 class_repr: None,
+                class_id: None,
             })),
         )
         .unwrap();
@@ -1485,6 +1489,7 @@ mod tests {
                 constructor: None,
                 repr: None,
                 class_repr: None,
+                class_id: None,
             })),
         )
         .unwrap();
@@ -1495,6 +1500,7 @@ mod tests {
                 constructor: None,
                 repr: None,
                 class_repr: None,
+                class_id: None,
             })),
         )
         .unwrap();
@@ -1505,6 +1511,7 @@ mod tests {
                 constructor: None,
                 repr: None,
                 class_repr: None,
+                class_id: None,
             })),
         )
         .unwrap();
@@ -1516,6 +1523,7 @@ mod tests {
                 constructor: None,
                 repr: None,
                 class_repr: None,
+                class_id: None,
             })),
         )
         .unwrap();

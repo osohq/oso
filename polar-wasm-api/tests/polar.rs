@@ -102,6 +102,7 @@ fn register_constant_succeeds() {
             constructor: None,
             repr: None,
             class_repr: None,
+            class_id: None,
         })))
         .unwrap(),
     );

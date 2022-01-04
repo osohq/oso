@@ -104,7 +104,8 @@ class Polar:
         value = ffi_serialize(value)
         result = lib.polar_register_constant(self.ptr, name, value)
         self.process_messages()
-        self.check_result(result)
+        const_id = ffi.cast("uint64_t", self.check_result(result))
+        return int(const_id)
 
     def register_mro(self, name, mro):
         name = to_c_str(name)

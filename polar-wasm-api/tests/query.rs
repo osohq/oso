@@ -33,6 +33,7 @@ fn call_result_succeeds() {
         constructor: None,
         repr: None,
         class_repr: None,
+        class_id: None,
     }));
     let term = serde_wasm_bindgen::to_value(&term).unwrap();
     polar.wasm_register_constant("y", term).unwrap();
@@ -72,6 +73,7 @@ fn app_error_succeeds() {
         constructor: None,
         repr: None,
         class_repr: None,
+        class_id: None,
     }));
     let term = serde_wasm_bindgen::to_value(&term).unwrap();
     polar.wasm_register_constant("y", term).unwrap();

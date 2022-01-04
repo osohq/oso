@@ -113,6 +113,7 @@ This may mean you performed an operation in your policy over an unbound variable
                     instance_id: id,
                     repr: Some(std::any::type_name::<Self>().to_owned()),
                     class_repr: Some(std::any::type_name::<Self>().to_owned()),
+                    class_id: None,
                 })
             }
             PolarValue::List(l) => {
