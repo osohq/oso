@@ -18,6 +18,12 @@ pub struct CResult<T> {
     pub error: *const c_char,
 }
 
+#[repr(C)]
+pub struct CU64Result {
+    pub result: u64,
+    pub error: *const c_char,
+}
+
 impl From<Result<(), error::PolarError>> for CResult<c_void> {
     fn from(other: Result<(), error::PolarError>) -> Self {
         // Convenience handler to map `()` results to c_void
@@ -34,6 +40,26 @@ impl<T> From<Result<*mut T, error::PolarError>> for CResult<T> {
             },
             Err(e) => Self {
                 result: null_mut(),
+                error: {
+                    let error_json = serde_json::to_string(&e).unwrap();
+                    CString::new(error_json)
+                        .expect("JSON should not contain any 0 bytes")
+                        .into_raw()
+                },
+            },
+        }
+    }
+}
+
+impl From<Result<u64, error::PolarError>> for CU64Result {
+    fn from(other: Result<u64, error::PolarError>) -> Self {
+        match other {
+            Ok(i) => Self {
+                result: i,
+                error: null(),
+            },
+            Err(e) => Self {
+                result: 0,
                 error: {
                     let error_json = serde_json::to_string(&e).unwrap();
                     CString::new(error_json)
@@ -124,12 +150,13 @@ pub extern "C" fn polar_register_constant(
     polar_ptr: *mut Polar,
     name: *const c_char,
     value: *const c_char,
-) -> *mut CResult<c_void> {
+) -> *mut CU64Result {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         let name = unsafe { ffi_string!(name) };
-        from_json(value)
-            .and_then(|value| polar.register_constant(terms::Symbol::new(name.as_ref()), value))
+        let id = from_json(value)
+            .and_then(|value| polar.register_constant(terms::Symbol::new(name.as_ref()), value))?;
+        Ok(id)
     })
 }
 
