@@ -252,8 +252,11 @@ class Polar:
         # TODO: let's add example usage here or at least a proper docstring for the arguments
 
         # TODO: @patrickod DRY this 'name' behavior up here & in cache_class
-        class_id = self.ffi_polar.new_id()
-        name = self.host.cache_class(
+        if name is None:
+            name = cls.__name__
+        class_id = self.register_constant(cls, name)
+
+        self.host.cache_class(
             cls,
             name=name,
             id=class_id,
@@ -262,8 +265,6 @@ class Polar:
             exec_query=exec_query,
             combine_query=combine_query,
         )
-        self.register_constant(cls, name)
-        self.host.register_mros()
 
     def register_constant(self, value, name):
         """
