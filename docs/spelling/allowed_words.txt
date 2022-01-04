@@ -51,6 +51,7 @@ MVC
 MyPy
 NaN
 NestJS
+NewType
 NewTypes
 NFA
 NotFoundError
