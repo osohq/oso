@@ -148,7 +148,7 @@ func (MethodVariants) GetEmptyIter() interfaces.Iterator {
 type ParentClass struct{}
 
 // TODO: this kind of inheritance doesn't fit Go conventions
-// There is not way to use this kind of subclassing for composition, and
+// There is no way to use this kind of subclassing for composition, and
 // so it doesn't fit with our model of inheritance. Leaving for posterity
 // but these are not tested
 type ChildClass ParentClass
