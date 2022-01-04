@@ -21,9 +21,11 @@ draft: true
   before upgrading.
 {{% /callout %}}
 
-##### Breaking change 1
+##### Updated Go type checking behavior
 
-Summary of breaking change.
+When evaluating whether a given query variable matches a Go type Polar will now use direct instance comparisons instead of Go's `reflect.IsConvertableTo` functionality. This change resolves false-positive type checking results where discrete structs with identical sets of fields were considered to be equivalent. 
+
+This change has implications for the use of NewTypes in Polar rule definitions. Rules that are defined using NewTypes will now only match instances of the NewType and no longer match the underlying wrapped type.
 
 Link to [migration guide]().
 
