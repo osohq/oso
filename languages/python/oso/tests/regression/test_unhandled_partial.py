@@ -1,5 +1,5 @@
 import pytest
-
+from typing import List
 
 def test_unhandled_partial():
     """Spurious unhandled partial."""
