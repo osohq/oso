@@ -140,7 +140,7 @@ func TestQueryStr(t *testing.T) {
 	o.ClearRules()
 
 	o.LoadString("g(x) if x.Fake();")
-	results, errors = o.QueryStr("g(1)")
+	_, errors = o.QueryStr("g(1)")
 
 	if err = <-errors; err == nil {
 		t.Error("Expected Polar runtime error, got none")
@@ -175,7 +175,7 @@ func TestQueryRule(t *testing.T) {
 	o.ClearRules()
 
 	o.LoadString("g(x) if x.Fake();")
-	results, errors = o.QueryRule("g", 1)
+	_, errors = o.QueryRule("g", 1)
 
 	if err = <-errors; err == nil {
 		t.Error("Expected Polar runtime error, got none")

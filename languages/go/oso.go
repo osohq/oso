@@ -425,17 +425,17 @@ func (o Oso) dataFilter(actor interface{}, action interface{}, resource_type str
 				types.ValueExpression{
 					Operator: types.Operator{types.OperatorAnd{}},
 					Args: []types.Term{
-						types.Term{
+						{
 							Value: types.Value{
 								types.ValueExpression{
 									Operator: types.Operator{types.OperatorIsa{}},
 									Args: []types.Term{
-										types.Term{
+										{
 											Value: types.Value{
 												types.ValueVariable("resource"),
 											},
 										},
-										types.Term{
+										{
 											Value: types.Value{
 												types.ValuePattern{
 													types.PatternInstance{
@@ -470,7 +470,7 @@ func (o Oso) dataFilter(actor interface{}, action interface{}, resource_type str
 				}
 				m[k] = types.Term{Value: *polar}
 			}
-			b := make(map[string]map[string]types.Term, 0)
+			b := make(map[string]map[string]types.Term)
 			b["bindings"] = m
 			partials = append(partials, b)
 		}

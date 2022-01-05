@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/osohq/go-oso/errors"
 	_ "github.com/osohq/go-oso/internal/ffi/native"
 	"github.com/osohq/go-oso/types"
 )
@@ -35,7 +34,7 @@ func readStr(cStr *C.char) *string {
 func ffiSerialize(input interface{}) (*C.char, error) {
 	json, err := json.Marshal(input)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to serialize `%#v`:\n%s", json, err)
 	}
 	return C.CString(string(json)), nil
 }
@@ -116,7 +115,7 @@ func checkResultQuery(res *C.polar_CResult_Query) (*QueryFfi, error) {
 
 func getError(err *C.char) error {
 	errStr := *readStr(err)
-	var polarError errors.FormattedPolarError
+	var polarError types.FormattedPolarError
 	jsonErr := json.Unmarshal([]byte(errStr), &polarError)
 	if jsonErr != nil {
 		return jsonErr

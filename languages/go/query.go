@@ -12,7 +12,6 @@ import (
 	"github.com/osohq/go-oso/internal/ffi"
 	"github.com/osohq/go-oso/internal/host"
 	"github.com/osohq/go-oso/internal/util"
-	"github.com/osohq/go-oso/types"
 	. "github.com/osohq/go-oso/types"
 )
 
@@ -128,7 +127,7 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 			err = q.handleNextExternal(ev)
 		default:
 			defer q.Cleanup()
-			return nil, fmt.Errorf("unexpected query event: %v", ev)
+			return nil, fmt.Errorf("unexpected query event: %#v", ev)
 		}
 		if err != nil {
 			defer q.Cleanup()
@@ -138,7 +137,7 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 
 }
 
-func (q *Query) Bind(name string, value *types.Term) error {
+func (q *Query) Bind(name string, value *Term) error {
 	return q.ffiQuery.Bind(name, value)
 }
 
@@ -149,7 +148,7 @@ func (q *Query) SetAcceptExpression(acceptExpression bool) {
 	(q.host).SetAcceptExpression(acceptExpression)
 }
 
-func (q Query) handleMakeExternal(event types.QueryEventMakeExternal) error {
+func (q Query) handleMakeExternal(event QueryEventMakeExternal) error {
 	id := uint64(event.InstanceId)
 	call, _ := event.Constructor.Value.ValueVariant.(ValueCall)
 	if call.Kwargs != nil {
@@ -158,7 +157,7 @@ func (q Query) handleMakeExternal(event types.QueryEventMakeExternal) error {
 	return q.host.MakeInstance(call, id)
 }
 
-func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
+func (q Query) handleExternalCall(event QueryEventExternalCall) error {
 	instance, err := q.host.ToGo(event.Instance)
 	if err != nil {
 		return err
@@ -219,7 +218,7 @@ func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 	}
 	return q.ffiQuery.CallResult(event.CallId, &Term{*polarValue})
 }
-func (q Query) handleExternalIsa(event types.QueryEventExternalIsa) error {
+func (q Query) handleExternalIsa(event QueryEventExternalIsa) error {
 	isa, err := q.host.Isa(event.Instance, string(event.ClassTag))
 	if err != nil {
 		return err
@@ -227,7 +226,7 @@ func (q Query) handleExternalIsa(event types.QueryEventExternalIsa) error {
 	return q.ffiQuery.QuestionResult(event.CallId, isa)
 }
 
-func (q Query) handleExternalIsSubSpecializer(event types.QueryEventExternalIsSubSpecializer) error {
+func (q Query) handleExternalIsSubSpecializer(event QueryEventExternalIsSubSpecializer) error {
 	res, err := q.host.IsSubspecializer(int(event.InstanceId), string(event.LeftClassTag), string(event.RightClassTag))
 	if err != nil {
 		return err
@@ -235,7 +234,7 @@ func (q Query) handleExternalIsSubSpecializer(event types.QueryEventExternalIsSu
 	return q.ffiQuery.QuestionResult(event.CallId, res)
 }
 
-func (q Query) handleExternalIsSubclass(event types.QueryEventExternalIsSubclass) error {
+func (q Query) handleExternalIsSubclass(event QueryEventExternalIsSubclass) error {
 	res, err := q.host.IsSubclass(string(event.LeftClassTag), string(event.RightClassTag))
 	if err != nil {
 		return err
@@ -243,9 +242,9 @@ func (q Query) handleExternalIsSubclass(event types.QueryEventExternalIsSubclass
 	return q.ffiQuery.QuestionResult(event.CallId, res)
 }
 
-func (q Query) handleExternalOp(event types.QueryEventExternalOp) error {
+func (q Query) handleExternalOp(event QueryEventExternalOp) error {
 	if len(event.Args) != 2 {
-		return fmt.Errorf("Unexpected number of arguments for operation: %v", len(event.Args))
+		return fmt.Errorf("unexpected number of arguments for operation: %v", len(event.Args))
 	}
 	left, err := q.host.ToGo(event.Args[0])
 	if err != nil {
@@ -282,12 +281,12 @@ func (q Query) handleExternalOp(event types.QueryEventExternalOp) error {
 	return q.handleCmp(event, left, op, right)
 }
 
-func (q Query) answer(ev types.QueryEventExternalOp, b bool) error {
+func (q Query) answer(ev QueryEventExternalOp, b bool) error {
 	return q.ffiQuery.QuestionResult(ev.CallId, b)
 }
 
 func (q Query) handleCmpL(
-	ev types.QueryEventExternalOp,
+	ev QueryEventExternalOp,
 	l interfaces.Comparer,
 	op OperatorVariant,
 	r interface{}) error {
@@ -302,12 +301,12 @@ func (q Query) handleCmpL(
 	case OperatorNeq:
 		return q.answer(ev, !l.Equal(r))
 	default:
-		return fmt.Errorf("Unsupported operation: %v", op)
+		return fmt.Errorf("unsupported operation: %v", op)
 	}
 }
 
 func (q Query) handleCmpR(
-	ev types.QueryEventExternalOp,
+	ev QueryEventExternalOp,
 	l interface{},
 	op OperatorVariant,
 	r interfaces.Comparer) error {
@@ -322,12 +321,12 @@ func (q Query) handleCmpR(
 	case OperatorNeq:
 		return q.answer(ev, !r.Equal(l))
 	default:
-		return fmt.Errorf("Unsupported operation: %v", op)
+		return fmt.Errorf("unsupported operation: %v", op)
 	}
 }
 
 func (q Query) handleCmpLR(
-	ev types.QueryEventExternalOp,
+	ev QueryEventExternalOp,
 	l interfaces.Comparer,
 	op OperatorVariant,
 	r interfaces.Comparer) error {
@@ -346,12 +345,12 @@ func (q Query) handleCmpLR(
 	case OperatorNeq:
 		return q.answer(ev, !l.Equal(r))
 	default:
-		return fmt.Errorf("Unsupported operation: %v", op)
+		return fmt.Errorf("unsupported operation: %v", op)
 	}
 }
 
 func (q Query) handleCmp(
-	ev types.QueryEventExternalOp,
+	ev QueryEventExternalOp,
 	l interface{},
 	op OperatorVariant,
 	r interface{}) error {
@@ -362,11 +361,11 @@ func (q Query) handleCmp(
 	case OperatorNeq:
 		return q.answer(ev, !reflect.DeepEqual(l, r))
 	default:
-		return fmt.Errorf("Unsupported operation: %v", op)
+		return fmt.Errorf("unsupported operation: %v", op)
 	}
 }
 
-func (q Query) handleNextExternal(event types.QueryEventNextExternal) error {
+func (q Query) handleNextExternal(event QueryEventNextExternal) error {
 	if _, ok := q.calls[event.CallId]; !ok {
 		instance, err := q.host.ToGo(event.Iterable)
 		if err != nil {
@@ -391,7 +390,7 @@ func (q Query) handleNextExternal(event types.QueryEventNextExternal) error {
 	return q.ffiQuery.CallResult(event.CallId, &Term{*retValue})
 }
 
-func (q Query) handleDebug(event types.QueryEventDebug) error {
+func (q Query) handleDebug(event QueryEventDebug) error {
 	fmt.Printf("%s\n", event.Message)
 
 	reader := bufio.NewReader(os.Stdin)

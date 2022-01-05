@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-) // Call struct
+)
+
+// Call struct
 type Call struct {
 	// Name
 	Name Symbol `json:"name"`
@@ -60,7 +62,7 @@ func (result *Declaration) UnmarshalJSON(b []byte) error {
 		}
 		// JSON should be of form {"VariantName": {...}}
 		if len(rawMap) != 1 {
-			return errors.New("Deserializing Declaration as an enum variant; expecting a single key")
+			return errors.New("deserializing Declaration as an enum variant; expecting a single key")
 		}
 		for k, v := range rawMap {
 			variantName = k
@@ -68,7 +70,6 @@ func (result *Declaration) UnmarshalJSON(b []byte) error {
 		}
 	}
 	switch variantName {
-
 	case "Role":
 		var variant DeclarationRole
 		if variantValue != nil {
@@ -79,7 +80,6 @@ func (result *Declaration) UnmarshalJSON(b []byte) error {
 		}
 		*result = Declaration{variant}
 		return nil
-
 	case "Permission":
 		var variant DeclarationPermission
 		if variantValue != nil {
@@ -90,7 +90,6 @@ func (result *Declaration) UnmarshalJSON(b []byte) error {
 		}
 		*result = Declaration{variant}
 		return nil
-
 	case "Relation":
 		var variant DeclarationRelation
 		if variantValue != nil {
@@ -101,33 +100,25 @@ func (result *Declaration) UnmarshalJSON(b []byte) error {
 		}
 		*result = Declaration{variant}
 		return nil
-
 	}
 
-	return fmt.Errorf("Cannot deserialize Declaration: %s", string(b))
+	return fmt.Errorf("cannot deserialize Declaration: %s", string(b))
 }
 
 func (variant Declaration) MarshalJSON() ([]byte, error) {
 	switch inner := variant.DeclarationVariant.(type) {
-
 	case DeclarationRole:
-		return json.Marshal(map[string]DeclarationRole{
-			"Role": inner,
-		})
-
+		return json.Marshal("Role")
 	case DeclarationPermission:
-		return json.Marshal(map[string]DeclarationPermission{
-			"Permission": inner,
-		})
-
+		return json.Marshal("Permission")
 	case DeclarationRelation:
 		return json.Marshal(map[string]DeclarationRelation{
 			"Relation": inner,
 		})
-
+	default:
+		return nil, fmt.Errorf("unexpected variant %#v of %v", inner, variant)
 	}
 
-	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
 // Dictionary struct
@@ -223,7 +214,7 @@ func (result *ErrorKind) UnmarshalJSON(b []byte) error {
 		}
 		// JSON should be of form {"VariantName": {...}}
 		if len(rawMap) != 1 {
-			return errors.New("Deserializing ErrorKind as an enum variant; expecting a single key")
+			return errors.New("deserializing ErrorKind as an enum variant; expecting a single key")
 		}
 		for k, v := range rawMap {
 			variantName = k
@@ -231,7 +222,6 @@ func (result *ErrorKind) UnmarshalJSON(b []byte) error {
 		}
 	}
 	switch variantName {
-
 	case "Parse":
 		var variant ErrorKindParse
 		if variantValue != nil {
@@ -242,7 +232,6 @@ func (result *ErrorKind) UnmarshalJSON(b []byte) error {
 		}
 		*result = ErrorKind{variant}
 		return nil
-
 	case "Runtime":
 		var variant ErrorKindRuntime
 		if variantValue != nil {
@@ -253,7 +242,6 @@ func (result *ErrorKind) UnmarshalJSON(b []byte) error {
 		}
 		*result = ErrorKind{variant}
 		return nil
-
 	case "Operational":
 		var variant ErrorKindOperational
 		if variantValue != nil {
@@ -264,7 +252,6 @@ func (result *ErrorKind) UnmarshalJSON(b []byte) error {
 		}
 		*result = ErrorKind{variant}
 		return nil
-
 	case "Validation":
 		var variant ErrorKindValidation
 		if variantValue != nil {
@@ -275,38 +262,33 @@ func (result *ErrorKind) UnmarshalJSON(b []byte) error {
 		}
 		*result = ErrorKind{variant}
 		return nil
-
 	}
 
-	return fmt.Errorf("Cannot deserialize ErrorKind: %s", string(b))
+	return fmt.Errorf("cannot deserialize ErrorKind: %s", string(b))
 }
 
 func (variant ErrorKind) MarshalJSON() ([]byte, error) {
 	switch inner := variant.ErrorKindVariant.(type) {
-
 	case ErrorKindParse:
 		return json.Marshal(map[string]ErrorKindParse{
 			"Parse": inner,
 		})
-
 	case ErrorKindRuntime:
 		return json.Marshal(map[string]ErrorKindRuntime{
 			"Runtime": inner,
 		})
-
 	case ErrorKindOperational:
 		return json.Marshal(map[string]ErrorKindOperational{
 			"Operational": inner,
 		})
-
 	case ErrorKindValidation:
 		return json.Marshal(map[string]ErrorKindValidation{
 			"Validation": inner,
 		})
-
+	default:
+		return nil, fmt.Errorf("unexpected variant %#v of %v", inner, variant)
 	}
 
-	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
 // ExternalInstance struct
@@ -375,7 +357,7 @@ func (result *MessageKind) UnmarshalJSON(b []byte) error {
 		}
 		// JSON should be of form {"VariantName": {...}}
 		if len(rawMap) != 1 {
-			return errors.New("Deserializing MessageKind as an enum variant; expecting a single key")
+			return errors.New("deserializing MessageKind as an enum variant; expecting a single key")
 		}
 		for k, v := range rawMap {
 			variantName = k
@@ -383,7 +365,6 @@ func (result *MessageKind) UnmarshalJSON(b []byte) error {
 		}
 	}
 	switch variantName {
-
 	case "Print":
 		var variant MessageKindPrint
 		if variantValue != nil {
@@ -394,7 +375,6 @@ func (result *MessageKind) UnmarshalJSON(b []byte) error {
 		}
 		*result = MessageKind{variant}
 		return nil
-
 	case "Warning":
 		var variant MessageKindWarning
 		if variantValue != nil {
@@ -405,28 +385,21 @@ func (result *MessageKind) UnmarshalJSON(b []byte) error {
 		}
 		*result = MessageKind{variant}
 		return nil
-
 	}
 
-	return fmt.Errorf("Cannot deserialize MessageKind: %s", string(b))
+	return fmt.Errorf("cannot deserialize MessageKind: %s", string(b))
 }
 
 func (variant MessageKind) MarshalJSON() ([]byte, error) {
 	switch inner := variant.MessageKindVariant.(type) {
-
 	case MessageKindPrint:
-		return json.Marshal(map[string]MessageKindPrint{
-			"Print": inner,
-		})
-
+		return json.Marshal("Print")
 	case MessageKindWarning:
-		return json.Marshal(map[string]MessageKindWarning{
-			"Warning": inner,
-		})
-
+		return json.Marshal("Warning")
+	default:
+		return nil, fmt.Errorf("unexpected variant %#v of %v", inner, variant)
 	}
 
-	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
 // NodeRule newtype
@@ -484,7 +457,7 @@ func (result *Node) UnmarshalJSON(b []byte) error {
 		}
 		// JSON should be of form {"VariantName": {...}}
 		if len(rawMap) != 1 {
-			return errors.New("Deserializing Node as an enum variant; expecting a single key")
+			return errors.New("deserializing Node as an enum variant; expecting a single key")
 		}
 		for k, v := range rawMap {
 			variantName = k
@@ -492,7 +465,6 @@ func (result *Node) UnmarshalJSON(b []byte) error {
 		}
 	}
 	switch variantName {
-
 	case "Rule":
 		var variant NodeRule
 		if variantValue != nil {
@@ -503,7 +475,6 @@ func (result *Node) UnmarshalJSON(b []byte) error {
 		}
 		*result = Node{variant}
 		return nil
-
 	case "Term":
 		var variant NodeTerm
 		if variantValue != nil {
@@ -514,28 +485,25 @@ func (result *Node) UnmarshalJSON(b []byte) error {
 		}
 		*result = Node{variant}
 		return nil
-
 	}
 
-	return fmt.Errorf("Cannot deserialize Node: %s", string(b))
+	return fmt.Errorf("cannot deserialize Node: %s", string(b))
 }
 
 func (variant Node) MarshalJSON() ([]byte, error) {
 	switch inner := variant.NodeVariant.(type) {
-
 	case NodeRule:
 		return json.Marshal(map[string]NodeRule{
 			"Rule": inner,
 		})
-
 	case NodeTerm:
 		return json.Marshal(map[string]NodeTerm{
 			"Term": inner,
 		})
-
+	default:
+		return nil, fmt.Errorf("unexpected variant %#v of %v", inner, variant)
 	}
 
-	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
 // NumericInteger newtype
@@ -593,7 +561,7 @@ func (result *Numeric) UnmarshalJSON(b []byte) error {
 		}
 		// JSON should be of form {"VariantName": {...}}
 		if len(rawMap) != 1 {
-			return errors.New("Deserializing Numeric as an enum variant; expecting a single key")
+			return errors.New("deserializing Numeric as an enum variant; expecting a single key")
 		}
 		for k, v := range rawMap {
 			variantName = k
@@ -601,7 +569,6 @@ func (result *Numeric) UnmarshalJSON(b []byte) error {
 		}
 	}
 	switch variantName {
-
 	case "Integer":
 		var variant NumericInteger
 		if variantValue != nil {
@@ -612,7 +579,6 @@ func (result *Numeric) UnmarshalJSON(b []byte) error {
 		}
 		*result = Numeric{variant}
 		return nil
-
 	case "Float":
 		var variant NumericFloat
 		if variantValue != nil {
@@ -623,28 +589,25 @@ func (result *Numeric) UnmarshalJSON(b []byte) error {
 		}
 		*result = Numeric{variant}
 		return nil
-
 	}
 
-	return fmt.Errorf("Cannot deserialize Numeric: %s", string(b))
+	return fmt.Errorf("cannot deserialize Numeric: %s", string(b))
 }
 
 func (variant Numeric) MarshalJSON() ([]byte, error) {
 	switch inner := variant.NumericVariant.(type) {
-
 	case NumericInteger:
 		return json.Marshal(map[string]NumericInteger{
 			"Integer": inner,
 		})
-
 	case NumericFloat:
 		return json.Marshal(map[string]NumericFloat{
 			"Float": inner,
 		})
-
+	default:
+		return nil, fmt.Errorf("unexpected variant %#v of %v", inner, variant)
 	}
 
-	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
 // Operation struct
@@ -690,7 +653,7 @@ func (result *OperationalError) UnmarshalJSON(b []byte) error {
 		}
 		// JSON should be of form {"VariantName": {...}}
 		if len(rawMap) != 1 {
-			return errors.New("Deserializing OperationalError as an enum variant; expecting a single key")
+			return errors.New("deserializing OperationalError as an enum variant; expecting a single key")
 		}
 		for k, v := range rawMap {
 			variantName = k
@@ -698,7 +661,6 @@ func (result *OperationalError) UnmarshalJSON(b []byte) error {
 		}
 	}
 	switch variantName {
-
 	case "Serialization":
 		var variant OperationalErrorSerialization
 		if variantValue != nil {
@@ -709,7 +671,6 @@ func (result *OperationalError) UnmarshalJSON(b []byte) error {
 		}
 		*result = OperationalError{variant}
 		return nil
-
 	case "Unknown":
 		var variant OperationalErrorUnknown
 		if variantValue != nil {
@@ -720,28 +681,23 @@ func (result *OperationalError) UnmarshalJSON(b []byte) error {
 		}
 		*result = OperationalError{variant}
 		return nil
-
 	}
 
-	return fmt.Errorf("Cannot deserialize OperationalError: %s", string(b))
+	return fmt.Errorf("cannot deserialize OperationalError: %s", string(b))
 }
 
 func (variant OperationalError) MarshalJSON() ([]byte, error) {
 	switch inner := variant.OperationalErrorVariant.(type) {
-
 	case OperationalErrorSerialization:
 		return json.Marshal(map[string]OperationalErrorSerialization{
 			"Serialization": inner,
 		})
-
 	case OperationalErrorUnknown:
-		return json.Marshal(map[string]OperationalErrorUnknown{
-			"Unknown": inner,
-		})
-
+		return json.Marshal("Unknown")
+	default:
+		return nil, fmt.Errorf("unexpected variant %#v of %v", inner, variant)
 	}
 
-	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
 type OperatorDebug struct{}
@@ -867,7 +823,7 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		// JSON should be of form {"VariantName": {...}}
 		if len(rawMap) != 1 {
-			return errors.New("Deserializing Operator as an enum variant; expecting a single key")
+			return errors.New("deserializing Operator as an enum variant; expecting a single key")
 		}
 		for k, v := range rawMap {
 			variantName = k
@@ -875,7 +831,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 	}
 	switch variantName {
-
 	case "Debug":
 		var variant OperatorDebug
 		if variantValue != nil {
@@ -886,7 +841,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Print":
 		var variant OperatorPrint
 		if variantValue != nil {
@@ -897,7 +851,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Cut":
 		var variant OperatorCut
 		if variantValue != nil {
@@ -908,7 +861,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "In":
 		var variant OperatorIn
 		if variantValue != nil {
@@ -919,7 +871,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Isa":
 		var variant OperatorIsa
 		if variantValue != nil {
@@ -930,7 +881,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "New":
 		var variant OperatorNew
 		if variantValue != nil {
@@ -941,7 +891,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Dot":
 		var variant OperatorDot
 		if variantValue != nil {
@@ -952,7 +901,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Not":
 		var variant OperatorNot
 		if variantValue != nil {
@@ -963,7 +911,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Mul":
 		var variant OperatorMul
 		if variantValue != nil {
@@ -974,7 +921,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Div":
 		var variant OperatorDiv
 		if variantValue != nil {
@@ -985,7 +931,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Mod":
 		var variant OperatorMod
 		if variantValue != nil {
@@ -996,7 +941,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Rem":
 		var variant OperatorRem
 		if variantValue != nil {
@@ -1007,7 +951,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Add":
 		var variant OperatorAdd
 		if variantValue != nil {
@@ -1018,7 +961,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Sub":
 		var variant OperatorSub
 		if variantValue != nil {
@@ -1029,7 +971,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Eq":
 		var variant OperatorEq
 		if variantValue != nil {
@@ -1040,7 +981,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Geq":
 		var variant OperatorGeq
 		if variantValue != nil {
@@ -1051,7 +991,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Leq":
 		var variant OperatorLeq
 		if variantValue != nil {
@@ -1062,7 +1001,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Neq":
 		var variant OperatorNeq
 		if variantValue != nil {
@@ -1073,7 +1011,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Gt":
 		var variant OperatorGt
 		if variantValue != nil {
@@ -1084,7 +1021,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Lt":
 		var variant OperatorLt
 		if variantValue != nil {
@@ -1095,7 +1031,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Unify":
 		var variant OperatorUnify
 		if variantValue != nil {
@@ -1106,7 +1041,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Or":
 		var variant OperatorOr
 		if variantValue != nil {
@@ -1117,7 +1051,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "And":
 		var variant OperatorAnd
 		if variantValue != nil {
@@ -1128,7 +1061,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "ForAll":
 		var variant OperatorForAll
 		if variantValue != nil {
@@ -1139,7 +1071,6 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	case "Assign":
 		var variant OperatorAssign
 		if variantValue != nil {
@@ -1150,93 +1081,67 @@ func (result *Operator) UnmarshalJSON(b []byte) error {
 		}
 		*result = Operator{variant}
 		return nil
-
 	}
 
-	return fmt.Errorf("Cannot deserialize Operator: %s", string(b))
+	return fmt.Errorf("cannot deserialize Operator: %s", string(b))
 }
 
 func (variant Operator) MarshalJSON() ([]byte, error) {
-	switch variant.OperatorVariant.(type) {
-
+	switch inner := variant.OperatorVariant.(type) {
 	case OperatorDebug:
 		return json.Marshal("Debug")
-
 	case OperatorPrint:
 		return json.Marshal("Print")
-
 	case OperatorCut:
 		return json.Marshal("Cut")
-
 	case OperatorIn:
 		return json.Marshal("In")
-
 	case OperatorIsa:
 		return json.Marshal("Isa")
-
 	case OperatorNew:
 		return json.Marshal("New")
-
 	case OperatorDot:
 		return json.Marshal("Dot")
-
 	case OperatorNot:
 		return json.Marshal("Not")
-
 	case OperatorMul:
 		return json.Marshal("Mul")
-
 	case OperatorDiv:
 		return json.Marshal("Div")
-
 	case OperatorMod:
 		return json.Marshal("Mod")
-
 	case OperatorRem:
 		return json.Marshal("Rem")
-
 	case OperatorAdd:
 		return json.Marshal("Add")
-
 	case OperatorSub:
 		return json.Marshal("Sub")
-
 	case OperatorEq:
 		return json.Marshal("Eq")
-
 	case OperatorGeq:
 		return json.Marshal("Geq")
-
 	case OperatorLeq:
 		return json.Marshal("Leq")
-
 	case OperatorNeq:
 		return json.Marshal("Neq")
-
 	case OperatorGt:
 		return json.Marshal("Gt")
-
 	case OperatorLt:
 		return json.Marshal("Lt")
-
 	case OperatorUnify:
 		return json.Marshal("Unify")
-
 	case OperatorOr:
 		return json.Marshal("Or")
-
 	case OperatorAnd:
 		return json.Marshal("And")
-
 	case OperatorForAll:
 		return json.Marshal("ForAll")
-
 	case OperatorAssign:
 		return json.Marshal("Assign")
-
+	default:
+		return nil, fmt.Errorf("unexpected variant %#v of %v", inner, variant)
 	}
 
-	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
 // Parameter struct
@@ -1370,7 +1275,7 @@ func (result *ParseError) UnmarshalJSON(b []byte) error {
 		}
 		// JSON should be of form {"VariantName": {...}}
 		if len(rawMap) != 1 {
-			return errors.New("Deserializing ParseError as an enum variant; expecting a single key")
+			return errors.New("deserializing ParseError as an enum variant; expecting a single key")
 		}
 		for k, v := range rawMap {
 			variantName = k
@@ -1378,7 +1283,6 @@ func (result *ParseError) UnmarshalJSON(b []byte) error {
 		}
 	}
 	switch variantName {
-
 	case "IntegerOverflow":
 		var variant ParseErrorIntegerOverflow
 		if variantValue != nil {
@@ -1389,7 +1293,6 @@ func (result *ParseError) UnmarshalJSON(b []byte) error {
 		}
 		*result = ParseError{variant}
 		return nil
-
 	case "InvalidTokenCharacter":
 		var variant ParseErrorInvalidTokenCharacter
 		if variantValue != nil {
@@ -1400,7 +1303,6 @@ func (result *ParseError) UnmarshalJSON(b []byte) error {
 		}
 		*result = ParseError{variant}
 		return nil
-
 	case "InvalidToken":
 		var variant ParseErrorInvalidToken
 		if variantValue != nil {
@@ -1411,7 +1313,6 @@ func (result *ParseError) UnmarshalJSON(b []byte) error {
 		}
 		*result = ParseError{variant}
 		return nil
-
 	case "UnrecognizedEOF":
 		var variant ParseErrorUnrecognizedEOF
 		if variantValue != nil {
@@ -1422,7 +1323,6 @@ func (result *ParseError) UnmarshalJSON(b []byte) error {
 		}
 		*result = ParseError{variant}
 		return nil
-
 	case "UnrecognizedToken":
 		var variant ParseErrorUnrecognizedToken
 		if variantValue != nil {
@@ -1433,7 +1333,6 @@ func (result *ParseError) UnmarshalJSON(b []byte) error {
 		}
 		*result = ParseError{variant}
 		return nil
-
 	case "ExtraToken":
 		var variant ParseErrorExtraToken
 		if variantValue != nil {
@@ -1444,7 +1343,6 @@ func (result *ParseError) UnmarshalJSON(b []byte) error {
 		}
 		*result = ParseError{variant}
 		return nil
-
 	case "ReservedWord":
 		var variant ParseErrorReservedWord
 		if variantValue != nil {
@@ -1455,7 +1353,6 @@ func (result *ParseError) UnmarshalJSON(b []byte) error {
 		}
 		*result = ParseError{variant}
 		return nil
-
 	case "InvalidFloat":
 		var variant ParseErrorInvalidFloat
 		if variantValue != nil {
@@ -1466,7 +1363,6 @@ func (result *ParseError) UnmarshalJSON(b []byte) error {
 		}
 		*result = ParseError{variant}
 		return nil
-
 	case "WrongValueType":
 		var variant ParseErrorWrongValueType
 		if variantValue != nil {
@@ -1477,7 +1373,6 @@ func (result *ParseError) UnmarshalJSON(b []byte) error {
 		}
 		*result = ParseError{variant}
 		return nil
-
 	case "DuplicateKey":
 		var variant ParseErrorDuplicateKey
 		if variantValue != nil {
@@ -1488,68 +1383,57 @@ func (result *ParseError) UnmarshalJSON(b []byte) error {
 		}
 		*result = ParseError{variant}
 		return nil
-
 	}
 
-	return fmt.Errorf("Cannot deserialize ParseError: %s", string(b))
+	return fmt.Errorf("cannot deserialize ParseError: %s", string(b))
 }
 
 func (variant ParseError) MarshalJSON() ([]byte, error) {
 	switch inner := variant.ParseErrorVariant.(type) {
-
 	case ParseErrorIntegerOverflow:
 		return json.Marshal(map[string]ParseErrorIntegerOverflow{
 			"IntegerOverflow": inner,
 		})
-
 	case ParseErrorInvalidTokenCharacter:
 		return json.Marshal(map[string]ParseErrorInvalidTokenCharacter{
 			"InvalidTokenCharacter": inner,
 		})
-
 	case ParseErrorInvalidToken:
 		return json.Marshal(map[string]ParseErrorInvalidToken{
 			"InvalidToken": inner,
 		})
-
 	case ParseErrorUnrecognizedEOF:
 		return json.Marshal(map[string]ParseErrorUnrecognizedEOF{
 			"UnrecognizedEOF": inner,
 		})
-
 	case ParseErrorUnrecognizedToken:
 		return json.Marshal(map[string]ParseErrorUnrecognizedToken{
 			"UnrecognizedToken": inner,
 		})
-
 	case ParseErrorExtraToken:
 		return json.Marshal(map[string]ParseErrorExtraToken{
 			"ExtraToken": inner,
 		})
-
 	case ParseErrorReservedWord:
 		return json.Marshal(map[string]ParseErrorReservedWord{
 			"ReservedWord": inner,
 		})
-
 	case ParseErrorInvalidFloat:
 		return json.Marshal(map[string]ParseErrorInvalidFloat{
 			"InvalidFloat": inner,
 		})
-
 	case ParseErrorWrongValueType:
 		return json.Marshal(map[string]ParseErrorWrongValueType{
 			"WrongValueType": inner,
 		})
-
 	case ParseErrorDuplicateKey:
 		return json.Marshal(map[string]ParseErrorDuplicateKey{
 			"DuplicateKey": inner,
 		})
-
+	default:
+		return nil, fmt.Errorf("unexpected variant %#v of %v", inner, variant)
 	}
 
-	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
 // PatternDictionary newtype
@@ -1607,7 +1491,7 @@ func (result *Pattern) UnmarshalJSON(b []byte) error {
 		}
 		// JSON should be of form {"VariantName": {...}}
 		if len(rawMap) != 1 {
-			return errors.New("Deserializing Pattern as an enum variant; expecting a single key")
+			return errors.New("deserializing Pattern as an enum variant; expecting a single key")
 		}
 		for k, v := range rawMap {
 			variantName = k
@@ -1615,7 +1499,6 @@ func (result *Pattern) UnmarshalJSON(b []byte) error {
 		}
 	}
 	switch variantName {
-
 	case "Dictionary":
 		var variant PatternDictionary
 		if variantValue != nil {
@@ -1626,7 +1509,6 @@ func (result *Pattern) UnmarshalJSON(b []byte) error {
 		}
 		*result = Pattern{variant}
 		return nil
-
 	case "Instance":
 		var variant PatternInstance
 		if variantValue != nil {
@@ -1637,28 +1519,25 @@ func (result *Pattern) UnmarshalJSON(b []byte) error {
 		}
 		*result = Pattern{variant}
 		return nil
-
 	}
 
-	return fmt.Errorf("Cannot deserialize Pattern: %s", string(b))
+	return fmt.Errorf("cannot deserialize Pattern: %s", string(b))
 }
 
 func (variant Pattern) MarshalJSON() ([]byte, error) {
 	switch inner := variant.PatternVariant.(type) {
-
 	case PatternDictionary:
 		return json.Marshal(map[string]PatternDictionary{
 			"Dictionary": inner,
 		})
-
 	case PatternInstance:
 		return json.Marshal(map[string]PatternInstance{
 			"Instance": inner,
 		})
-
+	default:
+		return nil, fmt.Errorf("unexpected variant %#v of %v", inner, variant)
 	}
 
-	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
 type QueryEventNone struct{}
@@ -1814,7 +1693,7 @@ func (result *QueryEvent) UnmarshalJSON(b []byte) error {
 		}
 		// JSON should be of form {"VariantName": {...}}
 		if len(rawMap) != 1 {
-			return errors.New("Deserializing QueryEvent as an enum variant; expecting a single key")
+			return errors.New("deserializing QueryEvent as an enum variant; expecting a single key")
 		}
 		for k, v := range rawMap {
 			variantName = k
@@ -1822,7 +1701,6 @@ func (result *QueryEvent) UnmarshalJSON(b []byte) error {
 		}
 	}
 	switch variantName {
-
 	case "None":
 		var variant QueryEventNone
 		if variantValue != nil {
@@ -1833,7 +1711,6 @@ func (result *QueryEvent) UnmarshalJSON(b []byte) error {
 		}
 		*result = QueryEvent{variant}
 		return nil
-
 	case "Done":
 		var variant QueryEventDone
 		if variantValue != nil {
@@ -1844,7 +1721,6 @@ func (result *QueryEvent) UnmarshalJSON(b []byte) error {
 		}
 		*result = QueryEvent{variant}
 		return nil
-
 	case "Debug":
 		var variant QueryEventDebug
 		if variantValue != nil {
@@ -1855,7 +1731,6 @@ func (result *QueryEvent) UnmarshalJSON(b []byte) error {
 		}
 		*result = QueryEvent{variant}
 		return nil
-
 	case "MakeExternal":
 		var variant QueryEventMakeExternal
 		if variantValue != nil {
@@ -1866,7 +1741,6 @@ func (result *QueryEvent) UnmarshalJSON(b []byte) error {
 		}
 		*result = QueryEvent{variant}
 		return nil
-
 	case "ExternalCall":
 		var variant QueryEventExternalCall
 		if variantValue != nil {
@@ -1877,7 +1751,6 @@ func (result *QueryEvent) UnmarshalJSON(b []byte) error {
 		}
 		*result = QueryEvent{variant}
 		return nil
-
 	case "ExternalIsa":
 		var variant QueryEventExternalIsa
 		if variantValue != nil {
@@ -1888,7 +1761,6 @@ func (result *QueryEvent) UnmarshalJSON(b []byte) error {
 		}
 		*result = QueryEvent{variant}
 		return nil
-
 	case "ExternalIsaWithPath":
 		var variant QueryEventExternalIsaWithPath
 		if variantValue != nil {
@@ -1899,7 +1771,6 @@ func (result *QueryEvent) UnmarshalJSON(b []byte) error {
 		}
 		*result = QueryEvent{variant}
 		return nil
-
 	case "ExternalIsSubSpecializer":
 		var variant QueryEventExternalIsSubSpecializer
 		if variantValue != nil {
@@ -1910,7 +1781,6 @@ func (result *QueryEvent) UnmarshalJSON(b []byte) error {
 		}
 		*result = QueryEvent{variant}
 		return nil
-
 	case "ExternalIsSubclass":
 		var variant QueryEventExternalIsSubclass
 		if variantValue != nil {
@@ -1921,7 +1791,6 @@ func (result *QueryEvent) UnmarshalJSON(b []byte) error {
 		}
 		*result = QueryEvent{variant}
 		return nil
-
 	case "Result":
 		var variant QueryEventResult
 		if variantValue != nil {
@@ -1932,7 +1801,6 @@ func (result *QueryEvent) UnmarshalJSON(b []byte) error {
 		}
 		*result = QueryEvent{variant}
 		return nil
-
 	case "ExternalOp":
 		var variant QueryEventExternalOp
 		if variantValue != nil {
@@ -1943,7 +1811,6 @@ func (result *QueryEvent) UnmarshalJSON(b []byte) error {
 		}
 		*result = QueryEvent{variant}
 		return nil
-
 	case "NextExternal":
 		var variant QueryEventNextExternal
 		if variantValue != nil {
@@ -1954,78 +1821,63 @@ func (result *QueryEvent) UnmarshalJSON(b []byte) error {
 		}
 		*result = QueryEvent{variant}
 		return nil
-
 	}
 
-	return fmt.Errorf("Cannot deserialize QueryEvent: %s", string(b))
+	return fmt.Errorf("cannot deserialize QueryEvent: %s", string(b))
 }
 
 func (variant QueryEvent) MarshalJSON() ([]byte, error) {
 	switch inner := variant.QueryEventVariant.(type) {
-
 	case QueryEventNone:
-		return json.Marshal(map[string]QueryEventNone{
-			"None": inner,
-		})
-
+		return json.Marshal("None")
 	case QueryEventDone:
 		return json.Marshal(map[string]QueryEventDone{
 			"Done": inner,
 		})
-
 	case QueryEventDebug:
 		return json.Marshal(map[string]QueryEventDebug{
 			"Debug": inner,
 		})
-
 	case QueryEventMakeExternal:
 		return json.Marshal(map[string]QueryEventMakeExternal{
 			"MakeExternal": inner,
 		})
-
 	case QueryEventExternalCall:
 		return json.Marshal(map[string]QueryEventExternalCall{
 			"ExternalCall": inner,
 		})
-
 	case QueryEventExternalIsa:
 		return json.Marshal(map[string]QueryEventExternalIsa{
 			"ExternalIsa": inner,
 		})
-
 	case QueryEventExternalIsaWithPath:
 		return json.Marshal(map[string]QueryEventExternalIsaWithPath{
 			"ExternalIsaWithPath": inner,
 		})
-
 	case QueryEventExternalIsSubSpecializer:
 		return json.Marshal(map[string]QueryEventExternalIsSubSpecializer{
 			"ExternalIsSubSpecializer": inner,
 		})
-
 	case QueryEventExternalIsSubclass:
 		return json.Marshal(map[string]QueryEventExternalIsSubclass{
 			"ExternalIsSubclass": inner,
 		})
-
 	case QueryEventResult:
 		return json.Marshal(map[string]QueryEventResult{
 			"Result": inner,
 		})
-
 	case QueryEventExternalOp:
 		return json.Marshal(map[string]QueryEventExternalOp{
 			"ExternalOp": inner,
 		})
-
 	case QueryEventNextExternal:
 		return json.Marshal(map[string]QueryEventNextExternal{
 			"NextExternal": inner,
 		})
-
+	default:
+		return nil, fmt.Errorf("unexpected variant %#v of %v", inner, variant)
 	}
 
-	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
 // Rule struct
@@ -2187,7 +2039,7 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		}
 		// JSON should be of form {"VariantName": {...}}
 		if len(rawMap) != 1 {
-			return errors.New("Deserializing RuntimeError as an enum variant; expecting a single key")
+			return errors.New("deserializing RuntimeError as an enum variant; expecting a single key")
 		}
 		for k, v := range rawMap {
 			variantName = k
@@ -2195,7 +2047,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		}
 	}
 	switch variantName {
-
 	case "ArithmeticError":
 		var variant RuntimeErrorArithmeticError
 		if variantValue != nil {
@@ -2206,7 +2057,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		}
 		*result = RuntimeError{variant}
 		return nil
-
 	case "Unsupported":
 		var variant RuntimeErrorUnsupported
 		if variantValue != nil {
@@ -2217,7 +2067,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		}
 		*result = RuntimeError{variant}
 		return nil
-
 	case "TypeError":
 		var variant RuntimeErrorTypeError
 		if variantValue != nil {
@@ -2228,7 +2077,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		}
 		*result = RuntimeError{variant}
 		return nil
-
 	case "StackOverflow":
 		var variant RuntimeErrorStackOverflow
 		if variantValue != nil {
@@ -2239,7 +2087,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		}
 		*result = RuntimeError{variant}
 		return nil
-
 	case "QueryTimeout":
 		var variant RuntimeErrorQueryTimeout
 		if variantValue != nil {
@@ -2250,7 +2097,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		}
 		*result = RuntimeError{variant}
 		return nil
-
 	case "Application":
 		var variant RuntimeErrorApplication
 		if variantValue != nil {
@@ -2261,7 +2107,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		}
 		*result = RuntimeError{variant}
 		return nil
-
 	case "IncompatibleBindings":
 		var variant RuntimeErrorIncompatibleBindings
 		if variantValue != nil {
@@ -2272,7 +2117,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		}
 		*result = RuntimeError{variant}
 		return nil
-
 	case "UnhandledPartial":
 		var variant RuntimeErrorUnhandledPartial
 		if variantValue != nil {
@@ -2283,7 +2127,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		}
 		*result = RuntimeError{variant}
 		return nil
-
 	case "DataFilteringFieldMissing":
 		var variant RuntimeErrorDataFilteringFieldMissing
 		if variantValue != nil {
@@ -2294,7 +2137,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		}
 		*result = RuntimeError{variant}
 		return nil
-
 	case "DataFilteringUnsupportedOp":
 		var variant RuntimeErrorDataFilteringUnsupportedOp
 		if variantValue != nil {
@@ -2305,7 +2147,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		}
 		*result = RuntimeError{variant}
 		return nil
-
 	case "InvalidRegistration":
 		var variant RuntimeErrorInvalidRegistration
 		if variantValue != nil {
@@ -2316,7 +2157,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		}
 		*result = RuntimeError{variant}
 		return nil
-
 	case "InvalidState":
 		var variant RuntimeErrorInvalidState
 		if variantValue != nil {
@@ -2327,7 +2167,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		}
 		*result = RuntimeError{variant}
 		return nil
-
 	case "MultipleLoadError":
 		var variant RuntimeErrorMultipleLoadError
 		if variantValue != nil {
@@ -2338,7 +2177,6 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		}
 		*result = RuntimeError{variant}
 		return nil
-
 	case "QueryForUndefinedRule":
 		var variant RuntimeErrorQueryForUndefinedRule
 		if variantValue != nil {
@@ -2349,88 +2187,71 @@ func (result *RuntimeError) UnmarshalJSON(b []byte) error {
 		}
 		*result = RuntimeError{variant}
 		return nil
-
 	}
 
-	return fmt.Errorf("Cannot deserialize RuntimeError: %s", string(b))
+	return fmt.Errorf("cannot deserialize RuntimeError: %s", string(b))
 }
 
 func (variant RuntimeError) MarshalJSON() ([]byte, error) {
 	switch inner := variant.RuntimeErrorVariant.(type) {
-
 	case RuntimeErrorArithmeticError:
 		return json.Marshal(map[string]RuntimeErrorArithmeticError{
 			"ArithmeticError": inner,
 		})
-
 	case RuntimeErrorUnsupported:
 		return json.Marshal(map[string]RuntimeErrorUnsupported{
 			"Unsupported": inner,
 		})
-
 	case RuntimeErrorTypeError:
 		return json.Marshal(map[string]RuntimeErrorTypeError{
 			"TypeError": inner,
 		})
-
 	case RuntimeErrorStackOverflow:
 		return json.Marshal(map[string]RuntimeErrorStackOverflow{
 			"StackOverflow": inner,
 		})
-
 	case RuntimeErrorQueryTimeout:
 		return json.Marshal(map[string]RuntimeErrorQueryTimeout{
 			"QueryTimeout": inner,
 		})
-
 	case RuntimeErrorApplication:
 		return json.Marshal(map[string]RuntimeErrorApplication{
 			"Application": inner,
 		})
-
 	case RuntimeErrorIncompatibleBindings:
 		return json.Marshal(map[string]RuntimeErrorIncompatibleBindings{
 			"IncompatibleBindings": inner,
 		})
-
 	case RuntimeErrorUnhandledPartial:
 		return json.Marshal(map[string]RuntimeErrorUnhandledPartial{
 			"UnhandledPartial": inner,
 		})
-
 	case RuntimeErrorDataFilteringFieldMissing:
 		return json.Marshal(map[string]RuntimeErrorDataFilteringFieldMissing{
 			"DataFilteringFieldMissing": inner,
 		})
-
 	case RuntimeErrorDataFilteringUnsupportedOp:
 		return json.Marshal(map[string]RuntimeErrorDataFilteringUnsupportedOp{
 			"DataFilteringUnsupportedOp": inner,
 		})
-
 	case RuntimeErrorInvalidRegistration:
 		return json.Marshal(map[string]RuntimeErrorInvalidRegistration{
 			"InvalidRegistration": inner,
 		})
-
 	case RuntimeErrorInvalidState:
 		return json.Marshal(map[string]RuntimeErrorInvalidState{
 			"InvalidState": inner,
 		})
-
 	case RuntimeErrorMultipleLoadError:
-		return json.Marshal(map[string]RuntimeErrorMultipleLoadError{
-			"MultipleLoadError": inner,
-		})
-
+		return json.Marshal("MultipleLoadError")
 	case RuntimeErrorQueryForUndefinedRule:
 		return json.Marshal(map[string]RuntimeErrorQueryForUndefinedRule{
 			"QueryForUndefinedRule": inner,
 		})
-
+	default:
+		return nil, fmt.Errorf("unexpected variant %#v of %v", inner, variant)
 	}
 
-	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
 // Source struct
@@ -2586,7 +2407,7 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		}
 		// JSON should be of form {"VariantName": {...}}
 		if len(rawMap) != 1 {
-			return errors.New("Deserializing ValidationError as an enum variant; expecting a single key")
+			return errors.New("deserializing ValidationError as an enum variant; expecting a single key")
 		}
 		for k, v := range rawMap {
 			variantName = k
@@ -2594,7 +2415,6 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		}
 	}
 	switch variantName {
-
 	case "FileLoading":
 		var variant ValidationErrorFileLoading
 		if variantValue != nil {
@@ -2605,7 +2425,6 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		}
 		*result = ValidationError{variant}
 		return nil
-
 	case "MissingRequiredRule":
 		var variant ValidationErrorMissingRequiredRule
 		if variantValue != nil {
@@ -2616,7 +2435,6 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		}
 		*result = ValidationError{variant}
 		return nil
-
 	case "InvalidRule":
 		var variant ValidationErrorInvalidRule
 		if variantValue != nil {
@@ -2627,7 +2445,6 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		}
 		*result = ValidationError{variant}
 		return nil
-
 	case "InvalidRuleType":
 		var variant ValidationErrorInvalidRuleType
 		if variantValue != nil {
@@ -2638,7 +2455,6 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		}
 		*result = ValidationError{variant}
 		return nil
-
 	case "UndefinedRuleCall":
 		var variant ValidationErrorUndefinedRuleCall
 		if variantValue != nil {
@@ -2649,7 +2465,6 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		}
 		*result = ValidationError{variant}
 		return nil
-
 	case "ResourceBlock":
 		var variant ValidationErrorResourceBlock
 		if variantValue != nil {
@@ -2660,7 +2475,6 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		}
 		*result = ValidationError{variant}
 		return nil
-
 	case "SingletonVariable":
 		var variant ValidationErrorSingletonVariable
 		if variantValue != nil {
@@ -2671,7 +2485,6 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		}
 		*result = ValidationError{variant}
 		return nil
-
 	case "UnregisteredClass":
 		var variant ValidationErrorUnregisteredClass
 		if variantValue != nil {
@@ -2682,7 +2495,6 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		}
 		*result = ValidationError{variant}
 		return nil
-
 	case "DuplicateResourceBlockDeclaration":
 		var variant ValidationErrorDuplicateResourceBlockDeclaration
 		if variantValue != nil {
@@ -2693,63 +2505,53 @@ func (result *ValidationError) UnmarshalJSON(b []byte) error {
 		}
 		*result = ValidationError{variant}
 		return nil
-
 	}
 
-	return fmt.Errorf("Cannot deserialize ValidationError: %s", string(b))
+	return fmt.Errorf("cannot deserialize ValidationError: %s", string(b))
 }
 
 func (variant ValidationError) MarshalJSON() ([]byte, error) {
 	switch inner := variant.ValidationErrorVariant.(type) {
-
 	case ValidationErrorFileLoading:
 		return json.Marshal(map[string]ValidationErrorFileLoading{
 			"FileLoading": inner,
 		})
-
 	case ValidationErrorMissingRequiredRule:
 		return json.Marshal(map[string]ValidationErrorMissingRequiredRule{
 			"MissingRequiredRule": inner,
 		})
-
 	case ValidationErrorInvalidRule:
 		return json.Marshal(map[string]ValidationErrorInvalidRule{
 			"InvalidRule": inner,
 		})
-
 	case ValidationErrorInvalidRuleType:
 		return json.Marshal(map[string]ValidationErrorInvalidRuleType{
 			"InvalidRuleType": inner,
 		})
-
 	case ValidationErrorUndefinedRuleCall:
 		return json.Marshal(map[string]ValidationErrorUndefinedRuleCall{
 			"UndefinedRuleCall": inner,
 		})
-
 	case ValidationErrorResourceBlock:
 		return json.Marshal(map[string]ValidationErrorResourceBlock{
 			"ResourceBlock": inner,
 		})
-
 	case ValidationErrorSingletonVariable:
 		return json.Marshal(map[string]ValidationErrorSingletonVariable{
 			"SingletonVariable": inner,
 		})
-
 	case ValidationErrorUnregisteredClass:
 		return json.Marshal(map[string]ValidationErrorUnregisteredClass{
 			"UnregisteredClass": inner,
 		})
-
 	case ValidationErrorDuplicateResourceBlockDeclaration:
 		return json.Marshal(map[string]ValidationErrorDuplicateResourceBlockDeclaration{
 			"DuplicateResourceBlockDeclaration": inner,
 		})
-
+	default:
+		return nil, fmt.Errorf("unexpected variant %#v of %v", inner, variant)
 	}
 
-	return nil, fmt.Errorf("unexpected variant of %v", variant)
 }
 
 // ValueNumber newtype
@@ -2951,7 +2753,7 @@ func (result *Value) UnmarshalJSON(b []byte) error {
 		}
 		// JSON should be of form {"VariantName": {...}}
 		if len(rawMap) != 1 {
-			return errors.New("Deserializing Value as an enum variant; expecting a single key")
+			return errors.New("deserializing Value as an enum variant; expecting a single key")
 		}
 		for k, v := range rawMap {
 			variantName = k
@@ -2959,7 +2761,6 @@ func (result *Value) UnmarshalJSON(b []byte) error {
 		}
 	}
 	switch variantName {
-
 	case "Number":
 		var variant ValueNumber
 		if variantValue != nil {
@@ -2970,7 +2771,6 @@ func (result *Value) UnmarshalJSON(b []byte) error {
 		}
 		*result = Value{variant}
 		return nil
-
 	case "String":
 		var variant ValueString
 		if variantValue != nil {
@@ -2981,7 +2781,6 @@ func (result *Value) UnmarshalJSON(b []byte) error {
 		}
 		*result = Value{variant}
 		return nil
-
 	case "Boolean":
 		var variant ValueBoolean
 		if variantValue != nil {
@@ -2992,7 +2791,6 @@ func (result *Value) UnmarshalJSON(b []byte) error {
 		}
 		*result = Value{variant}
 		return nil
-
 	case "ExternalInstance":
 		var variant ValueExternalInstance
 		if variantValue != nil {
@@ -3003,7 +2801,6 @@ func (result *Value) UnmarshalJSON(b []byte) error {
 		}
 		*result = Value{variant}
 		return nil
-
 	case "Dictionary":
 		var variant ValueDictionary
 		if variantValue != nil {
@@ -3014,7 +2811,6 @@ func (result *Value) UnmarshalJSON(b []byte) error {
 		}
 		*result = Value{variant}
 		return nil
-
 	case "Pattern":
 		var variant ValuePattern
 		if variantValue != nil {
@@ -3025,7 +2821,6 @@ func (result *Value) UnmarshalJSON(b []byte) error {
 		}
 		*result = Value{variant}
 		return nil
-
 	case "Call":
 		var variant ValueCall
 		if variantValue != nil {
@@ -3036,7 +2831,6 @@ func (result *Value) UnmarshalJSON(b []byte) error {
 		}
 		*result = Value{variant}
 		return nil
-
 	case "List":
 		var variant ValueList
 		if variantValue != nil {
@@ -3047,7 +2841,6 @@ func (result *Value) UnmarshalJSON(b []byte) error {
 		}
 		*result = Value{variant}
 		return nil
-
 	case "Variable":
 		var variant ValueVariable
 		if variantValue != nil {
@@ -3058,7 +2851,6 @@ func (result *Value) UnmarshalJSON(b []byte) error {
 		}
 		*result = Value{variant}
 		return nil
-
 	case "RestVariable":
 		var variant ValueRestVariable
 		if variantValue != nil {
@@ -3069,7 +2861,6 @@ func (result *Value) UnmarshalJSON(b []byte) error {
 		}
 		*result = Value{variant}
 		return nil
-
 	case "Expression":
 		var variant ValueExpression
 		if variantValue != nil {
@@ -3080,218 +2871,59 @@ func (result *Value) UnmarshalJSON(b []byte) error {
 		}
 		*result = Value{variant}
 		return nil
-
 	}
 
-	return fmt.Errorf("Cannot deserialize Value: %s", string(b))
+	return fmt.Errorf("cannot deserialize Value: %s", string(b))
 }
 
 func (variant Value) MarshalJSON() ([]byte, error) {
 	switch inner := variant.ValueVariant.(type) {
-
 	case ValueNumber:
 		return json.Marshal(map[string]ValueNumber{
 			"Number": inner,
 		})
-
 	case ValueString:
 		return json.Marshal(map[string]ValueString{
 			"String": inner,
 		})
-
 	case ValueBoolean:
 		return json.Marshal(map[string]ValueBoolean{
 			"Boolean": inner,
 		})
-
 	case ValueExternalInstance:
 		return json.Marshal(map[string]ValueExternalInstance{
 			"ExternalInstance": inner,
 		})
-
 	case ValueDictionary:
 		return json.Marshal(map[string]ValueDictionary{
 			"Dictionary": inner,
 		})
-
 	case ValuePattern:
 		return json.Marshal(map[string]ValuePattern{
 			"Pattern": inner,
 		})
-
 	case ValueCall:
 		return json.Marshal(map[string]ValueCall{
 			"Call": inner,
 		})
-
 	case ValueList:
 		return json.Marshal(map[string]ValueList{
 			"List": inner,
 		})
-
 	case ValueVariable:
 		return json.Marshal(map[string]ValueVariable{
 			"Variable": inner,
 		})
-
 	case ValueRestVariable:
 		return json.Marshal(map[string]ValueRestVariable{
 			"RestVariable": inner,
 		})
-
 	case ValueExpression:
 		return json.Marshal(map[string]ValueExpression{
 			"Expression": inner,
 		})
-
+	default:
+		return nil, fmt.Errorf("unexpected variant %#v of %v", inner, variant)
 	}
 
-	return nil, fmt.Errorf("unexpected variant of %v", variant)
-}
-
-type Comparison int
-
-const (
-	Eq Comparison = iota
-	Neq
-	In
-)
-
-func (comparison *Comparison) UnmarshalJSON(b []byte) error {
-	var cmp string
-	err := json.Unmarshal(b, &cmp)
-	if err != nil {
-		return err
-	}
-	switch cmp {
-	case "Eq":
-		*comparison = Eq
-	case "Neq":
-		*comparison = Neq
-	case "In":
-		*comparison = In
-	}
-	return nil
-}
-
-type Projection struct {
-	TypeName  string
-	FieldName string
-}
-
-func (proj *Projection) UnmarshalJSON(b []byte) error {
-	var l []string
-	err := json.Unmarshal(b, &l)
-	if err != nil {
-		return err
-	}
-	proj.TypeName = l[0]
-	proj.FieldName = l[1]
-	return nil
-}
-
-type Immediate struct {
-	Value interface{}
-}
-
-type DatumVariant interface {
-	isDatum()
-}
-
-type Datum struct {
-	DatumVariant
-}
-
-func (datum *Datum) UnmarshalJSON(b []byte) error {
-	var m map[string]*json.RawMessage
-	err := json.Unmarshal(b, &m)
-	if err != nil {
-		return err
-	}
-	for k, v := range m {
-		switch k {
-		case "Immediate":
-			var val Value
-			err = json.Unmarshal(*v, &val)
-			if err != nil {
-				return err
-			}
-			datum.DatumVariant = Immediate{val}
-		case "Field":
-			var proj Projection
-			err = json.Unmarshal(*v, &proj)
-			if err != nil {
-				return err
-			}
-			datum.DatumVariant = proj
-		}
-		break
-	}
-	return nil
-}
-
-func (Projection) isDatum() {}
-func (Immediate) isDatum()  {}
-
-type FilterRelation struct {
-	FromTypeName  string
-	FromFieldName string
-	ToTypeName    string
-}
-
-func (relation *FilterRelation) UnmarshalJSON(b []byte) error {
-	var fields []string
-	err := json.Unmarshal(b, &fields)
-	if err != nil {
-		return err
-	}
-	relation.FromTypeName = fields[0]
-	relation.FromFieldName = fields[1]
-	relation.ToTypeName = fields[2]
-	return nil
-}
-
-type FilterCondition struct {
-	Lhs Datum
-	Cmp Comparison
-	Rhs Datum
-}
-
-func (relation *FilterCondition) UnmarshalJSON(b []byte) error {
-	var fields []*json.RawMessage
-
-	err := json.Unmarshal(b, &fields)
-	if err != nil {
-		return err
-	}
-	var lhs Datum
-	err = json.Unmarshal(*fields[0], &lhs)
-	if err != nil {
-		return err
-	}
-	var op Comparison
-	err = json.Unmarshal(*fields[1], &op)
-	if err != nil {
-		return err
-	}
-	var rhs Datum
-	err = json.Unmarshal(*fields[2], &rhs)
-	if err != nil {
-		return err
-	}
-	relation.Lhs = lhs
-	relation.Cmp = op
-	relation.Rhs = rhs
-	return nil
-}
-
-type Filter struct {
-	// Root
-	Root string `json:"root"`
-	// Relations
-	Relations []FilterRelation `json:"relations"`
-	// Conditions
-	Conditions [][]FilterCondition `json:"conditions"`
-	// Types
-	Types map[string]map[string]interface{}
 }
