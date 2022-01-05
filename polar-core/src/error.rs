@@ -579,3 +579,19 @@ where
     let term = term.borrow().clone();
     Err(RuntimeError::Unsupported { msg, term }.into())
 }
+
+pub(crate) fn df_unsupported_op<T>(operation: Operation) -> PolarResult<T> {
+    Err(RuntimeError::DataFilteringUnsupportedOp { operation }.into())
+}
+
+pub(crate) fn df_field_missing<T, U, V>(var_type: T, field: U) -> PolarResult<V>
+where
+    T: AsRef<str>,
+    U: AsRef<str>,
+{
+    Err(RuntimeError::DataFilteringFieldMissing {
+        var_type: var_type.as_ref().into(),
+        field: field.as_ref().into(),
+    }
+    .into())
+}

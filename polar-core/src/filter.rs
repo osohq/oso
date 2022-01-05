@@ -5,8 +5,8 @@ use std::{
 };
 
 use crate::{
-    data_filtering::{unregistered_field_error, unsupported_op_error, PartialResults, Type},
-    error::{invalid_state, PolarResult},
+    data_filtering::{PartialResults, Type},
+    error::{df_field_missing, df_unsupported_op, invalid_state, PolarResult},
     normalize::*,
     terms::*,
 };
@@ -253,7 +253,7 @@ impl FilterInfo {
         // then we fail here.
         for dot in path {
             match self.get_relation_def(&typ, &dot) {
-                None => return unregistered_field_error(&typ, &dot),
+                None => return df_field_missing(&typ, &dot),
                 Some(rel) => {
                     let Relation(_, name, right) = &rel;
                     typ = right.clone();
@@ -314,7 +314,7 @@ impl FilterInfo {
         match op.args.len() {
             1 => self.add_constraint_1(op),
             2 => self.add_constraint_2(op),
-            _ => unsupported_op_error(op),
+            _ => df_unsupported_op(op),
         }
     }
 
@@ -329,9 +329,9 @@ impl FilterInfo {
                     self.add_condition(left, Comparison::Nin, right);
                     Ok(())
                 }
-                _ => unsupported_op_error(op),
+                _ => df_unsupported_op(op),
             },
-            _ => unsupported_op_error(op),
+            _ => df_unsupported_op(op),
         }
     }
 
@@ -351,7 +351,7 @@ impl FilterInfo {
             Leq => Comparison::Leq,
             Gt => Comparison::Gt,
             Geq => Comparison::Geq,
-            _ => return unsupported_op_error(op),
+            _ => return df_unsupported_op(op),
         };
         self.add_condition(left, op, right);
         Ok(())

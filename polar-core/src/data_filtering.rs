@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     counter::Counter,
-    error::{invalid_state, PolarResult, RuntimeError},
+    error::{df_field_missing, df_unsupported_op, invalid_state, PolarResult},
     events::ResultEvent,
     filter::singleton,
     terms::*,
@@ -229,7 +229,7 @@ impl VarInfo {
                 self.types.push((lhs, i.tag.0.clone()));
                 Ok(self)
             }
-            _ => unsupported_op_error(Operation {
+            _ => df_unsupported_op(Operation {
                 operator: Operator::Isa,
                 args: vec![lhs.clone(), rhs.clone()],
             }),
@@ -246,7 +246,7 @@ impl VarInfo {
             // 1 = 1 is irrelevant for data filtering, other stuff seems like an error.
             // @NOTE(steve): Going with the same not yet supported message but if this is
             // coming through it's probably a bug in the simplifier.
-            _ => unsupported_op_error(Operation {
+            _ => df_unsupported_op(Operation {
                 operator: Operator::Unify,
                 args: vec![left.clone(), right.clone()],
             })?,
@@ -265,7 +265,7 @@ impl VarInfo {
                 let l = self.symbolize(left);
                 self.uncycles.push((l, r))
             }
-            _ => unsupported_op_error(Operation {
+            _ => df_unsupported_op(Operation {
                 operator: Operator::Neq,
                 args: vec![left.clone(), right.clone()],
             })?,
@@ -277,7 +277,7 @@ impl VarInfo {
         match (self.undot(left), self.undot(right)) {
             (Value::Variable(l), Value::Variable(r)) => self.in_relationships.push((l, r)),
             (val, Value::Variable(var)) => self.contained_values.push((Term::from(val), var)),
-            _ => unsupported_op_error(Operation {
+            _ => df_unsupported_op(Operation {
                 operator: Operator::In,
                 args: vec![left.clone(), right.clone()],
             })?,
@@ -296,22 +296,9 @@ impl VarInfo {
             Neq if args.len() == 2 => self.do_neq(&args[0], &args[1]),
             In if args.len() == 2 => self.do_in(&args[0], &args[1]),
             Unify | Eq | Assign if args.len() == 2 => self.do_unify(&args[0], &args[1]),
-            _ => unsupported_op_error(exp.clone()),
+            _ => df_unsupported_op(exp.clone()),
         }
     }
-}
-
-// TODO(gj): move these to error.rs?
-pub(crate) fn unsupported_op_error<A>(operation: Operation) -> PolarResult<A> {
-    Err(RuntimeError::DataFilteringUnsupportedOp { operation }.into())
-}
-
-pub(crate) fn unregistered_field_error<A>(var_type: &str, field: &str) -> PolarResult<A> {
-    Err(RuntimeError::DataFilteringFieldMissing {
-        var_type: var_type.to_string(),
-        field: field.to_string(),
-    }
-    .into())
 }
 
 impl FilterPlan {
@@ -811,7 +798,7 @@ impl<'a> ResultSetBuilder<'a> {
             Some(fs) => fs.iter().fold(Ok(self), |this, (field, child)| {
                 let this = this?;
                 match this.types.get(var_type).and_then(|m| m.get(field)) {
-                    None => unregistered_field_error(var_type, field),
+                    None => df_field_missing(var_type, field),
                     Some(Type::Relation {
                         other_class_tag,
                         my_field,

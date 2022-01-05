@@ -302,7 +302,7 @@ mod test {
     use super::*;
 
     use crate::bindings::Bindings;
-    use crate::error::{ErrorKind, PolarError, RuntimeError};
+    use crate::error::{ErrorKind, PolarError, PolarResult, RuntimeError};
     use crate::events::QueryEvent;
     use crate::formatting::ToPolarString;
     use crate::polar::Polar;
@@ -385,7 +385,7 @@ mod test {
         }};
     }
 
-    fn next_binding(query: &mut Query) -> Result<Bindings, PolarError> {
+    fn next_binding(query: &mut Query) -> PolarResult<Bindings> {
         let event = query.next_event()?;
         if let QueryEvent::Result { bindings, .. } = event {
             Ok(bindings)
@@ -394,7 +394,7 @@ mod test {
         }
     }
 
-    type TestResult = Result<(), PolarError>;
+    type TestResult = PolarResult<()>;
 
     #[test]
     fn basic_test() -> TestResult {
