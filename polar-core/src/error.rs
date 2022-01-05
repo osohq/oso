@@ -59,7 +59,7 @@ impl PolarError {
         use ErrorKind::*;
         match &self.0 {
             Operational(o) => "OperationalError::".to_string() + o.as_ref(),
-            Parse(p) => "ParseError::".to_string() + p.as_ref(),
+            Parse(p) => "ParseError::".to_string() + p.kind.as_ref(),
             Runtime(r) => "RuntimeError::".to_string() + r.as_ref(),
             Validation(v) => "ValidationError::".to_string() + v.as_ref(),
         }
@@ -67,32 +67,28 @@ impl PolarError {
 
     pub fn get_context(&self) -> Option<Context> {
         use ErrorKind::*;
-        use ParseError::*;
+        use ParseErrorKind::*;
         use RuntimeError::*;
         use ValidationError::*;
 
         match &self.0 {
-            Parse(e) => match e {
+            Parse(e) => match &e.kind {
                 // These errors track `loc` (left bound) and `token`, and we calculate right bound
                 // as `loc + token.len()`.
-                DuplicateKey {
-                    key: token,
-                    loc,
-                    source,
-                }
-                | ExtraToken { token, loc, source }
-                | IntegerOverflow { token, loc, source }
-                | InvalidFloat { token, loc, source }
-                | ReservedWord { token, loc, source }
-                | UnrecognizedToken { token, loc, source } => {
-                    Some(Context::new(source, *loc, loc + token.len()))
+                DuplicateKey { key: token, loc }
+                | ExtraToken { token, loc }
+                | IntegerOverflow { token, loc }
+                | InvalidFloat { token, loc }
+                | ReservedWord { token, loc }
+                | UnrecognizedToken { token, loc } => {
+                    Some(Context::new(&e.source, *loc, loc + token.len()))
                 }
 
                 // These errors track `loc` and only pertain to a single character, so right bound
                 // of span is also `loc`.
-                InvalidTokenCharacter { loc, source, .. }
-                | InvalidToken { loc, source }
-                | UnrecognizedEOF { loc, source } => Some(Context::new(source, *loc, *loc)),
+                InvalidTokenCharacter { loc, .. }
+                | InvalidToken { loc }
+                | UnrecognizedEOF { loc } => Some(Context::new(&e.source, *loc, *loc)),
 
                 // These errors track `term`, from which we calculate the span.
                 WrongValueType { term, .. } => term.parsed_context().cloned(),
@@ -170,69 +166,18 @@ impl From<PolarError> for FormattedPolarError {
     }
 }
 
-#[derive(AsRefStr, Clone, Debug, Serialize)]
-pub enum ParseError {
-    IntegerOverflow {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        token: String,
-        loc: usize,
-    },
-    InvalidTokenCharacter {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        token: String,
-        c: char,
-        loc: usize,
-    },
-    InvalidToken {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        loc: usize,
-    },
-    #[allow(clippy::upper_case_acronyms)]
-    UnrecognizedEOF {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        loc: usize,
-    },
-    UnrecognizedToken {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        token: String,
-        loc: usize,
-    },
-    ExtraToken {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        token: String,
-        loc: usize,
-    },
-    ReservedWord {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        token: String,
-        loc: usize,
-    },
-    InvalidFloat {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        token: String,
-        loc: usize,
-    },
-    WrongValueType {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        loc: usize,
-        term: Term,
-        expected: String,
-    },
-    DuplicateKey {
-        #[serde(skip_serializing)]
-        source: Arc<Source>,
-        loc: usize,
-        key: String,
-    },
+#[derive(Clone, Debug, Serialize)]
+#[serde(transparent)]
+pub struct ParseError {
+    pub kind: ParseErrorKind,
+    #[serde(skip_serializing)]
+    pub source: Arc<Source>,
+}
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.kind)
+    }
 }
 
 impl From<ParseError> for PolarError {
@@ -241,7 +186,52 @@ impl From<ParseError> for PolarError {
     }
 }
 
-impl fmt::Display for ParseError {
+#[derive(AsRefStr, Clone, Debug, Serialize)]
+pub enum ParseErrorKind {
+    IntegerOverflow {
+        token: String,
+        loc: usize,
+    },
+    InvalidTokenCharacter {
+        token: String,
+        c: char,
+        loc: usize,
+    },
+    InvalidToken {
+        loc: usize,
+    },
+    #[allow(clippy::upper_case_acronyms)]
+    UnrecognizedEOF {
+        loc: usize,
+    },
+    UnrecognizedToken {
+        token: String,
+        loc: usize,
+    },
+    ExtraToken {
+        token: String,
+        loc: usize,
+    },
+    ReservedWord {
+        token: String,
+        loc: usize,
+    },
+    InvalidFloat {
+        token: String,
+        loc: usize,
+    },
+    WrongValueType {
+        loc: usize,
+        term: Term,
+        expected: String,
+    },
+    DuplicateKey {
+        loc: usize,
+        key: String,
+    },
+}
+
+impl fmt::Display for ParseErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::IntegerOverflow { token, .. } => {

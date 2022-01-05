@@ -359,7 +359,7 @@ macro_rules! qparse {
     ($query:expr, $err:pat) => {
         assert!(matches!(
             polar().load_str($query).unwrap_err(),
-            PolarError(ErrorKind::Parse($err))
+            PolarError(ErrorKind::Parse(ParseError { kind: $err, .. }))
         ));
     };
 }
@@ -2032,11 +2032,11 @@ fn test_matches() {
 
 #[test]
 fn test_keyword_call() {
-    qparse!("cut(a) if a;", ParseError::ReservedWord { .. });
-    qparse!("debug(a) if a;", ParseError::ReservedWord { .. });
+    qparse!("cut(a) if a;", ParseErrorKind::ReservedWord { .. });
+    qparse!("debug(a) if a;", ParseErrorKind::ReservedWord { .. });
     qparse!(
         "foo(debug) if debug = 1;",
-        ParseError::UnrecognizedToken { .. }
+        ParseErrorKind::UnrecognizedToken { .. }
     );
 }
 
@@ -2060,15 +2060,15 @@ fn test_keyword_dot() -> TestResult {
 /// Test that rule heads work correctly when unification or specializers are used.
 #[test]
 fn test_unify_rule_head() -> TestResult {
-    qparse!("f(Foo{a: 1});", ParseError::UnrecognizedToken { .. });
+    qparse!("f(Foo{a: 1});", ParseErrorKind::UnrecognizedToken { .. });
     qparse!(
         "f(new Foo(a: Foo{a: 1}));",
-        ParseError::UnrecognizedToken { .. }
+        ParseErrorKind::UnrecognizedToken { .. }
     );
-    qparse!("f(x: new Foo(a: 1));", ParseError::ReservedWord { .. });
+    qparse!("f(x: new Foo(a: 1));", ParseErrorKind::ReservedWord { .. });
     qparse!(
         "f(x: Foo{a: new Foo(a: 1)});",
-        ParseError::ReservedWord { .. }
+        ParseErrorKind::ReservedWord { .. }
     );
 
     let p = polar();
@@ -2250,7 +2250,7 @@ fn test_assignment() {
     qeval(&p, "x := y and y = 6 and x = 6");
 
     // confirm old syntax -> parse error
-    qparse!("f(x) := g(x);", ParseError::UnrecognizedToken { .. });
+    qparse!("f(x) := g(x);", ParseErrorKind::UnrecognizedToken { .. });
 }
 
 #[test]

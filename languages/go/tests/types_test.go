@@ -63,7 +63,7 @@ func TestDeserialize(t *testing.T) {
 	expectedErr := errors.FormattedPolarError{
 		Kind: ErrorKind{
 			ErrorKindParse{
-				ParseErrorInvalidTokenCharacter{
+				ParseErrorKindInvalidTokenCharacter{
 					Token: "this is not",
 					C:     "\n",
 					Loc:   24,

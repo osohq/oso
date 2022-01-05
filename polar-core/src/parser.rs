@@ -35,38 +35,37 @@ pub enum Line {
 }
 
 fn lalrpop_error_to_polar_error(
-    e: ParseError<usize, lexer::Token, error::ParseError>,
+    e: ParseError<usize, lexer::Token, error::ParseErrorKind>,
     source: &Arc<Source>,
 ) -> error::ParseError {
-    match e {
-        ParseError::InvalidToken { location: loc } => error::ParseError::InvalidToken {
-            loc,
-            source: source.clone(),
-        },
-        ParseError::UnrecognizedEOF { location: loc, .. } => error::ParseError::UnrecognizedEOF {
-            loc,
-            source: source.clone(),
-        },
+    let kind = match e {
+        ParseError::InvalidToken { location: loc } => error::ParseErrorKind::InvalidToken { loc },
+        ParseError::UnrecognizedEOF { location: loc, .. } => {
+            error::ParseErrorKind::UnrecognizedEOF { loc }
+        }
         ParseError::UnrecognizedToken {
             token: (loc, t, _), ..
         } => match t {
-            Token::Debug | Token::Cut | Token::In | Token::New => error::ParseError::ReservedWord {
+            Token::Debug | Token::Cut | Token::In | Token::New => {
+                error::ParseErrorKind::ReservedWord {
+                    token: t.to_string(),
+                    loc,
+                }
+            }
+            _ => error::ParseErrorKind::UnrecognizedToken {
                 token: t.to_string(),
                 loc,
-                source: source.clone(),
-            },
-            _ => error::ParseError::UnrecognizedToken {
-                token: t.to_string(),
-                loc,
-                source: source.clone(),
             },
         },
-        ParseError::ExtraToken { token: (loc, t, _) } => error::ParseError::ExtraToken {
+        ParseError::ExtraToken { token: (loc, t, _) } => error::ParseErrorKind::ExtraToken {
             token: t.to_string(),
             loc,
-            source: source.clone(),
         },
         ParseError::User { error } => error,
+    };
+    error::ParseError {
+        source: source.clone(),
+        kind,
     }
 }
 
@@ -92,7 +91,7 @@ pub fn parse_rules(source: &Arc<Source>) -> Result<Vec<Rule>, error::ParseError>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::ParseError::*;
+    use crate::error::ParseErrorKind::*;
     use crate::formatting::ToPolarString;
     use pretty_assertions::assert_eq;
 
@@ -102,8 +101,8 @@ mod tests {
     }
 
     #[track_caller]
-    fn parse_term_error(src: &str) -> error::ParseError {
-        super::parse_query(&source!(src)).unwrap_err()
+    fn parse_term_error(src: &str) -> error::ParseErrorKind {
+        super::parse_query(&source!(src)).unwrap_err().kind
     }
 
     #[track_caller]
