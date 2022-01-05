@@ -10,11 +10,9 @@ draft: true
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
-### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
+### Go
 
 #### Breaking changes
-
-<!-- TODO: remove warning and replace with "None" if no breaking changes. -->
 
 {{% callout "Warning" "orange" %}}
   This release contains breaking changes. Be sure to follow migration steps
@@ -23,9 +21,30 @@ draft: true
 
 ##### Updated Go type checking behavior
 
-When evaluating whether a given query variable matches a Go type Polar will now use direct instance comparisons instead of Go's `reflect.ConvertibleTo` functionality. This change resolves false-positive type checking results where discrete structs with identical sets of fields were considered to be equivalent. 
+When evaluating whether a given query variable matches a Go type Polar will now use direct instance comparisons instead of Go's `reflect.ConvertibleTo` functionality. This change resolves false-positive type checking results where discrete structs with identical sets of fields were considered to be equivalent.
 
 This change has implications for the use of NewTypes in Polar rule definitions. Rules that are defined using NewTypes will now only match instances of the NewType and no longer match the underlying wrapped type.
+
+Rules which consume NewTypes must now be specialized over the NewType directly and not the underlying wrapped type.
+
+```go
+type Role string
+const (
+    Admin Role = "admin"
+    User Role = "user"
+)
+```
+
+Where previously it was possible to utilize this `Role` type as interchangeable with that of `string`:
+```polar
+has_role(user: User, role String, resource: Resource) if ...
+```
+
+This rule definition must be rewritten as follows:
+
+```polar
+has_role(user: User, role: Role, resource: Resource) if ...
+```
 
 Link to [migration guide]().
 
