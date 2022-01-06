@@ -80,7 +80,6 @@ pub fn parse_rules(src_id: u64, src: &str) -> Result<Vec<Rule>, error::ParseErro
 mod tests {
     use super::*;
     use crate::error::ParseError::*;
-    use crate::formatting::ToPolarString;
     use pretty_assertions::assert_eq;
 
     #[track_caller]
@@ -133,7 +132,7 @@ mod tests {
             exp2,
             term!(op!(Dot, term!(sym!("foo")), term!(call!("a", [sym!("b")])))),
             "{}",
-            exp2.to_polar()
+            exp2
         );
         let rule = parse_rule(r#"f(x) if g(x);"#);
         assert_eq!(rule, rule!("f", [sym!("x")] => call!("g", [sym!("x")])));
@@ -192,9 +191,9 @@ mod tests {
         a(1);b(2);c(3);
         "#;
         let results = parse_rules(0, f).unwrap();
-        assert_eq!(results[0].to_polar(), r#"a(1);"#);
-        assert_eq!(results[1].to_polar(), r#"b(2);"#);
-        assert_eq!(results[2].to_polar(), r#"c(3);"#);
+        assert_eq!(results[0].to_string(), r#"a(1);"#);
+        assert_eq!(results[1].to_string(), r#"b(2);"#);
+        assert_eq!(results[2].to_string(), r#"c(3);"#);
     }
 
     #[test]
@@ -228,14 +227,14 @@ mod tests {
     fn test_parse_new() {
         let f = r#"a(x) if x = new Foo(a: 1);"#;
         let results = parse_rules(0, f).unwrap();
-        assert_eq!(results[0].to_polar(), r#"a(x) if x = new Foo(a: 1);"#);
+        assert_eq!(results[0].to_string(), r#"a(x) if x = new Foo(a: 1);"#);
     }
 
     #[test]
     fn test_parse_new_boa_constructor() {
         let f = r#"a(x) if x = new Foo(1, 2);"#;
         let results = parse_rules(0, f).unwrap();
-        assert_eq!(results[0].to_polar(), r#"a(x) if x = new Foo(1, 2);"#);
+        assert_eq!(results[0].to_string(), r#"a(x) if x = new Foo(1, 2);"#);
 
         // test trailing comma
         let f = r#"a(x) if x = new Foo(1,);"#;
@@ -247,13 +246,13 @@ mod tests {
         let f = r#"a(x) if x = new Foo(1, 2, bar: 3, baz:4);"#;
         let results = parse_rules(0, f).unwrap();
         assert_eq!(
-            results[0].to_polar(),
+            results[0].to_string(),
             r#"a(x) if x = new Foo(1, 2, bar: 3, baz: 4);"#
         );
         let f = r#"a(x) if x = new Foo(bar: 3, baz: 4);"#;
         let results = parse_rules(0, f).unwrap();
         assert_eq!(
-            results[0].to_polar(),
+            results[0].to_string(),
             r#"a(x) if x = new Foo(bar: 3, baz: 4);"#
         );
 
@@ -270,15 +269,15 @@ mod tests {
     #[test]
     fn test_parse_matches() {
         let term = parse_query("{} matches {}");
-        assert_eq!(term.to_polar(), "{} matches {}");
+        assert_eq!(term.to_string(), "{} matches {}");
         let term = parse_query("{x: 1} matches {}");
-        assert_eq!(term.to_polar(), "{x: 1} matches {}");
+        assert_eq!(term.to_string(), "{x: 1} matches {}");
     }
 
     #[test]
     fn test_parse_rest_vars() {
         let q = "[1, 2, *x] = [*rest]";
-        assert_eq!(parse_query(q).to_polar(), q);
+        assert_eq!(parse_query(q).to_string(), q);
 
         let e = super::parse_query(0, "[1, 2, 3] = [*rest, 3]").expect_err("parse error");
         assert!(matches!(e, UnrecognizedToken { .. }));
@@ -290,10 +289,10 @@ mod tests {
         assert!(matches!(e, UnrecognizedToken { .. }));
 
         let q = "[1, 2, 3] matches [1, 2, 3]";
-        assert_eq!(parse_query(q).to_polar(), q, "{} -- {}", q, parse_query(q));
+        assert_eq!(parse_query(q).to_string(), q, "{} -- {}", q, parse_query(q));
 
         let q = "[1, 2, 3] matches [1, *rest]";
-        assert_eq!(parse_query(q).to_polar(), q, "{} -- {}", q, parse_query(q));
+        assert_eq!(parse_query(q).to_string(), q, "{} -- {}", q, parse_query(q));
     }
 
     #[test]

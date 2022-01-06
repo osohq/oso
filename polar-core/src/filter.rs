@@ -126,7 +126,7 @@ impl PathVar {
                 Ok(pv)
             }
             Variable(Symbol(var)) => Ok(var.clone().into()),
-            _ => invalid_state_error(format!("PathVar::from_term({})", t.to_polar())),
+            _ => invalid_state_error(format!("PathVar::from_term({})", t)),
         }
     }
 }
@@ -167,7 +167,7 @@ impl Filter {
         use {Operator::*, Value::*};
 
         if std::env::var("POLAR_EXPLAIN").is_ok() {
-            eprintln!("{}", ands.to_polar());
+            eprintln!("{}", ands);
         }
 
         let term2expr = |i: Term| match i.value().as_expression() {
@@ -194,7 +194,7 @@ impl Filter {
             }
 
             // oops, we don't know how to handle this!
-            _ => invalid_state_error(ands.to_polar()),
+            _ => invalid_state_error(ands.to_string()),
         }
     }
 
@@ -534,7 +534,7 @@ impl Display for Datum {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         use Datum::*;
         match self {
-            Immediate(val) => write!(f, "{}", val.to_polar()),
+            Immediate(val) => write!(f, "{}", val),
             Field(Projection(typ, None)) => write!(f, "{}", typ),
             Field(Projection(typ, Some(field))) => write!(f, "{}.{}", typ, field),
         }
@@ -752,7 +752,7 @@ mod test {
         ];
 
         let to_s =
-            |ooa: Vec<Term>| format!("{:?}", ooa.iter().map(|a| a.to_polar()).collect::<Vec<_>>());
+            |ooa: Vec<Term>| format!("{:?}", ooa.iter().map(Term::to_string).collect::<Vec<_>>());
 
         assert_eq!(to_s(oa), to_s(vec_of_ands(ex)));
     }

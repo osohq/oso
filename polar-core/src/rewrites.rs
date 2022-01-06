@@ -258,7 +258,7 @@ pub fn unwrap_and(term: &Term) -> TermList {
             operator: Operator::And,
             args,
         }) => args.clone(),
-        _ => panic!("expected And, found {}", term.to_polar()),
+        _ => panic!("expected And, found {}", term),
     }
 }
 
@@ -277,7 +277,6 @@ pub fn rewrite_rule(rule: Rule, kb: &mut KnowledgeBase) -> Rule {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::formatting::ToPolarString;
 
     // Re-defined here for convenience
     fn parse_query(src: &str) -> Term {
@@ -293,7 +292,7 @@ mod tests {
         let mut kb = KnowledgeBase::new();
         let query = parse_query("[1, 2, 3] = [_, _, _]");
         assert_eq!(
-            rewrite_term(query, &mut kb).to_polar(),
+            rewrite_term(query, &mut kb).to_string(),
             "[1, 2, 3] = [_1, _2, _3]"
         );
     }
@@ -303,24 +302,24 @@ mod tests {
         let mut kb = KnowledgeBase::new();
         let rules = parse_rules("f(a.b);");
         let rule = rules[0].clone();
-        assert_eq!(rule.to_polar(), "f(a.b);");
+        assert_eq!(rule.to_string(), "f(a.b);");
 
         // First rewrite
         let rule = rewrite_rule(rule, &mut kb);
-        assert_eq!(rule.to_polar(), "f(_value_1) if a.b = _value_1;");
+        assert_eq!(rule.to_string(), "f(_value_1) if a.b = _value_1;");
 
         // Check we can parse the rules back again
-        let again = parse_rules(&rule.to_polar());
+        let again = parse_rules(&rule.to_string());
         let again_rule = again[0].clone();
-        assert_eq!(again_rule.to_polar(), rule.to_polar());
+        assert_eq!(again_rule.to_string(), rule.to_string());
 
         // Chained lookups
         let rules = parse_rules("f(a.b.c);");
         let rule = rules[0].clone();
-        assert_eq!(rule.to_polar(), "f(a.b.c);");
+        assert_eq!(rule.to_string(), "f(a.b.c);");
         let rule = rewrite_rule(rule, &mut kb);
         assert_eq!(
-            rule.to_polar(),
+            rule.to_string(),
             "f(_value_3) if a.b = _value_2 and _value_2.c = _value_3;"
         );
     }
@@ -331,13 +330,13 @@ mod tests {
         let rules = parse_rules("foo(z, y) if forall(x in y, x.n < z);");
         let rule = rewrite_rule(rules[0].clone(), &mut kb);
         assert_eq!(
-            rule.to_polar(),
+            rule.to_string(),
             "foo(z, y) if forall(x in y, _value_1 < z and x.n = _value_1);"
         );
 
         let query = rewrite_term(parse_query("forall(x in y, x.n < z)"), &mut kb);
         assert_eq!(
-            query.to_polar(),
+            query.to_string(),
             "forall(x in y, _value_2 < z and x.n = _value_2)"
         );
     }
@@ -349,20 +348,20 @@ mod tests {
         // Lookups with args
         let rules = parse_rules("f(a, c) if a.b(c);");
         let rule = rules[0].clone();
-        assert_eq!(rule.to_polar(), "f(a, c) if a.b(c);");
+        assert_eq!(rule.to_string(), "f(a, c) if a.b(c);");
         let rule = rewrite_rule(rule, &mut kb);
         assert_eq!(
-            rule.to_polar(),
+            rule.to_string(),
             "f(a, c) if a.b(c) = _value_1 and _value_1;"
         );
 
         // Nested lookups
         let rules = parse_rules("f(a, c, e) if a.b(c.d(e.f()));");
         let rule = rules[0].clone();
-        assert_eq!(rule.to_polar(), "f(a, c, e) if a.b(c.d(e.f()));");
+        assert_eq!(rule.to_string(), "f(a, c, e) if a.b(c.d(e.f()));");
         let rule = rewrite_rule(rule, &mut kb);
         assert_eq!(
-            rule.to_polar(),
+            rule.to_string(),
             "f(a, c, e) if e.f() = _value_2 and c.d(_value_2) = _value_3 and a.b(_value_3) = _value_4 and _value_4;"
         );
     }
@@ -371,28 +370,28 @@ mod tests {
     fn rewrite_terms() {
         let mut kb = KnowledgeBase::new();
         let term = parse_query("x and a.b");
-        assert_eq!(term.to_polar(), "x and a.b");
+        assert_eq!(term.to_string(), "x and a.b");
         assert_eq!(
-            rewrite_term(term, &mut kb).to_polar(),
+            rewrite_term(term, &mut kb).to_string(),
             "x and a.b = _value_1 and _value_1"
         );
 
         let query = parse_query("f(a.b().c)");
-        assert_eq!(query.to_polar(), "f(a.b().c)");
+        assert_eq!(query.to_string(), "f(a.b().c)");
         assert_eq!(
-            rewrite_term(query, &mut kb).to_polar(),
+            rewrite_term(query, &mut kb).to_string(),
             "a.b() = _value_2 and _value_2.c = _value_3 and f(_value_3)"
         );
 
         let term = parse_query("a.b = 1");
         assert_eq!(
-            rewrite_term(term, &mut kb).to_polar(),
+            rewrite_term(term, &mut kb).to_string(),
             "a.b = _value_4 and _value_4 = 1"
         );
         let term = parse_query("{x: 1}.x = 1");
-        assert_eq!(term.to_polar(), "{x: 1}.x = 1");
+        assert_eq!(term.to_string(), "{x: 1}.x = 1");
         assert_eq!(
-            rewrite_term(term, &mut kb).to_polar(),
+            rewrite_term(term, &mut kb).to_string(),
             "{x: 1}.x = _value_5 and _value_5 = 1"
         );
     }
@@ -402,38 +401,38 @@ mod tests {
         let mut kb = KnowledgeBase::new();
 
         let term = parse_query("0 - 0 = 0");
-        assert_eq!(term.to_polar(), "0 - 0 = 0");
+        assert_eq!(term.to_string(), "0 - 0 = 0");
         assert_eq!(
-            rewrite_term(term, &mut kb).to_polar(),
+            rewrite_term(term, &mut kb).to_string(),
             "0 - 0 = _op_1 and _op_1 = 0"
         );
 
         let rules = parse_rules("sum(a, b, a + b);");
         let rule = rules[0].clone();
-        assert_eq!(rule.to_polar(), "sum(a, b, a + b);");
+        assert_eq!(rule.to_string(), "sum(a, b, a + b);");
         let rule = rewrite_rule(rule, &mut kb);
-        assert_eq!(rule.to_polar(), "sum(a, b, _op_2) if a + b = _op_2;");
+        assert_eq!(rule.to_string(), "sum(a, b, _op_2) if a + b = _op_2;");
 
         let rules = parse_rules("fib(n, a+b) if fib(n-1, a) and fib(n-2, b);");
         let rule = rules[0].clone();
         let rule = rewrite_rule(rule, &mut kb);
-        assert_eq!(rule.to_polar(), "fib(n, _op_5) if n - 1 = _op_3 and fib(_op_3, a) and n - 2 = _op_4 and fib(_op_4, b) and a + b = _op_5;");
+        assert_eq!(rule.to_string(), "fib(n, _op_5) if n - 1 = _op_3 and fib(_op_3, a) and n - 2 = _op_4 and fib(_op_4, b) and a + b = _op_5;");
     }
 
     #[test]
     fn rewrite_nested_literal() {
         let mut kb = KnowledgeBase::new();
         let term = parse_query("new Foo(x: bar.y)");
-        assert_eq!(term.to_polar(), "new Foo(x: bar.y)");
+        assert_eq!(term.to_string(), "new Foo(x: bar.y)");
         assert_eq!(
-            rewrite_term(term, &mut kb).to_polar(),
+            rewrite_term(term, &mut kb).to_string(),
             "bar.y = _value_1 and new (Foo(x: _value_1), _instance_2) and _instance_2"
         );
 
         let term = parse_query("f(new Foo(x: bar.y))");
-        assert_eq!(term.to_polar(), "f(new Foo(x: bar.y))");
+        assert_eq!(term.to_string(), "f(new Foo(x: bar.y))");
         assert_eq!(
-            rewrite_term(term, &mut kb).to_polar(),
+            rewrite_term(term, &mut kb).to_string(),
             "bar.y = _value_3 and new (Foo(x: _value_3), _instance_4) and f(_instance_4)"
         );
     }
@@ -442,11 +441,11 @@ mod tests {
     fn rewrite_class_constructor() {
         let mut kb = KnowledgeBase::new();
         let term = parse_query("new Foo(a: 1, b: 2)");
-        assert_eq!(term.to_polar(), "new Foo(a: 1, b: 2)");
+        assert_eq!(term.to_string(), "new Foo(a: 1, b: 2)");
 
         // @ means external constructor
         assert_eq!(
-            rewrite_term(term, &mut kb).to_polar(),
+            rewrite_term(term, &mut kb).to_string(),
             "new (Foo(a: 1, b: 2), _instance_1) and _instance_1"
         );
     }
@@ -455,10 +454,10 @@ mod tests {
     fn rewrite_nested_class_constructor() {
         let mut kb = KnowledgeBase::new();
         let term = parse_query("new Foo(a: 1, b: new Foo(a: 2, b: 3))");
-        assert_eq!(term.to_polar(), "new Foo(a: 1, b: new Foo(a: 2, b: 3))");
+        assert_eq!(term.to_string(), "new Foo(a: 1, b: new Foo(a: 2, b: 3))");
 
         assert_eq!(
-            rewrite_term(term, &mut kb).to_polar(),
+            rewrite_term(term, &mut kb).to_string(),
             "new (Foo(a: 2, b: 3), _instance_1) and \
              new (Foo(a: 1, b: _instance_1), _instance_2) and _instance_2"
         );
@@ -469,12 +468,12 @@ mod tests {
         let mut kb = KnowledgeBase::new();
         let mut rules = parse_rules("rule_test(new Foo(a: 1, b: 2));");
         let rule = rules.pop().unwrap();
-        assert_eq!(rule.to_polar(), "rule_test(new Foo(a: 1, b: 2));");
+        assert_eq!(rule.to_string(), "rule_test(new Foo(a: 1, b: 2));");
         assert!(rules.is_empty());
 
         let rule = rewrite_rule(rule, &mut kb);
         assert_eq!(
-            rule.to_polar(),
+            rule.to_string(),
             "rule_test(_instance_1) if new (Foo(a: 1, b: 2), _instance_1);"
         )
     }
@@ -483,10 +482,10 @@ mod tests {
     fn rewrite_not_with_lookup() {
         let mut kb = KnowledgeBase::new();
         let term = parse_query("not foo.x = 1");
-        assert_eq!(term.to_polar(), "not foo.x = 1");
+        assert_eq!(term.to_string(), "not foo.x = 1");
 
         pretty_assertions::assert_eq!(
-            rewrite_term(term, &mut kb).to_polar(),
+            rewrite_term(term, &mut kb).to_string(),
             "not (_value_1 = 1 and foo.x = _value_1)"
         )
     }

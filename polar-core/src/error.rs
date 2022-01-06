@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     diagnostic::{Context, Range},
-    formatting::to_polar::ToPolarString,
     kb::KnowledgeBase,
     resource_block::Declaration,
     rules::Rule,
@@ -429,7 +428,7 @@ The expression is: {expr}
                     "#,
                     operation.operator,
                     operation.args.len(),
-                    operation.to_polar()
+                    operation
                 );
                 write!(f, "{}", msg)
             }

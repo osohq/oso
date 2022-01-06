@@ -20,7 +20,6 @@ use crate::diagnostic::{Context, Range};
 use crate::error::{self, RuntimeError};
 use crate::events::*;
 use crate::folder::Folder;
-use crate::formatting::ToPolarString;
 use crate::inverter::Inverter;
 use crate::kb::*;
 use crate::lexer::loc_to_pos;
@@ -1390,13 +1389,13 @@ impl PolarVirtualMachine {
                     .clone()
                     .unwrap_or_else(Vec::new)
                     .into_iter()
-                    .map(|a| a.to_polar());
+                    .map(|a| a.to_string());
                 let kwargs = kwargs
                     .clone()
                     .unwrap_or_else(BTreeMap::new)
                     .into_iter()
                     .map(|(k, v)| format!("{}: {}", k, v));
-                msg.push_str(&args.chain(kwargs).collect::<Vec<String>>().join(", "));
+                msg.push_str(&args.chain(kwargs).collect::<Vec<_>>().join(", "));
                 msg.push(')');
                 msg
             },
@@ -1694,8 +1693,8 @@ impl PolarVirtualMachine {
                     format!(
                         "debug({})",
                         args.iter()
-                            .map(|arg| self.deref(arg).to_polar())
-                            .collect::<Vec<String>>()
+                            .map(|arg| self.deref(arg).to_string())
+                            .collect::<Vec<_>>()
                             .join(", ")
                     )
                 });
@@ -1705,8 +1704,8 @@ impl PolarVirtualMachine {
                 self.print(
                     &args
                         .iter()
-                        .map(|arg| self.deref(arg).to_polar())
-                        .collect::<Vec<String>>()
+                        .map(|arg| self.deref(arg).to_string())
+                        .collect::<Vec<_>>()
                         .join(", "),
                 );
             }
@@ -1716,7 +1715,7 @@ impl PolarVirtualMachine {
                 }
                 let result = args.pop().unwrap();
                 if !matches!(result.value(), Value::Variable(_)) {
-                    return invalid_state(format!("Not a variable: {}", result.to_polar()));
+                    return invalid_state(format!("Not a variable: {}", result));
                 }
                 let constructor = args.pop().unwrap();
 
@@ -1732,7 +1731,7 @@ impl PolarVirtualMachine {
                     constructor.clone_with_value(Value::ExternalInstance(ExternalInstance {
                         instance_id,
                         constructor: Some(constructor.clone()),
-                        repr: Some(constructor.to_polar()),
+                        repr: Some(constructor.to_string()),
                         class_repr,
                     }));
 
@@ -1837,7 +1836,7 @@ impl PolarVirtualMachine {
 
         let mut args = args.clone();
         if args.len() < 2 {
-            return invalid_state(format!("query_op_helper: wrong arity: {}", term.to_polar()));
+            return invalid_state(format!("query_op_helper: wrong arity: {}", term));
         }
         let left = &args[0];
         let right = &args[1];
@@ -1899,7 +1898,7 @@ impl PolarVirtualMachine {
             | (_, Value::Expression(_))
             | (Value::RestVariable(_), _)
             | (_, Value::RestVariable(_)) => {
-                return invalid_state(format!("invalid query: {}", term.to_polar()));
+                return invalid_state(format!("invalid query: {}", term));
             }
             _ => {}
         };
@@ -1947,10 +1946,7 @@ impl PolarVirtualMachine {
         let Operation { operator: op, args } = term.value().as_expression().unwrap();
 
         if args.len() != 2 {
-            return invalid_state(format!(
-                "comparison_op_helper: wrong arity: {}",
-                term.to_polar()
-            ));
+            return invalid_state(format!("comparison_op_helper: wrong arity: {}", term));
         }
         let left = &args[0];
         let right = &args[1];
@@ -1989,20 +1985,14 @@ impl PolarVirtualMachine {
         let Operation { operator: op, args } = term.value().as_expression().unwrap();
 
         if args.len() != 3 {
-            return invalid_state(format!(
-                "arithmetic_op_helper: wrong arity: {}",
-                term.to_polar()
-            ));
+            return invalid_state(format!("arithmetic_op_helper: wrong arity: {}", term));
         }
         let left = &args[0];
         let right = &args[1];
         let result = &args[2];
 
         if !matches!(result.value(), Value::Variable(_)) {
-            return invalid_state(format!(
-                "arithmetic_op_helper: not a variable: {}",
-                result.to_polar()
-            ));
+            return invalid_state(format!("arithmetic_op_helper: not a variable: {}", result));
         }
 
         match (left.value(), right.value()) {
@@ -2016,7 +2006,7 @@ impl PolarVirtualMachine {
                     Operator::Rem => *left % *right,
                     _ => {
                         return Err(RuntimeError::Unsupported {
-                            msg: format!("numeric operation {}", op.to_polar()),
+                            msg: format!("numeric operation {}", op),
                             term: term.clone(),
                         });
                     }
@@ -2042,7 +2032,7 @@ impl PolarVirtualMachine {
         let Operation { args, .. } = term.value().as_expression().unwrap();
 
         if args.len() != 3 {
-            return invalid_state(format!("dot_op_helper: wrong arity: {}", term.to_polar()));
+            return invalid_state(format!("dot_op_helper: wrong arity: {}", term));
         }
         let mut args = args.clone();
         let object = &args[0];
@@ -2100,7 +2090,7 @@ impl PolarVirtualMachine {
                     object,
                     format!(
                         "can only perform lookups on dicts and instances, this is {}",
-                        object.to_polar()
+                        object
                     ),
                 ))
             }
@@ -2112,7 +2102,7 @@ impl PolarVirtualMachine {
         let Operation { args, .. } = term.value().as_expression().unwrap();
 
         if args.len() != 2 {
-            return invalid_state(format!("in_op_helper: wrong arity: {}", term.to_polar()));
+            return invalid_state(format!("in_op_helper: wrong arity: {}", term));
         }
         let item = &args[0];
         let iterable = &args[1];
@@ -2238,11 +2228,7 @@ impl PolarVirtualMachine {
                     _ => {
                         return Err(self.type_error(
                             left,
-                            format!(
-                                "cannot unify expressions directly `{}` = `{}`",
-                                left.to_polar(),
-                                right.to_polar()
-                            ),
+                            format!("cannot unify expressions directly `{}` = `{}`", left, right),
                         ))
                     }
                 }
@@ -2842,7 +2828,7 @@ impl PolarVirtualMachine {
             (Some(source), Some((left, right))) => {
                 source.src.chars().take(*right).skip(*left).collect()
             }
-            _ => term.to_polar(),
+            _ => term.to_string(),
         };
 
         if include_info {
@@ -2860,7 +2846,7 @@ impl PolarVirtualMachine {
     }
 
     pub fn rule_source(&self, rule: &Rule) -> String {
-        rule.to_polar()
+        rule.to_string()
     }
 
     fn type_error(&self, term: &Term, msg: String) -> RuntimeError {

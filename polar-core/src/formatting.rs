@@ -179,8 +179,8 @@ pub mod display {
     use crate::bindings::Binding;
     use crate::numerics::Numeric;
     use crate::resource_block::Declaration;
-    use crate::rules::Rule;
-    use crate::terms::{Call, Operator, Symbol, Term};
+    use crate::rules::{Parameter, Rule};
+    use crate::terms::{Call, Dictionary, InstanceLiteral, Operation, Operator, Symbol, Term};
     use crate::vm::*;
 
     impl fmt::Display for Binding {
@@ -202,6 +202,12 @@ pub mod display {
     }
 
     impl fmt::Display for Call {
+        fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(fmt, "{}", self.to_polar())
+        }
+    }
+
+    impl fmt::Display for Operation {
         fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(fmt, "{}", self.to_polar())
         }
@@ -329,6 +335,12 @@ pub mod display {
         }
     }
 
+    impl fmt::Display for Parameter {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            write!(fmt, "{}", self.to_polar())
+        }
+    }
+
     impl fmt::Display for Numeric {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             match self {
@@ -355,6 +367,18 @@ pub mod display {
                 Self::Debug => write!(f, "debug"),
                 Self::Info => write!(f, "info"),
             }
+        }
+    }
+
+    impl fmt::Display for InstanceLiteral {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            write!(fmt, "{}", self.to_polar())
+        }
+    }
+
+    impl fmt::Display for Dictionary {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            write!(fmt, "{}", self.to_polar())
         }
     }
 }
