@@ -265,9 +265,11 @@ impl Oso {
         value: V,
         name: &str,
     ) -> crate::Result<()> {
+        let id = self.inner.get_external_id();
         self.inner.register_constant(
             Symbol(name.to_string()),
             value.to_polar().to_term(&mut self.host),
+            id,
         )?;
         Ok(())
     }

@@ -239,7 +239,7 @@ class Host:
 
         return re.sub(r"\^\{id: ([0-9]+)\}", replace_repr, message, flags=re.M)
 
-    def to_polar(self, v):
+    def to_polar(self, v, instance_id=None):
         """Convert a Python object to a Polar term."""
         if type(v) == bool:
             val = {"Boolean": v}
@@ -307,11 +307,12 @@ class Host:
         #       ]
         #   }
         else:
-            instance_id = None
             import inspect
 
             # maintain consistent IDs for registered classes
-            if inspect.isclass(v):
+            # TODO @patrickod will `instance_id` *ever* be `None` when we're
+            # passing classes and not instances?
+            if instance_id is None and inspect.isclass(v):
                 if v in self.types:
                     instance_id = self.types[v].id
 
