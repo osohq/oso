@@ -48,7 +48,7 @@ has_relation(subject: A, "a", object: Aprime) if
 
     @dataclass
     class A:
-        groups: list[Group]
+        groups: List[Group]
 
     @dataclass
     class Aprime(A):
@@ -56,7 +56,7 @@ has_relation(subject: A, "a", object: Aprime) if
 
     @dataclass
     class User:
-        group_ids: list[int]
+        group_ids: List[int]
 
     oso = Oso()
     oso.register_class(Aprime)
