@@ -101,15 +101,13 @@ impl Visitor for AndOrPrecendenceCheck {
                         && op.operator != o.operator
                 )
             }) {
-                // TODO(gj): are these `.unwrap()`s chill?
-                let context = term.parsed_context().unwrap();
-
-                // TODO(gj): is this unchecked indexing operation chill?
-                //
-                // check if source _before_ the term contains an opening
-                // parenthesis
-                if !context.source.src[..context.left].trim().ends_with('(') {
-                    self.unparenthesized_expr.push(term.clone());
+                if let Some(context) = term.parsed_context() {
+                    // check if source _before_ the term contains an opening
+                    // parenthesis
+                    let preceding_source = context.source.src.get(..context.left);
+                    if preceding_source.map_or(false, |s| !s.trim().ends_with('(')) {
+                        self.unparenthesized_expr.push(term.clone());
+                    }
                 }
             }
         }
