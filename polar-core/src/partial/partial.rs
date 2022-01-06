@@ -1214,7 +1214,8 @@ mod test {
         let next = next_binding(&mut q)?;
         assert_partial_expressions!(next, "x" => "_this = y and 1 < _this", "y" => "x = _this and 1 < x");
         let next = next_binding(&mut q)?;
-        // TODO: This seems wrong. Should be 2 > this and this > 1 for `y` binding
+        // TODO: This seems wrong. Should be 2 > this and this > 1 for `y` binding.
+        // Not an issue for now because it's a partial of two inputs.
         assert_partial_expressions!(next, "x" => "_this = y and 2 > _this and _this > 1", "y" => "x = _this and 2 > x and x > 1");
         assert_query_done!(q);
 
@@ -1230,7 +1231,6 @@ mod test {
             term!(op!(Lt, var!("_this"), term!(2)))
         );
 
-        // TODO: This seems kind of wrong.
         assert_partial_binding!(
             next,
             "y",
