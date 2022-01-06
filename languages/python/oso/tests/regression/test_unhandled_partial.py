@@ -1,11 +1,12 @@
 import pytest
 from typing import List
 
+
 def test_unhandled_partial_gh1467():
     """Test that previously failed due to incorrect partial unification.
-    
+
     Submitted by BAH.
-    
+
     Fixed in https://github.com/osohq/oso/pull/1467."""
     POLICY = """\
 actor User {}
