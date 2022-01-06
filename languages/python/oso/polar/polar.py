@@ -254,10 +254,8 @@ class Polar:
         # TODO: @patrickod DRY this 'name' behavior up here & in cache_class
         if name is None:
             name = cls.__name__
-        class_id = self.ffi_polar.new_id()
-        # special-case of `register_constant` where we want to specify the ID
-        self.ffi_polar.register_constant(self.host.to_polar(cls, instance_id=class_id), name)
 
+        class_id = self.ffi_polar.new_id()
         self.host.cache_class(
             cls,
             name=name,
@@ -267,6 +265,10 @@ class Polar:
             exec_query=exec_query,
             combine_query=combine_query,
         )
+
+        # special-case of `register_constant` where we want to specify the ID
+        self.ffi_polar.register_constant(self.host.to_polar(cls), name)
+
 
     def register_constant(self, value, name):
         """

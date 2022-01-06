@@ -239,7 +239,7 @@ class Host:
 
         return re.sub(r"\^\{id: ([0-9]+)\}", replace_repr, message, flags=re.M)
 
-    def to_polar(self, v, instance_id=None):
+    def to_polar(self, v):
         """Convert a Python object to a Polar term."""
         if type(v) == bool:
             val = {"Boolean": v}
@@ -308,6 +308,7 @@ class Host:
         #   }
         else:
             import inspect
+            instance_id = None
 
             instance_id = None
             class_id = None

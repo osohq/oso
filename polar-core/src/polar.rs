@@ -251,7 +251,7 @@ impl Polar {
         self.kb.read().unwrap().new_id()
     }
 
-    pub fn register_constant(&self, name: Symbol, value: Term, _id: u64) -> PolarResult<()> {
+    pub fn register_constant(&self, name: Symbol, value: Term) -> PolarResult<()> {
         self.kb.write().unwrap().register_constant(name, value)
     }
 
