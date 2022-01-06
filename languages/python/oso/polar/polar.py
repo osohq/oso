@@ -253,11 +253,8 @@ class Polar:
         # TODO: let's add example usage here or at least a proper docstring for the arguments
 
         # TODO: @patrickod DRY this 'name' behavior up here & in cache_class
-        if name is None:
-            name = cls.__name__
-
         class_id = self.ffi_polar.new_id()
-        self.host.cache_class(
+        name = self.host.cache_class(
             cls,
             name=name,
             id=class_id,

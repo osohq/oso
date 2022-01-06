@@ -313,7 +313,7 @@ class Host:
             # maintain consistent IDs for registered classes
             # TODO @patrickod will `instance_id` *ever* be `None` when we're
             # passing classes and not instances?
-            if instance_id is None and inspect.isclass(v):
+            if inspect.isclass(v):
                 if v in self.types:
                     instance_id = self.types[v].id
 
@@ -322,7 +322,9 @@ class Host:
             class_repr = class_repr if class_repr in self.types else None
 
             # pass the class_id for registered types, otherwise None
-            class_id = self.types[class_repr].id if class_repr in self.types else None
+            class_id = None
+            if inspect.isclass(v) and v in self.types:
+                class_id = self.types[v].id
 
             val = {
                 "ExternalInstance": {
