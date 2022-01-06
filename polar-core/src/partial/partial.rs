@@ -335,14 +335,8 @@ mod test {
                     .into_iter()
                     .collect::<HashSet<Term>>();
             let r = hashset! { $($args),+ };
-            let fmt = |hs: &HashSet<Term>| {
-                let mut l: String = "{".into();
-                for i in hs.iter() {
-                    l += &(i.to_polar() + ", ");
-                }
-                l += "}";
-                l
-            };
+            let fmt = |hs: &HashSet<Term>| format!("{{ {} }}", hs.iter().map(|t| t.to_polar()).collect::<Vec<String>>().join(", "));
+
             assert_eq!(&l, &r, "{} != {}", fmt(&l), fmt(&r));
 
         };
@@ -2387,7 +2381,8 @@ mod test {
             r#"
             f(a) if b(a, b) and b.id = 0;
             b(a, b) if a = b;
-            "#)?;
+            "#,
+        )?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         assert_partial_expressions!(
             next_binding(&mut q)?,
