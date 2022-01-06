@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 pub use super::bindings::Bindings;
+use super::constants::Constants;
 use super::counter::Counter;
 use super::diagnostic::Diagnostic;
 use super::error::{PolarResult, RuntimeError, ValidationError};
@@ -29,7 +30,7 @@ impl RuleParamMatch {
 pub struct KnowledgeBase {
     /// A map of bindings: variable name → value. The VM uses a stack internally,
     /// but can translate to and from this type.
-    constants: Bindings,
+    constants: Constants,
     /// Map of class name -> MRO list where the MRO list is a list of class instance IDs
     mro: HashMap<Symbol, Vec<u64>>,
 
@@ -589,7 +590,11 @@ impl KnowledgeBase {
             }
             .with_context(&*self));
         }
-        self.constants.insert(name, value);
+        if let &Value::ExternalInstance(ExternalInstance { class_id, .. }) = value.value() {
+            self.constants.insert(name, value, class_id)
+        } else {
+            self.constants.insert(name, value, None);
+        }
         Ok(())
     }
 
@@ -600,7 +605,7 @@ impl KnowledgeBase {
 
     /// Getter for `constants` map without exposing it for mutation.
     pub fn get_registered_constants(&self) -> &Bindings {
-        &self.constants
+        &self.constants.symbol_to_term
     }
 
     // TODO(gj): currently no way to distinguish classes from other registered constants in the
