@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use super::diagnostic::Diagnostic;
-use super::error::ValidationError;
+use super::error::{PolarError, ValidationError};
 use super::kb::*;
 use super::rules::*;
 use super::terms::*;
@@ -191,14 +191,15 @@ impl<'kb> UndefinedRuleCallVisitor<'kb> {
         }
     }
 
-    fn errors(self) -> Vec<ValidationError> {
+    fn errors(self) -> Vec<Diagnostic> {
         self.call_terms
             .into_iter()
             .filter(|term| {
-                let call = term.value().as_call().unwrap();
-                !self.defined_rules.contains(&call.name)
+                term.value()
+                    .as_call()
+                    .map_or(false, |call| !self.defined_rules.contains(&call.name))
             })
-            .map(|term| ValidationError::UndefinedRuleCall { term })
+            .map(|term| PolarError::from(ValidationError::UndefinedRuleCall { term }).into())
             .collect()
     }
 }
@@ -223,12 +224,7 @@ pub fn check_undefined_rule_calls(kb: &KnowledgeBase) -> Vec<Diagnostic> {
     for rule in kb.get_rules().values() {
         visitor.visit_generic_rule(rule);
     }
-    visitor
-        .errors()
-        .into_iter()
-        .map(Into::into)
-        .map(Diagnostic::Error)
-        .collect()
+    visitor.errors()
 }
 
 #[cfg(test)]
