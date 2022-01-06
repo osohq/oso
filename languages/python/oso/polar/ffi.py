@@ -99,13 +99,14 @@ class Polar:
             return None
         return Query(q)
 
-    def register_constant(self, value, name):
+    def register_constant(self, value, name, id=None):
+        if id is None:
+            id = self.new_id()
         name = to_c_str(name)
         value = ffi_serialize(value)
-        result = lib.polar_register_constant(self.ptr, name, value)
+        result = lib.polar_register_constant(self.ptr, name, value, id)
         self.process_messages()
-        const_id = ffi.cast("uint64_t", self.check_result(result))
-        return int(const_id)
+        self.check_result(result)
 
     def register_mro(self, name, mro):
         name = to_c_str(name)

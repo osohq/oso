@@ -150,13 +150,15 @@ pub extern "C" fn polar_register_constant(
     polar_ptr: *mut Polar,
     name: *const c_char,
     value: *const c_char,
-) -> *mut CU64Result {
+    id: u64,
+) -> *mut CResult<c_void> {
     ffi_try!({
         let polar = unsafe { ffi_ref!(polar_ptr) };
         let name = unsafe { ffi_string!(name) };
-        let id = from_json(value)
-            .and_then(|value| polar.register_constant(terms::Symbol::new(name.as_ref()), value))?;
-        Ok(id)
+        from_json(value).and_then(|value| {
+            polar.register_constant(terms::Symbol::new(name.as_ref()), value, id)
+        })?;
+        Ok(())
     })
 }
 

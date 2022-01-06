@@ -33,8 +33,9 @@ impl Polar {
     #[wasm_bindgen(js_class = Polar, js_name = registerConstant)]
     pub fn wasm_register_constant(&mut self, name: &str, term: JsValue) -> JsResult<()> {
         let term = serde_wasm_bindgen::from_value(term)?;
+        let id = self.0.get_external_id();
         self.0
-            .register_constant(Symbol::new(name), term)
+            .register_constant(Symbol::new(name), term, id)
             .map_err(Error::from)?;
         Ok(())
     }
