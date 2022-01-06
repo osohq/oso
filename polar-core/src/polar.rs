@@ -52,7 +52,7 @@ impl Polar {
             // TODO(gj): should we also check for duplicate content across sources w/o a filename?
             let source = Arc::new(source);
             if let Some(ref filename) = source.filename {
-                kb.add_source(filename, source.clone())?;
+                kb.add_source(filename, &source)?;
             }
             // TODO(gj): we still bomb out at the first ParseError.
             let mut lines = parser::parse_lines(&source)?;

@@ -1,8 +1,15 @@
 use std::sync::Arc;
 
-use crate::lexer::Token;
-use crate::sources::Source;
 use lalrpop_util::{lalrpop_mod, ParseError};
+
+use super::{
+    error,
+    lexer::{self, Lexer, Token},
+    resource_block::Production,
+    rules::*,
+    sources::Source,
+    terms::*,
+};
 
 /// Used to denote whether an enclosed value is a value or a logical operator
 pub enum ValueOrLogical {
@@ -15,12 +22,6 @@ lalrpop_mod!(
     #[allow(clippy::all, dead_code, unused_imports, unused_mut)]
     polar
 );
-
-use super::error;
-use super::lexer::{self, Lexer};
-use super::resource_block::Production;
-use super::rules::*;
-use super::terms::*;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Line {

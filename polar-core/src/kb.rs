@@ -635,10 +635,7 @@ impl KnowledgeBase {
         self.resource_blocks.clear();
     }
 
-    // TODO(gj): should be able to assert that a Source *must* have a filename, like
-    // WithFilename<Source> or something.
-    // TODO(gj): new name for function
-    pub fn add_source(&mut self, filename: &str, source: Arc<Source>) -> PolarResult<()> {
+    pub(crate) fn add_source(&mut self, filename: &str, source: &Arc<Source>) -> PolarResult<()> {
         match (
             self.loaded_content
                 .insert(source.src.clone(), filename.to_owned()),
@@ -648,19 +645,19 @@ impl KnowledgeBase {
         ) {
             (Some(other_file), true) if other_file == filename => {
                 Err(ValidationError::FileLoading {
-                    source,
+                    source: source.clone(),
                     msg: format!("File {} has already been loaded.", filename),
                 })
             }
             (_, true) => Err(ValidationError::FileLoading {
-                source,
+                source: source.clone(),
                 msg: format!(
                     "A file with the name {}, but different contents has already been loaded.",
                     filename
                 ),
             }),
             (Some(other_file), _) => Err(ValidationError::FileLoading {
-                source,
+                source: source.clone(),
                 msg: format!(
                     "A file with the same contents as {} named {} has already been loaded.",
                     filename, other_file
@@ -854,9 +851,8 @@ mod tests {
     use crate::error::ErrorKind::Validation;
 
     #[test]
-    /// Test validation implemented in `check_file()`.
     fn test_add_source_file_validation() {
-        fn expect_error(kb: &mut KnowledgeBase, name: &str, source: Arc<Source>, expected: &str) {
+        fn expect_error(kb: &mut KnowledgeBase, name: &str, source: &Arc<Source>, expected: &str) {
             let msg = match kb.add_source(name, source).unwrap_err().0 {
                 Validation(ValidationError::FileLoading { msg, .. }) => msg,
                 e => panic!("Unexpected error: {}", e),
@@ -871,27 +867,27 @@ mod tests {
 
         // Load source1.
         let source1 = Arc::new(Source::new_with_name(filename1, src));
-        kb.add_source(filename1, source1.clone()).unwrap();
+        kb.add_source(filename1, &source1).unwrap();
 
         // Cannot load source1 a second time.
         let expected = format!("File {} has already been loaded.", filename1);
-        expect_error(&mut kb, filename1, source1, &expected);
+        expect_error(&mut kb, filename1, &source1, &expected);
 
         // Cannot load source2 with the same name as source1 but different contents.
-        let source2 = Source::new_with_name(filename1, "g();");
+        let source2 = Arc::new(Source::new_with_name(filename1, "g();"));
         let expected = format!(
             "A file with the name {}, but different contents has already been loaded.",
             filename1
         );
-        expect_error(&mut kb, filename1, source2.into(), &expected);
+        expect_error(&mut kb, filename1, &source2, &expected);
 
         // Cannot load source3 with the same contents as source1 but a different name.
-        let source3 = Source::new_with_name(filename2, src);
+        let source3 = Arc::new(Source::new_with_name(filename2, src));
         let expected = format!(
             "A file with the same contents as {} named {} has already been loaded.",
             filename2, filename1
         );
-        expect_error(&mut kb, filename2, source3.into(), &expected);
+        expect_error(&mut kb, filename2, &source3, &expected);
     }
 
     #[test]
