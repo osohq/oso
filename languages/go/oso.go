@@ -476,10 +476,19 @@ func (o Oso) dataFilter(actor interface{}, action interface{}, resource_type str
 		}
 	}
 
-	filter, err := (*o.p).ffiPolar.BuildDataFilter(query.host.Fields(), partials, "resource", resource_type)
+	types, types_json, err := query.host.SerializeTypes()
 	if err != nil {
 		return nil, nil, err
 	}
+	filter, err := (*o.p).ffiPolar.BuildDataFilter(types_json, partials, "resource", resource_type)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = query.host.ParseValues(filter)
+	if err != nil {
+		return nil, nil, err
+	}
+	filter.Types = types
 	q, err := query.host.BuildQuery(filter)
 	if err != nil {
 		return nil, nil, err

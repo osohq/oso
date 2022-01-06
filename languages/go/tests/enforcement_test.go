@@ -27,11 +27,11 @@ func getOso(t *testing.T) oso.Oso {
 	})
 	o.RegisterClassWithNameAndFields(reflect.TypeOf(Widget{}), nil, "Widget", map[string]interface{}{
 		"Id": "Integer",
-		"Parent": types.TypeRelation{
-			Kind:          "one",
-			OtherClassTag: "Company",
-			MyField:       "CompanyId",
-			OtherField:    "Id",
+		"Parent": types.Relation{
+			Kind:       "one",
+			OtherType:  "Company",
+			MyField:    "CompanyId",
+			OtherField: "Id",
 		},
 	})
 	o.RegisterClassWithNameAndFields(reflect.TypeOf(Company{}), nil, "Company", map[string]interface{}{
@@ -216,7 +216,7 @@ func TestAuthorizedActions(t *testing.T) {
 type TestAdapter struct {
 }
 
-func (a TestAdapter) BuildQuery(types types.TypeMap, filter *types.Filter) (interface{}, error) {
+func (a TestAdapter) BuildQuery(filter *types.Filter) (interface{}, error) {
 	return nil, nil
 }
 

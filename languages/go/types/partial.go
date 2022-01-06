@@ -6,6 +6,3 @@ type Expression struct {
 }
 
 type Variable string
-
-type TypeFields map[string]Type
-type TypeMap map[string]TypeFields

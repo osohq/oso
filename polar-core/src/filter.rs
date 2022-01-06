@@ -11,7 +11,7 @@ use crate::{
     terms::*,
 };
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 type FilterResult<A> = core::result::Result<A, RuntimeError>;
 
@@ -33,7 +33,7 @@ type Set<A> = HashSet<A>;
 /// hold over the data source: for every record in the data source, if for some
 /// top-level set in `conditions` every inner condition holds on the record, then
 /// the record passes through the filter.
-#[derive(Clone, Eq, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Eq, Debug, Serialize, PartialEq)]
 pub struct Filter {
     root: TypeName,                  // the host already has this, so we could leave it off
     relations: Set<Relation>,        // this & root determine the "joins" (or whatever)
@@ -48,22 +48,22 @@ pub struct Filter {
 /// For example, Relation("Foo", "bar", "Bar") represents a Relation
 /// from the `Foo` type to the `Bar` type, accessed using the `bar` field
 /// on `Foo`.
-#[derive(PartialEq, Eq, Debug, Deserialize, Serialize, Clone, Hash)]
+#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
 pub struct Relation(TypeName, FieldName, TypeName);
 
 /// A constraint that must hold for a record in the data source.
-#[derive(PartialEq, Eq, Debug, Deserialize, Serialize, Clone, Hash)]
+#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
 pub struct Condition(Datum, Comparison, Datum);
 
 /// The left or right side of a Condition.
-#[derive(PartialEq, Eq, Debug, Deserialize, Serialize, Clone, Hash)]
+#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
 pub enum Datum {
     Field(Projection),
     Immediate(Value),
 }
 
 /// The comparison operation applied by a Condition.
-#[derive(PartialEq, Debug, Deserialize, Serialize, Copy, Clone, Eq, Hash)]
+#[derive(PartialEq, Debug, Serialize, Copy, Clone, Eq, Hash)]
 pub enum Comparison {
     Eq,
     Neq,
@@ -76,7 +76,7 @@ pub enum Comparison {
 }
 
 /// An abstract "field reference" on a record from a named data source.
-#[derive(PartialEq, Eq, Debug, Deserialize, Serialize, Clone, Hash)]
+#[derive(PartialEq, Eq, Debug, Serialize, Clone, Hash)]
 pub struct Projection(TypeName, Option<FieldName>);
 
 type TypeInfo = Map<TypeName, Map<FieldName, Type>>;
