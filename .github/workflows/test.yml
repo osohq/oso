@@ -43,10 +43,10 @@ jobs:
           args: --all-features --all-targets -- -D warnings
 
       ## Check Python
-      - name: Install Python 3.6
+      - name: Install Python 3.7
         uses: actions/setup-python@v1
         with:
-          python-version: "3.6"
+          python-version: "3.7"
       - name: Install Python formatter
         run: pip install black
       - name: Check Python formatting
@@ -172,10 +172,10 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt, clippy
-      - name: Install Python 3.6
+      - name: Install Python 3.7
         uses: actions/setup-python@v1
         with:
-          python-version: "3.6"
+          python-version: "3.7"
       - name: Test python
         run: make python-test
       - name: Test flask
@@ -329,10 +329,10 @@ jobs:
             ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
             ${{ runner.os }}-cargo-test-
 
-      - name: Install Python 3.6
+      - name: Install Python 3.7
         uses: actions/setup-python@v1
         with:
-          python-version: "3.6"
+          python-version: "3.7"
 
       - name: install aspell
         run: sudo apt-get install aspell
