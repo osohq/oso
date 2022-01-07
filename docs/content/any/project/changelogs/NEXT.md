@@ -37,5 +37,6 @@ Link to [relevant documentation section]().
 
 #### Other bugs & improvements
 
-- Fixed a bug that caused `UnhandledPartial` errors in some valid
-  policies that unified two variables that both have constraints.
+- Bulleted list
+- Of smaller improvements
+- Potentially with doc [links]().
