@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Mark release as latest
-        uses: tubone24/update_release@v1.0
+        uses: tubone24/update_release@v1.3.1
         with:
           prerelease: false
         env:
