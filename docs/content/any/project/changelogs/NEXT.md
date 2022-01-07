@@ -28,7 +28,7 @@ draft: true
   before upgrading.
 {{% /callout %}}
 
-##### `@polar_class` is deprecated in favour of `Oso#register_class`
+##### `@polar_class` is deprecated in favor of `Oso#register_class`
 
 The `@polar_class` decorator used to register classes with Polar has been deprecated. To register a class with Polar it is now necessary to use the [`Oso#register_class`](https://docs.osohq.com/reference/api/index.html#oso.Oso.register_class) API.
 
