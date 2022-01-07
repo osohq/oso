@@ -7,7 +7,7 @@ import type {
   CustomError,
   Class,
   PolarTerm,
-  DataFilteringQueryParams,
+  DataFilteringAdapter,
 } from './types';
 import {
   NotFoundError,
@@ -15,8 +15,7 @@ import {
   OsoError,
   UnregisteredClassError,
 } from './errors';
-import { filterData } from './dataFiltering';
-import type { FilterPlan } from './dataFiltering';
+import { parseFilter } from './filter';
 
 /** The Oso authorization API. */
 // TODO(gj): maybe pass DF options to constructor & try to parametrize a
@@ -301,13 +300,14 @@ export class Oso<
       });
     }
 
-    const plan = this.getFfi().buildFilterPlan(
+    const dataFilter = this.getFfi().buildDataFilter(
       host.serializeTypes(),
       queryResults,
       'resource',
       clsName
-    ) as FilterPlan;
-    return filterData(host, plan);
+    );
+    const filter = await parseFilter(dataFilter, host)
+    return host.adapter.buildQuery(filter);
   }
 
   /**
@@ -326,21 +326,13 @@ export class Oso<
   ): Promise<T[]> {
     const query = await this.authorizedQuery(actor, action, resourceCls);
     if (!query) return [];
-    const userType = this.getHost().getType(resourceCls);
-    if (userType === undefined)
-      throw new UnregisteredClassError(resourceCls.name);
-    return (await userType.execQuery(query)) as T[];
+    return (await this.getHost().adapter.executeQuery(query)) as T[];
   }
 
   /**
-   * Register default values for data filtering query functions.
-   * These can be overridden by passing specific implementations to
-   * `registerClass`.
+   * Register adapter for data filtering query functions.
    */
-  setDataFilteringQueryDefaults(options: DataFilteringQueryParams): void {
-    if (options.buildQuery) this.getHost().buildQuery = options.buildQuery;
-    if (options.execQuery) this.getHost().execQuery = options.execQuery;
-    if (options.combineQuery)
-      this.getHost().combineQuery = options.combineQuery;
+  setDataFilteringAdapter(adapter: DataFilteringAdapter): void {
+    this.getHost().adapter = adapter
   }
 }

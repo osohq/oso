@@ -27,9 +27,8 @@ import type {
   PolarTerm,
   UserTypeParams,
   BuildQueryFn,
-  ExecQueryFn,
-  CombineQueryFn,
-  DataFilteringQueryParams,
+  ExecuteQueryFn,
+  DataFilteringAdapter,
   NullishOrHasConstructor,
   IsaCheck,
 } from './types';
@@ -46,8 +45,8 @@ import {
   isPolarStr,
   isPolarVariable,
 } from './types';
-import { Relation } from './dataFiltering';
-import type { SerializedFields } from './dataFiltering';
+import { Relation } from './filter';
+import type { SerializedFields } from './filter';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export class UserType<Type extends Class<T>, T = any, Query = any> {
@@ -55,9 +54,6 @@ export class UserType<Type extends Class<T>, T = any, Query = any> {
   cls: Type;
   id: number;
   fields: Map<string, Class | Relation>;
-  buildQuery: BuildQueryFn<Promise<Query>>;
-  execQuery: ExecQueryFn<Query, Promise<T[]>>;
-  combineQuery: CombineQueryFn<Query>;
   isaCheck: IsaCheck;
 
   constructor({
@@ -65,20 +61,11 @@ export class UserType<Type extends Class<T>, T = any, Query = any> {
     cls,
     id,
     fields,
-    buildQuery,
-    execQuery,
-    combineQuery,
     isaCheck,
   }: UserTypeParams<Type>) {
     this.name = name;
     this.cls = cls;
     this.fields = fields;
-    // NOTE(gj): these `promisify1()` calls are for Promisifying synchronous
-    // return values from {build,exec}Query. Since a user's implementation
-    // *might* return a Promise, we want to `await` _all_ invocations.
-    this.buildQuery = promisify1(buildQuery);
-    this.execQuery = promisify1(execQuery);
-    this.combineQuery = combineQuery;
     this.id = id;
     this.isaCheck = isaCheck;
   }
@@ -89,17 +76,14 @@ export class UserType<Type extends Class<T>, T = any, Query = any> {
  *
  * @internal
  */
-export class Host implements Required<DataFilteringQueryParams> {
+export class Host {
   #ffiPolar: FfiPolar;
   #instances: Map<number, unknown>;
   types: Map<string | Class, UserType<any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   #opts: HostOpts;
 
-  // global data filtering config
-  buildQuery: BuildQueryFn;
-  execQuery: ExecQueryFn;
-  combineQuery: CombineQueryFn;
+  adapter: DataFilteringAdapter;
 
   /**
    * Shallow clone a host to extend its state for the duration of a particular
@@ -112,9 +96,7 @@ export class Host implements Required<DataFilteringQueryParams> {
     const clone = new Host(host.#ffiPolar, options);
     clone.#instances = new Map(host.#instances);
     clone.types = new Map(host.types);
-    clone.buildQuery = host.buildQuery;
-    clone.execQuery = host.execQuery;
-    clone.combineQuery = host.combineQuery;
+    clone.adapter = host.adapter;
     return clone;
   }
 
@@ -125,15 +107,14 @@ export class Host implements Required<DataFilteringQueryParams> {
     this.#instances = new Map();
     this.types = new Map();
 
-    this.buildQuery = () => {
-      throw new DataFilteringConfigurationError('buildQuery');
-    };
-    this.execQuery = () => {
-      throw new DataFilteringConfigurationError('execQuery');
-    };
-    this.combineQuery = () => {
-      throw new DataFilteringConfigurationError('combineQuery');
-    };
+    this.adapter = {
+      buildQuery: () => {
+        throw new DataFilteringConfigurationError('adapter');
+      },
+      executeQuery: () => {
+        throw new DataFilteringConfigurationError('adapter');
+      }
+    }
   }
 
   /**
@@ -204,7 +185,7 @@ export class Host implements Required<DataFilteringQueryParams> {
     let fields = params.fields || {};
     if (!(fields instanceof Map)) fields = new Map(Object.entries(fields));
 
-    const { name, buildQuery, execQuery, combineQuery } = params;
+    const { name } = params;
     if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
     const clsName: string = name ? name : cls.name;
     const existing = this.types.get(clsName);
@@ -224,9 +205,6 @@ export class Host implements Required<DataFilteringQueryParams> {
       name: clsName,
       cls,
       fields,
-      buildQuery: buildQuery || this.buildQuery,
-      execQuery: execQuery || this.execQuery,
-      combineQuery: combineQuery || this.combineQuery,
       id: this.cacheInstance(cls),
       isaCheck: params.isaCheck || defaultCheck,
     });

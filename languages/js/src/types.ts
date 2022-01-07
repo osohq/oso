@@ -1,4 +1,4 @@
-import type { Filter, Relation } from './dataFiltering';
+import type { Filter, Relation } from './filter';
 import { isObj } from './helpers';
 
 /**
@@ -259,7 +259,7 @@ export function isPolarPattern(v: PolarValue): v is PolarPattern {
  *
  * @internal
  */
-type PolarValue =
+export type PolarValue =
   | PolarStr
   | PolarNum
   | PolarBool
@@ -680,25 +680,19 @@ export class Dict extends Object {
   [index: string]: unknown;
 }
 
-export type BuildQueryFn<Q = any> = (filters: Filter[]) => Q; // eslint-disable-line @typescript-eslint/no-explicit-any
-export type ExecQueryFn<Q = any, ReturnType = any> = (query: Q) => ReturnType; // eslint-disable-line @typescript-eslint/no-explicit-any
-export type CombineQueryFn<Q = any> = (a: Q, b: Q) => Q; // eslint-disable-line @typescript-eslint/no-explicit-any
+export type BuildQueryFn<Q = any> = (filter: Filter) => Promise<Q>; // eslint-disable-line @typescript-eslint/no-explicit-any
+export type ExecuteQueryFn<Q = any, ReturnType = any> = (query: Q) => Promise<ReturnType>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-// NOTE(gj): these are *required* if the user wants to use Data Filtering.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface DataFilteringQueryParams<Query = any, ReturnType = any> {
+export interface DataFilteringAdapter<Query = any, ReturnType = any> {
   /**
    * A function to produce a query.
    */
-  buildQuery?: BuildQueryFn<Query>;
-  /**
-   * A function to execute a query produced by [[`ClassParams.buildQuery`]].
-   */
-  execQuery?: ExecQueryFn<Query, ReturnType>;
-  /**
-   * A function to merge two queries produced by [[`ClassParams.buildQuery`]].
-   */
-  combineQuery?: CombineQueryFn<Query>;
+   buildQuery: BuildQueryFn<Query>;
+   /**
+    * A function to execute a query produced by [[`ClassParams.buildQuery`]].
+    */
+   executeQuery: ExecuteQueryFn<Query, ReturnType>;
 }
 
 export type IsaCheck = (instance: NullishOrHasConstructor) => boolean;
@@ -706,7 +700,7 @@ export type IsaCheck = (instance: NullishOrHasConstructor) => boolean;
 /**
  * Optional parameters for [[`Polar.registerClass`]] and [[`Host.cacheClass`]].
  */
-export interface ClassParams extends DataFilteringQueryParams {
+export interface ClassParams {
   /**
    * Explicit name to use for the class in Polar. Defaults to the class's
    * `name` property.
@@ -724,8 +718,7 @@ export interface ClassParams extends DataFilteringQueryParams {
 /**
  * Parameters for [[`UserType`]].
  */
-export interface UserTypeParams<Type extends Class>
-  extends Required<DataFilteringQueryParams> {
+export interface UserTypeParams<Type extends Class> {
   /**
    * Class registered as a user type.
    */

@@ -1,6 +1,6 @@
 import { Oso } from './Oso';
-import { Field, Relation } from './dataFiltering';
-import type { Filter, FilterKind, FilterField } from './dataFiltering';
+import { Filter, Relation } from './filter';
+//import type { Filter, FilterKind, FilterField } from './dataFiltering';
 import 'reflect-metadata';
 import {
   OneToMany,
@@ -252,101 +252,111 @@ async function fixtures() {
     return out;
   }
 
-  const toRhs = (
-    value: unknown,
-    kind: FilterKind,
-    name: string,
-    param: obj
-  ) => {
-    if (value instanceof Field) return `${name}.${value.field}`;
-    const sym = gensym();
-    const rhs = kind === 'In' ? `(:...${sym})` : `:${sym}`;
-    param[sym] = value;
-    return rhs;
-  };
+//   const toRhs = (
+//     value: unknown,
+//     kind: FilterKind,
+//     name: string,
+//     param: obj
+//   ) => {
+//     if (value instanceof Field) return `${name}.${value.field}`;
+//     const sym = gensym();
+//     const rhs = kind === 'In' ? `(:...${sym})` : `:${sym}`;
+//     param[sym] = value;
+//     return rhs;
+//   };
 
-  const fromRepo = <T>(repo: Repository<T>, name: string) => {
-    const constrain = (
-      query: SelectQueryBuilder<T>,
-      { field, kind, value }: Filter
-    ) => {
-      const param: obj = {};
+//   const fromRepo = <T>(repo: Repository<T>, name: string) => {
+//     const constrain = (
+//       query: SelectQueryBuilder<T>,
+//       { field, kind, value }: Filter
+//     ) => {
+//       const param: obj = {};
 
-      if (field === undefined) {
-        field = 'id';
-        value =
-          kind === 'In' ? (value as obj[]).map(x => x.id) : (value as obj).id; // eslint-disable-line @typescript-eslint/no-explicit-any
-      }
+//       if (field === undefined) {
+//         field = 'id';
+//         value =
+//           kind === 'In' ? (value as obj[]).map(x => x.id) : (value as obj).id; // eslint-disable-line @typescript-eslint/no-explicit-any
+//       }
 
-      const sqlOps = {
-        Eq: '=',
-        Neq: '<>',
-        In: 'IN',
-        Nin: 'NOT IN',
-        Contains: '???',
-      };
-      const rhs = toRhs(value, kind, name, param);
-      let clause: string;
+//       const sqlOps = {
+//         Eq: '=',
+//         Neq: '<>',
+//         In: 'IN',
+//         Nin: 'NOT IN',
+//         Contains: '???',
+//       };
+//       const rhs = toRhs(value, kind, name, param);
+//       let clause: string;
 
-      if (field instanceof Array) {
-        field = field.map((f: FilterField) => {
-          const fld: string = typeof f === 'string' ? f : 'id';
-          return `${name}.${fld}`;
-        });
-        kind = kind === 'In' ? 'Eq' : 'Neq';
-        const co: string = sqlOps[kind],
-          conds: string[] = (value as unknown[][]).map((view: unknown[]) => {
-            const z: string[] = zip(field as FilterField[], view).map(
-              ([l, r]) =>
-                `(${l as string} ${co} ${toRhs(r, kind, name, param)})`
-            );
-            return z.reduce((l: string, r: string) => `(${l} AND ${r})`);
-          });
-        clause = conds.reduce(
-          (l: string, r: string) => `(${l} OR ${r})`,
-          '1=0'
-        );
-      } else {
-        const lhs = `${name}.${field}`;
-        const op = sqlOps[kind];
-        clause = `${lhs} ${op} ${rhs}`;
-      }
+//       if (field instanceof Array) {
+//         field = field.map((f: FilterField) => {
+//           const fld: string = typeof f === 'string' ? f : 'id';
+//           return `${name}.${fld}`;
+//         });
+//         kind = kind === 'In' ? 'Eq' : 'Neq';
+//         const co: string = sqlOps[kind],
+//           conds: string[] = (value as unknown[][]).map((view: unknown[]) => {
+//             const z: string[] = zip(field as FilterField[], view).map(
+//               ([l, r]) =>
+//                 `(${l as string} ${co} ${toRhs(r, kind, name, param)})`
+//             );
+//             return z.reduce((l: string, r: string) => `(${l} AND ${r})`);
+//           });
+//         clause = conds.reduce(
+//           (l: string, r: string) => `(${l} OR ${r})`,
+//           '1=0'
+//         );
+//       } else {
+//         const lhs = `${name}.${field}`;
+//         const op = sqlOps[kind];
+//         clause = `${lhs} ${op} ${rhs}`;
+//       }
 
-      return query.andWhere(clause, param);
-    };
+//       return query.andWhere(clause, param);
+//     };
 
-    return (constraints: Filter[]) =>
-      constraints.reduce(constrain, repo.createQueryBuilder(name));
-  };
+//     return (constraints: Filter[]) =>
+//       constraints.reduce(constrain, repo.createQueryBuilder(name));
+//   };
 
-  type Resource =
-    | User
-    | Repo
-    | Org
-    | Issue
-    | RepoRole
-    | OrgRole
-    | Bar
-    | Foo
-    | Num;
+//   type Resource =
+//     | User
+//     | Repo
+//     | Org
+//     | Issue
+//     | RepoRole
+//     | OrgRole
+//     | Bar
+//     | Foo
+//     | Num;
 
-  const execQuery = (q: SelectQueryBuilder<Resource>) => q.getMany();
-  const combineQuery = <T extends SelectQueryBuilder<Resource>>(a: T, b: T) => {
-    // this is kind of bad but typeorm doesn't give you a lot of tools
-    // for working with queries :(
-    const whereClause = (sql: string) => /WHERE (.*)$/.exec(sql)?.[1];
-    const bClause = whereClause(b.getQuery());
-    if (bClause) a = a.orWhere(bClause, b.getParameters());
-    const aClause = whereClause(a.getQuery());
-    if (aClause) a = a.where(`(${aClause})`, a.getParameters());
-    return a;
-  };
+//   const execQuery = (q: SelectQueryBuilder<Resource>) => q.getMany();
+//   const combineQuery = <T extends SelectQueryBuilder<Resource>>(a: T, b: T) => {
+//     // this is kind of bad but typeorm doesn't give you a lot of tools
+//     // for working with queries :(
+//     const whereClause = (sql: string) => /WHERE (.*)$/.exec(sql)?.[1];
+//     const bClause = whereClause(b.getQuery());
+//     if (bClause) a = a.orWhere(bClause, b.getParameters());
+//     const aClause = whereClause(a.getQuery());
+//     if (aClause) a = a.where(`(${aClause})`, a.getParameters());
+//     return a;
+//   };
 
-  // set global exec/combine query functions
-  oso.setDataFilteringQueryDefaults({ execQuery, combineQuery });
+  async function buildQuery(filter: Filter): Promise<number> {
+    console.log(filter);
+    return 123;
+  }
+  async function executeQuery(query: number): Promise<number[]> {
+    return [query];
+  }
+
+  const adapter = {
+      buildQuery: buildQuery,
+      executeQuery: executeQuery,
+  }
+  oso.setDataFilteringAdapter(adapter);
 
   oso.registerClass(User, {
-    buildQuery: fromRepo(users, 'user'),
     fields: {
       id: Number,
       email: String,
@@ -356,7 +366,6 @@ async function fixtures() {
   });
 
   oso.registerClass(Repo, {
-    buildQuery: fromRepo(repos, 'repo'),
     fields: {
       id: Number,
       name: String,
@@ -368,7 +377,6 @@ async function fixtures() {
   });
 
   oso.registerClass(Org, {
-    buildQuery: fromRepo(orgs, 'org'),
     fields: {
       id: Number,
       name: String,
@@ -380,7 +388,6 @@ async function fixtures() {
   });
 
   oso.registerClass(Issue, {
-    buildQuery: fromRepo(issues, 'issue'),
     fields: {
       id: Number,
       title: String,
@@ -390,7 +397,6 @@ async function fixtures() {
   });
 
   oso.registerClass(RepoRole, {
-    buildQuery: fromRepo(repoRoles, 'repo_role'),
     fields: {
       id: Number,
       role: String,
@@ -402,7 +408,6 @@ async function fixtures() {
   });
 
   oso.registerClass(OrgRole, {
-    buildQuery: fromRepo(orgRoles, 'org_role'),
     fields: {
       id: Number,
       role: String,
@@ -414,7 +419,6 @@ async function fixtures() {
   });
 
   oso.registerClass(Bar, {
-    buildQuery: fromRepo(bars, 'bar'),
     fields: {
       id: String,
       isCool: Boolean,
@@ -424,7 +428,6 @@ async function fixtures() {
   });
 
   oso.registerClass(Foo, {
-    buildQuery: fromRepo(foos, 'foo'),
     fields: {
       id: String,
       barId: String,
@@ -436,7 +439,6 @@ async function fixtures() {
   });
 
   oso.registerClass(Log, {
-    buildQuery: fromRepo(logs, 'log'),
     fields: {
       id: String,
       fooId: String,
@@ -446,7 +448,6 @@ async function fixtures() {
   });
 
   oso.registerClass(Num, {
-    buildQuery: fromRepo(nums, 'num'),
     fields: {
       number: Number,
       fooId: String,

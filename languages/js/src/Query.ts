@@ -34,8 +34,7 @@ import {
   isIterableIterator,
   QueryEventKind,
 } from './types';
-import { Relation } from './dataFiltering';
-import type { FilterKind } from './dataFiltering';
+import { Relation } from './filter';
 
 function getLogLevelsFromEnv() {
   if (typeof process?.env === 'undefined') return [undefined, undefined];
@@ -147,18 +146,20 @@ export class Query {
     // the core in `handleCall`.
     const value = receiver[rel.myField] as unknown; // eslint-disable-line
 
-    // Use the fetcher for the other type to traverse
-    // the relationship.
-    const filter = { kind: 'Eq' as FilterKind, value, field: rel.otherField };
-    const query = await typ.buildQuery([filter]); // eslint-disable-line @typescript-eslint/no-unsafe-assignment
-    const results = await typ.execQuery(query);
-    if (rel.kind === 'one') {
-      if (results.length !== 1)
-        throw new Error(`Wrong number of parents: ${results.length}`);
-      return results[0]; // eslint-disable-line @typescript-eslint/no-unsafe-return
-    } else {
-      return results; // eslint-disable-line @typescript-eslint/no-unsafe-return
-    }
+    // TODO(steve)
+    // // Use the fetcher for the other type to traverse
+    // // the relationship.
+    // const filter = { kind: 'Eq' as FilterKind, value, field: rel.otherField };
+    // const query = await typ.buildQuery([filter]); // eslint-disable-line @typescript-eslint/no-unsafe-assignment
+    // const results = await typ.execQuery(query);
+    // if (rel.kind === 'one') {
+    //   if (results.length !== 1)
+    //     throw new Error(`Wrong number of parents: ${results.length}`);
+    //   return results[0]; // eslint-disable-line @typescript-eslint/no-unsafe-return
+    // } else {
+    //   return results; // eslint-disable-line @typescript-eslint/no-unsafe-return
+    // }
+    return null;
   }
 
   /**
