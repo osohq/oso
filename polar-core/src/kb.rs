@@ -590,7 +590,7 @@ impl KnowledgeBase {
             }
             .with_context(&*self));
         }
-        if let &Value::ExternalInstance(ExternalInstance { class_id, .. }) = value.value() {
+        if let Value::ExternalInstance(ExternalInstance { class_id, .. }) = *value.value() {
             self.constants.insert(name, value, class_id)
         } else {
             self.constants.insert(name, value, None);

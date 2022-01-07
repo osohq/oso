@@ -266,7 +266,6 @@ class Polar:
         # special-case of `register_constant` where we want to specify the ID
         self.ffi_polar.register_constant(self.host.to_polar(cls), name)
 
-
     def register_constant(self, value, name):
         """
         Register `value` as a Polar constant variable called `name`.
