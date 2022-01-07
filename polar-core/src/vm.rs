@@ -1130,10 +1130,10 @@ impl PolarVirtualMachine {
 
                 // attempt an in-core IsA check if we have the necessary
                 // class_id information to index into MROs
-                if let &Value::ExternalInstance(ExternalInstance {
+                if let Value::ExternalInstance(ExternalInstance {
                     class_id: Some(cid),
                     ..
-                }) = left.value()
+                }) = *left.value()
                 {
                     let isa = {
                         let kb = self.kb.read().unwrap();
