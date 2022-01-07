@@ -1,5 +1,4 @@
 from polar import (
-    polar_class,
     Variable,
     Predicate,
     Relation,
