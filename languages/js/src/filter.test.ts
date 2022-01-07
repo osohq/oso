@@ -1,5 +1,5 @@
 import { Oso } from './Oso';
-import { Filter, Relation } from './filter';
+import { Datum, Filter, Immediate, Projection, Relation, SerializedFields, SerializedRelation } from './filter';
 //import type { Filter, FilterKind, FilterField } from './dataFiltering';
 import 'reflect-metadata';
 import {
@@ -342,12 +342,102 @@ async function fixtures() {
 //     return a;
 //   };
 
-  async function buildQuery(filter: Filter): Promise<number> {
-    console.log(filter);
-    return 123;
+  type Resource =
+    | User
+    | Repo
+    | Org
+    | Issue
+    | RepoRole
+    | OrgRole
+    | Bar
+    | Foo
+    | Num;
+
+  // const resources: {[key: string]: Resource} = {
+  //   'User': User,
+  //   'Repo': Repo,
+  //   'Org': Org,
+  //   'Issue': Issue,
+  //   'RepoRole': RepoRole,
+  //   'OrgRole': OrgRole,
+  //   'Bar': Bar,
+  //   'Foo': Foo,
+  //   'Num': Num
+  // };
+
+  const repositories: {[key: string]: Repository<Resource>} = {
+    'User': users,
+    'Repo': repos,
+    'Org': orgs,
+    'Issue': issues,
+    'RepoRole': repoRoles,
+    'OrgRole': orgRoles,
+    'Bar': bars,
+    'Foo': foos,
+    'Num': nums
+  };
+
+  const classes: {[key: string]: any} = {
+    'User': User,
+    'Repo': Repo,
+    'Org': Org,
+    'Issue': Issue,
+    'RepoRole': RepoRole,
+    'OrgRole': OrgRole,
+    'Bar': Bar,
+    'Foo': Foo,
+    'Num': Num
+  };
+
+  function toSql(d: Datum): string {
+    if (d.hasOwnProperty("value")) {
+      return `${(d as Immediate).value}`;
+    } else {
+      let proj = d as Projection;
+      return `${proj.typeName}.${proj.fieldName}`
+    }
   }
-  async function executeQuery(query: number): Promise<number[]> {
-    return [query];
+
+  async function buildQuery(filter: Filter): Promise<SelectQueryBuilder<Resource>> {
+    var repo: Repository<Resource> = repositories[filter.model];
+    let query: SelectQueryBuilder<Resource> = repo.createQueryBuilder(filter.model);
+
+    let type = filter.types[filter.model]
+    for (let rel of filter.relations) {
+      let other = classes[rel.toTypeName];
+      let relation = (type[rel.fromFieldName] as SerializedRelation).Relation;
+
+      let join_repo = repositories[rel.toTypeName]
+      let join = `${filter.model}.${relation.my_field} = ${rel.toTypeName}.${relation.other_field}`
+      query = query.innerJoin(other, rel.toTypeName, join)
+    }
+
+    for (let cs of filter.conditions) {
+      let ands = ""
+      for (let c of cs) {
+        let op;
+        switch(c.cmp) {
+          case 'Eq': {
+            op = '='
+            break;
+          }
+          default: {
+            continue;
+          }
+        }
+        let constraint = `${toSql(c.lhs)} ${op} ${toSql(c.rhs)}`
+        if (ands.length!=0) {
+          ands += " AND "
+        }
+        ands += constraint
+      }
+      query = query.orWhere(ands)
+    }
+    
+    return query;
+  }
+  async function executeQuery(query: SelectQueryBuilder<Resource>): Promise<Resource[]> {
+    return query.getMany();
   }
 
   const adapter = {

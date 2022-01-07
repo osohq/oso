@@ -5,7 +5,7 @@ import { OsoError, UnregisteredClassError } from './errors';
 import { DefaultNamingStrategy } from 'typeorm';
 import { Comparator } from 'lodash';
 
-interface SerializedRelation {
+export interface SerializedRelation {
   Relation: {
     kind: string;
     other_class_tag: string;
