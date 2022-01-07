@@ -23,6 +23,7 @@ from .expression import Expression, Pattern
 from .data_filtering import serialize_types, filter_data
 from .data import DataFilter
 
+
 class Polar:
     """Polar API"""
 
@@ -320,4 +321,3 @@ class Polar:
         plan = self.ffi_polar.build_data_filter(types, results, "resource", class_name)
 
         return self.host.adapter.build_query(DataFilter.parse(self, plan))
-
