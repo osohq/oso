@@ -1137,10 +1137,16 @@ impl PolarVirtualMachine {
                 {
                     let isa = {
                         let kb = self.kb.read().unwrap();
+
+                        // check for MRO membership if one is defined for the symbol
                         if let Some(mro) = kb.mro.get(&right_literal.tag) {
                             mro.contains(&cid)
+                        // otherwise rely on a direct comparison between the left & right symbols
                         } else {
-                            false
+                            let symbol = kb
+                                .get_symbol_for_class_id(cid)
+                                .expect("missing symbol for class_id");
+                            symbol == &right_literal.tag
                         }
                     };
                     if !isa {

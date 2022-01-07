@@ -22,4 +22,8 @@ impl Constants {
     pub(crate) fn get(&self, name: &Symbol) -> Option<&Term> {
         self.symbol_to_term.get(name)
     }
+
+    pub(crate) fn get_symbol_for_class_id(&self, id: u64) -> Option<&Symbol> {
+        self.id_to_symbol.get(&id)
+    }
 }

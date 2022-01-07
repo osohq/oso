@@ -308,6 +308,7 @@ class Host:
         #   }
         else:
             import inspect
+
             instance_id = None
             class_id = None
 
