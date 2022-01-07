@@ -137,13 +137,13 @@ macro_rules! call {
 macro_rules! op {
     ($op_type:ident, $($args:expr),+) => {
         Operation {
-            operator: Operator::$op_type,
+            operator: crate::terms::Operator::$op_type,
             args: vec![$($args),+]
         }
     };
     ($op_type:ident) => {
         Operation {
-            operator: Operator::$op_type,
+            operator: crate::terms::Operator::$op_type,
             args: vec![]
         }
     };

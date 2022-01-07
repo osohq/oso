@@ -235,7 +235,11 @@ impl Polar {
 
     pub fn new_query_from_term(&self, term: Term, _trace: bool) -> Query {
         // todo!()
-        Query { term }
+        Query {
+            term,
+            variables: Vec::new(),
+            kb: self.kb.clone(),
+        }
         // let query = Goal::Query { term: term.clone() };
         // let vm =
         //     PolarVirtualMachine::new(self.kb.clone(), trace, vec![query], self.messages.clone());

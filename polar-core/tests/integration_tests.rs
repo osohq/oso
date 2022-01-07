@@ -72,9 +72,9 @@ where
     K: FnMut(&Message),
     L: FnMut(PolarError) -> QueryResults,
 {
-    let mut results = query.run(Default::default());
+    let mut results = query.run();
 
-    results.map(|b| (b.bindings(), None)).collect()
+    results.map(|b| (b, None)).collect()
 }
 
 macro_rules! query_results {
