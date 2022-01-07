@@ -32,7 +32,7 @@ pub struct KnowledgeBase {
     /// but can translate to and from this type.
     constants: Constants,
     /// Map of class name -> MRO list where the MRO list is a list of class instance IDs
-    mro: HashMap<Symbol, Vec<u64>>,
+    pub mro: HashMap<Symbol, Vec<u64>>,
 
     /// Map from filename to source ID for files loaded into the KB.
     loaded_files: HashMap<String, u64>,

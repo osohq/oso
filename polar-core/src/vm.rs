@@ -1127,11 +1127,33 @@ impl PolarVirtualMachine {
                         right_literal.fields.clone(),
                     ))),
                 })?;
-                // Check class
-                self.push_goal(Goal::IsaExternal {
-                    instance: left.clone(),
-                    literal: right_literal.clone(),
-                })?;
+
+                // attempt an in-core IsA check if we have the necessary
+                // class_id information to index into MROs
+                if let &Value::ExternalInstance(ExternalInstance {
+                    class_id: Some(cid),
+                    ..
+                }) = left.value()
+                {
+                    let isa = {
+                        let kb = self.kb.read().unwrap();
+                        if let Some(mro) = kb.mro.get(&right_literal.tag) {
+                            mro.contains(&cid)
+                        } else {
+                            false
+                        }
+                    };
+                    if !isa {
+                        self.push_goal(Goal::Backtrack)?;
+                    }
+                // default to IsaExternal when no `class_id` information is available
+                } else {
+                    // Check class
+                    self.push_goal(Goal::IsaExternal {
+                        instance: left.clone(),
+                        literal: right_literal.clone(),
+                    })?;
+                }
             }
 
             // Default case: x isa y if x = y.
