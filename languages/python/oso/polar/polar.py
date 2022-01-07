@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import os
 from pathlib import Path
 import sys
-from typing import Dict, List, Union
+from typing import List, Union
 
 from .exceptions import (
     PolarRuntimeError,
