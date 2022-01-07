@@ -5,7 +5,7 @@ import pytest
 from oso import Oso
 import os
 from runpy import run_path
-context = __import__('02-context')
+import context
 
 run_path("context.py")
 
