@@ -321,17 +321,3 @@ class Polar:
 
         return self.host.adapter.build_query(DataFilter.parse(self, plan))
 
-
-def polar_class(_cls=None, *, name=None):
-    """Decorator to register a Python class with Polar.
-    An alternative to ``register_class()``."""
-
-    def wrap(cls):
-        cls_name = cls.__name__ if name is None else name
-        CLASSES[cls_name] = cls
-        return cls
-
-    if _cls is None:
-        return wrap
-
-    return wrap(_cls)
