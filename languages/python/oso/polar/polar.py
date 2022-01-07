@@ -95,7 +95,6 @@ class Polar:
 
     # Register MROs, load Polar code, and check inline queries.
     def _load_sources(self, sources: List[Source]):
-        self.host.register_mros()
         self.ffi_polar.load(sources)
         self.check_inline_queries()
 
@@ -264,6 +263,7 @@ class Polar:
             combine_query=combine_query,
         )
         self.register_constant(cls, name)
+        self.host.register_mros()
 
     def register_constant(self, value, name):
         """
