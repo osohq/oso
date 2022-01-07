@@ -320,3 +320,4 @@ class Polar:
         plan = self.ffi_polar.build_data_filter(types, results, "resource", class_name)
 
         return self.host.adapter.build_query(DataFilter.parse(self, plan))
+
