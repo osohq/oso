@@ -1129,20 +1129,19 @@ impl PolarVirtualMachine {
                 })?;
 
                 // attempt an in-core IsA check if we have the necessary
-                // class_id information
-                if let Value::ExternalInstance(ExternalInstance {
+                // class_id information to index into MROs
+                if let &Value::ExternalInstance(ExternalInstance {
                     class_id: Some(cid),
                     ..
-                }) = *left.value()
+                }) = left.value()
                 {
                     let isa = {
                         let kb = self.kb.read().unwrap();
-
-                        let mro = kb
-                            .mro
-                            .get(&right_literal.tag)
-                            .expect("no MRO registered for class_id");
-                        mro.contains(&cid)
+                        if let Some(mro) = kb.mro.get(&right_literal.tag) {
+                            mro.contains(&cid)
+                        } else {
+                            false
+                        }
                     };
                     if !isa {
                         self.push_goal(Goal::Backtrack)?;

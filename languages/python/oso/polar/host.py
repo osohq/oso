@@ -324,10 +324,13 @@ class Host:
             class_repr = type(v).__name__
             class_repr = class_repr if class_repr in self.types else None
 
-            # pass the class_id for registered types, otherwise None
+            # pass class_id for classes & instances of registered classes,
+            # otherwise pass None
             class_id = None
             if inspect.isclass(v) and v in self.types:
                 class_id = self.types[v].id
+            elif type(v).__name__ in self.types:
+                class_id = self.types[type(v).__name__].id
 
             val = {
                 "ExternalInstance": {
