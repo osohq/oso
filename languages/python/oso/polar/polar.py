@@ -23,13 +23,10 @@ from .expression import Expression, Pattern
 from .data_filtering import serialize_types, filter_data
 from .data import DataFilter
 
-CLASSES: Dict[str, type] = {}
-
-
 class Polar:
     """Polar API"""
 
-    def __init__(self, classes=CLASSES):
+    def __init__(self):
         self.ffi_polar = FfiPolar()
         self.host = Host(self.ffi_polar)
         self.ffi_polar.set_message_enricher(self.host.enrich_message)
@@ -46,10 +43,6 @@ class Polar:
         self.register_class(str, name="String")
         self.register_class(datetime, name="Datetime")
         self.register_class(timedelta, name="Timedelta")
-
-        # Pre-registered classes.
-        for name, cls in classes.items():
-            self.register_class(cls, name=name)
 
     def __del__(self):
         del self.host
