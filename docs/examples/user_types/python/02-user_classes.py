@@ -1,12 +1,10 @@
 from oso import polar_class
 
 
-@polar_class
 class Customer:
     pass
 
 
-@polar_class
 # internal-start
 class InternalUser:
     ...
@@ -17,7 +15,6 @@ class InternalUser:
 
 
 # account-start
-@polar_class
 class AccountManager(InternalUser):
     ...
 

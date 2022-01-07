@@ -5,12 +5,15 @@ import pytest
 from oso import Oso
 import os
 from runpy import run_path
+context = __import__('02-context')
 
 run_path("02-context.py")
 
 
 @pytest.fixture
 def oso():
+    oso = Oso()
+    oso.register_class(context.Env)
     return Oso()
 
 
