@@ -262,9 +262,7 @@ class Polar:
             exec_query=exec_query,
             combine_query=combine_query,
         )
-
-        # special-case of `register_constant` where we want to specify the ID
-        self.ffi_polar.register_constant(self.host.to_polar(cls), name)
+        self.register_constant(cls, name)
 
     def register_constant(self, value, name):
         """
