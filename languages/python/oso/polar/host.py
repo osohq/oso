@@ -309,13 +309,12 @@ class Host:
         else:
             import inspect
             instance_id = None
+            class_id = None
 
             # maintain consistent IDs for registered classes
-            # TODO @patrickod will `instance_id` *ever* be `None` when we're
-            # passing classes and not instances?
             if inspect.isclass(v):
                 if v in self.types:
-                    instance_id = self.types[v].id
+                    class_id = instance_id = self.types[v].id
 
             # pass the class_repr only for registered types otherwise None
             class_repr = type(v).__name__
@@ -323,10 +322,7 @@ class Host:
 
             # pass class_id for classes & instances of registered classes,
             # otherwise pass None
-            class_id = None
-            if inspect.isclass(v) and v in self.types:
-                class_id = self.types[v].id
-            elif type(v).__name__ in self.types:
+            if type(v).__name__ in self.types:
                 class_id = self.types[type(v).__name__].id
 
             val = {
