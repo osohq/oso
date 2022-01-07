@@ -13,10 +13,10 @@ jobs:
       - name: Mark release as latest
         uses: tubone24/update_release@v1.0
         with:
-          release_name: "oso ${{ github.event.inputs.version }}"
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: "v${{ github.event.inputs.version }}"
   go:
     # Notifies the go-oso repo there's a new release.
     # CI over there then pulls this tag, commits and pushes their own tag.
