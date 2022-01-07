@@ -23,7 +23,6 @@ from .expression import Expression, Pattern
 from .data_filtering import serialize_types, filter_data
 from .data import DataFilter
 
-
 class Polar:
     """Polar API"""
 
