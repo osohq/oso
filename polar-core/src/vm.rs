@@ -1129,7 +1129,7 @@ impl PolarVirtualMachine {
                 })?;
 
                 // attempt an in-core IsA check if we have the necessary
-                // class_id information to index into MROs
+                // class_id information
                 if let Value::ExternalInstance(ExternalInstance {
                     class_id: Some(cid),
                     ..
@@ -1138,16 +1138,11 @@ impl PolarVirtualMachine {
                     let isa = {
                         let kb = self.kb.read().unwrap();
 
-                        // check for MRO membership if one is defined for the symbol
-                        if let Some(mro) = kb.mro.get(&right_literal.tag) {
-                            mro.contains(&cid)
-                        // otherwise rely on a direct comparison between the left & right symbols
-                        } else {
-                            let symbol = kb
-                                .get_symbol_for_class_id(cid)
-                                .expect("missing symbol for class_id");
-                            symbol == &right_literal.tag
-                        }
+                        let mro = kb
+                            .mro
+                            .get(&right_literal.tag)
+                            .expect("no MRO registered for class_id");
+                        mro.contains(&cid)
                     };
                     if !isa {
                         self.push_goal(Goal::Backtrack)?;

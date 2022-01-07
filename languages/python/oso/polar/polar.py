@@ -263,6 +263,7 @@ class Polar:
             combine_query=combine_query,
         )
         self.register_constant(cls, name)
+        self.host.register_mros()
 
     def register_constant(self, value, name):
         """
