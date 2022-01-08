@@ -34,7 +34,6 @@ extern {
         "{" => lexer::Token::LCB,           // {
         "}" => lexer::Token::RCB,           // }
         "." => lexer::Token::Dot,           // .
-        "new" => lexer::Token::New,         // new
         "!" => lexer::Token::Bang,          // !
         "*" => lexer::Token::Mul,           // *
         "/" => lexer::Token::Div,           // /
@@ -78,7 +77,6 @@ ResWord: String = {
   "and" => "and".to_owned(),
   "or" => "or".to_owned(),
   "not" => "not".to_owned(),
-  "new" => "new".to_owned(),
   "matches" => "matches".to_owned(),
 }
 
@@ -166,14 +164,6 @@ DotCall: Value = {
       Value::Call(Call{name, args, kwargs})
   },
 }
-
-New: Value = {
-    "new" <call:Spanned<Call>> => {
-        let args = vec![call];
-        let op = Operation{operator: Operator::New, args};
-        Value::Expression(op)
-    },
-};
 
 Field<T>: (Symbol, Term) = {
     <name:Name> ":" <value:T> => (name, value),
@@ -273,22 +263,6 @@ BuiltinOperation: Value = {
         let args = vec![arg1, arg2];
         let op = Operation{operator: Operator::ForAll, args};
         Value::Expression(op)
-    },
-};
-
-RewritableOperator: Operator = {
-    "." => Operator::Dot,
-    "new" => Operator::New,
-    "in" => Operator::In,
-};
-
-RewrittenOperation: Value = {
-    <op:RewritableOperator> "(" <mut args:(<TermExp> ",")*> <arg:TermExp?> ")" => {
-        match arg {
-            Some(arg) => args.push(arg),
-            None => ()
-        };
-        Value::Expression(Operation{operator: op, args: args})
     },
 };
 
@@ -615,12 +589,10 @@ Value: ValueOrLogical = {
     <IsAny<Boolean>>,
     <IsAny<Variable>>,
     <IsLogical<Call>>,
-    <IsValue<New>>,
     <IsValue<List<"Term">>>,
     <IsValue<Number>>,
     <IsValue<PolarString>>,
     <IsValue<DictionaryTerm>>,
-    <IsLogical<RewrittenOperation>>,
 };
 
 

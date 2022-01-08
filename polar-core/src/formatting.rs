@@ -85,7 +85,6 @@ fn precedence(o: &Operator) -> i32 {
     match o {
         Operator::Print => 11,
         Operator::Debug => 11,
-        Operator::New => 10,
         Operator::Cut => 10,
         Operator::ForAll => 10,
         Operator::Dot => 9,
@@ -214,27 +213,6 @@ pub mod to_polar {
         }
     }
 
-    impl ToPolarString for ExternalInstance {
-        fn to_polar(&self) -> String {
-            if let Some(ref repr) = self.repr {
-                format!(
-                    "{} TYPE `{}`",
-                    repr.clone(),
-                    self.class_repr.as_ref().unwrap_or(&"UNKNOWN".to_string())
-                )
-            } else {
-                // Print out external instances like ^{id: 123}
-                // NOTE: this format is used by host libraries to enrich output
-                // messages with native representations of the instances.
-                format!(
-                    "^{{id: {}}} TYPE `{}`",
-                    self.instance_id,
-                    self.class_repr.as_ref().unwrap_or(&"UNKNOWN".to_string())
-                )
-            }
-        }
-    }
-
     impl ToPolarString for InstanceLiteral {
         fn to_polar(&self) -> String {
             format!("{}{}", self.tag.to_polar(), self.fields.to_polar())
@@ -260,7 +238,6 @@ pub mod to_polar {
                 Lt => "<",
                 Or => "or",
                 And => "and",
-                New => "new",
                 Dot => ".",
                 Unify => "=",
                 Assign => ":=",
@@ -289,17 +266,6 @@ pub mod to_polar {
                     self.args[0].to_polar(),
                     self.args[1].to_polar()
                 ),
-                New => {
-                    if self.args.len() == 1 {
-                        format!("new {}", to_polar_parens(self.operator, &self.args[0]))
-                    } else {
-                        format!(
-                            "new ({}, {})",
-                            to_polar_parens(self.operator, &self.args[0]),
-                            self.args[1].to_polar()
-                        )
-                    }
-                }
                 // Lookup operator
                 Dot => {
                     let call_term = if let Value::String(s) = self.args[1].value() {
@@ -461,7 +427,6 @@ pub mod to_polar {
                 }
                 Value::Dictionary(i) => i.to_polar(),
                 Value::Pattern(i) => i.to_polar(),
-                Value::ExternalInstance(i) => i.to_polar(),
                 Value::Call(c) => c.to_polar(),
                 Value::List(l) => format!("[{}]", format_args(Operator::And, l, ", "),),
                 Value::Variable(s) => s.to_polar(),

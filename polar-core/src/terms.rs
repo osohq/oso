@@ -38,14 +38,6 @@ pub struct InstanceLiteral {
     pub fields: Dictionary,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub struct ExternalInstance {
-    pub instance_id: u64,
-    pub constructor: Option<Term>,
-    pub repr: Option<String>,
-    pub class_repr: Option<String>,
-}
-
 // Context stored somewhere by id.
 
 // parser outputs
@@ -98,7 +90,6 @@ pub enum Operator {
     Cut,
     In,
     Isa,
-    New,
     Dot,
     Not,
     Mul,
@@ -138,7 +129,6 @@ pub enum Value {
     Number(Numeric),
     String(String),
     Boolean(bool),
-    ExternalInstance(ExternalInstance),
     Dictionary(Dictionary),
     Pattern(Pattern),
     Call(Call),
@@ -215,10 +205,7 @@ impl Value {
 
     pub fn is_ground(&self) -> bool {
         match self {
-            Value::Call(_)
-            | Value::ExternalInstance(_)
-            | Value::Variable(_)
-            | Value::RestVariable(_) => false,
+            Value::Call(_) | Value::Variable(_) | Value::RestVariable(_) => false,
             Value::Number(_) | Value::String(_) | Value::Boolean(_) => true,
             Value::Pattern(_) => panic!("unexpected value type"),
             Value::Dictionary(Dictionary { fields }) => fields.values().all(|t| t.is_ground()),
@@ -301,12 +288,6 @@ impl From<TermList> for Value {
 impl From<String> for Value {
     fn from(other: String) -> Self {
         Self::String(other)
-    }
-}
-
-impl From<ExternalInstance> for Value {
-    fn from(other: ExternalInstance) -> Self {
-        Self::ExternalInstance(other)
     }
 }
 

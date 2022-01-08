@@ -187,12 +187,6 @@ impl Filter {
                 .collect::<FilterResult<Vec<_>>>()
                 .and_then(|ands| FilterInfo::build_filter(types.clone(), ands, var, class)),
 
-            // sometimes we get an instance back. that means the variable
-            // is exactly this instance, so return a filter that matches it.
-            ExternalInstance(_) => {
-                FilterInfo::build_filter(types.clone(), vec![term2expr(ands.clone())], var, class)
-            }
-
             // oops, we don't know how to handle this!
             _ => invalid_state_error(ands.to_polar()),
         }

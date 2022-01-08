@@ -215,7 +215,7 @@ impl<'kb> Visitor for UndefinedRuleCallVisitor<'kb> {
     fn visit_term(&mut self, term: &Term) {
         match term.value() {
             Value::Expression(op) => {
-                if op.operator == Operator::Dot || op.operator == Operator::New {
+                if op.operator == Operator::Dot {
                     return;
                 }
             }

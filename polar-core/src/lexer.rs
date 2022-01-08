@@ -59,7 +59,6 @@ pub enum Token {
     LCB,       // {
     RCB,       // }
     Dot,       // .
-    New,       // new
     Bang,      // !
     Mul,       // *
     Div,       // /
@@ -109,7 +108,6 @@ impl ToString for Token {
             Token::LCB => "{".to_owned(),           // {
             Token::RCB => "}".to_owned(),           // }
             Token::Dot => ".".to_owned(),           // .
-            Token::New => "new".to_owned(),         // new
             Token::Bang => "!".to_owned(),          // !
             Token::Mul => "*".to_owned(),           // *
             Token::Div => "/".to_owned(),           // /
@@ -220,7 +218,6 @@ impl<'input> Lexer<'input> {
             "false" => Token::Boolean(false),
             "inf" => Token::Float(f64::INFINITY),
             "nan" => Token::Float(f64::NAN),
-            "new" => Token::New,
             "in" => Token::In,
             "cut" => Token::Cut,
             "debug" => Token::Debug,

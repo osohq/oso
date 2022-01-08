@@ -40,7 +40,7 @@ fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> erro
         ParseError::UnrecognizedToken {
             token: (loc, t, _), ..
         } => match t {
-            Token::Debug | Token::Cut | Token::In | Token::New => error::ParseError::ReservedWord {
+            Token::Debug | Token::Cut | Token::In => error::ParseError::ReservedWord {
                 token: t.to_string(),
                 loc,
             },
@@ -222,49 +222,6 @@ mod tests {
     fn test_rule_type_error() {
         let rule_type = r#"type f(x: String) if x = "bad";"#;
         super::parse_lines(0, rule_type).expect_err("parse error");
-    }
-
-    #[test]
-    fn test_parse_new() {
-        let f = r#"a(x) if x = new Foo(a: 1);"#;
-        let results = parse_rules(0, f).unwrap();
-        assert_eq!(results[0].to_polar(), r#"a(x) if x = new Foo(a: 1);"#);
-    }
-
-    #[test]
-    fn test_parse_new_boa_constructor() {
-        let f = r#"a(x) if x = new Foo(1, 2);"#;
-        let results = parse_rules(0, f).unwrap();
-        assert_eq!(results[0].to_polar(), r#"a(x) if x = new Foo(1, 2);"#);
-
-        // test trailing comma
-        let f = r#"a(x) if x = new Foo(1,);"#;
-        parse_rules(0, f).expect_err("parse error");
-    }
-
-    #[test]
-    fn test_parse_new_mixed_args() {
-        let f = r#"a(x) if x = new Foo(1, 2, bar: 3, baz:4);"#;
-        let results = parse_rules(0, f).unwrap();
-        assert_eq!(
-            results[0].to_polar(),
-            r#"a(x) if x = new Foo(1, 2, bar: 3, baz: 4);"#
-        );
-        let f = r#"a(x) if x = new Foo(bar: 3, baz: 4);"#;
-        let results = parse_rules(0, f).unwrap();
-        assert_eq!(
-            results[0].to_polar(),
-            r#"a(x) if x = new Foo(bar: 3, baz: 4);"#
-        );
-
-        let f = r#"a(x) if x = new Foo(bar: 3, baz: 4, 1, 2);"#;
-        parse_rules(0, f).expect_err("parse error");
-
-        // Don't allow kwargs in calls or dot ops.
-        let f = r#"a(x) if f(x: 1)"#;
-        parse_rules(0, f).expect_err("parse error");
-        let f = r#"a(x) if x.f(x: 1)"#;
-        parse_rules(0, f).expect_err("parse error");
     }
 
     #[test]

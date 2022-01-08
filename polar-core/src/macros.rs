@@ -234,17 +234,6 @@ impl From<Value> for TestHelper<Term> {
     }
 }
 
-impl From<u64> for ExternalInstance {
-    fn from(instance_id: u64) -> Self {
-        ExternalInstance {
-            instance_id,
-            constructor: None,
-            repr: None,
-            class_repr: None,
-        }
-    }
-}
-
 // TODO change this
 // TODO(gj): TODONE?
 impl From<(Symbol, Term)> for TestHelper<Parameter> {
