@@ -229,15 +229,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "fix externals"]
     fn test_fold_term_compounds() {
-        todo!("fix for external instance");
-        // let external_instance = term!(Value::ExternalInstance(ExternalInstance {
-        //     instance_id: 1,
-        //     constructor: None,
-        //     repr: None,
-        //     class_repr: None,
-        // }));
         let instance_pattern = term!(value!(InstanceLiteral {
             tag: sym!("d"),
             fields: Dictionary {

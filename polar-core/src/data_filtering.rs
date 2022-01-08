@@ -1050,31 +1050,29 @@ mod test {
     }
 
     fn test_input_0() -> Term {
-        todo!("fix for external instance");
-        // let ins0: Term = ExternalInstance::from(0).into();
-        // let ins1: Term = ExternalInstance::from(1).into();
-        // let pat_a = term!(pattern!(instance!("A")));
-        // let pat_b = term!(pattern!(instance!("B")));
-        // term!(op!(
-        //     And,
-        //     term!(op!(Isa, var!("_this"), pat_a)),
-        //     term!(op!(Isa, ins0.clone(), pat_b.clone())),
-        //     term!(op!(Isa, ins1.clone(), pat_b)),
-        //     term!(op!(
-        //         Unify,
-        //         term!(op!(Dot, ins0, str!("field"))),
-        //         var!("_this")
-        //     )),
-        //     term!(op!(
-        //         Unify,
-        //         term!(op!(Dot, var!("_this"), str!("field"))),
-        //         ins1
-        //     ))
-        // ))
+        let ins0: Term = term!(instance!("A"));
+        let ins1: Term = term!(instance!("B"));
+        let pat_a = term!(instance!("A"));
+        let pat_b = term!(instance!("B"));
+        term!(op!(
+            And,
+            term!(op!(Isa, var!("_this"), pat_a)),
+            term!(op!(Isa, ins0.clone(), pat_b.clone())),
+            term!(op!(Isa, ins1.clone(), pat_b)),
+            term!(op!(
+                Unify,
+                term!(op!(Dot, ins0, str!("field"))),
+                var!("_this")
+            )),
+            term!(op!(
+                Unify,
+                term!(op!(Dot, var!("_this"), str!("field"))),
+                ins1
+            ))
+        ))
     }
 
     #[test]
-    #[ignore = "fix externals"]
     fn test_dot_plan() -> TestResult {
         let partial = test_input_0();
         let bindings = ResultEvent::from(hashmap! {

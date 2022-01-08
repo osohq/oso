@@ -52,6 +52,12 @@ pub fn has_rest_var(list: &TermList) -> bool {
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Symbol(pub String);
 
+impl<T: AsRef<str>> From<T> for Symbol {
+    fn from(other: T) -> Self {
+        Symbol(other.as_ref().to_string())
+    }
+}
+
 impl Symbol {
     pub fn new(name: &str) -> Self {
         Self(name.to_string())

@@ -30,7 +30,7 @@ pub struct KnowledgeBase {
     /// but can translate to and from this type.
     constants: crate::Bindings,
     /// Map of class name -> MRO list where the MRO list is a list of class instance IDs
-    mro: HashMap<Symbol, Vec<u64>>,
+    mro: HashMap<Symbol, Vec<Symbol>>,
 
     /// Map from filename to source ID for files loaded into the KB.
     loaded_files: HashMap<String, u64>,
@@ -206,38 +206,38 @@ impl KnowledgeBase {
         &self,
         rule_instance: &InstanceLiteral,
         rule_type_instance: &InstanceLiteral,
+        rule_type_pattern: &Term, // used for source error printing
         index: usize,
     ) -> ValidationResult<RuleParamMatch> {
-        // Get the unique ID of the prototype instance pattern class.
-        // TODO(gj): make actual term available here instead of constructing a fake test one.
-        let term = self.get_registered_class(&term!(rule_type_instance.tag.clone()))?;
-        // if let Value::ExternalInstance(ExternalInstance { instance_id, .. }) = term.value() {
-        //     if let Some(rule_mro) = self.mro.get(&rule_instance.tag) {
-        //         if !rule_mro.contains(instance_id) {
-        //             Ok(RuleParamMatch::False(format!(
-        //                 "Rule specializer {} on parameter {} must match rule type specializer {}",
-        //                 rule_instance.tag, index, rule_type_instance.tag
-        //             )))
-        //         } else if !self
-        //             .param_fields_match(&rule_type_instance.fields, &rule_instance.fields)
-        //         {
-        //             Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match rule type specializer {} because the specializer fields did not match.", rule_instance.to_polar(), index, rule_type_instance.to_polar())))
-        //         } else {
-        //             Ok(RuleParamMatch::True)
-        //         }
-        //     } else {
-        //         // If `rule_instance.tag` were registered as a class, it would have an MRO.
-        //         Ok(RuleParamMatch::False(format!(
-        //             "Rule specializer {} on parameter {} is not registered as a class.",
-        //             rule_instance.tag, index
-        //         )))
-        //     }
-        // } else {
-        Ok(RuleParamMatch::False(format!(
-            "Rule type specializer {} on parameter {} should be a registered class, but instead it's registered as a constant with value: {}",
-            rule_type_instance.tag, index, term
-        )))
-        // }
+        // TODO: this isn't the right place to check for registered classes
+        // Putting this here for backwards compatibility
+        let term = self.get_registered_class(&rule_type_pattern.clone_with_value(
+            Value::Variable(Variable::new(rule_type_instance.tag.0.clone())),
+        ))?;
+        if !matches!(term.value(), Value::InstanceLiteral(_)) {
+            return Ok(RuleParamMatch::False(format!(
+                "Rule type specializer {} on parameter {} should be a registered class, but instead it's registered as a constant with value: {}",
+                rule_type_instance.tag, index, term
+            )));
+        }
+        if let Some(rule_mro) = self.mro.get(&rule_instance.tag) {
+            if !rule_mro.contains(&rule_type_instance.tag) {
+                Ok(RuleParamMatch::False(format!(
+                    "Rule specializer {} on parameter {} must match rule type specializer {}",
+                    rule_instance.tag, index, rule_type_instance.tag
+                )))
+            } else if !self.param_fields_match(&rule_type_instance.fields, &rule_instance.fields) {
+                Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match rule type specializer {} because the specializer fields did not match.", rule_instance.to_polar(), index, rule_type_instance.to_polar())))
+            } else {
+                Ok(RuleParamMatch::True)
+            }
+        } else {
+            // If `rule_instance.tag` were registered as a class, it would have an MRO.
+            Ok(RuleParamMatch::False(format!(
+                "Rule specializer {} on parameter {} is not registered as a class.",
+                rule_instance.tag, index
+            )))
+        }
     }
 
     /// Check that a rule parameter that has a pattern specializer matches a rule type parameter that has a pattern specializer.
@@ -290,7 +290,7 @@ impl KnowledgeBase {
                                 tag: member.value().as_symbol().expect("parsed as symbol").clone(),
                                 fields: rule_type_instance.fields.clone()
                             };
-                            match self.check_rule_instance_is_subclass_of_rule_type_instance(rule_instance, &rule_type_instance, index) {
+                            match self.check_rule_instance_is_subclass_of_rule_type_instance(rule_instance, &rule_type_instance, rule_type_pattern, index) {
                                 Ok(RuleParamMatch::True) if !success => success = true,
                                 Err(e) => return Err(e),
                                 _ => (),
@@ -322,7 +322,7 @@ impl KnowledgeBase {
                     }
                 // If tags don't match, then rule specializer must be a subclass of rule type specializer
                 } else {
-                    self.check_rule_instance_is_subclass_of_rule_type_instance(rule_instance, rule_type_instance, index)?
+                    self.check_rule_instance_is_subclass_of_rule_type_instance(rule_instance, rule_type_instance, rule_type_pattern, index)?
                 }
             }
             (Value::Dictionary(rule_type_fields), Value::Dictionary(rule_fields))
@@ -407,7 +407,6 @@ impl KnowledgeBase {
         rule_type_param: &Parameter,
         rule_type: &Rule,
     ) -> ValidationResult<RuleParamMatch> {
-        use crate::terms::Dictionary as Dict;
         use crate::terms::InstanceLiteral as InstanceLit;
         use Value::*;
         let res = match (
@@ -424,8 +423,8 @@ impl KnowledgeBase {
                 Some(InstanceLiteral(_) | Dictionary(_)),
             ) => self.check_pattern_param(
                 index,
-                &rule_param.specializer.as_ref().unwrap(),
-                &rule_type_param.specializer.as_ref().unwrap(),
+                rule_param.specializer.as_ref().unwrap(),
+                rule_type_param.specializer.as_ref().unwrap(),
             )?,
             // RuleType has an instance pattern specializer but rule has no specializer
             (
@@ -472,11 +471,7 @@ impl KnowledgeBase {
                         });
                     }
                 };
-                self.check_pattern_param(
-                    index,
-                    rule_param.specializer.as_ref().unwrap(),
-                    rule_type_param.specializer.as_ref().unwrap(),
-                )?
+                self.check_pattern_param(index, &term!(rule_spec), &term!(lit))?
             }
 
             // Rule has value or value specializer, rule type has pattern specializer
@@ -611,7 +606,7 @@ impl KnowledgeBase {
 
     /// Add the Method Resolution Order (MRO) list for a registered class.
     /// The `mro` argument is a list of the `instance_id` associated with a registered class.
-    pub fn add_mro(&mut self, name: Symbol, mro: Vec<u64>) -> PolarResult<()> {
+    pub fn add_mro(&mut self, name: Symbol, mro: Vec<Symbol>) -> PolarResult<()> {
         // Confirm name is a registered class
         if !self.is_constant(&name) {
             let msg = format!("Cannot add MRO for unregistered class {}", name);
@@ -866,10 +861,24 @@ impl KnowledgeBase {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
 
     use crate::error::{ErrorKind::Validation, PolarError};
+
+    /// helper method to register a class and its MRO
+    pub fn register_class_mro(kb: &mut KnowledgeBase, class_name: &str, mro: &[&str]) {
+        kb.register_constant(
+            sym!(class_name),
+            term!(instance!(
+                "Class",
+                btreemap! {sym!("tag") => term!(class_name)}
+            )),
+        )
+        .unwrap();
+        kb.add_mro(sym!(class_name), mro.iter().map(|s| s.into()).collect())
+            .unwrap();
+    }
 
     #[test]
     /// Test validation implemented in `check_file()`.
@@ -938,52 +947,25 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "fix externals"]
     fn test_rule_params_match() {
         let mut kb = KnowledgeBase::new();
-        todo!("fix for external instance");
-        let mut constant = |name: &str, instance_id: u64| {
-            // kb.register_constant(
-            //     sym!(name),
-            //     term!(Value::ExternalInstance(ExternalInstance {
-            //         instance_id,
-            //         constructor: None,
-            //         repr: None,
-            //         class_repr: None,
-            //     })),
-            // )
-            // .unwrap();
-        };
 
-        constant("Fruit", 1);
-        constant("Citrus", 2);
-        constant("Orange", 3);
+        register_class_mro(&mut kb, "Fruit", &["Fruit"]);
+        register_class_mro(&mut kb, "Citrus", &["Citrus", "Fruit"]);
+        register_class_mro(&mut kb, "Orange", &["Orange", "Citrus", "Fruit"]);
         // NOTE: Foo doesn't need an MRO b/c it only appears as a rule type specializer; not a rule
         // specializer.
-        constant("Foo", 4);
+        register_class_mro(&mut kb, "Foo", &[]);
 
         // NOTE: this is only required for these tests b/c we're bypassing the normal load process,
         // where MROs are registered via FFI calls in the host language libraries.
         // process.
-        constant("Integer", 5);
-        constant("Float", 6);
-        constant("String", 7);
-        constant("Boolean", 8);
-        constant("List", 9);
-        constant("Dictionary", 10);
-
-        kb.add_mro(sym!("Fruit"), vec![1]).unwrap();
-        // Citrus is a subclass of Fruit
-        kb.add_mro(sym!("Citrus"), vec![2, 1]).unwrap();
-        // Orange is a subclass of Citrus
-        kb.add_mro(sym!("Orange"), vec![3, 2, 1]).unwrap();
-
-        kb.add_mro(sym!("Integer"), vec![]).unwrap();
-        kb.add_mro(sym!("Float"), vec![]).unwrap();
-        kb.add_mro(sym!("String"), vec![]).unwrap();
-        kb.add_mro(sym!("Boolean"), vec![]).unwrap();
-        kb.add_mro(sym!("List"), vec![]).unwrap();
-        kb.add_mro(sym!("Dictionary"), vec![]).unwrap();
+        register_class_mro(&mut kb, "Integer", &[]);
+        register_class_mro(&mut kb, "Float", &[]);
+        register_class_mro(&mut kb, "String", &[]);
+        register_class_mro(&mut kb, "Boolean", &[]);
+        register_class_mro(&mut kb, "List", &[]);
+        register_class_mro(&mut kb, "Dictionary", &[]);
 
         // BOTH PATTERN SPEC
         // rule: f(x: Foo), rule_type: f(x: Foo) => PASS
@@ -1383,45 +1365,11 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "fix externals"]
     fn test_validate_rules() {
-        todo!("fix for external instance");
         let mut kb = KnowledgeBase::new();
-        // kb.register_constant(
-        //     sym!("Fruit"),
-        //     term!(Value::ExternalInstance(ExternalInstance {
-        //         instance_id: 1,
-        //         constructor: None,
-        //         repr: None,
-        //         class_repr: None,
-        //     })),
-        // )
-        // .unwrap();
-        // kb.register_constant(
-        //     sym!("Citrus"),
-        //     term!(Value::ExternalInstance(ExternalInstance {
-        //         instance_id: 2,
-        //         constructor: None,
-        //         repr: None,
-        //         class_repr: None,
-        //     })),
-        // )
-        // .unwrap();
-        // kb.register_constant(
-        //     sym!("Orange"),
-        //     term!(Value::ExternalInstance(ExternalInstance {
-        //         instance_id: 3,
-        //         constructor: None,
-        //         repr: None,
-        //         class_repr: None,
-        //     })),
-        // )
-        // .unwrap();
-        kb.add_mro(sym!("Fruit"), vec![1]).unwrap();
-        // Citrus is a subclass of Fruit
-        kb.add_mro(sym!("Citrus"), vec![2, 1]).unwrap();
-        // Orange is a subclass of Citrus
-        kb.add_mro(sym!("Orange"), vec![3, 2, 1]).unwrap();
+        register_class_mro(&mut kb, "Fruit", &["Fruit"]);
+        register_class_mro(&mut kb, "Citrus", &["Citrus", "Fruit"]);
+        register_class_mro(&mut kb, "Orange", &["Orange", "Citrus", "Fruit"]);
 
         // Rule type applies if it has the same name as a rule
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!("Orange"))]));
@@ -1468,7 +1416,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "fix externals"]
     fn test_rule_type_validation_errors_for_non_class_specializers() {
         let mut kb = KnowledgeBase::new();
 
@@ -1476,49 +1423,28 @@ mod tests {
             .unwrap();
         kb.register_constant(sym!("String2"), term!("also not an external instance"))
             .unwrap();
-        todo!("fix for external instance");
-        // kb.register_constant(
-        //     sym!("ExternalInstanceWithoutMRO1"),
-        //     term!(Value::ExternalInstance(ExternalInstance {
-        //         instance_id: 1,
-        //         constructor: None,
-        //         repr: None,
-        //         class_repr: None,
-        //     })),
-        // )
-        // .unwrap();
-        // kb.register_constant(
-        //     sym!("ExternalInstanceWithoutMRO2"),
-        //     term!(Value::ExternalInstance(ExternalInstance {
-        //         instance_id: 2,
-        //         constructor: None,
-        //         repr: None,
-        //         class_repr: None,
-        //     })),
-        // )
-        // .unwrap();
-        // kb.register_constant(
-        //     sym!("Class1"),
-        //     term!(Value::ExternalInstance(ExternalInstance {
-        //         instance_id: 3,
-        //         constructor: None,
-        //         repr: None,
-        //         class_repr: None,
-        //     })),
-        // )
-        // .unwrap();
-        // kb.add_mro(sym!("Class1"), vec![3]).unwrap();
-        // kb.register_constant(
-        //     sym!("Class2"),
-        //     term!(Value::ExternalInstance(ExternalInstance {
-        //         instance_id: 4,
-        //         constructor: None,
-        //         repr: None,
-        //         class_repr: None,
-        //     })),
-        // )
-        // .unwrap();
-        kb.add_mro(sym!("Class2"), vec![4]).unwrap();
+
+        kb.register_constant(
+            sym!("ExternalInstanceWithoutMRO1"),
+            term!(instance!(
+                "Class",
+                btreemap! {sym!("tag") => term!("ExternalInstanceWithoutMRO1")}
+            )),
+        )
+        .unwrap();
+        kb.register_constant(
+            sym!("ExternalInstanceWithoutMRO2"),
+            term!(instance!(
+                "Class",
+                btreemap! {sym!("tag") => term!("ExternalInstanceWithoutMRO2")}
+            )),
+        )
+        .unwrap();
+
+        // register_class_mro(&mut kb, "ExternalInstanceWithoutMRO1", &[]);
+        // register_class_mro(&mut kb, "ExternalInstanceWithoutMRO2", &[]);
+        register_class_mro(&mut kb, "Class1", &["Class1"]);
+        register_class_mro(&mut kb, "Class2", &["Class2"]);
 
         // Same unregistered specializer.
         kb.add_rule_type(rule!("f", ["_"; instance!("Unregistered")]));

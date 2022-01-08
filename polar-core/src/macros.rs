@@ -334,3 +334,10 @@ impl From<BTreeMap<Symbol, Term>> for TestHelper<Value> {
         Self(Value::Dictionary(Dictionary { fields: other }))
     }
 }
+
+impl<'a, T> From<&'a T> for TestHelper<Value>
+where T: Clone + Into<TestHelper<Value>> {
+    fn from(other: &'a T) -> Self {
+        other.clone().into()
+    }
+}

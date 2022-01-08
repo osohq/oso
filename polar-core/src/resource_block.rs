@@ -637,6 +637,7 @@ mod tests {
         ErrorKind::{Runtime, Validation},
         PolarError, RuntimeError,
     };
+    use crate::kb::tests::register_class_mro;
     use crate::parser::{parse_lines, Line};
     use crate::polar::Polar;
 
@@ -811,21 +812,12 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "fix externals"]
     fn test_resource_block_declarations_spread_over_multiple_resource_blocks() {
         let p = Polar::new();
-        todo!("fix for external instance");
-        // let repo_instance = ExternalInstance {
-        //     instance_id: 1,
-        //     constructor: None,
-        //     repr: None,
-        //     class_repr: None,
-        // };
-        // let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
-        // let repo_name = sym!("Repo");
-        // p.register_constant(repo_name.clone(), repo_term).unwrap();
-        // p.register_mro(repo_name, vec![repo_instance.instance_id])
-        //     .unwrap();
+        {
+            let mut kb = p.kb.write().unwrap();
+            register_class_mro(&mut kb, "Repo", &["Repo"]);
+        }
 
         // Use declarations from one resource block in shorthand rules in another.
         let valid_policy = r#"
@@ -968,22 +960,13 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "fix externals"]
     fn test_resource_block_declarations_overwriting() {
         let p = Polar::new();
-        todo!("fix for external instance");
-        // let repo_instance = ExternalInstance {
-        //     instance_id: 1,
-        //     constructor: None,
-        //     repr: None,
-        //     class_repr: None,
-        // };
-        // let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
-        // let repo_name = sym!("Repo");
-        // p.register_constant(repo_name.clone(), repo_term).unwrap();
-        // p.register_mro(repo_name, vec![repo_instance.instance_id])
-        //     .unwrap();
-
+        {
+            let mut kb = p.kb.write().unwrap();
+            register_class_mro(&mut kb, "Repo", &["Repo"]);
+            register_class_mro(&mut kb, "User", &["User"]);
+        }
         // validate overwriting declarations of the same type is ok
         let valid_policy = r#"
             resource Repo {
@@ -1058,18 +1041,6 @@ mod tests {
             has_relation(subject: Repo, "reader", object: Repo) if
                 object.parent_id = subject.id;
         "#;
-        todo!("fix for external instance");
-        // let user_instance = ExternalInstance {
-        //     instance_id: 2,
-        //     constructor: None,
-        //     repr: None,
-        //     class_repr: None,
-        // };
-        // let user_term = term!(Value::ExternalInstance(user_instance.clone()));
-        // let user_name = sym!("User");
-        // p.register_constant(user_name.clone(), user_term).unwrap();
-        // p.register_mro(user_name, vec![user_instance.instance_id])
-        //     .unwrap();
         expect_error(
             &p,
             invalid_policy,
@@ -1527,58 +1498,12 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "fix externals"]
     fn test_validate_rules_with_union_type_specializers() {
         let mut kb = KnowledgeBase::new();
-        todo!("fix for external instance");
-        // kb.register_constant(
-        //     sym!("Fruit"),
-        //     term!(Value::ExternalInstance(ExternalInstance {
-        //         instance_id: 1,
-        //         constructor: None,
-        //         repr: None,
-        //         class_repr: None,
-        //     })),
-        // )
-        // .unwrap();
-        // kb.register_constant(
-        //     sym!("Citrus"),
-        //     term!(Value::ExternalInstance(ExternalInstance {
-        //         instance_id: 2,
-        //         constructor: None,
-        //         repr: None,
-        //         class_repr: None,
-        //     })),
-        // )
-        // .unwrap();
-        // kb.register_constant(
-        //     sym!("Orange"),
-        //     term!(Value::ExternalInstance(ExternalInstance {
-        //         instance_id: 3,
-        //         constructor: None,
-        //         repr: None,
-        //         class_repr: None,
-        //     })),
-        // )
-        // .unwrap();
-        kb.add_mro(sym!("Fruit"), vec![1]).unwrap();
-        // Citrus is a subclass of Fruit
-        kb.add_mro(sym!("Citrus"), vec![2, 1]).unwrap();
-        // Orange is a subclass of Citrus
-        kb.add_mro(sym!("Orange"), vec![3, 2, 1]).unwrap();
-
-        todo!("fix for external instance");
-        // kb.register_constant(
-        //     sym!("User"),
-        //     term!(Value::ExternalInstance(ExternalInstance {
-        //         instance_id: 4,
-        //         constructor: None,
-        //         repr: None,
-        //         class_repr: None,
-        //     })),
-        // )
-        // .unwrap();
-        kb.add_mro(sym!("User"), vec![4]).unwrap();
+        register_class_mro(&mut kb, "Fruit", &["Fruit"]);
+        register_class_mro(&mut kb, "Citrus", &["Citrus", "Fruit"]);
+        register_class_mro(&mut kb, "Orange", &["Orange", "Citrus", "Fruit"]);
+        register_class_mro(&mut kb, "User", &["User"]);
 
         // Add member to 'Resource' union.
         kb.resource_blocks.resources.insert(term!(sym!("Citrus")));
@@ -1695,7 +1620,6 @@ mod tests {
     //   - has_relation between (Organization, "parent", Repository)
     //   - has_role created because at least one resource block has roles declared
     #[test]
-    #[ignore = "fix externals"]
     fn test_create_resource_specific_rule_types() -> core::result::Result<(), PolarError> {
         let policy = r#"
             resource Organization {
@@ -1716,30 +1640,11 @@ mod tests {
         "#;
 
         let polar = Polar::new();
-
-        todo!("fix for external instance");
-        // let repo_instance = ExternalInstance {
-        //     instance_id: 1,
-        //     constructor: None,
-        //     repr: None,
-        //     class_repr: None,
-        // };
-        // let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
-        let repo_name = sym!("Repository");
-        // polar.register_constant(repo_name.clone(), repo_term)?;
-        // polar.register_mro(repo_name.clone(), vec![repo_instance.instance_id])?;
-
-        // let org_instance = ExternalInstance {
-        //     instance_id: 2,
-        //     constructor: None,
-        //     repr: None,
-        //     class_repr: None,
-        // };
-        // let org_term = term!(Value::ExternalInstance(org_instance.clone()));
-        let org_name = sym!("Organization");
-        // polar.register_constant(org_name.clone(), org_term)?;
-        // polar.register_mro(org_name.clone(), vec![org_instance.instance_id])?;
-
+        {
+            let mut kb = polar.kb.write().unwrap();
+            register_class_mro(&mut kb, "Repository", &["Repository"]);
+            register_class_mro(&mut kb, "Organization", &["Organization"]);
+        }
         polar.load_str(policy)?;
 
         let kb = polar.kb.read().unwrap();
@@ -1752,7 +1657,7 @@ mod tests {
 
         let has_relation_rule_types = kb.get_rule_types(&sym!("has_relation")).unwrap();
         // has_relation(organization: Organization, "parent", repository: Repository)
-        let expected = rule!("has_relation", ["subject"; instance!(org_name), "parent", "object"; instance!(repo_name)]);
+        let expected = rule!("has_relation", ["subject"; instance!("Organization"), "parent", "object"; instance!("Repository")]);
         assert_eq!(1, has_relation_rule_types.len());
         assert_eq!(has_relation_rule_types[0], expected,);
 
@@ -1762,7 +1667,6 @@ mod tests {
     // Test creation of rule types for actor roles
     //   - has_role created because at least one resource block has roles declared
     #[test]
-    #[ignore = "fix externals"]
     fn test_create_resource_specific_rule_types_actor_roles() -> core::result::Result<(), PolarError>
     {
         let policy = r#"
@@ -1774,17 +1678,10 @@ mod tests {
         "#;
 
         let polar = Polar::new();
-        todo!("fix for external instance");
-        // let team_instance = ExternalInstance {
-        //     instance_id: 1,
-        //     constructor: None,
-        //     repr: None,
-        //     class_repr: None,
-        // };
-        // let team_term = term!(Value::ExternalInstance(team_instance.clone()));
-        // let team_name = sym!("Team");
-        // polar.register_constant(team_name.clone(), team_term)?;
-        // polar.register_mro(team_name, vec![team_instance.instance_id])?;
+        {
+            let mut kb = polar.kb.write().unwrap();
+            register_class_mro(&mut kb, "Team", &["Team"]);
+        }
 
         polar.load_str(policy)?;
 
