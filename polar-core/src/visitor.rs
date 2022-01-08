@@ -29,7 +29,7 @@ pub trait Visitor: Sized {
     fn visit_boolean(&mut self, _b: &bool) {}
     fn visit_instance_id(&mut self, _i: &u64) {}
     fn visit_symbol(&mut self, _s: &Symbol) {}
-    fn visit_variable(&mut self, _v: &Symbol) {}
+    fn visit_variable(&mut self, _v: &Variable) {}
     fn visit_rest_variable(&mut self, _r: &Symbol) {}
     fn visit_operator(&mut self, _o: &Operator) {}
 
@@ -191,9 +191,9 @@ mod tests {
             self.push(Value::Number(Numeric::Integer(*i as i64)));
         }
         fn visit_symbol(&mut self, s: &Symbol) {
-            self.push(Value::Variable(s.clone()));
+            self.push(Value::Variable(Variable::new(s.0.clone())));
         }
-        fn visit_variable(&mut self, v: &Symbol) {
+        fn visit_variable(&mut self, v: &Variable) {
             self.push(Value::Variable(v.clone()));
         }
         fn visit_rest_variable(&mut self, r: &Symbol) {

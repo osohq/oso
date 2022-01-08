@@ -425,7 +425,7 @@ impl KnowledgeBase {
                 (
                     Value::Variable(_),
                     Some(Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. }))),
-                    Value::Variable(parameter),
+                    match_var!(parameter),
                     None,
                 ) => RuleParamMatch::False(format!(
                     "Parameter `{parameter}` expects a {tag} type constraint.

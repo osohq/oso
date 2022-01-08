@@ -429,7 +429,7 @@ pub mod to_polar {
                 Value::Pattern(i) => i.to_polar(),
                 Value::Call(c) => c.to_polar(),
                 Value::List(l) => format!("[{}]", format_args(Operator::And, l, ", "),),
-                Value::Variable(s) => s.to_polar(),
+                match_var!(s) => s.to_polar(),
                 Value::RestVariable(s) => format!("*{}", s.to_polar()),
                 Value::Expression(e) => e.to_polar(),
             }

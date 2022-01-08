@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     kb::KnowledgeBase,
-    terms::{Call, Operation, Operator, Symbol, Term, ToPolarString, Value},
+    terms::{Call, Operation, Operator, Symbol, Term, ToPolarString, Value, Variable},
 };
 
 pub struct Query {
@@ -44,7 +44,7 @@ impl Query {
                             .bindings
                             .get(v)
                             .map(|t| t.value().clone())
-                            .unwrap_or_else(|| Value::Variable(Symbol(v.clone()))),
+                            .unwrap_or_else(|| Value::Variable(Variable::new(v.clone()))),
                     )
                 })
                 .collect()
@@ -165,6 +165,15 @@ pub struct State {
     pub bindings: HashMap<String, Term>,
 }
 
+/// A struct to represent a unify _goal_
+///
+/// The question: when do you use the goal versus calling unify directly?
+/// There are two cases:
+/// 1. You need to perform a unification after some other goal
+/// 2. Unification might result in multiple new states
+///
+/// Currently (2) never happens. So always prefer to use the direct unification
+/// for efficiency.
 struct Unify {
     left: Term,
     right: Term,
@@ -183,13 +192,24 @@ impl Goal for Unify {
 }
 
 impl State {
-    fn walk(&self, term: Term) -> Term {
+    fn walk(&mut self, term: Term) -> Term {
         match term.value() {
-            Value::Variable(var) => {
-                if let Some(t) = self.bindings.get(&var.0) {
-                    self.walk(t.clone())
-                } else {
-                    term
+            match_var!(var) => {
+                match self.bindings.get(&var.0) {
+                    Some(t) if t == &term => {
+                        // var is unbound
+                        t.clone()
+                    }
+                    Some(t) => {
+                        let t= t.clone();
+                        self.walk(t)
+                    },
+                    _ => {
+                        // if we encounter a variable that is unbound, we immediately insert
+                        // an entry for that variable binding it to itself.
+                        self.bindings.insert(var.0.clone(), term.clone());
+                        term
+                    }
                 }
             }
             _ => term,
@@ -199,7 +219,7 @@ impl State {
     fn unify(&mut self, left: Term, right: Term) -> bool {
         match (self.walk(left).value(), self.walk(right).value()) {
             (left, right) if left == right => true,
-            (Value::Variable(var), value) | (value, Value::Variable(var)) => {
+            (match_var!(var), value) | (value, match_var!(var)) => {
                 self.bindings
                     .insert(var.0.clone(), Term::new_temporary(value.clone()));
                 true
@@ -207,6 +227,18 @@ impl State {
             _ => false,
         }
     }
+
+    // fn isa(&mut self, left: Term, right: Term) -> bool {
+    //     match (self.walk(left).value(), self.walk(right).value()) {
+    //         (left, right) if left == right => true,
+    //         (match_var!(var), value) | (value, match_var!(var)) => {
+    //             self.bindings
+    //                 .insert(var.0.clone(), Term::new_temporary(value.clone()));
+    //             true
+    //         }
+    //         _ => false,
+    //     }
+    // }
 
     fn kb(&self) -> RwLockReadGuard<KnowledgeBase> {
         self.kb.read().unwrap()

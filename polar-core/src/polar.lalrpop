@@ -114,7 +114,7 @@ Boolean: Value = <b:"Boolean"> => {
 Name: Symbol = <s:"Symbol"> => s;
 
 Variable: Value  = <n:Name> => {
-    Value::Variable(n)
+    Value::Variable(Variable::new(n.0))
 };
 
 RestVar: Value  = "*" <n:Name> => {
@@ -385,7 +385,7 @@ Matches = {"matches"};
 MatchExp<T>: Value = {
     // Symbols on the RHS are treated as class names, just like in a specializers
     <left:ExpectValue<Exp8<T>>> Matches <right:Spanned<Pattern>> => {
-        let right = if let Value::Variable(ref sym) = right.value() {
+        let right = if let match_var!(sym) = &right.value() {
             right.clone_with_value(Value::Pattern(Pattern::Instance(InstanceLiteral {
                 tag: sym.clone(),
                 fields: Dictionary::new()
@@ -621,7 +621,7 @@ Parameter: Parameter = {
         Parameter{parameter, specializer: None}
     },
     <parameter:Spanned<Variable>> ":" <specializer:Spanned<Pattern>> => {
-        if let Value::Variable(class_name) = specializer.value() {
+        if let match_var!(class_name) = specializer.value() {
             let fields = BTreeMap::new();
             let instance_literal = InstanceLiteral{tag: class_name.clone(), fields: Dictionary{fields}};
             Parameter {

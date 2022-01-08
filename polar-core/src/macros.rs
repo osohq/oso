@@ -14,6 +14,13 @@ pub const ORD: Ordering = Ordering::SeqCst;
 pub static NEXT_ID: AtomicU64 = AtomicU64::new(0);
 
 #[macro_export]
+macro_rules! match_var {
+    ($v:ident) => {
+        crate::terms::Value::Variable(crate::terms::Variable { name: $v, .. })
+    };
+}
+
+#[macro_export]
 macro_rules! value {
     ([$($args:expr),*]) => {
         $crate::terms::Value::List(vec![
@@ -243,7 +250,9 @@ impl From<(Symbol, Term)> for TestHelper<Parameter> {
             v => v,
         };
         Self(Parameter {
-            parameter: arg.1.clone_with_value(Value::Variable(arg.0)),
+            parameter: arg
+                .1
+                .clone_with_value(Value::Variable(Variable::new(arg.0 .0))),
             specializer: Some(term!(specializer)),
         })
     }
@@ -324,7 +333,7 @@ impl From<TermList> for TestHelper<Value> {
 }
 impl From<Symbol> for TestHelper<Value> {
     fn from(other: Symbol) -> Self {
-        Self(Value::Variable(other))
+        Self(Value::Variable(Variable::new(other.0)))
     }
 }
 impl From<BTreeMap<Symbol, Term>> for TestHelper<Value> {

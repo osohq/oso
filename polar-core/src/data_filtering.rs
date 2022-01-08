@@ -150,7 +150,7 @@ impl VarInfo {
     /// for when you absolutely, definitely need a symbol.
     fn symbolize(&mut self, val: &Term) -> VarName {
         match val.value() {
-            Value::Variable(var) | Value::RestVariable(var) => var.clone(),
+            match_var!(var) | Value::RestVariable(var) => var.clone(),
             Value::Expression(Operation {
                 operator: Operator::Dot,
                 args,
@@ -238,11 +238,11 @@ impl VarInfo {
 
     fn do_unify(mut self, left: &Term, right: &Term) -> Result<Self> {
         match (self.undot(left), self.undot(right)) {
-            (Value::Variable(l), Value::Variable(r)) => {
+            (match_var!(l), match_var!(r)) => {
                 self.cycles.push((l, r));
                 Ok(self)
             }
-            (Value::Variable(var), val) | (val, Value::Variable(var)) => {
+            (match_var!(var), val) | (val, match_var!(var)) => {
                 self.eq_values.push((var, Term::from(val)));
                 Ok(self)
             }
@@ -259,16 +259,16 @@ impl VarInfo {
 
     fn do_neq(mut self, left: &Term, right: &Term) -> Result<Self> {
         match (self.undot(left), self.undot(right)) {
-            (Value::Variable(l), Value::Variable(r)) => {
+            (match_var!(l), match_var!(r)) => {
                 self.uncycles.push((l, r));
                 Ok(self)
             }
-            (Value::Variable(l), _) => {
+            (match_var!(l), _) => {
                 let r = self.symbolize(right);
                 self.uncycles.push((l, r));
                 Ok(self)
             }
-            (_, Value::Variable(r)) => {
+            (_, match_var!(r)) => {
                 let l = self.symbolize(left);
                 self.uncycles.push((l, r));
                 Ok(self)
@@ -282,11 +282,11 @@ impl VarInfo {
 
     fn do_in(mut self, left: &Term, right: &Term) -> Result<Self> {
         match (self.undot(left), self.undot(right)) {
-            (Value::Variable(l), Value::Variable(r)) => {
+            (match_var!(l), match_var!(r)) => {
                 self.in_relationships.push((l, r));
                 Ok(self)
             }
-            (val, Value::Variable(var)) => {
+            (val, match_var!(var)) => {
                 self.contained_values.push((Term::from(val), var));
                 Ok(self)
             }

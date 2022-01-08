@@ -77,6 +77,23 @@ impl Symbol {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+pub struct Variable {
+    pub name: Symbol,
+    type_info: Option<String>, // currently just a class name
+    constraints: Vec<Operation>,
+}
+
+impl Variable {
+    pub fn new(name: String) -> Self {
+        Self {
+            name: Symbol(name),
+            type_info: Default::default(),
+            constraints: Default::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Call {
     pub name: Symbol,
     pub args: TermList,
@@ -133,7 +150,7 @@ pub enum Value {
     Pattern(Pattern),
     Call(Call),
     List(TermList),
-    Variable(Symbol),
+    Variable(Variable),
     RestVariable(Symbol),
     Expression(Operation),
 }
@@ -141,7 +158,7 @@ pub enum Value {
 impl Value {
     pub fn as_symbol(&self) -> Result<&Symbol> {
         match self {
-            Value::Variable(name) => Ok(name),
+            match_var!(var) => Ok(var),
             Value::RestVariable(name) => Ok(name),
             _ => Err(InvalidState {
                 msg: format!("Expected symbol, got: {}", self),
@@ -263,7 +280,7 @@ where
 
 impl From<Symbol> for Value {
     fn from(other: Symbol) -> Self {
-        Self::Variable(other)
+        Self::Variable(Variable::new(other.0))
     }
 }
 
@@ -421,8 +438,8 @@ impl Term {
         }
 
         impl<'set> Visitor for VariableVisitor<'set> {
-            fn visit_variable(&mut self, v: &Symbol) {
-                self.vars.insert(v.clone());
+            fn visit_variable(&mut self, v: &Variable) {
+                self.vars.insert(v.name.clone());
             }
         }
 
@@ -444,8 +461,8 @@ impl Term {
         }
 
         impl<'var> Visitor for VariableChecker<'var> {
-            fn visit_variable(&mut self, v: &Symbol) {
-                if !self.occurs && *v == *self.var {
+            fn visit_variable(&mut self, v: &Variable) {
+                if !self.occurs && &v.name == self.var {
                     self.occurs = true;
                 }
             }
@@ -478,11 +495,11 @@ impl Term {
     }
 
     pub fn is_actor_union(&self) -> bool {
-        matches!(self.value(), Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) | Value::Variable(tag) if tag.0 == ACTOR_UNION_NAME)
+        matches!(self.value(), Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) | match_var!(tag) if tag.0 == ACTOR_UNION_NAME)
     }
 
     pub fn is_resource_union(&self) -> bool {
-        matches!(self.value(), Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) | Value::Variable(tag) if tag.0 == RESOURCE_UNION_NAME)
+        matches!(self.value(), Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) | match_var!(tag) if tag.0 == RESOURCE_UNION_NAME)
     }
 }
 

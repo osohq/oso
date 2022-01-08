@@ -49,7 +49,7 @@ impl<'kb> SingletonVisitor<'kb> {
 impl<'kb> Visitor for SingletonVisitor<'kb> {
     fn visit_term(&mut self, t: &Term) {
         match t.value() {
-            Value::Variable(v)
+            match_var!(v)
             | Value::RestVariable(v)
             | Value::Pattern(Pattern::Instance(InstanceLiteral { tag: v, .. }))
                 if !v.is_temporary_var()

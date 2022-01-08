@@ -125,7 +125,7 @@ impl PathVar {
                 pv.path.push(dot);
                 Ok(pv)
             }
-            Variable(Symbol(var)) => Ok(var.clone().into()),
+            match_var!(var) => Ok(var.0.clone().into()),
             _ => invalid_state_error(format!("PathVar::from_term({})", t.to_polar())),
         }
     }

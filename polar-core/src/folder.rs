@@ -42,11 +42,12 @@ pub trait Folder: Sized {
     fn fold_name(&mut self, n: Symbol) -> Symbol {
         fold_name(n, self)
     }
-    fn fold_variable(&mut self, v: Symbol) -> Symbol {
+    fn fold_variable(&mut self, v: Variable) -> Variable {
         fold_variable(v, self)
     }
     fn fold_rest_variable(&mut self, v: Symbol) -> Symbol {
-        fold_variable(v, self)
+        v
+        // fold_variable(v, self)
     }
     fn fold_operator(&mut self, o: Operator) -> Operator {
         fold_operator(o, self)
@@ -177,7 +178,7 @@ pub fn fold_call<T: Folder>(Call { name, args, kwargs }: Call, fld: &mut T) -> C
     }
 }
 
-pub fn fold_variable<T: Folder>(v: Symbol, _fld: &mut T) -> Symbol {
+pub fn fold_variable<T: Folder>(v: Variable, _fld: &mut T) -> Variable {
     v
 }
 
