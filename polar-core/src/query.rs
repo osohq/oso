@@ -31,10 +31,8 @@ impl Query {
             variables,
             kb,
         } = self;
-        let state = State {
-            kb,
-            ..Default::default()
-        };
+
+        let state = State::new(kb);
         term.run(state).map(move |state| {
             variables
                 .iter()
@@ -70,12 +68,7 @@ impl Goal for Call {
             // for each applicable rule
             // create a set of bindings for the input arguments
             // and construct the goals needed to evaluate the rule
-            let bindings = HashMap::new();
-            let mut inner_state = State {
-                bindings,
-                kb: kb.clone(),
-            };
-
+            let mut inner_state = State::new(kb.clone());
             let mut applicable = true;
             let mut variables = vec![];
             for (arg, param) in self.args.iter().zip(r.params.iter()) {
@@ -161,10 +154,34 @@ impl Operation {
                     Box::new(empty())
                 }
             }
+            // The `And` goal is constructed by sequentially chaining all state streams created by evaluating each
+            // successive goal
+            //
+            // I.e. (x = 1 or x = 2) and (y = 3) first produces a stream of two states (x=1), (x=2)
+            // and we append the result of running (y=3) onto each of these.
+            //
+            // TBD: is this breadth of depth first?
             And => Box::new(self.args.into_iter().fold(
                 Box::new(once(state)) as Box<dyn Iterator<Item = State>>,
                 |states, term| Box::new(states.flat_map(move |state| term.clone().run(state))),
             )),
+            // The `Or` goal is constructed by cloning the state and creating an iterator for each goal
+            Or => Box::new(
+                self.args
+                    .into_iter()
+                    .flat_map(move |term| term.run(state.clone())),
+            ),
+            Print => {
+                println!(
+                    "{}",
+                    self.args
+                        .iter()
+                        .map(|a| a.to_string())
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                );
+                Box::new(once(state))
+            }
             o => todo!("implementing run for operation {}", o.to_polar()),
         }
     }
@@ -174,6 +191,20 @@ impl Operation {
 pub struct State {
     kb: Arc<RwLock<KnowledgeBase>>,
     pub bindings: HashMap<String, Term>,
+}
+
+impl State {
+    pub fn new(kb: Arc<RwLock<KnowledgeBase>>) -> Self {
+        // seed the state with all registered constants
+        let bindings = kb
+            .read()
+            .unwrap()
+            .get_registered_constants()
+            .iter()
+            .map(|(k, v)| (k.0.clone(), v.clone()))
+            .collect();
+        Self { kb, bindings }
+    }
 }
 
 /// A struct to represent a unify _goal_
@@ -224,6 +255,30 @@ impl State {
                         self.walk(t)
                     }
                     _ => term,
+                }
+            }
+            Value::Expression(Operation {
+                operator: Operator::Dot,
+                args,
+            }) => {
+                if let Value::String(field) = args[1].value() {
+                    match self.walk(args[0].clone()).value() {
+                        Value::Dictionary(d) => d
+                            .fields
+                            .get(&Symbol(field.clone()))
+                            .expect("field not found")
+                            .clone(),
+                        Value::InstanceLiteral(lit) => {
+                            if let Some(v) = lit.fields.fields.get(&Symbol(field.clone())) {
+                                v.clone()
+                            } else {
+                                todo!("accessing a field on a literal that doesn't exist")
+                            }
+                        }
+                        _ => todo!("lookup on a non-literal"),
+                    }
+                } else {
+                    todo!("support lookups: {}", term)
                 }
             }
             _ => term,

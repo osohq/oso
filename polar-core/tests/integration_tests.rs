@@ -1683,6 +1683,7 @@ fn test_and_or_warning() -> TestResult {
 }
 
 #[test]
+#[ignore = "not doing a message handler for now"]
 fn test_print() -> TestResult {
     // TODO: If POLAR_LOG is on this test will fail.
     let p = polar();
@@ -2236,7 +2237,7 @@ fn test_numeric_applicability() -> TestResult {
     qeval(&p, "f(9223372036854775807)");
     qeval(&p, "f(-9223372036854775807)");
     qeval(&p, "f(9223372036854776000.0)");
-    qeval(&p, "f(nan1)");
+    qnull(&p, "f(nan1)");
     qnull(&p, "f(nan2)");
     Ok(())
 }
