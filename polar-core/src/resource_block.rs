@@ -428,7 +428,7 @@ fn index_declarations(
     let mut declarations = HashMap::new();
 
     if let Some(roles) = roles {
-        for role in roles.value().as_list().expect("parsed as list") {
+        for role in &roles.value().as_list().expect("parsed as list").elements {
             if let Some(existing) = declarations.insert(role.clone(), Declaration::Role) {
                 return Err(ValidationError::DuplicateResourceBlockDeclaration {
                     resource: resource.clone(),
@@ -441,7 +441,12 @@ fn index_declarations(
     }
 
     if let Some(permissions) = permissions {
-        for permission in permissions.value().as_list().expect("parsed as list") {
+        for permission in &permissions
+            .value()
+            .as_list()
+            .expect("parsed as list")
+            .elements
+        {
             if let Some(existing) = declarations.insert(permission.clone(), Declaration::Permission)
             {
                 return Err(ValidationError::DuplicateResourceBlockDeclaration {

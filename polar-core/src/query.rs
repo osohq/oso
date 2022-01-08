@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     kb::KnowledgeBase,
-    terms::{Call, Operation, Operator, Symbol, Term, ToPolarString, Value, Variable},
+    terms::{Call, List, Operation, Operator, Symbol, Term, ToPolarString, Value, Variable},
 };
 
 pub struct Query {
@@ -143,7 +143,7 @@ impl Goal for Term {
 }
 
 impl Operation {
-    fn run(self, mut state: State) -> Box<dyn Iterator<Item = State>> {
+    fn run(mut self, mut state: State) -> Box<dyn Iterator<Item = State>> {
         use crate::terms::Operator::*;
         println!("run operation: {}", self.to_polar());
         match self.operator {
@@ -171,6 +171,53 @@ impl Operation {
                     .into_iter()
                     .flat_map(move |term| term.run(state.clone())),
             ),
+            Not =>
+            // this is not proper negation yet... but the idea is fail
+            // if we get any results, and dont bind anything otherwise
+            {
+                if self.args.pop().unwrap().run(state.clone()).next().is_some() {
+                    Box::new(empty())
+                } else {
+                    Box::new(once(state))
+                }
+            }
+
+            In => {
+                let list = state.walk(self.args.pop().unwrap());
+                let item = state.walk(self.args.pop().unwrap());
+                if let Value::List(list) = list.value() {
+                    let iter_state = state.clone();
+                    let iter_item = item.clone();
+                    // attempt to unify item with each element
+                    let elem_iter = list.elements.clone().into_iter().filter_map(move |elem| {
+                        let mut state = iter_state.clone();
+                        if state.unify(iter_item.clone(), elem) {
+                            Some(state)
+                        } else {
+                            None
+                        }
+                    });
+                    if let Some(rv) = &list.rest_var {
+                        // if there's a rest var, the item could be in that list instead
+                        // chain on those goals
+                        Box::new(
+                            elem_iter.chain(
+                                Operation {
+                                    operator: Operator::In,
+                                    args: vec![item.clone(), term!(rv.clone())],
+                                }
+                                .run(state),
+                            ),
+                        )
+                    } else {
+                        Box::new(elem_iter)
+                    }
+                } else if let Value::Variable(v) = &list.value() {
+                    todo!("cannot `in` with a variable for now")
+                } else {
+                    todo!("unsupported: in for: {}", list)
+                }
+            }
             Print => {
                 println!(
                     "{}",
@@ -285,6 +332,11 @@ impl State {
         }
     }
 
+    fn bind(&mut self, var: &str, value: Term) {
+        println!("Bind: {} = {}", var, value);
+        self.bindings.insert(var.to_string(), value);
+    }
+
     fn unify(&mut self, left: Term, right: Term) -> bool {
         println!("Unify: {} = {}", left, right);
 
@@ -294,15 +346,66 @@ impl State {
                 true
             }
             (match_var!(var), value) | (value, match_var!(var)) => {
-                println!("Bind: {} = {}", var, value);
-                self.bindings
-                    .insert(var.0.clone(), Term::new_temporary(value.clone()));
+                self.bind(&var.0, term!(value.clone()));
                 true
             }
+            (Value::List(l), Value::List(r)) => self.unify_lists(l, r),
             (l, r) => {
                 println!("Unify failed: {} = {}", l, r);
                 false
             }
+        }
+    }
+
+    fn unify_lists(&mut self, left: &List, right: &List) -> bool {
+        match (
+            left.elements.len(),
+            &left.rest_var,
+            right.elements.len(),
+            &right.rest_var,
+        ) {
+            // make sure left <= right in length
+            (l_len, _, r_len, _) if r_len < l_len => self.unify_lists(right, left),
+
+            // equal lengths
+            (l_len, lrv, r_len, rrv) if l_len == r_len => {
+                let res = match (lrv, rrv) {
+                    // left rest var and right rest_var are the same lists
+                    // TODO: add list constraint to vars?
+                    (Some(lrv), Some(rrv)) => self.unify(term!(lrv.clone()), term!(rrv)),
+                    // rest var must be empty list
+                    (Some(rv), None) | (None, Some(rv)) => self.unify(term!(rv.clone()), term!([])),
+                    _ => true,
+                };
+                res && left
+                    .elements
+                    .iter()
+                    .zip(right.elements.iter())
+                    .all(|(l, r)| self.unify(l.clone(), r.clone()))
+            }
+
+            // l_len <= r_len since we swap
+            (l_len, Some(lrv), _, rrv) => {
+                let res = if let Some(rrv) = rrv {
+                    // left rest var is the full suffix of the right
+                    self.unify(
+                        term!(lrv),
+                        term!(List {
+                            elements: right.elements[l_len..].to_vec(),
+                            rest_var: Some(rrv.clone())
+                        }),
+                    )
+                } else {
+                    // left rest var is the suffix _and_ the rest var of right
+                    self.unify(term!(lrv.clone()), term!(right.elements[l_len..].to_vec()))
+                };
+                res && left
+                    .elements
+                    .iter()
+                    .zip(right.elements.iter())
+                    .all(|(l, r)| self.unify(l.clone(), r.clone()))
+            }
+            _ => false,
         }
     }
 

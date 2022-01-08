@@ -150,7 +150,7 @@ impl VarInfo {
     /// for when you absolutely, definitely need a symbol.
     fn symbolize(&mut self, val: &Term) -> VarName {
         match val.value() {
-            match_var!(var) | Value::RestVariable(var) => var.clone(),
+            match_var!(var) => var.clone(),
             Value::Expression(Operation {
                 operator: Operator::Dot,
                 args,
@@ -948,7 +948,6 @@ impl Vars {
                     Value::Dictionary(_) => "Dictionary",
                     Value::Call(_) => "Call",
                     Value::Variable(_) => "Variable",
-                    Value::RestVariable(_) => "RestVariable",
                     Value::Expression(_) => "Expression",
                     Value::InstanceLiteral(_) => "InstanceLiteral",
                 }

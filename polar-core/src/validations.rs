@@ -50,12 +50,13 @@ impl<'kb> Visitor for SingletonVisitor<'kb> {
     fn visit_term(&mut self, t: &Term) {
         match t.value() {
             match_var!(v)
-            | Value::RestVariable(v)
             | Value::InstanceLiteral(InstanceLiteral { tag: v, .. })
-                if !v.is_temporary_var()
-                    && !v.is_namespaced_var()
-                    && !self.kb.is_constant(v)
-                    && !self.kb.is_union(t) =>
+            | Value::List(List {
+                rest_var: Some(v), ..
+            }) if !v.is_temporary_var()
+                && !v.is_namespaced_var()
+                && !self.kb.is_constant(v)
+                && !self.kb.is_union(t) =>
             {
                 self.singletons
                     .entry(v.clone())

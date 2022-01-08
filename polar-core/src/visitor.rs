@@ -28,7 +28,9 @@ pub trait Visitor: Sized {
     fn visit_string(&mut self, _s: &str) {}
     fn visit_boolean(&mut self, _b: &bool) {}
     fn visit_symbol(&mut self, _s: &Symbol) {}
-    fn visit_variable(&mut self, _v: &Variable) {}
+    fn visit_variable(&mut self, v: &Variable) {
+        self.visit_symbol(&v.name)
+    }
     fn visit_rest_variable(&mut self, _r: &Symbol) {}
     fn visit_operator(&mut self, _o: &Operator) {}
 
@@ -56,7 +58,7 @@ pub trait Visitor: Sized {
         walk_call(self, c)
     }
     #[allow(clippy::ptr_arg)]
-    fn visit_list(&mut self, l: &TermList) {
+    fn visit_list(&mut self, l: &List) {
         walk_list(self, l)
     }
     fn visit_operation(&mut self, o: &Operation) {
@@ -105,7 +107,6 @@ pub fn walk_term<V: Visitor>(visitor: &mut V, term: &Term) {
         Value::Call(c) => visitor.visit_call(c),
         Value::List(l) => visitor.visit_list(l),
         Value::Variable(v) => visitor.visit_variable(v),
-        Value::RestVariable(r) => visitor.visit_rest_variable(r),
         Value::Expression(o) => visitor.visit_operation(o),
     }
 }
@@ -133,8 +134,11 @@ pub fn walk_call<V: Visitor>(visitor: &mut V, call: &Call) {
 }
 
 #[allow(clippy::ptr_arg)]
-pub fn walk_list<V: Visitor>(visitor: &mut V, list: &TermList) {
-    walk_elements!(visitor, visit_term, list);
+pub fn walk_list<V: Visitor>(visitor: &mut V, list: &List) {
+    walk_elements!(visitor, visit_term, &list.elements);
+    if let Some(rv) = &list.rest_var {
+        visitor.visit_symbol(rv);
+    }
 }
 
 pub fn walk_operation<V: Visitor>(visitor: &mut V, expr: &Operation) {
@@ -182,9 +186,6 @@ mod tests {
         fn visit_variable(&mut self, v: &Variable) {
             self.push(Value::Variable(v.clone()));
         }
-        fn visit_rest_variable(&mut self, r: &Symbol) {
-            self.push(Value::RestVariable(r.clone()));
-        }
         fn visit_operator(&mut self, o: &Operator) {
             self.push(Value::Expression(Operation {
                 operator: *o,
@@ -199,18 +200,23 @@ mod tests {
         let string = value!("Hi there!");
         let boolean = value!(true);
         let variable = value!(sym!("x"));
-        let rest_var = Value::RestVariable(sym!("rest"));
-        let list = Value::List(vec![
+        let rest_variable = value!(sym!("rest"));
+        let list = vec![
             term!(number.clone()),
             term!(string.clone()),
             term!(boolean.clone()),
             term!(variable.clone()),
-            term!(rest_var.clone()),
-        ]);
-        let term = term!(list);
+        ];
+        let term = term!(List {
+            elements: list,
+            rest_var: Some(sym!("rest")) // not visited
+        });
         let mut v = TestVisitor::new();
         v.visit_term(&term);
-        assert_eq!(v.visited, vec![number, string, boolean, variable, rest_var]);
+        assert_eq!(
+            v.visited,
+            vec![number, string, boolean, variable, rest_variable]
+        );
     }
 
     #[test]

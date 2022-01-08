@@ -117,8 +117,8 @@ Variable: Value  = <n:Name> => {
     Value::Variable(Variable::new(n.0))
 };
 
-RestVar: Value  = "*" <n:Name> => {
-    Value::RestVariable(n)
+RestVar: Symbol  = "*" <n:Name> => {
+    n
 };
 
 Call: Value = {
@@ -559,13 +559,10 @@ ListTerms: Vec<Term> = {
 }
 
 List: Value = {
-    "[" "]" => Value::List(vec![]),
-    "[" <Spanned<RestVar>> "]" => Value::List(vec![<>]),
-    "[" <ListTerms> "]" => Value::List(<>),
-    "[" <mut terms:ListTerms> "," <rest:Spanned<RestVar>> "]" => {
-        terms.push(rest);
-        Value::List(terms)
-    }
+    "[" "]" => Value::List(List { elements: vec![], rest_var: None }),
+    "[" <RestVar> "]" => Value::List(List { elements: vec![], rest_var: Some(<>) }),
+    "[" <ListTerms> "]" => Value::List(List { elements: <>, rest_var: None }),
+    "[" <mut terms:ListTerms> "," <rest:RestVar> "]" => Value::List(List { elements: terms, rest_var: Some(rest) }),
 }
 
 Value: ValueOrLogical = {
@@ -661,8 +658,8 @@ StringListTerms: Vec<Term> = {
     },
 }
 StringList: Value = {
-    "[" "]" => Value::List(vec![]),
-    "[" <StringListTerms> "]" => Value::List(<>),
+    "[" "]" => Value::List(List { elements: vec![], rest_var: None }),
+    "[" <StringListTerms> "]" => Value::List(List { elements: <>, rest_var: None }),
 }
 DeclarationValue: Value = {
     <StringList> => <>,

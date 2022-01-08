@@ -9,7 +9,7 @@
 //! In addition, there are special cases like traces and sources that have their own
 //! formatting requirements.
 
-use super::{lexer::loc_to_pos, rules::*, sources::*, terms::*, traces::*};
+use super::{lexer::loc_to_pos, rules::*, sources::*, terms::*};
 pub use display::*;
 pub use to_polar::*;
 
@@ -131,7 +131,6 @@ pub fn to_polar_parens(op: Operator, t: &Term) -> String {
 
 pub mod display {
     use std::fmt;
-    use std::sync::Arc;
 
     use super::ToPolarString;
     use crate::numerics::Numeric;
@@ -419,9 +418,15 @@ pub mod to_polar {
                 Value::Dictionary(i) => i.to_polar(),
                 Value::InstanceLiteral(i) => i.to_polar(),
                 Value::Call(c) => c.to_polar(),
-                Value::List(l) => format!("[{}]", format_args(Operator::And, l, ", "),),
                 match_var!(s) => s.to_polar(),
-                Value::RestVariable(s) => format!("*{}", s.to_polar()),
+                Value::List(l) => format!(
+                    "[{}{}{}]",
+                    format_args(Operator::And, &l.elements, ", "),
+                    if l.elements.is_empty() || l.rest_var.is_none() { "" } else { ", " },
+                    l.rest_var
+                        .as_ref()
+                        .map_or_else(String::new, |rv| format!("*{}", rv))
+                ),
                 Value::Expression(e) => e.to_polar(),
             }
         }

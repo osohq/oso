@@ -36,15 +36,11 @@ pub trait Folder: Sized {
         fold_boolean(b, self)
     }
     // Class, key, and rule names.
-    fn fold_name(&mut self, n: Symbol) -> Symbol {
-        fold_name(n, self)
+    fn fold_symbol(&mut self, n: Symbol) -> Symbol {
+        fold_symbol(n, self)
     }
     fn fold_variable(&mut self, v: Variable) -> Variable {
         fold_variable(v, self)
-    }
-    fn fold_rest_variable(&mut self, v: Symbol) -> Symbol {
-        v
-        // fold_variable(v, self)
     }
     fn fold_operator(&mut self, o: Operator) -> Operator {
         fold_operator(o, self)
@@ -68,7 +64,7 @@ pub trait Folder: Sized {
     fn fold_call(&mut self, c: Call) -> Call {
         fold_call(c, self)
     }
-    fn fold_list(&mut self, l: TermList) -> TermList {
+    fn fold_list(&mut self, l: List) -> List {
         fold_list(l, self)
     }
     fn fold_operation(&mut self, o: Operation) -> Operation {
@@ -90,7 +86,7 @@ pub fn fold_rule<T: Folder>(
     fld: &mut T,
 ) -> Rule {
     Rule {
-        name: fld.fold_name(name),
+        name: fld.fold_symbol(name),
         params: params.into_iter().map(|p| fld.fold_param(p)).collect(),
         body: fld.fold_term(body),
         source_info,
@@ -100,6 +96,15 @@ pub fn fold_rule<T: Folder>(
 
 pub fn fold_term<T: Folder>(t: Term, fld: &mut T) -> Term {
     t.clone_with_value(fld.fold_value(t.value().clone()))
+}
+
+pub fn fold_term_list<T: Folder>(mut t: Vec<Term>, fld: &mut T) -> Vec<Term> {
+    for elem in t.iter_mut() {
+        let mut tmp_term = term!(false);
+        std::mem::swap(&mut tmp_term, elem);
+        *elem = fld.fold_term(tmp_term)
+    }
+    t
 }
 
 pub fn fold_value<T: Folder>(v: Value, fld: &mut T) -> Value {
@@ -112,7 +117,6 @@ pub fn fold_value<T: Folder>(v: Value, fld: &mut T) -> Value {
         Value::Call(c) => Value::Call(fld.fold_call(c)),
         Value::List(l) => Value::List(fld.fold_list(l)),
         Value::Variable(v) => Value::Variable(fld.fold_variable(v)),
-        Value::RestVariable(r) => Value::RestVariable(fld.fold_rest_variable(r)),
         Value::Expression(o) => Value::Expression(fld.fold_operation(o)),
     }
 }
@@ -134,7 +138,7 @@ pub fn fold_instance_literal<T: Folder>(
     fld: &mut T,
 ) -> InstanceLiteral {
     InstanceLiteral {
-        tag: fld.fold_name(tag),
+        tag: fld.fold_symbol(tag),
         fields: fld.fold_dictionary(fields),
     }
 }
@@ -143,19 +147,19 @@ pub fn fold_dictionary<T: Folder>(Dictionary { fields }: Dictionary, fld: &mut T
     Dictionary {
         fields: fields
             .into_iter()
-            .map(|(k, v)| (fld.fold_name(k), fld.fold_term(v)))
+            .map(|(k, v)| (fld.fold_symbol(k), fld.fold_term(v)))
             .collect::<BTreeMap<Symbol, Term>>(),
     }
 }
 
 pub fn fold_call<T: Folder>(Call { name, args, kwargs }: Call, fld: &mut T) -> Call {
     Call {
-        name: fld.fold_name(name),
-        args: fld.fold_list(args),
+        name: fld.fold_symbol(name),
+        args: fold_term_list(args, fld),
         kwargs: kwargs.map(|kwargs| {
             kwargs
                 .into_iter()
-                .map(|(k, v)| (fld.fold_name(k), fld.fold_term(v)))
+                .map(|(k, v)| (fld.fold_symbol(k), fld.fold_term(v)))
                 .collect::<BTreeMap<Symbol, Term>>()
         }),
     }
@@ -165,10 +169,11 @@ pub fn fold_variable<T: Folder>(v: Variable, _fld: &mut T) -> Variable {
     v
 }
 
-pub fn fold_list<T: Folder>(l: TermList, fld: &mut T) -> TermList {
-    l.into_iter()
-        .map(|t| fld.fold_term(t))
-        .collect::<TermList>()
+pub fn fold_list<T: Folder>(l: List, fld: &mut T) -> List {
+    List {
+        elements: fold_term_list(l.elements, fld),
+        rest_var: l.rest_var.map(|rv| fld.fold_symbol(rv)),
+    }
 }
 
 pub fn fold_operator<T: Folder>(o: Operator, _fld: &mut T) -> Operator {
@@ -181,11 +186,11 @@ pub fn fold_operation<T: Folder>(
 ) -> Operation {
     Operation {
         operator: fld.fold_operator(operator),
-        args: fld.fold_list(args),
+        args: fold_term_list(args, fld),
     }
 }
 
-pub fn fold_name<T: Folder>(n: Symbol, _fld: &mut T) -> Symbol {
+pub fn fold_symbol<T: Folder>(n: Symbol, _fld: &mut T) -> Symbol {
     n
 }
 
@@ -215,14 +220,12 @@ mod tests {
         let string = value!("Hi there!");
         let boolean = value!(true);
         let variable = value!(sym!("x"));
-        let rest_var = Value::RestVariable(sym!("rest"));
-        let list = Value::List(vec![
+        let list = vec![
             term!(number),
             term!(string),
             term!(boolean),
             term!(variable),
-            term!(rest_var),
-        ]);
+        ];
         let term = term!(list);
         let mut fld = TrivialFolder {};
         assert_eq!(fld.fold_term(term.clone()), term);

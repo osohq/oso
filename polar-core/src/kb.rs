@@ -369,7 +369,11 @@ impl KnowledgeBase {
                         msg: "Rule types cannot contain *rest variables.".to_string(),
                     });
                 }
-                if rule_type_list.iter().all(|t| rule_list.contains(t)) {
+                if rule_type_list
+                    .elements
+                    .iter()
+                    .all(|t| rule_list.elements.contains(t))
+                {
                     RuleParamMatch::True
                 } else {
                     RuleParamMatch::False(format!(
@@ -1313,10 +1317,7 @@ pub mod tests {
         assert!(kb
             .rule_params_match(
                 &rule!("f", ["x"; value!([1, 2])]),
-                &rule!(
-                    "f",
-                    ["x"; value!([1, 2, Value::RestVariable(sym!("*_rest"))])]
-                )
+                &rule!("f", ["x"; value!([1, 2, @rest "rest"])])
             )
             .is_err());
         // Dict: rule must be more specific than (superset of) rule_type

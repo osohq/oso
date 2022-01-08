@@ -41,12 +41,18 @@ pub struct Context {
     pub file: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+pub struct List {
+    pub elements: Vec<Term>,
+    pub rest_var: Option<Symbol>,
+}
+
 pub type TermList = Vec<Term>;
 
 /// Return true if the list ends with a rest-variable.
 #[allow(clippy::ptr_arg)]
-pub fn has_rest_var(list: &TermList) -> bool {
-    !list.is_empty() && matches!(list.last().unwrap().value(), Value::RestVariable(_))
+pub fn has_rest_var(list: &List) -> bool {
+    list.rest_var.is_some()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -149,9 +155,8 @@ pub enum Value {
     Dictionary(Dictionary),
     InstanceLiteral(InstanceLiteral),
     Call(Call),
-    List(TermList),
+    List(List),
     Variable(Variable),
-    RestVariable(Symbol),
     Expression(Operation),
 }
 
@@ -159,7 +164,6 @@ impl Value {
     pub fn as_symbol(&self) -> Result<&Symbol> {
         match self {
             match_var!(var) => Ok(var),
-            Value::RestVariable(name) => Ok(name),
             _ => Err(InvalidState {
                 msg: format!("Expected symbol, got: {}", self),
             }),
@@ -193,7 +197,7 @@ impl Value {
         }
     }
 
-    pub fn as_list(&self) -> Result<&TermList> {
+    pub fn as_list(&self) -> Result<&List> {
         match self {
             Value::List(l) => Ok(l),
             _ => Err(InvalidState {
@@ -222,14 +226,16 @@ impl Value {
 
     pub fn is_ground(&self) -> bool {
         match self {
-            Value::Call(_) | Value::Variable(_) | Value::RestVariable(_) => false,
+            Value::Call(_) | Value::Variable(_) => false,
             Value::Number(_) | Value::String(_) | Value::Boolean(_) => true,
             Value::InstanceLiteral(InstanceLiteral {
                 fields: Dictionary { fields },
                 ..
             })
             | Value::Dictionary(Dictionary { fields }) => fields.values().all(|t| t.is_ground()),
-            Value::List(terms) => terms.iter().all(|t| t.is_ground()),
+            Value::List(terms) => {
+                terms.rest_var.is_none() && terms.elements.iter().all(|t| t.is_ground())
+            }
             Value::Expression(Operation { operator: _, args }) => {
                 args.iter().all(|t| t.is_ground())
             }
@@ -301,7 +307,10 @@ impl From<Operation> for Value {
 
 impl From<TermList> for Value {
     fn from(other: TermList) -> Self {
-        Self::List(other)
+        Self::List(List {
+            elements: other,
+            rest_var: None,
+        })
     }
 }
 
@@ -423,8 +432,8 @@ impl Term {
         }
 
         impl<'set> Visitor for VariableVisitor<'set> {
-            fn visit_variable(&mut self, v: &Variable) {
-                self.vars.insert(v.name.clone());
+            fn visit_symbol(&mut self, s: &Symbol) {
+                self.vars.insert(s.clone());
             }
         }
 

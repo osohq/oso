@@ -22,10 +22,21 @@ macro_rules! match_var {
 
 #[macro_export]
 macro_rules! value {
+    ([$($args:expr),* , @rest $rv:literal]) => {
+        $crate::terms::Value::List(List {
+            elements: vec![
+                $(term!(value!($args))),*
+            ],
+            rest_var: Some(Symbol($rv.to_string()))
+        })
+    };
     ([$($args:expr),*]) => {
-        $crate::terms::Value::List(vec![
-            $(term!(value!($args))),*
-        ])
+        $crate::terms::Value::List(List {
+            elements: vec![
+                $(term!(value!($args))),*
+            ],
+            rest_var: None
+        })
     };
     ($arg:expr) => {
         $crate::macros::TestHelper::<Value>::from($arg).0
@@ -319,9 +330,17 @@ impl From<Operation> for TestHelper<Value> {
         Self(Value::Expression(other))
     }
 }
+impl From<List> for TestHelper<Value> {
+    fn from(other: List) -> Self {
+        Self(Value::List(other))
+    }
+}
 impl From<TermList> for TestHelper<Value> {
     fn from(other: TermList) -> Self {
-        Self(Value::List(other))
+        Self(Value::List(List {
+            elements: other,
+            rest_var: None,
+        }))
     }
 }
 impl From<Symbol> for TestHelper<Value> {
@@ -336,7 +355,9 @@ impl From<BTreeMap<Symbol, Term>> for TestHelper<Value> {
 }
 
 impl<'a, T> From<&'a T> for TestHelper<Value>
-where T: Clone + Into<TestHelper<Value>> {
+where
+    T: Clone + Into<TestHelper<Value>>,
+{
     fn from(other: &'a T) -> Self {
         other.clone().into()
     }
