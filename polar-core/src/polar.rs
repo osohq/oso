@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::sync::{Arc, RwLock};
 
 use crate::Query;
@@ -234,10 +235,13 @@ impl Polar {
     }
 
     pub fn new_query_from_term(&self, term: Term, _trace: bool) -> Query {
-        // todo!()
+        // TODO: do we want to let people specify what variables to get back?
+        // what's the use case for that?
+        let mut vars = HashSet::new();
+        term.variables(&mut vars);
         Query {
             term,
-            variables: Vec::new(),
+            variables: vars.into_iter().map(|s| s.0).collect(),
             kb: self.kb.clone(),
         }
         // let query = Goal::Query { term: term.clone() };

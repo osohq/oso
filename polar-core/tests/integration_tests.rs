@@ -362,6 +362,7 @@ fn test_forall_with_dot_lookup() -> TestResult {
 }
 
 #[test]
+#[ignore = "no tracing at the moment"]
 fn test_trace() -> TestResult {
     let p = polar();
     p.load_str(
@@ -1974,32 +1975,15 @@ fn test_keyword_dot() -> TestResult {
 /// Test that rule heads work correctly when unification or specializers are used.
 #[test]
 fn test_unify_rule_head() -> TestResult {
-    qparse!("f(Foo{a: 1});", ParseError::UnrecognizedToken { .. });
-    qparse!(
-        "f(new Foo(a: Foo{a: 1}));",
-        ParseError::UnrecognizedToken { .. }
-    );
-    qparse!("f(x: new Foo(a: 1));", ParseError::ReservedWord { .. });
-    qparse!(
-        "f(x: Foo{a: new Foo(a: 1)});",
-        ParseError::ReservedWord { .. }
-    );
+    let p = polar();
+    p.load_str(
+        r#"f(_: Foo{a: 1}, x) if x = 1;
+           g(_: Foo{a: Foo{a: 1}}, x) if x = 1;"#,
+    )?;
 
-    todo!("fix for external instance");
-    // let p = polar();
-    // p.register_constant(sym!("Foo"), term!(true))?;
-    // p.load_str(
-    //     r#"f(_: Foo{a: 1}, x) if x = 1;
-    //        g(_: Foo{a: Foo{a: 1}}, x) if x = 1;"#,
-    // )?;
+    qvars(&p, "f(Foo { a: 1 }, x)", &["x"], values![[1]]);
+    qvars(&p, "g(Foo { a: Foo {a: 1 }}, x)", &["x"], values![[1]]);
 
-    // let q = p.new_query("f(new Foo(a: 1), x)", false)?;
-    // let (results, _externals) = query_results_with_externals(q);
-    // assert_eq!(results[0].0[&sym!("x")], value!(1));
-
-    // let q = p.new_query("g(new Foo(a: new Foo(a: 1)), x)", false)?;
-    // let (results, _externals) = query_results_with_externals(q);
-    // assert_eq!(results[0].0[&sym!("x")], value!(1));
     Ok(())
 }
 

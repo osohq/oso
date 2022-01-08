@@ -668,9 +668,9 @@ mod test {
 
         let ors = vec![ResultEvent::new(hashmap! {
             sym!("resource") => term!(op!(And,
-                term!(op!(Isa, var!("_this"), term!(pattern!(instance!("Resource"))))),
-                term!(op!(Isa, term!(op!(Dot, var!("_this"), str!("foo"))), term!(pattern!(instance!("Foo"))))),
-                term!(op!(Isa, term!(op!(Dot, term!(op!(Dot, var!("_this"), str!("foo"))), str!("resource"))), term!(pattern!(instance!("Foo"))))),
+                term!(op!(Isa, var!("_this"), term!(instance!("Resource")))),
+                term!(op!(Isa, term!(op!(Dot, var!("_this"), str!("foo"))), term!(instance!("Foo")))),
+                term!(op!(Isa, term!(op!(Dot, term!(op!(Dot, var!("_this"), str!("foo"))), str!("resource"))), term!(instance!("Foo")))),
                 term!(op!(Unify, term!(1), term!(op!(Dot, term!(op!(Dot, term!(op!(Dot, var!("_this"), str!("foo"))), str!("resource"))), str!("foo")))))))
         })];
 
@@ -702,7 +702,7 @@ mod test {
 
         let ors = vec![ResultEvent::new(hashmap! {
             sym!("resource") => term!(op!(And,
-                term!(op!(Isa, var!("_this"), term!(pattern!(instance!("Resource"))))),
+                term!(op!(Isa, var!("_this"), term!(instance!("Resource")))),
                 term!(op!(In, var!("x"), term!(op!(Dot, var!("_this"), str!("foos"))))),
                 term!(op!(Unify, term!(1), term!(op!(Dot, var!("x"), str!("y")))))
             ))

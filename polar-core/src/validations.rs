@@ -32,7 +32,7 @@ impl<'kb> SingletonVisitor<'kb> {
         singletons
             .into_iter()
             .map(|(sym, term)| {
-                if let Value::Pattern(_) = term.value() {
+                if let Value::InstanceLiteral(_) = term.value() {
                     Diagnostic::Warning(
                         ValidationWarning::UnknownSpecializer { term, sym }.with_context(self.kb),
                     )
@@ -51,7 +51,7 @@ impl<'kb> Visitor for SingletonVisitor<'kb> {
         match t.value() {
             match_var!(v)
             | Value::RestVariable(v)
-            | Value::Pattern(Pattern::Instance(InstanceLiteral { tag: v, .. }))
+            | Value::InstanceLiteral(InstanceLiteral { tag: v, .. })
                 if !v.is_temporary_var()
                     && !v.is_namespaced_var()
                     && !self.kb.is_constant(v)

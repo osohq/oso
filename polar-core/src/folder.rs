@@ -35,9 +35,6 @@ pub trait Folder: Sized {
     fn fold_boolean(&mut self, b: bool) -> bool {
         fold_boolean(b, self)
     }
-    fn fold_instance_id(&mut self, i: u64) -> u64 {
-        fold_instance_id(i, self)
-    }
     // Class, key, and rule names.
     fn fold_name(&mut self, n: Symbol) -> Symbol {
         fold_name(n, self)
@@ -67,9 +64,6 @@ pub trait Folder: Sized {
     }
     fn fold_dictionary(&mut self, d: Dictionary) -> Dictionary {
         fold_dictionary(d, self)
-    }
-    fn fold_pattern(&mut self, p: Pattern) -> Pattern {
-        fold_pattern(p, self)
     }
     fn fold_call(&mut self, c: Call) -> Call {
         fold_call(c, self)
@@ -114,7 +108,7 @@ pub fn fold_value<T: Folder>(v: Value, fld: &mut T) -> Value {
         Value::String(s) => Value::String(fld.fold_string(s)),
         Value::Boolean(b) => Value::Boolean(fld.fold_boolean(b)),
         Value::Dictionary(d) => Value::Dictionary(fld.fold_dictionary(d)),
-        Value::Pattern(p) => Value::Pattern(fld.fold_pattern(p)),
+        Value::InstanceLiteral(i) => Value::InstanceLiteral(fld.fold_instance_literal(i)),
         Value::Call(c) => Value::Call(fld.fold_call(c)),
         Value::List(l) => Value::List(fld.fold_list(l)),
         Value::Variable(v) => Value::Variable(fld.fold_variable(v)),
@@ -135,10 +129,6 @@ pub fn fold_boolean<T: Folder>(b: bool, _fld: &mut T) -> bool {
     b
 }
 
-pub fn fold_instance_id<T: Folder>(id: u64, _fld: &mut T) -> u64 {
-    id
-}
-
 pub fn fold_instance_literal<T: Folder>(
     InstanceLiteral { tag, fields }: InstanceLiteral,
     fld: &mut T,
@@ -155,13 +145,6 @@ pub fn fold_dictionary<T: Folder>(Dictionary { fields }: Dictionary, fld: &mut T
             .into_iter()
             .map(|(k, v)| (fld.fold_name(k), fld.fold_term(v)))
             .collect::<BTreeMap<Symbol, Term>>(),
-    }
-}
-
-pub fn fold_pattern<T: Folder>(p: Pattern, fld: &mut T) -> Pattern {
-    match p {
-        Pattern::Dictionary(d) => Pattern::Dictionary(fld.fold_dictionary(d)),
-        Pattern::Instance(i) => Pattern::Instance(fld.fold_instance_literal(i)),
     }
 }
 
@@ -255,7 +238,7 @@ mod tests {
         //     repr: None,
         //     class_repr: None,
         // }));
-        let instance_pattern = term!(value!(Pattern::Instance(InstanceLiteral {
+        let instance_pattern = term!(value!(InstanceLiteral {
             tag: sym!("d"),
             fields: Dictionary {
                 fields: btreemap! {
@@ -263,13 +246,13 @@ mod tests {
                     sym!("g") => term!(op!(Add, term!(3), term!(4))),
                 }
             }
-        })));
-        let dict_pattern = term!(Value::Pattern(Pattern::Dictionary(Dictionary {
+        }));
+        let dict_pattern = term!(value!(Dictionary {
             fields: btreemap! {
                 sym!("i") => term!("j"),
                 sym!("k") => term!("l"),
             },
-        })));
+        }));
         let term = term!(btreemap! {
             sym!("a") => term!(btreemap!{
                 // sym!("b") => external_instance,

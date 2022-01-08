@@ -581,7 +581,7 @@ fn shorthand_rule_head_to_params(head: &Term, resource: &Term) -> Vec<Parameter>
     vec![
         Parameter {
             parameter: head.clone_with_value(value!(sym!("actor"))),
-            specializer: Some(head.clone_with_value(value!(pattern!(instance!(ACTOR_UNION_NAME))))),
+            specializer: Some(head.clone_with_value(value!(instance!(ACTOR_UNION_NAME)))),
         },
         Parameter {
             parameter: head.clone(),
@@ -589,9 +589,7 @@ fn shorthand_rule_head_to_params(head: &Term, resource: &Term) -> Vec<Parameter>
         },
         Parameter {
             parameter: head.clone_with_value(resource_name_as_var(resource, false)),
-            specializer: Some(
-                resource.clone_with_value(value!(pattern!(instance!(resource_name)))),
-            ),
+            specializer: Some(resource.clone_with_value(value!(instance!(resource_name)))),
         },
     ]
 }

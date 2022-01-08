@@ -27,7 +27,6 @@ pub trait Visitor: Sized {
     fn visit_number(&mut self, _n: &Numeric) {}
     fn visit_string(&mut self, _s: &str) {}
     fn visit_boolean(&mut self, _b: &bool) {}
-    fn visit_instance_id(&mut self, _i: &u64) {}
     fn visit_symbol(&mut self, _s: &Symbol) {}
     fn visit_variable(&mut self, _v: &Variable) {}
     fn visit_rest_variable(&mut self, _r: &Symbol) {}
@@ -52,9 +51,6 @@ pub trait Visitor: Sized {
     }
     fn visit_dictionary(&mut self, d: &Dictionary) {
         walk_dictionary(self, d)
-    }
-    fn visit_pattern(&mut self, p: &Pattern) {
-        walk_pattern(self, p)
     }
     fn visit_call(&mut self, c: &Call) {
         walk_call(self, c)
@@ -105,7 +101,7 @@ pub fn walk_term<V: Visitor>(visitor: &mut V, term: &Term) {
         Value::String(s) => visitor.visit_string(s),
         Value::Boolean(b) => visitor.visit_boolean(b),
         Value::Dictionary(d) => visitor.visit_dictionary(d),
-        Value::Pattern(p) => visitor.visit_pattern(p),
+        Value::InstanceLiteral(i) => visitor.visit_instance_literal(i),
         Value::Call(c) => visitor.visit_call(c),
         Value::List(l) => visitor.visit_list(l),
         Value::Variable(v) => visitor.visit_variable(v),
@@ -126,13 +122,6 @@ pub fn walk_instance_literal<V: Visitor>(visitor: &mut V, instance: &InstanceLit
 
 pub fn walk_dictionary<V: Visitor>(visitor: &mut V, dict: &Dictionary) {
     walk_fields!(visitor, &dict.fields);
-}
-
-pub fn walk_pattern<V: Visitor>(visitor: &mut V, pattern: &Pattern) {
-    match pattern {
-        Pattern::Dictionary(dict) => visitor.visit_dictionary(dict),
-        Pattern::Instance(instance) => visitor.visit_instance_literal(instance),
-    }
 }
 
 pub fn walk_call<V: Visitor>(visitor: &mut V, call: &Call) {
@@ -187,9 +176,6 @@ mod tests {
         fn visit_boolean(&mut self, b: &bool) {
             self.push(Value::Boolean(*b));
         }
-        fn visit_instance_id(&mut self, i: &u64) {
-            self.push(Value::Number(Numeric::Integer(*i as i64)));
-        }
         fn visit_symbol(&mut self, s: &Symbol) {
             self.push(Value::Variable(Variable::new(s.0.clone())));
         }
@@ -228,16 +214,8 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "fix externals"]
     fn test_walk_term_compounds() {
-        todo!("fix for external instance");
-        // let external_instance = term!(Value::ExternalInstance(ExternalInstance {
-        //     instance_id: 1,
-        //     constructor: None,
-        //     repr: None,
-        //     class_repr: None,
-        // }));
-        let instance_pattern = term!(value!(Pattern::Instance(InstanceLiteral {
+        let instance_pattern = term!(value!(InstanceLiteral {
             tag: sym!("d"),
             fields: Dictionary {
                 fields: btreemap! {
@@ -245,17 +223,16 @@ mod tests {
                     sym!("g") => term!(op!(Add, term!(3), term!(4))),
                 }
             }
-        })));
-        let dict_pattern = term!(Value::Pattern(Pattern::Dictionary(Dictionary {
+        }));
+        let dict_pattern = term!(Value::Dictionary(Dictionary {
             fields: btreemap! {
                 sym!("i") => term!("j"),
                 sym!("k") => term!("l"),
             },
-        })));
+        }));
         let term = term!(btreemap! {
             sym!("a") => term!(btreemap!{
-                // sym!("b") => external_instance,
-                sym!("c") => instance_pattern,
+                sym!("b") => instance_pattern,
             }),
             sym!("h") => dict_pattern,
         });
@@ -266,8 +243,6 @@ mod tests {
             vec![
                 value!(sym!("a")),
                 value!(sym!("b")),
-                value!(1),
-                value!(sym!("c")),
                 value!(sym!("d")),
                 value!(sym!("e")),
                 value!(sym!("f")),

@@ -244,11 +244,11 @@ impl KnowledgeBase {
     fn check_pattern_param(
         &self,
         index: usize,
-        rule_pattern: &Pattern,
-        rule_type_pattern: &Pattern,
+        rule_pattern: &Term,
+        rule_type_pattern: &Term,
     ) -> ValidationResult<RuleParamMatch> {
-        Ok(match (rule_type_pattern, rule_pattern) {
-            (Pattern::Instance(rule_type_instance), Pattern::Instance(rule_instance)) => {
+        Ok(match (rule_type_pattern.value(), rule_pattern.value()) {
+            (Value::InstanceLiteral(rule_type_instance), Value::InstanceLiteral(rule_instance)) => {
                 // if tags match, all rule type fields must match those in rule fields, otherwise false
                 if rule_type_instance.tag == rule_instance.tag {
                     if self.param_fields_match(
@@ -325,8 +325,8 @@ impl KnowledgeBase {
                     self.check_rule_instance_is_subclass_of_rule_type_instance(rule_instance, rule_type_instance, index)?
                 }
             }
-            (Pattern::Dictionary(rule_type_fields), Pattern::Dictionary(rule_fields))
-            | (Pattern::Dictionary(rule_type_fields), Pattern::Instance(InstanceLiteral { fields: rule_fields, .. })) => {
+            (Value::Dictionary(rule_type_fields), Value::Dictionary(rule_fields))
+            | (Value::Dictionary(rule_type_fields), Value::InstanceLiteral(InstanceLiteral { fields: rule_fields, .. })) => {
                 if self.param_fields_match(rule_type_fields, rule_fields) {
                     RuleParamMatch::True
                 } else {
@@ -334,11 +334,11 @@ impl KnowledgeBase {
                 }
             }
             (
-                Pattern::Instance(InstanceLiteral {
+                Value::InstanceLiteral(InstanceLiteral {
                     tag,
                     fields: rule_type_fields,
                 }),
-                Pattern::Dictionary(rule_fields),
+                Value::Dictionary(rule_fields),
             ) if tag == &sym!("Dictionary") => {
                 if self.param_fields_match(rule_type_fields, rule_fields) {
                     RuleParamMatch::True
@@ -407,122 +407,113 @@ impl KnowledgeBase {
         rule_type_param: &Parameter,
         rule_type: &Rule,
     ) -> ValidationResult<RuleParamMatch> {
-        Ok(
-            match (
-                rule_type_param.parameter.value(),
-                rule_type_param.specializer.as_ref().map(Term::value),
-                rule_param.parameter.value(),
-                rule_param.specializer.as_ref().map(Term::value),
-            ) {
-                // Rule and rule type both have pattern specializers
-                (
-                    Value::Variable(_),
-                    Some(Value::Pattern(rule_type_spec)),
-                    Value::Variable(_),
-                    Some(Value::Pattern(rule_spec)),
-                ) => self.check_pattern_param(index, rule_spec, rule_type_spec)?,
-                // RuleType has an instance pattern specializer but rule has no specializer
-                (
-                    Value::Variable(_),
-                    Some(Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. }))),
-                    match_var!(parameter),
-                    None,
-                ) => RuleParamMatch::False(format!(
-                    "Parameter `{parameter}` expects a {tag} type constraint.
+        use crate::terms::Dictionary as Dict;
+        use crate::terms::InstanceLiteral as InstanceLit;
+        use Value::*;
+        let res = match (
+            rule_type_param.parameter.value(),
+            rule_type_param.specializer.as_ref().map(Term::value),
+            rule_param.parameter.value(),
+            rule_param.specializer.as_ref().map(Term::value),
+        ) {
+            // Rule and rule type both have pattern specializers
+            (
+                Variable(_),
+                Some(InstanceLiteral(_) | Dictionary(_)),
+                Variable(_),
+                Some(InstanceLiteral(_) | Dictionary(_)),
+            ) => self.check_pattern_param(
+                index,
+                &rule_param.specializer.as_ref().unwrap(),
+                &rule_type_param.specializer.as_ref().unwrap(),
+            )?,
+            // RuleType has an instance pattern specializer but rule has no specializer
+            (
+                Variable(_),
+                Some(InstanceLiteral(InstanceLit { tag, .. })),
+                match_var!(parameter),
+                None,
+            ) => RuleParamMatch::False(format!(
+                "Parameter `{parameter}` expects a {tag} type constraint.
 
 \t{parameter}: {tag}",
-                    parameter = parameter,
-                    tag = tag
-                )),
-                // RuleType has specializer but rule doesn't
-                (Value::Variable(_), Some(rule_type_spec), Value::Variable(_), None) => {
+                parameter = parameter,
+                tag = tag
+            )),
+            // RuleType has specializer but rule doesn't
+            (Variable(_), Some(rule_type_spec), Variable(_), None) => {
+                RuleParamMatch::False(format!(
+                    "Invalid rule parameter {}. Rule type expected {}",
+                    index,
+                    rule_type_spec.to_polar()
+                ))
+            }
+
+            // Rule has value or value specializer, rule type has pattern specializer
+            (Variable(_), Some(InstanceLiteral(lit)), Variable(_), Some(rule_value))
+            | (Variable(_), Some(InstanceLiteral(lit)), rule_value, None) => {
+                let rule_spec = match rule_value {
+                    String(_) => instance!(sym!("String")),
+                    Number(Numeric::Integer(_)) => instance!(sym!("Integer")),
+                    Number(Numeric::Float(_)) => instance!(sym!("Float")),
+                    Boolean(_) => instance!(sym!("Boolean")),
+                    List(_) => instance!(sym!("List")),
+                    Dictionary(rule_fields) => {
+                        instance!(sym!("Dictionary"), rule_fields.clone().fields)
+                    }
+                    _ => {
+                        // TODO(gj): what type of value could this be? Will this get
+                        // past the parser or is it unreachable? Prior to #1356 we
+                        // could hit this branch with a `Variable` if the
+                        // specializer in the rule head was parenthesized.
+                        return Err(ValidationError::InvalidRule {
+                            msg: format!("Value variant {} cannot be a specializer", rule_value),
+                            rule: rule.clone(),
+                        });
+                    }
+                };
+                self.check_pattern_param(
+                    index,
+                    rule_param.specializer.as_ref().unwrap(),
+                    rule_type_param.specializer.as_ref().unwrap(),
+                )?
+            }
+
+            // Rule has value or value specializer, rule type has pattern specializer
+            (Variable(_), Some(Dictionary(rule_type_fields)), Variable(_), Some(rule_value))
+            | (Variable(_), Some(Dictionary(rule_type_fields)), rule_value, None) => {
+                if let Dictionary(rule_fields) = rule_value {
+                    if self.param_fields_match(rule_type_fields, rule_fields) {
+                        RuleParamMatch::True
+                    } else {
+                        RuleParamMatch::False(format!("Invalid parameter {}. Rule type expected Dictionary with fields {}, got dictionary with fields {}.", index, rule_type_fields.to_polar(), rule_fields.to_polar()))
+                    }
+                } else {
                     RuleParamMatch::False(format!(
-                        "Invalid rule parameter {}. Rule type expected {}",
+                        "Invalid parameter {}. Rule type expected Dictionary, got {}.",
                         index,
-                        rule_type_spec.to_polar()
+                        rule_value.to_polar()
                     ))
                 }
-                // Rule has value or value specializer, rule type has pattern specializer
-                (
-                    Value::Variable(_),
-                    Some(Value::Pattern(rule_type_spec)),
-                    Value::Variable(_),
-                    Some(rule_value),
-                )
-                | (Value::Variable(_), Some(Value::Pattern(rule_type_spec)), rule_value, None) => {
-                    match rule_type_spec {
-                        // Rule type specializer is an instance pattern
-                        Pattern::Instance(InstanceLiteral { .. }) => {
-                            let rule_spec = match rule_value {
-                                Value::String(_) => instance!(sym!("String")),
-                                Value::Number(Numeric::Integer(_)) => instance!(sym!("Integer")),
-                                Value::Number(Numeric::Float(_)) => instance!(sym!("Float")),
-                                Value::Boolean(_) => instance!(sym!("Boolean")),
-                                Value::List(_) => instance!(sym!("List")),
-                                Value::Dictionary(rule_fields) => {
-                                    instance!(sym!("Dictionary"), rule_fields.clone().fields)
-                                }
-                                _ => {
-                                    // TODO(gj): what type of value could this be? Will this get
-                                    // past the parser or is it unreachable? Prior to #1356 we
-                                    // could hit this branch with a `Value::Variable` if the
-                                    // specializer in the rule head was parenthesized.
-                                    return Err(ValidationError::InvalidRule {
-                                        msg: format!(
-                                            "Value variant {} cannot be a specializer",
-                                            rule_value
-                                        ),
-                                        rule: rule.clone(),
-                                    });
-                                }
-                            };
-                            self.check_pattern_param(
-                                index,
-                                &Pattern::Instance(rule_spec),
-                                rule_type_spec,
-                            )?
-                        }
-                        // Rule type specializer is a dictionary pattern
-                        Pattern::Dictionary(rule_type_fields) => {
-                            if let Value::Dictionary(rule_fields) = rule_value {
-                                if self.param_fields_match(rule_type_fields, rule_fields) {
-                                    RuleParamMatch::True
-                                } else {
-                                    RuleParamMatch::False(format!("Invalid parameter {}. Rule type expected Dictionary with fields {}, got dictionary with fields {}.", index, rule_type_fields.to_polar(), rule_fields.to_polar()))
-                                }
-                            } else {
-                                RuleParamMatch::False(format!(
-                                    "Invalid parameter {}. Rule type expected Dictionary, got {}.",
-                                    index,
-                                    rule_value.to_polar()
-                                ))
-                            }
-                        }
-                    }
-                }
+            }
 
-                // Rule type has no specializer
-                (Value::Variable(_), None, _, _) => RuleParamMatch::True,
-                // Rule has value or value specializer, rule type has value specializer |
-                // rule has value, rule type has value
-                (
-                    Value::Variable(_),
-                    Some(rule_type_value),
-                    Value::Variable(_),
-                    Some(rule_value),
-                )
-                | (Value::Variable(_), Some(rule_type_value), rule_value, None)
-                | (rule_type_value, None, rule_value, None) => {
-                    self.check_value_param(index, rule_value, rule_type_value, rule_type)?
-                }
-                _ => RuleParamMatch::False(format!(
-                    "Invalid parameter {}. Rule parameter {} does not match rule type parameter {}",
-                    index,
-                    rule_param.to_polar(),
-                    rule_type_param.to_polar()
-                )),
-            },
-        )
+            // Rule type has no specializer
+            (Variable(_), None, _, _) => RuleParamMatch::True,
+            // Rule has value or value specializer, rule type has value specializer |
+            // rule has value, rule type has value
+            (Variable(_), Some(rule_type_value), Variable(_), Some(rule_value))
+            | (Variable(_), Some(rule_type_value), rule_value, None)
+            | (rule_type_value, None, rule_value, None) => {
+                self.check_value_param(index, rule_value, rule_type_value, rule_type)?
+            }
+            _ => RuleParamMatch::False(format!(
+                "Invalid parameter {}. Rule parameter {} does not match rule type parameter {}",
+                index,
+                rule_param.to_polar(),
+                rule_type_param.to_polar()
+            )),
+        };
+        Ok(res)
     }
 
     /// Determine whether a `rule` matches a `rule_type` based on its parameters.
@@ -823,9 +814,9 @@ impl KnowledgeBase {
         }
 
         let mut rule_types = rule_types_to_create.into_iter().map(|((subject, relation, object), required)| {
-            let subject_specializer = pattern!(instance!(&subject.value().as_symbol().expect("must be symbol").0));
+            let subject_specializer = instance!(&subject.value().as_symbol().expect("must be symbol").0);
             let relation_name = relation.value().as_string().expect("must be string");
-            let object_specializer = pattern!(instance!(&object.value().as_symbol().expect("must be symbol").0));
+            let object_specializer = instance!(&object.value().as_symbol().expect("must be symbol").0);
 
             let src_id = relation.get_source_id().expect("must be parsed");
             let (left, right) = relation.span().expect("must be parsed");

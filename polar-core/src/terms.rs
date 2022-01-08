@@ -32,12 +32,6 @@ impl Dictionary {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub struct InstanceLiteral {
-    pub tag: Symbol,
-    pub fields: Dictionary,
-}
-
 // Context stored somewhere by id.
 
 // parser outputs
@@ -79,8 +73,8 @@ impl Symbol {
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Variable {
     pub name: Symbol,
-    type_info: Option<String>, // currently just a class name
-    constraints: Vec<Operation>,
+    pub type_info: Option<String>, // currently just a class name
+    pub constraints: Vec<Operation>,
 }
 
 impl Variable {
@@ -136,9 +130,9 @@ pub struct Operation {
 
 /// Represents a pattern in a specializer or after isa.
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub enum Pattern {
-    Dictionary(Dictionary),
-    Instance(InstanceLiteral),
+pub struct InstanceLiteral {
+    pub tag: Symbol,
+    pub fields: Dictionary,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -147,7 +141,7 @@ pub enum Value {
     String(String),
     Boolean(bool),
     Dictionary(Dictionary),
-    Pattern(Pattern),
+    InstanceLiteral(InstanceLiteral),
     Call(Call),
     List(TermList),
     Variable(Variable),
@@ -193,15 +187,6 @@ impl Value {
         }
     }
 
-    pub fn as_pattern(&self) -> Result<&Pattern> {
-        match self {
-            Value::Pattern(p) => Ok(p),
-            _ => Err(InvalidState {
-                msg: format!("Expected pattern, got: {}", self),
-            }),
-        }
-    }
-
     pub fn as_list(&self) -> Result<&TermList> {
         match self {
             Value::List(l) => Ok(l),
@@ -220,12 +205,24 @@ impl Value {
         }
     }
 
+    pub fn as_literal(&self) -> Result<&InstanceLiteral> {
+        match self {
+            Value::InstanceLiteral(d) => Ok(d),
+            _ => Err(InvalidState {
+                msg: format!("Expected instance literal, got: {}", self),
+            }),
+        }
+    }
+
     pub fn is_ground(&self) -> bool {
         match self {
             Value::Call(_) | Value::Variable(_) | Value::RestVariable(_) => false,
             Value::Number(_) | Value::String(_) | Value::Boolean(_) => true,
-            Value::Pattern(_) => panic!("unexpected value type"),
-            Value::Dictionary(Dictionary { fields }) => fields.values().all(|t| t.is_ground()),
+            Value::InstanceLiteral(InstanceLiteral {
+                fields: Dictionary { fields },
+                ..
+            })
+            | Value::Dictionary(Dictionary { fields }) => fields.values().all(|t| t.is_ground()),
             Value::List(terms) => terms.iter().all(|t| t.is_ground()),
             Value::Expression(Operation { operator: _, args }) => {
                 args.iter().all(|t| t.is_ground())
@@ -305,24 +302,6 @@ impl From<TermList> for Value {
 impl From<String> for Value {
     fn from(other: String) -> Self {
         Self::String(other)
-    }
-}
-
-impl From<Pattern> for Value {
-    fn from(other: Pattern) -> Self {
-        Self::Pattern(other)
-    }
-}
-
-impl From<InstanceLiteral> for Pattern {
-    fn from(lit: InstanceLiteral) -> Self {
-        Pattern::Instance(lit)
-    }
-}
-
-impl From<Dictionary> for Pattern {
-    fn from(dict: Dictionary) -> Self {
-        Pattern::Dictionary(dict)
     }
 }
 
@@ -495,11 +474,11 @@ impl Term {
     }
 
     pub fn is_actor_union(&self) -> bool {
-        matches!(self.value(), Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) | match_var!(tag) if tag.0 == ACTOR_UNION_NAME)
+        matches!(self.value(), Value::InstanceLiteral(InstanceLiteral { tag, .. }) | match_var!(tag) if tag.0 == ACTOR_UNION_NAME)
     }
 
     pub fn is_resource_union(&self) -> bool {
-        matches!(self.value(), Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) | match_var!(tag) if tag.0 == RESOURCE_UNION_NAME)
+        matches!(self.value(), Value::InstanceLiteral(InstanceLiteral { tag, .. }) | match_var!(tag) if tag.0 == RESOURCE_UNION_NAME)
     }
 }
 

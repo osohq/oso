@@ -172,13 +172,13 @@ mod tests {
 
     #[test]
     fn test_parse_specializers() {
-        let rule = parse_rule(r#"f(x: 1);"#);
-        assert_eq!(rule, rule!("f", ["x"; 1]));
+        let rule = parse_rule(r#"f(x: Foo);"#);
+        assert_eq!(rule, rule!("f", ["x"; instance!("Foo")]));
 
-        let rule = parse_rule(r#"f(x: 1, y: [x]) if y = 2;"#);
+        let rule = parse_rule(r#"f(x: {y: 1}, y: Bar{x: 2}) if y = 2;"#);
         assert_eq!(
             rule,
-            rule!("f", ["x" ; 1 , "y" ; value!([sym!("x")])] => op!(Unify, term!(sym!("y")), term!(2)))
+            rule!("f", ["x" ; value!(btreemap!(sym!("y") => term!(1))) , "y" ; instance!("Bar", btreemap!{sym!("x") => term!(2)})] => op!(Unify, term!(sym!("y")), term!(2)))
         );
 
         // parse specializer as a type
@@ -246,11 +246,12 @@ mod tests {
         let e = super::parse_query(0, "[1, *x, *y] = [*rest]").expect_err("parse error");
         assert!(matches!(e, UnrecognizedToken { .. }));
 
-        let q = "[1, 2, 3] matches [1, 2, 3]";
-        assert_eq!(parse_query(q).to_polar(), q, "{} -- {}", q, parse_query(q));
+        // Not supported any more
+        // let q = "[1, 2, 3] matches [1, 2, 3]";
+        // assert_eq!(parse_query(q).to_polar(), q, "{} -- {}", q, parse_query(q));
 
-        let q = "[1, 2, 3] matches [1, *rest]";
-        assert_eq!(parse_query(q).to_polar(), q, "{} -- {}", q, parse_query(q));
+        // let q = "[1, 2, 3] matches [1, *rest]";
+        // assert_eq!(parse_query(q).to_polar(), q, "{} -- {}", q, parse_query(q));
     }
 
     #[test]
@@ -293,7 +294,12 @@ mod tests {
             "y matches z = x",
         ] {
             let e = super::parse_query(0, bad_query).expect_err("parse error");
-            assert!(matches!(e, WrongValueType { .. }));
+            assert!(
+                matches!(e, WrongValueType { .. }),
+                "expected WrongValueType error, got: {} in parsing: {}",
+                e,
+                bad_query
+            );
         }
     }
 

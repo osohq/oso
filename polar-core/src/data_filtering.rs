@@ -223,10 +223,10 @@ impl VarInfo {
     }
 
     fn do_isa(mut self, lhs: &Term, rhs: &Term) -> Result<Self> {
-        match rhs.value().as_pattern() {
-            Ok(Pattern::Instance(i)) if i.fields.fields.is_empty() => {
+        match rhs.value().as_literal() {
+            Ok(InstanceLiteral { tag, fields }) if fields.fields.is_empty() => {
                 let lhs = self.symbolize(lhs);
-                self.types.push((lhs, i.tag.0.clone()));
+                self.types.push((lhs, tag.0.clone()));
                 Ok(self)
             }
             _ => unsupported_op_error(Operation {
@@ -950,7 +950,7 @@ impl Vars {
                     Value::Variable(_) => "Variable",
                     Value::RestVariable(_) => "RestVariable",
                     Value::Expression(_) => "Expression",
-                    Value::Pattern(_) => "Pattern",
+                    Value::InstanceLiteral(_) => "InstanceLiteral",
                 }
             } else {
                 "unknown"
@@ -1110,7 +1110,7 @@ mod test {
 
     #[test]
     fn test_unregistered_field() -> TestResult {
-        let pat_a = term!(pattern!(instance!("A")));
+        let pat_a = term!(instance!("A"));
         let partial = term!(op!(
             And,
             term!(op!(Isa, var!("_this"), pat_a)),

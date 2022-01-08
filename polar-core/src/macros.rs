@@ -50,13 +50,6 @@ macro_rules! term {
 }
 
 #[macro_export]
-macro_rules! pattern {
-    ($arg:expr) => {
-        $crate::macros::TestHelper::<Pattern>::from($arg).0
-    };
-}
-
-#[macro_export]
 macro_rules! param {
     ($($tt:tt)*) => {
         $crate::macros::TestHelper::<Parameter>::from($($tt)*).0
@@ -66,15 +59,15 @@ macro_rules! param {
 #[macro_export]
 macro_rules! instance {
     ($instance:expr) => {
-        InstanceLiteral {
+        crate::terms::InstanceLiteral {
             tag: sym!($instance),
-            fields: Dictionary::new(),
+            fields: crate::terms::Dictionary::new(),
         }
     };
     ($tag:expr, $fields:expr) => {
-        InstanceLiteral {
+        crate::terms::InstanceLiteral {
             tag: sym!($tag),
-            fields: $crate::macros::TestHelper::<Dictionary>::from($fields).0,
+            fields: $crate::macros::TestHelper::<crate::terms::Dictionary>::from($fields).0,
         }
     };
 }
@@ -246,7 +239,7 @@ impl From<Value> for TestHelper<Term> {
 impl From<(Symbol, Term)> for TestHelper<Parameter> {
     fn from(arg: (Symbol, Term)) -> Self {
         let specializer = match arg.1.value().clone() {
-            Value::Dictionary(dict) => value!(pattern!(dict)),
+            Value::Dictionary(dict) => value!(dict),
             v => v,
         };
         Self(Parameter {
@@ -306,19 +299,19 @@ impl From<bool> for TestHelper<Value> {
     }
 }
 
-impl From<InstanceLiteral> for TestHelper<Value> {
-    fn from(other: InstanceLiteral) -> Self {
-        Self(Value::Pattern(Pattern::Instance(other)))
-    }
-}
 impl From<Call> for TestHelper<Value> {
     fn from(other: Call) -> Self {
         Self(Value::Call(other))
     }
 }
-impl From<Pattern> for TestHelper<Value> {
-    fn from(other: Pattern) -> Self {
-        Self(Value::Pattern(other))
+impl From<Dictionary> for TestHelper<Value> {
+    fn from(other: Dictionary) -> Self {
+        Self(Value::Dictionary(other))
+    }
+}
+impl From<InstanceLiteral> for TestHelper<Value> {
+    fn from(other: InstanceLiteral) -> Self {
+        Self(Value::InstanceLiteral(other))
     }
 }
 impl From<Operation> for TestHelper<Value> {
@@ -339,26 +332,5 @@ impl From<Symbol> for TestHelper<Value> {
 impl From<BTreeMap<Symbol, Term>> for TestHelper<Value> {
     fn from(other: BTreeMap<Symbol, Term>) -> Self {
         Self(Value::Dictionary(Dictionary { fields: other }))
-    }
-}
-
-impl From<Dictionary> for TestHelper<Pattern> {
-    fn from(other: Dictionary) -> Self {
-        Self(Pattern::Dictionary(other))
-    }
-}
-impl From<BTreeMap<Symbol, Term>> for TestHelper<Pattern> {
-    fn from(other: BTreeMap<Symbol, Term>) -> Self {
-        Self(Pattern::Dictionary(dict!(other)))
-    }
-}
-impl From<InstanceLiteral> for TestHelper<Pattern> {
-    fn from(other: InstanceLiteral) -> Self {
-        Self(Pattern::Instance(other))
-    }
-}
-impl From<Pattern> for TestHelper<Term> {
-    fn from(other: Pattern) -> Self {
-        Self(Term::from(value!(other)))
     }
 }

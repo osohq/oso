@@ -4,7 +4,7 @@ use indoc::indoc;
 
 use super::diagnostic::{Context, Range};
 use super::kb::KnowledgeBase;
-use super::terms::{InstanceLiteral, Pattern, Symbol, Term, Value};
+use super::terms::{InstanceLiteral, Symbol, Term, Value};
 
 #[derive(Debug)]
 pub struct PolarWarning {
@@ -105,7 +105,7 @@ const MISSING_HAS_PERMISSION_RULE_MSG: &str = indoc! {"
 "};
 
 fn common_specializer_misspellings(term: &Term) -> Option<&str> {
-    if let Value::Pattern(Pattern::Instance(InstanceLiteral { tag, .. })) = term.value() {
+    if let Value::InstanceLiteral(InstanceLiteral { tag, .. }) = term.value() {
         let misspelled_type = match tag.0.as_ref() {
             "integer" => "Integer",
             "int" => "Integer",
