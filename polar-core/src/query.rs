@@ -41,6 +41,8 @@ impl Query {
                         Symbol(v.clone()),
                         state
                             .bindings
+                            .get(&0)
+                            .unwrap()
                             .get(v) // get binding
                             .map(|t| state.walk(t.clone())) // walk to deref
                             .map(|t| t.value().clone()) // convert to value
@@ -57,6 +59,8 @@ impl Goal for Call {
 
     fn run(self, state: State) -> Self::Results {
         println!("run call: {}", self.to_polar());
+        // TODO: walk the call either here, or in the Query goal to make sure that
+        // we _only_ have frame-specific variables.
         let kb = state.kb.clone();
         let rules = state
             .kb()
@@ -70,12 +74,8 @@ impl Goal for Call {
             // and construct the goals needed to evaluate the rule
             let mut inner_state = State::new(kb.clone());
             let mut applicable = true;
-            let mut variables = vec![];
             for (arg, param) in self.args.iter().zip(r.params.iter()) {
                 let arg = (&state).walk(arg.clone());
-                if let Value::Variable(v) = arg.value() {
-                    variables.push(v.name.0.clone())
-                }
                 if !inner_state.unify(arg.clone(), param.parameter.clone()) {
                     applicable = false;
                     println!("Failed to unify: {} and {}", arg, param.parameter);
@@ -98,13 +98,38 @@ impl Goal for Call {
                     // TODO: could run this like query since we want to get a specific set of
                     // bindings out
                     // Also, check for any unresolved partials
-                    for v in &variables {
-                        new_state.bindings.insert(
-                            v.clone(),
-                            inner_state
-                                .walk(inner_state.bindings.get(v).expect("must be bound").clone()),
-                        );
+
+                    // TODO: Need to figure out how to do bindings here correctly.
+                    // I think the trick will be to walk every term that we see, so that we can ensure
+                    // that all variables are instantiated to the earliest version of it.
+                    // This sort of amounts to a rewrite.. But basically every time we see an unbound variable,
+                    // we should deref it and replace with the framed version of a variable.
+                    //
+                    // e.g. f(x, y) if x in y;
+                    //
+                    // If we have y = 1 and f(y, [1, 2, 3]) we should get:
+                    //              ^ y@0 := 1
+                    //                        ^ x@1 := y@0
+                    //                            ^ y@1 := [1, 2, 3]
+                    //
+                    // (inside rule, x in y) => x in y => x@1 in y@1 => y@0 in [1, 2, 3] => 1 in [1, 2, 3] => true
+                    //
+                    // If we have f(1, [x, y, z]) we should get:
+                    //              ^ x@1 := 1
+                    //                      ^ y@1 := [x@0, y@0, z@0]
+                    //
+                    // (inside rule, x in y) => x in y => x@1 in y@1 => 1 in [x@0, y@0, z@0] => x@0 = 1 or y@0 = 1 or z@0 = 1
+                    // I think this implies we _always _pass by reference?
+                    for (k, v) in new_state.bindings.get(&state.frame).unwrap().iter() {
+                        state.bind(k, v.clone())
                     }
+                    // for v in &variables {
+                    //     new_state.bindings.insert(
+                    //         v.clone(),
+                    //         inner_state
+                    //             .walk(inner_state.bindings.get(v).expect("must be bound").clone()),
+                    //     );
+                    // }
                     new_state
                 })) as Box<dyn Iterator<Item = State>>
             } else {
@@ -234,23 +259,44 @@ impl Operation {
     }
 }
 
-#[derive(Clone, Default)]
+use std::sync::atomic::{AtomicU64, Ordering};
+pub static COUNTER: AtomicU64 = AtomicU64::new(2);
+
+#[derive(Default)]
 pub struct State {
+    /// current frame. 0 is unset, 1 is global, locals start from 2
+    pub frame: u64,
     kb: Arc<RwLock<KnowledgeBase>>,
-    pub bindings: HashMap<String, Term>,
+    pub bindings: HashMap<u64, HashMap<String, Term>>,
+}
+
+impl Clone for State {
+    fn clone(&self) -> Self {
+        Self {
+            frame: COUNTER.fetch_add(1, Ordering::SeqCst),
+            kb: self.kb.clone(),
+            bindings: self.bindings.clone(),
+        }
+    }
 }
 
 impl State {
     pub fn new(kb: Arc<RwLock<KnowledgeBase>>) -> Self {
         // seed the state with all registered constants
-        let bindings = kb
+        let frame_bindings = kb
             .read()
             .unwrap()
             .get_registered_constants()
             .iter()
             .map(|(k, v)| (k.0.clone(), v.clone()))
             .collect();
-        Self { kb, bindings }
+        let frame = 0; // start out from 0
+        let bindings = [(frame, frame_bindings)].into();
+        Self {
+            frame,
+            kb,
+            bindings,
+        }
     }
 }
 
@@ -334,7 +380,16 @@ impl State {
 
     fn bind(&mut self, var: &str, value: Term) {
         println!("Bind: {} = {}", var, value);
-        self.bindings.insert(var.to_string(), value);
+        self.bindings
+            .insert((self.frame_id, var.to_string()), value);
+    }
+
+    fn get_frame_binding(&self, frame_id: u64, var: &str) -> Option<&Term> {
+        self.bindings.get(&(frame_id, var))
+    }
+
+    fn get_binding(&self, var: &str) -> Option<&Term> {
+        self.get_frame_binding(self.frame, var)
     }
 
     fn unify(&mut self, left: Term, right: Term) -> bool {
