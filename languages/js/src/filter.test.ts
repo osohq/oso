@@ -15,6 +15,8 @@ import {
   DeepPartial,
 } from 'typeorm';
 import { Class, obj } from './types';
+import { values } from 'lodash';
+import { notDeepStrictEqual } from 'assert';
 
 class TestOso extends Oso {
   async checkAuthz(
@@ -351,19 +353,8 @@ async function fixtures() {
     | OrgRole
     | Bar
     | Foo
-    | Num;
-
-  // const resources: {[key: string]: Resource} = {
-  //   'User': User,
-  //   'Repo': Repo,
-  //   'Org': Org,
-  //   'Issue': Issue,
-  //   'RepoRole': RepoRole,
-  //   'OrgRole': OrgRole,
-  //   'Bar': Bar,
-  //   'Foo': Foo,
-  //   'Num': Num
-  // };
+    | Num
+    | Log;
 
   const repositories: {[key: string]: Repository<Resource>} = {
     'User': users,
@@ -374,7 +365,8 @@ async function fixtures() {
     'OrgRole': orgRoles,
     'Bar': bars,
     'Foo': foos,
-    'Num': nums
+    'Num': nums,
+    'Log': logs,
   };
 
   const classes: {[key: string]: any} = {
@@ -389,9 +381,12 @@ async function fixtures() {
     'Num': Num
   };
 
-  function toSql(d: Datum): string {
+  function toSql(d: Datum, values: {[key: string]: any}): string {
     if (d.hasOwnProperty("value")) {
-      return `${(d as Immediate).value}`;
+      let nextId = Object.keys(values).length;
+      let key = `${nextId}`
+      values[key] = (d as Immediate).value
+      return `:${key}`;
     } else {
       let proj = d as Projection;
       return `${proj.typeName}.${proj.fieldName}`
@@ -402,17 +397,16 @@ async function fixtures() {
     var repo: Repository<Resource> = repositories[filter.model];
     let query: SelectQueryBuilder<Resource> = repo.createQueryBuilder(filter.model);
 
-    let type = filter.types[filter.model]
     for (let rel of filter.relations) {
+      let type = filter.types[rel.fromTypeName]
       let other = classes[rel.toTypeName];
       let relation = (type[rel.fromFieldName] as SerializedRelation).Relation;
-
-      let join_repo = repositories[rel.toTypeName]
-      let join = `${filter.model}.${relation.my_field} = ${rel.toTypeName}.${relation.other_field}`
+      let join = `${rel.fromTypeName}.${relation.my_field} = ${rel.toTypeName}.${relation.other_field}`
       query = query.innerJoin(other, rel.toTypeName, join)
     }
 
     for (let cs of filter.conditions) {
+      let values = {}
       let ands = ""
       for (let c of cs) {
         let op;
@@ -425,13 +419,33 @@ async function fixtures() {
             continue;
           }
         }
-        let constraint = `${toSql(c.lhs)} ${op} ${toSql(c.rhs)}`
+        if (c.lhs.hasOwnProperty("typeName") && (c.lhs as Projection).fieldName == undefined) {
+          c.lhs = {
+            typeName: (c.lhs as Projection).typeName,
+            fieldName: 'id',
+          }
+          c.rhs = {
+            value: (c.rhs as Immediate).value.id
+          }
+        }
+        if (c.rhs.hasOwnProperty("typeName") && (c.rhs as Projection).fieldName == undefined) {
+          c.rhs = {
+            typeName: (c.rhs as Projection).typeName,
+            fieldName: 'id',
+          }
+          c.lhs = {
+            value: (c.lhs as Immediate).value.id
+          }
+        } 
+        let constraint = `${toSql(c.lhs, values)} ${op} ${toSql(c.rhs, values)}`
         if (ands.length!=0) {
           ands += " AND "
         }
         ands += constraint
       }
-      query = query.orWhere(ands)
+      if (ands.length != 0) {
+        query = query.orWhere(ands, values)
+      }
     }
     
     return query;
