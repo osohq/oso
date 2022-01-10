@@ -17,7 +17,7 @@ allow(actor: test_oso::User, "frob", resource: test_oso::Company) if
 allow(actor: test_oso::User, "list", test_oso::Company) if
     actor.name = "auditor";
 
-allow(foo: FooDecorated, "read", bar: BarDecorated) if
+allow(foo: Foo, "read", bar: Bar) if
     foo.foo = bar.bar;
 
 # Admins can update all fields

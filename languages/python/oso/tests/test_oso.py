@@ -3,7 +3,7 @@
 from pathlib import Path
 import pytest
 
-from oso import Oso, polar_class
+from oso import Oso
 from polar import exceptions
 
 # Fake global actor name → company ID map.
@@ -65,6 +65,8 @@ def test_oso():
     oso.register_class(User, name="test_oso::User")
     oso.register_class(Widget, name="test_oso::Widget")
     oso.register_class(Company, name="test_oso::Company")
+    oso.register_class(Foo)
+    oso.register_class(Bar)
     oso.load_file(test_oso_file)
 
     return oso
@@ -74,18 +76,12 @@ def test_sanity(test_oso):
     pass
 
 
-def test_decorators(test_oso):
-    assert test_oso.is_allowed(FooDecorated(foo=1), "read", BarDecorated(bar=1))
-
-
-@polar_class
-class FooDecorated:
+class Foo:
     def __init__(self, foo):
         self.foo = foo
 
 
-@polar_class
-class BarDecorated(FooDecorated):
+class Bar(Foo):
     def __init__(self, bar):
         super()
         self.bar = bar

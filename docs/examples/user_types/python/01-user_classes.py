@@ -1,14 +1,8 @@
-# classes-start
-from oso import polar_class
-
-
-@polar_class
 class Customer:
     def __init__(self, id):
         self.id = id
 
 
-@polar_class
 class InternalUser:
     def __init__(self, id):
         self.id = id

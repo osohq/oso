@@ -193,3 +193,5 @@ polar-wasm-api/pkg/*
 # Algolia tool
 docs/searcher
 docs/search/vendor/*
+
+.nvmrc

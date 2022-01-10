@@ -1,3 +1,3 @@
 ---
-envClassPath: examples/context/python/02-context.py
+envClassPath: examples/context/python/context.py
 ---
