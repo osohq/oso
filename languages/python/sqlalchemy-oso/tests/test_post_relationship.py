@@ -806,14 +806,12 @@ def test_two_level_isa_with_path(session, oso, tag_nested_many_many_test_fixture
     oso.load_str(
         """
             allow(user, _, post: Post) if
-                check(user, post) and user.name == "user";
-
+                check(user, post) and user.username == "user";
 
             check(user: User, post: Post) if
                 post.created_by = u and
                 check(user, u.tag);
             check(_: User, tag: Tag)      if tag.is_public;
-            #check(_: User, nottag: Post)      if nottag.bad;
         """
     )
 
@@ -823,12 +821,12 @@ def test_two_level_isa_with_path(session, oso, tag_nested_many_many_test_fixture
     )
     print_query(posts)
     # Should only get posts created by user.
-    # TODO TEST HANGS
     posts = posts.all()
     for post in posts:
         assert post.created_by.username == "user"
 
     assert len(posts) == 5
+
 
 # TODO test_nested_relationship_single_many
 # TODO test_nested_relationship_single_single

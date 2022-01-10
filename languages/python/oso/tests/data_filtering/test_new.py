@@ -483,10 +483,10 @@ def test_unify_ins_neq(oso):
 
 @pytest.mark.xfail(reason="a bug")
 def test_deeply_nested_in(oso):
-    # gwen can read any foo whose bar has another foo.
+    # can read any foo whose bar has another foo.
     oso.load_str(
         """
-            allow("gwen", "read", a: Foo) if
+            allow(_, "read", a: Foo) if
                 b in a.bar.foos and b != a;# and
 #                c in b.bar.foos and c != b and
 #                d in c.bar.foos and d != c and
@@ -495,4 +495,18 @@ def test_deeply_nested_in(oso):
     )
 
     result = oso.authorized_resources("gwen", "read", Foo)
+    assert len(result) == 3
+
+
+def test_two_level_isa_with_path(oso):
+    oso.load_str(
+        """
+        allow(u, _, log: Log) if check(u, log.foo.bar);
+        check(u, log: Log) if allow(u, "", log);
+        check(_u, _f: Foo);
+        check(_, _: Bar);
+    """
+    )
+
+    result = oso.authorized_resources("gwen", "read", Log)
     assert len(result) == 3
