@@ -72,9 +72,11 @@ requirements:
 - Rust: 1.46+
 - Go: 1.12+
 
-## Contributing
+## Contributing & Jobs
 
 See: [CONTRIBUTING.md][contributing].
+
+If you want to work on the Oso codebase full-time, visit [our jobs page](https://www.osohq.com/company/jobs).
 
 ## License
 
