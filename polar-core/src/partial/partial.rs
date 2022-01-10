@@ -334,7 +334,7 @@ mod test {
                     .into_iter()
                     .collect::<HashSet<Term>>();
             let r = hashset! { $($args),+ };
-            let fmt = |hs: &HashSet<Term>| format!("{{ {} }}", hs.iter().map(|t| t.to_polar()).collect::<Vec<String>>().join(", "));
+            let fmt = |hs: &HashSet<Term>| format!("{{ {} }}", hs.iter().map(Term::to_string).collect::<Vec<_>>().join(", "));
 
             assert_eq!(&l, &r, "{} != {}", fmt(&l), fmt(&r));
 
