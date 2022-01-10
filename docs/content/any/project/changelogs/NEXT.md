@@ -37,7 +37,7 @@ const (
 
 Where previously it was possible to utilize this `Role` type as interchangeable with that of `string`:
 ```polar
-has_role(user: User, role String, resource: Resource) if ...
+has_role(user: User, role: String, resource: Resource) if ...
 ```
 
 This rule definition must be rewritten as follows:
