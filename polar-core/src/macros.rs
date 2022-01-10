@@ -27,7 +27,7 @@ macro_rules! value {
             elements: vec![
                 $(term!(value!($args))),*
             ],
-            rest_var: Some(Symbol($rv.to_string()))
+            rest_var: Some(Variable::new($rv.to_string()))
         })
     };
     ([$($args:expr),*]) => {
@@ -88,6 +88,15 @@ macro_rules! sym {
     ($arg:expr) => {
         $crate::macros::TestHelper::<Symbol>::from($arg).0
     };
+}
+
+#[macro_export]
+macro_rules! result_var {
+    ($arg:expr) => {{
+        let mut var = Variable::new($arg.to_string());
+        var.frame = 1;
+        var
+    }};
 }
 
 #[macro_export]
@@ -303,6 +312,11 @@ impl From<&str> for TestHelper<Value> {
         Self(Value::String(other.to_string()))
     }
 }
+impl From<String> for TestHelper<Value> {
+    fn from(other: String) -> Self {
+        Self(Value::String(other))
+    }
+}
 
 impl From<bool> for TestHelper<Value> {
     fn from(other: bool) -> Self {
@@ -346,6 +360,11 @@ impl From<TermList> for TestHelper<Value> {
 impl From<Symbol> for TestHelper<Value> {
     fn from(other: Symbol) -> Self {
         Self(Value::Variable(Variable::new(other.0)))
+    }
+}
+impl From<Variable> for TestHelper<Value> {
+    fn from(other: Variable) -> Self {
+        Self(Value::Variable(other))
     }
 }
 impl From<BTreeMap<Symbol, Term>> for TestHelper<Value> {

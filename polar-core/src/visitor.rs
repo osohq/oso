@@ -137,7 +137,7 @@ pub fn walk_call<V: Visitor>(visitor: &mut V, call: &Call) {
 pub fn walk_list<V: Visitor>(visitor: &mut V, list: &List) {
     walk_elements!(visitor, visit_term, &list.elements);
     if let Some(rv) = &list.rest_var {
-        visitor.visit_symbol(rv);
+        visitor.visit_variable(rv);
     }
 }
 
@@ -209,7 +209,7 @@ mod tests {
         ];
         let term = term!(List {
             elements: list,
-            rest_var: Some(sym!("rest")) // not visited
+            rest_var: Some(Variable::new("rest".to_string()))
         });
         let mut v = TestVisitor::new();
         v.visit_term(&term);

@@ -6,7 +6,8 @@ use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
 
 use polar_core::{
-    error::*, messages::*, polar::Polar, sym, term, terms::*, traces::*, value, values, Query,
+    error::*, messages::*, polar::Polar, result_var, sym, term, terms::*, traces::*, value, values,
+    Query,
 };
 
 fn polar() -> Polar {
@@ -247,12 +248,9 @@ fn qvars(p: &Polar, query_str: &str, variables: &[&str], expected: Vec<Vec<Value
 
 #[track_caller]
 fn _qruntime(p: &Polar, query_str: &str) -> ErrorKind {
-    todo!()
-    // p.new_query(query_str, false)
-    //     .unwrap()
-    //     .next_event()
-    //     .unwrap_err()
-    //     .kind
+    // todo!()
+    let _: Vec<_> = p.new_query(query_str, false).unwrap().run().collect();
+    panic!("This was supposed to fail somehow")
 }
 
 macro_rules! qruntime {
@@ -840,7 +838,7 @@ fn test_bindings() -> TestResult {
         &p,
         "x=y and y=x",
         &["x", "y"],
-        values![[sym!("y"), sym!("x")]],
+        values![[result_var!("y"), result_var!("y")]],
     );
 
     // 3-cycle, 3 ways.
@@ -848,13 +846,13 @@ fn test_bindings() -> TestResult {
         &p,
         "x=y and y=z",
         &["x", "y", "z"],
-        values![[sym!("z"), sym!("x"), sym!("y")]],
+        values![[result_var!("z"), result_var!("z"), result_var!("z")]],
     );
     qvars(
         &p,
         "x=y and z=x",
         &["x", "y", "z"],
-        values![[sym!("y"), sym!("z"), sym!("x")]],
+        values![[result_var!("y"), result_var!("y"), result_var!("y")]],
     );
 
     // 4-cycle, 3 ways.
@@ -862,19 +860,34 @@ fn test_bindings() -> TestResult {
         &p,
         "x=y and y=z and z=w and w=x",
         &["x", "y", "z", "w"],
-        values![[sym!("w"), sym!("x"), sym!("y"), sym!("z")]],
+        values![[
+            result_var!("w"),
+            result_var!("w"),
+            result_var!("w"),
+            result_var!("w")
+        ]],
     );
     qvars(
         &p,
         "x=y and y=z and w=z and w=x",
         &["x", "y", "z", "w"],
-        values![[sym!("w"), sym!("x"), sym!("y"), sym!("z")]],
+        values![[
+            result_var!("z"),
+            result_var!("z"),
+            result_var!("z"),
+            result_var!("z")
+        ]],
     );
     qvars(
         &p,
         "x=y and w=z and z=x",
         &["x", "y", "z", "w"],
-        values![[sym!("y"), sym!("z"), sym!("w"), sym!("x")]],
+        values![[
+            result_var!("y"),
+            result_var!("y"),
+            result_var!("y"),
+            result_var!("y")
+        ]],
     );
 
     // Don't create sub-cycles.
@@ -882,7 +895,12 @@ fn test_bindings() -> TestResult {
         &p,
         "x=y and y=z and z=w and w=x and y=x",
         &["x", "y", "z", "w"],
-        values![[sym!("w"), sym!("x"), sym!("y"), sym!("z")]],
+        values![[
+            result_var!("w"),
+            result_var!("w"),
+            result_var!("w"),
+            result_var!("w")
+        ]],
     );
 
     // 6-cycle, 2 ways.
@@ -891,12 +909,12 @@ fn test_bindings() -> TestResult {
         "x=y and y=z and z=w and w=v and v=u",
         &["x", "y", "z", "w", "v", "u"],
         values![[
-            sym!("u"),
-            sym!("x"),
-            sym!("y"),
-            sym!("z"),
-            sym!("w"),
-            sym!("v")
+            result_var!("u"),
+            result_var!("u"),
+            result_var!("u"),
+            result_var!("u"),
+            result_var!("u"),
+            result_var!("u")
         ]],
     );
     qvars(
@@ -904,13 +922,20 @@ fn test_bindings() -> TestResult {
         "x=y and y=z and w=v and v=u and u=x",
         &["x", "y", "z", "w", "v", "u"],
         values![[
-            sym!("z"),
-            sym!("u"),
-            sym!("y"),
-            sym!("x"),
-            sym!("w"),
-            sym!("v")
+            result_var!("z"),
+            result_var!("z"),
+            result_var!("z"),
+            result_var!("z"),
+            result_var!("z"),
+            result_var!("z")
         ]],
+    );
+
+    qvars(
+        &p,
+        "x=y and y=z and w=v and v=u and u=x and x = 1",
+        &["x", "y", "z", "w", "v", "u"],
+        values![[1, 1, 1, 1, 1, 1]],
     );
 
     Ok(())
@@ -1884,18 +1909,18 @@ fn test_in_op() -> TestResult {
     let results = query_results!(q);
     assert_eq!(results.len(), 3);
     // `x` is unbound in first and last queries
-    assert_eq!(
+    assert!(matches!(
         results[0].0.get(&Symbol("x".to_string())).unwrap().clone(),
-        value!(sym!("x"))
-    );
+        Value::Variable(_)
+    ));
     assert_eq!(
         results[1].0.get(&Symbol("x".to_string())).unwrap().clone(),
         value!(1)
     );
-    assert_eq!(
+    assert!(matches!(
         results[2].0.get(&Symbol("x".to_string())).unwrap().clone(),
-        value!(sym!("x"))
-    );
+        Value::Variable(_)
+    ));
     // This returns 3 results, with 1 binding each.
     let q = p.new_query("f(1, [x,y,z])", false)?;
     let results = query_results!(q);

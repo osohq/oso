@@ -61,7 +61,7 @@ impl Polar {
             let mut diagnostics = vec![];
             while let Some(line) = lines.pop() {
                 match line {
-                    parser::Line::Rule(mut rule) => {
+                    parser::Line::Rule(rule) => {
                         diagnostics.append(&mut check_singletons(&rule, kb));
                         diagnostics.append(&mut check_ambiguous_precedence(&rule, kb));
                         // rule = rewrite_rule(rule, kb);

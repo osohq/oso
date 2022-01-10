@@ -1,7 +1,7 @@
 use criterion::{criterion_group, BenchmarkId, Criterion};
 
 use polar_core::*;
-use polar_core::{kb::Bindings, polar::Polar, terms::*};
+use polar_core::{polar::Polar, terms::*};
 
 use super::runner::{runner_from_query, Runner};
 
@@ -48,8 +48,8 @@ pub fn not(c: &mut Criterion) {
 
 pub fn fib(c: &mut Criterion) {
     let policy = "
-        fib(0, 1) if cut;
-        fib(1, 1) if cut;
+        fib(0, 1);
+        fib(1, 1);
         fib(n, a+b) if fib(n-1, a) and fib(n-2, b);
     ";
 
@@ -73,7 +73,7 @@ pub fn fib(c: &mut Criterion) {
                     let mut runner = runner_from_query(&format!("fib({}, result)", n));
                     runner.load_str(policy).unwrap();
                     runner.expected_result(maplit::hashmap!(
-                        sym!("result") => term!(fib(*n))
+                        sym!("result") => value!(fib(*n))
                     ));
                     runner
                 },
@@ -137,7 +137,7 @@ pub fn indexed_rules(c: &mut Criterion) {
             policy += &format!("f({});", i);
         }
         runner.load_str(&policy).unwrap();
-        runner.expected_result(Bindings::new());
+        runner.expected_result(Default::default());
         runner
     }
 
@@ -171,7 +171,7 @@ pub fn many_rules(c: &mut Criterion) {
             policy += &format!("f({}) if f({});", i, i - 1);
         }
         runner.load_str(&policy).unwrap();
-        runner.expected_result(Bindings::new());
+        runner.expected_result(Default::default());
         runner
     }
 
@@ -198,9 +198,9 @@ criterion_group!(
     benches,
     simple_queries,
     many_rules,
-    fib,
+    // fib,
     prime,
     indexed_rules,
     not,
-    load_policy,
+    // load_policy,
 );

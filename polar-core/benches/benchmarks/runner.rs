@@ -1,5 +1,10 @@
+use std::collections::HashMap;
+
 use polar_core::parser;
-use polar_core::{events::*, kb::Bindings, polar::Polar, query::Query};
+use polar_core::terms::{Symbol, Value};
+use polar_core::{polar::Polar, query::Query};
+
+pub type Bindings = HashMap<Symbol, Value>;
 
 pub fn runner_from_query(q: &str) -> Runner {
     let polar = Polar::new();
@@ -23,37 +28,24 @@ impl Runner {
             query,
         }
     }
-
     pub fn expected_result(&mut self, bindings: Bindings) {
         self.expected_result = Some(bindings);
     }
 
-    pub fn next(&mut self) -> QueryEvent {
-        self.query.next_event().expect("query errored")
-    }
-
     pub fn run(&mut self) {
-        loop {
-            let event = self.next();
-            match event {
-                QueryEvent::Result { bindings, .. } => return self.handle_result(bindings),
-                QueryEvent::Done { .. } if self.expected_result.is_some() => {
-                    panic!("Result expected")
-                }
-                QueryEvent::Done { .. } => break,
-                QueryEvent::Debug { message } => self.handle_debug(message),
-                event => todo!("{:?}", event),
+        let Self {
+            expected_result,
+            query,
+            ..
+        } = self;
+        if let Some(result) = query.run().next() {
+            if let Some(expected) = expected_result.as_ref() {
+                assert_eq!(expected, &result);
             }
+        } else if expected_result.is_some() {
+            panic!("Result expected")
         }
     }
-
-    fn handle_result(&mut self, bindings: Bindings) {
-        if let Some(ref expected_bindings) = self.expected_result {
-            assert_eq!(expected_bindings, &bindings);
-        }
-    }
-
-    fn handle_debug(&mut self, _: String) {}
 }
 
 impl std::ops::Deref for Runner {

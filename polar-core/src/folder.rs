@@ -172,7 +172,7 @@ pub fn fold_variable<T: Folder>(v: Variable, _fld: &mut T) -> Variable {
 pub fn fold_list<T: Folder>(l: List, fld: &mut T) -> List {
     List {
         elements: fold_term_list(l.elements, fld),
-        rest_var: l.rest_var.map(|rv| fld.fold_symbol(rv)),
+        rest_var: l.rest_var.map(|rv| fld.fold_variable(rv)),
     }
 }
 

@@ -397,6 +397,16 @@ pub mod to_polar {
         }
     }
 
+    impl ToPolarString for Variable {
+        fn to_polar(&self) -> String {
+            if self.frame == usize::MAX {
+                self.name.to_string()
+            } else {
+                format!("{}@{}", self.name, self.frame)
+            }
+        }
+    }
+
     impl ToPolarString for Term {
         fn to_polar(&self) -> String {
             self.value().to_polar()
@@ -418,14 +428,18 @@ pub mod to_polar {
                 Value::Dictionary(i) => i.to_polar(),
                 Value::InstanceLiteral(i) => i.to_polar(),
                 Value::Call(c) => c.to_polar(),
-                match_var!(s) => s.to_polar(),
+                Value::Variable(v) => v.to_polar(),
                 Value::List(l) => format!(
                     "[{}{}{}]",
                     format_args(Operator::And, &l.elements, ", "),
-                    if l.elements.is_empty() || l.rest_var.is_none() { "" } else { ", " },
+                    if l.elements.is_empty() || l.rest_var.is_none() {
+                        ""
+                    } else {
+                        ", "
+                    },
                     l.rest_var
                         .as_ref()
-                        .map_or_else(String::new, |rv| format!("*{}", rv))
+                        .map_or_else(String::new, |rv| format!("*{}", rv.to_polar()))
                 ),
                 Value::Expression(e) => e.to_polar(),
             }

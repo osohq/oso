@@ -44,7 +44,8 @@ pub struct Context {
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct List {
     pub elements: Vec<Term>,
-    pub rest_var: Option<Symbol>,
+    /// TODO: This should probably be Option<Term> so we capture source info
+    pub rest_var: Option<Variable>,
 }
 
 pub type TermList = Vec<Term>;
@@ -85,6 +86,9 @@ impl Symbol {
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Variable {
     pub name: Symbol,
+    /// what frame the variable came from.
+    /// Zero == constant, u64::MAX == from parser (i.e. no frame associated)
+    pub frame: usize,
     pub type_info: Option<String>, // currently just a class name
     pub constraints: Vec<Operation>,
 }
@@ -93,6 +97,7 @@ impl Variable {
     pub fn new(name: String) -> Self {
         Self {
             name: Symbol(name),
+            frame: usize::MAX,
             type_info: Default::default(),
             constraints: Default::default(),
         }
@@ -432,8 +437,8 @@ impl Term {
         }
 
         impl<'set> Visitor for VariableVisitor<'set> {
-            fn visit_symbol(&mut self, s: &Symbol) {
-                self.vars.insert(s.clone());
+            fn visit_variable(&mut self, v: &Variable) {
+                self.vars.insert(v.name.clone());
             }
         }
 

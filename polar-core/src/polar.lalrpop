@@ -117,8 +117,8 @@ Variable: Value  = <n:Name> => {
     Value::Variable(Variable::new(n.0))
 };
 
-RestVar: Symbol  = "*" <n:Name> => {
-    n
+RestVar: Variable  = "*" <n:Name> => {
+    Variable::new(n.0)
 };
 
 Call: Value = {

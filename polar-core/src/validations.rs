@@ -52,7 +52,8 @@ impl<'kb> Visitor for SingletonVisitor<'kb> {
             match_var!(v)
             | Value::InstanceLiteral(InstanceLiteral { tag: v, .. })
             | Value::List(List {
-                rest_var: Some(v), ..
+                rest_var: Some(Variable { name: v, .. }),
+                ..
             }) if !v.is_temporary_var()
                 && !v.is_namespaced_var()
                 && !self.kb.is_constant(v)

@@ -21,7 +21,7 @@ pub mod normalize;
 mod numerics;
 pub mod parser;
 pub mod polar;
-mod query;
+pub mod query;
 pub mod resource_block;
 pub mod rules;
 pub mod sources;
