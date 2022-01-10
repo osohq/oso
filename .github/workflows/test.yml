@@ -172,10 +172,10 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt, clippy
-      - name: Install Python 3.7
+      - name: Install Python 3.6
         uses: actions/setup-python@v1
         with:
-          python-version: "3.7"
+          python-version: "3.6"
       - name: Test python
         run: make python-test
       - name: Test flask
