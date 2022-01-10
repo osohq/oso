@@ -1,4 +1,3 @@
-use std::fmt::Write;
 use std::rc::Rc;
 
 use super::bindings::Binding;
