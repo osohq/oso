@@ -3,7 +3,7 @@
 from pathlib import Path
 import pytest
 
-from oso import Oso, polar_class
+from oso import Oso
 from polar import exceptions
 
 # Fake global actor name → company ID map.
@@ -65,6 +65,8 @@ def test_oso():
     oso.register_class(User, name="test_oso::User")
     oso.register_class(Widget, name="test_oso::Widget")
     oso.register_class(Company, name="test_oso::Company")
+    oso.register_class(Foo)
+    oso.register_class(Bar)
     oso.load_file(test_oso_file)
 
     return oso
@@ -74,18 +76,12 @@ def test_sanity(test_oso):
     pass
 
 
-def test_decorators(test_oso):
-    assert test_oso.is_allowed(FooDecorated(foo=1), "read", BarDecorated(bar=1))
-
-
-@polar_class
-class FooDecorated:
+class Foo:
     def __init__(self, foo):
         self.foo = foo
 
 
-@polar_class
-class BarDecorated(FooDecorated):
+class Bar(Foo):
     def __init__(self, bar):
         super()
         self.bar = bar
@@ -166,6 +162,71 @@ def test_get_allowed_actions(test_oso):
         assert set(
             test_oso.get_allowed_actions(user, resource, allow_wildcard=True)
         ) == set(["*"])
+
+
+def test_forall_with_dot_lookup_and_method_call():
+    """Thanks to user Alex Pearce for this test case!"""
+    from dataclasses import dataclass, field
+    from typing import List
+    import uuid
+
+    from oso import ForbiddenError, Oso, NotFoundError
+
+    @dataclass(frozen=True)
+    class User:
+        name: str
+        scopes: List[str]
+        id: str = field(default_factory=lambda: str(uuid.uuid4()))
+
+        def has_scope(self, scope: str):
+            print(f"Checking scope {scope}")
+            return scope in self.scopes
+
+    # Placeholder for a Flask/Starlette Request object
+    @dataclass(frozen=True)
+    class Request:
+        # The scopes defined on the route
+        # A token must have these scopes to be access to access the route
+        scopes: List[str] = field(default_factory=list)
+
+    def check_request(actor, request):
+        """Helper to convert an Oso exception to a True/False decision."""
+        try:
+            oso.authorize_request(actor, request)
+        except (ForbiddenError, NotFoundError):
+            return False
+        return True
+
+    def expect(value, expected):
+        assert value == expected
+
+    oso = Oso()
+    oso.clear_rules()
+    oso.register_class(User)
+    oso.register_class(Request)
+    oso.load_str(
+        """
+# allow(actor: Actor, action: String, resource: Resource) if
+#    has_permission(actor, action, resource);
+allow(_, _, _);
+
+# A Token is authorised if has all scopes required by the route being accessed
+# in the request
+allow_request(user: User, request: Request) if
+  request_scopes = request.scopes and
+  forall(scope in request_scopes, user.has_scope(scope));
+  # forall(scope in request.scopes, scope in user.scopes);
+    """
+    )
+
+    # Org owner
+    user = User(name="Dave", scopes=["xyz"])
+    # A request with no scopes
+    expect(check_request(user, Request()), True)
+    # A request with scopes the User has
+    expect(check_request(user, Request(scopes=["xyz"])), True)
+    # A request with scopes the User has
+    expect(check_request(user, Request(scopes=["xyzxyz"])), False)
 
 
 if __name__ == "__main__":

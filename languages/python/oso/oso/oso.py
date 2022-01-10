@@ -1,12 +1,11 @@
 """Core oso functionality"""
 
-__version__ = "0.24.0"
+__version__ = "0.25.1"
 
 import os
 from typing import List, Any, Set
 
-from polar import Polar, Variable, exceptions, Expression, Pattern
-from polar.data_filtering import serialize_types, filter_data
+from polar import Polar, Variable, exceptions
 from .exceptions import NotFoundError, ForbiddenError
 
 
@@ -55,8 +54,7 @@ class Oso(Polar):
 
         Uses allow rules in the Polar policy to determine whether a request is
         permitted. ``actor`` and ``resource`` should be classes that have been
-        registered with Polar using the :py:func:`register_class` function or
-        the ``polar_class`` decorator.
+        registered with Polar using the :py:func:`register_class` function.
 
         :param actor: The actor performing the request.
         :param action: The action the actor is attempting to perform.
@@ -240,33 +238,11 @@ class Oso(Polar):
 
         :return: A query to fetch the resources,
         """
-        # Data filtering.
-        resource = Variable("resource")
-        # Get registered class name somehow
-        class_name = self.host.types[resource_cls].name
-        constraint = Expression(
-            "And", [Expression("Isa", [resource, Pattern(class_name, {})])]
-        )
 
-        query = self.query_rule(
-            "allow",
-            actor,
-            action,
-            resource,
-            bindings={"resource": constraint},
-            accept_expression=True,
-        )
-
-        results = [
-            {"bindings": {k: self.host.to_polar(v)}}
-            for result in query
-            for k, v in result["bindings"].items()
-        ]
-
-        types = serialize_types(self.host.distinct_user_types(), self.host.types)
-        plan = self.ffi_polar.build_filter_plan(types, results, "resource", class_name)
-
-        return filter_data(self, plan)
+        if self.is_new_data_filtering_configured():
+            return self.new_authorized_query(actor, action, resource_cls)
+        else:
+            return self.old_authorized_query(actor, action, resource_cls)
 
     def authorized_resources(self, actor, action, resource_cls) -> List[Any]:
         """Determine the resources of type ``resource_cls`` that ``actor``
@@ -279,11 +255,13 @@ class Oso(Polar):
         :return: The requested resources.
         """
         query = self.authorized_query(actor, action, resource_cls)
-        if query is None:
-            return []
 
-        results = self.host.types[resource_cls].exec_query(query)
-        return results
+        if self.is_new_data_filtering_configured():
+            return self.host.adapter.execute_query(query)
+        elif query is None:
+            return []
+        else:
+            return self.host.types[resource_cls].exec_query(query)
 
     def set_data_filtering_query_defaults(
         self, build_query=None, exec_query=None, combine_query=None
@@ -298,6 +276,10 @@ class Oso(Polar):
             self.host.exec_query = exec_query
         if combine_query is not None:
             self.host.combine_query = combine_query
+
+    def set_data_filtering_adapter(self, adapter):
+        """Set a global adapter for the new data filtering interface."""
+        self.host.adapter = adapter
 
     def _print_polar_log_message(self):
         if os.environ.get("POLAR_LOG", "0") not in ("off", "0"):

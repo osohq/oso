@@ -12,6 +12,7 @@ pub const FALSE: Operation = op!(Or);
 
 /// Invert operators.
 pub fn invert_operation(Operation { operator, args }: Operation) -> Operation {
+    use Operator::*;
     fn invert_args(args: Vec<Term>) -> Vec<Term> {
         args.into_iter()
             .map(|t| {
@@ -23,50 +24,52 @@ pub fn invert_operation(Operation { operator, args }: Operation) -> Operation {
     }
 
     match operator {
-        Operator::And => Operation {
-            operator: Operator::Or,
+        // noop
+        Debug | Print | New | Dot => Operation { operator, args },
+
+        // de morgan
+        And => Operation {
+            operator: Or,
             args: invert_args(args),
         },
-        Operator::Or => Operation {
-            operator: Operator::And,
+        Or => Operation {
+            operator: And,
             args: invert_args(args),
         },
-        Operator::Unify | Operator::Eq => Operation {
-            operator: Operator::Neq,
+
+        // opposite operator
+        Unify | Eq => Operation {
+            operator: Neq,
             args,
         },
-        Operator::Neq => Operation {
-            operator: Operator::Unify,
+        Neq => Operation {
+            operator: Unify,
             args,
         },
-        Operator::Gt => Operation {
-            operator: Operator::Leq,
+        Gt => Operation {
+            operator: Leq,
             args,
         },
-        Operator::Geq => Operation {
-            operator: Operator::Lt,
+        Geq => Operation { operator: Lt, args },
+        Lt => Operation {
+            operator: Geq,
             args,
         },
-        Operator::Lt => Operation {
-            operator: Operator::Geq,
-            args,
-        },
-        Operator::Leq => Operation {
-            operator: Operator::Gt,
-            args,
-        },
-        Operator::Debug | Operator::Print | Operator::New | Operator::Dot => {
-            Operation { operator, args }
-        }
-        Operator::Isa => Operation {
-            operator: Operator::Not,
-            args: vec![term!(op!(Isa, args[0].clone(), args[1].clone()))],
-        },
-        Operator::Not => args[0]
+        Leq => Operation { operator: Gt, args },
+
+        // double negative
+        Not => args[0]
             .value()
             .as_expression()
             .expect("negated expression")
             .clone(),
+
+        // preserve the not
+        Isa | In => Operation {
+            operator: Not,
+            args: vec![term!(Operation { operator, args })],
+        },
+
         _ => todo!("negate {:?}", operator),
     }
 }
@@ -322,8 +325,7 @@ mod test {
     }
     macro_rules! assert_partial_binding {
         ($bindings:expr, $sym:expr, $($args:expr),+) => {
-            assert_eq!(
-                $bindings
+            let l = $bindings
                     .get(&sym!($sym))
                     .expect(&format!("{} is unbound", $sym))
                     .value()
@@ -331,8 +333,11 @@ mod test {
                     .unwrap()
                     .clone()
                     .into_iter()
-                    .collect::<HashSet<Term>>(),
-                    hashset! { $($args),+ })
+                    .collect::<HashSet<Term>>();
+            let r = hashset! { $($args),+ };
+            let fmt = |hs: &HashSet<Term>| format!("{{ {} }}", hs.iter().map(|t| t.to_polar()).collect::<Vec<String>>().join(", "));
+
+            assert_eq!(&l, &r, "{} != {}", fmt(&l), fmt(&r));
 
         };
     }
@@ -490,7 +495,7 @@ mod test {
         // NOTE(gj): only one permutation remains parse-able.
         p.load_str("m(x) if [_y] matches [x];")?;
         let mut q = p.new_query_from_term(term!(call!("m", [sym!("x")])), false);
-        assert_partial_expression!(next_binding(&mut q)?, "x", "__y_34 matches _this");
+        assert_partial_expression!(next_binding(&mut q)?, "x", "__y_36 matches _this");
         assert_query_done!(q);
 
         // TODO(gj): Make the below work.
@@ -1107,7 +1112,7 @@ mod test {
         assert_partial_expression!(
             next_binding(&mut q),
             "x",
-            "_this matches A{} and _b_74 in _this.b and _b_74 matches B{} and 1 = _b_74.foo"
+            "_this matches A{} and _b_81 in _this.b and _b_81 matches B{} and 1 = _b_81.foo"
         );
         assert_query_done!(q);
 
@@ -1115,7 +1120,7 @@ mod test {
         assert_partial_expression!(
             next_binding(&mut q),
             "x",
-            "_this matches A{} and _b_84 in _this.b and _b_84 matches B{} and _b_84.c matches C{} and 1 = _b_84.c.bar"
+            "_this matches A{} and _b_92 in _this.b and _b_92 matches B{} and _b_92.c matches C{} and 1 = _b_92.c.bar"
         );
         assert_query_done!(q);
 
@@ -1123,7 +1128,7 @@ mod test {
         assert_partial_expression!(
             next_binding(&mut q),
             "x",
-            "_this matches A{} and _b_104 in _this.b and _b_104.c matches C{} and 1 = _b_104.c.bar"
+            "_this matches A{} and _b_115 in _this.b and _b_115.c matches C{} and 1 = _b_115.c.bar"
         );
         // @TODO(sam): this result is incorrect. We *could* know
         // that `_b_104` matches B{} by checking `a.b` first
@@ -1131,7 +1136,7 @@ mod test {
         assert_partial_expression!(
             next_binding(&mut q),
             "x",
-            "_this matches A{} and _b_104 in _this.b and _b_104.c matches D{} and 2 = _b_104.c.bar"
+            "_this matches A{} and _b_115 in _this.b and _b_115.c matches D{} and 2 = _b_115.c.bar"
         );
         assert_query_done!(q);
         Ok(())
@@ -1188,11 +1193,11 @@ mod test {
         let p = Polar::new();
         p.load_str(
             r#"f(x, y) if x = y;
-               f(x, y) if x = y and 1 = x;
-               f(x, y) if 2 = y and x = y and x = 1;
+               f(x, y) if x = y and 1 < x;
+               f(x, y) if 2 > y and x = y and x > 1;
 
-               g(x, y) if x = 1 and y = 2;
-               g(x, y) if x = 1 and y = 2 and x = y;"#,
+               g(x, y) if x > 1 and y < 2;
+               g(x, y) if x > 1 and y < 2 and x = y;"#,
         )?;
 
         // Register `x` as a partial.
@@ -1201,30 +1206,69 @@ mod test {
         let next = next_binding(&mut q)?;
         assert_partial_expressions!(next, "x" => "_this = y", "y" => "x = _this");
         let next = next_binding(&mut q)?;
-        assert_eq!(next[&sym!("x")], term!(1));
-        assert_eq!(next[&sym!("y")], term!(1));
+        assert_partial_expressions!(next, "x" => "_this = y and 1 < _this", "y" => "x = _this and 1 < x");
+        let next = next_binding(&mut q)?;
+        // TODO: This seems wrong. Should be 2 > this and this > 1 for `y` binding.
+        // Not an issue for now because it's a partial of two inputs.
+        assert_partial_expressions!(next, "x" => "_this = y and 2 > _this and _this > 1", "y" => "x = _this and 2 > x and x > 1");
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
-        assert_eq!(next[&sym!("x")], term!(1));
-        assert_eq!(next[&sym!("y")], term!(2));
+        assert_partial_expressions!(next, "x" => "_this > 1", "y" => "_this < 2");
+        let next = next_binding(&mut q)?;
+        assert_partial_binding!(
+            next,
+            "x",
+            term!(op!(Unify, var!("_this"), var!("y"))),
+            term!(op!(Gt, var!("_this"), term!(1))),
+            term!(op!(Lt, var!("_this"), term!(2)))
+        );
+
+        assert_partial_binding!(
+            next,
+            "y",
+            term!(op!(Unify, var!("x"), var!("_this"))),
+            term!(op!(Gt, var!("x"), term!(1))),
+            term!(op!(Lt, var!("x"), term!(2)))
+        );
+
         assert_query_done!(q);
 
         // Register `y` as a partial.
         p.register_constant(sym!("y"), term!(value!(op!(And))))?;
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
-        assert_eq!(next[&sym!("x")], var!("y"));
+        assert_partial_expression!(next, "x", "_this = y");
         let next = next_binding(&mut q)?;
-        assert_eq!(next[&sym!("x")], term!(1));
-        assert_eq!(next[&sym!("y")], term!(1));
+        assert_partial_expression!(next, "x", "_this = y and 1 < _this");
+        assert_partial_expression!(next, "y", "x = _this and 1 < x");
+        let next = next_binding(&mut q)?;
+        assert_partial_binding!(
+            next,
+            "x",
+            term!(op!(Unify, var!("_this"), var!("y"))),
+            term!(op!(Gt, var!("_this"), term!(1))),
+            term!(op!(Gt, term!(2), var!("_this")))
+        );
+
+        // TODO: This seems kind of wrong.
+        assert_partial_binding!(
+            next,
+            "y",
+            term!(op!(Unify, var!("x"), var!("_this"))),
+            term!(op!(Gt, var!("x"), term!(1))),
+            term!(op!(Gt, term!(2), var!("x")))
+        );
         assert_query_done!(q);
 
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("x"), sym!("y")])), false);
         let next = next_binding(&mut q)?;
-        assert_eq!(next[&sym!("x")], term!(1));
-        assert_eq!(next[&sym!("y")], term!(2));
+        assert_partial_expression!(next, "x", "_this > 1");
+        assert_partial_expression!(next, "y", "_this < 2");
+        let next = next_binding(&mut q)?;
+        assert_partial_expression!(next, "x", "_this > 1 and _this = y and _this < 2");
+        assert_partial_expression!(next, "y", "x > 1 and x = _this and x < 2");
         assert_query_done!(q);
         Ok(())
     }
@@ -2321,6 +2365,28 @@ mod test {
         assert_partial_expressions!(
             next_binding(&mut q)?,
             "x" => "_this = _y_26.foo and 1 = _y_26.bar"
+        );
+
+        assert_query_done!(q);
+        Ok(())
+    }
+
+    /// Test a case that previously caused an unhandled partial.
+    ///
+    /// Fixed in: https://github.com/osohq/oso/pull/1467
+    #[test]
+    fn test_unhandled_partial_regression_gh1467() -> TestResult {
+        let p = Polar::new();
+        p.load_str(
+            r#"
+            f(a) if b(a, b) and b.id = 0;
+            b(a, b) if a = b;
+            "#,
+        )?;
+        let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
+        assert_partial_expressions!(
+            next_binding(&mut q)?,
+            "x" => "0 = _this.id"
         );
 
         assert_query_done!(q);

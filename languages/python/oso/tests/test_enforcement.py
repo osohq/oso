@@ -6,7 +6,7 @@ import pytest
 
 from oso import Oso
 from polar import exceptions
-from .test_oso import User, Widget, Company
+from .test_oso import User, Widget, Company, Foo, Bar
 
 test_oso_file = Path(__file__).parent / "test_oso.polar"
 
@@ -17,6 +17,8 @@ def test_oso():
     oso.register_class(User, name="test_oso::User")
     oso.register_class(Widget, name="test_oso::Widget")
     oso.register_class(Company, name="test_oso::Company")
+    oso.register_class(Foo)
+    oso.register_class(Bar)
     oso.load_file(test_oso_file)
 
     return oso
@@ -175,11 +177,10 @@ def test_custom_errors():
 
 def test_custom_read_action():
     oso = Oso(read_action="fetch")
-    with pytest.raises(NotFoundError):
-        oso.authorize("graham", "frob", "bar")
-
     # Allow user to "fetch" bar
     oso.load_str("""allow("graham", "fetch", "bar");""")
+    with pytest.raises(NotFoundError):
+        oso.authorize("not graham", "frob", "bar")
     with pytest.raises(ForbiddenError):
         oso.authorize("graham", "frob", "bar")
 

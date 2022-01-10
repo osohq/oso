@@ -117,10 +117,16 @@ int32_t polar_free(struct polar_Polar *polar);
 int32_t query_free(struct polar_Query *query);
 
 /**
- * Recovers the original boxed version of `query` so that
+ * Recovers the original boxed version of `result` so that
  * it can be properly freed
  */
 int32_t result_free(struct polar_CResult_c_void *result);
+
+struct polar_CResult_c_char *polar_build_data_filter(struct polar_Polar *polar_ptr,
+                                                     const char *types,
+                                                     const char *results,
+                                                     const char *variable,
+                                                     const char *class_tag);
 
 struct polar_CResult_c_char *polar_build_filter_plan(struct polar_Polar *polar_ptr,
                                                      const char *types,

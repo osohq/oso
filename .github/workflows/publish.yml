@@ -6,6 +6,17 @@ on:
         description: "Version Number"
         required: true
 jobs:
+  mark-latest:
+    # Mark the release about to be published as latest.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark release as latest
+        uses: tubone24/update_release@v1.3.1
+        with:
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: "v${{ github.event.inputs.version }}"
   go:
     # Notifies the go-oso repo there's a new release.
     # CI over there then pulls this tag, commits and pushes their own tag.

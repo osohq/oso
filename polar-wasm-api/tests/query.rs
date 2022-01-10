@@ -1,9 +1,28 @@
-use js_sys::{Error, JsString, Map, Object, Reflect};
+use js_sys::{Boolean, Error, JsString, Map, Object, Reflect};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_test::*;
 
 use polar_core::sources::Source;
 use polar_core::terms::*;
+
+// TODO(gj): figure out how to define shared test helpers instead of duplicating these in
+// tests/polar.rs & tests/query.rs.
+fn is_done_event(event: Object) -> bool {
+    let key: JsValue = "Done".into();
+    let value = Reflect::get(&event, &key).unwrap();
+    let key: JsValue = "result".into();
+    let value = Reflect::get(&value, &key).unwrap();
+    value.dyn_into::<Boolean>().is_ok()
+}
+
+fn is_result_event(event: Object) -> bool {
+    let key: JsValue = "Result".into();
+    let value = Reflect::get(&event, &key).unwrap();
+    let key: JsValue = "bindings".into();
+    let value = Reflect::get(&value, &key).unwrap();
+    let value = value.dyn_into::<Map>().unwrap();
+    value.size() == 0
+}
 
 #[wasm_bindgen_test]
 #[allow(clippy::float_cmp)]
@@ -13,6 +32,7 @@ fn call_result_succeeds() {
         instance_id: 1,
         constructor: None,
         repr: None,
+        class_repr: None,
     }));
     let term = serde_wasm_bindgen::to_value(&term).unwrap();
     polar.wasm_register_constant("y", term).unwrap();
@@ -35,17 +55,12 @@ fn call_result_succeeds() {
     query.wasm_call_result(3.0, call_result).unwrap();
 
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
-    let event_kind: JsValue = "Result".into();
-    let event_data = Reflect::get(&event, &event_kind).unwrap();
-    let data_key: JsValue = "bindings".into();
-    let bindings = Reflect::get(&event_data, &data_key).unwrap();
-    assert_eq!(bindings.dyn_into::<Map>().unwrap().size(), 0);
+    assert!(is_result_event(event));
 
     query.wasm_call_result(3.0, JsValue::undefined()).unwrap();
 
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
-    let event_kind: JsValue = "Done".into();
-    assert!(Reflect::get(&event, &event_kind).is_ok())
+    assert!(is_done_event(event));
 }
 
 #[wasm_bindgen_test]
@@ -56,6 +71,7 @@ fn app_error_succeeds() {
         instance_id: 1,
         constructor: None,
         repr: None,
+        class_repr: None,
     }));
     let term = serde_wasm_bindgen::to_value(&term).unwrap();
     polar.wasm_register_constant("y", term).unwrap();

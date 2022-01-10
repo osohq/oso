@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import os
 from pathlib import Path
 import sys
-from typing import Dict, List, Union
+from typing import List, Union
 
 from .exceptions import (
     PolarRuntimeError,
@@ -18,14 +18,16 @@ from .ffi import Polar as FfiPolar, PolarSource as Source
 from .host import Host
 from .query import Query
 from .predicate import Predicate
-
-CLASSES: Dict[str, type] = {}
+from .variable import Variable
+from .expression import Expression, Pattern
+from .data_filtering import serialize_types, filter_data
+from .data import DataFilter
 
 
 class Polar:
     """Polar API"""
 
-    def __init__(self, classes=CLASSES):
+    def __init__(self):
         self.ffi_polar = FfiPolar()
         self.host = Host(self.ffi_polar)
         self.ffi_polar.set_message_enricher(self.host.enrich_message)
@@ -42,10 +44,6 @@ class Polar:
         self.register_class(str, name="String")
         self.register_class(datetime, name="Datetime")
         self.register_class(timedelta, name="Timedelta")
-
-        # Pre-registered classes.
-        for name, cls in classes.items():
-            self.register_class(cls, name=name)
 
     def __del__(self):
         del self.host
@@ -281,17 +279,45 @@ class Polar:
         """
         return self.host.get_class(name)
 
+    def partial_query(self, actor, action, resource_cls):
+        resource = Variable("resource")
+        class_name = self.host.types[resource_cls].name
+        constraint = Expression(
+            "And", [Expression("Isa", [resource, Pattern(class_name, {})])]
+        )
 
-def polar_class(_cls=None, *, name=None):
-    """Decorator to register a Python class with Polar.
-    An alternative to ``register_class()``."""
+        query = self.query_rule(
+            "allow",
+            actor,
+            action,
+            resource,
+            bindings={"resource": constraint},
+            accept_expression=True,
+        )
 
-    def wrap(cls):
-        cls_name = cls.__name__ if name is None else name
-        CLASSES[cls_name] = cls
-        return cls
+        return [
+            {"bindings": {k: self.host.to_polar(v)}}
+            for result in query
+            for k, v in result["bindings"].items()
+        ]
 
-    if _cls is None:
-        return wrap
+    def is_new_data_filtering_configured(self):
+        return self.host.adapter is not None
 
-    return wrap(_cls)
+    def old_authorized_query(self, actor, action, resource_cls):
+        results = self.partial_query(actor, action, resource_cls)
+
+        types = serialize_types(self.host.distinct_user_types(), self.host.types)
+        class_name = self.host.types[resource_cls].name
+        plan = self.ffi_polar.build_filter_plan(types, results, "resource", class_name)
+
+        return filter_data(self, plan)
+
+    def new_authorized_query(self, actor, action, resource_cls):
+        results = self.partial_query(actor, action, resource_cls)
+
+        types = serialize_types(self.host.distinct_user_types(), self.host.types)
+        class_name = self.host.types[resource_cls].name
+        plan = self.ffi_polar.build_data_filter(types, results, "resource", class_name)
+
+        return self.host.adapter.build_query(DataFilter.parse(self, plan))

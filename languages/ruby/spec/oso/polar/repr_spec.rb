@@ -19,7 +19,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       subject.load_str('f(_foo: Foo) if 1 = 1;')
       expect do
         subject.query_rule('f', Foo.new).to_a
-      end.to output(/QUERY: f\(#{FOO_REPR}\)/).to_stdout
+      end.to output(/QUERY RULE: f\(#{FOO_REPR} TYPE `Foo`\)/).to_stdout
       ENV.delete('POLAR_LOG') unless old_polar_log
     end
 
@@ -30,7 +30,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         subject.query_rule('f', Foo.new).to_a
       end.to raise_error(
         an_instance_of(Oso::Polar::PolarRuntimeError)
-        .and(having_attributes(message: /f\(#{FOO_REPR}\)/))
+        .and(having_attributes(message: /f\(#{FOO_REPR} TYPE `Foo`\)/))
       )
     end
 
@@ -40,7 +40,7 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
       $stdin = input
       expect do
         subject.query_rule('f', Foo.new).to_a
-      end.to output(/_foo_[0-9]+ = #{FOO_REPR}/).to_stdout
+      end.to output(/_foo_[0-9]+ = #{FOO_REPR} TYPE `Foo`/).to_stdout
       $stdin = STDIN
     end
   end

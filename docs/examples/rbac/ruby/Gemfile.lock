@@ -1,7 +1,7 @@
 PATH
   remote: ../../../../languages/ruby
   specs:
-    oso-oso (0.21.0)
+    oso-oso (0.25.0)
       ffi (~> 1.0)
 
 GEM
@@ -24,6 +24,7 @@ GEM
     rspec-support (3.10.2)
 
 PLATFORMS
+  ruby
   x86_64-darwin-19
 
 DEPENDENCIES

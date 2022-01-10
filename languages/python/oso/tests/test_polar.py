@@ -4,7 +4,6 @@ from pathlib import Path
 from enum import Enum
 
 from polar import (
-    polar_class,
     exceptions,
     Polar,
     Predicate,
@@ -92,8 +91,12 @@ def test_clear_rules(polar, query):
     polar.load_str("f(x) if x = 1;")
     assert len(query("f(1)")) == 1
     assert len(query("x = new Test()")) == 1
+
     polar.clear_rules()
-    assert len(query("f(1)")) == 0
+
+    with pytest.raises(exceptions.PolarRuntimeError) as e:
+        query(("f(1)")) == []
+    assert "Query for undefined rule `f`" in str(e.value)
     assert len(query("x = new Test()")) == 1
 
 
@@ -692,40 +695,6 @@ def test_inf_nan(polar, qeval, query):
     assert not query("inf = neg_inf")
     assert not query("inf < neg_inf")
     assert qeval("neg_inf < inf")
-
-
-def test_register_constants_with_decorator():
-    @polar_class
-    class RegisterDecoratorTest:
-        x = 1
-
-    p = Polar()
-    p.load_str(
-        """foo_rule(_: RegisterDecoratorTest, y) if y = 1;
-           foo_class_attr(y) if y = RegisterDecoratorTest.x;"""
-    )
-    assert (
-        next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))[
-            "bindings"
-        ]["y"]
-        == 1
-    )
-    assert next(p.query_rule("foo_class_attr", Variable("y")))["bindings"]["y"] == 1
-
-    p.clear_rules()
-
-    p = Polar()
-    p.load_str(
-        """foo_rule(_: RegisterDecoratorTest, y) if y = 1;
-           foo_class_attr(y) if y = RegisterDecoratorTest.x;"""
-    )
-    assert (
-        next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))[
-            "bindings"
-        ]["y"]
-        == 1
-    )
-    assert next(p.query_rule("foo_class_attr", Variable("y")))["bindings"]["y"] == 1
 
 
 def test_unbound_variable(polar, query):

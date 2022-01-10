@@ -18,6 +18,7 @@ replApi: |
     OSO ||= Oso.new
     OSO.register_class(Expense)
     OSO.register_class(User)
+    OSO.load_files(["alice.polar"])
     OSO.repl
     ```
 ---

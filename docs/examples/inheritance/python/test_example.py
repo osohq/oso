@@ -9,7 +9,13 @@ from . import inheritance_external
 
 @pytest.fixture
 def oso():
-    return Oso()
+    oso = Oso()
+    oso.register_class(inheritance_external.Lab)
+    oso.register_class(inheritance_external.User)
+    oso.register_class(inheritance_external.PatientData)
+    oso.register_class(inheritance_external.Order)
+    oso.register_class(inheritance_external.Test)
+    return oso
 
 
 @pytest.fixture

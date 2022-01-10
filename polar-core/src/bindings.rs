@@ -521,16 +521,22 @@ impl BindingManager {
 
             // partial x partial -- if they already overlap, do nothing.
             // else rebind vars as a 2-cycle & requery
-            ((_, Partial(lp)), (_, Partial(rp))) => {
+            ((lv, Partial(lp)), (rv, Partial(rp))) => {
                 if rp.variables().contains(left) {
                     Ok(None)
                 } else {
-                    let (lp, rp) = (lp.clone(), rp.clone());
-                    self.add_binding(left, term!(right.clone()));
-                    self.add_binding(right, term!(left.clone()));
+                    // Merge the two partials.
+                    let merged = lp.clone().merge_constraints(rp.clone());
 
-                    let term = term!(op!(And, term!(lp), term!(rp)));
-                    Ok(Some(Goal::Query { term }))
+                    // Express the partial in terms of lv (bind rv to lv, replacing all rv in partial with lv).
+                    let goal = self.partial_bind(merged, rv, term!(lv.clone()))?;
+
+                    // Unification from lv = rv (remember that vars are equal so that the
+                    // simplifier can later choose the correct one). We do this
+                    // after the partial bind so that we don't recursively query the unification.
+                    let unify = term!(op!(Unify, term!(lv.clone()), term!(rv.clone())));
+                    self.add_constraint(&unify)?;
+                    Ok(Some(goal))
                 }
             }
         }

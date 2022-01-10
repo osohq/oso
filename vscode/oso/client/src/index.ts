@@ -5,7 +5,6 @@ import { join } from 'path';
 import { debounce } from 'lodash';
 import {
   ExtensionContext,
-  languages,
   RelativePattern,
   TextDocument,
   Uri,
@@ -84,53 +83,36 @@ function polarFilesInWorkspaceFolderPattern(folder: WorkspaceFolder) {
   return new RelativePattern(folder, '**/*.polar');
 }
 
-// Trigger a `didOpen` event for every Polar file in `folder` as a somewhat
-// hacky means of transmitting the initial file system state to the server.
-// Alternatives: we could (A) do a file system walk on the server or (B)
-// `workspace.findFiles()` in the client and then send the list of files to the
-// server for it to load. However, by doing it this way, we delegate the
-// responibility for content retrieval to VSCode, which means we can piggyback
-// on their capabilities for, e.g., loading non-`file://` schemes if we wanted
-// to do that at some point in the future.
+// Trigger a [`didOpen`][didOpen] event for every not-already-open Polar file
+// in `folder` as a somewhat hacky means of transmitting the initial file
+// system state to the server. Alternatives: we could (A) do a file system walk
+// on the server or (B) `workspace.findFiles()` in the client and then send the
+// list of files to the server for it to load. However, by doing it this way,
+// we delegate the responibility for content retrieval to VS Code, which means
+// we can piggyback on their capabilities for, e.g., loading non-`file://`
+// schemes if we wanted to do that at some point in the future.
 //
 // Relevant issues:
 // - https://github.com/microsoft/vscode/issues/15723
 // - https://github.com/microsoft/vscode/issues/33046
+//
+// [didOpen]: https://code.visualstudio.com/api/references/vscode-api#workspace.onDidOpenTextDocument
 async function openPolarFilesInWorkspaceFolder(folder: WorkspaceFolder) {
   const pattern = polarFilesInWorkspaceFolderPattern(folder);
   const uris = await workspace.findFiles(pattern);
-  return Promise.all(uris.map(reloadDocument));
+  return Promise.all(uris.map(openDocument));
 }
 
-// Trigger a [`didOpen`][didOpen] event for `uri`.
+// Trigger a [`didOpen`][didOpen] event if `uri` is not already open.
 //
 // The server uses `didOpen` events to maintain its internal view of Polar
 // documents in the current workspace folder.
 //
 // [didOpen]: https://code.visualstudio.com/api/references/vscode-api#workspace.onDidOpenTextDocument
-async function reloadDocument(uri: Uri) {
+async function openDocument(uri: Uri) {
   const uriMatch = (d: TextDocument) => d.uri.toString() === uri.toString();
-  let doc = workspace.textDocuments.find(uriMatch);
-
-  if (doc) {
-    // If `doc` is already open, cycle its `languageId` from `polar` ->
-    // `plaintext` -> `polar` to trigger a `didOpen` event. This is the event
-    // the server listens to in order to update the state of all Polar
-    // documents it's aware of.
-    //
-    // The [`setTextDocumentLanguage`][setTextDocumentLanguage] API triggers a
-    // `didOpen` event but seems to only fire when the document's `languageId`
-    // actually changes. Calling `setTextDocumentLanguage(doc, 'polar')`
-    // doesn't trigger the event if `doc`'s `languageId` is already `'polar'`.
-    //
-    // [setTextDocumentLanguage]: https://code.visualstudio.com/api/references/vscode-api#languages.setTextDocumentLanguage
-    doc = await languages.setTextDocumentLanguage(doc, 'plaintext');
-    await languages.setTextDocumentLanguage(doc, 'polar');
-  } else {
-    // If `doc` wasn't already open, open it, which will trigger the `didOpen`
-    // event without the above `setTextDocumentLanguage` shenanigans.
-    await workspace.openTextDocument(uri);
-  }
+  const doc = workspace.textDocuments.find(uriMatch);
+  if (doc === undefined) await workspace.openTextDocument(uri);
 }
 
 async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
@@ -139,8 +121,8 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   // Watch `FileChangeType.Deleted` events for Polar files in the current
   // workspace, including those not open in any editor in the workspace.
   //
-  // NOTE(gj): Due to a current limitation in VSCode, when a parent directory
-  // is deleted, VSCode's file watcher does not emit events for matching files
+  // NOTE(gj): Due to a current limitation in VS Code, when a parent directory
+  // is deleted, VS Code's file watcher does not emit events for matching files
   // nested inside that parent. For more information, see this GitHub issue:
   // https://github.com/microsoft/vscode/issues/60813. If that behavior is
   // fixed in the future, we should be able to remove the
@@ -148,17 +130,18 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   // a single watcher for files matching '**/*.polar'.
   const deleteWatcher = workspace.createFileSystemWatcher(
     polarFilesInWorkspaceFolderPattern(folder),
-    true,
-    true
+    true, // ignoreCreateEvents
+    true, // ignoreChangeEvents
+    false // ignoreDeleteEvents
   );
   // Watch `FileChangeType.Created` and `FileChangeType.Changed` events for
   // files in the current workspace, including those not open in any editor in
   // the workspace.
   const createChangeWatcher = workspace.createFileSystemWatcher(
     polarFilesInWorkspaceFolderPattern(folder),
-    false,
-    false,
-    true
+    false, // ignoreCreateEvents
+    false, // ignoreChangeEvents
+    true // ignoreDeleteEvents
   );
 
   // Clean up watchers when extension is deactivated.
@@ -194,14 +177,19 @@ async function startClient(folder: WorkspaceFolder, context: ExtensionContext) {
   // Start client and mark it for cleanup when the extension is deactivated.
   context.subscriptions.push(client.start());
 
-  // When a Polar document in `folder` (even documents not currently open in
-  // VSCode) is created or changed, trigger a `workspace.onDidOpenTextDocument`
-  // event that the language server is listening for.
-  context.subscriptions.push(createChangeWatcher.onDidCreate(reloadDocument));
-  context.subscriptions.push(createChangeWatcher.onDidChange(reloadDocument));
+  // When a Polar document in `folder` (even documents not currently open in VS
+  // Code) is created or changed, trigger a [`didOpen`][didOpen] event if the
+  // document is not already open. This will transmit the current state of the
+  // newly created or changed document to the Language Server, and subsequent
+  // changes to it will be relayed via [`didChange`][didChange] events.
+  //
+  // [didOpen]: https://code.visualstudio.com/api/references/vscode-api#workspace.onDidOpenTextDocument
+  // [didChange]: https://code.visualstudio.com/api/references/vscode-api#workspace.onDidChangeTextDocument
+  context.subscriptions.push(createChangeWatcher.onDidCreate(openDocument));
+  context.subscriptions.push(createChangeWatcher.onDidChange(openDocument));
 
   // Transmit the initial file system state for `folder` (including files not
-  // currently open in VSCode) to the server.
+  // currently open in VS Code) to the server.
   await openPolarFilesInWorkspaceFolder(folder);
 
   clients.set(folder.uri.toString(), [client, recordTelemetry]);
@@ -234,7 +222,7 @@ function updateClients(context: ExtensionContext) {
 let persistState: (state: TelemetryCounters) => Promise<void> = async () => {}; // eslint-disable-line @typescript-eslint/no-empty-function
 
 export async function activate(context: ExtensionContext): Promise<void> {
-  // Seed extension-local state from persisted VSCode memento-backed state.
+  // Seed extension-local state from persisted VS Code memento-backed state.
   seedState(context.globalState.get<TelemetryCounters>(TELEMETRY_STATE_KEY));
 
   // Capturing `context.globalState` in this closure since we won't have access

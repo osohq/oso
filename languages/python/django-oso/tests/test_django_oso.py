@@ -222,7 +222,7 @@ def test_partial_isa_with_path(load_additional_str):
 
 
 @pytest.mark.django_db
-def test_partial_errors(rf):
+def test_authorize_query_no_access(rf, load_additional_str):
     from test_app.models import Post
 
     Post(name="test", is_private=False, timestamp=1).save()
@@ -234,7 +234,9 @@ def test_partial_errors(rf):
     request = rf.get("/")
     request.user = "test_user"
 
-    # No rules for this.
+    # No matching rules for Post.
+    load_additional_str("allow(_, _, _: test_app::User);")
+
     q = Post.objects.authorize(request, action="get")
     assert q.count() == 0
 

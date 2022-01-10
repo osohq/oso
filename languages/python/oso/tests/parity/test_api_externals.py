@@ -2,11 +2,9 @@
 from dataclasses import dataclass
 import re
 
-from polar import polar_class
 from typing import List, Optional
 
 
-@polar_class
 class Http:
     """A resource accessed via HTTP."""
 
@@ -27,7 +25,6 @@ class Http:
         return f"Http({field_str})"
 
 
-@polar_class
 class PathMapper:
     """Map from a template string with capture groups of the form
     ``{name}`` to a dictionary of the form ``{name: captured_value}``
@@ -67,7 +64,6 @@ def set_frobbed(f):
     frobbed = f
 
 
-@polar_class
 class Widget:
     # Data fields.
     id: str = ""
@@ -89,7 +85,6 @@ class Widget:
         return self
 
 
-@polar_class
 class DooDad(Widget):
     pass
 
@@ -112,7 +107,6 @@ class User:
 
 
 @dataclass(frozen=True)
-@polar_class
 class Company:
     # Data fields.
     id: str = ""

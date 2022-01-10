@@ -156,10 +156,18 @@ def test_route_authorization(flask_oso, oso, flask_app, app_ctx):
         return "Test"
 
     with flask_app.test_client() as c:
-        assert c.get("/test_route").status_code == 403
+        with pytest.raises(OsoError) as e:
+            c.get("/test_route")
+        assert "Query for undefined rule `allow`" in str(e)
 
     # Add rule to policy.
     oso.load_str('allow("user", "GET", _: Request{path: "/test_route"});')
+
+    flask_oso.set_get_actor(lambda: "other_user")
+    with flask_app.test_client() as c:
+        assert c.get("/test_route").status_code == 403
+
+    flask_oso.set_get_actor(lambda: "user")
     with flask_app.test_client() as c:
         assert c.get("/test_route").status_code == 200
 
@@ -183,10 +191,18 @@ def test_route_authorizaton_manual(flask_oso, oso, flask_app, app_ctx):
         return "authed"
 
     with flask_app.test_client() as c:
-        assert c.get("/test_route").status_code == 403
+        with pytest.raises(OsoError) as e:
+            c.get("/test_route")
+        assert "Query for undefined rule `allow`" in str(e)
 
     # Add rule
     oso.load_str('allow("user", "GET", _: Request{path: "/test_route"});')
+
+    flask_oso.set_get_actor(lambda: "other_user")
+    with flask_app.test_client() as c:
+        assert c.get("/test_route").status_code == 403
+
+    flask_oso.set_get_actor(lambda: "user")
     with flask_app.test_client() as c:
         assert c.get("/test_route").status_code == 200
 
@@ -200,8 +216,11 @@ def test_custom_unauthorize(flask_oso, oso, flask_app, app_ctx):
         auth_failed = True
 
     flask_oso.set_unauthorized_action(unauth)
-    flask_oso.authorize(resource="fail!", action="bad")
 
+    # Add rule
+    oso.load_str('allow(_, "not bad", _);')
+
+    flask_oso.authorize(resource="fail!", action="bad")
     assert auth_failed
 
 

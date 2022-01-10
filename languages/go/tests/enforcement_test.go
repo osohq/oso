@@ -1,11 +1,13 @@
 package oso_test
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
 	oso "github.com/osohq/go-oso"
 	"github.com/osohq/go-oso/errors"
+	"github.com/osohq/go-oso/types"
 )
 
 type Request struct {
@@ -20,10 +22,25 @@ func getOso(t *testing.T) oso.Oso {
 		t.Fatalf("Failed to set up Oso: %v", err)
 	}
 
-	o.RegisterClass(reflect.TypeOf(User{}), nil)
-	o.RegisterClass(reflect.TypeOf(Widget{}), nil)
-	o.RegisterClass(reflect.TypeOf(Company{}), nil)
-	o.RegisterClass(reflect.TypeOf(Request{}), nil)
+	o.RegisterClassWithNameAndFields(reflect.TypeOf(User{}), nil, "User", map[string]interface{}{
+		"Name": "String",
+	})
+	o.RegisterClassWithNameAndFields(reflect.TypeOf(Widget{}), nil, "Widget", map[string]interface{}{
+		"Id": "Integer",
+		"Parent": types.Relation{
+			Kind:       "one",
+			OtherType:  "Company",
+			MyField:    "CompanyId",
+			OtherField: "Id",
+		},
+	})
+	o.RegisterClassWithNameAndFields(reflect.TypeOf(Company{}), nil, "Company", map[string]interface{}{
+		"Id": "Integer",
+	})
+	o.RegisterClassWithNameAndFields(reflect.TypeOf(Request{}), nil, "Request", map[string]interface{}{
+		"Method": "String",
+		"Path":   "String",
+	})
 
 	return o
 }
@@ -139,7 +156,7 @@ func TestAuthorizeField(t *testing.T) {
 
 	admin := User{"admin"}
 	guest := User{"guest"}
-	widget := Widget{0}
+	widget := Widget{0, 0}
 
 	if err = o.AuthorizeField(admin, "update", widget, "purpose"); err != nil {
 		t.Errorf("Authorize returned error for allowed action: %v", err)
@@ -196,6 +213,35 @@ func TestAuthorizedActions(t *testing.T) {
 	}
 }
 
+type TestAdapter struct {
+}
+
+func (a TestAdapter) BuildQuery(filter *types.Filter) (interface{}, error) {
+	return nil, nil
+}
+
+func (a TestAdapter) ExecuteQuery(query interface{}) (interface{}, error) {
+	return nil, nil
+}
+
+func TestAuthorizedQuery(t *testing.T) {
+	o := getOso(t)
+	var err error
+
+	o.SetDataFilteringAdapter(&TestAdapter{})
+
+	o.LoadString("allow(_actor: User, \"get\", resource: Widget) if resource.Parent.Id = 1;")
+
+	actor := User{Name: "Sally"}
+	resource := Widget{Id: 1}
+	_, _ = o.IsAllowed(actor, "get", resource)
+
+	results, err := o.AuthorizedQuery(actor, "get", "Widget")
+	fmt.Printf("%v\n", results)
+	if err != nil {
+		t.Fatalf("Failed to get query: %v", err)
+	}
+}
 func TestAuthorizedFields(t *testing.T) {
 	o := getOso(t)
 	var res map[interface{}]struct{}
@@ -215,7 +261,7 @@ func TestAuthorizedFields(t *testing.T) {
 
 	admin := User{"admin"}
 	guest := User{"guest"}
-	widget := Widget{0}
+	widget := Widget{0, 0}
 
 	// Admins should be able to update all fields
 	res, _ = o.AuthorizedFields(admin, "update", widget, false)

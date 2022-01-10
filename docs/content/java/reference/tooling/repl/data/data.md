@@ -20,6 +20,7 @@ replApi: |
             Oso oso = new Oso();
             oso.registerClass(Expense.class);
             oso.registerClass(User.class);
+            oso.loadFiles(["alice.polar"]);
             oso.repl(args)
         }
     }
