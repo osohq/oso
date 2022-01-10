@@ -18,7 +18,6 @@ use crate::debugger::{get_binding_for_var, DebugEvent, Debugger};
 use crate::error::{invalid_state, unsupported, PolarError, PolarResult, RuntimeError};
 use crate::events::*;
 use crate::folder::Folder;
-use crate::formatting::ToPolarString;
 use crate::inverter::Inverter;
 use crate::kb::*;
 use crate::messages::*;
@@ -1365,13 +1364,13 @@ impl PolarVirtualMachine {
                     .clone()
                     .unwrap_or_else(Vec::new)
                     .into_iter()
-                    .map(|a| a.to_polar());
+                    .map(|a| a.to_string());
                 let kwargs = kwargs
                     .clone()
                     .unwrap_or_else(BTreeMap::new)
                     .into_iter()
                     .map(|(k, v)| format!("{}: {}", k, v));
-                msg.push_str(&args.chain(kwargs).collect::<Vec<String>>().join(", "));
+                msg.push_str(&args.chain(kwargs).collect::<Vec<_>>().join(", "));
                 msg.push(')');
                 msg
             },
@@ -1667,8 +1666,8 @@ impl PolarVirtualMachine {
                     format!(
                         "debug({})",
                         args.iter()
-                            .map(|arg| self.deref(arg).to_polar())
-                            .collect::<Vec<String>>()
+                            .map(|arg| self.deref(arg).to_string())
+                            .collect::<Vec<_>>()
                             .join(", ")
                     )
                 });
@@ -1678,8 +1677,8 @@ impl PolarVirtualMachine {
                 self.print(
                     &args
                         .iter()
-                        .map(|arg| self.deref(arg).to_polar())
-                        .collect::<Vec<String>>()
+                        .map(|arg| self.deref(arg).to_string())
+                        .collect::<Vec<_>>()
                         .join(", "),
                 );
             }
@@ -1705,7 +1704,7 @@ impl PolarVirtualMachine {
                     constructor.clone_with_value(Value::ExternalInstance(ExternalInstance {
                         instance_id,
                         constructor: Some(constructor.clone()),
-                        repr: Some(constructor.to_polar()),
+                        repr: Some(constructor.to_string()),
                         class_repr,
                     }));
 
@@ -2785,7 +2784,7 @@ impl PolarVirtualMachine {
             let chars = context.source.src.chars();
             chars.take(context.right).skip(context.left).collect()
         } else {
-            term.to_polar()
+            term.to_string()
         };
 
         if include_info {

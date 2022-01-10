@@ -5,7 +5,6 @@ use serde::Serialize;
 use strum_macros::AsRefStr;
 
 use super::{
-    formatting::to_polar::ToPolarString,
     resource_block::Declaration,
     rules::Rule,
     sources::{Context, Source},
@@ -419,7 +418,7 @@ The expression is: {expr}
                     "#,
                     operation.operator,
                     operation.args.len(),
-                    operation.to_polar()
+                    operation
                 );
                 write!(f, "{}", msg)
             }

@@ -8,7 +8,6 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use super::error::{invalid_state, PolarResult};
-pub use super::formatting::ToPolarString;
 pub use super::numerics::Numeric;
 use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::sources::{Context, Source, SourceInfo};

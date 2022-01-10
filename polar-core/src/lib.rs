@@ -16,7 +16,7 @@ pub mod error;
 pub mod events;
 pub mod filter;
 mod folder;
-pub mod formatting;
+mod formatting;
 mod inverter;
 pub mod kb;
 mod lexer;

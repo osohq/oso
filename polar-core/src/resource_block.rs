@@ -696,7 +696,7 @@ mod tests {
             .as_rule(&term!(sym!("repo")), &blocks)
             .unwrap();
         assert_eq!(
-            rewritten_role_role.to_polar(),
+            rewritten_role_role.to_string(),
             format!("has_role(actor: {}{{}}, \"reader\", repo_instance: repo{{}}) if has_relation(related_org_instance, \"parent\", repo_instance) and has_role(actor, \"member\", related_org_instance);", ACTOR_UNION_NAME),
         );
     }
@@ -723,7 +723,7 @@ mod tests {
         let rewritten_role_role = shorthand_rule.as_rule(&resource, &blocks).unwrap();
 
         assert_eq!(
-            rewritten_role_role.to_polar(),
+            rewritten_role_role.to_string(),
             format!("has_permission(actor: {}{{}}, \"read\", dir: Dir{{}}) if has_relation(related_dir, \"parent\", dir) and has_permission(actor, \"read\", related_dir);", ACTOR_UNION_NAME),
         );
     }
@@ -744,7 +744,7 @@ mod tests {
             .as_rule(&term!(sym!("Org")), &blocks)
             .unwrap();
         assert_eq!(
-            rewritten_role_role.to_polar(),
+            rewritten_role_role.to_string(),
             format!("has_role(actor: {}{{}}, \"member\", org: Org{{}}) if has_role(actor, \"owner\", org);", ACTOR_UNION_NAME),
         );
 
@@ -756,7 +756,7 @@ mod tests {
             .as_rule(&term!(sym!("Org")), &blocks)
             .unwrap();
         assert_eq!(
-            rewritten_permission_role.to_polar(),
+            rewritten_permission_role.to_string(),
             format!("has_permission(actor: {}{{}}, \"invite\", org: Org{{}}) if has_role(actor, \"owner\", org);", ACTOR_UNION_NAME),
         );
 
@@ -768,7 +768,7 @@ mod tests {
             .as_rule(&term!(sym!("Org")), &blocks)
             .unwrap();
         assert_eq!(
-            rewritten_permission_permission.to_polar(),
+            rewritten_permission_permission.to_string(),
             format!("has_permission(actor: {}{{}}, \"create_repo\", org: Org{{}}) if has_permission(actor, \"invite\", org);", ACTOR_UNION_NAME),
         );
     }
@@ -804,7 +804,7 @@ mod tests {
             .as_rule(&term!(sym!("Repo")), &blocks)
             .unwrap();
         assert_eq!(
-            rewritten_role_role.to_polar(),
+            rewritten_role_role.to_string(),
             format!("has_role(actor: {}{{}}, \"reader\", repo: Repo{{}}) if has_relation(related_org, \"parent\", repo) and has_role(actor, \"member\", related_org);", ACTOR_UNION_NAME),
         );
     }

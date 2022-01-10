@@ -192,7 +192,7 @@ impl Filter {
             }
 
             // oops, we don't know how to handle this!
-            _ => invalid_state(ands.to_polar()),
+            _ => invalid_state(ands.to_string()),
         }
     }
 
@@ -750,7 +750,7 @@ mod test {
         ];
 
         let to_s =
-            |ooa: Vec<Term>| format!("{:?}", ooa.iter().map(|a| a.to_polar()).collect::<Vec<_>>());
+            |ooa: Vec<Term>| format!("{:?}", ooa.iter().map(Term::to_string).collect::<Vec<_>>());
 
         assert_eq!(to_s(oa), to_s(vec_of_ands(ex)));
     }

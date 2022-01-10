@@ -32,10 +32,6 @@ Classes
 .. autoclass:: polar.data.adapter.sqlalchemy_adapter.SqlAlchemyAdapter
 
 
-Decorator Functions
-^^^^^^^^^^^^^^^^^^^
-.. autofunction:: oso.polar_class
-
 Exceptions
 ==========
 

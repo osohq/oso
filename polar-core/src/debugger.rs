@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use super::bindings::Binding;
 use super::error::{PolarError, PolarResult};
-use super::formatting::{source_lines, ToPolarString};
+use super::formatting::source_lines;
 use super::kb::KnowledgeBase;
 use super::partial::simplify_bindings;
 use super::terms::*;
@@ -15,11 +15,10 @@ impl PolarVirtualMachine {
         let relevant_bindings = self.relevant_bindings(&[query]);
         let bindings_str = relevant_bindings
             .iter()
-            .map(|(var, val)| format!("{} = {}", var.0, val.to_polar()))
-            .collect::<Vec<String>>()
+            .map(|(var, val)| format!("{} = {}", var.0, val))
+            .collect::<Vec<_>>()
             .join(", ");
-        let query_str = query.to_polar();
-        format!("QUERY: {}, BINDINGS: {{{}}}", query_str, bindings_str)
+        format!("QUERY: {}, BINDINGS: {{{}}}", query, bindings_str)
     }
 
     /// If the inner [`Debugger`](struct.Debugger.html) returns a [`Goal`](../vm/enum.Goal.html),
@@ -285,7 +284,7 @@ impl Debugger {
                             let _ = write!(st, "\n  ");
                             if let Some(context) = t.parsed_context() {
                                 if let Some(rule) = &rule {
-                                    let _ = write!(st, "in rule {}", rule.name.to_polar());
+                                    let _ = write!(st, "in rule {}", rule.name);
                                 } else {
                                     let _ = write!(st, "in query");
                                 }
@@ -317,7 +316,7 @@ impl Debugger {
                     let mut vars = vm
                         .bindings(true)
                         .keys()
-                        .map(|k| k.to_polar())
+                        .map(|k| k.0.as_ref())
                         .collect::<Vec<_>>()
                         .join(", ");
                     if vars.is_empty() {
