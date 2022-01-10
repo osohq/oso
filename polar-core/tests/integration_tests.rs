@@ -1531,17 +1531,31 @@ fn test_debug() -> TestResult {
                     s.lines().next().unwrap(),
                     "QUERY: 3 = 3 and 4 = 4, BINDINGS: {}"
                 );
-                "step"
+                "stack"
             }
             5 => {
+                let expected = indoc! {"
+                    3: a()
+                      in query at line 1, column 1
+                    2: debug() and b() and c() and d()
+                      in rule a at line 1, column 8
+                    1: c()
+                      in rule a at line 1, column 28
+                    0: 3 = 3 and 4 = 4
+                      in rule c at line 4, column 8
+                    "};
+                assert_eq!(s, expected);
+                "step"
+            }
+            6 => {
                 assert_eq!(s.lines().next().unwrap(), "QUERY: 3 = 3, BINDINGS: {}");
                 "out"
             }
-            6 => {
+            7 => {
                 assert_eq!(s.lines().next().unwrap(), "QUERY: d(), BINDINGS: {}");
                 "over"
             }
-            7 => {
+            8 => {
                 assert_eq!(s.lines().next().unwrap(), "QUERY: 5 = 5, BINDINGS: {}");
                 "c"
             }
