@@ -851,10 +851,10 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-debug-${{ hashFiles('**/Cargo.lock') }}
-      - name: Use Python 3.6
+      - name: Use Python 3.7
         uses: actions/setup-python@v1
         with:
-          python-version: "3.6"
+          python-version: "3.7"
       - name: Use Ruby 2.4
         uses: ruby/setup-ruby@v1
         with:
