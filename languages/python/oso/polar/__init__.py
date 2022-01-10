@@ -1,4 +1,4 @@
-from .polar import Polar, polar_class
+from .polar import Polar
 from .query import Query, QueryResult
 from .variable import Variable
 from .predicate import Predicate

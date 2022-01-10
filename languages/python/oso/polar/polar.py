@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import os
 from pathlib import Path
 import sys
-from typing import Dict, List, Union
+from typing import List, Union
 
 from .exceptions import (
     PolarRuntimeError,
@@ -23,13 +23,11 @@ from .expression import Expression, Pattern
 from .data_filtering import serialize_types, filter_data
 from .data import DataFilter
 
-CLASSES: Dict[str, type] = {}
-
 
 class Polar:
     """Polar API"""
 
-    def __init__(self, classes=CLASSES):
+    def __init__(self):
         self.ffi_polar = FfiPolar()
         self.host = Host(self.ffi_polar)
         self.ffi_polar.set_message_enricher(self.host.enrich_message)
@@ -46,10 +44,6 @@ class Polar:
         self.register_class(str, name="String")
         self.register_class(datetime, name="Datetime")
         self.register_class(timedelta, name="Timedelta")
-
-        # Pre-registered classes.
-        for name, cls in classes.items():
-            self.register_class(cls, name=name)
 
     def __del__(self):
         del self.host
@@ -327,18 +321,3 @@ class Polar:
         plan = self.ffi_polar.build_data_filter(types, results, "resource", class_name)
 
         return self.host.adapter.build_query(DataFilter.parse(self, plan))
-
-
-def polar_class(_cls=None, *, name=None):
-    """Decorator to register a Python class with Polar.
-    An alternative to ``register_class()``."""
-
-    def wrap(cls):
-        cls_name = cls.__name__ if name is None else name
-        CLASSES[cls_name] = cls
-        return cls
-
-    if _cls is None:
-        return wrap
-
-    return wrap(_cls)
