@@ -817,9 +817,8 @@ impl PolarVirtualMachine {
         }
     }
 
-    // TODO(gj): this method looks pretty similar to Debugger::debug_command#stack.
     /// Get the query stack as a string for printing in error messages.
-    fn stack_trace(&self) -> String {
+    pub(crate) fn stack_trace(&self) -> String {
         let mut trace_stack = self.trace_stack.clone();
         let mut trace = self.trace.clone();
 
@@ -836,9 +835,11 @@ impl PolarVirtualMachine {
 
         stack.reverse();
 
-        let mut st = String::new();
-        let _ = write!(st, "trace (most recent evaluation last):");
+        // Only index queries, not rules. Rule nodes are just used as context for where the query
+        // comes from.
+        let mut i = stack.iter().filter_map(|t| t.term()).count();
 
+        let mut st = "trace (most recent evaluation last):\n".to_owned();
         let mut rule = None;
         for t in stack {
             match &t.node {
@@ -850,7 +851,9 @@ impl PolarVirtualMachine {
                     {
                         continue;
                     }
-                    let _ = write!(st, "\n  ");
+
+                    i -= 1;
+                    let _ = write!(st, "{}: {}\n  ", i, self.term_source(t, false));
 
                     if let Some(context) = t.parsed_context() {
                         if let Some(rule) = &rule {
@@ -861,7 +864,6 @@ impl PolarVirtualMachine {
                         let _ = write!(st, "{}", context.source_position());
                         let _ = writeln!(st);
                     };
-                    let _ = write!(st, "    {}", self.term_source(t, false));
                 }
             }
         }

@@ -1535,6 +1535,7 @@ fn test_debug() -> TestResult {
             }
             5 => {
                 let expected = indoc! {"
+                    trace (most recent evaluation last):
                     3: a()
                       in query at line 1, column 1
                     2: debug() and b() and c() and d()
@@ -1543,7 +1544,7 @@ fn test_debug() -> TestResult {
                       in rule a at line 1, column 28
                     0: 3 = 3 and 4 = 4
                       in rule c at line 4, column 8
-                    "};
+                "};
                 assert_eq!(s, expected);
                 "step"
             }

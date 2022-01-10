@@ -248,58 +248,9 @@ impl Debugger {
                     })
                 }
             }
-            // TODO(gj): this looks pretty similar to VM::stack_trace().
             "stack" | "trace" => {
-                let mut trace_stack = vm.trace_stack.clone();
-                let mut trace = vm.trace.clone();
-
-                // Walk up the trace stack so we can print out the current query at each level.
-                let mut stack = vec![];
-                while let Some(t) = trace.last() {
-                    stack.push(t.clone());
-                    trace = trace_stack
-                        .pop()
-                        .map(|ts| ts.as_ref().clone())
-                        .unwrap_or_else(Vec::new);
-                }
-
-                stack.reverse();
-
-                // Only index queries, not rules. Rule nodes are just used as context for where the query comes from.
-                let mut i = stack.iter().filter(|t| t.term().is_some()).count();
-
-                let mut st = String::new();
-                let mut rule = None;
-                for t in stack {
-                    match &t.node {
-                        Node::Rule(r) => {
-                            rule = Some(r.clone());
-                        }
-                        Node::Term(t) => {
-                            if matches!(t.value(), Value::Expression(Operation { operator: Operator::And, args}) if args.len() == 1)
-                            {
-                                continue;
-                            }
-
-
-                            let _ = write!(st, "{}: {}", i-1, vm.term_source(t, false));
-                            i -= 1;
-                            let _ = write!(st, "\n  ");
-                            if let Some(context) = t.parsed_context() {
-                                if let Some(rule) = &rule {
-                                    let _ = write!(st, "in rule {}", rule.name);
-                                } else {
-                                    let _ = write!(st, "in query");
-                                }
-                                let _ = write!(st, "{}", context.source_position());
-                                let _ = writeln!(st);
-                            };
-                        }
-                    }
-                }
-
                 return Some(Goal::Debug {
-                    message: st
+                    message: vm.stack_trace()
                 })
             }
             "goals" => return Some(show(&vm.goals)),
