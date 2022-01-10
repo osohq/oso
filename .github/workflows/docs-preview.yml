@@ -84,6 +84,5 @@ jobs:
         with:
           max_attempts: 2
           timeout_minutes: 4
-          command: make deploy-ci DOCS_TAG=${{ env.BRANCH_NAME }}
-          on_retry_command: ls examples/quickstart/ruby
-        working-directory: docs
+          command: make -C docs deploy-ci DOCS_TAG=${{ env.BRANCH_NAME }}
+          on_retry_command: ls docs/examples/quickstart/ruby
