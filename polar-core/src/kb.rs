@@ -395,7 +395,6 @@ impl KnowledgeBase {
         &self,
         index: usize,
         rule_param: &Parameter,
-        rule: &Rule,
         rule_type_param: &Parameter,
         rule_type: &Rule,
     ) -> PolarResult<RuleParamMatch> {
@@ -458,14 +457,10 @@ impl KnowledgeBase {
                                     // past the parser or is it unreachable? Prior to #1356 we
                                     // could hit this branch with a `Value::Variable` if the
                                     // specializer in the rule head was parenthesized.
-                                    return Err(ValidationError::InvalidRule {
-                                        msg: format!(
-                                            "Value variant {} cannot be a specializer",
-                                            rule_value
-                                        ),
-                                        rule: rule.clone(),
-                                    }
-                                    .into());
+                                    return invalid_state(format!(
+                                        "Value variant {} cannot be a specializer",
+                                        rule_value
+                                    ));
                                 }
                             };
                             self.check_pattern_param(
@@ -529,7 +524,7 @@ impl KnowledgeBase {
             .zip(rule_type.params.iter())
             .enumerate()
             .map(|(i, (rule_param, rule_type_param))| {
-                self.check_param(i + 1, rule_param, rule, rule_type_param, rule_type)
+                self.check_param(i + 1, rule_param, rule_type_param, rule_type)
             })
             .collect::<PolarResult<Vec<RuleParamMatch>>>()
             .map(|results| {

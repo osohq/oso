@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use std::collections::{HashMap, HashSet};
 
-use super::error::{PolarError, PolarResult, ValidationError};
+use super::error::{invalid_state, PolarError, PolarResult, ValidationError};
 use super::kb::KnowledgeBase;
 use super::rules::*;
 use super::terms::*;
@@ -351,11 +351,7 @@ impl ResourceBlocks {
         if let Declaration::Relation(related_type) = declaration {
             Ok(related_type)
         } else {
-            Err(ValidationError::ResourceBlock {
-                term: relation.clone(),
-                msg: format!("Expected Relation; got: {:?}", declaration),
-            }
-            .into())
+            invalid_state(format!("Expected Relation; got: {:?}", declaration))
         }
     }
 
