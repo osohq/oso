@@ -853,16 +853,15 @@ impl PolarVirtualMachine {
                     }
 
                     i -= 1;
-                    let _ = write!(st, "{}: {}\n  ", i, self.term_source(t, false));
+                    let _ = writeln!(st, "  {:03}: {}", i, self.term_source(t, false));
 
                     if let Some(context) = t.parsed_context() {
                         if let Some(rule) = &rule {
-                            let _ = write!(st, "in rule {}", rule.name);
+                            let _ = write!(st, "    in rule {}", rule.name);
                         } else {
-                            let _ = write!(st, "in query");
+                            let _ = write!(st, "    in query");
                         }
-                        let _ = write!(st, "{}", context.source_position());
-                        let _ = writeln!(st);
+                        let _ = writeln!(st, "{}", context.source_position());
                     };
                 }
             }

@@ -714,10 +714,11 @@ RSpec.describe Oso::Polar::Polar do # rubocop:disable Metrics/BlockLength
         expect(e).to be_an Oso::Polar::PolarTypeError
         error = <<~TRACE.chomp
           trace (most recent evaluation last):
-            in query at line 1, column 1
-              foo(1,2)
-            in rule foo at line 1, column 13
-              a in b
+            002: foo(1,2)
+              in query at line 1, column 1
+            001: a in b
+              in rule foo at line 1, column 13
+
           Type error: can only use `in` on an iterable value, this is Number(Integer(2)) at line 1, column 7
         TRACE
         expect(e.message).to start_with error
