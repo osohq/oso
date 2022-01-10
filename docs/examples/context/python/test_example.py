@@ -7,7 +7,7 @@ import os
 from runpy import run_path
 from .context import Env
 
-run_path("02-context.py")
+run_path("context.py")
 
 
 @pytest.fixture
