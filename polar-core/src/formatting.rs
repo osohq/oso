@@ -10,12 +10,10 @@
 //! formatting requirements.
 
 use super::{lexer::loc_to_pos, rules::*, sources::*, terms::*, traces::*};
-pub use display::*;
-pub use to_polar::*;
 
 impl Trace {
     /// Return the string representation of this `Trace`
-    pub fn draw(&self, vm: &crate::vm::PolarVirtualMachine) -> String {
+    pub(crate) fn draw(&self, vm: &crate::vm::PolarVirtualMachine) -> String {
         let mut res = String::new();
         self.draw_trace(vm, 0, &mut res);
         res
@@ -58,7 +56,7 @@ impl Trace {
 /// return the source line containing the `offset` character as well as `context_lines` lines above
 /// and below it.
 // @TODO: Can we have the caret under the whole range of the expression instead of just the beginning.
-pub fn source_lines(source: &Source, offset: usize, context_lines: usize) -> String {
+pub(crate) fn source_lines(source: &Source, offset: usize, context_lines: usize) -> String {
     let (target_line, target_column) = loc_to_pos(&source.src, offset);
     // Skip everything up to the first line of requested context (`target_line - context_lines`),
     // but don't overflow if `context_lines > target_line`.
@@ -97,7 +95,7 @@ pub fn source_lines(source: &Source, offset: usize, context_lines: usize) -> Str
 /// Formats a vector of terms as a string-separated list
 /// When providing an operator, parentheses are applied suitably
 /// (see: to_polar_parens)
-pub fn format_args(op: Operator, args: &[Term], sep: &str) -> String {
+fn format_args(op: Operator, args: &[Term], sep: &str) -> String {
     args.iter()
         .map(|t| to_polar_parens(op, t))
         .collect::<Vec<String>>()
@@ -105,20 +103,10 @@ pub fn format_args(op: Operator, args: &[Term], sep: &str) -> String {
 }
 
 /// Formats a vector of parameters
-pub fn format_params(args: &[Parameter], sep: &str) -> String {
+fn format_params(args: &[Parameter], sep: &str) -> String {
     args.iter()
-        .map(|parameter| parameter.to_polar())
-        .collect::<Vec<String>>()
-        .join(sep)
-}
-
-/// Formats a vector of rules as a string-separated list.
-#[allow(clippy::ptr_arg)]
-pub fn format_rules(rules: &Rules, sep: &str) -> String {
-    rules
-        .iter()
-        .map(|rule| rule.to_polar())
-        .collect::<Vec<String>>()
+        .map(Parameter::to_string)
+        .collect::<Vec<_>>()
         .join(sep)
 }
 
@@ -163,24 +151,24 @@ fn has_lower_pred(op: Operator, t: &Term) -> bool {
     }
 }
 
-pub fn to_polar_parens(op: Operator, t: &Term) -> String {
+fn to_polar_parens(op: Operator, t: &Term) -> String {
     if has_lower_pred(op, t) {
-        format!("({})", t.to_polar())
+        format!("({})", t)
     } else {
-        t.to_polar()
+        t.to_string()
     }
 }
 
-pub mod display {
+mod display {
     use std::fmt;
     use std::sync::Arc;
 
-    use super::ToPolarString;
+    use super::to_polar::ToPolarString;
     use crate::bindings::Binding;
     use crate::numerics::Numeric;
     use crate::resource_block::Declaration;
-    use crate::rules::Rule;
-    use crate::terms::{Call, Operator, Symbol, Term};
+    use crate::rules::{Parameter, Rule};
+    use crate::terms::{Call, Dictionary, InstanceLiteral, Operation, Operator, Symbol, Term};
     use crate::vm::*;
 
     impl fmt::Display for Binding {
@@ -202,6 +190,12 @@ pub mod display {
     }
 
     impl fmt::Display for Call {
+        fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(fmt, "{}", self.to_polar())
+        }
+    }
+
+    impl fmt::Display for Operation {
         fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(fmt, "{}", self.to_polar())
         }
@@ -329,6 +323,12 @@ pub mod display {
         }
     }
 
+    impl fmt::Display for Parameter {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            write!(fmt, "{}", self.to_polar())
+        }
+    }
+
     impl fmt::Display for Numeric {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             match self {
@@ -357,9 +357,21 @@ pub mod display {
             }
         }
     }
+
+    impl fmt::Display for InstanceLiteral {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            write!(fmt, "{}", self.to_polar())
+        }
+    }
+
+    impl fmt::Display for Dictionary {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            write!(fmt, "{}", self.to_polar())
+        }
+    }
 }
 
-pub mod to_polar {
+mod to_polar {
     use crate::formatting::{format_args, format_params, to_polar_parens};
     use crate::resource_block::{BlockType, ResourceBlock, ShorthandRule};
     use crate::rules::*;
@@ -367,7 +379,7 @@ pub mod to_polar {
 
     /// Effectively works as a reverse-parser. Allows types to be turned
     /// back into polar-parseable strings.
-    pub trait ToPolarString {
+    pub(super) trait ToPolarString {
         fn to_polar(&self) -> String;
     }
 
@@ -568,7 +580,7 @@ pub mod to_polar {
     }
 
     impl Rule {
-        pub fn head_as_string(&self) -> String {
+        pub(crate) fn head_as_string(&self) -> String {
             format!("{}({})", self.name, format_params(&self.params, ", "))
         }
     }

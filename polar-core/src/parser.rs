@@ -80,7 +80,6 @@ pub fn parse_rules(src_id: u64, src: &str) -> Result<Vec<Rule>, error::ParseErro
 mod tests {
     use super::*;
     use crate::error::ParseError::*;
-    use crate::formatting::ToPolarString;
     use pretty_assertions::assert_eq;
 
     #[track_caller]
@@ -117,27 +116,27 @@ mod tests {
         let s = parse_term(r#""string literal""#);
         assert_eq!(s, term!("string literal"));
 
-        let t = parse_term(r#"true"#);
+        let t = parse_term("true");
         assert_eq!(t, term!(true));
 
-        let sym = parse_term(r#"foo_qwe"#);
+        let sym = parse_term("foo_qwe");
         assert_eq!(sym, term!(sym!("foo_qwe")));
 
-        let l = parse_term(r#"[foo, bar, baz]"#);
+        let l = parse_term("[foo, bar, baz]");
         assert_eq!(l, term!([sym!("foo"), sym!("bar"), sym!("baz")]));
 
         parse_rules(0, r#"bar(a, c) if foo(a, b(c), "d")"#).expect_err("parse error");
 
-        let exp2 = parse_term(r#"foo.a(b)"#);
+        let exp2 = parse_term("foo.a(b)");
         assert_eq!(
             exp2,
             term!(op!(Dot, term!(sym!("foo")), term!(call!("a", [sym!("b")])))),
             "{}",
-            exp2.to_polar()
+            exp2
         );
-        let rule = parse_rule(r#"f(x) if g(x);"#);
+        let rule = parse_rule("f(x) if g(x);");
         assert_eq!(rule, rule!("f", [sym!("x")] => call!("g", [sym!("x")])));
-        let rule = parse_rule(r#"f(x);"#);
+        let rule = parse_rule("f(x);");
         assert_eq!(rule, rule!("f", [sym!("x")]));
     }
 
@@ -172,45 +171,43 @@ mod tests {
 
     #[test]
     fn test_parse_specializers() {
-        let rule = parse_rule(r#"f(x: 1);"#);
+        let rule = parse_rule("f(x: 1);");
         assert_eq!(rule, rule!("f", ["x"; 1]));
 
-        let rule = parse_rule(r#"f(x: 1, y: [x]) if y = 2;"#);
+        let rule = parse_rule("f(x: 1, y: [x]) if y = 2;");
         assert_eq!(
             rule,
             rule!("f", ["x" ; 1 , "y" ; value!([sym!("x")])] => op!(Unify, term!(sym!("y")), term!(2)))
         );
 
         // parse specializer as a type
-        let rule = parse_rule(r#"f(x: y);"#);
+        let rule = parse_rule("f(x: y);");
         assert_eq!(rule, rule!("f", ["x"; value!(instance!("y"))]));
     }
 
     #[test]
     fn test_parse_file() {
-        let f = r#"
-        a(1);b(2);c(3);
-        "#;
+        let f = "a(1);b(2);c(3);";
         let results = parse_rules(0, f).unwrap();
-        assert_eq!(results[0].to_polar(), r#"a(1);"#);
-        assert_eq!(results[1].to_polar(), r#"b(2);"#);
-        assert_eq!(results[2].to_polar(), r#"c(3);"#);
+        assert_eq!(results[0].to_string(), "a(1);");
+        assert_eq!(results[1].to_string(), "b(2);");
+        assert_eq!(results[2].to_string(), "c(3);");
     }
 
     #[test]
     fn test_parse_line() {
-        let kb = r#"f(x) if x = 1;"#;
+        let kb = "f(x) if x = 1;";
         let line = parse_lines(kb);
         assert_eq!(
             line[0],
             Line::Rule(rule!("f", [sym!("x")] => op!(Unify, term!(sym!("x")), term!(1))))
         );
-        let f = r#"?= f(1);"#;
+        let f = "?= f(1);";
         let line = parse_lines(f);
 
         assert_eq!(line[0], Line::Query(term!(call!("f", [1]))));
 
-        let rule_type = r#"type f(x: String);"#;
+        let rule_type = "type f(x: String);";
         let line = parse_lines(rule_type);
         assert_eq!(
             line[0],
@@ -226,59 +223,59 @@ mod tests {
 
     #[test]
     fn test_parse_new() {
-        let f = r#"a(x) if x = new Foo(a: 1);"#;
+        let f = "a(x) if x = new Foo(a: 1);";
         let results = parse_rules(0, f).unwrap();
-        assert_eq!(results[0].to_polar(), r#"a(x) if x = new Foo(a: 1);"#);
+        assert_eq!(results[0].to_string(), "a(x) if x = new Foo(a: 1);");
     }
 
     #[test]
     fn test_parse_new_boa_constructor() {
-        let f = r#"a(x) if x = new Foo(1, 2);"#;
+        let f = "a(x) if x = new Foo(1, 2);";
         let results = parse_rules(0, f).unwrap();
-        assert_eq!(results[0].to_polar(), r#"a(x) if x = new Foo(1, 2);"#);
+        assert_eq!(results[0].to_string(), "a(x) if x = new Foo(1, 2);");
 
         // test trailing comma
-        let f = r#"a(x) if x = new Foo(1,);"#;
+        let f = "a(x) if x = new Foo(1,);";
         parse_rules(0, f).expect_err("parse error");
     }
 
     #[test]
     fn test_parse_new_mixed_args() {
-        let f = r#"a(x) if x = new Foo(1, 2, bar: 3, baz:4);"#;
+        let f = "a(x) if x = new Foo(1, 2, bar: 3, baz:4);";
         let results = parse_rules(0, f).unwrap();
         assert_eq!(
-            results[0].to_polar(),
-            r#"a(x) if x = new Foo(1, 2, bar: 3, baz: 4);"#
+            results[0].to_string(),
+            "a(x) if x = new Foo(1, 2, bar: 3, baz: 4);"
         );
-        let f = r#"a(x) if x = new Foo(bar: 3, baz: 4);"#;
+        let f = "a(x) if x = new Foo(bar: 3, baz: 4);";
         let results = parse_rules(0, f).unwrap();
         assert_eq!(
-            results[0].to_polar(),
-            r#"a(x) if x = new Foo(bar: 3, baz: 4);"#
+            results[0].to_string(),
+            "a(x) if x = new Foo(bar: 3, baz: 4);"
         );
 
-        let f = r#"a(x) if x = new Foo(bar: 3, baz: 4, 1, 2);"#;
+        let f = "a(x) if x = new Foo(bar: 3, baz: 4, 1, 2);";
         parse_rules(0, f).expect_err("parse error");
 
         // Don't allow kwargs in calls or dot ops.
-        let f = r#"a(x) if f(x: 1)"#;
+        let f = "a(x) if f(x: 1)";
         parse_rules(0, f).expect_err("parse error");
-        let f = r#"a(x) if x.f(x: 1)"#;
+        let f = "a(x) if x.f(x: 1)";
         parse_rules(0, f).expect_err("parse error");
     }
 
     #[test]
     fn test_parse_matches() {
         let term = parse_query("{} matches {}");
-        assert_eq!(term.to_polar(), "{} matches {}");
+        assert_eq!(term.to_string(), "{} matches {}");
         let term = parse_query("{x: 1} matches {}");
-        assert_eq!(term.to_polar(), "{x: 1} matches {}");
+        assert_eq!(term.to_string(), "{x: 1} matches {}");
     }
 
     #[test]
     fn test_parse_rest_vars() {
         let q = "[1, 2, *x] = [*rest]";
-        assert_eq!(parse_query(q).to_polar(), q);
+        assert_eq!(parse_query(q).to_string(), q);
 
         let e = super::parse_query(0, "[1, 2, 3] = [*rest, 3]").expect_err("parse error");
         assert!(matches!(e, UnrecognizedToken { .. }));
@@ -290,10 +287,10 @@ mod tests {
         assert!(matches!(e, UnrecognizedToken { .. }));
 
         let q = "[1, 2, 3] matches [1, 2, 3]";
-        assert_eq!(parse_query(q).to_polar(), q, "{} -- {}", q, parse_query(q));
+        assert_eq!(parse_query(q).to_string(), q, "{} -- {}", q, parse_query(q));
 
         let q = "[1, 2, 3] matches [1, *rest]";
-        assert_eq!(parse_query(q).to_polar(), q, "{} -- {}", q, parse_query(q));
+        assert_eq!(parse_query(q).to_string(), q, "{} -- {}", q, parse_query(q));
     }
 
     #[test]
@@ -342,23 +339,23 @@ mod tests {
 
     #[test]
     fn trailing_commas() {
-        let q = r#"{a: 1,}"#;
+        let q = "{a: 1,}";
         let dict = term!(btreemap! { sym!("a") => term!(1)});
         assert_eq!(parse_term(q), dict);
 
-        let q = r#"[1, 2,]"#;
+        let q = "[1, 2,]";
         let list = term!([1, 2]);
         assert_eq!(parse_term(q), list);
 
         assert_eq!(
-            parse_query(r#"{a: 1,} = [1, 2,]"#),
+            parse_query("{a: 1,} = [1, 2,]"),
             term!(op!(Unify, dict, list))
         );
     }
 
     #[test]
     fn duplicate_keys() {
-        let q = r#"{a: 1, a: 2}"#;
+        let q = "{a: 1, a: 2}";
         let e = super::parse_query(0, q).expect_err("parse error");
         assert!(matches!(e, DuplicateKey { .. }));
     }
