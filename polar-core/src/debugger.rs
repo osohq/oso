@@ -123,8 +123,11 @@ impl Debugger {
                 self.break_query(vm)
             }
             (Step::Error, DebugEvent::Error(error)) => {
+                let context = error
+                    .get_context()
+                    .map_or_else(|| "".into(), |c| c.source_position());
                 self.break_msg(vm).map(|message| Goal::Debug {
-                    message: format!("{}\nERROR: {}\n", message, error),
+                    message: format!("{}\nERROR: {}{}\n", message, error.0, context),
                 })
             }
             (Step::Rule, DebugEvent::Rule) => self.break_query(vm),
