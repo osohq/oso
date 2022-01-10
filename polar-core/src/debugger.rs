@@ -324,7 +324,7 @@ impl Debugger {
                     let mut vars = vm
                         .bindings(true)
                         .keys()
-                        .map(|k| k.0.clone())
+                        .map(|k| k.0.as_ref())
                         .collect::<Vec<_>>()
                         .join(", ");
                     if vars.is_empty() {
