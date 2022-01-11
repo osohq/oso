@@ -1143,8 +1143,8 @@ impl PolarVirtualMachine {
                         let left_symbol = kb
                             .get_symbol_for_class_id(&class_id)
                             .expect("no symbol for class ID");
-                        if let Some(mro) = kb.mro.get(&left_symbol) {
-                            mro.contains(&right_id)
+                        if let Some(mro) = kb.mro.get(left_symbol) {
+                            mro.contains(right_id)
                         } else {
                             false
                         }
