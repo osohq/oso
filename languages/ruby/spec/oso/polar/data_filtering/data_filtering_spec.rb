@@ -16,6 +16,34 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       check_old_authorized_query 'gwen', 'get', Widget, [Widget.all[8]]
     end
 
+    # TODO(gj): make sure we have tests for re-registering (via register_class &
+    # register_constant) the same class, the same class as different names,
+    # different classes as the same name, etc.
+    #
+    # TODO(gj): think about queuing up `register_constant` calls until "after"
+    # all classes have been registered to ensure we have all desired Isa info in
+    # core. Not sure how to determine when all classes have been registered...
+    # maybe pay a cost before the first query? Reasoning for this would be
+    # removing the ordering dependency between `register_class` &
+    # `register_constant` calls; i.e., if someone registers constants *before*
+    # classes they'll silently be booted off the performant internal Isa path
+    # and back onto regular ole' ExternalIsa.
+    #
+    # NOTE(gj): ignore above idea on queuing. One potential solution to above is
+    # to (A) differentiate in the core whether we're registering a class or a
+    # constant (I think this is now differentiated based on `class_id ==
+    # instance_id`) and (B) leverage that differentiation to throw an error when
+    # a *class* is registered after >0 constants have been registered. Reasoning
+    # to users: if you want free performance, register your classes before your
+    # constants. (But in all seriousness this is such an edge case that it's
+    # probably fine either way.)
+    #
+    # TODO(gj): do we need to ensure `Boolean` type has a `class_id` (`==` its
+    # `instance_id`)? Not sure what would happen if a user did something like
+    # `register_constant(true, name: 'Foo')` and then we hit an Isa path in the
+    # core. Assume it wouldn't be able to shortcut the ExternalIsa check...
+    # maybe?
+
     it 'handles queries that return known results' do
       subject.register_class(Widget, fields: { id: Integer })
       subject.register_constant(Widget.all.first, name: 'Prototype')

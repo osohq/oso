@@ -110,13 +110,13 @@ module Oso
       # @return [String] the name the class is cached as.
       # @raise [DuplicateClassAliasError] if attempting to register a class
       # under a previously-registered name.
-      def cache_class(cls, name:, fields:, build_query:, combine_query:, exec_query:) # rubocop:disable Metrics/ParameterLists, Metrics/MethodLength
+      def cache_class(cls, id: nil, name:, fields:, build_query:, combine_query:, exec_query:) # rubocop:disable Metrics/ParameterLists, Metrics/MethodLength
         raise DuplicateClassAliasError.new name: name, old: get_class(name), new: cls if types.key? name
 
         types[name] = types[cls] = UserType.new(
           name: name,
           klass: PolarClass.new(cls),
-          id: cache_instance(cls),
+          id: cache_instance(cls, id: id),
           fields: fields || {},
           combine_query: combine_query || self.combine_query,
           exec_query: exec_query || self.exec_query,
@@ -319,17 +319,23 @@ module Oso
                   end
                 else
                   instance_id = nil
-                  instance_id = types[value].id if value.is_a?(Class) && types.key?(value)
-
-                  # only pass class_repr for registered types
+                  class_id = nil
                   class_repr = nil
-                  class_repr = value.class.to_s if types.key?(value.class)
+
+                  # pass `class_id` & `class_repr` for registered types
+                  if value.is_a?(Class) && types.key?(value)
+                    instance_id = class_id = types[value].id
+                  elsif types.key?(value.class)
+                    class_id = types[value.class].id
+                    class_repr = value.class.to_s
+                  end
 
                   {
                     'ExternalInstance' => {
                       'instance_id' => cache_instance(value, id: instance_id),
                       'repr' => nil,
-                      'class_repr' => class_repr
+                      'class_repr' => class_repr,
+                      'class_id' => class_id
                     }
                   }
                 end

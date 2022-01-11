@@ -208,8 +208,10 @@ module Oso
       # @raise [FFI::Error] if the FFI call returns an error.
       # @return [self] for chaining.
       def register_class(cls, name: nil, fields: nil, combine_query: nil, build_query: nil, exec_query: nil) # rubocop:disable Metrics/ParameterLists
+        class_id = ffi_polar.new_id
         name = host.cache_class(
           cls,
+          id: class_id,
           name: name || cls.name,
           fields: fields,
           build_query: build_query || maybe_mtd(cls, :build_query),
@@ -217,6 +219,7 @@ module Oso
           exec_query: exec_query || maybe_mtd(cls, :exec_query)
         )
         register_constant(cls, name: name)
+        host.register_mros
       end
 
       # Register a Ruby object with Polar.
@@ -343,7 +346,6 @@ module Oso
       # Register MROs, load Polar code, and check inline queries.
       # @param sources [Array<Source>] Polar sources to load.
       def load_sources(sources)
-        host.register_mros
         ffi_polar.load(sources)
         check_inline_queries
       end
