@@ -11,7 +11,7 @@ fn path(x: &Term) -> Vec<Term> {
         Value::Expression(Operation {
             operator: Operator::Dot,
             args,
-        }) => [vec![args[0].clone()], path(&args[1])].concat(),
+        }) => [path(&args[0]), path(&args[1])].concat(),
         _ => vec![x.clone()],
     }
 }

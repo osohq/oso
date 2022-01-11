@@ -316,7 +316,7 @@ def tag_nested_many_many_test_fixture(session):
     other = Tag(name="other")
     unused = Tag(name="unused")
 
-    user = User(username="user", tags=[eng, user_posts])
+    user = User(username="user", tags=[eng, user_posts], tag=random)
     other_user = User(username="other_user", tags=[random])
     moderator = User(username="moderator", tags=[random, user_posts, eng])
 
@@ -800,6 +800,32 @@ def test_partial_isa_with_path(session, oso, tag_nested_many_many_test_fixture):
         assert any(post.created_by.username == "user" for post in tag.posts)
 
     assert len(tags) == 4
+
+
+def test_two_level_isa_with_path(session, oso, tag_nested_many_many_test_fixture):
+    oso.load_str(
+        """
+            allow(user, _, post: Post) if
+                check(user, post) and user.username == "user";
+
+            check(user: User, post: Post) if
+                post.created_by = u and
+                check(user, u.tag);
+            check(_: User, tag: Tag)      if tag.is_public;
+        """
+    )
+
+    user = tag_nested_many_many_test_fixture["user"]
+    posts = session.query(Post).filter(
+        authorize_model(oso, user, "read", session, Post)
+    )
+    print_query(posts)
+    # Should only get posts created by user.
+    posts = posts.all()
+    for post in posts:
+        assert post.created_by.username == "user"
+
+    assert len(posts) == 5
 
 
 # TODO test_nested_relationship_single_many

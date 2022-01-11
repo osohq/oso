@@ -8,6 +8,13 @@ description: >-
 draft: true
 ---
 
+## `oso` 0.26.0
+
+### Core
+
+#### Other bugs & improvements
+- Fixed a bug affecting runtime type checking on nested object attributes.
+  
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
 ### Python
