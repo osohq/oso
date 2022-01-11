@@ -378,24 +378,30 @@ async function fixtures() {
     'OrgRole': OrgRole,
     'Bar': Bar,
     'Foo': Foo,
-    'Num': Num
+    'Num': Num,
+    'Log': Log,
   };
-
-  function toSql(d: Datum, values: {[key: string]: any}): string {
-    if (d.hasOwnProperty("value")) {
-      let nextId = Object.keys(values).length;
-      let key = `${nextId}`
-      values[key] = (d as Immediate).value
-      return `:${key}`;
-    } else {
-      let proj = d as Projection;
-      return `${proj.typeName}.${proj.fieldName}`
-    }
-  }
 
   async function buildQuery(filter: Filter): Promise<SelectQueryBuilder<Resource>> {
     var repo: Repository<Resource> = repositories[filter.model];
     let query: SelectQueryBuilder<Resource> = repo.createQueryBuilder(filter.model);
+
+    // Sort relations so they are in a sql valid order
+    let relations = []
+    let seen = [filter.model]
+    while (filter.relations.length > 0) {
+      let rest = []
+      for (let rel of filter.relations) {
+        if (seen.includes(rel.fromTypeName)) {
+          seen.push(rel.toTypeName)
+          relations.push(rel)
+        } else {
+          rest.push(rel)
+        }
+      }
+      filter.relations = rest
+    }
+    filter.relations = relations
 
     for (let rel of filter.relations) {
       let type = filter.types[rel.fromTypeName]
@@ -403,6 +409,19 @@ async function fixtures() {
       let relation = (type[rel.fromFieldName] as SerializedRelation).Relation;
       let join = `${rel.fromTypeName}.${relation.my_field} = ${rel.toTypeName}.${relation.other_field}`
       query = query.innerJoin(other, rel.toTypeName, join)
+    }
+
+    let nextId = 0
+    function toSql(d: Datum, values: {[key: string]: any}): string {
+      if (d.hasOwnProperty("value")) {
+        let key = `${nextId}`
+        nextId += 1
+        values[key] = (d as Immediate).value
+        return `:${key}`;
+      } else {
+        let proj = d as Projection;
+        return `${proj.typeName}.${proj.fieldName}`
+      }
     }
 
     for (let cs of filter.conditions) {
@@ -415,8 +434,25 @@ async function fixtures() {
             op = '='
             break;
           }
-          default: {
-            continue;
+          case 'Geq': {
+            op = '>='
+            break;
+          }
+          case 'Gt': {
+            op = '>'
+            break;
+          }
+          case 'Leq': {
+            op = '<='
+            break;
+          }
+          case 'Lt': {
+            op = '<'
+            break;
+          }
+          case 'Neq': {
+            op = '!='
+            break;
           }
         }
         if (c.lhs.hasOwnProperty("typeName") && (c.lhs as Projection).fieldName == undefined) {
@@ -779,7 +815,8 @@ describe('Data filtering parity tests', () => {
     await oso.checkAuthz('steve', 'get', Foo, expected);
   });
 
-  test('test_duplex_relationship', async () => {
+  // Joins to the same table are not yet supported in new data filtering
+  xtest('test_duplex_relationship', async () => {
     const { oso, foos } = await fixtures();
     await oso.loadStr(`
       allow(_, _, foo: Foo) if foo in foo.bar.foos;
@@ -998,7 +1035,8 @@ describe('Data filtering parity tests', () => {
 });
 
 describe('Data filtering using typeorm/sqlite', () => {
-  test('relations and operators', async () => {
+  // multiple joins to the same table are not yet supported in the new data filtering
+  xtest('relations and operators', async () => {
     const { oso, somethingFoo, anotherFoo, thirdFoo, fourthFoo } =
       await fixtures();
 
