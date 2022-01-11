@@ -590,10 +590,22 @@ impl KnowledgeBase {
             }
             .with_context(&*self));
         }
-        if let Value::ExternalInstance(ExternalInstance { class_id, .. }) = *value.value() {
-            self.constants.insert(name, value, class_id)
+
+        if let Value::ExternalInstance(ExternalInstance {
+            class_id,
+            instance_id,
+            ..
+        }) = *value.value()
+        {
+            // ExternalInstance values with matching class_id & instance_id represent *classes*
+            if class_id.map_or(false, |id| id == instance_id) {
+                self.constants.insert_class(name, value, instance_id)
+            // ExternalInstance values with differing `class_id` and `instance_id` represent *instances* of classes
+            } else {
+                self.constants.insert(name, value)
+            }
         } else {
-            self.constants.insert(name, value, None);
+            self.constants.insert(name, value)
         }
         Ok(())
     }
