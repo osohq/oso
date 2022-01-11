@@ -304,7 +304,6 @@ mod test {
     use crate::bindings::Bindings;
     use crate::error::{ErrorKind, PolarError, RuntimeError};
     use crate::events::QueryEvent;
-    use crate::formatting::ToPolarString;
     use crate::polar::Polar;
     use crate::query::Query;
     use crate::terms::{Call, Dictionary, InstanceLiteral, Pattern};
@@ -318,7 +317,7 @@ mod test {
                     .value()
                     .as_expression()
                     .unwrap()
-                    .to_polar(),
+                    .to_string(),
                 $right
             )
         };
@@ -335,7 +334,7 @@ mod test {
                     .into_iter()
                     .collect::<HashSet<Term>>();
             let r = hashset! { $($args),+ };
-            let fmt = |hs: &HashSet<Term>| format!("{{ {} }}", hs.iter().map(|t| t.to_polar()).collect::<Vec<String>>().join(", "));
+            let fmt = |hs: &HashSet<Term>| format!("{{ {} }}", hs.iter().map(Term::to_string).collect::<Vec<_>>().join(", "));
 
             assert_eq!(&l, &r, "{} != {}", fmt(&l), fmt(&r));
 
@@ -362,8 +361,8 @@ mod test {
                         "Bindings: {}",
                         bindings
                             .iter()
-                            .map(|(k, v)| format!("{}: {}", k.0, v.to_polar()))
-                            .collect::<Vec<String>>()
+                            .map(|(k, v)| format!("{}: {}", k.0, v))
+                            .collect::<Vec<_>>()
                             .join("\n")
                     )
                 } else {
@@ -2355,7 +2354,7 @@ mod test {
                 ),
                 "unexpected result: {:#?} for {}",
                 res,
-                query.to_polar()
+                query
             );
         }
 

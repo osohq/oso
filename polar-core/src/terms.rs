@@ -7,7 +7,6 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 use super::error::RuntimeError::{self, InvalidState};
-pub use super::formatting::ToPolarString;
 pub use super::numerics::Numeric;
 use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::sources::SourceInfo;

@@ -140,8 +140,7 @@ impl KnowledgeBase {
                                 RuleParamMatch::False(message) => {
                                     msg.push_str(&format!(
                                         "\n{}\n\tFailed to match because: {}\n",
-                                        rule_type.to_polar(),
-                                        message
+                                        rule_type, message
                                     ));
                                     false
                                 }
@@ -222,7 +221,7 @@ impl KnowledgeBase {
                 } else if !self
                     .param_fields_match(&rule_type_instance.fields, &rule_instance.fields)
                 {
-                    Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match rule type specializer {} because the specializer fields did not match.", rule_instance.to_polar(), index, rule_type_instance.to_polar())))
+                    Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match rule type specializer {} because the specializer fields did not match.", rule_instance, index, rule_type_instance)))
                 } else {
                     Ok(RuleParamMatch::True)
                 }
@@ -258,7 +257,7 @@ impl KnowledgeBase {
                     ) {
                         RuleParamMatch::True
                     } else {
-                        RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match rule type specializer {} because the specializer fields did not match.", rule_instance.to_polar(), index, rule_type_instance.to_polar()))
+                        RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match rule type specializer {} because the specializer fields did not match.", rule_instance, index, rule_type_instance))
                     }
                 } else if self.is_union(&term!(sym!(&rule_type_instance.tag.0))) {
                     if self.is_union(&term!(sym!(&rule_instance.tag.0))) {
@@ -270,7 +269,7 @@ impl KnowledgeBase {
                             ) {
                                 return Ok(RuleParamMatch::True);
                             } else {
-                                return Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match rule type specializer {} because the specializer fields did not match.", rule_instance.to_polar(), index, rule_type_instance.to_polar())));
+                                return Ok(RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match rule type specializer {} because the specializer fields did not match.", rule_instance, index, rule_type_instance)));
                             }
                         } else {
                             // TODO(gj): revisit when we have unions beyond Actor & Resource. Union
@@ -317,7 +316,7 @@ impl KnowledgeBase {
                         }
                     }
                     if !self.param_fields_match(&rule_type_instance.fields, &rule_instance.fields) {
-                        RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match rule type specializer {} because the specializer fields did not match.", rule_instance.to_polar(), index, rule_type_instance.to_polar()))
+                        RuleParamMatch::False(format!("Rule specializer {} on parameter {} did not match rule type specializer {} because the specializer fields did not match.", rule_instance, index, rule_type_instance))
                     } else {
                         RuleParamMatch::True
                     }
@@ -439,8 +438,7 @@ impl KnowledgeBase {
                 (Value::Variable(_), Some(rule_type_spec), Value::Variable(_), None) => {
                     RuleParamMatch::False(format!(
                         "Invalid rule parameter {}. Rule type expected {}",
-                        index,
-                        rule_type_spec.to_polar()
+                        index, rule_type_spec
                     ))
                 }
                 // Rule has value or value specializer, rule type has pattern specializer
@@ -489,13 +487,12 @@ impl KnowledgeBase {
                                 if self.param_fields_match(rule_type_fields, rule_fields) {
                                     RuleParamMatch::True
                                 } else {
-                                    RuleParamMatch::False(format!("Invalid parameter {}. Rule type expected Dictionary with fields {}, got dictionary with fields {}.", index, rule_type_fields.to_polar(), rule_fields.to_polar()))
+                                    RuleParamMatch::False(format!("Invalid parameter {}. Rule type expected Dictionary with fields {}, got dictionary with fields {}.", index, rule_type_fields, rule_fields))
                                 }
                             } else {
                                 RuleParamMatch::False(format!(
                                     "Invalid parameter {}. Rule type expected Dictionary, got {}.",
-                                    index,
-                                    rule_value.to_polar()
+                                    index, rule_value
                                 ))
                             }
                         }
@@ -518,9 +515,7 @@ impl KnowledgeBase {
                 }
                 _ => RuleParamMatch::False(format!(
                     "Invalid parameter {}. Rule parameter {} does not match rule type parameter {}",
-                    index,
-                    rule_param.to_polar(),
-                    rule_type_param.to_polar()
+                    index, rule_param, rule_type_param
                 )),
             },
         )
