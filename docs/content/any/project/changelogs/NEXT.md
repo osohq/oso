@@ -8,6 +8,13 @@ description: >-
 draft: true
 ---
 
+## `oso` 0.26.0
+
+### Core
+
+#### Other bugs & improvements
+- Fixed a bug in the detection of conficting type constraints on nested object attributes.
+  
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
 ### Python
