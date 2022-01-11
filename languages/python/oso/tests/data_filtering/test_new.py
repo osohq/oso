@@ -450,20 +450,20 @@ def test_forall_in_collection(oso):
     oso.load_str(
         "allow(_, _, bar: Bar) if forall(foo in bar.foos, foo.is_fooey = true);"
     )
-    results = oso.authorized_resources("gwen", "get", Bar)
+    results = oso.authorized_resources("", "get", Bar)
     assert len(results) == 3
 
 
 @pytest.mark.xfail(reason="not yet supported")
 def test_no_objects_collection_condition(oso):
     oso.load_str("allow(_, _, bar: Bar) if not (foo in bar.foos and foo.is_fooey);")
-    results = oso.authorized_resources("gwen", "get", Bar)
+    results = oso.authorized_resources("", "get", Bar)
     assert len(results) == 0
 
 
 @pytest.mark.xfail(reason="a bug")
 def test_unify_ins_neq(oso):
-    # gwen can read any bar with at least two foos
+    # can read any bar with at least two foos
     oso.load_str(
         """
             allow(_, "read", bar: Bar) if
@@ -478,21 +478,35 @@ def test_unify_ins_neq(oso):
         for bar in bars
         if [foo for foo in bar.foos() for goo in bar.foos() if foo is not goo]
     ]
-    oso.check_authz("gwen", "read", Bar, expected)
+    oso.check_authz("", "read", Bar, expected)
 
 
 @pytest.mark.xfail(reason="a bug")
 def test_deeply_nested_in(oso):
-    # gwen can read any foo whose bar has another foo.
+    # can read any foo whose bar has another foo.
     oso.load_str(
         """
-            allow("gwen", "read", a: Foo) if
-                b in a.bar.foos and b != a;# and
-#                c in b.bar.foos and c != b and
-#                d in c.bar.foos and d != c and
-#                e in d.bar.foos and e != d;
+            allow(_, "read", a: Foo) if
+                b in a.bar.foos and b != a and
+                c in b.bar.foos and c != b and
+                d in c.bar.foos and d != c and
+                e in d.bar.foos and e != d;
         """
     )
 
-    result = oso.authorized_resources("gwen", "read", Foo)
+    result = oso.authorized_resources("", "read", Foo)
+    assert len(result) == 3
+
+
+def test_two_level_isa_with_path(oso):
+    oso.load_str(
+        """
+        allow(u, _, log: Log) if check(u, log.foo.bar);
+        check(u, log: Log) if allow(u, "", log);
+        check(_u, _f: Foo);
+        check(_, _: Bar);
+    """
+    )
+
+    result = oso.authorized_resources("", "read", Log)
     assert len(result) == 3
