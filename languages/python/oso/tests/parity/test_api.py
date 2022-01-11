@@ -15,6 +15,7 @@ from polar.exceptions import (
 
 from .test_api_externals import (
     Http,
+    PathMapper,
     Widget,
     DooDad,
     User,
@@ -28,6 +29,15 @@ from .test_api_externals import (
 EXPECT_XFAIL_PASS = not bool(os.getenv("EXPECT_XFAIL_PASS", False))
 
 # *** FIXTURES *** #
+
+
+@pytest.fixture()
+def register_classes(polar):
+    polar.register_class(Company)
+    polar.register_class(Widget)
+    polar.register_class(DooDad)
+    polar.register_class(Http)
+    polar.register_class(PathMapper)
 
 
 @pytest.fixture
@@ -64,14 +74,14 @@ def actor_in_role(monkeypatch):
 # *** TESTS *** #
 
 
-def test_register_class(polar, load_policy, query):
+def test_register_class(polar, register_classes, load_policy, query):
     actor = User(name="guest")
     resource = Widget(id="1")
     action = "get"
     assert query(Predicate(name="allow", args=(actor, action, resource)))
 
 
-def test_is_allowed(polar, load_policy, query):
+def test_is_allowed(polar, register_classes, load_policy, query):
     actor = User(name="guest")
     resource = Widget(id="1")
     action = "get"
@@ -81,7 +91,7 @@ def test_is_allowed(polar, load_policy, query):
     assert query(Predicate(name="allowRole", args=["admin", "create", resource]))
 
 
-def test_method_resolution_order(polar, load_policy, query):
+def test_method_resolution_order(polar, register_classes, load_policy, query):
     set_frobbed([])
     actor = User(name="guest")
     resource = Widget(id="1")
@@ -96,7 +106,7 @@ def test_method_resolution_order(polar, load_policy, query):
     assert get_frobbed() == ["DooDad", "Widget"]
 
 
-def test_cut(polar, load_policy, query):
+def test_cut(polar, register_classes, load_policy, query):
     set_frobbed([])
     actor = User(name="guest")
     resource = Widget(id="1")
@@ -109,7 +119,7 @@ def test_cut(polar, load_policy, query):
     assert get_frobbed() == ["DooDad"]
 
 
-def test_querystring_resource_map(polar, load_policy, query):
+def test_querystring_resource_map(polar, register_classes, load_policy, query):
     assert query(
         Predicate(
             name="allow",
@@ -127,7 +137,7 @@ def test_querystring_resource_map(polar, load_policy, query):
     )
 
 
-def test_resource_mapping(polar, load_policy, query):
+def test_resource_mapping(polar, register_classes, load_policy, query):
     # from flask import Flask, request, Response, g
     try:
         from flask import Flask, request, Response, g
@@ -173,7 +183,9 @@ def test_resource_mapping(polar, load_policy, query):
         assert resp.status_code == 204
 
 
-def test_patching(polar, widget_in_company, actor_in_role, load_policy, query):
+def test_patching(
+    polar, widget_in_company, actor_in_role, register_classes, load_policy, query
+):
     user = User("test")
     assert not query(
         Predicate(name="actorInRole", args=[user, "admin", Widget(id="1")])
@@ -209,7 +221,7 @@ def test_instance_initialization(polar, query, qvar):
     assert polar.host.to_python(env["returned_user"]) == user
 
 
-def test_instance_from_external_call(polar, load_policy, query):
+def test_instance_from_external_call(polar, register_classes, load_policy, query):
     user = User(name="guest")
     resource = Widget(id="1", name="name")
     assert query(Predicate(name="allow", args=[user, "frob", resource]))
@@ -218,7 +230,7 @@ def test_instance_from_external_call(polar, load_policy, query):
     assert not query(Predicate(name="allow", args=[user, "frob", resource]))
 
 
-def test_load_input_checking(polar, query):
+def test_load_input_checking(polar, register_classes, query):
     with pytest.raises(PolarFileExtensionError):
         polar.load_file("unreal.py")
     with pytest.raises(PolarFileExtensionError):
@@ -242,13 +254,13 @@ def test_return_list(polar, load_policy, query):
     assert query(Predicate(name="allow", args=[actor, action, resource]))
 
 
-def test_type_fields(polar, load_policy, query):
+def test_type_fields(polar, register_classes, load_policy, query):
     resource = Widget(id=1, name="goldfish")
     actor = User(name="elmo", id=1, widget=resource)
     assert query(Predicate(name="allow", args=[actor, "keep", resource]))
 
 
-def test_iter_fields(polar, load_policy, query):
+def test_iter_fields(polar, register_classes, load_policy, query):
     resource = Widget(id=1, name="stapler")
     actor = User(name="milton", id=1)
     assert query(Predicate(name="allow", args=[actor, "can_have", resource]))

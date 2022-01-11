@@ -8,7 +8,7 @@ weight: 4
 
 # The Polar Language
 
-The Oso authorization library uses the Polar programming language to express authorization logic and policies. This guide is an introduction to the Polar language: what it is, how it works, why we've chosen to use it. For a more complete guide to syntax, use our [Syntax Guide](https://www.notion.so/Concepts-The-Polar-Language-0c59f78527bb470bbefb173ebf85ed69).
+The Oso authorization library uses the Polar programming language to express authorization logic and policies. This guide is an introduction to the Polar language: what it is, how it works, why we've chosen to use it. For a more complete guide to syntax, use our [Syntax Guide](reference/polar/polar-syntax).
 
 ## Declarative Programming
 

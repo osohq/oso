@@ -7,7 +7,6 @@ use crate::bindings::{BindingManager, Bsp, FollowerId, VariableState};
 use crate::counter::Counter;
 use crate::error::RuntimeError;
 use crate::events::QueryEvent;
-use crate::formatting::ToPolarString;
 use crate::kb::Bindings;
 use crate::partial::simplify_bindings;
 use crate::runnable::Runnable;
@@ -137,9 +136,7 @@ fn reduce_constraints(bindings: Vec<Bindings>) -> Bindings {
                         }
                         (existing, new) => panic!(
                             "Illegal state reached while reducing constraints for {}: {} → {}",
-                            var,
-                            existing.to_polar(),
-                            new.to_polar()
+                            var, existing, new
                         ),
                     },
                     Entry::Vacant(v) => {

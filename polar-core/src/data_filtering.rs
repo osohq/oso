@@ -353,7 +353,7 @@ impl FilterPlan {
                         Ok(exp) if exp.operator == Operator::And => {
                             let vars = Vars::from_op(exp)?;
                             if explain {
-                                eprintln!("  {}: {}", i, term.to_polar());
+                                eprintln!("  {}: {}", i, term);
                                 vars.explain()
                             }
 
@@ -428,7 +428,7 @@ impl FilterPlan {
                     };
                     let field = &constraint.field;
                     let value = match &constraint.value {
-                        ConstraintValue::Term(t) => t.to_polar(),
+                        ConstraintValue::Term(t) => t.to_string(),
                         ConstraintValue::Field(f) => format!("FIELD({})", f),
                         ConstraintValue::Ref(r) => {
                             let inside = match &r.field {
@@ -959,11 +959,11 @@ impl Vars {
             };
             eprintln!("          type: {}", type_tag);
             if let Some(val) = self.eq_values.get(id) {
-                eprintln!("          value: {}", val.to_polar());
+                eprintln!("          value: {}", val);
             }
             if let Some(values) = self.contained_values.get(id) {
                 for val in values {
-                    eprintln!("          value contains: {}", val.to_polar());
+                    eprintln!("          value contains: {}", val);
                 }
             }
         }

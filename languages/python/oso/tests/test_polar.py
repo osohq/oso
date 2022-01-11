@@ -4,7 +4,6 @@ from pathlib import Path
 from enum import Enum
 
 from polar import (
-    polar_class,
     exceptions,
     Polar,
     Predicate,
@@ -698,40 +697,6 @@ def test_inf_nan(polar, qeval, query):
     assert qeval("neg_inf < inf")
 
 
-def test_register_constants_with_decorator():
-    @polar_class
-    class RegisterDecoratorTest:
-        x = 1
-
-    p = Polar()
-    p.load_str(
-        """foo_rule(_: RegisterDecoratorTest, y) if y = 1;
-           foo_class_attr(y) if y = RegisterDecoratorTest.x;"""
-    )
-    assert (
-        next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))[
-            "bindings"
-        ]["y"]
-        == 1
-    )
-    assert next(p.query_rule("foo_class_attr", Variable("y")))["bindings"]["y"] == 1
-
-    p.clear_rules()
-
-    p = Polar()
-    p.load_str(
-        """foo_rule(_: RegisterDecoratorTest, y) if y = 1;
-           foo_class_attr(y) if y = RegisterDecoratorTest.x;"""
-    )
-    assert (
-        next(p.query_rule("foo_rule", RegisterDecoratorTest(), Variable("y")))[
-            "bindings"
-        ]["y"]
-        == 1
-    )
-    assert next(p.query_rule("foo_class_attr", Variable("y")))["bindings"]["y"] == 1
-
-
 def test_unbound_variable(polar, query):
     """Test that unbound variable is returned."""
     polar.load_str("rule(_, y) if y = 1;")
@@ -1016,7 +981,11 @@ def test_isa_with_path(polar, query):
     polar.register_class(Baz, fields={"bar": Bar})
 
     polar.load_str(
-        "f(x: Integer) if x = 0; g(x: Baz) if f(x.bar.foo.num); h(x: Bar) if f(x.num);"
+        """
+        f(x: Integer) if x = 0;
+        g(x: Baz) if f(x.bar.foo.num);
+        h(x: Bar) if f(x.num);
+    """
     )
     results = query("g(x)", accept_expression=True)
     assert len(results) == 1

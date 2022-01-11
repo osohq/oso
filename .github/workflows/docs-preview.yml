@@ -75,6 +75,14 @@ jobs:
         run: |
           wget https://github.com/bep/s3deploy/releases/download/v2.4.0/s3deploy_2.4.0_Linux-64bit.deb
           sudo dpkg -i s3deploy_2.4.0_Linux-64bit.deb
+      # This step flakes sometime as in this run:
+      # https://github.com/osohq/oso/runs/4743006731?check_suite_focus=true
+      # This slows down releasing.
+      # Try to retry, and get some more info about why the flake is happening.
       - name: Build docs for CI preview
-        run: make deploy-ci DOCS_TAG=${{ env.BRANCH_NAME }}
-        working-directory: docs
+        uses: nick-invision/retry@v2
+        with:
+          max_attempts: 2
+          timeout_minutes: 4
+          command: make -C docs deploy-ci DOCS_TAG=${{ env.BRANCH_NAME }}
+          on_retry_command: ls docs/examples/quickstart/ruby

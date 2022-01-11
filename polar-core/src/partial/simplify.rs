@@ -8,7 +8,6 @@ use crate::{
     error::RuntimeError,
     filter::singleton,
     folder::{fold_term, Folder},
-    formatting::ToPolarString,
     terms::*,
 };
 
@@ -124,7 +123,7 @@ pub fn simplify_partial(
     simplify_debug!("*** simplify partial {:?}", var);
     simplifier.simplify_partial(&mut term);
     term = simplify_trivial_constraint(var.clone(), term);
-    simplify_debug!("simplify partial done {:?}, {:?}", var, term.to_polar());
+    simplify_debug!("simplify partial done {:?}, {}", var, term);
     if matches!(term.value(), Value::Expression(e) if e.operator != Operator::And) {
         (op!(And, term).into(), simplifier.perf_counters())
     } else {
@@ -148,7 +147,7 @@ pub fn simplify_bindings_opt(bindings: Bindings, all: bool) -> Result<Option<Bin
     if_debug! {
         eprintln!("before simplified");
         for (k, v) in bindings.iter() {
-            eprintln!("{:?} {:?}", k, v.to_polar());
+            eprintln!("{:?} {}", k, v);
         }
     }
 
@@ -213,7 +212,7 @@ pub fn simplify_bindings_opt(bindings: Bindings, all: bool) -> Result<Option<Bin
         if_debug! {
             eprintln!("after simplified");
             for (k, v) in simplified_bindings.iter() {
-                eprintln!("{:?} {:?}", k, v.to_polar());
+                eprintln!("{:?} {}", k, v);
             }
         }
 
@@ -238,13 +237,13 @@ impl fmt::Display for PerfCounters {
         writeln!(f, "perf {{")?;
         writeln!(f, "simplify term")?;
         for (term, ncalls) in self.simplify_term.iter() {
-            writeln!(f, "\t{}: {}", term.to_polar(), ncalls)?;
+            writeln!(f, "\t{}: {}", term, ncalls)?;
         }
 
         writeln!(f, "preprocess and")?;
 
         for (term, ncalls) in self.preprocess_and.iter() {
-            writeln!(f, "\t{}: {}", term.to_polar(), ncalls)?;
+            writeln!(f, "\t{}: {}", term, ncalls)?;
         }
 
         writeln!(f, "}}")
@@ -477,19 +476,14 @@ impl Simplifier {
                         MaybeDrop::Drop => keep[i] = false,
                         MaybeDrop::Bind(var, value) => {
                             keep[i] = false;
-                            simplify_debug!("bind {:?}, {:?}", var, value.to_polar());
+                            simplify_debug!("bind {:?}, {}", var, value);
                             self.bind(var, value);
                         }
                         MaybeDrop::Check(var, value) => {
-                            simplify_debug!("check {:?}, {:?}", var.to_polar(), value.to_polar());
+                            simplify_debug!("check {}, {}", var, value);
                             for (j, arg) in o.args.iter().enumerate() {
                                 if j != i && arg.contains_variable(&var) {
-                                    simplify_debug!(
-                                        "check bind {:?}, {:?} ref: {}",
-                                        var.to_polar(),
-                                        value.to_polar(),
-                                        j
-                                    );
+                                    simplify_debug!("check bind {}, {} ref: {}", var, value, j);
                                     self.bind(var, value);
                                     keep[i] = false;
 
@@ -644,7 +638,7 @@ impl Simplifier {
         let mut last = term.hash_value();
         let mut nbindings = self.bindings.len();
         loop {
-            simplify_debug!("simplify loop {:?}", term.to_polar());
+            simplify_debug!("simplify loop {}", term);
             self.counters.simplify_term();
 
             self.simplify_term(term, Simplifier::simplify_operation_variables);

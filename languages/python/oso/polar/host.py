@@ -19,6 +19,7 @@ from .exceptions import (
 from .variable import Variable
 from .predicate import Predicate
 from .expression import Expression, Pattern
+from .data_filtering import Relation
 
 
 @dataclass
@@ -69,6 +70,9 @@ class Host:
         if field not in rec.fields:
             raise PolarRuntimeError(f"No field {field} on {obj.__name__}")
         field_type = rec.fields[field]
+
+        if not isinstance(field_type, Relation):
+            return field_type
 
         if field_type.kind == "one":
             return self.types[field_type.other_type].cls

@@ -36,7 +36,7 @@ type Set<A> = HashSet<A>;
 #[derive(Clone, Eq, Debug, Serialize, PartialEq)]
 pub struct Filter {
     root: TypeName,                  // the host already has this, so we could leave it off
-    relations: Set<Relation>,        // this & root determine the "joins" (or whatever)
+    relations: Vec<Relation>,        // this & root determine the "joins" (or whatever)
     conditions: Vec<Set<Condition>>, // disjunctive normal form
 }
 
@@ -126,7 +126,7 @@ impl PathVar {
                 Ok(pv)
             }
             Variable(Symbol(var)) => Ok(var.clone().into()),
-            _ => invalid_state_error(format!("PathVar::from_term({})", t.to_polar())),
+            _ => invalid_state_error(format!("PathVar::from_term({})", t)),
         }
     }
 }
@@ -167,7 +167,7 @@ impl Filter {
         use {Operator::*, Value::*};
 
         if std::env::var("POLAR_EXPLAIN").is_ok() {
-            eprintln!("{}", ands.to_polar());
+            eprintln!("{}", ands);
         }
 
         let term2expr = |i: Term| match i.value().as_expression() {
@@ -194,7 +194,7 @@ impl Filter {
             }
 
             // oops, we don't know how to handle this!
-            _ => invalid_state_error(ands.to_polar()),
+            _ => invalid_state_error(ands.to_string()),
         }
     }
 
@@ -211,10 +211,14 @@ impl Filter {
         }
     }
 
-    fn union(self, mut other: Self) -> Self {
-        other.conditions.extend(self.conditions);
-        other.relations.extend(self.relations);
-        other
+    fn union(mut self, other: Self) -> Self {
+        self.conditions.extend(other.conditions);
+        for rel in other.relations {
+            if !self.relations.iter().any(|r| r == &rel) {
+                self.relations.push(rel);
+            }
+        }
+        self
     }
 }
 
@@ -444,6 +448,26 @@ impl FilterInfo {
         var: &str,
         class: &str,
     ) -> FilterResult<Filter> {
+        fn sort_relations(
+            relations: HashSet<Relation>,
+            mut types: HashSet<TypeName>,
+            mut out: Vec<Relation>,
+        ) -> Vec<Relation> {
+            if relations.is_empty() {
+                return out;
+            }
+            let mut rest = HashSet::new();
+            for rel in relations {
+                if types.contains(&rel.0) {
+                    types.insert(rel.2.clone());
+                    out.push(rel);
+                } else {
+                    rest.insert(rel);
+                }
+            }
+            sort_relations(rest, types, out)
+        }
+
         // TODO(gw) check more isas in host -- rn we only check external instances
         let (_isas, othas): (Set<_>, Set<_>) = parts
             .into_iter()
@@ -463,6 +487,8 @@ impl FilterInfo {
             ..Default::default()
         }
         .with_constraints(othas, class)?;
+
+        let relations = sort_relations(relations, singleton(class.to_string()), vec![]);
 
         Ok(Filter {
             relations,
@@ -534,7 +560,7 @@ impl Display for Datum {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         use Datum::*;
         match self {
-            Immediate(val) => write!(f, "{}", val.to_polar()),
+            Immediate(val) => write!(f, "{}", val),
             Field(Projection(typ, None)) => write!(f, "{}", typ),
             Field(Projection(typ, Some(field))) => write!(f, "{}.{}", typ, field),
         }
@@ -597,19 +623,22 @@ mod test {
     use crate::events::ResultEvent;
 
     type TestResult = Result<(), RuntimeError>;
+    type TypeMap = Map<String, Map<String, Type>>;
+
+    fn types_0() -> TypeMap {
+        let s = String::from;
+        hashmap! {
+            s("Foo") => hashmap!{
+                s("id") => Type::Base {
+                    class_tag: s("Integer")
+                },
+            }
+        }
+    }
 
     #[test]
     fn test_or_normalization() -> TestResult {
-        let s = String::from;
-        let types = || {
-            hashmap! {
-                s("Foo") => hashmap!{
-                    s("id") => Type::Base {
-                        class_tag: s("Integer")
-                    },
-                }
-            }
-        };
+        let types = types_0;
 
         // two conditions behind an `or` in one result
         let ex1 = vec![ResultEvent::new(hashmap! {
@@ -647,10 +676,9 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_dup_reln() {
+    fn types_1() -> TypeMap {
         let s = String::from;
-        let types = hashmap! {
+        hashmap! {
             s("Resource") => hashmap!{
                 s("foo") => Type::Relation {
                    kind: s("one"),
@@ -670,7 +698,12 @@ mod test {
                     other_class_tag: s("Resource"),
                 }
             }
-        };
+        }
+    }
+
+    #[test]
+    fn test_dup_reln() {
+        let types = types_1();
 
         let ors = vec![ResultEvent::new(hashmap! {
             sym!("resource") => term!(op!(And,
@@ -724,9 +757,7 @@ mod test {
 
         assert_eq!(
             relations,
-            hashset! {
-                Relation(s("Resource"), s("foos"), s("Foo"))
-            }
+            vec![Relation(s("Resource"), s("foos"), s("Foo"))]
         );
 
         assert_eq!(
@@ -752,8 +783,67 @@ mod test {
         ];
 
         let to_s =
-            |ooa: Vec<Term>| format!("{:?}", ooa.iter().map(|a| a.to_polar()).collect::<Vec<_>>());
+            |ooa: Vec<Term>| format!("{:?}", ooa.iter().map(Term::to_string).collect::<Vec<_>>());
 
         assert_eq!(to_s(oa), to_s(vec_of_ands(ex)));
+    }
+
+    fn types_2() -> TypeMap {
+        let s = String::from;
+        hashmap! {
+            s("Resource") => hashmap!{
+                s("foo") => Type::Relation {
+                   kind: s("one"),
+                   my_field: s("_"),
+                   other_field: s("_"),
+                   other_class_tag: s("Foo")
+                }
+            },
+            s("Foo") => hashmap!{
+                s("boo") => Type::Relation {
+                    kind: s("one"),
+                    my_field: s("_"),
+                    other_field: s("_"),
+                    other_class_tag: s("Boo"),
+                }
+            },
+            s("Boo") => hashmap!{
+                s("goo") => Type::Relation {
+                    kind: s("one"),
+                    my_field: s("_"),
+                    other_field: s("_"),
+                    other_class_tag: s("Goo"),
+                }
+            },
+            s("Goo") => hashmap!{
+                s("id") => Type::Base {
+                    class_tag: s("Integer")
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_relation_depsort() -> TestResult {
+        let s = String::from;
+        let types = types_2();
+        let ors = vec![ResultEvent::new(hashmap! {
+            sym!("resource") => term!(op!(And,
+                term!(op!(Isa, var!("_this"), term!(pattern!(instance!("Resource"))))),
+                term!(op!(Unify, term!(1), term!(op!(Dot, term!(op!(Dot, term!(op!(Dot, term!(op!(Dot, var!("_this"), str!("foo"))), str!("boo"))), str!("goo"))), str!("id")))))
+            ))
+        })];
+
+        let Filter { relations, .. } = Filter::build(types, ors, "resource", "Resource")?;
+        assert_eq!(
+            relations,
+            vec![
+                Relation(s("Resource"), s("foo"), s("Foo")),
+                Relation(s("Foo"), s("boo"), s("Boo")),
+                Relation(s("Boo"), s("goo"), s("Goo"))
+            ]
+        );
+
+        Ok(())
     }
 }
