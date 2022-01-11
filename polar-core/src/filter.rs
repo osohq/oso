@@ -211,10 +211,14 @@ impl Filter {
         }
     }
 
-    fn union(self, mut other: Self) -> Self {
-        other.conditions.extend(self.conditions);
-        other.relations.extend(self.relations);
-        other
+    fn union(mut self, other: Self) -> Self {
+        self.conditions.extend(other.conditions);
+        for rel in other.relations {
+            if !self.relations.iter().any(|r| r == &rel) {
+                self.relations.push(rel);
+            }
+        }
+        self
     }
 }
 
@@ -446,7 +450,7 @@ impl FilterInfo {
     ) -> FilterResult<Filter> {
         fn sort_relations(
             relations: HashSet<Relation>,
-            mut seen: HashSet<TypeName>,
+            mut types: HashSet<TypeName>,
             mut out: Vec<Relation>,
         ) -> Vec<Relation> {
             if relations.is_empty() {
@@ -454,14 +458,14 @@ impl FilterInfo {
             }
             let mut rest = HashSet::new();
             for rel in relations {
-                if seen.contains(&rel.0) {
-                    seen.insert(rel.2.clone());
+                if types.contains(&rel.0) {
+                    types.insert(rel.2.clone());
                     out.push(rel);
                 } else {
                     rest.insert(rel);
                 }
             }
-            sort_relations(rest, seen, out)
+            sort_relations(rest, types, out)
         }
 
         // TODO(gw) check more isas in host -- rn we only check external instances
