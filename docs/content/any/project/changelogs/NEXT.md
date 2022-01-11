@@ -13,7 +13,7 @@ draft: true
 ### Core
 
 #### Other bugs & improvements
-- Fixed a bug in the detection of conficting type constraints on nested object attributes.
+- Fixed a bug affecting runtime type checking on nested object attributes.
   
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
