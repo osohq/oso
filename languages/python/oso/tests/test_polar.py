@@ -981,7 +981,11 @@ def test_isa_with_path(polar, query):
     polar.register_class(Baz, fields={"bar": Bar})
 
     polar.load_str(
-        "f(x: Integer) if x = 0; g(x: Baz) if f(x.bar.foo.num); h(x: Bar) if f(x.num);"
+        """
+        f(x: Integer) if x = 0;
+        g(x: Baz) if f(x.bar.foo.num);
+        h(x: Bar) if f(x.num);
+    """
     )
     results = query("g(x)", accept_expression=True)
     assert len(results) == 1
