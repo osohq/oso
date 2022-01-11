@@ -1131,18 +1131,23 @@ impl PolarVirtualMachine {
                 // attempt an in-core IsA check if we have the necessary
                 // class_id information
                 if let Value::ExternalInstance(ExternalInstance {
-                    class_id: Some(cid),
+                    class_id: Some(class_id),
                     ..
                 }) = *left.value()
                 {
                     let isa = {
                         let kb = self.kb.read().unwrap();
-
-                        let mro = kb
-                            .mro
-                            .get(&right_literal.tag)
-                            .expect("no MRO registered for class_id");
-                        mro.contains(&cid)
+                        let right_id = kb
+                            .get_class_id_for_symbol(&right_literal.tag)
+                            .expect("no class ID for symbol");
+                        let left_symbol = kb
+                            .get_symbol_for_class_id(&class_id)
+                            .expect("no symbol for class ID");
+                        if let Some(mro) = kb.mro.get(&left_symbol) {
+                            mro.contains(&right_id)
+                        } else {
+                            false
+                        }
                     };
                     if !isa {
                         self.push_goal(Goal::Backtrack)?;

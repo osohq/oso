@@ -608,6 +608,14 @@ impl KnowledgeBase {
         &self.constants.symbol_to_term
     }
 
+    pub(crate) fn get_symbol_for_class_id(&self, id: &u64) -> Option<&Symbol> {
+        self.constants.get_symbol_for_class_id(id)
+    }
+
+    pub(crate) fn get_class_id_for_symbol(&self, symbol: &Symbol) -> Option<&u64> {
+        self.constants.get_class_id_for_symbol(symbol)
+    }
+
     // TODO(gj): currently no way to distinguish classes from other registered constants in the
     // core, so it's up to callers to ensure this is only called with terms we expect to be
     // registered as a _class_.
