@@ -2712,9 +2712,9 @@ fn test_internal_isa_check() -> TestResult {
         class_id: Some(1),
     };
 
-    let repo_instance_term = term!(Value::ExternalInstance(repo_instance.clone()));
+    let repo_instance_term = term!(Value::ExternalInstance(repo_instance));
     let repo_instance_name = sym!("repo");
-    p.register_constant(repo_instance_name.clone(), repo_instance_term)?;
+    p.register_constant(repo_instance_name, repo_instance_term)?;
 
     let query = p.new_query("repo matches Repository", false)?;
     let results = query_results(
