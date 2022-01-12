@@ -73,8 +73,8 @@ export interface Immediate {
 }
 
 export interface Adapter<Q, R> {
-  buildQuery: (f: Filter) => Promise<Q>,
-  executeQuery: (q: Q) => Promise<R[]>,
+  buildQuery: (f: Filter) => Promise<Q>;
+  executeQuery: (q: Q) => Promise<R[]>;
 }
 
 export type Datum = Projection | Immediate;

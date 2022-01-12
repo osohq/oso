@@ -278,15 +278,17 @@ async function fixtures() {
     | Num
     | Log;
 
-
-  function typeOrmAdapter<R>(connection: Connection): Adapter<SelectQueryBuilder<R>, R> {
-    const
-      ops = { Eq: '=', Geq: '>=', Gt: '>', Leq: '<=', Lt: '<', Neq: '!=', },
-
-      isProj = (d: Projection | Immediate): d is Projection => 
+  function typeOrmAdapter<R>(
+    connection: Connection
+  ): Adapter<SelectQueryBuilder<R>, R> {
+    const ops = { Eq: '=', Geq: '>=', Gt: '>', Leq: '<=', Lt: '<', Neq: '!=' },
+      isProj = (d: Projection | Immediate): d is Projection =>
         (d as Projection).typeName !== undefined,
-
-      idCheck = (c: FilterCondition, a: FilterConditionSide, b: FilterConditionSide) => {
+      idCheck = (
+        c: FilterCondition,
+        a: FilterConditionSide,
+        b: FilterConditionSide
+      ) => {
         const q: Datum = c[a];
         if (isProj(q) && q.fieldName === undefined) {
           c[a] = {
@@ -298,7 +300,6 @@ async function fixtures() {
           };
         }
       },
-
       writeClauses = (sep: string, z: string, ss: string[]) =>
         ss.length ? `(${ss.join(` ${sep} `)})` : z,
       queryBuilder = (r: string) =>
@@ -307,7 +308,7 @@ async function fixtures() {
     return {
       executeQuery: (query: SelectQueryBuilder<R>) => query.getMany(),
       buildQuery: async (filter: Filter) => {
-        const sqlValues: {[key: string]: any } = {};
+        const sqlValues: { [key: string]: any } = {};
 
         let nextId = 0;
         function toSql(d: Datum): string {
@@ -317,27 +318,36 @@ async function fixtures() {
           return `:${key}`;
         }
 
-        const sqlQuery =
-          writeClauses('OR', '1=0', filter.conditions.map(cs =>
-            writeClauses('AND', '1=1', cs.map(c => (
-              idCheck(c, 'lhs', 'rhs'),
-              idCheck(c, 'rhs', 'lhs'),
-              `${toSql(c.lhs)} ${ops[c.cmp]} ${toSql(c.rhs)}`)))));
+        const sqlQuery = writeClauses(
+          'OR',
+          '1=0',
+          filter.conditions.map(cs =>
+            writeClauses(
+              'AND',
+              '1=1',
+              cs.map(
+                c => (
+                  idCheck(c, 'lhs', 'rhs'),
+                  idCheck(c, 'rhs', 'lhs'),
+                  `${toSql(c.lhs)} ${ops[c.cmp]} ${toSql(c.rhs)}`
+                )
+              )
+            )
+          )
+        );
 
         return filter.relations
-          .reduce(
-            (query, {fromTypeName, fromFieldName, toTypeName}) => {
-              const { my_field, other_field } =
-                (filter.types[fromTypeName][fromFieldName] as SerializedRelation).Relation;
-              const join = `${fromTypeName}.${my_field} = ${toTypeName}.${other_field}`;
-              return query.innerJoin(toTypeName, toTypeName, join); // lol typeorm ??
-            },
-            queryBuilder(filter.model) as SelectQueryBuilder<R>)
+          .reduce((query, { fromTypeName, fromFieldName, toTypeName }) => {
+            const { my_field, other_field } = (
+              filter.types[fromTypeName][fromFieldName] as SerializedRelation
+            ).Relation;
+            const join = `${fromTypeName}.${my_field} = ${toTypeName}.${other_field}`;
+            return query.innerJoin(toTypeName, toTypeName, join); // lol typeorm ??
+          }, queryBuilder(filter.model) as SelectQueryBuilder<R>)
           .where(sqlQuery, sqlValues);
       },
     };
   }
-
 
   oso.setDataFilteringAdapter(typeOrmAdapter(connection));
 
