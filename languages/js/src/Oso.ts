@@ -2,31 +2,26 @@ import { Polar } from './Polar';
 import { Variable } from './Variable';
 import { Expression } from './Expression';
 import { Pattern } from './Pattern';
-import type {
-  Options,
-  CustomError,
-  Class,
-  PolarTerm,
-  DataFilteringAdapter,
-} from './types';
+import type { Options, CustomError, Class, PolarTerm } from './types';
 import {
   NotFoundError,
   ForbiddenError,
   OsoError,
   UnregisteredClassError,
 } from './errors';
-import { parseFilter } from './filter';
+import { parseFilter, Adapter, FilterJson } from './filter';
 
 /** The Oso authorization API. */
 // TODO(gj): maybe pass DF options to constructor & try to parametrize a
 // `Query` type w/ the return type of the provided buildQuery fn.
 export class Oso<
+  Q = unknown,
+  Resource = unknown,
   Actor = unknown,
   Action = unknown,
-  Resource = unknown,
   Field = unknown,
   Request = unknown
-> extends Polar {
+> extends Polar<Q, Resource> {
   #notFoundError: CustomError = NotFoundError;
   #forbiddenError: CustomError = ForbiddenError;
   #readAction: unknown = 'read';
@@ -264,7 +259,7 @@ export class Oso<
     actor: Actor,
     action: Action,
     resourceCls: Class<Resource>
-  ): Promise<unknown> {
+  ): Promise<Q> {
     const resource = new Variable('resource');
     const host = this.getHost();
     const clsName = host.getType(resourceCls)?.name;
@@ -305,7 +300,7 @@ export class Oso<
       queryResults,
       'resource',
       clsName
-    );
+    ) as FilterJson;
     const filter = await parseFilter(dataFilter, host);
     return host.adapter.buildQuery(filter);
   }
@@ -319,20 +314,20 @@ export class Oso<
    * @param resourceCls Object type.
    * @returns An array of authorized resources.
    */
-  async authorizedResources<T extends Resource>(
+  async authorizedResources(
     actor: Actor,
     action: Action,
-    resourceCls: Class<T>
-  ): Promise<T[]> {
+    resourceCls: Class<Resource>
+  ): Promise<Resource[]> {
     const query = await this.authorizedQuery(actor, action, resourceCls);
     if (!query) return [];
-    return (await this.getHost().adapter.executeQuery(query)) as T[];
+    return await this.getHost().adapter.executeQuery(query);
   }
 
   /**
    * Register adapter for data filtering query functions.
    */
-  setDataFilteringAdapter(adapter: DataFilteringAdapter): void {
+  setDataFilteringAdapter(adapter: Adapter<Q, Resource>): void {
     this.getHost().adapter = adapter;
   }
 }

@@ -7,7 +7,6 @@ import {
   Immediate,
   Projection,
   Relation,
-  SerializedFields,
   SerializedRelation,
   Adapter,
 } from './filter';
@@ -27,15 +26,13 @@ import {
   DeepPartial,
 } from 'typeorm';
 import { Class, obj } from './types';
-import { values } from 'lodash';
-import { notDeepStrictEqual } from 'assert';
 
-class TestOso extends Oso {
+class TestOso<R, A> extends Oso<SelectQueryBuilder<R>, R, A> {
   async checkAuthz(
-    actor: unknown,
+    actor: A,
     action: string | number,
-    resource: Class,
-    expected: unknown[]
+    resource: Class<R>,
+    expected: R[]
   ) {
     for (const x of expected)
       expect(await this.isAllowed(actor, action, x)).toBe(true);
@@ -258,14 +255,6 @@ async function fixtures() {
   for (const i of [0, 1]) allNums.push(await mkNum(i, 'another'));
   for (const i of [0]) allNums.push(await mkNum(i, 'third'));
 
-  const oso = new TestOso();
-
-  function zip<A, B>(as: A[], bs: B[]): (A | B)[][] {
-    const out = [];
-    for (let i = 0; i < as.length; i++) out.push([as[i], bs[i]]);
-    return out;
-  }
-
   type Resource =
     | User
     | Repo
@@ -277,6 +266,8 @@ async function fixtures() {
     | Foo
     | Num
     | Log;
+
+  const oso = new TestOso<Resource, unknown>();
 
   function typeOrmAdapter<R>(
     connection: Connection
@@ -296,7 +287,7 @@ async function fixtures() {
             fieldName: 'id',
           };
           c[b] = {
-            value: (c[b] as Immediate).value.id,
+            value: ((c[b] as Immediate).value as { id: number }).id,
           };
         }
       },
@@ -307,8 +298,8 @@ async function fixtures() {
 
     return {
       executeQuery: (query: SelectQueryBuilder<R>) => query.getMany(),
-      buildQuery: async (filter: Filter) => {
-        const sqlValues: { [key: string]: any } = {};
+      buildQuery: (filter: Filter): SelectQueryBuilder<R> => {
+        const sqlValues: obj = {};
 
         let nextId = 0;
         function toSql(d: Datum): string {

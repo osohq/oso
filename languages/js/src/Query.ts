@@ -21,6 +21,7 @@ import type {
   ExternalOp,
   MakeExternal,
   NextExternal,
+  obj,
   NullishOrHasConstructor,
   PolarTerm,
   QueryResult,
@@ -46,13 +47,17 @@ function getLogLevelsFromEnv() {
  *
  * @internal
  */
-export class Query {
+export class Query<Q, R> {
   #ffiQuery: FfiQuery;
   #calls: Map<number, AsyncGenerator>;
-  #host: Host;
+  #host: Host<Q, R>;
   results: QueryResult;
 
-  constructor(ffiQuery: FfiQuery, host: Host, bindings?: Map<string, unknown>) {
+  constructor(
+    ffiQuery: FfiQuery,
+    host: Host<Q, R>,
+    bindings?: Map<string, unknown>
+  ) {
     ffiQuery.setLoggingOptions(...getLogLevelsFromEnv());
     this.#ffiQuery = ffiQuery;
     this.#calls = new Map();
@@ -133,7 +138,7 @@ export class Query {
    * @internal
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private async handleRelation(receiver: any, rel: Relation): Promise<unknown> {
+  private async handleRelation(receiver: obj, rel: Relation): Promise<unknown> {
     // TODO(gj|gw): we should add validation for UserType relations once we
     // have a nice hook where we know every class has been registered
     // (e.g., once we enforce that all registerCalls() have to happen
@@ -144,7 +149,7 @@ export class Query {
     // NOTE(gj): disabling ESLint for following line b/c we're fine if
     // `receiver[rel.myField]` blows up -- we catch the error and relay it to
     // the core in `handleCall`.
-    const value = receiver[rel.myField] as unknown; // eslint-disable-line
+    const value = receiver[rel.myField]; // eslint-disable-line
 
     const condition: FilterCondition = {
       lhs: {
@@ -152,7 +157,7 @@ export class Query {
         fieldName: rel.otherField,
       },
       cmp: 'Eq',
-      rhs: { value: receiver[rel.myField] },
+      rhs: { value },
     };
     const filter: Filter = {
       model: rel.otherType,
@@ -160,7 +165,7 @@ export class Query {
       conditions: [[condition]],
       types: this.#host.serializeTypes(),
     };
-    const query = await this.#host.adapter.buildQuery(filter);
+    const query = this.#host.adapter.buildQuery(filter);
     const results = await this.#host.adapter.executeQuery(query);
 
     if (rel.kind === 'one') {
@@ -190,7 +195,7 @@ export class Query {
       )) as NullishOrHasConstructor;
       const rel = this.#host.getType(receiver?.constructor)?.fields?.get(attr);
       if (rel instanceof Relation) {
-        value = await this.handleRelation(receiver, rel);
+        value = await this.handleRelation(receiver as obj, rel);
       } else {
         // NOTE(gj): disabling ESLint for following line b/c we're fine if
         // `receiver[attr]` blows up -- we catch the error and relay it to the
