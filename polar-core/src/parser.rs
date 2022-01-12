@@ -72,20 +72,20 @@ fn lalrpop_error_to_polar_error(
 
 pub fn parse_lines(source: &Arc<Source>) -> Result<Vec<Line>, error::ParseError> {
     polar::LinesParser::new()
-        .parse(source, Lexer::new(source))
+        .parse(source, Lexer::new(&source.src))
         .map_err(|e| lalrpop_error_to_polar_error(e, source))
 }
 
 pub fn parse_query(source: &Arc<Source>) -> Result<Term, error::ParseError> {
     polar::TermParser::new()
-        .parse(source, Lexer::new(source))
+        .parse(source, Lexer::new(&source.src))
         .map_err(|e| lalrpop_error_to_polar_error(e, source))
 }
 
 #[cfg(test)]
 pub fn parse_rules(source: &Arc<Source>) -> Result<Vec<Rule>, error::ParseError> {
     polar::RulesParser::new()
-        .parse(source, Lexer::new(source))
+        .parse(source, Lexer::new(&source.src))
         .map_err(|e| lalrpop_error_to_polar_error(e, source))
 }
 
