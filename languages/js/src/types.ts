@@ -180,6 +180,7 @@ interface PolarInstance {
     instance_id: number;
     repr: string;
     class_repr?: string;
+    class_id?: number;
     constructor?: PolarTerm;
   };
 }
@@ -712,6 +713,12 @@ export interface ClassParams extends DataFilteringQueryParams {
    * `name` property.
    */
   name?: string;
+  /**
+   * Explicit ID to use when registering the class class in Polar. An ID is
+   * generated if none is provided .
+   */
+
+  id?: number;
   /**
    * A Map or object with string keys containing types for fields. Used for
    * data filtering.

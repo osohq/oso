@@ -204,7 +204,7 @@ export class Host implements Required<DataFilteringQueryParams> {
     let fields = params.fields || {};
     if (!(fields instanceof Map)) fields = new Map(Object.entries(fields));
 
-    const { name, buildQuery, execQuery, combineQuery } = params;
+    const { id, name, buildQuery, execQuery, combineQuery } = params;
     if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
     const clsName: string = name ? name : cls.name;
     const existing = this.types.get(clsName);
@@ -227,7 +227,7 @@ export class Host implements Required<DataFilteringQueryParams> {
       buildQuery: buildQuery || this.buildQuery,
       execQuery: execQuery || this.execQuery,
       combineQuery: combineQuery || this.combineQuery,
-      id: this.cacheInstance(cls),
+      id: this.cacheInstance(cls, id),
       isaCheck: params.isaCheck || defaultCheck,
     });
     this.types.set(cls, userType);
@@ -507,12 +507,25 @@ export class Host implements Required<DataFilteringQueryParams> {
       }
       default: {
         let instanceId: number | undefined = undefined;
-        if (isConstructor(v)) instanceId = this.getType(v)?.id;
+        let classId: number | undefined = undefined;
 
         // pass a string class repr *for registered types only*, otherwise pass
         // undefined (allow core to differentiate registered or not)
         const v_cast = v as NullishOrHasConstructor;
         let classRepr: string | undefined = v_cast?.constructor?.name;
+
+        if (isConstructor(v)) {
+          instanceId = this.getType(v)?.id;
+          classId = instanceId;
+        } else {
+          // pass classId for instances of *registered classes* only
+          if (classRepr !== undefined && this.types.has(classRepr)) {
+            classId = this.getType(classRepr)?.id;
+          }
+        }
+
+        // pass classRepr for *registered* classes only, pass undefined
+        // otherwise
         if (classRepr !== undefined && !this.types.has(classRepr)) {
           classRepr = undefined;
         }
@@ -525,6 +538,7 @@ export class Host implements Required<DataFilteringQueryParams> {
               constructor: undefined,
               repr: repr(v),
               class_repr: classRepr,
+              class_id: classId,
             },
           },
         };
