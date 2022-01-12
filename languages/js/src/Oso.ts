@@ -306,7 +306,7 @@ export class Oso<
       'resource',
       clsName
     );
-    const filter = await parseFilter(dataFilter, host)
+    const filter = await parseFilter(dataFilter, host);
     return host.adapter.buildQuery(filter);
   }
 
@@ -333,6 +333,6 @@ export class Oso<
    * Register adapter for data filtering query functions.
    */
   setDataFilteringAdapter(adapter: DataFilteringAdapter): void {
-    this.getHost().adapter = adapter
+    this.getHost().adapter = adapter;
   }
 }

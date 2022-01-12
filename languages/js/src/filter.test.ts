@@ -1,5 +1,16 @@
 import { Oso } from './Oso';
-import { Datum, Filter, Immediate, Projection, Relation, SerializedFields, SerializedRelation } from './filter';
+import {
+  Datum,
+  Filter,
+  FilterCondition,
+  FilterConditionSide,
+  Immediate,
+  Projection,
+  Relation,
+  SerializedFields,
+  SerializedRelation,
+  Adapter,
+} from './filter';
 //import type { Filter, FilterKind, FilterField } from './dataFiltering';
 import 'reflect-metadata';
 import {
@@ -10,6 +21,7 @@ import {
   PrimaryColumn,
   Column,
   createConnection,
+  Connection,
   Repository,
   SelectQueryBuilder,
   DeepPartial,
@@ -172,7 +184,7 @@ let i = 0;
 const gensym = (tag?: string) => `_${tag || 'anon'}_${i++}`;
 
 async function fixtures() {
-  const connection = await createConnection({
+  const connection: Connection = await createConnection({
     type: 'sqlite',
     database: ':memory:',
     entities: [Foo, Bar, Log, Num, Org, Repo, User, OrgRole, RepoRole, Issue],
@@ -266,145 +278,68 @@ async function fixtures() {
     | Num
     | Log;
 
-  const repositories: {[key: string]: Repository<Resource>} = {
-    'User': users,
-    'Repo': repos,
-    'Org': orgs,
-    'Issue': issues,
-    'RepoRole': repoRoles,
-    'OrgRole': orgRoles,
-    'Bar': bars,
-    'Foo': foos,
-    'Num': nums,
-    'Log': logs,
-  };
 
-  const classes: {[key: string]: any} = {
-    'User': User,
-    'Repo': Repo,
-    'Org': Org,
-    'Issue': Issue,
-    'RepoRole': RepoRole,
-    'OrgRole': OrgRole,
-    'Bar': Bar,
-    'Foo': Foo,
-    'Num': Num,
-    'Log': Log,
-  };
+  function typeOrmAdapter<R>(connection: Connection): Adapter<SelectQueryBuilder<R>, R> {
+    const
+      ops = { Eq: '=', Geq: '>=', Gt: '>', Leq: '<=', Lt: '<', Neq: '!=', },
 
-  async function buildQuery(filter: Filter): Promise<SelectQueryBuilder<Resource>> {
-    var repo: Repository<Resource> = repositories[filter.model];
-    let query: SelectQueryBuilder<Resource> = repo.createQueryBuilder(filter.model);
+      isProj = (d: Projection | Immediate): d is Projection => 
+        (d as Projection).typeName !== undefined,
 
-    // Sort relations so they are in a sql valid order
-    let relations = []
-    let seen = [filter.model]
-    while (filter.relations.length > 0) {
-      let rest = []
-      for (let rel of filter.relations) {
-        if (seen.includes(rel.fromTypeName)) {
-          seen.push(rel.toTypeName)
-          relations.push(rel)
-        } else {
-          rest.push(rel)
-        }
-      }
-      filter.relations = rest
-    }
-    filter.relations = relations
-
-    for (let rel of filter.relations) {
-      let type = filter.types[rel.fromTypeName]
-      let other = classes[rel.toTypeName];
-      let relation = (type[rel.fromFieldName] as SerializedRelation).Relation;
-      let join = `${rel.fromTypeName}.${relation.my_field} = ${rel.toTypeName}.${relation.other_field}`
-      query = query.innerJoin(other, rel.toTypeName, join)
-    }
-
-    let nextId = 0
-    function toSql(d: Datum, values: {[key: string]: any}): string {
-      if (d.hasOwnProperty("value")) {
-        let key = `${nextId}`
-        nextId += 1
-        values[key] = (d as Immediate).value
-        return `:${key}`;
-      } else {
-        let proj = d as Projection;
-        return `${proj.typeName}.${proj.fieldName}`
-      }
-    }
-
-    for (let cs of filter.conditions) {
-      let values = {}
-      let ands = ""
-      for (let c of cs) {
-        let op;
-        switch(c.cmp) {
-          case 'Eq': {
-            op = '='
-            break;
-          }
-          case 'Geq': {
-            op = '>='
-            break;
-          }
-          case 'Gt': {
-            op = '>'
-            break;
-          }
-          case 'Leq': {
-            op = '<='
-            break;
-          }
-          case 'Lt': {
-            op = '<'
-            break;
-          }
-          case 'Neq': {
-            op = '!='
-            break;
-          }
-        }
-        if (c.lhs.hasOwnProperty("typeName") && (c.lhs as Projection).fieldName == undefined) {
-          c.lhs = {
-            typeName: (c.lhs as Projection).typeName,
+      idCheck = (c: FilterCondition, a: FilterConditionSide, b: FilterConditionSide) => {
+        const q: Datum = c[a];
+        if (isProj(q) && q.fieldName === undefined) {
+          c[a] = {
+            typeName: q.typeName,
             fieldName: 'id',
-          }
-          c.rhs = {
-            value: (c.rhs as Immediate).value.id
-          }
+          };
+          c[b] = {
+            value: (c[b] as Immediate).value.id,
+          };
         }
-        if (c.rhs.hasOwnProperty("typeName") && (c.rhs as Projection).fieldName == undefined) {
-          c.rhs = {
-            typeName: (c.rhs as Projection).typeName,
-            fieldName: 'id',
-          }
-          c.lhs = {
-            value: (c.lhs as Immediate).value.id
-          }
-        } 
-        let constraint = `${toSql(c.lhs, values)} ${op} ${toSql(c.rhs, values)}`
-        if (ands.length!=0) {
-          ands += " AND "
+      },
+
+      writeClauses = (sep: string, z: string, ss: string[]) =>
+        ss.length ? `(${ss.join(` ${sep} `)})` : z,
+      queryBuilder = (r: string) =>
+        connection.getRepository(r).createQueryBuilder(r);
+
+    return {
+      executeQuery: (query: SelectQueryBuilder<R>) => query.getMany(),
+      buildQuery: async (filter: Filter) => {
+        const sqlValues: {[key: string]: any } = {};
+
+        let nextId = 0;
+        function toSql(d: Datum): string {
+          if (isProj(d)) return `${d.typeName}.${d.fieldName}`;
+          const key = `${nextId++}`;
+          sqlValues[key] = d.value;
+          return `:${key}`;
         }
-        ands += constraint
-      }
-      if (ands.length != 0) {
-        query = query.orWhere(ands, values)
-      }
-    }
-    
-    return query;
-  }
-  async function executeQuery(query: SelectQueryBuilder<Resource>): Promise<Resource[]> {
-    return query.getMany();
+
+        const sqlQuery =
+          writeClauses('OR', '1=0', filter.conditions.map(cs =>
+            writeClauses('AND', '1=1', cs.map(c => (
+              idCheck(c, 'lhs', 'rhs'),
+              idCheck(c, 'rhs', 'lhs'),
+              `${toSql(c.lhs)} ${ops[c.cmp]} ${toSql(c.rhs)}`)))));
+
+        return filter.relations
+          .reduce(
+            (query, {fromTypeName, fromFieldName, toTypeName}) => {
+              const { my_field, other_field } =
+                (filter.types[fromTypeName][fromFieldName] as SerializedRelation).Relation;
+              const join = `${fromTypeName}.${my_field} = ${toTypeName}.${other_field}`;
+              return query.innerJoin(toTypeName, toTypeName, join); // lol typeorm ??
+            },
+            queryBuilder(filter.model) as SelectQueryBuilder<R>)
+          .where(sqlQuery, sqlValues);
+      },
+    };
   }
 
-  const adapter = {
-      buildQuery: buildQuery,
-      executeQuery: executeQuery,
-  }
-  oso.setDataFilteringAdapter(adapter);
+
+  oso.setDataFilteringAdapter(typeOrmAdapter(connection));
 
   oso.registerClass(User, {
     fields: {

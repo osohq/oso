@@ -149,19 +149,19 @@ export class Query {
     const condition: FilterCondition = {
       lhs: {
         typeName: rel.otherType,
-        fieldName: rel.otherField
+        fieldName: rel.otherField,
       },
       cmp: 'Eq',
-      rhs: {value: receiver[rel.myField]}
-    }
+      rhs: { value: receiver[rel.myField] },
+    };
     const filter: Filter = {
       model: rel.otherType,
       relations: [],
       conditions: [[condition]],
-      types: this.#host.serializeTypes()
-    }
-    const query = await this.#host.adapter.buildQuery(filter)
-    const results = await this.#host.adapter.executeQuery(query)
+      types: this.#host.serializeTypes(),
+    };
+    const query = await this.#host.adapter.buildQuery(filter);
+    const results = await this.#host.adapter.executeQuery(query);
 
     if (rel.kind === 'one') {
       if (results.length !== 1)

@@ -56,13 +56,7 @@ export class UserType<Type extends Class<T>, T = any, Query = any> {
   fields: Map<string, Class | Relation>;
   isaCheck: IsaCheck;
 
-  constructor({
-    name,
-    cls,
-    id,
-    fields,
-    isaCheck,
-  }: UserTypeParams<Type>) {
+  constructor({ name, cls, id, fields, isaCheck }: UserTypeParams<Type>) {
     this.name = name;
     this.cls = cls;
     this.fields = fields;
@@ -113,8 +107,8 @@ export class Host {
       },
       executeQuery: () => {
         throw new DataFilteringConfigurationError('adapter');
-      }
-    }
+      },
+    };
   }
 
   /**

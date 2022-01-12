@@ -1,5 +1,11 @@
 import { Host } from './Host';
-import { obj, isPolarTerm, PolarComparisonOperator, PolarTerm, PolarValue } from './types';
+import {
+  obj,
+  isPolarTerm,
+  PolarComparisonOperator,
+  PolarTerm,
+  PolarValue,
+} from './types';
 import { isObj, isString } from './helpers';
 import { OsoError, UnregisteredClassError } from './errors';
 import { DefaultNamingStrategy } from 'typeorm';
@@ -52,36 +58,46 @@ export type SerializedFields = {
 };
 
 export interface FilterRelation {
-  fromTypeName: string,
-  fromFieldName: string,
-  toTypeName: string
+  fromTypeName: string;
+  fromFieldName: string;
+  toTypeName: string;
 }
 
 export interface Projection {
-  typeName: string,
-  fieldName: string
+  typeName: string;
+  fieldName: string;
 }
 
 export interface Immediate {
-  value: any
+  value: any;
+}
+
+export interface Adapter<Q, R> {
+  buildQuery: (f: Filter) => Promise<Q>,
+  executeQuery: (q: Q) => Promise<R[]>,
 }
 
 export type Datum = Projection | Immediate;
 
 export interface FilterCondition {
-  lhs: Datum,
-  cmp: PolarComparisonOperator,
-  rhs: Datum
+  lhs: Datum;
+  cmp: PolarComparisonOperator;
+  rhs: Datum;
 }
+
+export type FilterConditionSide = 'lhs' | 'rhs';
 
 export interface Filter {
-  model: string,
-  relations: FilterRelation[],
-  conditions: FilterCondition[][],
-  types: { [tag: string]: SerializedFields }
+  model: string;
+  relations: FilterRelation[];
+  conditions: FilterCondition[][];
+  types: { [tag: string]: SerializedFields };
 }
 
-export async function parseFilter(filter_json: any, host: Host):Promise<Filter> {
+export async function parseFilter(
+  filter_json: any,
+  host: Host
+): Promise<Filter> {
   let filter = {
     model: filter_json.root,
     relations: [] as FilterRelation[],
@@ -94,36 +110,36 @@ export async function parseFilter(filter_json: any, host: Host):Promise<Filter> 
     let rel: FilterRelation = {
       fromTypeName: from,
       fromFieldName: field,
-      toTypeName: to
+      toTypeName: to,
     };
     filter.relations.push(rel);
   }
 
   async function parseDatum(d: any, host: Host): Promise<Datum> {
     let k = Object.getOwnPropertyNames(d)[0];
-    switch(k) {
+    switch (k) {
       case 'Field': {
-        let [type, field] = d[k]
+        let [type, field] = d[k];
         return {
           typeName: type,
-          fieldName: field
-        }
+          fieldName: field,
+        };
       }
       case 'Immediate': {
         let value: PolarValue = d[k];
         let term: PolarTerm = {
-          value: value
-        }
+          value: value,
+        };
         let jsValue = await host.toJs(term);
         return {
-          value: jsValue
-        }
+          value: jsValue,
+        };
       }
       default: {
-        throw new OsoError(`Invalid filter json.`)
+        throw new OsoError(`Invalid filter json.`);
       }
     }
-  };
+  }
 
   for (let cs of filter_json.conditions) {
     let and_group: FilterCondition[] = [];
@@ -133,11 +149,11 @@ export async function parseFilter(filter_json: any, host: Host):Promise<Filter> 
         lhs: await parseDatum(l, host),
         cmp: op as PolarComparisonOperator,
         rhs: await parseDatum(r, host),
-      }
-      and_group.push(condition)
+      };
+      and_group.push(condition);
     }
-    filter.conditions.push(and_group)
+    filter.conditions.push(and_group);
   }
 
-  return filter
+  return filter;
 }

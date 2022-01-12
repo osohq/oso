@@ -681,18 +681,20 @@ export class Dict extends Object {
 }
 
 export type BuildQueryFn<Q = any> = (filter: Filter) => Promise<Q>; // eslint-disable-line @typescript-eslint/no-explicit-any
-export type ExecuteQueryFn<Q = any, ReturnType = any> = (query: Q) => Promise<ReturnType>; // eslint-disable-line @typescript-eslint/no-explicit-any
+export type ExecuteQueryFn<Q = any, ReturnType = any> = (
+  query: Q
+) => Promise<ReturnType>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface DataFilteringAdapter<Query = any, ReturnType = any> {
   /**
    * A function to produce a query.
    */
-   buildQuery: BuildQueryFn<Query>;
-   /**
-    * A function to execute a query produced by [[`ClassParams.buildQuery`]].
-    */
-   executeQuery: ExecuteQueryFn<Query, ReturnType>;
+  buildQuery: BuildQueryFn<Query>;
+  /**
+   * A function to execute a query produced by [[`ClassParams.buildQuery`]].
+   */
+  executeQuery: ExecuteQueryFn<Query, ReturnType>;
 }
 
 export type IsaCheck = (instance: NullishOrHasConstructor) => boolean;
