@@ -53,6 +53,10 @@ fn no_is_subspecializer(_: u64, _: Symbol, _: Symbol) -> bool {
     false
 }
 
+fn panic_external_isa_handler(_: Term, _: Symbol) -> bool {
+    panic!("panic_external_isa_handler");
+}
+
 #[allow(clippy::too_many_arguments)]
 fn query_results<F, G, H, I, J, K, L>(
     mut query: Query,
@@ -2682,5 +2686,47 @@ allow(actor, action, resource) if has_permission(actor, action, resource);
     assert!(err
         .to_string()
         .contains("Missing implementation for required rule has_relation("));
+    Ok(())
+}
+
+#[test]
+fn test_internal_isa_check() -> TestResult {
+    let p = polar();
+    let repo_class_instance = ExternalInstance {
+        instance_id: 1,
+        constructor: None,
+        repr: None,
+        class_repr: None,
+        class_id: Some(1),
+    };
+    let repo_class_term = term!(Value::ExternalInstance(repo_class_instance.clone()));
+    let repo_class_name = sym!("Repository");
+    p.register_constant(repo_class_name.clone(), repo_class_term)?;
+    p.register_mro(repo_class_name, vec![repo_class_instance.class_id.unwrap()])?;
+
+    let repo_instance = ExternalInstance {
+        instance_id: 2,
+        constructor: None,
+        repr: None,
+        class_repr: None,
+        class_id: Some(1),
+    };
+
+    let repo_instance_term = term!(Value::ExternalInstance(repo_instance.clone()));
+    let repo_instance_name = sym!("repo");
+    p.register_constant(repo_instance_name.clone(), repo_instance_term)?;
+
+    let query = p.new_query("repo matches Repository", false)?;
+    let results = query_results(
+        query,
+        no_results,
+        no_externals,
+        panic_external_isa_handler,
+        no_is_subspecializer,
+        no_debug,
+        print_messages,
+        no_error_handler,
+    );
+    assert_eq!(results.len(), 1);
     Ok(())
 }
