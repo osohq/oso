@@ -94,5 +94,5 @@ func gormDb(dbFile string) *gorm.DB {
 func TestDataFiltering(t *testing.T) {
 
   o, _ := oso.NewOso()
-  o.SetDataFilteringAdapter(GormAdapter{gormDb("test.sqlite")})
+  o.SetDataFilteringAdapter(GormAdapter{gormDb("data_filtering_test.sqlite")})
 }
