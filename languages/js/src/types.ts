@@ -1,4 +1,4 @@
-import type { Filter, Relation } from './filter';
+import type { Relation } from './filter';
 import { isObj } from './helpers';
 
 /**
@@ -680,21 +680,6 @@ export class Dict extends Object {
   [index: string]: unknown;
 }
 
-export type BuildQueryFn<Q = any> = (filter: Filter) => Promise<Q>; // eslint-disable-line @typescript-eslint/no-explicit-any
-export type ExecuteQueryFn<Q = any, ReturnType = any> = (query: Q) => Promise<ReturnType>; // eslint-disable-line @typescript-eslint/no-explicit-any
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface DataFilteringAdapter<Query = any, ReturnType = any> {
-  /**
-   * A function to produce a query.
-   */
-   buildQuery: BuildQueryFn<Query>;
-   /**
-    * A function to execute a query produced by [[`ClassParams.buildQuery`]].
-    */
-   executeQuery: ExecuteQueryFn<Query, ReturnType>;
-}
-
 export type IsaCheck = (instance: NullishOrHasConstructor) => boolean;
 
 /**
@@ -742,6 +727,8 @@ export interface UserTypeParams<Type extends Class> {
   isaCheck: IsaCheck;
 }
 
+export type Constructable = { constructor: Class };
+
 /**
  * Utility type to represent a JS value that either does or does not have a
  * constructor property.
@@ -750,4 +737,4 @@ export interface UserTypeParams<Type extends Class> {
  * `constructor` property (e.g., `(1).constructor` returns `[Function:
  * Number]`), but I'm not 100% sure of that.
  */
-export type NullishOrHasConstructor = { constructor: Class } | null | undefined;
+export type NullishOrHasConstructor = Constructable | null | undefined;

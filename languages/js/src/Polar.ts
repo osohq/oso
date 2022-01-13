@@ -43,7 +43,7 @@ class Source {
 }
 
 /** Create and manage an instance of the Polar runtime. */
-export class Polar {
+export class Polar<Q, R> {
   /**
    * Internal WebAssembly module.
    *
@@ -56,7 +56,7 @@ export class Polar {
    *
    * @internal
    */
-  #host: Host;
+  #host: Host<Q, R>;
 
   constructor(opts: Options = {}) {
     this.#ffiPolar = new FfiPolar();
@@ -254,7 +254,7 @@ export class Polar {
     this.#ffiPolar.registerConstant(name, term);
   }
 
-  getHost(): Host {
+  getHost(): Host<Q, R> {
     return this.#host;
   }
 

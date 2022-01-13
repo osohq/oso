@@ -6,20 +6,20 @@ import type { obj, QueryOpts } from '../src/types';
 
 type Result = Map<string, unknown>;
 
-export async function query<T extends Polar>(
-  x: T,
+export async function query<Q, R>(
+  x: Polar<Q, R>,
   q: string | Predicate,
   opts?: QueryOpts
 ): Promise<Result[]> {
   const results = [];
   for await (const result of x.query(q, opts)) {
-    results.push(result);
+    results.push(result as Result);
   }
   return results;
 }
 
-export async function queryRule<T extends Polar>(
-  x: T,
+export async function queryRule<Q, R>(
+  x: Polar<Q, R>,
   name: string,
   ...args: unknown[]
 ): Promise<Result[]> {
@@ -30,8 +30,8 @@ export async function queryRule<T extends Polar>(
   return results;
 }
 
-export async function qvar<T extends Polar>(
-  x: T,
+export async function qvar<Q, R>(
+  x: Polar<Q, R>,
   q: string | Predicate,
   prop: string,
   one?: boolean

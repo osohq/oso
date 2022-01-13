@@ -1,9 +1,6 @@
 import { Host } from './Host';
-import { obj, isPolarTerm, PolarComparisonOperator, PolarTerm, PolarValue } from './types';
-import { isObj, isString } from './helpers';
-import { OsoError, UnregisteredClassError } from './errors';
-import { DefaultNamingStrategy } from 'typeorm';
-import { Comparator } from 'lodash';
+import { PolarComparisonOperator, PolarValue, obj } from './types';
+import { OsoError } from './errors';
 
 export interface SerializedRelation {
   Relation: {
@@ -52,92 +49,89 @@ export type SerializedFields = {
 };
 
 export interface FilterRelation {
-  fromTypeName: string,
-  fromFieldName: string,
-  toTypeName: string
+  fromTypeName: string;
+  fromFieldName: string;
+  toTypeName: string;
 }
 
 export interface Projection {
-  typeName: string,
-  fieldName: string
+  typeName: string;
+  fieldName: string;
 }
 
 export interface Immediate {
-  value: any
+  value: unknown;
+}
+
+export interface Adapter<Q, R> {
+  buildQuery: (f: Filter) => Q;
+  executeQuery: (q: Q) => Promise<R[]>;
 }
 
 export type Datum = Projection | Immediate;
 
 export interface FilterCondition {
-  lhs: Datum,
-  cmp: PolarComparisonOperator,
-  rhs: Datum
+  lhs: Datum;
+  cmp: PolarComparisonOperator;
+  rhs: Datum;
 }
+
+export type FilterConditionSide = 'lhs' | 'rhs';
 
 export interface Filter {
-  model: string,
-  relations: FilterRelation[],
-  conditions: FilterCondition[][],
-  types: { [tag: string]: SerializedFields }
+  model: string;
+  relations: FilterRelation[];
+  conditions: FilterCondition[][];
+  types: { [tag: string]: SerializedFields };
 }
 
-export async function parseFilter(filter_json: any, host: Host):Promise<Filter> {
-  let filter = {
+export interface FilterJson {
+  conditions: unknown[][][];
+  relations: string[][];
+  root: string;
+}
+
+export async function parseFilter<Q, R>(
+  filter_json: FilterJson,
+  host: Host<Q, R>
+): Promise<Filter> {
+  const filter = {
     model: filter_json.root,
     relations: [] as FilterRelation[],
     conditions: [] as FilterCondition[][],
     types: host.serializeTypes(),
   };
 
-  for (let r of filter_json.relations) {
-    let [from, field, to] = r;
-    let rel: FilterRelation = {
-      fromTypeName: from,
-      fromFieldName: field,
-      toTypeName: to
-    };
-    filter.relations.push(rel);
-  }
+  for (const [fromTypeName, fromFieldName, toTypeName] of filter_json.relations)
+    filter.relations.push({ fromTypeName, fromFieldName, toTypeName });
 
-  async function parseDatum(d: any, host: Host): Promise<Datum> {
-    let k = Object.getOwnPropertyNames(d)[0];
-    switch(k) {
+  async function parseDatum(d: obj, host: Host<Q, R>): Promise<Datum> {
+    const k = Object.getOwnPropertyNames(d)[0];
+    switch (k) {
       case 'Field': {
-        let [type, field] = d[k]
-        return {
-          typeName: type,
-          fieldName: field
-        }
+        const [typeName, fieldName] = d[k] as string[];
+        return { typeName, fieldName };
       }
-      case 'Immediate': {
-        let value: PolarValue = d[k];
-        let term: PolarTerm = {
-          value: value
-        }
-        let jsValue = await host.toJs(term);
-        return {
-          value: jsValue
-        }
-      }
+      case 'Immediate':
+        return { value: await host.toJs({ value: d[k] as PolarValue }) };
       default: {
-        throw new OsoError(`Invalid filter json.`)
+        throw new OsoError('Invalid filter json.');
       }
     }
-  };
-
-  for (let cs of filter_json.conditions) {
-    let and_group: FilterCondition[] = [];
-    for (let c of cs) {
-      let [l, op, r] = c;
-      let condition = {
-        lhs: await parseDatum(l, host),
-        cmp: op as PolarComparisonOperator,
-        rhs: await parseDatum(r, host),
-      }
-      and_group.push(condition)
-    }
-    filter.conditions.push(and_group)
   }
 
-  return filter
+  for (const cs of filter_json.conditions) {
+    const and_group: FilterCondition[] = [];
+    for (const [l, op, r] of cs) {
+      const condition = {
+        lhs: await parseDatum(l as obj, host),
+        cmp: op as PolarComparisonOperator,
+        rhs: await parseDatum(r as obj, host),
+      };
+      and_group.push(condition);
+    }
+    filter.conditions.push(and_group);
+  }
+
+  return filter;
 }

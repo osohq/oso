@@ -7,13 +7,7 @@ import {
   UnregisteredInstanceError,
   UnexpectedExpressionError,
 } from './errors';
-import {
-  ancestors,
-  isConstructor,
-  isString,
-  promisify1,
-  repr,
-} from './helpers';
+import { ancestors, isConstructor, isString, repr } from './helpers';
 import type { Polar as FfiPolar } from './polar_wasm_api';
 import { Expression } from './Expression';
 import { Pattern } from './Pattern';
@@ -26,9 +20,6 @@ import type {
   PolarComparisonOperator,
   PolarTerm,
   UserTypeParams,
-  BuildQueryFn,
-  ExecuteQueryFn,
-  DataFilteringAdapter,
   NullishOrHasConstructor,
   IsaCheck,
 } from './types';
@@ -45,24 +36,18 @@ import {
   isPolarStr,
   isPolarVariable,
 } from './types';
-import { Relation } from './filter';
+import { Relation, Adapter } from './filter';
 import type { SerializedFields } from './filter';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export class UserType<Type extends Class<T>, T = any, Query = any> {
+export class UserType<Type extends Class<T>, T = any> {
   name: string;
   cls: Type;
   id: number;
   fields: Map<string, Class | Relation>;
   isaCheck: IsaCheck;
 
-  constructor({
-    name,
-    cls,
-    id,
-    fields,
-    isaCheck,
-  }: UserTypeParams<Type>) {
+  constructor({ name, cls, id, fields, isaCheck }: UserTypeParams<Type>) {
     this.name = name;
     this.cls = cls;
     this.fields = fields;
@@ -76,14 +61,14 @@ export class UserType<Type extends Class<T>, T = any, Query = any> {
  *
  * @internal
  */
-export class Host {
+export class Host<Q, R> {
   #ffiPolar: FfiPolar;
   #instances: Map<number, unknown>;
   types: Map<string | Class, UserType<any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   #opts: HostOpts;
 
-  adapter: DataFilteringAdapter;
+  adapter: Adapter<Q, R>;
 
   /**
    * Shallow clone a host to extend its state for the duration of a particular
@@ -91,9 +76,9 @@ export class Host {
    *
    * @internal
    */
-  static clone(host: Host, opts: Partial<HostOpts>): Host {
+  static clone<Q, R>(host: Host<Q, R>, opts: Partial<HostOpts>): Host<Q, R> {
     const options = { ...host.#opts, ...opts };
-    const clone = new Host(host.#ffiPolar, options);
+    const clone = new Host<Q, R>(host.#ffiPolar, options);
     clone.#instances = new Map(host.#instances);
     clone.types = new Map(host.types);
     clone.adapter = host.adapter;
@@ -113,8 +98,8 @@ export class Host {
       },
       executeQuery: () => {
         throw new DataFilteringConfigurationError('adapter');
-      }
-    }
+      },
+    };
   }
 
   /**
