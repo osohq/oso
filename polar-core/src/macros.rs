@@ -31,7 +31,7 @@ macro_rules! value {
         })
     };
     ([$($args:expr),*]) => {
-        $crate::terms::Value::List(List {
+        $crate::terms::Value::List($crate::terms::List {
             elements: vec![
                 $(term!(value!($args))),*
             ],

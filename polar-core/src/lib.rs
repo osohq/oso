@@ -7,6 +7,7 @@ extern crate maplit;
 #[macro_use]
 pub mod macros;
 
+pub mod bindings;
 mod counter;
 pub mod data_filtering;
 pub mod diagnostic;
@@ -20,9 +21,11 @@ pub mod messages;
 pub mod normalize;
 mod numerics;
 pub mod parser;
+pub mod partial;
 pub mod polar;
 pub mod query;
 pub mod resource_block;
+pub mod rewrites;
 pub mod rules;
 pub mod sources;
 pub mod terms;
