@@ -603,7 +603,7 @@ mod tests {
             let params = diagnostics.get(&doc.uri).unwrap();
             assert_eq!(params.uri, doc.uri);
             assert_eq!(params.version.unwrap(), doc.version);
-            assert_eq!(params.diagnostics.len(), 1, "{}", doc.uri.to_string());
+            assert_eq!(params.diagnostics.len(), 1, "{}", doc.uri);
             let diagnostic = params.diagnostics.get(0).unwrap();
             assert_eq!(
                 diagnostic.message,
@@ -628,7 +628,7 @@ mod tests {
             let params = diagnostics.get(&doc.uri).unwrap();
             assert_eq!(params.uri, doc.uri);
             assert_eq!(params.version.unwrap(), doc.version);
-            assert_eq!(params.diagnostics.len(), 1, "{}", doc.uri.to_string());
+            assert_eq!(params.diagnostics.len(), 1, "{}", doc.uri);
             let diagnostic = params.diagnostics.get(0).unwrap();
             let expected = diagnostic
                 .message
