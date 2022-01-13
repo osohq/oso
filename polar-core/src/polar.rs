@@ -81,7 +81,7 @@ impl Polar {
                             diagnostics.push(Diagnostic::Error(
                                 ValidationError::InvalidRuleType {
                                     rule_type,
-                                    msg: "Rule types cannot contain dot lookups.".to_owned(),
+                                    msg: "Rule types cannot contain dot lookups.".into(),
                                 }
                                 .into(),
                             ));
@@ -97,7 +97,7 @@ impl Polar {
                         let (block, mut errors) =
                             resource_block_from_productions(keyword, resource, productions);
                         errors.append(&mut block.add_to_kb(kb));
-                        diagnostics.extend(errors.into_iter().map(Diagnostic::Error));
+                        diagnostics.extend(errors.into_iter().map(Into::into));
                     }
                 }
             }
@@ -123,13 +123,7 @@ impl Polar {
         }
 
         // Rewrite shorthand rules in resource blocks before validating rule types.
-        diagnostics.append(
-            &mut kb
-                .rewrite_shorthand_rules()
-                .into_iter()
-                .map(Diagnostic::Error)
-                .collect(),
-        );
+        diagnostics.extend(kb.rewrite_shorthand_rules().into_iter().map(Into::into));
 
         // NOTE(gj): need to bomb out before rule type validation in case additional rule types
         // were defined later on in the file that encountered the unrecoverable error. Those
