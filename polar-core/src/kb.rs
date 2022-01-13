@@ -30,8 +30,6 @@ pub struct KnowledgeBase {
     /// Map of class name -> MRO list where the MRO list is a list of class instance IDs
     mro: HashMap<Symbol, Vec<u64>>,
 
-    /// Map from filename to source ID for files loaded into the KB.
-    loaded_files: HashMap<String, String>,
     /// Map from contents to filename for files loaded into the KB.
     loaded_content: HashMap<String, String>,
 
@@ -620,28 +618,23 @@ impl KnowledgeBase {
         self.rule_types.reset();
         self.inline_queries.clear();
         self.loaded_content.clear();
-        self.loaded_files.clear();
         self.resource_blocks.clear();
     }
 
     // TODO(gj): Remove this fn & `FileLoading` error variant. These checks don't spark joy.
     pub(crate) fn add_source(&mut self, filename: &str, contents: &str) -> PolarResult<()> {
-        match (
-            self.loaded_content.insert(contents.into(), filename.into()),
-            self.loaded_files
-                .insert(filename.into(), contents.into())
-                .is_some(),
-        ) {
-            (Some(other_file), true) if other_file == filename => {
+        let seen_filename = self.loaded_content.values().any(|name| name == filename);
+        match self.loaded_content.insert(contents.into(), filename.into()) {
+            Some(other_file) if other_file == filename => {
                 Err(format!("File {} has already been loaded.", filename))
             }
-            (_, true) => Err(format!(
-                "A file with the name {}, but different contents has already been loaded.",
-                filename
-            )),
-            (Some(other_file), _) => Err(format!(
+            Some(other_file) => Err(format!(
                 "A file with the same contents as {} named {} has already been loaded.",
                 filename, other_file
+            )),
+            _ if seen_filename => Err(format!(
+                "A file with the name {}, but different contents has already been loaded.",
+                filename
             )),
             _ => Ok(()),
         }
