@@ -336,7 +336,7 @@ impl Term {
     }
 
     /// Creates a new term from the parser
-    pub fn new_from_parser(source: &Arc<Source>, left: usize, right: usize, value: Value) -> Self {
+    pub fn new_from_parser(source: Arc<Source>, left: usize, right: usize, value: Value) -> Self {
         Self {
             source_info: SourceInfo::parser(source, left, right),
             value: Arc::new(value),

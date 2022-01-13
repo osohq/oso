@@ -80,14 +80,14 @@ impl PolarError {
                 | InvalidFloat { token, loc }
                 | ReservedWord { token, loc }
                 | UnrecognizedToken { token, loc } => {
-                    Some(Context::new(&e.source, *loc, loc + token.len()))
+                    Some(Context::new(e.source.clone(), *loc, loc + token.len()))
                 }
 
                 // These errors track `loc` and only pertain to a single character, so right bound
                 // of span is also `loc`.
                 InvalidTokenCharacter { loc, .. }
                 | InvalidToken { loc }
-                | UnrecognizedEOF { loc } => Some(Context::new(&e.source, *loc, *loc)),
+                | UnrecognizedEOF { loc } => Some(Context::new(e.source.clone(), *loc, *loc)),
 
                 // These errors track `term`, from which we calculate the span.
                 WrongValueType { term, .. } => term.parsed_context().cloned(),
@@ -146,7 +146,7 @@ impl PolarError {
                     filename, contents, ..
                 } => {
                     let source = Arc::new(Source::new_with_name(filename, contents));
-                    Some(Context::new(&source, 0, 0))
+                    Some(Context::new(source, 0, 0))
                 }
             },
 

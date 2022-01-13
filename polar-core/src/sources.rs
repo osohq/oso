@@ -24,9 +24,9 @@ impl fmt::Display for Context {
 }
 
 impl Context {
-    pub(crate) fn new(source: &Arc<Source>, left: usize, right: usize) -> Self {
+    pub(crate) fn new(source: Arc<Source>, left: usize, right: usize) -> Self {
         Self {
-            source: source.clone(),
+            source,
             left,
             right,
         }
@@ -63,7 +63,7 @@ impl SourceInfo {
         Self::Ffi
     }
 
-    pub(crate) fn parser(source: &Arc<Source>, left: usize, right: usize) -> Self {
+    pub(crate) fn parser(source: Arc<Source>, left: usize, right: usize) -> Self {
         Self::Parser(Context::new(source, left, right))
     }
 }

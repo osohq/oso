@@ -64,7 +64,7 @@ impl Rule {
 
     /// Creates a new rule from the parser
     pub fn new_from_parser(
-        source: &Arc<Source>,
+        source: Arc<Source>,
         left: usize,
         right: usize,
         name: Symbol,
