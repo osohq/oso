@@ -46,10 +46,8 @@ impl Polar {
 
     /// Load `sources` into the KB, returning compile-time diagnostics accumulated during the load.
     pub fn diagnostic_load(&self, sources: Vec<Source>) -> Vec<Diagnostic> {
-        // we extract this into a separate function
-        // so that any errors returned with `?` are captured
+        // Separate function so that errors returned with `?` are captured.
         fn load_source(source: Source, kb: &mut KnowledgeBase) -> PolarResult<Vec<Diagnostic>> {
-            // TODO(gj): should we also check for duplicate content across sources w/o a filename?
             if let Some(ref filename) = source.filename {
                 kb.add_source(filename, &source.src)?;
             }

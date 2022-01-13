@@ -624,6 +624,7 @@ impl KnowledgeBase {
         self.resource_blocks.clear();
     }
 
+    // TODO(gj): Remove this fn & `FileLoading` error variant. These checks don't spark joy.
     pub(crate) fn add_source(&mut self, filename: &str, contents: &str) -> PolarResult<()> {
         match (
             self.loaded_content.insert(contents.into(), filename.into()),
