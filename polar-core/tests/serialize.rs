@@ -2,9 +2,7 @@
 mod tests {
     use std::{collections::BTreeMap, sync::Arc};
 
-    use polar_core::{
-        error::*, events::*, rules::*, source, sources::Source, term, terms::*, value,
-    };
+    use polar_core::{error::*, events::*, rules::*, sources::Source, term, terms::*, value};
 
     #[test]
     fn serialize_test() {
@@ -70,7 +68,7 @@ mod tests {
         };
         let e = ParseError {
             kind,
-            source: source!("CinnabarVinegarInteger"),
+            source: Arc::new(Source::new("CinnabarVinegarInteger")),
         };
         let err = PolarError::from(e);
         eprintln!("{}", serde_json::to_string(&err).unwrap());

@@ -632,13 +632,11 @@ mod tests {
     use permute::permute;
 
     use std::collections::HashSet;
-    use std::sync::Arc;
 
     use super::*;
-    use crate::diagnostic::Diagnostic;
     use crate::error::{
         ErrorKind::{Runtime, Validation},
-        RuntimeError,
+        RuntimeError, ValidationError,
     };
     use crate::events::QueryEvent;
     use crate::parser::{parse_lines, Line};
@@ -647,13 +645,11 @@ mod tests {
 
     #[track_caller]
     fn expect_error(p: &Polar, policy: &str, expected: &str) {
-        let error = p.load_str(policy).unwrap_err();
-        let msg = match error.0 {
-            Validation(ValidationError::ResourceBlock { msg, .. }) => msg,
-            Validation(ValidationError::UnregisteredClass { .. })
-            | Validation(ValidationError::DuplicateResourceBlockDeclaration { .. }) => {
-                error.to_string()
-            }
+        let error = p.load_str(policy).unwrap_err().unwrap_validation();
+        let msg = match error {
+            ValidationError::ResourceBlock { msg, .. } => msg,
+            ValidationError::UnregisteredClass { .. }
+            | ValidationError::DuplicateResourceBlockDeclaration { .. } => error.to_string(),
             _ => panic!("Unexpected error: {}", error),
         };
         assert!(msg.contains(expected));
@@ -1320,7 +1316,10 @@ mod tests {
                 let mut policy = "resource Repo {\n".to_owned();
                 policy += &permutation.join("\n");
                 policy += "}";
-                assert!(equal(&parse_lines(&source!(policy)).unwrap()[0], expected));
+                assert!(equal(
+                    &parse_lines(Source::new(policy)).unwrap()[0],
+                    expected
+                ));
             }
         };
 
@@ -1596,10 +1595,9 @@ mod tests {
         // Union A does not match union B.
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!(ACTOR_UNION_NAME))]));
-        assert!(matches!(
-            kb.validate_rules().first().unwrap(),
-            Diagnostic::Error(PolarError(Validation(ValidationError::InvalidRule { .. })))
-        ));
+        let diagnostic = kb.validate_rules().into_iter().next().unwrap();
+        let error = diagnostic.unwrap_error().unwrap_validation();
+        assert!(matches!(error, ValidationError::InvalidRule { .. }));
 
         kb.clear_rules();
         kb.resource_blocks.resources.insert(term!(sym!("Citrus")));
@@ -1620,10 +1618,9 @@ mod tests {
         // Member of union A does not match union B.
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(ACTOR_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Citrus"))]));
-        assert!(matches!(
-            kb.validate_rules().first().unwrap(),
-            Diagnostic::Error(PolarError(Validation(ValidationError::InvalidRule { .. })))
-        ));
+        let diagnostic = kb.validate_rules().into_iter().next().unwrap();
+        let error = diagnostic.unwrap_error().unwrap_validation();
+        assert!(matches!(error, ValidationError::InvalidRule { .. }));
 
         kb.clear_rules();
         kb.resource_blocks.resources.insert(term!(sym!("Citrus")));
@@ -1641,10 +1638,9 @@ mod tests {
         // Superclass of member of union does not match union.
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!(RESOURCE_UNION_NAME))]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Fruit"))]));
-        assert!(matches!(
-            kb.validate_rules().first().unwrap(),
-            Diagnostic::Error(PolarError(Validation(ValidationError::InvalidRule { .. })))
-        ));
+        let diagnostic = kb.validate_rules().into_iter().next().unwrap();
+        let error = diagnostic.unwrap_error().unwrap_validation();
+        assert!(matches!(error, ValidationError::InvalidRule { .. }));
 
         // kb.clear_rules();
         // kb.resource_blocks.resources.insert(term!(sym!("Citrus")));

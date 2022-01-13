@@ -142,10 +142,39 @@ impl PolarError {
                 }
 
                 // These errors always pertain to a specific file but not to a specific place therein.
-                FileLoading { source, .. } => Some(Context::new(source, 0, 0)),
+                FileLoading {
+                    filename, contents, ..
+                } => {
+                    let source = Arc::new(Source::new_with_name(filename, contents));
+                    Some(Context::new(&source, 0, 0))
+                }
             },
 
             Operational(_) => None,
+        }
+    }
+}
+
+#[cfg(test)]
+impl PolarError {
+    pub fn unwrap_parse(self) -> ParseErrorKind {
+        match self.0 {
+            ErrorKind::Parse(ParseError { kind, .. }) => kind,
+            e => panic!("Expected ErrorKind::Parse; was: {}", e),
+        }
+    }
+
+    pub fn unwrap_runtime(self) -> RuntimeError {
+        match self.0 {
+            ErrorKind::Runtime(e) => e,
+            e => panic!("Expected ErrorKind::Runtime; was: {}", e),
+        }
+    }
+
+    pub fn unwrap_validation(self) -> ValidationError {
+        match self.0 {
+            ErrorKind::Validation(e) => e,
+            e => panic!("Expected ErrorKind::Validation; was: {}", e),
         }
     }
 }
@@ -465,7 +494,9 @@ impl fmt::Display for OperationalError {
 pub enum ValidationError {
     FileLoading {
         #[serde(skip_serializing)]
-        source: Arc<Source>,
+        filename: String,
+        #[serde(skip_serializing)]
+        contents: String,
         msg: String,
     },
     MissingRequiredRule {

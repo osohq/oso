@@ -7,7 +7,6 @@ use super::diagnostic::Diagnostic;
 use super::error::{invalid_state, PolarError, PolarResult, RuntimeError, ValidationError};
 use super::resource_block::{ResourceBlocks, ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::rules::*;
-use super::sources::Source;
 use super::terms::*;
 use super::validations::check_undefined_rule_calls;
 
@@ -32,7 +31,7 @@ pub struct KnowledgeBase {
     mro: HashMap<Symbol, Vec<u64>>,
 
     /// Map from filename to source ID for files loaded into the KB.
-    loaded_files: HashMap<String, Arc<Source>>,
+    loaded_files: HashMap<String, String>,
     /// Map from contents to filename for files loaded into the KB.
     loaded_content: HashMap<String, String>,
 
@@ -625,37 +624,34 @@ impl KnowledgeBase {
         self.resource_blocks.clear();
     }
 
-    pub(crate) fn add_source(&mut self, filename: &str, source: &Arc<Source>) -> PolarResult<()> {
+    pub(crate) fn add_source(&mut self, filename: &str, contents: &str) -> PolarResult<()> {
         match (
-            self.loaded_content
-                .insert(source.src.clone(), filename.to_owned()),
+            self.loaded_content.insert(contents.into(), filename.into()),
             self.loaded_files
-                .insert(filename.to_owned(), source.clone())
+                .insert(filename.into(), contents.into())
                 .is_some(),
         ) {
             (Some(other_file), true) if other_file == filename => {
-                Err(ValidationError::FileLoading {
-                    source: source.clone(),
-                    msg: format!("File {} has already been loaded.", filename),
-                })
+                Err(format!("File {} has already been loaded.", filename))
             }
-            (_, true) => Err(ValidationError::FileLoading {
-                source: source.clone(),
-                msg: format!(
-                    "A file with the name {}, but different contents has already been loaded.",
-                    filename
-                ),
-            }),
-            (Some(other_file), _) => Err(ValidationError::FileLoading {
-                source: source.clone(),
-                msg: format!(
-                    "A file with the same contents as {} named {} has already been loaded.",
-                    filename, other_file
-                ),
-            }),
+            (_, true) => Err(format!(
+                "A file with the name {}, but different contents has already been loaded.",
+                filename
+            )),
+            (Some(other_file), _) => Err(format!(
+                "A file with the same contents as {} named {} has already been loaded.",
+                filename, other_file
+            )),
             _ => Ok(()),
         }
-        .map_err(Into::into)
+        .map_err(|msg| {
+            ValidationError::FileLoading {
+                filename: filename.into(),
+                contents: contents.into(),
+                msg,
+            }
+            .into()
+        })
     }
 
     /// Check that all relations declared across all resource blocks have been registered as
@@ -838,46 +834,45 @@ impl KnowledgeBase {
 mod tests {
     use super::*;
 
-    use crate::error::ErrorKind::Validation;
+    use crate::error::ValidationError::{FileLoading, InvalidRule};
 
     #[test]
     fn test_add_source_file_validation() {
-        fn expect_error(kb: &mut KnowledgeBase, name: &str, source: &Arc<Source>, expected: &str) {
-            let msg = match kb.add_source(name, source).unwrap_err().0 {
-                Validation(ValidationError::FileLoading { msg, .. }) => msg,
+        fn expect_error(kb: &mut KnowledgeBase, name: &str, contents: &str, expected: &str) {
+            let err = kb.add_source(name, contents).unwrap_err();
+            let msg = match err.unwrap_validation() {
+                FileLoading { msg, .. } => msg,
                 e => panic!("Unexpected error: {}", e),
             };
             assert_eq!(msg, expected);
         }
 
         let mut kb = KnowledgeBase::new();
-        let src = "f();";
+        let contents1 = "f();";
+        let contents2 = "g();";
         let filename1 = "f";
         let filename2 = "g";
 
         // Load source1.
-        let source1 = Arc::new(Source::new_with_name(filename1, src));
-        kb.add_source(filename1, &source1).unwrap();
+        kb.add_source(filename1, contents1).unwrap();
 
         // Cannot load source1 a second time.
         let expected = format!("File {} has already been loaded.", filename1);
-        expect_error(&mut kb, filename1, &source1, &expected);
+        expect_error(&mut kb, filename1, contents1, &expected);
 
         // Cannot load source2 with the same name as source1 but different contents.
-        let source2 = Arc::new(Source::new_with_name(filename1, "g();"));
         let expected = format!(
             "A file with the name {}, but different contents has already been loaded.",
             filename1
         );
-        expect_error(&mut kb, filename1, &source2, &expected);
+        expect_error(&mut kb, filename1, contents2, &expected);
 
         // Cannot load source3 with the same contents as source1 but a different name.
-        let source3 = Arc::new(Source::new_with_name(filename2, src));
         let expected = format!(
             "A file with the same contents as {} named {} has already been loaded.",
             filename2, filename1
         );
-        expect_error(&mut kb, filename2, &source3, &expected);
+        expect_error(&mut kb, filename2, contents1, &expected);
     }
 
     #[test]
@@ -1370,10 +1365,9 @@ mod tests {
 
         let diagnostics = kb.validate_rules();
         assert_eq!(diagnostics.len(), 1);
-        assert!(matches!(
-            diagnostics.first().unwrap(),
-            Diagnostic::Error(PolarError(Validation(ValidationError::InvalidRule { .. })))
-        ));
+        let diagnostic = diagnostics.into_iter().next().unwrap();
+        let error = diagnostic.unwrap_error().unwrap_validation();
+        assert!(matches!(error, InvalidRule { .. }));
 
         // Rule type does not apply if it doesn't have the same name as a rule
         kb.clear_rules();
@@ -1387,10 +1381,9 @@ mod tests {
         kb.add_rule_type(rule!("f", ["x"; instance!(sym!("Orange")), value!(1)]));
         kb.add_rule(rule!("f", ["x"; instance!(sym!("Orange"))]));
 
-        assert!(matches!(
-            kb.validate_rules().first().unwrap(),
-            Diagnostic::Error(PolarError(Validation(ValidationError::InvalidRule { .. })))
-        ));
+        let diagnostic = kb.validate_rules().into_iter().next().unwrap();
+        let error = diagnostic.unwrap_error().unwrap_validation();
+        assert!(matches!(error, InvalidRule { .. }));
 
         // Multiple templates can exist for the same name but only one needs to match
         kb.clear_rules();

@@ -51,6 +51,16 @@ impl Diagnostic {
     }
 }
 
+#[cfg(test)]
+impl Diagnostic {
+    pub fn unwrap_error(self) -> PolarError {
+        match self {
+            Diagnostic::Error(e) => e,
+            _ => panic!(),
+        }
+    }
+}
+
 impl fmt::Display for Diagnostic {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {

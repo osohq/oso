@@ -50,12 +50,11 @@ impl Polar {
         // so that any errors returned with `?` are captured
         fn load_source(source: Source, kb: &mut KnowledgeBase) -> PolarResult<Vec<Diagnostic>> {
             // TODO(gj): should we also check for duplicate content across sources w/o a filename?
-            let source = Arc::new(source);
             if let Some(ref filename) = source.filename {
-                kb.add_source(filename, &source)?;
+                kb.add_source(filename, &source.src)?;
             }
             // TODO(gj): we still bomb out at the first ParseError.
-            let mut lines = parser::parse_lines(&source)?;
+            let mut lines = parser::parse_lines(source)?;
             lines.reverse();
             let mut diagnostics = vec![];
             while let Some(line) = lines.pop() {
@@ -213,9 +212,7 @@ impl Polar {
     }
 
     pub fn new_query(&self, src: &str, trace: bool) -> PolarResult<Query> {
-        let source = Arc::new(Source::new(src));
-        let term = parser::parse_query(&source)?;
-        Ok(self.new_query_from_term(term, trace))
+        parser::parse_query(src).map(|term| self.new_query_from_term(term, trace))
     }
 
     pub fn new_query_from_term(&self, mut term: Term, trace: bool) -> Query {
@@ -285,7 +282,7 @@ impl Polar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::ErrorKind::{Runtime, Validation};
+    use crate::error::{RuntimeError::MultipleLoadError, ValidationError::FileLoading};
 
     #[test]
     fn can_load_and_query() {
@@ -303,15 +300,13 @@ mod tests {
         polar.load(vec![Source::new(src)]).unwrap();
 
         // Loading twice is not.
-        assert!(matches!(
-            polar.load(vec![Source::new(src)]).unwrap_err().0,
-            Runtime(RuntimeError::MultipleLoadError),
-        ));
+        let e = polar.load(vec![Source::new(src)]).unwrap_err();
+        assert!(matches!(e.unwrap_runtime(), MultipleLoadError));
 
         // Even with load_str().
         assert!(matches!(
-            polar.load(vec![Source::new(src)]).unwrap_err().0,
-            Runtime(RuntimeError::MultipleLoadError),
+            polar.load_str(src).unwrap_err().unwrap_runtime(),
+            MultipleLoadError
         ));
     }
 
@@ -325,9 +320,9 @@ mod tests {
                 Source::new_with_name(filename, src),
             ])
             .unwrap_err()
-            .0
+            .unwrap_validation()
         {
-            Validation(ValidationError::FileLoading { msg, .. }) => msg,
+            FileLoading { msg, .. } => msg,
             e => panic!("{}", e),
         };
         assert_eq!(msg, "File file has already been loaded.");
