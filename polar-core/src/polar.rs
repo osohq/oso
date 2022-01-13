@@ -97,7 +97,7 @@ impl Polar {
                         let (block, mut errors) =
                             resource_block_from_productions(keyword, resource, productions);
                         errors.append(&mut block.add_to_kb(kb));
-                        let errors = errors.into_iter().map(Into::into).map(Diagnostic::Error);
+                        let errors = errors.into_iter().map(Diagnostic::Error);
                         diagnostics.append(&mut errors.collect());
                     }
                 }
