@@ -2481,8 +2481,10 @@ type TraceResult struct {
 
 // ValidationErrorFileLoading struct
 type ValidationErrorFileLoading struct {
-	// Source
-	Source Source `json:"source"`
+	// Filename
+	Filename string `json:"filename"`
+	// Contents
+	Contents string `json:"contents"`
 	// Msg
 	Msg string `json:"msg"`
 }
