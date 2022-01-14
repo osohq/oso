@@ -315,10 +315,29 @@ func oneSignNamed(name string, res []interface{}, t *testing.T) {
 	}
 }
 
+func TestOr(t *testing.T) {
+	o := testOso()
+	o.LoadString("allow(_, _, sign: Sign) if sign.Name = \"leo\" or sign.Element = \"air\";")
+	res, err := o.AuthorizedResources("", "", "Sign")
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	if len(res) == 0 {
+		t.Error("Expected results, got none")
+	}
+
+	for _, s := range res {
+		if s.(Sign).Name != "leo" && s.(Sign).Element != "air" {
+			t.Errorf("Unexpected result: %v", s)
+		}
+	}
+}
+
 func TestFieldCmpRelRelField(t *testing.T) {
 	o := testOso()
 	o.LoadString("allow(_, _, p: Person) if p.Name = p.Sign.Planet.Name;")
-	res, err := o.AuthorizedResources("gwen", "read", "Person")
+	res, err := o.AuthorizedResources("", "", "Person")
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -418,5 +437,318 @@ func TestForallNotInRelation(t *testing.T) {
 				t.Errorf("Unexpected person")
 			}
 		}
+	}
+}
+
+func TestForallForall(t *testing.T) {
+	o := testOso()
+	o.LoadString("allow(planet: Planet, _, _) if forall(sign in planet.Signs, forall(person in sign.People, person.Name != \"sam\"));")
+	var jupiter Planet
+	(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("Signs.People").First(&jupiter, 6)
+	if jupiter.Name != "jupiter" {
+		t.Error("not jupiter")
+	}
+	res, err := o.AuthorizedResources(jupiter, "", "Person")
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if len(res) != 0 {
+		t.Errorf("Expected no results, got %d", len(res))
+	}
+}
+
+func TestForall(t *testing.T) {
+	o := testOso()
+	o.LoadString("allow(planet: Planet, _, _: Person) if forall(sign in planet.Signs, sign.Element != \"fire\");")
+	var planets []Planet
+	(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("Signs").Find(&planets)
+	for _, planet := range planets {
+		res, err := o.AuthorizedResources(planet, "get", "Person")
+		if err != nil {
+			t.Error(err.Error())
+		}
+		if len(res) == 0 != (planet.Name == "mars" || planet.Name == "sun" || planet.Name == "jupiter") {
+			t.Errorf("Unexpected results")
+		}
+	}
+}
+
+func TestInequalityOperators(t *testing.T) {
+	// TODO
+}
+
+func TestSpecializers(t *testing.T) {
+	// TODO
+}
+
+func TestParentChildCases(t *testing.T) {
+	// TODO
+}
+
+func TestVarInVars(t *testing.T) {
+	o := testOso()
+	o.LoadString("allow(_, _, sign: Sign) if person in sign.People and person.Name = \"eden\";")
+	res, err := o.AuthorizedResources("", "", "Sign")
+	if err != nil {
+		t.Error(err.Error())
+	}
+	oneSignNamed("cancer", res, t)
+}
+
+func TestScalarInList(t *testing.T) {
+	o := testOso()
+	o.LoadString("allow(_, _, sign: Sign) if sign.Planet.Name in [\"sun\", \"moon\"];")
+	res, err := o.AuthorizedResources("", "", "Sign")
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	if len(res) == 0 {
+		t.Errorf("Expected results, got none")
+	}
+
+	for _, s := range res {
+		id := s.(Sign).PlanetID
+		if id != 4 && id != 5 {
+			t.Errorf("Unexpected result: %v", s)
+		}
+	}
+}
+
+func TestRelationship(t *testing.T) {
+	o := testOso()
+	o.LoadString("allow(_, _, person: Person) if person.Name = \"eden\" and person.Sign.Name = \"cancer\";")
+	res, err := o.AuthorizedResources("", "", "Person")
+	if err != nil {
+		t.Error(err.Error())
+	}
+	onePersonNamed("eden", res, t)
+}
+
+func TestNeq(t *testing.T) {
+	o := testOso()
+	o.LoadString("allow(_, action, sign: Sign) if sign.Name != action;")
+	res, err := o.AuthorizedResources("", "libra", "Sign")
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if len(res) != 11 {
+		t.Errorf("Expected 11 results, got %d", len(res))
+	}
+	for _, r := range res {
+		if r.(Sign).Name == "libra" {
+			t.Errorf("Unexpected libra")
+		}
+	}
+}
+
+func TestNoRelationships(t *testing.T) {
+	o := testOso()
+	o.LoadString("allow(_, _, sign: Sign) if sign.Element = \"fire\";")
+	res, err := o.AuthorizedResources("", "", "Sign")
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if len(res) != 3 {
+		t.Errorf("Expected 3 results, got %d", len(res))
+	}
+	for _, r := range res {
+		if r.(Sign).Element != "fire" {
+			t.Errorf("Unexpected sign: %v", r)
+		}
+	}
+}
+
+func TestPartialIsaWithPath(t *testing.T) {
+	// TODO implement IsaWithPath query event
+	//  o := testOso()
+	//  o.LoadString("allow(_, _, person: Person) if check(person.Sign); check(sign: Sign) if sign.Name = \"cancer\"; check(person: Person) if person.Sign.Name = \"leo\";")
+	//	res, err := o.AuthorizedResources("", "", "Person")
+	//	if err != nil {
+	//		t.Error(err.Error())
+	//	}
+	//  onePersonNamed("eden", res, t)
+}
+
+func TestUnifyIns(t *testing.T) {
+	o := testOso()
+	o.LoadString("allow(_, _, planet: Planet) if s in planet.Signs and t in planet.Signs and s = t;")
+	res, err := o.AuthorizedResources("", "", "Planet")
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if len(res) == 0 {
+		t.Error("Expected results, got none")
+	}
+
+	for _, r := range res {
+		if r.(Planet).Name == "pluto" {
+			t.Error("Unexpected pluto")
+		}
+	}
+}
+
+func TestRedundantInOnSameField(t *testing.T) {
+	o := testOso()
+	o.LoadString("allow(_, _, sign: Sign) if a in sign.People and b in sign.People and a != b;")
+	res, err := o.AuthorizedResources("", "", "Sign")
+
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if len(res) != 0 {
+		t.Errorf("Expected no results, got %d", len(res))
+	}
+}
+
+func TestInWithConstraintsButNoMatchingObject(t *testing.T) {
+	o := testOso()
+	o.LoadString("allow(_, _, sign: Sign) if p in sign.People and p.Name = \"graham\";")
+	res, err := o.AuthorizedResources("", "", "Sign")
+
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if len(res) != 0 {
+		t.Errorf("Expected no results, got %d", len(res))
+	}
+}
+
+func TestEmptyConstraintsIn(t *testing.T) {
+	o := testOso()
+	o.LoadString("allow(_, _, planet: Planet) if _ in planet.Signs;")
+	res, err := o.AuthorizedResources("", "", "Planet")
+
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if len(res) != 7 {
+		t.Errorf("Expected 7 results, got %d", len(res))
+	}
+
+	for _, p := range res {
+		if p.(Planet).Name == "pluto" {
+			t.Error("Unexpected pluto")
+		}
+	}
+}
+
+func TestPartialInCollection(t *testing.T) {
+	o := testOso()
+	o.LoadString("allow(planet: Planet, _, sign: Sign) if sign in planet.Signs;")
+	var planets []Planet
+	(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("Signs").Find(&planets)
+	for _, planet := range planets {
+		res, err := o.AuthorizedResources(planet, "", "Sign")
+		if err != nil {
+			t.Error(err.Error())
+		}
+		var signs []Sign
+		(*o.GetHost().GetAdapter()).(GormAdapter).db.Where("planet_id = ?", planet.ID).Find(&signs)
+		if len(signs) != len(res) {
+			t.Errorf("Expected %d results, got %d", len(signs), len(res))
+		}
+	}
+}
+
+func TestNestedRelationshipManyManyConstrained(t *testing.T) {
+	o := testOso()
+	o.LoadString("allow(person: Person, _, planet: Planet) if person.Name = \"eden\" and sign in planet.Signs and person in sign.People;")
+	var people []Person
+	(*o.GetHost().GetAdapter()).(GormAdapter).db.Find(&people)
+	for _, person := range people {
+		res, err := o.AuthorizedResources(person, "", "Planet")
+		if err != nil {
+			t.Error(err.Error())
+		}
+
+		if person.Name == "eden" {
+			onePlanetNamed("moon", res, t)
+		} else if len(res) != 0 {
+			t.Errorf("Expected no results, got %d", len(res))
+		}
+	}
+}
+
+func TestNestedRelationshipManyMany(t *testing.T) {
+	o := testOso()
+	o.LoadString("allow(person: Person, _, planet: Planet) if person in planet.Signs.People;")
+	var people []Person
+	(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("Sign.Planet").Find(&people)
+	for _, person := range people {
+		res, err := o.AuthorizedResources(person, "", "Planet")
+		if err != nil {
+			t.Error(err.Error())
+		}
+		onePlanetNamed(person.Sign.Planet.Name, res, t)
+	}
+}
+
+func TestNestedRelationshipManySingle(t *testing.T) {
+	o := testOso()
+	o.LoadString("allow(person: Person, _, planet: Planet) if person.Sign in planet.Signs;")
+	var people []Person
+	(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("Sign.Planet").Find(&people)
+	for _, person := range people {
+		res, err := o.AuthorizedResources(person, "", "Planet")
+		if err != nil {
+			t.Error(err.Error())
+		}
+		onePlanetNamed(person.Sign.Planet.Name, res, t)
+	}
+}
+
+func hasPersonNamed(name string, res []interface{}, t *testing.T) {
+	for _, i := range res {
+		if name == i.(Person).Name {
+			return
+		}
+	}
+	t.Errorf("Expected %s, got %v", name, res)
+}
+
+func noPersonNamed(name string, res []interface{}, t *testing.T) {
+	for _, i := range res {
+		if name == i.(Person).Name {
+			t.Errorf("Unexpected %s", name)
+		}
+	}
+}
+
+func TestAuthorizeScalarAttributeCondition(t *testing.T) {
+	o := testOso()
+	o.LoadString("allow(sign: Sign, _, person: Person) if sign = person.Sign and sign.Planet.Name = \"jupiter\"; allow(_: Sign, _, person: Person) if person.Name = \"sam\" and person.Sign.Name = \"pisces\"; allow(sign: Sign, _, person: Person) if person.Sign.Element = \"air\" and sign.Element = \"earth\";")
+
+	var signs []Sign
+	(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("Planet").Find(&signs)
+	for _, sign := range signs {
+		res, err := o.AuthorizedResources(sign, "", "Person")
+		if err != nil {
+			t.Error(err.Error())
+		}
+		var people []Person
+		(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("Sign").Find(&people)
+		for _, person := range people {
+			if person.SignID == sign.ID && sign.Planet.Name == "jupiter" || person.Name == "sam" && person.Sign.Name == "pisces" || sign.Element == "earth" && person.Sign.Element == "air" {
+				hasPersonNamed(person.Name, res, t)
+			} else {
+				noPersonNamed(person.Name, res, t)
+			}
+		}
+	}
+}
+
+func TestAuthorizeScalarAttributeEq(t *testing.T) {
+	o := testOso()
+	o.LoadString("allow(_: Person, _, sign: Sign) if sign.Element = \"fire\"; allow(person: Person, _, sign: Sign) if sign = person.Sign;")
+	var sam Person
+	(*o.GetHost().GetAdapter()).(GormAdapter).db.Where("name = ?", "sam").Preload("Sign").First(&sam)
+	res, err := o.AuthorizedResources(sam, "", "Sign")
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	if len(res) != 4 {
+		t.Errorf("Expected 4 results, got %d", len(res))
 	}
 }
