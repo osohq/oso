@@ -265,8 +265,8 @@ func testOso() oso.Oso {
 
 func TestFieldCmpRelField(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(_, _, p: Person) if p.Name = p.Sign.Name;")
-	res, err := o.AuthorizedResources("gwen", "read", "Person")
+	o.LoadString("allow(_, _, person: Person{Name}) if Name = person.Sign.Name;")
+	res, err := o.AuthorizedResources("", "", "Person")
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -317,7 +317,9 @@ func oneSignNamed(name string, res []interface{}, t *testing.T) {
 
 func TestOr(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(_, _, sign: Sign) if sign.Name = \"leo\" or sign.Element = \"air\";")
+	o.LoadString(`
+    allow(_, _, _: Sign{Name, Element}) if
+      Name = "leo" or Element = "air";`)
 	res, err := o.AuthorizedResources("", "", "Sign")
 	if err != nil {
 		t.Error(err.Error())
@@ -336,7 +338,7 @@ func TestOr(t *testing.T) {
 
 func TestFieldCmpRelRelField(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(_, _, p: Person) if p.Name = p.Sign.Planet.Name;")
+	o.LoadString("allow(_, _, p: Person{Name}) if Name = p.Sign.Planet.Name;")
 	res, err := o.AuthorizedResources("", "", "Person")
 	if err != nil {
 		t.Error(err.Error())
@@ -346,8 +348,8 @@ func TestFieldCmpRelRelField(t *testing.T) {
 
 func TestInWithScalar(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(_, _, p: Planet) if s in p.Signs and s.Name = \"scorpio\";")
-	res, err := o.AuthorizedResources("gwen", "read", "Planet")
+	o.LoadString(`allow(_, _, _: Planet{Signs}) if sign in Signs and sign.Name = "scorpio";`)
+	res, err := o.AuthorizedResources("", "", "Planet")
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -356,7 +358,9 @@ func TestInWithScalar(t *testing.T) {
 
 func TestParamField(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(planet, element, sign: Sign) if sign.Planet = planet and sign.Element = element;")
+	o.LoadString(`
+    allow(planet, element, sign: Sign) if
+      sign.Planet = planet and sign.Element = element;`)
 	var signs []Sign
 	(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("Planet").Find(&signs)
 	for _, sign := range signs {
@@ -370,8 +374,8 @@ func TestParamField(t *testing.T) {
 
 func TestFieldNeq(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(_, _, p: Person) if p.Name != p.Sign.Name;")
-	res, err := o.AuthorizedResources("gwen", "read", "Person")
+	o.LoadString("allow(_, _, p: Person{Name}) if Name != p.Sign.Name;")
+	res, err := o.AuthorizedResources("", "", "Person")
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -387,8 +391,8 @@ func TestFieldNeq(t *testing.T) {
 
 func TestVarInValue(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(_, _, _: Person{Name}) if Name in [\"leo\", \"mercury\"];")
-	res, err := o.AuthorizedResources("gwen", "get", "Person")
+	o.LoadString(`allow(_, _, _: Person{Name}) if Name in ["leo", "mercury"];`)
+	res, err := o.AuthorizedResources("", "", "Person")
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -400,7 +404,7 @@ func TestVarInValue(t *testing.T) {
 
 func TestNotInRelation(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(s: Sign, _, p: Person) if not p in s.People;")
+	o.LoadString("allow(_: Sign{People}, _, person: Person) if not person in People;")
 	var signs []Sign
 	(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("People").Find(&signs)
 	for _, sign := range signs {
@@ -421,7 +425,9 @@ func TestNotInRelation(t *testing.T) {
 
 func TestForallNotInRelation(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(planet: Planet, _, person: Person) if forall(sign in planet.Signs, not person in sign.People);")
+	o.LoadString(`
+    allow(_: Planet{Signs}, _, person: Person) if
+      forall(sign in Signs, not person in sign.People);`)
 	var planets []Planet
 	(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("Signs.People").Find(&planets)
 	for _, planet := range planets {
@@ -442,7 +448,11 @@ func TestForallNotInRelation(t *testing.T) {
 
 func TestForallForall(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(planet: Planet, _, _) if forall(sign in planet.Signs, forall(person in sign.People, person.Name != \"sam\"));")
+	o.LoadString(`
+    allow(_: Planet{Signs}, _, _) if
+      forall(sign in Signs,
+        forall(person in sign.People,
+          person.Name != "sam"));`)
 	var jupiter Planet
 	(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("Signs.People").First(&jupiter, 6)
 	if jupiter.Name != "jupiter" {
@@ -459,7 +469,9 @@ func TestForallForall(t *testing.T) {
 
 func TestForall(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(planet: Planet, _, _: Person) if forall(sign in planet.Signs, sign.Element != \"fire\");")
+	o.LoadString(`
+    allow(_: Planet{Signs}, _, _) if
+      forall(sign in Signs, sign.Element != "fire");`)
 	var planets []Planet
 	(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("Signs").Find(&planets)
 	for _, planet := range planets {
@@ -482,12 +494,31 @@ func TestSpecializers(t *testing.T) {
 }
 
 func TestParentChildCases(t *testing.T) {
-	// TODO
+	o := testOso()
+	o.LoadString(`
+    allow(person: Person, 0, sign: Sign) if sign = person.Sign;
+    allow(person: Person, 1, _: Sign{People}) if person in People;
+    # FIXME ID ???
+    allow(person: Person{SignID}, 2, _: Sign{ID: SignID, People}) if person in People;`)
+	for i := 2; i <= 2; i++ {
+		var people []Person
+		(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("Sign").Find(&people)
+		for _, person := range people {
+			res, err := o.AuthorizedResources(person, i, "Sign")
+			if err != nil {
+				t.Error(err.Error())
+			}
+			oneSignNamed(person.Sign.Name, res, t)
+		}
+	}
+
 }
 
 func TestVarInVars(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(_, _, sign: Sign) if person in sign.People and person.Name = \"eden\";")
+	o.LoadString(`
+    allow(_, _, _: Sign{People}) if
+      person in People and person.Name = "eden";`)
 	res, err := o.AuthorizedResources("", "", "Sign")
 	if err != nil {
 		t.Error(err.Error())
@@ -497,7 +528,9 @@ func TestVarInVars(t *testing.T) {
 
 func TestScalarInList(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(_, _, sign: Sign) if sign.Planet.Name in [\"sun\", \"moon\"];")
+	o.LoadString(`
+    allow(_, _, sign: Sign) if
+      sign.Planet.Name in ["sun", "moon"];`)
 	res, err := o.AuthorizedResources("", "", "Sign")
 	if err != nil {
 		t.Error(err.Error())
@@ -517,7 +550,8 @@ func TestScalarInList(t *testing.T) {
 
 func TestRelationship(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(_, _, person: Person) if person.Name = \"eden\" and person.Sign.Name = \"cancer\";")
+	o.LoadString(`
+    allow(_, _, person: Person{Name: "eden"}) if person.Sign.Name = "cancer";`)
 	res, err := o.AuthorizedResources("", "", "Person")
 	if err != nil {
 		t.Error(err.Error())
@@ -527,7 +561,7 @@ func TestRelationship(t *testing.T) {
 
 func TestNeq(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(_, action, sign: Sign) if sign.Name != action;")
+	o.LoadString("allow(_, action, _: Sign{Name}) if Name != action;")
 	res, err := o.AuthorizedResources("", "libra", "Sign")
 	if err != nil {
 		t.Error(err.Error())
@@ -544,7 +578,7 @@ func TestNeq(t *testing.T) {
 
 func TestNoRelationships(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(_, _, sign: Sign) if sign.Element = \"fire\";")
+	o.LoadString(`allow(_, _, _: Sign{Element: "fire"});`)
 	res, err := o.AuthorizedResources("", "", "Sign")
 	if err != nil {
 		t.Error(err.Error())
@@ -572,7 +606,7 @@ func TestPartialIsaWithPath(t *testing.T) {
 
 func TestUnifyIns(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(_, _, planet: Planet) if s in planet.Signs and t in planet.Signs and s = t;")
+	o.LoadString("allow(_, _, _: Planet{Signs}) if s in Signs and t in Signs and s = t;")
 	res, err := o.AuthorizedResources("", "", "Planet")
 	if err != nil {
 		t.Error(err.Error())
@@ -590,7 +624,7 @@ func TestUnifyIns(t *testing.T) {
 
 func TestRedundantInOnSameField(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(_, _, sign: Sign) if a in sign.People and b in sign.People and a != b;")
+	o.LoadString("allow(_, _, _: Sign{People}) if a in People and b in People and a != b;")
 	res, err := o.AuthorizedResources("", "", "Sign")
 
 	if err != nil {
@@ -603,7 +637,7 @@ func TestRedundantInOnSameField(t *testing.T) {
 
 func TestInWithConstraintsButNoMatchingObject(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(_, _, sign: Sign) if p in sign.People and p.Name = \"graham\";")
+	o.LoadString(`allow(_, _, _: Sign{People}) if p in People and p.Name = "graham";`)
 	res, err := o.AuthorizedResources("", "", "Sign")
 
 	if err != nil {
@@ -616,7 +650,7 @@ func TestInWithConstraintsButNoMatchingObject(t *testing.T) {
 
 func TestEmptyConstraintsIn(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(_, _, planet: Planet) if _ in planet.Signs;")
+	o.LoadString("allow(_, _, _: Planet{Signs}) if _ in Signs;")
 	res, err := o.AuthorizedResources("", "", "Planet")
 
 	if err != nil {
@@ -635,7 +669,7 @@ func TestEmptyConstraintsIn(t *testing.T) {
 
 func TestPartialInCollection(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(planet: Planet, _, sign: Sign) if sign in planet.Signs;")
+	o.LoadString("allow(_: Planet{Signs}, _, sign) if sign in Signs;")
 	var planets []Planet
 	(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("Signs").Find(&planets)
 	for _, planet := range planets {
@@ -653,7 +687,9 @@ func TestPartialInCollection(t *testing.T) {
 
 func TestNestedRelationshipManyManyConstrained(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(person: Person, _, planet: Planet) if person.Name = \"eden\" and sign in planet.Signs and person in sign.People;")
+	o.LoadString(`
+    allow(person: Person{Name: "eden"}, _, _: Planet{Signs}) if
+      sign in Signs and person in sign.People;`)
 	var people []Person
 	(*o.GetHost().GetAdapter()).(GormAdapter).db.Find(&people)
 	for _, person := range people {
@@ -672,7 +708,9 @@ func TestNestedRelationshipManyManyConstrained(t *testing.T) {
 
 func TestNestedRelationshipManyMany(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(person: Person, _, planet: Planet) if person in planet.Signs.People;")
+	o.LoadString(`
+    allow(person: Person, _, _: Planet{Signs}) if
+      sign in Signs and person in sign.People;`)
 	var people []Person
 	(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("Sign.Planet").Find(&people)
 	for _, person := range people {
@@ -717,7 +755,13 @@ func noPersonNamed(name string, res []interface{}, t *testing.T) {
 
 func TestAuthorizeScalarAttributeCondition(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(sign: Sign, _, person: Person) if sign = person.Sign and sign.Planet.Name = \"jupiter\"; allow(_: Sign, _, person: Person) if person.Name = \"sam\" and person.Sign.Name = \"pisces\"; allow(sign: Sign, _, person: Person) if person.Sign.Element = \"air\" and sign.Element = \"earth\";")
+	o.LoadString(`
+    allow(sign, _, person: Person) if
+      sign = person.Sign and sign.Planet.Name = "jupiter";
+    allow(_, _, person: Person{Name: "sam"}) if
+      person.Sign.Name = "pisces";
+    allow(_: Sign{Element: "earth"}, _, person: Person) if
+      person.Sign.Element = "air";`)
 
 	var signs []Sign
 	(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("Planet").Find(&signs)
@@ -740,7 +784,9 @@ func TestAuthorizeScalarAttributeCondition(t *testing.T) {
 
 func TestAuthorizeScalarAttributeEq(t *testing.T) {
 	o := testOso()
-	o.LoadString("allow(_: Person, _, sign: Sign) if sign.Element = \"fire\"; allow(person: Person, _, sign: Sign) if sign = person.Sign;")
+	o.LoadString(`
+    allow(_, _, _: Sign{Element: "fire"});
+    allow(person, _, sign: Sign) if sign = person.Sign;`)
 	var sam Person
 	(*o.GetHost().GetAdapter()).(GormAdapter).db.Where("name = ?", "sam").Preload("Sign").First(&sam)
 	res, err := o.AuthorizedResources(sam, "", "Sign")
