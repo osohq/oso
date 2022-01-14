@@ -220,7 +220,7 @@ func (a TestAdapter) BuildQuery(filter *types.Filter) (interface{}, error) {
 	return nil, nil
 }
 
-func (a TestAdapter) ExecuteQuery(query interface{}) (interface{}, error) {
+func (a TestAdapter) ExecuteQuery(query interface{}) ([]interface{}, error) {
 	return nil, nil
 }
 
