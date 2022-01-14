@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use super::bindings::Binding;
 use super::error::{PolarError, PolarResult};
-use super::formatting::source_lines;
+// use super::formatting::source_lines;
 use super::kb::KnowledgeBase;
 use super::partial::simplify_bindings;
 use super::terms::*;
@@ -86,10 +86,11 @@ pub struct Debugger {
 impl Debugger {
     /// Retrieve the original source line (and, optionally, additional lines of context) for the
     /// current query.
-    fn query_source(&self, query: &Term, num_lines: usize) -> String {
+    fn query_source(&self, query: &Term, _num_lines: usize) -> String {
         query.parsed_context().map_or_else(
             || "".to_string(),
-            |context| source_lines(&context.source, context.left, num_lines),
+            |_| "".to_string(),
+            // |context| source_lines(&context.source, context.left, num_lines),
         )
     }
 

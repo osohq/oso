@@ -26,7 +26,7 @@ use crate::partial::{simplify_bindings_opt, simplify_partial, sub_this, IsaConst
 use crate::rewrites::Renamer;
 use crate::rules::*;
 use crate::runnable::Runnable;
-use crate::sources::Context;
+use crate::sources::{Context, SOURCES};
 use crate::terms::*;
 use crate::traces::*;
 use crate::visitor::{walk_term, Visitor};
@@ -2782,8 +2782,12 @@ impl PolarVirtualMachine {
         let source_info = term.parsed_context();
 
         let mut source_string = if let Some(context) = source_info {
-            let chars = context.source.src.chars();
-            chars.take(context.right).skip(context.left).collect()
+            if let Some(source) = SOURCES.read().unwrap().get(&context.src_id) {
+                let chars = source.src.chars();
+                chars.take(context.right).skip(context.left).collect()
+            } else {
+                term.to_string()
+            }
         } else {
             term.to_string()
         };

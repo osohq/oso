@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
-use super::sources::{Context, Source, SourceInfo};
+use super::sources::{Context, SourceInfo};
 use super::terms::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -64,7 +64,7 @@ impl Rule {
 
     /// Creates a new rule from the parser
     pub fn new_from_parser(
-        source: Arc<Source>,
+        src_id: u64,
         left: usize,
         right: usize,
         name: Symbol,
@@ -75,7 +75,7 @@ impl Rule {
             name,
             params,
             body,
-            source_info: SourceInfo::parser(source, left, right),
+            source_info: SourceInfo::parser(src_id, left, right),
             required: false,
         }
     }

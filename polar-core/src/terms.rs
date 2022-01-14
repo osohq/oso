@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use super::error::{invalid_state, PolarResult};
 pub use super::numerics::Numeric;
 use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
-use super::sources::{Context, Source, SourceInfo};
+use super::sources::{Context, SourceInfo};
 use super::visitor::{walk_operation, walk_term, Visitor};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
@@ -336,9 +336,9 @@ impl Term {
     }
 
     /// Creates a new term from the parser
-    pub fn new_from_parser(source: Arc<Source>, left: usize, right: usize, value: Value) -> Self {
+    pub fn new_from_parser(src_id: u64, left: usize, right: usize, value: Value) -> Self {
         Self {
-            source_info: SourceInfo::parser(source, left, right),
+            source_info: SourceInfo::parser(src_id, left, right),
             value: Arc::new(value),
         }
     }

@@ -48,11 +48,15 @@ impl Polar {
     pub fn diagnostic_load(&self, sources: Vec<Source>) -> Vec<Diagnostic> {
         // Separate function so that errors returned with `?` are captured.
         fn load_source(source: Source, kb: &mut KnowledgeBase) -> PolarResult<Vec<Diagnostic>> {
+            let src_id = kb.new_id();
+            {
+                SOURCES.write().unwrap().insert(src_id, source.clone());
+            }
             if let Some(ref filename) = source.filename {
-                kb.add_source(filename, &source.src)?;
+                kb.add_source(src_id, filename, &source.src)?;
             }
             // TODO(gj): we still bomb out at the first ParseError.
-            let mut lines = parser::parse_lines(source)?;
+            let mut lines = parser::parse_lines(src_id, &source.src)?;
             lines.reverse();
             let mut diagnostics = vec![];
             while let Some(line) = lines.pop() {
@@ -203,7 +207,11 @@ impl Polar {
     }
 
     pub fn new_query(&self, src: &str, trace: bool) -> PolarResult<Query> {
-        parser::parse_query(src).map(|term| self.new_query_from_term(term, trace))
+        let src_id = { self.kb.read().unwrap().new_id() };
+        {
+            SOURCES.write().unwrap().insert(src_id, Source::new(src));
+        }
+        parser::parse_query(src_id, src).map(|term| self.new_query_from_term(term, trace))
     }
 
     pub fn new_query_from_term(&self, mut term: Term, trace: bool) -> Query {

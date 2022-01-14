@@ -1,32 +1,43 @@
-use std::{fmt, sync::Arc};
+use std::{
+    collections::HashMap,
+    fmt,
+    sync::{Arc, RwLock},
+};
 
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 
 use crate::{formatting::source_lines, lexer::loc_to_pos};
 
+lazy_static! {
+    pub(crate) static ref SOURCES: Arc<RwLock<HashMap<u64, Source>>> = Default::default();
+}
+
 /// Parsed source context.
 #[derive(Clone, Debug)]
 pub struct Context {
-    pub source: Arc<Source>,
-    /// Start location within `source`.
+    pub src_id: u64,
+    /// Start location within source.
     pub left: usize,
-    /// End location within `source`.
+    /// End location within source.
     pub right: usize,
 }
 
 impl fmt::Display for Context {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.source_position())?;
-        let lines = source_lines(&self.source, self.left, 0).replace('\n', "\n\t");
-        writeln!(f, ":\n\t{}", lines)?;
+        if let Some(source) = SOURCES.read().unwrap().get(&self.src_id) {
+            let lines = source_lines(source, self.left, 0).replace('\n', "\n\t");
+            writeln!(f, ":\n\t{}", lines)?;
+        }
         Ok(())
     }
 }
 
 impl Context {
-    pub(crate) fn new(source: Arc<Source>, left: usize, right: usize) -> Self {
+    pub(crate) fn new(src_id: u64, left: usize, right: usize) -> Self {
         Self {
-            source,
+            src_id,
             left,
             right,
         }
@@ -34,10 +45,12 @@ impl Context {
 
     pub(crate) fn source_position(&self) -> String {
         let mut f = String::new();
-        let (row, column) = loc_to_pos(&self.source.src, self.left);
-        f += &format!(" at line {}, column {}", row + 1, column + 1);
-        if let Some(ref filename) = self.source.filename {
-            f += &format!(" of file {}", filename);
+        if let Some(source) = SOURCES.read().unwrap().get(&self.src_id) {
+            let (row, column) = loc_to_pos(&source.src, self.left);
+            f += &format!(" at line {}, column {}", row + 1, column + 1);
+            if let Some(ref filename) = source.filename {
+                f += &format!(" of file {}", filename);
+            }
         }
         f
     }
@@ -63,14 +76,14 @@ impl SourceInfo {
         Self::Ffi
     }
 
-    pub(crate) fn parser(source: Arc<Source>, left: usize, right: usize) -> Self {
-        Self::Parser(Context::new(source, left, right))
+    pub(crate) fn parser(src_id: u64, left: usize, right: usize) -> Self {
+        Self::Parser(Context::new(src_id, left, right))
     }
 }
 
 // TODO(gj): `Serialize` makes some `polar-wasm-api` tests easier to write. We could look into
 // https://serde.rs/remote-derive.html if we cared to preserve that while removing this impl.
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Source {
     pub filename: Option<String>,
     pub src: String,

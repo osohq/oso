@@ -622,7 +622,12 @@ impl KnowledgeBase {
     }
 
     // TODO(gj): Remove this fn & `FileLoading` error variant. These checks don't spark joy.
-    pub(crate) fn add_source(&mut self, filename: &str, contents: &str) -> PolarResult<()> {
+    pub(crate) fn add_source(
+        &mut self,
+        src_id: u64,
+        filename: &str,
+        contents: &str,
+    ) -> PolarResult<()> {
         let seen_filename = self.loaded_content.values().any(|name| name == filename);
         match self.loaded_content.insert(contents.into(), filename.into()) {
             Some(other_file) if other_file == filename => {
@@ -638,14 +643,7 @@ impl KnowledgeBase {
             )),
             _ => Ok(()),
         }
-        .map_err(|msg| {
-            ValidationError::FileLoading {
-                filename: filename.into(),
-                contents: contents.into(),
-                msg,
-            }
-            .into()
-        })
+        .map_err(|msg| ValidationError::FileLoading { src_id, msg }.into())
     }
 
     /// Check that all relations declared across all resource blocks have been registered as
@@ -833,7 +831,7 @@ mod tests {
     #[test]
     fn test_add_source_file_validation() {
         fn expect_error(kb: &mut KnowledgeBase, name: &str, contents: &str, expected: &str) {
-            let err = kb.add_source(name, contents).unwrap_err();
+            let err = kb.add_source(0, name, contents).unwrap_err();
             let msg = match err.unwrap_validation() {
                 FileLoading { msg, .. } => msg,
                 e => panic!("Unexpected error: {}", e),
@@ -848,7 +846,7 @@ mod tests {
         let filename2 = "g";
 
         // Load source1.
-        kb.add_source(filename1, contents1).unwrap();
+        kb.add_source(0, filename1, contents1).unwrap();
 
         // Cannot load source1 a second time.
         let expected = format!("File {} has already been loaded.", filename1);
