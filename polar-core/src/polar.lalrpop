@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use std::collections::BTreeMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::lexer::{self, Token};
 use crate::parser::Line;
@@ -16,7 +16,7 @@ use super::ValueOrLogical;
 
 use lalrpop_util::ParseError;
 
-grammar(source: &Rc<Source>);
+grammar(source: &Arc<Source>);
 
 extern {
     type Location = usize;

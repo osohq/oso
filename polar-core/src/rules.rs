@@ -1,5 +1,4 @@
 use std::collections::{BTreeSet, HashMap};
-use std::rc::Rc;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -65,7 +64,7 @@ impl Rule {
 
     /// Creates a new rule from the parser
     pub fn new_from_parser(
-        source: Rc<Source>,
+        source: Arc<Source>,
         left: usize,
         right: usize,
         name: Symbol,

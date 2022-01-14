@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use lalrpop_util::{lalrpop_mod, ParseError};
 
@@ -37,7 +37,7 @@ pub enum Line {
 
 fn lalrpop_error_to_polar_error(
     e: ParseError<usize, lexer::Token, error::ParseErrorKind>,
-    source: Rc<Source>,
+    source: Arc<Source>,
 ) -> error::PolarError {
     let kind = match e {
         ParseError::InvalidToken { location: loc } => error::ParseErrorKind::InvalidToken { loc },
@@ -68,14 +68,14 @@ fn lalrpop_error_to_polar_error(
 }
 
 pub fn parse_lines(source: Source) -> PolarResult<Vec<Line>> {
-    let source = Rc::new(source);
+    let source = Arc::new(source);
     polar::LinesParser::new()
         .parse(&source, Lexer::new(&source.src))
         .map_err(|e| lalrpop_error_to_polar_error(e, source))
 }
 
 pub fn parse_query(query: &str) -> PolarResult<Term> {
-    let source = Rc::new(Source::new(query));
+    let source = Arc::new(Source::new(query));
     polar::TermParser::new()
         .parse(&source, Lexer::new(query))
         .map_err(|e| lalrpop_error_to_polar_error(e, source))
@@ -83,7 +83,7 @@ pub fn parse_query(query: &str) -> PolarResult<Term> {
 
 #[cfg(test)]
 pub fn parse_rules(rules: &str) -> PolarResult<Vec<Rule>> {
-    let source = Rc::new(Source::new(rules));
+    let source = Arc::new(Source::new(rules));
     polar::RulesParser::new()
         .parse(&source, Lexer::new(rules))
         .map_err(|e| lalrpop_error_to_polar_error(e, source))
