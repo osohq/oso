@@ -63,7 +63,9 @@ impl fmt::Debug for SourceInfo {
         match self {
             // Ignore inner `Context` when `Debug`-formatting `SourceInfo::Parser`.
             Self::Parser(_) => f.debug_struct("SourceInfo::Parser").finish(),
-            _ => self.fmt(f),
+            Self::TemporaryVariable => f.debug_struct("SourceInfo::TemporaryVariable").finish(),
+            Self::Ffi => f.debug_struct("SourceInfo::Ffi").finish(),
+            Self::Test => f.debug_struct("SourceInfo::Test").finish(),
         }
     }
 }
