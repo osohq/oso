@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use super::diagnostic::Diagnostic;
-use super::error::ValidationError;
+use super::error::{PolarError, ValidationError};
 use super::kb::*;
 use super::rules::*;
 use super::terms::*;
@@ -28,18 +28,14 @@ impl<'kb> SingletonVisitor<'kb> {
             .into_iter()
             .flat_map(|(sym, term)| term.map(|t| (sym, t)))
             .collect::<Vec<_>>();
-        singletons.sort_by_key(|(_, term)| term.offset());
+        singletons.sort_by_key(|(_, term)| term.parsed_context().map_or(0, |context| context.left));
         singletons
             .into_iter()
             .map(|(sym, term)| {
                 if let Value::Pattern(_) = term.value() {
-                    Diagnostic::Warning(
-                        ValidationWarning::UnknownSpecializer { term, sym }.with_context(self.kb),
-                    )
+                    Diagnostic::Warning(ValidationWarning::UnknownSpecializer { term, sym }.into())
                 } else {
-                    Diagnostic::Error(
-                        ValidationError::SingletonVariable { term }.with_context(self.kb),
-                    )
+                    Diagnostic::Error(ValidationError::SingletonVariable { term }.into())
                 }
             })
             .collect()
@@ -74,15 +70,13 @@ pub fn check_singletons(rule: &Rule, kb: &KnowledgeBase) -> Vec<Diagnostic> {
     visitor.warnings()
 }
 
-struct AndOrPrecendenceCheck<'kb> {
-    kb: &'kb KnowledgeBase,
+struct AndOrPrecendenceCheck {
     unparenthesized_expr: Vec<Term>,
 }
 
-impl<'kb> AndOrPrecendenceCheck<'kb> {
-    fn new(kb: &'kb KnowledgeBase) -> Self {
+impl AndOrPrecendenceCheck {
+    fn new() -> Self {
         Self {
-            kb,
             unparenthesized_expr: Default::default(),
         }
     }
@@ -90,16 +84,12 @@ impl<'kb> AndOrPrecendenceCheck<'kb> {
     fn warnings(self) -> Vec<Diagnostic> {
         self.unparenthesized_expr
             .into_iter()
-            .map(|term| {
-                Diagnostic::Warning(
-                    ValidationWarning::AmbiguousPrecedence { term }.with_context(self.kb),
-                )
-            })
+            .map(|term| Diagnostic::Warning(ValidationWarning::AmbiguousPrecedence { term }.into()))
             .collect()
     }
 }
 
-impl<'kb> Visitor for AndOrPrecendenceCheck<'kb> {
+impl Visitor for AndOrPrecendenceCheck {
     fn visit_operation(&mut self, o: &Operation) {
         if (o.operator == Operator::And || o.operator == Operator::Or) && o.args.len() > 1 {
             for term in o.args.iter().filter(|t| {
@@ -111,13 +101,13 @@ impl<'kb> Visitor for AndOrPrecendenceCheck<'kb> {
                         && op.operator != o.operator
                 )
             }) {
-                let span = term.span().unwrap();
-                let source = self.kb.get_term_source(term).unwrap();
-
-                // check if source _before_ the term contains an opening
-                // parenthesis
-                if !source.src[..span.0].trim().ends_with('(') {
-                    self.unparenthesized_expr.push(term.clone());
+                if let Some(context) = term.parsed_context() {
+                    // check if source _before_ the term contains an opening
+                    // parenthesis
+                    let preceding_source = context.source.src.get(..context.left);
+                    if preceding_source.map_or(false, |s| !s.trim().ends_with('(')) {
+                        self.unparenthesized_expr.push(term.clone());
+                    }
                 }
             }
         }
@@ -125,8 +115,8 @@ impl<'kb> Visitor for AndOrPrecendenceCheck<'kb> {
     }
 }
 
-pub fn check_ambiguous_precedence(rule: &Rule, kb: &KnowledgeBase) -> Vec<Diagnostic> {
-    let mut visitor = AndOrPrecendenceCheck::new(kb);
+pub fn check_ambiguous_precedence(rule: &Rule) -> Vec<Diagnostic> {
+    let mut visitor = AndOrPrecendenceCheck::new();
     walk_rule(&mut visitor, rule);
     visitor.warnings()
 }
@@ -139,7 +129,7 @@ pub fn check_no_allow_rule(kb: &KnowledgeBase) -> Option<Diagnostic> {
         None
     } else {
         Some(Diagnostic::Warning(
-            ValidationWarning::MissingAllowRule.with_context(kb),
+            ValidationWarning::MissingAllowRule.into(),
         ))
     }
 }
@@ -199,14 +189,15 @@ impl<'kb> UndefinedRuleCallVisitor<'kb> {
         }
     }
 
-    fn errors(self) -> Vec<ValidationError> {
+    fn errors(self) -> Vec<Diagnostic> {
         self.call_terms
             .into_iter()
             .filter(|term| {
-                let call = term.value().as_call().unwrap();
-                !self.defined_rules.contains(&call.name)
+                term.value()
+                    .as_call()
+                    .map_or(false, |call| !self.defined_rules.contains(&call.name))
             })
-            .map(|term| ValidationError::UndefinedRuleCall { term })
+            .map(|term| PolarError::from(ValidationError::UndefinedRuleCall { term }).into())
             .collect()
     }
 }
@@ -231,11 +222,7 @@ pub fn check_undefined_rule_calls(kb: &KnowledgeBase) -> Vec<Diagnostic> {
     for rule in kb.get_rules().values() {
         visitor.visit_generic_rule(rule);
     }
-    visitor
-        .errors()
-        .into_iter()
-        .map(|e| Diagnostic::Error(e.with_context(kb)))
-        .collect()
+    visitor.errors()
 }
 
 #[cfg(test)]

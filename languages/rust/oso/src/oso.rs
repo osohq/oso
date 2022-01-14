@@ -186,10 +186,7 @@ impl Oso {
             let mut f = File::open(&file)?;
             let mut src = String::new();
             f.read_to_string(&mut src)?;
-            sources.push(Source {
-                src,
-                filename: Some(filename),
-            });
+            sources.push(Source::new_with_name(filename, src));
         }
 
         self.load_sources(sources)
@@ -202,10 +199,7 @@ impl Oso {
     /// ```
     pub fn load_str(&mut self, src: &str) -> crate::Result<()> {
         // TODO(gj): emit... some sort of warning?
-        self.load_sources(vec![Source {
-            src: src.to_owned(),
-            filename: None,
-        }])
+        self.load_sources(vec![Source::new(src)])
     }
 
     /// Query the knowledge base. This can be an allow query or any other polar expression.

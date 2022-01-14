@@ -15,7 +15,7 @@ Oso works with your favorite testing framework. We'll demonstrate with[pytest](h
 
 You can test your policy through the same API you call your policy with `oso.authorize()`.
 
-This example has one kind of resource, a `Repository` (like GitHub or GitLab). Users have [roles](https://www.notion.so/Outline-for-Testing-b6ab45097c214059803457de437f9aba) of `contributor`, `maintainer`, and `admin` on each repository. Someone who has `admin` permissions on one repository does not have `admin` permissions for a different repository.
+This example has one kind of resource, a `Repository` (like GitHub or GitLab). Users have roles of `contributor`, `maintainer`, and `admin` on each repository. Someone who has `admin` permissions on one repository does not have `admin` permissions for a different repository.
 
 Initialize your Oso instance in a test fixture.
 

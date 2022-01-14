@@ -46,23 +46,20 @@ impl Polar {
 
     /// Load `sources` into the KB, returning compile-time diagnostics accumulated during the load.
     pub fn diagnostic_load(&self, sources: Vec<Source>) -> Vec<Diagnostic> {
-        // we extract this into a separate function
-        // so that any errors returned with `?` are captured
-        fn load_source(
-            source_id: u64,
-            source: &Source,
-            kb: &mut KnowledgeBase,
-        ) -> PolarResult<Vec<Diagnostic>> {
-            let mut lines = parser::parse_lines(source_id, &source.src)
-                // TODO(gj): we still bomb out at the first ParseError.
-                .map_err(|e| e.with_context(source.clone()))?;
+        // Separate function so that errors returned with `?` are captured.
+        fn load_source(source: Source, kb: &mut KnowledgeBase) -> PolarResult<Vec<Diagnostic>> {
+            if let Some(ref filename) = source.filename {
+                kb.add_source(filename, &source.src)?;
+            }
+            // TODO(gj): we still bomb out at the first ParseError.
+            let mut lines = parser::parse_lines(source)?;
             lines.reverse();
             let mut diagnostics = vec![];
             while let Some(line) = lines.pop() {
                 match line {
                     parser::Line::Rule(rule) => {
                         diagnostics.append(&mut check_singletons(&rule, kb));
-                        diagnostics.append(&mut check_ambiguous_precedence(&rule, kb));
+                        diagnostics.append(&mut check_ambiguous_precedence(&rule));
                         let rule = rewrite_rule(rule, kb);
                         kb.add_rule(rule);
                     }
@@ -84,9 +81,9 @@ impl Polar {
                             diagnostics.push(Diagnostic::Error(
                                 ValidationError::InvalidRuleType {
                                     rule_type,
-                                    msg: "Rule types cannot contain dot lookups.".to_owned(),
+                                    msg: "Rule types cannot contain dot lookups.".into(),
                                 }
-                                .with_context(&*kb),
+                                .into(),
                             ));
                         } else {
                             kb.add_rule_type(rule_type);
@@ -100,10 +97,7 @@ impl Polar {
                         let (block, mut errors) =
                             resource_block_from_productions(keyword, resource, productions);
                         errors.append(&mut block.add_to_kb(kb));
-                        let errors = errors
-                            .into_iter()
-                            .map(|e| Diagnostic::Error(e.with_context(&*kb)));
-                        diagnostics.append(&mut errors.collect());
+                        diagnostics.extend(errors.into_iter().map(Into::into));
                     }
                 }
             }
@@ -113,10 +107,8 @@ impl Polar {
         let mut kb = self.kb.write().unwrap();
         let mut diagnostics = vec![];
 
-        for source in &sources {
-            let result = kb.add_source(source.clone());
-            let result = result.and_then(|source_id| load_source(source_id, source, &mut kb));
-            match result {
+        for source in sources {
+            match load_source(source, &mut kb) {
                 Ok(mut ds) => diagnostics.append(&mut ds),
                 Err(e) => diagnostics.push(Diagnostic::Error(e)),
             }
@@ -131,13 +123,7 @@ impl Polar {
         }
 
         // Rewrite shorthand rules in resource blocks before validating rule types.
-        diagnostics.append(
-            &mut kb
-                .rewrite_shorthand_rules()
-                .into_iter()
-                .map(|e| Diagnostic::Error(e.with_context(&*kb)))
-                .collect(),
-        );
+        diagnostics.extend(kb.rewrite_shorthand_rules().into_iter().map(Into::into));
 
         // NOTE(gj): need to bomb out before rule type validation in case additional rule types
         // were defined later on in the file that encountered the unrecoverable error. Those
@@ -151,7 +137,9 @@ impl Polar {
 
         // Generate appropriate rule_type definitions using the types contained in policy resource
         // blocks.
-        kb.create_resource_specific_rule_types();
+        if let Err(e) = kb.create_resource_specific_rule_types() {
+            diagnostics.push(e.into());
+        }
 
         // check rules are valid against rule types
         diagnostics.append(&mut kb.validate_rules());
@@ -165,7 +153,7 @@ impl Polar {
 
         // Check for has_permission calls alongside resource block definitions
         if let Some(w) = check_resource_blocks_missing_has_permission(&kb) {
-            diagnostics.push(Diagnostic::Warning(w.with_context(&*kb)))
+            diagnostics.push(Diagnostic::Warning(w.into()))
         };
 
         diagnostics
@@ -175,7 +163,7 @@ impl Polar {
     pub fn load(&self, sources: Vec<Source>) -> PolarResult<()> {
         if let Ok(kb) = self.kb.read() {
             if kb.has_rules() {
-                return Err(RuntimeError::MultipleLoadError.with_context(&*kb));
+                return Err(RuntimeError::MultipleLoadError.into());
             }
         }
 
@@ -200,10 +188,7 @@ impl Polar {
 
     // Used in integration tests
     pub fn load_str(&self, src: &str) -> PolarResult<()> {
-        self.load(vec![Source {
-            src: src.to_owned(),
-            filename: None,
-        }])
+        self.load(vec![Source::new(src)])
     }
 
     /// Clear rules from the knowledge base
@@ -218,19 +203,7 @@ impl Polar {
     }
 
     pub fn new_query(&self, src: &str, trace: bool) -> PolarResult<Query> {
-        let source = Source {
-            filename: None,
-            src: src.to_owned(),
-        };
-        let term = {
-            let mut kb = self.kb.write().unwrap();
-            let src_id = kb.new_id();
-            let term =
-                parser::parse_query(src_id, src).map_err(|e| e.with_context(source.clone()))?;
-            kb.sources.add_source(source, src_id);
-            term
-        };
-        Ok(self.new_query_from_term(term, trace))
+        parser::parse_query(src).map(|term| self.new_query_from_term(term, trace))
     }
 
     pub fn new_query_from_term(&self, mut term: Term, trace: bool) -> Query {
@@ -277,7 +250,6 @@ impl Polar {
         class_tag: &str,
     ) -> PolarResult<FilterPlan> {
         build_filter_plan(types, partial_results, variable, class_tag)
-            .map_err(|e| e.with_context(&*self.kb.read().unwrap()))
     }
 
     pub fn build_data_filter(
@@ -288,7 +260,6 @@ impl Polar {
         class_tag: &str,
     ) -> PolarResult<Filter> {
         Filter::build(types, partial_results, variable, class_tag)
-            .map_err(|e| e.with_context(&*self.kb.read().unwrap()))
     }
 
     // TODO(@gkaemmer): this is a hack and should not be used for similar cases.
@@ -302,10 +273,7 @@ impl Polar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::{
-        ErrorKind::{Runtime, Validation},
-        PolarError,
-    };
+    use crate::error::{RuntimeError::MultipleLoadError, ValidationError::FileLoading};
 
     #[test]
     fn can_load_and_query() {
@@ -318,46 +286,34 @@ mod tests {
     fn loading_a_second_time_fails() {
         let polar = Polar::new();
         let src = "f();";
-        let source = Source {
-            src: src.to_owned(),
-            filename: None,
-        };
 
         // Loading once is fine.
-        polar.load(vec![source.clone()]).unwrap();
+        polar.load(vec![Source::new(src)]).unwrap();
 
         // Loading twice is not.
-        assert!(matches!(
-            polar.load(vec![source.clone()]).unwrap_err(),
-            PolarError {
-                kind: Runtime(RuntimeError::MultipleLoadError),
-                ..
-            }
-        ));
+        let e = polar.load(vec![Source::new(src)]).unwrap_err();
+        assert!(matches!(e.unwrap_runtime(), MultipleLoadError));
 
         // Even with load_str().
         assert!(matches!(
-            polar.load(vec![source]).unwrap_err(),
-            PolarError {
-                kind: Runtime(RuntimeError::MultipleLoadError),
-                ..
-            }
+            polar.load_str(src).unwrap_err().unwrap_runtime(),
+            MultipleLoadError
         ));
     }
 
     #[test]
     fn loading_duplicate_files_errors_and_leaves_the_kb_empty() {
         let polar = Polar::new();
-        let source = Source {
-            src: "f();".to_owned(),
-            filename: Some("file".to_owned()),
-        };
-
-        let msg = match polar.load(vec![source.clone(), source]).unwrap_err() {
-            PolarError {
-                kind: Validation(ValidationError::FileLoading { msg, .. }),
-                ..
-            } => msg,
+        let (filename, src) = ("file", "f();");
+        let msg = match polar
+            .load(vec![
+                Source::new_with_name(filename, src),
+                Source::new_with_name(filename, src),
+            ])
+            .unwrap_err()
+            .unwrap_validation()
+        {
+            FileLoading { msg, .. } => msg,
             e => panic!("{}", e),
         };
         assert_eq!(msg, "File file has already been loaded.");
@@ -368,10 +324,7 @@ mod tests {
     #[test]
     fn diagnostic_load_returns_multiple_diagnostics() {
         let polar = Polar::new();
-        let source = Source {
-            src: "f() if g();".to_owned(),
-            filename: Some("file".to_owned()),
-        };
+        let source = Source::new_with_name("file", "f() if g();");
 
         let diagnostics = polar.diagnostic_load(vec![source]);
         assert_eq!(diagnostics.len(), 2);
@@ -408,10 +361,7 @@ mod tests {
               "burn" if "farmer";
             }
         "#;
-        let source = Source {
-            src: src.to_owned(),
-            filename: None,
-        };
+        let source = Source::new(src);
 
         let diagnostics = polar.diagnostic_load(vec![source]);
         assert_eq!(diagnostics.len(), 2, "{:#?}", diagnostics);
