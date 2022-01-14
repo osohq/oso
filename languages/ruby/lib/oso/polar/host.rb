@@ -327,7 +327,7 @@ module Oso
                     instance_id = class_id = types[value].id
                   elsif types.key?(value.class)
                     class_id = types[value.class].id
-                    class_repr = value.class.to_s
+                    class_repr = types[value.class].name
                   end
 
                   {
