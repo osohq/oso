@@ -312,9 +312,6 @@ class Host:
             instance_id = None
             class_id = None
 
-            instance_id = None
-            class_id = None
-
             # maintain consistent IDs for registered classes
             if inspect.isclass(v):
                 if v in self.types:
