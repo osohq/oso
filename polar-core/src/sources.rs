@@ -1,4 +1,4 @@
-use std::{fmt, sync::Arc};
+use std::{fmt, rc::Rc};
 
 use serde::{Deserialize, Serialize};
 
@@ -7,7 +7,7 @@ use crate::{formatting::source_lines, lexer::loc_to_pos};
 /// Parsed source context.
 #[derive(Clone, Debug)]
 pub struct Context {
-    pub source: Arc<Source>,
+    pub source: Rc<Source>,
     /// Start location within `source`.
     pub left: usize,
     /// End location within `source`.
@@ -24,7 +24,7 @@ impl fmt::Display for Context {
 }
 
 impl Context {
-    pub(crate) fn new(source: Arc<Source>, left: usize, right: usize) -> Self {
+    pub(crate) fn new(source: Rc<Source>, left: usize, right: usize) -> Self {
         Self {
             source,
             left,
@@ -63,7 +63,7 @@ impl SourceInfo {
         Self::Ffi
     }
 
-    pub(crate) fn parser(source: Arc<Source>, left: usize, right: usize) -> Self {
+    pub(crate) fn parser(source: Rc<Source>, left: usize, right: usize) -> Self {
         Self::Parser(Context::new(source, left, right))
     }
 }

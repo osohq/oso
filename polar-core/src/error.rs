@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, fmt, sync::Arc};
+use std::{borrow::Borrow, fmt, rc::Rc};
 
 use indoc::formatdoc;
 use serde::Serialize;
@@ -145,7 +145,7 @@ impl PolarError {
                 FileLoading {
                     filename, contents, ..
                 } => {
-                    let source = Arc::new(Source::new_with_name(filename, contents));
+                    let source = Rc::new(Source::new_with_name(filename, contents));
                     Some(Context::new(source, 0, 0))
                 }
             },
@@ -199,7 +199,7 @@ impl From<PolarError> for FormattedPolarError {
 pub struct ParseError {
     pub kind: ParseErrorKind,
     #[serde(skip_serializing)]
-    pub source: Arc<Source>,
+    pub source: Rc<Source>,
 }
 
 impl fmt::Display for ParseError {
