@@ -1,42 +1,42 @@
 use std::fmt;
 
 use indoc::indoc;
+use strum_macros::AsRefStr;
 
-use super::diagnostic::{Context, Range};
-use super::kb::KnowledgeBase;
+use super::sources::Context;
 use super::terms::{InstanceLiteral, Pattern, Symbol, Term, Value};
 
 #[derive(Debug)]
-pub struct PolarWarning {
-    pub kind: ValidationWarning,
-    pub context: Option<Context>,
-}
+pub struct PolarWarning(pub ValidationWarning);
 
 impl PolarWarning {
     pub fn kind(&self) -> String {
+        "ValidationWarning::".to_string() + self.0.as_ref()
+    }
+
+    pub fn get_context(&self) -> Option<Context> {
         use ValidationWarning::*;
 
-        match self.kind {
-            AmbiguousPrecedence { .. } => "ValidationWarning::AmbiguousPrecedence",
-            MissingAllowRule => "ValidationWarning::MissingAllowRule",
-            MissingHasPermissionRule => "ValidationWarning::MissingHasPermissionRule",
-            UnknownSpecializer { .. } => "ValidationWarning::UnknownSpecializer",
+        match &self.0 {
+            AmbiguousPrecedence { term } | UnknownSpecializer { term, .. } => {
+                term.parsed_context().cloned()
+            }
+            MissingAllowRule | MissingHasPermissionRule => None,
         }
-        .to_owned()
     }
 }
 
 impl fmt::Display for PolarWarning {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.kind)?;
-        if let Some(ref context) = self.context {
+        write!(f, "{}", self.0)?;
+        if let Some(context) = self.get_context() {
             write!(f, "{}", context)?;
         }
         Ok(())
     }
 }
 
-#[derive(Debug)]
+#[derive(AsRefStr, Debug)]
 pub enum ValidationWarning {
     // Category: general
     AmbiguousPrecedence { term: Term },
@@ -50,26 +50,9 @@ pub enum ValidationWarning {
     UnknownSpecializer { term: Term, sym: Symbol },
 }
 
-impl ValidationWarning {
-    pub fn with_context(self, kb: &KnowledgeBase) -> PolarWarning {
-        use ValidationWarning::*;
-
-        let context = match &self {
-            AmbiguousPrecedence { term } | UnknownSpecializer { term, .. } => {
-                term.span().zip(kb.get_term_source(term))
-            }
-            MissingAllowRule | MissingHasPermissionRule => None,
-        };
-
-        let context = context.map(|(span, source)| Context {
-            range: Range::from_span(&source.src, span),
-            source,
-        });
-
-        PolarWarning {
-            kind: self,
-            context,
-        }
+impl From<ValidationWarning> for PolarWarning {
+    fn from(other: ValidationWarning) -> Self {
+        Self(other)
     }
 }
 

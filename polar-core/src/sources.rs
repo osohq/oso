@@ -1,17 +1,52 @@
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{fmt, sync::Arc};
 
-#[derive(Debug, Clone, Hash)]
+use serde::{Deserialize, Serialize};
+
+use crate::{formatting::source_lines, lexer::loc_to_pos};
+
+/// Parsed source context.
+#[derive(Clone, Debug)]
+pub struct Context {
+    pub source: Arc<Source>,
+    /// Start location within `source`.
+    pub left: usize,
+    /// End location within `source`.
+    pub right: usize,
+}
+
+impl fmt::Display for Context {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.source_position())?;
+        let lines = source_lines(&self.source, self.left, 0).replace('\n', "\n\t");
+        writeln!(f, ":\n\t{}", lines)?;
+        Ok(())
+    }
+}
+
+impl Context {
+    pub(crate) fn new(source: Arc<Source>, left: usize, right: usize) -> Self {
+        Self {
+            source,
+            left,
+            right,
+        }
+    }
+
+    pub(crate) fn source_position(&self) -> String {
+        let mut f = String::new();
+        let (row, column) = loc_to_pos(&self.source.src, self.left);
+        f += &format!(" at line {}, column {}", row + 1, column + 1);
+        if let Some(ref filename) = self.source.filename {
+            f += &format!(" of file {}", filename);
+        }
+        f
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum SourceInfo {
     // From the parser
-    Parser {
-        /// Index into the source map stored in the knowledge base
-        src_id: u64,
-
-        /// Location of the term within the source map
-        left: usize,
-        right: usize,
-    },
+    Parser(Context),
 
     /// Created as a temporary variable
     TemporaryVariable,
@@ -27,48 +62,32 @@ impl SourceInfo {
     pub fn ffi() -> Self {
         Self::Ffi
     }
+
+    pub(crate) fn parser(source: Arc<Source>, left: usize, right: usize) -> Self {
+        Self::Parser(Context::new(source, left, right))
+    }
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+// TODO(gj): `Serialize` makes some `polar-wasm-api` tests easier to write. We could look into
+// https://serde.rs/remote-derive.html if we cared to preserve that while removing this impl.
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Source {
     pub filename: Option<String>,
     pub src: String,
 }
 
 impl Source {
-    pub(crate) fn new(filename: Option<&str>, src: &str) -> Self {
+    pub fn new<T: AsRef<str>>(src: T) -> Self {
         Self {
-            filename: filename.map(Into::into),
-            src: src.into(),
+            filename: None,
+            src: src.as_ref().into(),
         }
     }
-}
 
-pub struct Sources {
-    /// Map from term ID to `Source`.
-    sources: HashMap<u64, Source>,
-}
-
-impl Default for Sources {
-    fn default() -> Self {
-        let mut sources = HashMap::new();
-        sources.insert(
-            0,
-            Source {
-                filename: None,
-                src: "<Unknown>".to_string(),
-            },
-        );
-        Self { sources }
-    }
-}
-
-impl Sources {
-    pub fn add_source(&mut self, source: Source, id: u64) {
-        self.sources.insert(id, source);
-    }
-
-    pub fn get_source(&self, src_id: u64) -> Option<Source> {
-        self.sources.get(&src_id).cloned()
+    pub fn new_with_name<T: AsRef<str>, U: AsRef<str>>(filename: T, src: U) -> Self {
+        Self {
+            filename: Some(filename.as_ref().into()),
+            src: src.as_ref().into(),
+        }
     }
 }

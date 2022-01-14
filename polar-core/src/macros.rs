@@ -14,6 +14,13 @@ pub const ORD: Ordering = Ordering::SeqCst;
 pub static NEXT_ID: AtomicU64 = AtomicU64::new(0);
 
 #[macro_export]
+macro_rules! source {
+    ($arg:expr) => {
+        Arc::new(Source::new($arg))
+    };
+}
+
+#[macro_export]
 macro_rules! value {
     ([$($args:expr),*]) => {
         $crate::terms::Value::List(vec![

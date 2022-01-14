@@ -1,78 +1,185 @@
-use std::fmt;
+use std::{borrow::Borrow, fmt, sync::Arc};
 
 use indoc::formatdoc;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+use strum_macros::AsRefStr;
 
 use super::{
-    diagnostic::{Context, Range},
-    kb::KnowledgeBase,
     resource_block::Declaration,
     rules::Rule,
-    sources::Source,
+    sources::{Context, Source},
     terms::{Operation, Symbol, Term},
 };
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+pub type PolarResult<T> = Result<T, PolarError>;
+
+#[derive(Debug, Clone, Serialize)]
+pub enum ErrorKind {
+    Parse(ParseError),
+    Runtime(RuntimeError),
+    Operational(OperationalError),
+    Validation(ValidationError),
+}
+
+impl fmt::Display for ErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Parse(e) => write!(f, "{}", e),
+            Self::Runtime(e) => write!(f, "{}", e),
+            Self::Operational(e) => write!(f, "{}", e),
+            Self::Validation(e) => write!(f, "{}", e),
+        }
+    }
+}
+
+// NOTE(gj): `ErrorKind` is a layer of indirection so we can avoid infinite recursion when
+// serializing `PolarError` into `FormattedPolarError`, which references the error kind. If
+// `PolarError` were the enum (without `ErrorKind`), then `PolarError` would serialize into
+// `FormattedPolarError`, which has a field of type `PolarError`... etc. There's probably a better
+// way to structure this, but for now this is the path of least resistance.
+#[derive(Debug, Clone, Serialize)]
 #[serde(into = "FormattedPolarError")]
-pub struct PolarError {
-    pub kind: ErrorKind,
-    pub context: Option<Context>,
+pub struct PolarError(pub ErrorKind);
+
+impl std::error::Error for PolarError {}
+
+impl fmt::Display for PolarError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)?;
+        if let Some(context) = self.get_context() {
+            write!(f, "{}", context)?;
+        }
+        Ok(())
+    }
 }
 
 impl PolarError {
     pub fn kind(&self) -> String {
         use ErrorKind::*;
-        use OperationalError::*;
-        use ParseError::*;
+        match &self.0 {
+            Operational(o) => "OperationalError::".to_string() + o.as_ref(),
+            Parse(p) => "ParseError::".to_string() + p.kind.as_ref(),
+            Runtime(r) => "RuntimeError::".to_string() + r.as_ref(),
+            Validation(v) => "ValidationError::".to_string() + v.as_ref(),
+        }
+    }
+
+    pub fn get_context(&self) -> Option<Context> {
+        use ErrorKind::*;
+        use ParseErrorKind::*;
         use RuntimeError::*;
         use ValidationError::*;
 
-        match self.kind {
-            Parse(IntegerOverflow { .. }) => "ParseError::IntegerOverflow",
-            Parse(InvalidTokenCharacter { .. }) => "ParseError::InvalidTokenCharacter",
-            Parse(InvalidToken { .. }) => "ParseError::InvalidToken",
-            Parse(UnrecognizedEOF { .. }) => "ParseError::UnrecognizedEOF",
-            Parse(UnrecognizedToken { .. }) => "ParseError::UnrecognizedToken",
-            Parse(ExtraToken { .. }) => "ParseError::ExtraToken",
-            Parse(ReservedWord { .. }) => "ParseError::ReservedWord",
-            Parse(InvalidFloat { .. }) => "ParseError::InvalidFloat",
-            Parse(WrongValueType { .. }) => "ParseError::WrongValueType",
-            Parse(DuplicateKey { .. }) => "ParseError::DuplicateKey",
-            Runtime(Application { .. }) => "RuntimeError::Application",
-            Runtime(ArithmeticError { .. }) => "RuntimeError::ArithmeticError",
-            Runtime(IncompatibleBindings { .. }) => "RuntimeError::IncompatibleBindings",
-            Runtime(QueryTimeout { .. }) => "RuntimeError::QueryTimeout",
-            Runtime(StackOverflow { .. }) => "RuntimeError::StackOverflow",
-            Runtime(TypeError { .. }) => "RuntimeError::TypeError",
-            Runtime(UnhandledPartial { .. }) => "RuntimeError::UnhandledPartial",
-            Runtime(Unsupported { .. }) => "RuntimeError::Unsupported",
-            Runtime(DataFilteringFieldMissing { .. }) => "RuntimeError::DataFilteringFieldMissing",
-            Runtime(DataFilteringUnsupportedOp { .. }) => {
-                "RuntimeError::DataFilteringUnsupportedOp"
-            }
-            Runtime(InvalidRegistration { .. }) => "RuntimeError::InvalidRegistration",
-            Runtime(InvalidState { .. }) => "RuntimeError::InvalidState",
-            Runtime(MultipleLoadError) => "RuntimeError::MultipleLoadError",
-            Runtime(QueryForUndefinedRule { .. }) => "RuntimeError::QueryForUndefinedRule",
-            Operational(Serialization { .. }) => "OperationalError::Serialization",
-            Operational(Unknown) => "OperationalError::Unknown",
-            Validation(FileLoading { .. }) => "ValidationError::FileLoading",
-            Validation(InvalidRule { .. }) => "ValidationError::InvalidRule",
-            Validation(InvalidRuleType { .. }) => "ValidationError::InvalidRuleType",
-            Validation(ResourceBlock { .. }) => "ValidationError::ResourceBlock",
-            Validation(UndefinedRuleCall { .. }) => "ValidationError::UndefinedRuleCall",
-            Validation(SingletonVariable { .. }) => "ValidationError::SingletonVariable",
-            Validation(UnregisteredClass { .. }) => "ValidationError::UnregisteredClass",
-            Validation(MissingRequiredRule { .. }) => "ValidationError::MissingRequiredRule",
-            Validation(DuplicateResourceBlockDeclaration { .. }) => {
-                "ValidationError::DuplicateResourceBlockDeclaration"
-            }
+        match &self.0 {
+            Parse(e) => match &e.kind {
+                // These errors track `loc` (left bound) and `token`, and we calculate right bound
+                // as `loc + token.len()`.
+                DuplicateKey { key: token, loc }
+                | ExtraToken { token, loc }
+                | IntegerOverflow { token, loc }
+                | InvalidFloat { token, loc }
+                | ReservedWord { token, loc }
+                | UnrecognizedToken { token, loc } => {
+                    Some(Context::new(e.source.clone(), *loc, loc + token.len()))
+                }
+
+                // These errors track `loc` and only pertain to a single character, so right bound
+                // of span is also `loc`.
+                InvalidTokenCharacter { loc, .. }
+                | InvalidToken { loc }
+                | UnrecognizedEOF { loc } => Some(Context::new(e.source.clone(), *loc, *loc)),
+
+                // These errors track `term`, from which we calculate the span.
+                WrongValueType { term, .. } => term.parsed_context().cloned(),
+            },
+
+            Runtime(e) => match e {
+                // These errors sometimes track `term`, from which we derive context.
+                Application { term, .. } => term.as_ref().and_then(Term::parsed_context).cloned(),
+
+                // These errors track `term`, from which we derive the context.
+                ArithmeticError { term }
+                | TypeError { term, .. }
+                | UnhandledPartial { term, .. }
+                | Unsupported { term, .. } => term.parsed_context().cloned(),
+
+                // These errors never have context.
+                StackOverflow { .. }
+                | QueryTimeout { .. }
+                | IncompatibleBindings { .. }
+                | DataFilteringFieldMissing { .. }
+                | DataFilteringUnsupportedOp { .. }
+                | InvalidRegistration { .. }
+                | QueryForUndefinedRule { .. }
+                | MultipleLoadError => None,
+            },
+
+            Validation(e) => match e {
+                // These errors track `term`, from which we calculate the span.
+                ResourceBlock { term, .. }
+                | SingletonVariable { term, .. }
+                | UndefinedRuleCall { term }
+                | DuplicateResourceBlockDeclaration {
+                    declaration: term, ..
+                }
+                | UnregisteredClass { term, .. } => term.parsed_context().cloned(),
+
+                // These errors track `rule`, from which we calculate the span.
+                InvalidRule { rule, .. }
+                | InvalidRuleType {
+                    rule_type: rule, ..
+                } => rule.parsed_context().cloned(),
+
+                // These errors track `rule_type`, from which we sometimes calculate the span.
+                MissingRequiredRule { rule_type } => {
+                    if rule_type.name.0 == "has_relation" {
+                        rule_type.parsed_context().cloned()
+                    } else {
+                        // TODO(gj): copy source info from the appropriate resource block term for
+                        // `has_role()` rule type we create.
+                        None
+                    }
+                }
+
+                // These errors always pertain to a specific file but not to a specific place therein.
+                FileLoading {
+                    filename, contents, ..
+                } => {
+                    let source = Arc::new(Source::new_with_name(filename, contents));
+                    Some(Context::new(source, 0, 0))
+                }
+            },
+
+            Operational(_) => None,
         }
-        .to_owned()
     }
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[cfg(test)]
+impl PolarError {
+    pub fn unwrap_parse(self) -> ParseErrorKind {
+        match self.0 {
+            ErrorKind::Parse(ParseError { kind, .. }) => kind,
+            e => panic!("Expected ErrorKind::Parse; was: {}", e),
+        }
+    }
+
+    pub fn unwrap_runtime(self) -> RuntimeError {
+        match self.0 {
+            ErrorKind::Runtime(e) => e,
+            e => panic!("Expected ErrorKind::Runtime; was: {}", e),
+        }
+    }
+
+    pub fn unwrap_validation(self) -> ValidationError {
+        match self.0 {
+            ErrorKind::Validation(e) => e,
+            e => panic!("Expected ErrorKind::Validation; was: {}", e),
+        }
+    }
+}
+
+#[derive(Clone, Serialize)]
 pub struct FormattedPolarError {
     pub kind: ErrorKind,
     pub formatted: String,
@@ -82,47 +189,33 @@ impl From<PolarError> for FormattedPolarError {
     fn from(other: PolarError) -> Self {
         Self {
             formatted: other.to_string(),
-            kind: other.kind,
+            kind: other.0,
         }
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ErrorKind {
-    Parse(ParseError),
-    Runtime(RuntimeError),
-    Operational(OperationalError),
-    Validation(ValidationError),
+#[derive(Clone, Debug, Serialize)]
+#[serde(transparent)]
+pub struct ParseError {
+    pub kind: ParseErrorKind,
+    #[serde(skip_serializing)]
+    pub source: Arc<Source>,
 }
 
-pub type PolarResult<T> = std::result::Result<T, PolarError>;
-
-impl std::error::Error for PolarError {}
-
-impl fmt::Display for ErrorKind {
+impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ErrorKind::Parse(e) => write!(f, "{}", e)?,
-            ErrorKind::Runtime(e) => write!(f, "{}", e)?,
-            ErrorKind::Operational(e) => write!(f, "{}", e)?,
-            ErrorKind::Validation(e) => write!(f, "{}", e)?,
-        }
-        Ok(())
+        write!(f, "{}", self.kind)
     }
 }
 
-impl fmt::Display for PolarError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.kind)?;
-        if let Some(ref context) = self.context {
-            write!(f, "{}", context)?;
-        }
-        Ok(())
+impl From<ParseError> for PolarError {
+    fn from(err: ParseError) -> Self {
+        Self(ErrorKind::Parse(err))
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ParseError {
+#[derive(AsRefStr, Clone, Debug, Serialize)]
+pub enum ParseErrorKind {
     IntegerOverflow {
         token: String,
         loc: usize,
@@ -166,39 +259,7 @@ pub enum ParseError {
     },
 }
 
-impl ParseError {
-    pub fn with_context(self, source: Source) -> PolarError {
-        use ParseError::*;
-
-        let span = match &self {
-            // These errors track `loc` (left bound) and `token`, and we calculate right bound
-            // as `loc + token.len()`.
-            DuplicateKey { key: token, loc }
-            | ExtraToken { token, loc }
-            | IntegerOverflow { token, loc }
-            | InvalidFloat { token, loc }
-            | ReservedWord { token, loc }
-            | UnrecognizedToken { token, loc } => (*loc, loc + token.len()),
-
-            // These errors track `loc` and only pertain to a single character, so right bound
-            // of span is also `loc`.
-            InvalidTokenCharacter { loc, .. } | InvalidToken { loc } | UnrecognizedEOF { loc } => {
-                (*loc, *loc)
-            }
-
-            // These errors track `term`, from which we calculate the span.
-            WrongValueType { term, .. } => term.span().expect("always from parser"),
-        };
-        let range = Range::from_span(&source.src, span);
-
-        PolarError {
-            context: Some(Context { range, source }),
-            kind: ErrorKind::Parse(self),
-        }
-    }
-}
-
-impl fmt::Display for ParseError {
+impl fmt::Display for ParseErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::IntegerOverflow { token, .. } => {
@@ -245,7 +306,7 @@ impl fmt::Display for ParseError {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(AsRefStr, Clone, Debug, Serialize)]
 pub enum RuntimeError {
     ArithmeticError {
         /// Term<Operation> where the error arose, tracked for lexical context.
@@ -266,7 +327,8 @@ pub enum RuntimeError {
         msg: String,
     },
     QueryTimeout {
-        msg: String,
+        elapsed: u64,
+        timeout: u64,
     },
     Application {
         msg: String,
@@ -294,10 +356,6 @@ pub enum RuntimeError {
         sym: Symbol,
         msg: String,
     },
-    /// An invariant has been broken internally.
-    InvalidState {
-        msg: String,
-    },
     MultipleLoadError,
     /// The user queried for an undefined rule. This is the runtime analogue of
     /// `ValidationError::UndefinedRuleCall`.
@@ -306,48 +364,9 @@ pub enum RuntimeError {
     },
 }
 
-impl RuntimeError {
-    pub fn with_context(self, kb: &KnowledgeBase) -> PolarError {
-        use RuntimeError::*;
-
-        let context = match &self {
-            // These errors sometimes track `term`, from which we derive context.
-            Application { term, .. } => term
-                .as_ref()
-                .and_then(Term::span)
-                .zip(term.as_ref().and_then(|t| kb.get_term_source(t))),
-
-            // These errors track `term`, from which we derive the context.
-            ArithmeticError { term }
-            | TypeError { term, .. }
-            | UnhandledPartial { term, .. }
-            | Unsupported { term, .. } => term.span().zip(kb.get_term_source(term)),
-
-            // These errors never have context.
-            StackOverflow { .. }
-            | QueryTimeout { .. }
-            | IncompatibleBindings { .. }
-            | DataFilteringFieldMissing { .. }
-            | DataFilteringUnsupportedOp { .. }
-            | InvalidRegistration { .. }
-            | InvalidState { .. }
-            | QueryForUndefinedRule { .. }
-            | MultipleLoadError => None,
-        };
-
-        let context = context.map(|(span, source)| Context {
-            range: Range::from_span(&source.src, span),
-            source,
-        });
-
-        PolarError {
-            kind: ErrorKind::Runtime(self),
-            context,
-        }
-    }
-
-    pub fn unsupported<A>(msg: String, term: Term) -> Result<A, RuntimeError> {
-        Err(Self::Unsupported { msg, term })
+impl From<RuntimeError> for PolarError {
+    fn from(err: RuntimeError) -> Self {
+        Self(ErrorKind::Runtime(err))
     }
 }
 
@@ -365,7 +384,7 @@ impl fmt::Display for RuntimeError {
             Self::StackOverflow { msg } => {
                 write!(f, "{}", msg)
             }
-            Self::QueryTimeout { msg } => write!(f, "Query timeout: {}", msg),
+            Self::QueryTimeout { elapsed, timeout } => write!(f, "Query timeout: Query running for {}ms, which exceeds the timeout of {}ms. To disable timeouts, set the POLAR_TIMEOUT_MS environment variable to 0.", elapsed, timeout),
             Self::Application {
                 msg, stack_trace, ..
             } => {
@@ -435,37 +454,32 @@ The expression is: {expr}
             Self::InvalidRegistration { sym, msg } => {
                 write!(f, "Invalid attempt to register '{}': {}", sym, msg)
             }
-            // TODO(gj): move this back to `OperationalError` during The Next Great Diagnostic
-            // Refactor.
-            Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
             Self::MultipleLoadError => write!(f, "Cannot load additional Polar code -- all Polar code must be loaded at the same time."),
             Self::QueryForUndefinedRule { name } => write!(f, "Query for undefined rule `{}`", name),
         }
     }
 }
 
-// NOTE(gj): both of these errors are only constructed/used in the `polar-c-api` crate.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(AsRefStr, Clone, Debug, Serialize)]
 pub enum OperationalError {
-    Serialization {
-        msg: String,
-    },
+    /// An invariant has been broken internally.
+    InvalidState { msg: String },
+    /// Serialization errors in the `polar-c-api` crate.
+    Serialization { msg: String },
     /// Rust panics caught in the `polar-c-api` crate.
     Unknown,
 }
 
 impl From<OperationalError> for PolarError {
     fn from(err: OperationalError) -> Self {
-        Self {
-            kind: ErrorKind::Operational(err),
-            context: None,
-        }
+        Self(ErrorKind::Operational(err))
     }
 }
 
 impl fmt::Display for OperationalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
             Self::Serialization { msg } => write!(f, "Serialization error: {}", msg),
             Self::Unknown => write!(
                 f,
@@ -476,10 +490,13 @@ impl fmt::Display for OperationalError {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(AsRefStr, Clone, Debug, Serialize)]
 pub enum ValidationError {
     FileLoading {
-        source: Source,
+        #[serde(skip_serializing)]
+        filename: String,
+        #[serde(skip_serializing)]
+        contents: String,
         msg: String,
     },
     MissingRequiredRule {
@@ -528,50 +545,9 @@ pub enum ValidationError {
     },
 }
 
-impl ValidationError {
-    pub fn with_context(self, kb: &KnowledgeBase) -> PolarError {
-        use ValidationError::*;
-
-        let context = match &self {
-            // These errors track `term`, from which we calculate the span.
-            ResourceBlock { term, .. }
-            | SingletonVariable { term, .. }
-            | UndefinedRuleCall { term }
-            | DuplicateResourceBlockDeclaration {
-                declaration: term, ..
-            }
-            | UnregisteredClass { term, .. } => term.span().zip(kb.get_term_source(term)),
-
-            // These errors track `rule`, from which we calculate the span.
-            InvalidRule { rule, .. }
-            | InvalidRuleType {
-                rule_type: rule, ..
-            } => rule.span().zip(kb.get_rule_source(rule)),
-
-            // These errors track `rule_type`, from which we sometimes calculate the span.
-            MissingRequiredRule { rule_type } => {
-                if rule_type.name.0 == "has_relation" {
-                    rule_type.span().zip(kb.get_rule_source(rule_type))
-                } else {
-                    // TODO(gj): copy source info from the appropriate resource block term for
-                    // `has_role()` rule type we create.
-                    None
-                }
-            }
-
-            // These errors always pertain to a specific file but not to a specific place therein.
-            FileLoading { source, .. } => Some(((0, 0), source.to_owned())),
-        };
-
-        let context = context.map(|(span, source)| Context {
-            range: Range::from_span(&source.src, span),
-            source,
-        });
-
-        PolarError {
-            kind: ErrorKind::Validation(self),
-            context,
-        }
+impl From<ValidationError> for PolarError {
+    fn from(err: ValidationError) -> Self {
+        Self(ErrorKind::Validation(err))
     }
 }
 
@@ -616,6 +592,36 @@ impl fmt::Display for ValidationError {
     }
 }
 
-pub fn invalid_state_error<A>(msg: String) -> Result<A, RuntimeError> {
-    Err(RuntimeError::InvalidState { msg })
+pub(crate) fn invalid_state<T, U>(msg: T) -> PolarResult<U>
+where
+    T: AsRef<str>,
+{
+    let msg = msg.as_ref().into();
+    Err(OperationalError::InvalidState { msg }.into())
+}
+
+pub(crate) fn unsupported<T, U, V>(msg: T, term: U) -> PolarResult<V>
+where
+    T: AsRef<str>,
+    U: Borrow<Term>,
+{
+    let msg = msg.as_ref().into();
+    let term = term.borrow().clone();
+    Err(RuntimeError::Unsupported { msg, term }.into())
+}
+
+pub(crate) fn df_unsupported_op<T>(operation: Operation) -> PolarResult<T> {
+    Err(RuntimeError::DataFilteringUnsupportedOp { operation }.into())
+}
+
+pub(crate) fn df_field_missing<T, U, V>(var_type: T, field: U) -> PolarResult<V>
+where
+    T: AsRef<str>,
+    U: AsRef<str>,
+{
+    Err(RuntimeError::DataFilteringFieldMissing {
+        var_type: var_type.as_ref().into(),
+        field: field.as_ref().into(),
+    }
+    .into())
 }

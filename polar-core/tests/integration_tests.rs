@@ -9,7 +9,14 @@ use std::collections::{BTreeMap, HashMap};
 
 use mock_externals::MockExternal;
 use polar_core::{
-    error::*, events::*, messages::*, polar::Polar, query::Query, sym, term, terms::*, traces::*,
+    error::{ParseErrorKind::*, RuntimeError::*, ValidationError::*, *},
+    events::*,
+    messages::*,
+    polar::Polar,
+    query::Query,
+    sym, term,
+    terms::*,
+    traces::*,
     value, values,
 };
 
@@ -338,34 +345,45 @@ fn qvars(p: &Polar, query_str: &str, variables: &[&str], expected: Vec<Vec<Value
 }
 
 #[track_caller]
-fn _qruntime(p: &Polar, query_str: &str) -> ErrorKind {
+fn _qruntime(p: &Polar, query_str: &str) -> PolarError {
     p.new_query(query_str, false)
         .unwrap()
         .next_event()
         .unwrap_err()
-        .kind
 }
 
 macro_rules! qruntime {
     ($query:tt, $err:pat $(, $cond:expr)?) => {
-        assert!(matches!(_qruntime(&polar(), $query), ErrorKind::Runtime($err) $(if $cond)?));
+        assert!(matches!(_qruntime(&polar(), $query), PolarError(ErrorKind::Runtime($err)) $(if $cond)?));
     };
 
     ($polar:expr, $query:tt, $err:pat $(, $cond:expr)?) => {
-        assert!(matches!(_qruntime($polar, $query), ErrorKind::Runtime($err) $(if $cond)?));
+        assert!(matches!(_qruntime($polar, $query), PolarError(ErrorKind::Runtime($err)) $(if $cond)?));
     };
 }
 
 macro_rules! qparse {
     ($query:expr, $err:pat) => {
         assert!(matches!(
-            polar().load_str($query).unwrap_err().kind,
-            ErrorKind::Parse($err)
+            polar().load_str($query).unwrap_err(),
+            PolarError(ErrorKind::Parse(ParseError { kind: $err, .. }))
         ));
     };
 }
 
-type TestResult = Result<(), PolarError>;
+macro_rules! qvalidation {
+    ($query:tt, $err:pat $(, $substr:tt)?) => {
+        let e = polar().load_str($query).unwrap_err();
+        assert!(matches!(e.0, ErrorKind::Validation($err) $(if e.to_string().contains($substr))?), "{}", e);
+    };
+
+    ($polar:expr, $query:tt, $err:pat $(, $substr:tt)?) => {
+        let e = $polar.load_str($query).unwrap_err();
+        assert!(matches!(e.0, ErrorKind::Validation($err) $(if e.to_string().contains($substr))?), "{}", e);
+    };
+}
+
+type TestResult = PolarResult<()>;
 
 /// Adapted from <http://web.cse.ohio-state.edu/~stiff.4/cse3521/prolog-resolution.html>
 #[test]
@@ -612,11 +630,7 @@ fn test_multi_arg_method_ordering() -> TestResult {
 fn test_no_applicable_rules() -> TestResult {
     let p = polar();
 
-    qruntime!(
-        "f()",
-        RuntimeError::QueryForUndefinedRule { name },
-        name == "f"
-    );
+    qruntime!("f()", QueryForUndefinedRule { name }, name == "f");
 
     p.load_str("f(_);")?;
     qnull(&p, "f()");
@@ -1291,14 +1305,8 @@ fn test_arithmetic() -> TestResult {
     qeval(&p, "odd(3)");
     qnull(&p, "odd(4)");
 
-    qruntime!(
-        "9223372036854775807 + 1 > 0",
-        RuntimeError::ArithmeticError { .. }
-    );
-    qruntime!(
-        "-9223372036854775807 - 2 < 0",
-        RuntimeError::ArithmeticError { .. }
-    );
+    qruntime!("9223372036854775807 + 1 > 0", ArithmeticError { .. });
+    qruntime!("-9223372036854775807 - 2 < 0", ArithmeticError { .. });
 
     // x / 0 = ∞
     qvar(&p, "x=1/0", "x", values![f64::INFINITY]);
@@ -1336,7 +1344,7 @@ fn test_debug_break_on_error() -> TestResult {
                     001: foo() if debug() and 1 < "2" and 1 < 2;
                                               ^
 
-                    ERROR: Not supported: 1 < "2"
+                    ERROR: Not supported: 1 < "2" at line 1, column 22
                     "#
                 );
                 assert_eq!(s, expected);
@@ -1532,17 +1540,32 @@ fn test_debug() -> TestResult {
                     s.lines().next().unwrap(),
                     "QUERY: 3 = 3 and 4 = 4, BINDINGS: {}"
                 );
-                "step"
+                "stack"
             }
             5 => {
+                let expected = indoc! {"
+                    trace (most recent evaluation last):
+                      003: a()
+                        in query at line 1, column 1
+                      002: debug() and b() and c() and d()
+                        in rule a at line 1, column 8
+                      001: c()
+                        in rule a at line 1, column 28
+                      000: 3 = 3 and 4 = 4
+                        in rule c at line 4, column 8
+                "};
+                assert_eq!(s, expected);
+                "step"
+            }
+            6 => {
                 assert_eq!(s.lines().next().unwrap(), "QUERY: 3 = 3, BINDINGS: {}");
                 "out"
             }
-            6 => {
+            7 => {
                 assert_eq!(s.lines().next().unwrap(), "QUERY: d(), BINDINGS: {}");
                 "over"
             }
-            7 => {
+            8 => {
                 assert_eq!(s.lines().next().unwrap(), "QUERY: 5 = 5, BINDINGS: {}");
                 "c"
             }
@@ -1593,13 +1616,7 @@ fn test_anonymous_vars() {
 
 #[test]
 fn test_singleton_vars() {
-    let pol = "f(x,y,z) if y = z;";
-    let err = polar().load_str(pol).unwrap_err();
-    assert!(err.context.is_some());
-    assert!(matches!(
-        err.kind,
-        ErrorKind::Validation(ValidationError::SingletonVariable { .. })
-    ))
+    qvalidation!("f(x,y,z) if y = z;", SingletonVariable { .. });
 }
 
 #[test]
@@ -1633,10 +1650,13 @@ resource Organization {
 has_role(user: User, "owner", organization: Organization) if
     organization.owner_id = user.id;
 "#;
-    let err = p.load_str(policy).expect_err("Expected validation error");
-    assert!(matches!(&err.kind, ErrorKind::Validation(_)));
-    assert!(format!("{}", err)
-        .contains("Perhaps you meant to add an actor block to the top of your policy, like this:"));
+
+    qvalidation!(
+        p,
+        policy,
+        InvalidRule { .. },
+        "Perhaps you meant to add an actor block to the top of your policy, like this:"
+    );
 
     Ok(())
 }
@@ -1693,14 +1713,13 @@ has_role(user: User, "owner", organization: Organization) if
 has_role(user: User, "owner", repository: Repository) if
     repository.owner_id = user.id;
 "#;
-    let err = p.load_str(policy).expect_err("Expected validation error");
-    assert!(matches!(
-        &err.kind,
-        ErrorKind::Validation(ValidationError::InvalidRule { .. })
-    ));
-    assert!(err
-        .to_string()
-        .contains("Perhaps you meant to add a resource block to your policy, like this:"));
+
+    qvalidation!(
+        p,
+        policy,
+        InvalidRule { .. },
+        "Perhaps you meant to add a resource block to your policy, like this:"
+    );
 
     Ok(())
 }
@@ -1902,10 +1921,7 @@ fn test_circular_data() -> TestResult {
     let p = polar();
     qeval(&p, "x = [x] and x in x");
     qeval(&p, "y = {y:y} and [\"y\", y] in y");
-    qruntime!(
-        "x = [x, y] and y = [y, x] and x = y",
-        RuntimeError::StackOverflow { .. }
-    );
+    qruntime!("x = [x, y] and y = [y, x] and x = y", StackOverflow { .. });
     Ok(())
 }
 
@@ -2030,12 +2046,9 @@ fn test_matches() {
 
 #[test]
 fn test_keyword_call() {
-    qparse!("cut(a) if a;", ParseError::ReservedWord { .. });
-    qparse!("debug(a) if a;", ParseError::ReservedWord { .. });
-    qparse!(
-        "foo(debug) if debug = 1;",
-        ParseError::UnrecognizedToken { .. }
-    );
+    qparse!("cut(a) if a;", ReservedWord { .. });
+    qparse!("debug(a) if a;", ReservedWord { .. });
+    qparse!("foo(debug) if debug = 1;", UnrecognizedToken { .. });
 }
 
 #[test]
@@ -2058,16 +2071,10 @@ fn test_keyword_dot() -> TestResult {
 /// Test that rule heads work correctly when unification or specializers are used.
 #[test]
 fn test_unify_rule_head() -> TestResult {
-    qparse!("f(Foo{a: 1});", ParseError::UnrecognizedToken { .. });
-    qparse!(
-        "f(new Foo(a: Foo{a: 1}));",
-        ParseError::UnrecognizedToken { .. }
-    );
-    qparse!("f(x: new Foo(a: 1));", ParseError::ReservedWord { .. });
-    qparse!(
-        "f(x: Foo{a: new Foo(a: 1)});",
-        ParseError::ReservedWord { .. }
-    );
+    qparse!("f(Foo{a: 1});", UnrecognizedToken { .. });
+    qparse!("f(new Foo(a: Foo{a: 1}));", UnrecognizedToken { .. });
+    qparse!("f(x: new Foo(a: 1));", ReservedWord { .. });
+    qparse!("f(x: Foo{a: new Foo(a: 1)});", ReservedWord { .. });
 
     let p = polar();
     p.register_constant(sym!("Foo"), term!(true))?;
@@ -2241,14 +2248,14 @@ fn test_assignment() {
     qeval(&p, "x := 5 and x == 5");
     qruntime!(
         "x := 5 and x := 6",
-        RuntimeError::TypeError { msg: s, .. },
+        TypeError { msg: s, .. },
         s == "Can only assign to unbound variables, x is not unbound."
     );
     qnull(&p, "x := 5 and x > 6");
     qeval(&p, "x := y and y = 6 and x = 6");
 
     // confirm old syntax -> parse error
-    qparse!("f(x) := g(x);", ParseError::UnrecognizedToken { .. });
+    qparse!("f(x) := g(x);", UnrecognizedToken { .. });
 }
 
 #[test]
@@ -2521,23 +2528,15 @@ fn test_lookup_in_rule_head() -> TestResult {
 fn test_default_rule_types() -> TestResult {
     let p = polar();
 
-    // This should fail
-    let e = p
-        .load_str(r#"has_permission("leina", "eat", "food");"#)
-        .expect_err("Expected validation error");
-    assert!(matches!(e.kind, ErrorKind::Validation(_)));
-    let e = p
-        .load_str(r#"allow("leina", "food");"#)
-        .expect_err("Expected validation error");
-    assert!(matches!(e.kind, ErrorKind::Validation(_)));
-    let e = p
-        .load_str(r#"allow_field("leina", "food");"#)
-        .expect_err("Expected validation error");
-    assert!(matches!(e.kind, ErrorKind::Validation(_)));
-    let e = p
-        .load_str(r#"allow_request("leina", "eat", "food");"#)
-        .expect_err("Expected validation error");
-    assert!(matches!(e.kind, ErrorKind::Validation(_)));
+    let cases = vec![
+        r#"has_permission("leina", "eat", "food");"#,
+        r#"allow("leina", "food");"#,
+        r#"allow_field("leina", "food");"#,
+        r#"allow_request("leina", "eat", "food");"#,
+    ];
+    for case in cases {
+        qvalidation!(case, InvalidRule { .. });
+    }
 
     // This should succeed
     // TODO: should we emit warnings if rules with union specializers are loaded
@@ -2602,11 +2601,12 @@ has_role(actor: User, role_name, repository: Repository) if
     repository = role.repository;
 "#;
 
-    let err = p.load_str(policy).expect_err("Expected validation error");
-    assert!(matches!(&err.kind, ErrorKind::Validation(_)));
-    assert!(format!("{}", err).contains(
+    qvalidation!(
+        p,
+        policy,
+        InvalidRule { .. },
         "Failed to match because: Parameter `role_name` expects a String type constraint."
-    ));
+    );
 
     Ok(())
 }
@@ -2666,13 +2666,12 @@ resource Issue {
 allow(actor, action, resource) if has_permission(actor, action, resource);
 "#;
 
-    let err = p.load_str(policy).expect_err("Expected validation error");
-    assert!(matches!(
-        &err.kind,
-        ErrorKind::Validation(ValidationError::MissingRequiredRule { .. })
-    ));
-    assert!(err
-        .to_string()
-        .contains("Missing implementation for required rule has_relation("));
+    qvalidation!(
+        p,
+        policy,
+        MissingRequiredRule { .. },
+        "Missing implementation for required rule has_relation("
+    );
+
     Ok(())
 }
