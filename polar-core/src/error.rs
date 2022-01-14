@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, fmt};
+use std::{borrow::Borrow, fmt, sync::Arc};
 
 use indoc::formatdoc;
 use serde::Serialize;
@@ -7,7 +7,7 @@ use strum_macros::AsRefStr;
 use super::{
     resource_block::Declaration,
     rules::Rule,
-    sources::Context,
+    sources::{Context, Source},
     terms::{Operation, Symbol, Term},
 };
 
@@ -80,14 +80,14 @@ impl PolarError {
                 | InvalidFloat { token, loc }
                 | ReservedWord { token, loc }
                 | UnrecognizedToken { token, loc } => {
-                    Some(Context::new(e.src_id, *loc, loc + token.len()))
+                    Some(Context::new(e.source.clone(), *loc, loc + token.len()))
                 }
 
                 // These errors track `loc` and only pertain to a single character, so right bound
                 // of span is also `loc`.
                 InvalidTokenCharacter { loc, .. }
                 | InvalidToken { loc }
-                | UnrecognizedEOF { loc } => Some(Context::new(e.src_id, *loc, *loc)),
+                | UnrecognizedEOF { loc } => Some(Context::new(e.source.clone(), *loc, *loc)),
 
                 // These errors track `term`, from which we calculate the span.
                 WrongValueType { term, .. } => term.parsed_context().cloned(),
@@ -142,7 +142,12 @@ impl PolarError {
                 }
 
                 // These errors always pertain to a specific file but not to a specific place therein.
-                FileLoading { src_id, .. } => Some(Context::new(*src_id, 0, 0)),
+                FileLoading {
+                    filename, contents, ..
+                } => {
+                    let source = Arc::new(Source::new_with_name(filename, contents));
+                    Some(Context::new(source, 0, 0))
+                }
             },
 
             Operational(_) => None,
@@ -194,7 +199,7 @@ impl From<PolarError> for FormattedPolarError {
 pub struct ParseError {
     pub kind: ParseErrorKind,
     #[serde(skip_serializing)]
-    pub src_id: u64,
+    pub source: Arc<Source>,
 }
 
 impl fmt::Display for ParseError {
@@ -489,7 +494,9 @@ impl fmt::Display for OperationalError {
 pub enum ValidationError {
     FileLoading {
         #[serde(skip_serializing)]
-        src_id: u64,
+        filename: String,
+        #[serde(skip_serializing)]
+        contents: String,
         msg: String,
     },
     MissingRequiredRule {

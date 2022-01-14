@@ -811,7 +811,6 @@ dependencies = [
  "js-sys",
  "lalrpop",
  "lalrpop-util",
- "lazy_static",
  "maplit",
  "permute",
  "pipe",

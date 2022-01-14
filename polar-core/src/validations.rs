@@ -101,11 +101,10 @@ impl Visitor for AndOrPrecendenceCheck {
                         && op.operator != o.operator
                 )
             }) {
-                if let Some(_context) = term.parsed_context() {
+                if let Some(context) = term.parsed_context() {
                     // check if source _before_ the term contains an opening
                     // parenthesis
-                    // let preceding_source = context.source.src.get(..context.left);
-                    let preceding_source: Option<&str> = None;
+                    let preceding_source = context.source.src.get(..context.left);
                     if preceding_source.map_or(false, |s| !s.trim().ends_with('(')) {
                         self.unparenthesized_expr.push(term.clone());
                     }

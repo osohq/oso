@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use lalrpop_util::{lalrpop_mod, ParseError};
 
 use super::{
@@ -5,6 +7,7 @@ use super::{
     lexer::{self, Lexer, Token},
     resource_block::Production,
     rules::*,
+    sources::Source,
     terms::*,
 };
 
@@ -34,7 +37,7 @@ pub enum Line {
 
 fn lalrpop_error_to_polar_error(
     e: ParseError<usize, lexer::Token, error::ParseErrorKind>,
-    src_id: u64,
+    source: Arc<Source>,
 ) -> error::PolarError {
     let kind = match e {
         ParseError::InvalidToken { location: loc } => error::ParseErrorKind::InvalidToken { loc },
@@ -61,26 +64,29 @@ fn lalrpop_error_to_polar_error(
         },
         ParseError::User { error } => error,
     };
-    error::ParseError { src_id, kind }.into()
+    error::ParseError { source, kind }.into()
 }
 
-pub fn parse_lines(src_id: u64, src: &str) -> PolarResult<Vec<Line>> {
+pub fn parse_lines(source: Source) -> PolarResult<Vec<Line>> {
+    let source = Arc::new(source);
     polar::LinesParser::new()
-        .parse(src_id, Lexer::new(src))
-        .map_err(|e| lalrpop_error_to_polar_error(e, src_id))
+        .parse(&source, Lexer::new(&source.src))
+        .map_err(|e| lalrpop_error_to_polar_error(e, source))
 }
 
-pub fn parse_query(src_id: u64, query: &str) -> PolarResult<Term> {
+pub fn parse_query(query: &str) -> PolarResult<Term> {
+    let source = Arc::new(Source::new(query));
     polar::TermParser::new()
-        .parse(src_id, Lexer::new(query))
-        .map_err(|e| lalrpop_error_to_polar_error(e, src_id))
+        .parse(&source, Lexer::new(query))
+        .map_err(|e| lalrpop_error_to_polar_error(e, source))
 }
 
 #[cfg(test)]
 pub fn parse_rules(rules: &str) -> PolarResult<Vec<Rule>> {
+    let source = Arc::new(Source::new(rules));
     polar::RulesParser::new()
-        .parse(0, Lexer::new(rules))
-        .map_err(|e| lalrpop_error_to_polar_error(e, 0))
+        .parse(&source, Lexer::new(rules))
+        .map_err(|e| lalrpop_error_to_polar_error(e, source))
 }
 
 #[cfg(test)]
@@ -91,12 +97,12 @@ mod tests {
 
     #[track_caller]
     fn parse_term(src: &str) -> Term {
-        super::parse_query(0, src).unwrap()
+        super::parse_query(src).unwrap()
     }
 
     #[track_caller]
     fn parse_term_error(src: &str) -> error::ParseErrorKind {
-        super::parse_query(0, src).unwrap_err().unwrap_parse()
+        super::parse_query(src).unwrap_err().unwrap_parse()
     }
 
     #[track_caller]
@@ -106,7 +112,7 @@ mod tests {
 
     #[track_caller]
     fn parse_lines(src: &str) -> Vec<Line> {
-        super::parse_lines(0, src).unwrap()
+        super::parse_lines(Source::new(src)).unwrap()
     }
 
     #[test]
@@ -225,7 +231,7 @@ mod tests {
     #[test]
     fn test_rule_type_error() {
         let rule_type = r#"type f(x: String) if x = "bad";"#;
-        super::parse_lines(0, rule_type).unwrap_err();
+        super::parse_lines(Source::new(rule_type)).unwrap_err();
     }
 
     #[test]

@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
+    use std::{collections::BTreeMap, sync::Arc};
 
-    use polar_core::{error::*, events::*, rules::*, term, terms::*, value};
+    use polar_core::{error::*, events::*, rules::*, sources::Source, term, terms::*, value};
 
     #[test]
     fn serialize_test() {
@@ -66,7 +66,10 @@ mod tests {
             c: 'x',
             loc: 15,
         };
-        let e = ParseError { kind, src_id: 0 };
+        let e = ParseError {
+            kind,
+            source: Arc::new(Source::new("CinnabarVinegarInteger")),
+        };
         let err = PolarError::from(e);
         eprintln!("{}", serde_json::to_string(&err).unwrap());
         let rule = Rule::new_from_test(

@@ -18,10 +18,9 @@ name = "bench_main"
 harness = false
 
 [dependencies]
-indoc = "1.0.3"
 lalrpop-util = { version = "0.19.6", default-features = false }
-lazy_static = "1.4.0"
 serde = { version = "1.0.119", features = ["derive", "rc"] }
+indoc = "1.0.3"
 strum_macros = "0.23.1"
 
 [build_dependencies]

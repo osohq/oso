@@ -641,6 +641,7 @@ mod tests {
     use crate::events::QueryEvent;
     use crate::parser::{parse_lines, Line};
     use crate::polar::Polar;
+    use crate::sources::Source;
 
     #[track_caller]
     fn expect_error(p: &Polar, policy: &str, expected: &str) {
@@ -1315,7 +1316,10 @@ mod tests {
                 let mut policy = "resource Repo {\n".to_owned();
                 policy += &permutation.join("\n");
                 policy += "}";
-                assert!(equal(&parse_lines(0, &policy).unwrap()[0], expected));
+                assert!(equal(
+                    &parse_lines(Source::new(policy)).unwrap()[0],
+                    expected
+                ));
             }
         };
 
