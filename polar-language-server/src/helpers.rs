@@ -54,8 +54,8 @@ pub(crate) fn uri_from_polar_diagnostic_context(diagnostic: &Diagnostic) -> Opti
             }
         } else {
             log(&format!(
-                "source missing filename:\n\t{:?}\n\tDiagnostic: {}",
-                context.source, diagnostic
+                "Diagnostic source missing filename: {}",
+                diagnostic
             ));
         }
     } else {

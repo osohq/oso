@@ -194,12 +194,21 @@ impl From<PolarError> for FormattedPolarError {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Serialize)]
 #[serde(transparent)]
 pub struct ParseError {
     pub kind: ParseErrorKind,
     #[serde(skip_serializing)]
     pub source: Arc<Source>,
+}
+
+// Ignore `source` field when `Debug`-formatting `ParseError`.
+impl fmt::Debug for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ParseError")
+            .field("kind", &self.kind)
+            .finish()
+    }
 }
 
 impl fmt::Display for ParseError {
