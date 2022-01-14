@@ -61,10 +61,9 @@ pub enum SourceInfo {
 impl fmt::Debug for SourceInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            // Ignore inner `Context` when `Debug`-formatting `SourceInfo::Parser`.
             Self::Parser(_) => f.debug_struct("SourceInfo::Parser").finish(),
-            Self::TemporaryVariable => f.debug_struct("SourceInfo::TemporaryVariable").finish(),
-            Self::Ffi => f.debug_struct("SourceInfo::Ffi").finish(),
-            Self::Test => f.debug_struct("SourceInfo::Test").finish(),
+            _ => self.fmt(f),
         }
     }
 }
