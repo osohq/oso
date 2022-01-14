@@ -1,7 +1,6 @@
 package oso_test
 
 import (
-	// "encoding/json"
 	"os"
 	"reflect"
 	"strings"
@@ -9,7 +8,7 @@ import (
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	//	"gorm.io/gorm/logger"
 
 	oso "github.com/osohq/go-oso"
 	"github.com/osohq/go-oso/internal/host"
@@ -174,7 +173,7 @@ type Person struct {
 func gormDb(dbFile string) *gorm.DB {
 	os.Remove(dbFile)
 	db, _ := gorm.Open(sqlite.Open(dbFile), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		//	Logger: logger.Default.LogMode(logger.Info),
 	})
 	db.AutoMigrate(&Planet{})
 	db.AutoMigrate(&Sign{})
