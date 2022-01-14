@@ -1,18 +1,17 @@
-use std::collections::hash_map::DefaultHasher;
-use std::collections::{BTreeMap, HashSet};
-use std::fmt;
-use std::hash::{Hash, Hasher};
-use std::sync::Arc;
+use std::{
+    collections::{hash_map::DefaultHasher, BTreeMap, HashSet},
+    fmt,
+    hash::{Hash, Hasher},
+    sync::Arc,
+};
 
 use serde::{Deserialize, Serialize};
 
-use super::error::RuntimeError::{self, InvalidState};
+use super::error::{invalid_state, PolarResult};
 pub use super::numerics::Numeric;
 use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
-use super::sources::SourceInfo;
+use super::sources::{Context, Source, SourceInfo};
 use super::visitor::{walk_operation, walk_term, Visitor};
-
-type Result<T> = core::result::Result<T, RuntimeError>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct Dictionary {
@@ -43,15 +42,6 @@ pub struct ExternalInstance {
     pub constructor: Option<Term>,
     pub repr: Option<String>,
     pub class_repr: Option<String>,
-}
-
-// Context stored somewhere by id.
-
-// parser outputs
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Context {
-    pub file: String,
 }
 
 pub type TermList = Vec<Term>;
@@ -148,67 +138,53 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn as_symbol(&self) -> Result<&Symbol> {
+    pub fn as_symbol(&self) -> PolarResult<&Symbol> {
         match self {
             Value::Variable(name) => Ok(name),
             Value::RestVariable(name) => Ok(name),
-            _ => Err(InvalidState {
-                msg: format!("Expected symbol, got: {}", self),
-            }),
+            _ => invalid_state(format!("Expected symbol, got: {}", self)),
         }
     }
 
-    pub fn as_string(&self) -> Result<&str> {
+    pub fn as_string(&self) -> PolarResult<&str> {
         match self {
             Value::String(string) => Ok(string.as_ref()),
-            _ => Err(InvalidState {
-                msg: format!("Expected string, got: {}", self),
-            }),
+            _ => invalid_state(format!("Expected string, got: {}", self)),
         }
     }
 
-    pub fn as_expression(&self) -> Result<&Operation> {
+    pub fn as_expression(&self) -> PolarResult<&Operation> {
         match self {
             Value::Expression(op) => Ok(op),
-            _ => Err(InvalidState {
-                msg: format!("Expected expression, got: {}", self),
-            }),
+            _ => invalid_state(format!("Expected expression, got: {}", self)),
         }
     }
 
-    pub fn as_call(&self) -> Result<&Call> {
+    pub fn as_call(&self) -> PolarResult<&Call> {
         match self {
             Value::Call(pred) => Ok(pred),
-            _ => Err(InvalidState {
-                msg: format!("Expected call, got: {}", self),
-            }),
+            _ => invalid_state(format!("Expected call, got: {}", self)),
         }
     }
 
-    pub fn as_pattern(&self) -> Result<&Pattern> {
+    pub fn as_pattern(&self) -> PolarResult<&Pattern> {
         match self {
             Value::Pattern(p) => Ok(p),
-            _ => Err(InvalidState {
-                msg: format!("Expected pattern, got: {}", self),
-            }),
+            _ => invalid_state(format!("Expected pattern, got: {}", self)),
         }
     }
 
-    pub fn as_list(&self) -> Result<&TermList> {
+    pub fn as_list(&self) -> PolarResult<&TermList> {
         match self {
             Value::List(l) => Ok(l),
-            _ => Err(InvalidState {
-                msg: format!("Expected list, got: {}", self),
-            }),
+            _ => invalid_state(format!("Expected list, got: {}", self)),
         }
     }
 
-    pub fn as_dict(&self) -> Result<&Dictionary> {
+    pub fn as_dict(&self) -> PolarResult<&Dictionary> {
         match self {
             Value::Dictionary(d) => Ok(d),
-            _ => Err(InvalidState {
-                msg: format!("Expected dictionary, got: {}", self),
-            }),
+            _ => invalid_state(format!("Expected dictionary, got: {}", self)),
         }
     }
 
@@ -360,13 +336,9 @@ impl Term {
     }
 
     /// Creates a new term from the parser
-    pub fn new_from_parser(src_id: u64, left: usize, right: usize, value: Value) -> Self {
+    pub fn new_from_parser(source: Arc<Source>, left: usize, right: usize, value: Value) -> Self {
         Self {
-            source_info: SourceInfo::Parser {
-                src_id,
-                left,
-                right,
-            },
+            source_info: SourceInfo::parser(source, left, right),
             value: Arc::new(value),
         }
     }
@@ -393,17 +365,15 @@ impl Term {
         self.value = Arc::new(value);
     }
 
-    pub fn offset(&self) -> usize {
-        if let SourceInfo::Parser { left, .. } = self.source_info {
-            left
-        } else {
-            0
-        }
+    pub(crate) fn source_info(&self) -> &SourceInfo {
+        &self.source_info
     }
 
-    pub fn span(&self) -> Option<(usize, usize)> {
-        if let SourceInfo::Parser { left, right, .. } = self.source_info {
-            Some((left, right))
+    // TODO(gj): Parsed<T> type (or something) so we can remove this meaningless distinction
+    // between terms & rules.
+    pub(crate) fn parsed_context(&self) -> Option<&Context> {
+        if let SourceInfo::Parser(context) = self.source_info() {
+            Some(context)
         } else {
             None
         }
@@ -485,14 +455,6 @@ impl Term {
         let mut hasher = DefaultHasher::new();
         self.hash(&mut hasher);
         hasher.finish()
-    }
-
-    pub fn get_source_id(&self) -> Option<u64> {
-        if let SourceInfo::Parser { src_id, .. } = self.source_info {
-            Some(src_id)
-        } else {
-            None
-        }
     }
 
     pub fn is_actor_union(&self) -> bool {

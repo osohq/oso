@@ -28,7 +28,7 @@ impl Trace {
             }
         } else {
             let polar_str = match self.node {
-                Node::Rule(ref r) => vm.rule_source(r),
+                Node::Rule(ref r) => r.to_string(),
                 Node::Term(ref t) => vm.term_source(t, false),
             };
             let indented = polar_str
@@ -714,16 +714,13 @@ mod tests {
 
     #[test]
     fn test_source_lines() {
-        let src = "hi".to_owned();
-        let filename: Option<String> = None;
-        let source = Source { src, filename };
+        let source = Source::new("hi");
         assert_eq!(source_lines(&source, 0, 0), "001: hi\n     ^");
         assert_eq!(source_lines(&source, 1, 0), "001: hi\n      ^");
         assert_eq!(source_lines(&source, 2, 0), "001: hi\n       ^");
 
-        let src = " one\n  two\n   three\n    four\n     five\n      six\n       seven\n        eight\n         nine\n".to_owned();
-        let filename: Option<String> = None;
-        let source = Source { src, filename };
+        let src = " one\n  two\n   three\n    four\n     five\n      six\n       seven\n        eight\n         nine\n";
+        let source = Source::new(src);
         let lines = source_lines(&source, 34, 2);
         let expected = indoc! {"
             003:    three
@@ -733,7 +730,6 @@ mod tests {
             006:       six
             007:        seven"};
         assert_eq!(lines, expected, "\n{}", lines);
-
         let lines = source_lines(&source, 1, 2);
         let expected = indoc! {"
             001:  one
@@ -742,28 +738,22 @@ mod tests {
             003:    three"};
         assert_eq!(lines, expected, "\n{}", lines);
 
-        let src = "one\ntwo\nthree\n".to_owned();
-        let filename: Option<String> = None;
-        let source = Source { src, filename };
-
+        let source = Source::new("one\ntwo\nthree\n");
         let lines = source_lines(&source, 0, 0);
         let expected = indoc! {"
             001: one
                  ^"};
         assert_eq!(lines, expected, "\n{}", lines);
-
         let lines = source_lines(&source, 3, 0);
         let expected = indoc! {"
             001: one
                     ^"};
         assert_eq!(lines, expected, "\n{}", lines);
-
         let lines = source_lines(&source, 4, 0);
         let expected = indoc! {"
             002: two
                  ^"};
         assert_eq!(lines, expected, "\n{}", lines);
-
         let lines = source_lines(&source, 5, 0);
         let expected = indoc! {"
             002: two

@@ -1,15 +1,12 @@
-use std::fmt::Write;
 use std::rc::Rc;
 
-use super::error::RuntimeError;
+use super::bindings::Binding;
+use super::error::{PolarError, PolarResult};
 use super::formatting::source_lines;
+use super::kb::KnowledgeBase;
 use super::partial::simplify_bindings;
-use super::sources::*;
 use super::terms::*;
 use super::traces::*;
-
-use super::bindings::Binding;
-use super::kb::KnowledgeBase;
 use super::vm::*;
 
 impl PolarVirtualMachine {
@@ -25,7 +22,7 @@ impl PolarVirtualMachine {
 
     /// If the inner [`Debugger`](struct.Debugger.html) returns a [`Goal`](../vm/enum.Goal.html),
     /// push it onto the goal stack.
-    pub fn maybe_break(&mut self, event: DebugEvent) -> Result<bool, RuntimeError> {
+    pub fn maybe_break(&mut self, event: DebugEvent) -> PolarResult<bool> {
         self.debugger.maybe_break(event, self).map_or_else(
             || Ok(false),
             |goal| {
@@ -70,7 +67,7 @@ pub enum DebugEvent {
     Goal(Rc<Goal>),
     Query,
     Pop,
-    Error(RuntimeError),
+    Error(PolarError),
     Rule,
 }
 
@@ -89,14 +86,11 @@ pub struct Debugger {
 impl Debugger {
     /// Retrieve the original source line (and, optionally, additional lines of context) for the
     /// current query.
-    fn query_source(&self, query: &Term, sources: &Sources, num_lines: usize) -> String {
-        query
-            .get_source_id()
-            .and_then(|id| sources.get_source(id))
-            .map_or_else(
-                || "".to_string(),
-                |source| source_lines(&source, query.offset(), num_lines),
-            )
+    fn query_source(&self, query: &Term, num_lines: usize) -> String {
+        query.parsed_context().map_or_else(
+            || "".to_string(),
+            |context| source_lines(&context.source, context.left, num_lines),
+        )
     }
 
     /// When the [`VM`](../vm/struct.PolarVirtualMachine.html) hits a breakpoint, check if
@@ -128,8 +122,11 @@ impl Debugger {
                 self.break_query(vm)
             }
             (Step::Error, DebugEvent::Error(error)) => {
+                let context = error
+                    .get_context()
+                    .map_or_else(|| "".into(), |c| c.source_position());
                 self.break_msg(vm).map(|message| Goal::Debug {
-                    message: format!("{}\nERROR: {}\n", message, error),
+                    message: format!("{}\nERROR: {}{}\n", message, error.0, context),
                 })
             }
             (Step::Rule, DebugEvent::Rule) => self.break_query(vm),
@@ -145,11 +142,11 @@ impl Debugger {
                     args,
                 }) if args.len() == 1 => None,
                 _ => {
-                    let source = self.query_source(q, &vm.kb.read().unwrap().sources, 3);
+                    let source = self.query_source(q, 3);
                     Some(format!("{}\n\n{}\n", vm.query_summary(q), source))
                 }
             },
-            Node::Rule(ref r) => Some(vm.rule_source(r)),
+            Node::Rule(ref r) => Some(r.to_string()),
         })
     }
 
@@ -216,7 +213,7 @@ impl Debugger {
                 return Some(Goal::Debug {
                     message: vm.queries.last().map_or_else(
                         || "".to_string(),
-                        |query| self.query_source(query, &vm.kb.read().unwrap().sources, lines),
+                        |query| self.query_source(query, lines),
                     ),
                 });
             }
@@ -251,60 +248,8 @@ impl Debugger {
                 }
             }
             "stack" | "trace" => {
-                let mut trace_stack = vm.trace_stack.clone();
-                let mut trace = vm.trace.clone();
-
-                // Walk up the trace stack so we can print out the current query at each level.
-                let mut stack = vec![];
-                while let Some(t) = trace.last() {
-                    stack.push(t.clone());
-                    trace = trace_stack
-                        .pop()
-                        .map(|ts| ts.as_ref().clone())
-                        .unwrap_or_else(Vec::new);
-                }
-
-                stack.reverse();
-
-                // Only index queries, not rules. Rule nodes are just used as context for where the query comes from.
-                let mut i = stack.iter().filter(|t| t.term().is_some()).count();
-
-                let mut st = String::new();
-                let mut rule = None;
-                for t in stack {
-                    match &t.node {
-                        Node::Rule(r) => {
-                            rule = Some(r.clone());
-                        }
-                        Node::Term(t) => {
-                            if matches!(t.value(), Value::Expression(Operation { operator: Operator::And, args}) if args.len() == 1)
-                            {
-                                continue;
-                            }
-
-
-                            let _ = write!(st, "{}: {}", i-1, vm.term_source(t, false));
-                            i -= 1;
-                            let _ = write!(st, "\n  ");
-                            if let Some(source) = vm.source(t) {
-                                if let Some(rule) = &rule {
-                                    let _ = write!(st, "in rule {} ", rule.name);
-                                } else {
-                                    let _ = write!(st, "in query ");
-                                }
-                                let (row, column) = crate::lexer::loc_to_pos(&source.src, t.offset());
-                                let _ = write!(st, "at line {}, column {}", row + 1, column + 1);
-                                if let Some(filename) = source.filename {
-                                    let _ = write!(st, " in file {}", filename);
-                                }
-                                let _ = writeln!(st);
-                            };
-                        }
-                    }
-                }
-
                 return Some(Goal::Debug {
-                    message: st
+                    message: vm.stack_trace()
                 })
             }
             "goals" => return Some(show(&vm.goals)),

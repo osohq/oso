@@ -148,10 +148,9 @@ fn test() {
     assert!(
         matches!(
             res,
-            Err(oso::OsoError::Polar(PolarError {
-                kind: ErrorKind::Runtime(RuntimeError::UnhandledPartial { .. }),
-                ..
-            })),
+            Err(oso::OsoError::Polar(PolarError(ErrorKind::Runtime(
+                RuntimeError::UnhandledPartial { .. }
+            )))),
         ),
         "Expected unhandled partial error, got: {:#?}",
         res

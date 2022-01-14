@@ -1,5 +1,5 @@
 use crate::counter::Counter;
-use crate::error::RuntimeError;
+use crate::error::{invalid_state, PolarResult};
 use crate::events::QueryEvent;
 use crate::runnable::Runnable;
 use crate::terms::{Operation, Operator, Pattern, Symbol, Term, Value};
@@ -60,11 +60,11 @@ impl IsaConstraintCheck {
     ///
     /// Returns:
     /// Zero, one or two query events.
-    fn check_constraint(&mut self, constraint: Operation, counter: &Counter) -> Check {
+    fn check_constraint(&mut self, constraint: Operation, counter: &Counter) -> PolarResult<Check> {
         // TODO(gj): check non-`Isa` constraints, e.g., `(Unify, partial, 1)` against `(Isa,
         // partial, Integer)`.
         if constraint.operator != Operator::Isa {
-            return Check::None;
+            return Ok(Check::None);
         }
 
         let constraint_path = path(&constraint.args[0]);
@@ -73,7 +73,7 @@ impl IsaConstraintCheck {
         // Not comparable b/c one of the matches statements has a LHS that isn't a variable or dot
         // op.
         if constraint_path.is_empty() || proposed_path.is_empty() {
-            return Check::None;
+            return Ok(Check::None);
         }
 
         let just_vars = constraint_path.len() == 1
@@ -83,9 +83,9 @@ impl IsaConstraintCheck {
 
         // FIXME(gw): this logic is hard to follow!
         if just_vars {
-            let sym = constraint.args[0].value().as_symbol().unwrap();
+            let sym = constraint.args[0].value().as_symbol()?;
             if !self.proposed_names.contains(sym) {
-                return Check::None;
+                return Ok(Check::None);
             }
         } else if constraint_path
             // a.b.c vs. d
@@ -94,12 +94,12 @@ impl IsaConstraintCheck {
             .any(|(a, b)| a != b)
         // FIXME(gw): is this right? what if the first elements are aliases?
         {
-            return Check::None;
+            return Ok(Check::None);
         }
 
         let existing = constraint.args.last().unwrap();
 
-        if constraint_path == proposed_path {
+        let check = if constraint_path == proposed_path {
             // x matches A{} vs. x matches B{}
             self.subclass_compare(existing, counter)
         } else if constraint_path.len() < proposed_path.len() {
@@ -110,7 +110,8 @@ impl IsaConstraintCheck {
         } else {
             // Comparing existing `x.a.b matches B{}` vs. `proposed x.a matches A{}`.
             Check::None
-        }
+        };
+        Ok(check)
     }
 
     fn subclass_compare(&mut self, existing: &Term, counter: &Counter) -> Check {
@@ -170,7 +171,7 @@ impl IsaConstraintCheck {
 }
 
 impl Runnable for IsaConstraintCheck {
-    fn run(&mut self, counter: Option<&mut Counter>) -> Result<QueryEvent, RuntimeError> {
+    fn run(&mut self, counter: Option<&mut Counter>) -> PolarResult<QueryEvent> {
         if let Some(result) = self.result.take() {
             if result {
                 // If the primary check succeeds, there's no need to check the alternative.
@@ -190,7 +191,7 @@ impl Runnable for IsaConstraintCheck {
         loop {
             match self.existing.pop() {
                 None => return Ok(QueryEvent::Done { result: true }),
-                Some(constraint) => match self.check_constraint(constraint, counter) {
+                Some(constraint) => match self.check_constraint(constraint, counter)? {
                     Check::None => (),
                     Check::One(a) => return Ok(a),
                     Check::Two(a, b) => {
@@ -202,13 +203,10 @@ impl Runnable for IsaConstraintCheck {
         }
     }
 
-    fn external_question_result(&mut self, call_id: u64, answer: bool) -> Result<(), RuntimeError> {
+    fn external_question_result(&mut self, call_id: u64, answer: bool) -> PolarResult<()> {
         if call_id != self.last_call_id {
-            return Err(RuntimeError::InvalidState {
-                msg: String::from("Unexpected call id"),
-            });
+            return invalid_state("Unexpected call id");
         }
-
         self.result = Some(answer);
         Ok(())
     }

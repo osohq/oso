@@ -1,16 +1,17 @@
-mod context;
-
-pub use context::{Context, Range};
-
 use std::fmt;
 
-use super::error::PolarError;
-use super::warning::PolarWarning;
+use super::{error::PolarError, sources::Context, warning::PolarWarning};
 
 #[derive(Debug)]
 pub enum Diagnostic {
     Error(PolarError),
     Warning(PolarWarning),
+}
+
+impl From<PolarError> for Diagnostic {
+    fn from(err: PolarError) -> Self {
+        Self::Error(err)
+    }
 }
 
 impl Diagnostic {
@@ -29,10 +30,9 @@ impl Diagnostic {
         };
         matches!(
             self,
-            Diagnostic::Error(PolarError {
-                kind: Parse(_) | Validation(FileLoading { .. }) | Validation(ResourceBlock { .. }),
-                ..
-            })
+            Diagnostic::Error(PolarError(
+                Parse(_) | Validation(FileLoading { .. }) | Validation(ResourceBlock { .. }),
+            ))
         )
     }
 
@@ -40,6 +40,23 @@ impl Diagnostic {
         match self {
             Diagnostic::Error(e) => e.kind(),
             Diagnostic::Warning(w) => w.kind(),
+        }
+    }
+
+    pub fn get_context(&self) -> Option<Context> {
+        match self {
+            Diagnostic::Error(e) => e.get_context(),
+            Diagnostic::Warning(w) => w.get_context(),
+        }
+    }
+}
+
+#[cfg(test)]
+impl Diagnostic {
+    pub fn unwrap_error(self) -> PolarError {
+        match self {
+            Diagnostic::Error(e) => e,
+            _ => panic!(),
         }
     }
 }

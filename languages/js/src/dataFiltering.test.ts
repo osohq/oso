@@ -1098,5 +1098,5 @@ has_relation(repo: Repo, "parent", _: Issue{repo: repo});
     await oso.checkAuthz(gwen, 'create_issues', Repo, []);
     await oso.checkAuthz(leina, 'create_issues', Repo, [pol]);
     await oso.checkAuthz(gabe, 'create_issues', Repo, []);
-  });
+  }, 60000);
 });
