@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{formatting::source_lines, lexer::loc_to_pos};
 
 /// Parsed source context.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Context {
     pub source: Arc<Source>,
     /// Start location within `source`.
@@ -81,7 +81,7 @@ impl SourceInfo {
 
 // TODO(gj): `Serialize` makes some `polar-wasm-api` tests easier to write. We could look into
 // https://serde.rs/remote-derive.html if we cared to preserve that while removing this impl.
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(PartialEq, Serialize, Deserialize)]
 pub struct Source {
     pub filename: Option<String>,
     pub src: String,
