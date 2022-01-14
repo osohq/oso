@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - gj/revert-arc
 
 jobs:
   benchmark:
