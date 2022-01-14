@@ -714,7 +714,7 @@ export interface ClassParams extends DataFilteringQueryParams {
    */
   name?: string;
   /**
-   * Explicit ID to use when registering the class class in Polar. An ID is
+   * Explicit ID to use when registering the class in Polar. An ID is
    * generated if none is provided .
    */
 
