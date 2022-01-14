@@ -302,7 +302,7 @@ mod test {
     use super::*;
 
     use crate::bindings::Bindings;
-    use crate::error::{ErrorKind, PolarError, RuntimeError};
+    use crate::error::{ErrorKind, PolarError, PolarResult, RuntimeError};
     use crate::events::QueryEvent;
     use crate::polar::Polar;
     use crate::query::Query;
@@ -384,7 +384,7 @@ mod test {
         }};
     }
 
-    fn next_binding(query: &mut Query) -> Result<Bindings, PolarError> {
+    fn next_binding(query: &mut Query) -> PolarResult<Bindings> {
         let event = query.next_event()?;
         if let QueryEvent::Result { bindings, .. } = event {
             Ok(bindings)
@@ -393,7 +393,7 @@ mod test {
         }
     }
 
-    type TestResult = Result<(), PolarError>;
+    type TestResult = PolarResult<()>;
 
     #[test]
     fn basic_test() -> TestResult {
@@ -1006,11 +1006,8 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("a")])), false);
         let error = q.next_event().unwrap_err();
         assert!(matches!(
-            error,
-            PolarError {
-                kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }),
-                ..
-            }
+            error.0,
+            ErrorKind::Runtime(RuntimeError::Unsupported { .. }),
         ));
         Ok(())
     }
@@ -1764,11 +1761,8 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         let error = q.next_event().unwrap_err();
         assert!(matches!(
-            error,
-            PolarError {
-                kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }),
-                ..
-            }
+            error.0,
+            ErrorKind::Runtime(RuntimeError::Unsupported { .. }),
         ));
         Ok(())
     }
@@ -2347,10 +2341,9 @@ mod test {
             assert!(
                 matches!(
                     res,
-                    Err(PolarError {
-                        kind: ErrorKind::Runtime(RuntimeError::UnhandledPartial { .. }),
-                        ..
-                    })
+                    Err(PolarError(ErrorKind::Runtime(
+                        RuntimeError::UnhandledPartial { .. }
+                    )))
                 ),
                 "unexpected result: {:#?} for {}",
                 res,

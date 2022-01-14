@@ -245,10 +245,9 @@ fn test_already_loaded_file_error() -> oso::Result<()> {
     let err = oso.oso.load_files(vec![&path, &path]).unwrap_err();
 
     assert!(
-        matches!(&err, OsoError::Polar(polar_error::PolarError {
-            kind: polar_error::ErrorKind::Validation(polar_error::ValidationError::FileLoading { .. }),
-            ..
-        }) if err.to_string().starts_with(&format!("Problem loading file: File {} has already been loaded.", path.to_string_lossy()))),
+        matches!(&err, OsoError::Polar(polar_error::PolarError(
+            polar_error::ErrorKind::Validation(polar_error::ValidationError::FileLoading { .. })
+        )) if err.to_string().starts_with(&format!("Problem loading file: File {} has already been loaded.", path.to_string_lossy()))),
         "Error was {}",
         err
     );
@@ -962,12 +961,9 @@ fn test_rule_types() {
 
     assert!(matches!(
         &err,
-        OsoError::Polar(polar_error::PolarError {
-            kind: polar_error::ErrorKind::Validation(
-                polar_error::ValidationError::InvalidRule { .. }
-            ),
-            ..
-        })
+        OsoError::Polar(polar_error::PolarError(polar_error::ErrorKind::Validation(
+            polar_error::ValidationError::InvalidRule { .. }
+        )))
     ));
 }
 
