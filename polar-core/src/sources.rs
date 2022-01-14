@@ -43,7 +43,7 @@ impl Context {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum SourceInfo {
     // From the parser
     Parser(Context),
@@ -56,6 +56,17 @@ pub enum SourceInfo {
 
     /// Created for a test
     Test,
+}
+
+impl fmt::Debug for SourceInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Parser(_) => f.debug_struct("SourceInfo::Parser").finish(),
+            Self::TemporaryVariable => f.debug_struct("SourceInfo::TemporaryVariable").finish(),
+            Self::Ffi => f.debug_struct("SourceInfo::Ffi").finish(),
+            Self::Test => f.debug_struct("SourceInfo::Test").finish(),
+        }
+    }
 }
 
 impl SourceInfo {
