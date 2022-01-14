@@ -6,8 +6,8 @@ import (
 	"os"
 
 	osoErrors "github.com/osohq/go-oso/errors"
-	"github.com/osohq/go-oso/types"
 	"github.com/osohq/go-oso/internal/host"
+	"github.com/osohq/go-oso/types"
 )
 
 /*
@@ -42,7 +42,7 @@ func NewOso() (Oso, error) {
 }
 
 func (o *Oso) GetHost() *host.Host {
-  return &o.p.host
+	return &o.p.host
 }
 
 /*

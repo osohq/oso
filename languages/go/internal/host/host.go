@@ -73,6 +73,10 @@ func (h Host) Copy() Host {
 	}
 }
 
+func (h Host) GetAdapter() *Adapter {
+	return &h.adapter
+}
+
 func (h Host) GetClass(name string) (*reflect.Type, error) {
 	if v, ok := h.classes[name]; ok {
 		return &v, nil
@@ -452,11 +456,11 @@ func (h *Host) SetAcceptExpression(acceptExpression bool) {
 }
 
 func (h *Host) GetRelationFields(rel FilterRelation) (string, string) {
-  switch rec := h.fields[rel.FromTypeName][rel.FromFieldName].(type) {
-  case types.Relation:
-    return rec.MyField, rec.OtherField
-  }
-  return "", "" // FIXME return error
+	switch rec := h.fields[rel.FromTypeName][rel.FromFieldName].(type) {
+	case types.Relation:
+		return rec.MyField, rec.OtherField
+	}
+	return "", "" // FIXME return error
 }
 
 // sorry bout the type
