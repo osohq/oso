@@ -251,7 +251,6 @@ class Polar:
         """
         # TODO: let's add example usage here or at least a proper docstring for the arguments
 
-        # TODO: @patrickod DRY this 'name' behavior up here & in cache_class
         class_id = self.ffi_polar.new_id()
         name = self.host.cache_class(
             cls,
