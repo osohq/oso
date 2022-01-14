@@ -512,15 +512,19 @@ export class Host implements Required<DataFilteringQueryParams> {
         // pass a string class repr *for registered types only*, otherwise pass
         // undefined (allow core to differentiate registered or not)
         const v_cast = v as NullishOrHasConstructor;
-        let classRepr: string | undefined = v_cast?.constructor?.name;
+        let classRepr: string | undefined = undefined;
 
         if (isConstructor(v)) {
           instanceId = this.getType(v)?.id;
           classId = instanceId;
+          classRepr = this.getType(v)?.name;
         } else {
+          const v_constructor: Class | undefined = v_cast?.constructor;
+
           // pass classId for instances of *registered classes* only
-          if (classRepr !== undefined && this.types.has(classRepr)) {
-            classId = this.getType(classRepr)?.id;
+          if (v_constructor !== undefined && this.types.has(v_constructor)) {
+            classId = this.getType(v_constructor)?.id;
+            classRepr = this.getType(v_constructor)?.name;
           }
         }
 
