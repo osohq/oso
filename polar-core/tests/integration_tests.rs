@@ -2692,24 +2692,47 @@ allow(actor, action, resource) if has_permission(actor, action, resource);
 #[test]
 fn test_internal_isa_check() -> TestResult {
     let p = polar();
-    let repo_class_instance = ExternalInstance {
+
+    // "base" class
+    let object_class_instance = ExternalInstance {
         instance_id: 1,
         constructor: None,
         repr: None,
         class_repr: None,
         class_id: Some(1),
     };
-    let repo_class_term = term!(Value::ExternalInstance(repo_class_instance.clone()));
-    let repo_class_name = sym!("Repository");
-    p.register_constant(repo_class_name.clone(), repo_class_term)?;
-    p.register_mro(repo_class_name, vec![repo_class_instance.class_id.unwrap()])?;
+    let object_class_term = term!(Value::ExternalInstance(object_class_instance.clone()));
+    let object_class_name = sym!("Object");
+    p.register_constant(object_class_name.clone(), object_class_term)?;
+    p.register_mro(
+        object_class_name,
+        vec![object_class_instance.class_id.unwrap()],
+    )?;
 
-    let repo_instance = ExternalInstance {
+    // "repository" inheriting from "base"
+    let repo_class_instance = ExternalInstance {
         instance_id: 2,
         constructor: None,
         repr: None,
         class_repr: None,
-        class_id: Some(1),
+        class_id: Some(2),
+    };
+    let repo_class_term = term!(Value::ExternalInstance(repo_class_instance.clone()));
+    let repo_class_name = sym!("Repository");
+    p.register_constant(repo_class_name.clone(), repo_class_term)?;
+    p.register_mro(
+        repo_class_name,
+        vec![
+            repo_class_instance.instance_id,
+            object_class_instance.instance_id,
+        ],
+    )?;
+    let repo_instance = ExternalInstance {
+        instance_id: 3,
+        constructor: None,
+        repr: None,
+        class_repr: None,
+        class_id: Some(2),
     };
 
     let repo_instance_term = term!(Value::ExternalInstance(repo_instance));
@@ -2717,6 +2740,19 @@ fn test_internal_isa_check() -> TestResult {
     p.register_constant(repo_instance_name, repo_instance_term)?;
 
     let query = p.new_query("repo matches Repository", false)?;
+    let results = query_results(
+        query,
+        no_results,
+        no_externals,
+        panic_external_isa_handler,
+        no_is_subspecializer,
+        no_debug,
+        print_messages,
+        no_error_handler,
+    );
+    assert_eq!(results.len(), 1);
+
+    let query = p.new_query("repo matches Object", false)?;
     let results = query_results(
         query,
         no_results,
