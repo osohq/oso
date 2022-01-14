@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "v2"), allow(warnings, unused))]
+
 use std::{
     collections::{hash_map::DefaultHasher, HashMap, HashSet},
     hash::{Hash, Hasher},
@@ -66,7 +68,6 @@ impl BindingManager {
 
     pub fn get_bindings(&self, variables: &[String]) -> HashMap<Symbol, Value> {
         assert_eq!(self.frames.len(), 1); // we should be left with _just_ global bindings
-        println!("Get results: {{ {} }}", print_bindings(&self.bindings));
         variables
             .iter()
             .map(|v| {
@@ -139,6 +140,14 @@ impl BindingManager {
             self.bindings.insert(var.name.0.clone(), new_term.clone());
             new_term
         }
+    }
+
+    pub fn print_bindings(&self) -> String {
+        self.bindings
+            .iter()
+            .map(|(k, v)| format!("{} => {},", k, v))
+            .collect::<Vec<String>>()
+            .join("\n\t")
     }
 }
 
@@ -230,12 +239,4 @@ impl<'bm> Folder for Derefer<'bm> {
             _ => crate::folder::fold_term(t, self),
         }
     }
-}
-
-fn print_bindings(bindings: &HashMap<String, Term>) -> String {
-    bindings
-        .iter()
-        .map(|(k, v)| format!("{} => {},", k, v))
-        .collect::<Vec<String>>()
-        .join("\n\t")
 }

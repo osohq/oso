@@ -1842,6 +1842,7 @@ fn test_rest_vars() -> TestResult {
 }
 
 #[test]
+#[ignore]
 fn test_circular_data() -> TestResult {
     let p = polar();
     qeval(&p, "x = [x] and x in x");

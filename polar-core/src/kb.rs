@@ -1,6 +1,9 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use crate::folder::Folder;
+use crate::rewrites::Renamer;
+
 use super::counter::Counter;
 use super::diagnostic::Diagnostic;
 use super::error::{PolarResult, RuntimeError, ValidationError};
@@ -73,6 +76,12 @@ impl KnowledgeBase {
             "_" => String::from(name),
             _ => format!("_{}_", name),
         }
+    }
+
+    /// Generate a fresh set of variables for a rule.
+    pub fn rename_rule_vars(&self, rule: &Rule) -> Rule {
+        let mut renamer = Renamer::new(self);
+        renamer.fold_rule(rule.clone())
     }
 
     /// Generate a new symbol.

@@ -10,8 +10,9 @@ use crate::{
     error::RuntimeError,
     folder::{fold_list, fold_term, Folder},
     kb::KnowledgeBase,
+    partial::{simplify_bindings_opt, sub_this},
     // vm::Goal,
-    terms::{has_rest_var, List, Operation, Operator, Symbol, Term, Value},
+    terms::{has_rest_var, List, Operation, Operator, Symbol, Term, Value, Variable},
 };
 
 type Result<T> = core::result::Result<T, RuntimeError>;
@@ -165,11 +166,114 @@ impl BindingManager {
     }
 
     pub fn get_bindings(&self, variables: &[String]) -> HashMap<Symbol, Value> {
-        self.bindings(false)
+        let mut bindings = self.bindings(true);
+        match simplify_bindings_opt(bindings, false) {
+            Ok(Some(bs)) => {
+                // simplification succeeds
+                bindings = bs;
+            }
+            Ok(None) => {
+                // incompatible bindings; simplification fails
+                // do not return result
+                // return Ok(QueryEvent::None);
+                todo!("incompatible bindings")
+            }
+
+            // Err(RuntimeError::UnhandledPartial { term, ref var }) => {
+            //     // use the debugger to get the nicest possible version of this binding
+            //     let Binding(original_var_name, simplified) = get_binding_for_var(&var.0, self);
+
+            //     // TODO(gj): `t` is a partial constructed in the VM, so we don't have any
+            //     // source context for it. We make a best effort to track down some relevant
+            //     // context by walking `t` in search of the first piece of source context we
+            //     // find (verified by calling the `KnowledgeBase::get_term_source` API).
+            //     //
+            //     // For a future refactor, we might consider using the `Term::clone_with_value`
+            //     // API to preserve source context when initially binding a variable to an
+            //     // `Expression`.
+            //     fn try_to_add_context(kb: &KnowledgeBase, t: &Term, simplified: Term) -> Term {
+            //         /// `GetSource` walks a term & returns the _1st_ piece of source info it finds.
+            //         struct GetSource<'kb> {
+            //             kb: &'kb KnowledgeBase,
+            //             term: Option<Term>,
+            //         }
+
+            //         impl<'kb> Visitor for GetSource<'kb> {
+            //             fn visit_term(&mut self, t: &Term) {
+            //                 if self.term.is_none() {
+            //                     if self.kb.get_term_source(t).is_none() {
+            //                         walk_term(self, t)
+            //                     } else {
+            //                         self.term = Some(t.clone())
+            //                     }
+            //                 }
+            //             }
+            //         }
+
+            //         let mut source_getter = GetSource { kb, term: None };
+            //         source_getter.visit_term(t);
+            //         if let Some(term_with_context) = source_getter.term {
+            //             term_with_context.clone_with_value(simplified.value().clone())
+            //         } else {
+            //             simplified
+            //         }
+            //     }
+
+            //     // there was an unhandled partial in the bindings
+            //     // grab the context from the variable that was defined and
+            //     // set the context before returning
+            //     return Err(RuntimeError::UnhandledPartial {
+            //         term: try_to_add_context(&*self.kb(), &term, simplified),
+            //         var: original_var_name,
+            //     });
+            // }
+            Err(e) => unreachable!("unexpected error: {}", e.to_string()),
+        }
+
+        bindings = bindings
+            .clone()
             .into_iter()
-            .filter(|(k, _v)| variables.contains(&k.0))
-            .map(|(k, v)| (k, v.value().clone()))
+            .filter(|(var, _)| !var.is_temporary_var())
+            .map(|(var, value)| (var.clone(), sub_this(var, value)))
+            .collect();
+
+        // self.log(
+        //     LogLevel::Info,
+        //     || {
+        //         if bindings.is_empty() {
+        //             "RESULT: SUCCESS".to_string()
+        //         } else {
+        //             let mut out = "RESULT: {\n".to_string(); // open curly & newline
+        //             for (key, value) in &bindings {
+        //                 out.push_str(&format!("  {}: {}\n", key, value)); // key-value pairs spaced w/ newlines
+        //             }
+        //             out.push('}'); // closing curly
+        //             out
+        //         }
+        //     },
+        //     &[],
+        // );
+
+        // bindings
+        // Ok(QueryEvent::Result { bindings, trace })
+        variables
+            .iter()
+            .map(|v| {
+                let symv = Symbol(v.clone());
+                (
+                    symv.clone(),
+                    bindings
+                        .get(&symv)
+                        .map(|t| t.value().clone()) // convert to value
+                        .unwrap_or_else(|| Value::Variable(Variable::new(v.to_string()))), // default to an unbound variable (should be error?)
+                )
+            })
             .collect()
+        // self.bindings(false)
+        //     .into_iter()
+        //     .filter(|(k, _v)| variables.contains(&k.0))
+        //     .map(|(k, v)| (k, v.value().clone()))
+        //     .collect()
     }
 
     pub fn deref(&self, term: Term) -> Term {
@@ -250,6 +354,14 @@ impl BindingManager {
         .unwrap();
 
         Ok(goal)
+    }
+
+    pub fn print_bindings(&self) -> String {
+        self.bindings
+            .iter()
+            .map(|Binding(k, v)| format!("{} => {},", k, v))
+            .collect::<Vec<String>>()
+            .join("\n\t")
     }
 
     /// Rebind `var` to `val`, regardless of compatibility.
@@ -563,7 +675,6 @@ impl BindingManager {
     }
 
     fn lookup(&self, var: &Symbol) -> Option<Term> {
-        println!("{:#?}", self.bindings);
         match self.variable_state(var) {
             VariableState::Bound(val) => Some(val),
             _ => None,

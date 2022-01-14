@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::sync::{Arc, RwLock};
 
+use crate::rewrites::rewrite_rule;
 use crate::Query;
 
 use super::data_filtering::{build_filter_plan, FilterPlan, PartialResults, Types};
@@ -61,18 +62,24 @@ impl Polar {
             let mut diagnostics = vec![];
             while let Some(line) = lines.pop() {
                 match line {
-                    parser::Line::Rule(rule) => {
+                    parser::Line::Rule(mut rule) => {
                         diagnostics.append(&mut check_singletons(&rule, kb));
                         diagnostics.append(&mut check_ambiguous_precedence(&rule, kb));
-                        // rule = rewrite_rule(rule, kb);
+                        #[cfg(not(feature = "v2"))]
+                        {
+                            rule = rewrite_rule(rule, kb);
+                        }
                         kb.add_rule(rule);
                     }
                     parser::Line::Query(term) => {
                         kb.inline_queries.push(term);
                     }
-                    parser::Line::RuleType(rule_type) => {
+                    parser::Line::RuleType(mut rule_type) => {
                         // make sure rule_type doesn't have anything that needs to be rewritten in the head
-                        // let rule_type = rewrite_rule(rule_type, kb);
+                        #[cfg(not(feature = "v2"))]
+                        {
+                            rule_type = rewrite_rule(rule_type, kb);
+                        }
                         if !matches!(
                             rule_type.body.value(),
                             Value::Expression(

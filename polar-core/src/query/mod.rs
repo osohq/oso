@@ -36,6 +36,7 @@ use crate::bindings::BindingManager;
 
 use crate::{
     kb::KnowledgeBase,
+    rewrites::rewrite_term,
     terms::{
         Call, InstanceLiteral, List, Operation, Operator, Symbol, Term, ToPolarString, Value,
         Variable,
@@ -60,13 +61,24 @@ impl Query {
             variables,
             kb,
         } = self;
+        let mut term = term.clone();
+        #[cfg(not(feature = "v2"))]
+        {
+            let mut kb = kb.write().unwrap();
+            term = rewrite_term(term, &mut kb);
+        }
 
+        println!("Query: {}", term);
         let variables = variables.clone();
 
         let state = State::new(kb.clone());
-        term.clone()
-            .run(state)
-            .map(move |state| state.get_bindings(&variables))
+        term.clone().run(state).map(move |state| {
+            println!(
+                "Get results: {{ {} }}",
+                state.binding_manager.print_bindings()
+            );
+            state.get_bindings(&variables)
+        })
     }
 }
 
@@ -87,6 +99,9 @@ impl Goal for Call {
             // and construct the goals needed to evaluate the rule
             let mut state = state.clone();
             state.enter_rule();
+            // v1 bindings needs to rename parameters
+            #[cfg(not(feature = "v2"))]
+            let r = state.kb.read().unwrap().rename_rule_vars(&r);
             let mut applicable = true;
             for (arg, param) in self.args.iter().zip(r.params.iter()) {
                 // let arg = (&state).walk(arg.clone());
@@ -104,6 +119,11 @@ impl Goal for Call {
                 }
             }
             if applicable {
+                println!(
+                    "Evaluate rule: {} with bindings: {{ {} }}",
+                    r,
+                    state.binding_manager.print_bindings()
+                );
                 Box::new(r.body.clone().run(state).map(|mut state| {
                     state.exit_rule();
                     state
@@ -314,6 +334,7 @@ impl State {
     }
 
     fn bind(&mut self, var: &Variable, value: Term) {
+        println!("Bind: {} = {}", var.to_polar(), value,);
         #[cfg(feature = "v2")]
         self.binding_manager.bind(var, value);
         #[cfg(not(feature = "v2"))]
@@ -321,7 +342,9 @@ impl State {
     }
 
     fn deref(&mut self, term: Term) -> Term {
-        self.binding_manager.deref(term)
+        let res = self.binding_manager.deref(term.clone());
+        println!("Deref: {} = {}", term, res);
+        res
     }
 
     fn unify(&mut self, left: Term, right: Term) -> bool {
