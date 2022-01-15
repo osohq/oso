@@ -478,7 +478,7 @@ pub enum OperationalError {
     // This should go away once we can constrain the value variant of a particular term in the type
     // system, e.g., `Term<String>` instead of `Term::value().as_string()`.
     UnexpectedValue {
-        expected: String,
+        expected: &'static str,
         received: Arc<Value>,
     },
     /// Rust panics caught in the `polar-c-api` crate.
@@ -619,11 +619,7 @@ where
     Err(OperationalError::InvalidState { msg }.into())
 }
 
-pub(crate) fn unexpected_value<T, U>(expected: T, received: Arc<Value>) -> PolarResult<U>
-where
-    T: AsRef<str>,
-{
-    let expected = expected.as_ref().into();
+pub(crate) fn unexpected_value<T>(expected: &'static str, received: Arc<Value>) -> PolarResult<T> {
     Err(OperationalError::UnexpectedValue { expected, received }.into())
 }
 
