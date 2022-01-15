@@ -1687,8 +1687,9 @@ impl PolarVirtualMachine {
                     return wrong_arity();
                 }
                 let result = args.pop().unwrap();
-                if !matches!(result.value(), Value::Variable(_)) {
-                    return invalid_state(format!("Not a variable: {}", result));
+                match result.value() {
+                    Value::Variable(_) => (),
+                    _ => return unexpected_value("variable", result.clone_value()),
                 }
                 let constructor = args.pop().unwrap();
 
@@ -1961,8 +1962,9 @@ impl PolarVirtualMachine {
         let right = &args[1];
         let result = &args[2];
 
-        if !matches!(result.value(), Value::Variable(_)) {
-            return invalid_state(format!("arithmetic_op_helper: not a variable: {}", result));
+        match result.value() {
+            Value::Variable(_) => (),
+            _ => return unexpected_value("variable", result.clone_value()),
         }
 
         match (left.value(), right.value()) {
