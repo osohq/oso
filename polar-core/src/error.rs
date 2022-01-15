@@ -8,7 +8,7 @@ use super::{
     resource_block::Declaration,
     rules::Rule,
     sources::{Context, Source},
-    terms::{Operation, Symbol, Term},
+    terms::{Operation, Symbol, Term, Value},
 };
 
 pub type PolarResult<T> = Result<T, PolarError>;
@@ -475,6 +475,12 @@ pub enum OperationalError {
     InvalidState { msg: String },
     /// Serialization errors in the `polar-c-api` crate.
     Serialization { msg: String },
+    // This should go away once we can constrain the value variant of a particular term in the type
+    // system, e.g., `Term<String>` instead of `Term::value().as_string()`.
+    UnexpectedValue {
+        expected: String,
+        received: Arc<Value>,
+    },
     /// Rust panics caught in the `polar-c-api` crate.
     Unknown,
 }
@@ -490,6 +496,10 @@ impl fmt::Display for OperationalError {
         match self {
             Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
             Self::Serialization { msg } => write!(f, "Serialization error: {}", msg),
+            Self::UnexpectedValue { expected, received } => write!(
+                f,
+                "Unexpected value.\n  Expected: {expected}\n  Received: {received}"
+            ),
             Self::Unknown => write!(
                 f,
                 "We hit an unexpected error.\n\
@@ -607,6 +617,14 @@ where
 {
     let msg = msg.as_ref().into();
     Err(OperationalError::InvalidState { msg }.into())
+}
+
+pub(crate) fn unexpected_value<T, U>(expected: T, received: Arc<Value>) -> PolarResult<U>
+where
+    T: AsRef<str>,
+{
+    let expected = expected.as_ref().into();
+    Err(OperationalError::UnexpectedValue { expected, received }.into())
 }
 
 pub(crate) fn unsupported<T, U, V>(msg: T, term: U) -> PolarResult<V>

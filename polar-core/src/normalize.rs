@@ -33,7 +33,7 @@ impl Term {
     ) -> Self {
         use Value::*;
 
-        match self.value().as_expression() {
+        match self.as_expression() {
             Err(_) => self.clone(),
             Ok(Operation { operator, args }) => {
                 let args: Vec<_> = args.iter().map(|t| t.distribute(p1, c1, p2, c2)).collect();
@@ -63,7 +63,7 @@ impl Term {
     /// binary tree normal form -- all and / or nodes form a binary tree
     fn as_binary_tree(&self) -> Self {
         use Operator::*;
-        match self.value().as_expression() {
+        match self.as_expression() {
             Ok(Operation { operator, args }) if *operator == And || *operator == Or => {
                 match args.len() {
                     // empty -> boolean
@@ -91,7 +91,7 @@ impl Term {
     /// using De Morgan's law. must already be in btnf.
     fn negation_normal_form(&self) -> Self {
         use Operator::*;
-        match self.value().as_expression() {
+        match self.as_expression() {
             Err(_) => self.clone(),
             Ok(Operation {
                 operator: Not,
@@ -143,7 +143,7 @@ impl Term {
     }
 
     fn _hs(&self, n: usize) -> Self {
-        self.value().as_expression().unwrap().args[n].clone()
+        self.as_expression().unwrap().args[n].clone()
     }
 
     fn lhs(&self) -> Self {
@@ -167,7 +167,7 @@ pub fn not_(t: Term) -> Term {
 }
 
 fn is_op(l: &Term, op: Operator) -> bool {
-    matches!(l.value().as_expression(),
+    matches!(l.as_expression(),
         Ok(Operation { operator, .. }) if op == *operator)
 }
 
