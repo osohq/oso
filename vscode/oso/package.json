@@ -72,10 +72,11 @@
           "type": "array",
           "items": {
             "type": "string",
-            "format": "uri"
+            "pattern": "^([^/]+\/)*[^/]+\/?$",
+            "patternErrorMessage": "Project root must be a POSIX-style relative path that doesn't begin with a forward slash and has its path segments separated by single forward slashes. E.g.: `mypath` or `my/path/` or `./my/path`"
           },
           "default": [],
-          "markdownDescription": "asdfasdfasdfasdf"
+          "markdownDescription": "When a workspace contains multiple distinct Oso policies, list of **POSIX-style, relative paths** from workspace folder root to directory containing each Oso policy."
         }
       }
     }

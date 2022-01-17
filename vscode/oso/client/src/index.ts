@@ -5,7 +5,7 @@
  * warn if any aren't included in *any* policies.
  */
 
-import { join } from 'path';
+import { posix, join } from 'path';
 
 import { debounce } from 'lodash';
 import {
@@ -35,7 +35,6 @@ import {
   TELEMETRY_STATE_KEY,
   TELEMETRY_INTERVAL,
 } from './telemetry';
-import { inspect } from 'util';
 
 // TODO(gj): think about what it would take to support `load_str()` via
 // https://code.visualstudio.com/api/language-extensions/embedded-languages
@@ -127,6 +126,7 @@ async function openDocument(uri: Uri) {
   const uriMatch = (d: TextDocument) => d.uri.toString() === uri.toString();
   const doc = workspace.textDocuments.find(uriMatch);
   if (doc === undefined) await workspace.openTextDocument(uri);
+  return uri;
 }
 
 export const osoConfigKey = 'oso.polarLanguageServer';
@@ -142,16 +142,17 @@ async function startClients(
   const rawProjectRoots = workspace
     .getConfiguration(osoConfigKey, workspaceFolder)
     .get<string[]>(projectRootsKey, []);
-  outputChannel.appendLine(
-    `${fullProjectRootsKey} setting: ${inspect(rawProjectRoots)}`
-  );
 
   type InvalidProjectRootReason = "isn't a directory" | "doesn't exist";
 
   const projectRoots = [];
   const errors: [InvalidProjectRootReason, string][] = [];
   for (const path of [...new Set(rawProjectRoots)]) {
-    const uri = workspaceFolder.uri.with({ path });
+    // Split configured path on POSIX-style separator.
+    const segments = path.split(posix.sep);
+    // But join with platform-specific separator.
+    const joinedPath = join(workspaceFolder.uri.fsPath, ...segments);
+    const uri = workspaceFolder.uri.with({ path: joinedPath });
     try {
       const { type } = await workspace.fs.stat(uri);
       if (type === FileType.Directory) {
@@ -180,6 +181,7 @@ async function startClients(
   if (projectRoots.length === 0) projectRoots.push(workspaceFolder.uri);
 
   const workspaceFolderClients: WorkspaceFolderClients = new Map();
+  const polarFilesIncluded: Set<string> = new Set();
 
   for (const root of projectRoots) {
     // Watch `FileChangeType.Deleted` events for Polar files in the current
@@ -245,10 +247,20 @@ async function startClients(
 
     // Transmit the initial file system state for `root` (including files not
     // currently open in VS Code) to the server.
-    await openPolarFilesInFolder(root);
+    const openedFiles = await openPolarFilesInFolder(root);
+    openedFiles.forEach(f => polarFilesIncluded.add(f.toString()));
 
     workspaceFolderClients.set(root.toString(), [client, recordTelemetry]);
   }
+
+  // Ensure that all Polar files across the workspace were included in at least
+  // one project root.
+  (await openPolarFilesInFolder(workspaceFolder.uri)).forEach(f => {
+    if (!polarFilesIncluded.has(f.toString()))
+      outputChannel.appendLine(
+        `[pls] Polar file not included by any project root: ${f}`
+      );
+  });
 
   clients.set(workspaceFolder.uri.toString(), workspaceFolderClients);
 }
