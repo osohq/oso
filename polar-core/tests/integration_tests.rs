@@ -2071,7 +2071,6 @@ fn test_keyword_dot() -> TestResult {
 /// Test that rule heads work correctly when unification or specializers are used.
 #[test]
 fn test_unify_rule_head() -> TestResult {
-    qparse!("f(Foo{a: 1});", UnrecognizedToken { .. });
     qparse!("f(new Foo(a: Foo{a: 1}));", UnrecognizedToken { .. });
     qparse!("f(x: new Foo(a: 1));", ReservedWord { .. });
     qparse!("f(x: Foo{a: new Foo(a: 1)});", ReservedWord { .. });
@@ -2080,7 +2079,8 @@ fn test_unify_rule_head() -> TestResult {
     p.register_constant(sym!("Foo"), term!(true))?;
     p.load_str(
         r#"f(_: Foo{a: 1}, x) if x = 1;
-           g(_: Foo{a: Foo{a: 1}}, x) if x = 1;"#,
+           g(_: Foo{a: Foo{a: 1}}, x) if x = 1;
+           h(Foo{a: x}, x);"#,
     )?;
 
     let q = p.new_query("f(new Foo(a: 1), x)", false)?;
@@ -2088,6 +2088,10 @@ fn test_unify_rule_head() -> TestResult {
     assert_eq!(results[0].0[&sym!("x")], value!(1));
 
     let q = p.new_query("g(new Foo(a: new Foo(a: 1)), x)", false)?;
+    let (results, _externals) = query_results_with_externals(q);
+    assert_eq!(results[0].0[&sym!("x")], value!(1));
+
+    let q = p.new_query("h(new Foo(a: x), 1)", false)?;
     let (results, _externals) = query_results_with_externals(q);
     assert_eq!(results[0].0[&sym!("x")], value!(1));
     Ok(())

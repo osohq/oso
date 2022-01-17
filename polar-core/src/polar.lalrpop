@@ -663,6 +663,9 @@ Parameter: Parameter = {
             Parameter{parameter, specializer: Some(specializer)}
         }
     },
+    <specializer:Spanned<InstanceLiteralPattern>> => {
+      Parameter { parameter: var!("_"), specializer: Some(specializer) }
+    }
 };
 
 
