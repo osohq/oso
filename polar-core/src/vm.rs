@@ -15,9 +15,7 @@ use crate::bindings::{
 use crate::counter::Counter;
 use crate::data_filtering::partition_equivs;
 use crate::debugger::{get_binding_for_var, DebugEvent, Debugger};
-use crate::error::{
-    invalid_state, unexpected_value, unsupported, PolarError, PolarResult, RuntimeError,
-};
+use crate::error::{invalid_state, unsupported, PolarError, PolarResult, RuntimeError};
 use crate::events::*;
 use crate::folder::Folder;
 use crate::inverter::Inverter;
@@ -1687,10 +1685,7 @@ impl PolarVirtualMachine {
                     return wrong_arity();
                 }
                 let result = args.pop().unwrap();
-                match result.value() {
-                    Value::Variable(_) => (),
-                    _ => return unexpected_value("variable", result),
-                }
+                result.as_symbol()?; // Ensure `result` is a variable.
                 let constructor = args.pop().unwrap();
 
                 let instance_id = self.new_id();
@@ -1961,11 +1956,7 @@ impl PolarVirtualMachine {
         let left = &args[0];
         let right = &args[1];
         let result = &args[2];
-
-        match result.value() {
-            Value::Variable(_) => (),
-            _ => return unexpected_value("variable", result.clone()),
-        }
+        result.as_symbol()?; // Ensure `result` is a variable.
 
         match (left.value(), right.value()) {
             (Value::Number(left), Value::Number(right)) => {
