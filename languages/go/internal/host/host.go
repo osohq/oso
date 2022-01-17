@@ -84,6 +84,10 @@ func (h Host) GetClass(name string) (*reflect.Type, error) {
 	return nil, errors.NewUnregisteredClassError(name)
 }
 
+func (h Host) GetField(cls string, field string) interface{} {
+	return h.fields[cls][field]
+}
+
 func (h Host) CacheClass(cls reflect.Type, name string, constructor reflect.Value, fields map[string]interface{}) error {
 	if v, ok := h.classes[name]; ok {
 		return errors.NewDuplicateClassAliasError(name, cls, v)
