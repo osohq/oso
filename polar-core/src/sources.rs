@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{formatting::source_lines, lexer::loc_to_pos};
 
 /// Parsed source context.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Context {
     pub source: Arc<Source>,
     /// Start location within `source`.
@@ -43,7 +43,7 @@ impl Context {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum SourceInfo {
     // From the parser
     Parser(Context),
@@ -58,6 +58,18 @@ pub enum SourceInfo {
     Test,
 }
 
+impl fmt::Debug for SourceInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            // Ignore inner `Context` when `Debug`-formatting `SourceInfo::Parser`.
+            Self::Parser(_) => f.write_str("SourceInfo::Parser"),
+            Self::TemporaryVariable => f.write_str("SourceInfo::TemporaryVariable"),
+            Self::Ffi => f.write_str("SourceInfo::Ffi"),
+            Self::Test => f.write_str("SourceInfo::Test"),
+        }
+    }
+}
+
 impl SourceInfo {
     pub fn ffi() -> Self {
         Self::Ffi
@@ -70,7 +82,7 @@ impl SourceInfo {
 
 // TODO(gj): `Serialize` makes some `polar-wasm-api` tests easier to write. We could look into
 // https://serde.rs/remote-derive.html if we cared to preserve that while removing this impl.
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(PartialEq, Serialize, Deserialize)]
 pub struct Source {
     pub filename: Option<String>,
     pub src: String,
