@@ -30,7 +30,7 @@ the editor and in VS Code's **Problems** pane.
 
 #### Configuration
 
-##### Controlling which Polar files are treated as part of the same policy
+##### Configuring which Polar files are treated as part of the same policy
 
 By default, the extension assumes that each VS Code workspace folder contains a
 separate Oso policy. On startup, the extension searches each workspace folder
