@@ -193,8 +193,7 @@ impl<'kb> UndefinedRuleCallVisitor<'kb> {
         self.call_terms
             .into_iter()
             .filter(|term| {
-                term.value()
-                    .as_call()
+                term.as_call()
                     .map_or(false, |call| !self.defined_rules.contains(&call.name))
             })
             .map(|term| PolarError::from(ValidationError::UndefinedRuleCall { term }).into())

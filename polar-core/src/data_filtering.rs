@@ -174,7 +174,7 @@ impl VarInfo {
     fn dot_var(&mut self, base: &Term, field: &Term) -> VarName {
         // handle nested dot ops.
         let sym = self.symbolize(base);
-        let field_str = field.value().as_string().unwrap();
+        let field_str = field.as_string().unwrap();
 
         match self
             .field_relationships
@@ -201,19 +201,18 @@ impl VarInfo {
 
     /// turn dot expressions into symbols but leave other things unchanged.
     fn undot(&mut self, term: &Term) -> Value {
-        let val = term.value();
-        match val.as_expression() {
+        match term.as_expression() {
             Ok(Operation {
                 operator: Operator::Dot,
                 args,
             }) if args.len() == 2 => Value::from(self.dot_var(&args[0], &args[1])),
-            _ => val.clone(),
+            _ => term.value().clone(),
         }
     }
 
     fn do_and(self, args: &[Term]) -> PolarResult<Self> {
         args.iter().fold(Ok(self), |this, arg| {
-            this?.process_exp(arg.value().as_expression()?)
+            this?.process_exp(arg.as_expression()?)
         })
     }
 
@@ -223,7 +222,7 @@ impl VarInfo {
     }
 
     fn do_isa(mut self, lhs: &Term, rhs: &Term) -> PolarResult<Self> {
-        match rhs.value().as_pattern() {
+        match rhs.as_pattern() {
             Ok(Pattern::Instance(i)) if i.fields.fields.is_empty() => {
                 let lhs = self.symbolize(lhs);
                 self.types.push((lhs, i.tag.0.clone()));
@@ -324,8 +323,10 @@ impl FilterPlan {
             // if the result doesn't include a binding for this variable,
             // or if the binding isn't an expression, then just ignore it.
             .filter_map(|(i, result)| {
-                result.bindings.get(&Symbol::new(var)).map(|term| {
-                    match term.value().as_expression() {
+                result
+                    .bindings
+                    .get(&Symbol::new(var))
+                    .map(|term| match term.as_expression() {
                         Ok(exp) if exp.operator == Operator::And => {
                             let vars = Vars::from_op(exp)?;
                             if explain {
@@ -336,8 +337,7 @@ impl FilterPlan {
                             ResultSet::build(&types, &vars, class_tag)
                         }
                         _ => Ok(ResultSet::immediate(term.clone(), class_tag)),
-                    }
-                })
+                    })
             })
             .collect::<PolarResult<Vec<_>>>()?;
 

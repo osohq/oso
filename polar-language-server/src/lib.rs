@@ -376,15 +376,15 @@ impl PolarLanguageServer {
                                     match declaration {
                                         ParsedDeclaration::Permissions(permissions) => {
                                             event.resource_block_stats.permissions +=
-                                                permissions.value().as_list().unwrap().len();
+                                                permissions.as_list().unwrap().len();
                                         }
                                         ParsedDeclaration::Relations(relations) => {
                                             event.resource_block_stats.relations +=
-                                                relations.value().as_dict().unwrap().fields.len();
+                                                relations.as_dict().unwrap().fields.len();
                                         }
                                         ParsedDeclaration::Roles(roles) => {
                                             event.resource_block_stats.roles +=
-                                                roles.value().as_list().unwrap().len();
+                                                roles.as_list().unwrap().len();
                                         }
                                     }
                                 }
