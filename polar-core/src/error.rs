@@ -85,12 +85,12 @@ impl PolarError {
                 }
 
                 // These errors track `loc` and only pertain to a single character, so right bound
-                // of span is also `loc`.
+                // of context is also `loc`.
                 InvalidTokenCharacter { loc, .. }
                 | InvalidToken { loc }
                 | UnrecognizedEOF { loc } => Some(Context::new(e.source.clone(), *loc, *loc)),
 
-                // These errors track `term`, from which we calculate the span.
+                // These errors track `term`, from which we calculate the context.
                 WrongValueType { term, .. } => term.parsed_context().cloned(),
             },
 
@@ -116,7 +116,7 @@ impl PolarError {
             },
 
             Validation(e) => match e {
-                // These errors track `term`, from which we calculate the span.
+                // These errors track `term`, from which we calculate the context.
                 ResourceBlock { term, .. }
                 | SingletonVariable { term, .. }
                 | UndefinedRuleCall { term }
@@ -125,13 +125,13 @@ impl PolarError {
                 }
                 | UnregisteredClass { term, .. } => term.parsed_context().cloned(),
 
-                // These errors track `rule`, from which we calculate the span.
+                // These errors track `rule`, from which we calculate the context.
                 InvalidRule { rule, .. }
                 | InvalidRuleType {
                     rule_type: rule, ..
                 } => rule.parsed_context().cloned(),
 
-                // These errors track `rule_type`, from which we sometimes calculate the span.
+                // These errors track `rule_type`, from which we sometimes calculate the context.
                 MissingRequiredRule { rule_type } => {
                     if rule_type.name.0 == "has_relation" {
                         rule_type.parsed_context().cloned()
@@ -142,7 +142,7 @@ impl PolarError {
                     }
                 }
 
-                // These errors always pertain to a specific file but not to a specific place therein.
+                // These errors pertain to a specific file but not to a specific place therein.
                 FileLoading {
                     filename, contents, ..
                 } => {
