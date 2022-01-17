@@ -16,9 +16,7 @@ pub fn invert_operation(Operation { operator, args }: Operation) -> Operation {
     fn invert_args(args: Vec<Term>) -> Vec<Term> {
         args.into_iter()
             .map(|t| {
-                t.clone_with_value(value!(invert_operation(
-                    t.value().as_expression().unwrap().clone()
-                )))
+                t.clone_with_value(value!(invert_operation(t.as_expression().unwrap().clone())))
             })
             .collect()
     }
@@ -58,11 +56,7 @@ pub fn invert_operation(Operation { operator, args }: Operation) -> Operation {
         Leq => Operation { operator: Gt, args },
 
         // double negative
-        Not => args[0]
-            .value()
-            .as_expression()
-            .expect("negated expression")
-            .clone(),
+        Not => args[0].as_expression().expect("negated expression").clone(),
 
         // preserve the not
         Isa | In => Operation {
@@ -241,7 +235,7 @@ impl Operation {
     pub fn constraints(&self) -> Vec<Operation> {
         self.args
             .iter()
-            .map(|a| a.value().as_expression().unwrap().clone())
+            .map(|a| a.as_expression().unwrap().clone())
             .collect()
     }
 
@@ -314,7 +308,6 @@ mod test {
                 $bindings
                     .get(&sym!($sym))
                     .expect(&format!("{} is unbound", $sym))
-                    .value()
                     .as_expression()
                     .unwrap()
                     .to_string(),
@@ -327,7 +320,6 @@ mod test {
             let l = $bindings
                     .get(&sym!($sym))
                     .expect(&format!("{} is unbound", $sym))
-                    .value()
                     .as_expression()
                     .unwrap()
                     .clone()
@@ -1060,7 +1052,7 @@ mod test {
                         let last_segment = path.last().unwrap();
                         q.question_result(
                             call_id,
-                            last_segment.value().as_string().unwrap().to_uppercase() == class_tag.0,
+                            last_segment.as_string().unwrap().to_uppercase() == class_tag.0,
                         )
                         .unwrap();
                     }

@@ -73,12 +73,7 @@ impl Folder for VariableSubber {
 
 /// Substitute `sym!("_this")` for a variable in a partial.
 pub fn sub_this(this: Symbol, term: Term) -> Term {
-    if term
-        .value()
-        .as_symbol()
-        .map(|s| s == &this)
-        .unwrap_or(false)
-    {
+    if term.as_symbol().map(|s| s == &this).unwrap_or(false) {
         return term;
     }
     fold_term(term, &mut VariableSubber::new(this))
@@ -170,7 +165,7 @@ pub fn simplify_bindings_opt(bindings: Bindings, all: bool) -> Result<Option<Bin
                 perf.merge(p);
             }
 
-            match simplified.value().as_expression() {
+            match simplified.as_expression() {
                 Ok(o) if o == &FALSE => unsatisfiable = true,
                 _ => (),
             }
@@ -434,7 +429,7 @@ impl Simplifier {
     ) {
         fn toss_trivial_unifies(args: &mut TermList) {
             args.retain(|c| {
-                let o = c.value().as_expression().unwrap();
+                let o = c.as_expression().unwrap();
                 match o.operator {
                     Operator::Unify | Operator::Eq => {
                         assert_eq!(o.args.len(), 2);
@@ -471,7 +466,7 @@ impl Simplifier {
                 let mut keep = o.args.iter().map(|_| true).collect::<Vec<bool>>();
                 let mut references = o.args.iter().map(|_| false).collect::<Vec<bool>>();
                 for (i, arg) in o.args.iter().enumerate() {
-                    match self.maybe_bind_constraint(arg.value().as_expression().unwrap()) {
+                    match self.maybe_bind_constraint(arg.as_expression().unwrap()) {
                         MaybeDrop::Keep => (),
                         MaybeDrop::Drop => keep[i] = false,
                         MaybeDrop::Bind(var, value) => {
@@ -518,7 +513,6 @@ impl Simplifier {
                 simplifier.simplify_partial(&mut simplified);
                 *o = invert_operation(
                     simplified
-                        .value()
                         .as_expression()
                         .expect("a simplified expression")
                         .clone(),
@@ -542,7 +536,7 @@ impl Simplifier {
             // to avoid cloning to insert terms.
             let mut seen: HashSet<u64> = HashSet::with_capacity(args.len());
             args.retain(|a| {
-                let o = a.value().as_expression().unwrap();
+                let o = a.as_expression().unwrap();
                 o != &TRUE // trivial
                     && !seen.contains(&Term::from(o.mirror()).hash_value()) // reflection
                     && seen.insert(a.hash_value()) // duplicate
@@ -624,7 +618,7 @@ impl Simplifier {
             _ => (),
         }
 
-        if let Ok(sym) = orig.value().as_symbol() {
+        if let Ok(sym) = orig.as_symbol() {
             if term.contains_variable(sym) {
                 *term = orig.clone()
             }

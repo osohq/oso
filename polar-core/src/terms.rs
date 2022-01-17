@@ -7,7 +7,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use super::error::{invalid_state, PolarResult};
+use super::error::{unexpected_value, PolarResult};
 pub use super::numerics::Numeric;
 use super::resource_block::{ACTOR_UNION_NAME, RESOURCE_UNION_NAME};
 use super::sources::{Context, Source, SourceInfo};
@@ -138,56 +138,6 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn as_symbol(&self) -> PolarResult<&Symbol> {
-        match self {
-            Value::Variable(name) => Ok(name),
-            Value::RestVariable(name) => Ok(name),
-            _ => invalid_state(format!("Expected symbol, got: {}", self)),
-        }
-    }
-
-    pub fn as_string(&self) -> PolarResult<&str> {
-        match self {
-            Value::String(string) => Ok(string.as_ref()),
-            _ => invalid_state(format!("Expected string, got: {}", self)),
-        }
-    }
-
-    pub fn as_expression(&self) -> PolarResult<&Operation> {
-        match self {
-            Value::Expression(op) => Ok(op),
-            _ => invalid_state(format!("Expected expression, got: {}", self)),
-        }
-    }
-
-    pub fn as_call(&self) -> PolarResult<&Call> {
-        match self {
-            Value::Call(pred) => Ok(pred),
-            _ => invalid_state(format!("Expected call, got: {}", self)),
-        }
-    }
-
-    pub fn as_pattern(&self) -> PolarResult<&Pattern> {
-        match self {
-            Value::Pattern(p) => Ok(p),
-            _ => invalid_state(format!("Expected pattern, got: {}", self)),
-        }
-    }
-
-    pub fn as_list(&self) -> PolarResult<&TermList> {
-        match self {
-            Value::List(l) => Ok(l),
-            _ => invalid_state(format!("Expected list, got: {}", self)),
-        }
-    }
-
-    pub fn as_dict(&self) -> PolarResult<&Dictionary> {
-        match self {
-            Value::Dictionary(d) => Ok(d),
-            _ => invalid_state(format!("Expected dictionary, got: {}", self)),
-        }
-    }
-
     pub fn is_ground(&self) -> bool {
         match self {
             Value::Call(_)
@@ -382,6 +332,59 @@ impl Term {
     /// Get a reference to the underlying data of this term
     pub fn value(&self) -> &Value {
         &self.value
+    }
+
+    pub(crate) fn as_symbol(&self) -> PolarResult<&Symbol> {
+        match self.value() {
+            Value::Variable(name) => Ok(name),
+            Value::RestVariable(name) => Ok(name),
+            _ => unexpected_value("(rest) variable", self.clone()),
+        }
+    }
+
+    pub(crate) fn as_string(&self) -> PolarResult<&str> {
+        match self.value() {
+            Value::String(string) => Ok(string.as_ref()),
+            _ => unexpected_value("string", self.clone()),
+        }
+    }
+
+    // Can't currently be `pub(crate)` due to use in oso crate.
+    pub fn as_expression(&self) -> PolarResult<&Operation> {
+        match self.value() {
+            Value::Expression(op) => Ok(op),
+            _ => unexpected_value("expression", self.clone()),
+        }
+    }
+
+    pub(crate) fn as_call(&self) -> PolarResult<&Call> {
+        match self.value() {
+            Value::Call(pred) => Ok(pred),
+            _ => unexpected_value("call", self.clone()),
+        }
+    }
+
+    pub(crate) fn as_pattern(&self) -> PolarResult<&Pattern> {
+        match self.value() {
+            Value::Pattern(p) => Ok(p),
+            _ => unexpected_value("pattern", self.clone()),
+        }
+    }
+
+    // Can't currently be `pub(crate)` due to use in polar-language-server crate.
+    pub fn as_list(&self) -> PolarResult<&TermList> {
+        match self.value() {
+            Value::List(l) => Ok(l),
+            _ => unexpected_value("list", self.clone()),
+        }
+    }
+
+    // Can't currently be `pub(crate)` due to use in polar-language-server crate.
+    pub fn as_dict(&self) -> PolarResult<&Dictionary> {
+        match self.value() {
+            Value::Dictionary(d) => Ok(d),
+            _ => unexpected_value("dictionary", self.clone()),
+        }
     }
 
     /// Get a mutable reference to the underlying data.
