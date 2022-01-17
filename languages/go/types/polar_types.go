@@ -674,7 +674,7 @@ func (OperationalErrorSerialization) isOperationalError() {}
 // OperationalErrorUnexpectedValue struct
 type OperationalErrorUnexpectedValue struct {
 	// Received
-	Received Value `json:"received"`
+	Received Term `json:"received"`
 }
 
 func (OperationalErrorUnexpectedValue) isOperationalError() {}
