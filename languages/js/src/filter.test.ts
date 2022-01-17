@@ -10,7 +10,6 @@ import {
   SerializedRelation,
   Adapter,
 } from './filter';
-//import type { Filter, FilterKind, FilterField } from './dataFiltering';
 import 'reflect-metadata';
 import {
   OneToMany,
