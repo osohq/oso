@@ -13,7 +13,7 @@ export async function query<Q, R>(
 ): Promise<Result[]> {
   const results = [];
   for await (const result of x.query(q, opts)) {
-    results.push(result as Result);
+    results.push(result);
   }
   return results;
 }

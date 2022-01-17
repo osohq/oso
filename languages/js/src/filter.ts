@@ -1,5 +1,5 @@
-import { Host } from './Host';
-import { PolarComparisonOperator, PolarValue, obj } from './types';
+import type { Host } from './Host';
+import type { PolarComparisonOperator, PolarValue, obj } from './types';
 import { OsoError } from './errors';
 
 export interface SerializedRelation {
