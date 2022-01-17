@@ -593,14 +593,16 @@ func TestNoRelationships(t *testing.T) {
 }
 
 func TestPartialIsaWithPath(t *testing.T) {
-	// TODO implement IsaWithPath query event
-	//  o := testOso()
-	//  o.LoadString("allow(_, _, person: Person) if check(person.Sign); check(sign: Sign) if sign.Name = \"cancer\"; check(person: Person) if person.Sign.Name = \"leo\";")
-	//	res, err := o.AuthorizedResources("", "", "Person")
-	//	if err != nil {
-	//		t.Error(err.Error())
-	//	}
-	//  onePersonNamed("eden", res, t)
+	o := testOso()
+	o.LoadString(`
+    allow(_, _, person: Person) if check(person.Sign);
+    check(sign: Sign) if sign.Name = "cancer";
+    check(person: Person) if person.Sign.Name = "leo";`)
+	res, err := o.AuthorizedResources("", "", "Person")
+	if err != nil {
+		t.Error(err.Error())
+	}
+	onePersonNamed("eden", res, t)
 }
 
 func TestUnifyIns(t *testing.T) {
