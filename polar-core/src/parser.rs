@@ -1,5 +1,15 @@
-use crate::lexer::Token;
+use std::sync::Arc;
+
 use lalrpop_util::{lalrpop_mod, ParseError};
+
+use super::{
+    error::{self, PolarResult},
+    lexer::{self, Lexer, Token},
+    resource_block::Production,
+    rules::*,
+    sources::Source,
+    terms::*,
+};
 
 /// Used to denote whether an enclosed value is a value or a logical operator
 pub enum ValueOrLogical {
@@ -13,12 +23,6 @@ lalrpop_mod!(
     polar
 );
 
-use super::error;
-use super::lexer::{self, Lexer};
-use super::resource_block::Production;
-use super::rules::*;
-use super::terms::*;
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum Line {
     Rule(Rule),
@@ -31,75 +35,84 @@ pub enum Line {
     },
 }
 
-fn to_parse_error(e: ParseError<usize, lexer::Token, error::ParseError>) -> error::ParseError {
-    match e {
-        ParseError::InvalidToken { location: loc } => error::ParseError::InvalidToken { loc },
+fn lalrpop_error_to_polar_error(
+    e: ParseError<usize, lexer::Token, error::ParseErrorKind>,
+    source: Arc<Source>,
+) -> error::PolarError {
+    let kind = match e {
+        ParseError::InvalidToken { location: loc } => error::ParseErrorKind::InvalidToken { loc },
         ParseError::UnrecognizedEOF { location: loc, .. } => {
-            error::ParseError::UnrecognizedEOF { loc }
+            error::ParseErrorKind::UnrecognizedEOF { loc }
         }
         ParseError::UnrecognizedToken {
             token: (loc, t, _), ..
         } => match t {
-            Token::Debug | Token::Cut | Token::In | Token::New => error::ParseError::ReservedWord {
-                token: t.to_string(),
-                loc,
-            },
-            _ => error::ParseError::UnrecognizedToken {
+            Token::Debug | Token::Cut | Token::In | Token::New => {
+                error::ParseErrorKind::ReservedWord {
+                    token: t.to_string(),
+                    loc,
+                }
+            }
+            _ => error::ParseErrorKind::UnrecognizedToken {
                 token: t.to_string(),
                 loc,
             },
         },
-        ParseError::ExtraToken { token: (loc, t, _) } => error::ParseError::ExtraToken {
+        ParseError::ExtraToken { token: (loc, t, _) } => error::ParseErrorKind::ExtraToken {
             token: t.to_string(),
             loc,
         },
         ParseError::User { error } => error,
-    }
+    };
+    error::ParseError { source, kind }.into()
 }
 
-pub fn parse_lines(src_id: u64, src: &str) -> Result<Vec<Line>, error::ParseError> {
+pub fn parse_lines(source: Source) -> PolarResult<Vec<Line>> {
+    let source = Arc::new(source);
     polar::LinesParser::new()
-        .parse(src_id, Lexer::new(src))
-        .map_err(to_parse_error)
+        .parse(&source, Lexer::new(&source.src))
+        .map_err(|e| lalrpop_error_to_polar_error(e, source))
 }
 
-pub fn parse_query(src_id: u64, src: &str) -> Result<Term, error::ParseError> {
+pub fn parse_query(query: &str) -> PolarResult<Term> {
+    let source = Arc::new(Source::new(query));
     polar::TermParser::new()
-        .parse(src_id, Lexer::new(src))
-        .map_err(to_parse_error)
+        .parse(&source, Lexer::new(query))
+        .map_err(|e| lalrpop_error_to_polar_error(e, source))
 }
 
 #[cfg(test)]
-pub fn parse_rules(src_id: u64, src: &str) -> Result<Vec<Rule>, error::ParseError> {
+pub fn parse_rules(rules: &str) -> PolarResult<Vec<Rule>> {
+    let source = Arc::new(Source::new(rules));
     polar::RulesParser::new()
-        .parse(src_id, Lexer::new(src))
-        .map_err(to_parse_error)
+        .parse(&source, Lexer::new(rules))
+        .map_err(|e| lalrpop_error_to_polar_error(e, source))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::ParseError::*;
+    use crate::error::ParseErrorKind::*;
     use pretty_assertions::assert_eq;
 
     #[track_caller]
     fn parse_term(src: &str) -> Term {
-        polar::TermParser::new().parse(0, Lexer::new(src)).unwrap()
+        super::parse_query(src).unwrap()
     }
 
     #[track_caller]
-    fn parse_query(src: &str) -> Term {
-        super::parse_query(0, src).unwrap()
+    fn parse_term_error(src: &str) -> error::ParseErrorKind {
+        super::parse_query(src).unwrap_err().unwrap_parse()
     }
 
     #[track_caller]
     fn parse_rule(src: &str) -> Rule {
-        parse_rules(0, src).unwrap().pop().unwrap()
+        super::parse_rules(src).unwrap().pop().unwrap()
     }
 
     #[track_caller]
     fn parse_lines(src: &str) -> Vec<Line> {
-        super::parse_lines(0, src).unwrap()
+        super::parse_lines(Source::new(src)).unwrap()
     }
 
     #[test]
@@ -112,7 +125,7 @@ mod tests {
     fn try_it_with_macros() {
         let int = parse_term(" 123");
         assert_eq!(int, term!(123));
-        assert_eq!(int.offset(), 1);
+        assert_eq!(int.parsed_context().map(|context| context.left), Some(1));
         let s = parse_term(r#""string literal""#);
         assert_eq!(s, term!("string literal"));
 
@@ -125,7 +138,7 @@ mod tests {
         let l = parse_term("[foo, bar, baz]");
         assert_eq!(l, term!([sym!("foo"), sym!("bar"), sym!("baz")]));
 
-        parse_rules(0, r#"bar(a, c) if foo(a, b(c), "d")"#).expect_err("parse error");
+        super::parse_rules(r#"bar(a, c) if foo(a, b(c), "d")"#).expect_err("parse error");
 
         let exp2 = parse_term("foo.a(b)");
         assert_eq!(
@@ -142,30 +155,30 @@ mod tests {
 
     #[test]
     fn parse_booleans() {
-        assert_eq!(parse_query("true"), term!(true));
-        assert_eq!(parse_query("false"), term!(false));
+        assert_eq!(parse_term("true"), term!(true));
+        assert_eq!(parse_term("false"), term!(false));
     }
 
     #[test]
     fn parse_integers() {
-        assert_eq!(parse_query("123"), term!(123));
-        assert_eq!(parse_query("0"), term!(0));
-        assert_eq!(parse_query("+123"), term!(123));
-        assert_eq!(parse_query("-123"), term!(-123));
+        assert_eq!(parse_term("123"), term!(123));
+        assert_eq!(parse_term("0"), term!(0));
+        assert_eq!(parse_term("+123"), term!(123));
+        assert_eq!(parse_term("-123"), term!(-123));
     }
 
     #[test]
     fn parse_floats() {
-        assert_eq!(parse_query("0.123"), term!(0.123));
-        assert_eq!(parse_query("1.234"), term!(1.234));
-        assert_eq!(parse_query("+1.234"), term!(1.234));
-        assert_eq!(parse_query("-1.234"), term!(-1.234));
-        assert_eq!(parse_query("-1.234e-56"), term!(-1.234e-56));
-        assert_eq!(parse_query("-1.234e56"), term!(-1.234e56));
-        assert_eq!(parse_query("inf"), term!(f64::INFINITY));
-        assert_eq!(parse_query("-inf"), term!(f64::NEG_INFINITY));
+        assert_eq!(parse_term("0.123"), term!(0.123));
+        assert_eq!(parse_term("1.234"), term!(1.234));
+        assert_eq!(parse_term("+1.234"), term!(1.234));
+        assert_eq!(parse_term("-1.234"), term!(-1.234));
+        assert_eq!(parse_term("-1.234e-56"), term!(-1.234e-56));
+        assert_eq!(parse_term("-1.234e56"), term!(-1.234e56));
+        assert_eq!(parse_term("inf"), term!(f64::INFINITY));
+        assert_eq!(parse_term("-inf"), term!(f64::NEG_INFINITY));
         assert!(
-            matches!(parse_query("nan").value(), Value::Number(crate::numerics::Numeric::Float(f)) if f.is_nan())
+            matches!(parse_term("nan").value(), Value::Number(crate::numerics::Numeric::Float(f)) if f.is_nan())
         );
     }
 
@@ -188,7 +201,7 @@ mod tests {
     #[test]
     fn test_parse_file() {
         let f = "a(1);b(2);c(3);";
-        let results = parse_rules(0, f).unwrap();
+        let results = super::parse_rules(f).unwrap();
         assert_eq!(results[0].to_string(), "a(1);");
         assert_eq!(results[1].to_string(), "b(2);");
         assert_eq!(results[2].to_string(), "c(3);");
@@ -218,92 +231,92 @@ mod tests {
     #[test]
     fn test_rule_type_error() {
         let rule_type = r#"type f(x: String) if x = "bad";"#;
-        super::parse_lines(0, rule_type).expect_err("parse error");
+        super::parse_lines(Source::new(rule_type)).unwrap_err();
     }
 
     #[test]
     fn test_parse_new() {
         let f = "a(x) if x = new Foo(a: 1);";
-        let results = parse_rules(0, f).unwrap();
+        let results = super::parse_rules(f).unwrap();
         assert_eq!(results[0].to_string(), "a(x) if x = new Foo(a: 1);");
     }
 
     #[test]
     fn test_parse_new_boa_constructor() {
         let f = "a(x) if x = new Foo(1, 2);";
-        let results = parse_rules(0, f).unwrap();
+        let results = super::parse_rules(f).unwrap();
         assert_eq!(results[0].to_string(), "a(x) if x = new Foo(1, 2);");
 
         // test trailing comma
         let f = "a(x) if x = new Foo(1,);";
-        parse_rules(0, f).expect_err("parse error");
+        super::parse_rules(f).expect_err("parse error");
     }
 
     #[test]
     fn test_parse_new_mixed_args() {
         let f = "a(x) if x = new Foo(1, 2, bar: 3, baz:4);";
-        let results = parse_rules(0, f).unwrap();
+        let results = super::parse_rules(f).unwrap();
         assert_eq!(
             results[0].to_string(),
             "a(x) if x = new Foo(1, 2, bar: 3, baz: 4);"
         );
         let f = "a(x) if x = new Foo(bar: 3, baz: 4);";
-        let results = parse_rules(0, f).unwrap();
+        let results = super::parse_rules(f).unwrap();
         assert_eq!(
             results[0].to_string(),
             "a(x) if x = new Foo(bar: 3, baz: 4);"
         );
 
         let f = "a(x) if x = new Foo(bar: 3, baz: 4, 1, 2);";
-        parse_rules(0, f).expect_err("parse error");
+        super::parse_rules(f).expect_err("parse error");
 
         // Don't allow kwargs in calls or dot ops.
         let f = "a(x) if f(x: 1)";
-        parse_rules(0, f).expect_err("parse error");
+        super::parse_rules(f).expect_err("parse error");
         let f = "a(x) if x.f(x: 1)";
-        parse_rules(0, f).expect_err("parse error");
+        super::parse_rules(f).expect_err("parse error");
     }
 
     #[test]
     fn test_parse_matches() {
-        let term = parse_query("{} matches {}");
+        let term = parse_term("{} matches {}");
         assert_eq!(term.to_string(), "{} matches {}");
-        let term = parse_query("{x: 1} matches {}");
+        let term = parse_term("{x: 1} matches {}");
         assert_eq!(term.to_string(), "{x: 1} matches {}");
     }
 
     #[test]
     fn test_parse_rest_vars() {
         let q = "[1, 2, *x] = [*rest]";
-        assert_eq!(parse_query(q).to_string(), q);
+        assert_eq!(parse_term(q).to_string(), q);
 
-        let e = super::parse_query(0, "[1, 2, 3] = [*rest, 3]").expect_err("parse error");
+        let e = parse_term_error("[1, 2, 3] = [*rest, 3]");
         assert!(matches!(e, UnrecognizedToken { .. }));
 
-        let e = super::parse_query(0, "[1, 2, *3] = [*rest]").expect_err("parse error");
+        let e = parse_term_error("[1, 2, *3] = [*rest]");
         assert!(matches!(e, UnrecognizedToken { .. }));
 
-        let e = super::parse_query(0, "[1, *x, *y] = [*rest]").expect_err("parse error");
+        let e = parse_term_error("[1, *x, *y] = [*rest]");
         assert!(matches!(e, UnrecognizedToken { .. }));
 
         let q = "[1, 2, 3] matches [1, 2, 3]";
-        assert_eq!(parse_query(q).to_string(), q, "{} -- {}", q, parse_query(q));
+        assert_eq!(parse_term(q).to_string(), q, "{} -- {}", q, parse_term(q));
 
         let q = "[1, 2, 3] matches [1, *rest]";
-        assert_eq!(parse_query(q).to_string(), q, "{} -- {}", q, parse_query(q));
+        assert_eq!(parse_term(q).to_string(), q, "{} -- {}", q, parse_term(q));
     }
 
     #[test]
     fn test_primitive_methods() {
         let q = r#""abc".startswith("a")"#;
         assert_eq!(
-            parse_query(q),
+            parse_term(q),
             term!(op!(Dot, term!("abc"), term!(call!("startswith", ["a"])))),
         );
 
         let q = r#"x.("invalid-key")"#;
         assert_eq!(
-            parse_query(q),
+            parse_term(q),
             term!(op!(Dot, term!(sym!("x")), term!("invalid-key"))),
         );
     }
@@ -332,8 +345,7 @@ mod tests {
             "x = (not x)",
             "y matches z = x",
         ] {
-            let e = super::parse_query(0, bad_query).expect_err("parse error");
-            assert!(matches!(e, WrongValueType { .. }));
+            assert!(matches!(parse_term_error(bad_query), WrongValueType { .. }));
         }
     }
 
@@ -348,7 +360,7 @@ mod tests {
         assert_eq!(parse_term(q), list);
 
         assert_eq!(
-            parse_query("{a: 1,} = [1, 2,]"),
+            parse_term("{a: 1,} = [1, 2,]"),
             term!(op!(Unify, dict, list))
         );
     }
@@ -356,7 +368,6 @@ mod tests {
     #[test]
     fn duplicate_keys() {
         let q = "{a: 1, a: 2}";
-        let e = super::parse_query(0, q).expect_err("parse error");
-        assert!(matches!(e, DuplicateKey { .. }));
+        assert!(matches!(parse_term_error(q), DuplicateKey { .. }));
     }
 }

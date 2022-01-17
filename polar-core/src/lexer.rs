@@ -1,9 +1,11 @@
 #![allow(clippy::upper_case_acronyms)]
 
-use super::error::ParseError;
-use super::terms::Symbol;
-use std::iter::Peekable;
-use std::str::{CharIndices, FromStr};
+use std::{
+    iter::Peekable,
+    str::{CharIndices, FromStr},
+};
+
+use super::{error::ParseErrorKind, terms::Symbol};
 
 pub type SrcPos = (usize, usize);
 
@@ -172,7 +174,11 @@ impl<'input> Lexer<'input> {
 
     #[inline]
     #[allow(clippy::unnecessary_wraps)]
-    fn scan_symbol(&mut self, i: usize, chr: char) -> Option<Spanned<Token, usize, ParseError>> {
+    fn scan_symbol(
+        &mut self,
+        i: usize,
+        chr: char,
+    ) -> Option<Spanned<Token, usize, ParseErrorKind>> {
         let start = i;
         let mut last = i;
         self.buf.clear();
@@ -207,7 +213,7 @@ impl<'input> Lexer<'input> {
         }
         if let Some((i, _)) = &self.buf.char_indices().rev().nth(1) {
             if &self.buf[*i..] == "::" {
-                return Some(Err(ParseError::InvalidTokenCharacter {
+                return Some(Err(ParseErrorKind::InvalidTokenCharacter {
                     token: self.buf.clone(),
                     c: ':',
                     loc: last,
@@ -242,7 +248,7 @@ impl<'input> Lexer<'input> {
 
     #[inline]
     #[allow(clippy::unnecessary_wraps)]
-    fn scan_string(&mut self, i: usize) -> Option<Spanned<Token, usize, ParseError>> {
+    fn scan_string(&mut self, i: usize) -> Option<Spanned<Token, usize, ParseErrorKind>> {
         let start = i;
         let last;
         self.buf.clear();
@@ -251,7 +257,7 @@ impl<'input> Lexer<'input> {
             if let Some((i, char)) = self.c {
                 match char {
                     '\n' => {
-                        return Some(Err(ParseError::InvalidTokenCharacter {
+                        return Some(Err(ParseErrorKind::InvalidTokenCharacter {
                             token: self.buf.clone(),
                             c: char,
                             loc: i,
@@ -274,7 +280,7 @@ impl<'input> Lexer<'input> {
                             };
                             self.buf.push(escaped_char);
                         } else {
-                            return Some(Err(ParseError::InvalidTokenCharacter {
+                            return Some(Err(ParseErrorKind::InvalidTokenCharacter {
                                 token: self.buf.clone(),
                                 c: '\0',
                                 loc: i,
@@ -288,7 +294,7 @@ impl<'input> Lexer<'input> {
                     }
                 }
             } else {
-                return Some(Err(ParseError::InvalidTokenCharacter {
+                return Some(Err(ParseErrorKind::InvalidTokenCharacter {
                     token: self.buf.clone(),
                     c: '\0',
                     loc: i,
@@ -320,7 +326,11 @@ impl<'input> Lexer<'input> {
 
     #[inline]
     #[allow(clippy::unnecessary_wraps)]
-    fn scan_number(&mut self, i: usize, chr: char) -> Option<Spanned<Token, usize, ParseError>> {
+    fn scan_number(
+        &mut self,
+        i: usize,
+        chr: char,
+    ) -> Option<Spanned<Token, usize, ParseErrorKind>> {
         let start = i;
         let mut last = i;
         self.buf.clear();
@@ -367,7 +377,7 @@ impl<'input> Lexer<'input> {
             if let Ok(f) = f64::from_str(&self.buf) {
                 Some(Ok((start, Token::Float(f), last + 1)))
             } else {
-                Some(Err(ParseError::InvalidFloat {
+                Some(Err(ParseErrorKind::InvalidFloat {
                     token: self.buf.clone(),
                     loc: start,
                 }))
@@ -375,7 +385,7 @@ impl<'input> Lexer<'input> {
         } else if let Ok(int) = i64::from_str(&self.buf) {
             Some(Ok((start, Token::Integer(int), last + 1)))
         } else {
-            Some(Err(ParseError::IntegerOverflow {
+            Some(Err(ParseErrorKind::IntegerOverflow {
                 token: self.buf.clone(),
                 loc: start,
             }))
@@ -385,7 +395,11 @@ impl<'input> Lexer<'input> {
     /// Scan a one character operator to token.
     #[inline]
     #[allow(clippy::unnecessary_wraps)]
-    fn scan_1c_op(&mut self, i: usize, token: Token) -> Option<Spanned<Token, usize, ParseError>> {
+    fn scan_1c_op(
+        &mut self,
+        i: usize,
+        token: Token,
+    ) -> Option<Spanned<Token, usize, ParseErrorKind>> {
         self.c = self.chars.next();
         Some(Ok((i, token, i + 1)))
     }
@@ -398,7 +412,7 @@ impl<'input> Lexer<'input> {
         i: usize,
         next_char: char,
         token: Token,
-    ) -> Option<Spanned<Token, usize, ParseError>> {
+    ) -> Option<Spanned<Token, usize, ParseErrorKind>> {
         let start = i;
         self.c = self.chars.next();
         match self.c {
@@ -406,12 +420,12 @@ impl<'input> Lexer<'input> {
                 self.c = self.chars.next();
                 Some(Ok((start, token, start + 2)))
             }
-            Some((i, chr)) => Some(Err(ParseError::InvalidTokenCharacter {
+            Some((i, chr)) => Some(Err(ParseErrorKind::InvalidTokenCharacter {
                 token: token.to_string(),
                 c: chr,
                 loc: i,
             })),
-            _ => Some(Err(ParseError::InvalidTokenCharacter {
+            _ => Some(Err(ParseErrorKind::InvalidTokenCharacter {
                 token: token.to_string(),
                 c: '\0',
                 loc: start + 1,
@@ -428,7 +442,7 @@ impl<'input> Lexer<'input> {
         token: Token,
         next_char: char,
         next_token: Token,
-    ) -> Option<Spanned<Token, usize, ParseError>> {
+    ) -> Option<Spanned<Token, usize, ParseErrorKind>> {
         let start = i;
         self.c = self.chars.next();
         match self.c {
@@ -442,7 +456,7 @@ impl<'input> Lexer<'input> {
 }
 
 impl<'input> Iterator for Lexer<'input> {
-    type Item = Spanned<Token, usize, ParseError>; // @TODO: Error, not String
+    type Item = Spanned<Token, usize, ParseErrorKind>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.skip_whitespace();
@@ -474,7 +488,7 @@ impl<'input> Iterator for Lexer<'input> {
                 '*' => self.scan_1c_op(i, Token::Mul),
                 '/' => self.scan_1c_op(i, Token::Div),
                 ';' => self.scan_1c_op(i, Token::SemiColon),
-                _ => Some(Err(ParseError::InvalidTokenCharacter {
+                _ => Some(Err(ParseErrorKind::InvalidTokenCharacter {
                     token: "".to_owned(),
                     c: char,
                     loc: i,
@@ -555,18 +569,14 @@ mod tests {
 
     #[test]
     fn test_symbol_with_trailing_question_mark() {
-        let s = "foo?";
+        let s = "foo??";
         let mut lexer = Lexer::new(s);
         assert!(
             matches!(lexer.next(), Some(Ok((0, Token::Symbol(question), 4))) if question == Symbol::new("foo?"))
         );
-
-        let s = "foo??";
-        let mut lexer = Lexer::new(s);
-        lexer.next();
         assert!(matches!(
             lexer.next(),
-            Some(Err(ParseError::InvalidTokenCharacter {
+            Some(Err(ParseErrorKind::InvalidTokenCharacter {
                 token: t,
                 c: '\u{0}',
                 loc: 5,
@@ -598,28 +608,11 @@ mod tests {
         let mut lexer = Lexer::new(s);
         assert!(matches!(
             lexer.next(),
-            Some(Err(ParseError::InvalidTokenCharacter {
+            Some(Err(ParseErrorKind::InvalidTokenCharacter {
                 token: x,
                 c: ':',
                 loc: 4,
             })) if &x == "foo::"
-        ));
-    }
-
-    #[test]
-    fn test_symbol_question_marks() {
-        let s = "foo??";
-        let mut lexer = Lexer::new(s);
-        assert!(
-            matches!(lexer.next(), Some(Ok((0, Token::Symbol(x), 4))) if x == Symbol::new("foo?"))
-        );
-        assert!(matches!(
-            lexer.next(),
-            Some(Err(ParseError::InvalidTokenCharacter {
-                token: x,
-                c: '\u{0}',
-                loc: 5,
-            })) if &x == "?="
         ));
     }
 
@@ -681,7 +674,7 @@ mod tests {
         let mut lexer = Lexer::new(f);
         assert!(matches!(
             lexer.next(),
-            Some(Err(ParseError::InvalidFloat { .. }))
+            Some(Err(ParseErrorKind::InvalidFloat { .. }))
         ));
 
         let f = "1.1";

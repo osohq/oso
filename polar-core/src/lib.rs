@@ -38,3 +38,5 @@ mod validations;
 mod visitor;
 mod vm;
 pub mod warning;
+
+pub use lexer::loc_to_pos;

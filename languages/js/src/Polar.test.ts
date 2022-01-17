@@ -87,12 +87,13 @@ describe('#registerClass', () => {
     expect(await qvar(p, 'new Foo("A").a = x', 'x', true)).toStrictEqual('A');
     await expect(qvar(p, 'new Foo("A").a() = x', 'x', true)).rejects.toThrow(
       `trace (most recent evaluation last):
-  in query at line 1, column 1
-    new Foo("A")
-  in query at line 1, column 1
-    new Foo("A").a()
-  in query at line 1, column 1
-    new Foo("A").a()
+  002: new Foo("A")
+    in query at line 1, column 1
+  001: new Foo("A").a()
+    in query at line 1, column 1
+  000: new Foo("A").a()
+    in query at line 1, column 1
+
 Application error: Foo { a: 'A' }.a is not a function at line 1, column 1`
     );
     await expect(qvar(p, 'x in new Foo("A").b', 'x', true)).rejects.toThrow(
@@ -755,10 +756,11 @@ describe('errors', () => {
       await p.loadStr('foo(a,b) if a in b;');
       await expect(query(p, 'foo(1,2)')).rejects.toThrow(
         `trace (most recent evaluation last):
-  in query at line 1, column 1
-    foo(1,2)
-  in rule foo at line 1, column 13
-    a in b
+  002: foo(1,2)
+    in query at line 1, column 1
+  001: a in b
+    in rule foo at line 1, column 13
+
 Type error: can only use \`in\` on an iterable value, this is Number(Integer(2)) at line 1, column 7`
       );
     });
@@ -768,10 +770,11 @@ Type error: can only use \`in\` on an iterable value, this is Number(Integer(2))
       p.registerConstant(undefined, 'undefined');
       await expect(query(p, 'undefined.foo')).rejects.toThrow(
         `trace (most recent evaluation last):
-  in query at line 1, column 1
-    undefined.foo
-  in query at line 1, column 1
-    undefined.foo
+  001: undefined.foo
+    in query at line 1, column 1
+  000: undefined.foo
+    in query at line 1, column 1
+
 Application error: Cannot read propert`
       );
     });

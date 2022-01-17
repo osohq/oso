@@ -16,9 +16,7 @@ pub fn invert_operation(Operation { operator, args }: Operation) -> Operation {
     fn invert_args(args: Vec<Term>) -> Vec<Term> {
         args.into_iter()
             .map(|t| {
-                t.clone_with_value(value!(invert_operation(
-                    t.value().as_expression().unwrap().clone()
-                )))
+                t.clone_with_value(value!(invert_operation(t.as_expression().unwrap().clone())))
             })
             .collect()
     }
@@ -58,11 +56,7 @@ pub fn invert_operation(Operation { operator, args }: Operation) -> Operation {
         Leq => Operation { operator: Gt, args },
 
         // double negative
-        Not => args[0]
-            .value()
-            .as_expression()
-            .expect("negated expression")
-            .clone(),
+        Not => args[0].as_expression().expect("negated expression").clone(),
 
         // preserve the not
         Isa | In => Operation {
@@ -241,7 +235,7 @@ impl Operation {
     pub fn constraints(&self) -> Vec<Operation> {
         self.args
             .iter()
-            .map(|a| a.value().as_expression().unwrap().clone())
+            .map(|a| a.as_expression().unwrap().clone())
             .collect()
     }
 
@@ -302,7 +296,7 @@ mod test {
     use super::*;
 
     use crate::bindings::Bindings;
-    use crate::error::{ErrorKind, PolarError, RuntimeError};
+    use crate::error::{ErrorKind, PolarError, PolarResult, RuntimeError};
     use crate::events::QueryEvent;
     use crate::polar::Polar;
     use crate::query::Query;
@@ -314,7 +308,6 @@ mod test {
                 $bindings
                     .get(&sym!($sym))
                     .expect(&format!("{} is unbound", $sym))
-                    .value()
                     .as_expression()
                     .unwrap()
                     .to_string(),
@@ -327,7 +320,6 @@ mod test {
             let l = $bindings
                     .get(&sym!($sym))
                     .expect(&format!("{} is unbound", $sym))
-                    .value()
                     .as_expression()
                     .unwrap()
                     .clone()
@@ -384,7 +376,7 @@ mod test {
         }};
     }
 
-    fn next_binding(query: &mut Query) -> Result<Bindings, PolarError> {
+    fn next_binding(query: &mut Query) -> PolarResult<Bindings> {
         let event = query.next_event()?;
         if let QueryEvent::Result { bindings, .. } = event {
             Ok(bindings)
@@ -393,7 +385,7 @@ mod test {
         }
     }
 
-    type TestResult = Result<(), PolarError>;
+    type TestResult = PolarResult<()>;
 
     #[test]
     fn basic_test() -> TestResult {
@@ -1006,11 +998,8 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("g", [sym!("a")])), false);
         let error = q.next_event().unwrap_err();
         assert!(matches!(
-            error,
-            PolarError {
-                kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }),
-                ..
-            }
+            error.0,
+            ErrorKind::Runtime(RuntimeError::Unsupported { .. }),
         ));
         Ok(())
     }
@@ -1063,7 +1052,7 @@ mod test {
                         let last_segment = path.last().unwrap();
                         q.question_result(
                             call_id,
-                            last_segment.value().as_string().unwrap().to_uppercase() == class_tag.0,
+                            last_segment.as_string().unwrap().to_uppercase() == class_tag.0,
                         )
                         .unwrap();
                     }
@@ -1764,11 +1753,8 @@ mod test {
         let mut q = p.new_query_from_term(term!(call!("f", [sym!("x")])), false);
         let error = q.next_event().unwrap_err();
         assert!(matches!(
-            error,
-            PolarError {
-                kind: ErrorKind::Runtime(RuntimeError::Unsupported { .. }),
-                ..
-            }
+            error.0,
+            ErrorKind::Runtime(RuntimeError::Unsupported { .. }),
         ));
         Ok(())
     }
@@ -2347,10 +2333,9 @@ mod test {
             assert!(
                 matches!(
                     res,
-                    Err(PolarError {
-                        kind: ErrorKind::Runtime(RuntimeError::UnhandledPartial { .. }),
-                        ..
-                    })
+                    Err(PolarError(ErrorKind::Runtime(
+                        RuntimeError::UnhandledPartial { .. }
+                    )))
                 ),
                 "unexpected result: {:#?} for {}",
                 res,

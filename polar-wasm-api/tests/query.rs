@@ -36,10 +36,7 @@ fn call_result_succeeds() {
     }));
     let term = serde_wasm_bindgen::to_value(&term).unwrap();
     polar.wasm_register_constant("y", term).unwrap();
-    let source = Source {
-        src: "x() if y.z;".to_owned(),
-        filename: None,
-    };
+    let source = Source::new("x() if y.z;");
     let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
     polar.wasm_load(sources).unwrap();
     let mut query = polar.wasm_new_query_from_str("x()").unwrap();
@@ -49,22 +46,21 @@ fn call_result_succeeds() {
     let event_data: Object = event_data.dyn_into().unwrap();
     let event_field: JsValue = "call_id".into();
     let call_id = Reflect::get(&event_data, &event_field).unwrap();
-    assert_eq!(call_id, 3.0);
+    assert_eq!(call_id, 1);
 
     let call_result = serde_wasm_bindgen::to_value(&Term::from(Value::Boolean(true))).unwrap();
-    query.wasm_call_result(3.0, call_result).unwrap();
+    query.wasm_call_result(1.0, call_result).unwrap();
 
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
     assert!(is_result_event(event));
 
-    query.wasm_call_result(3.0, JsValue::undefined()).unwrap();
+    query.wasm_call_result(1.0, JsValue::undefined()).unwrap();
 
     let event: Object = query.wasm_next_event().unwrap().dyn_into().unwrap();
     assert!(is_done_event(event));
 }
 
 #[wasm_bindgen_test]
-#[allow(clippy::float_cmp)]
 fn app_error_succeeds() {
     let mut polar = polar_wasm_api::Polar::wasm_new();
     let term = Term::from(Value::ExternalInstance(ExternalInstance {
@@ -75,10 +71,7 @@ fn app_error_succeeds() {
     }));
     let term = serde_wasm_bindgen::to_value(&term).unwrap();
     polar.wasm_register_constant("y", term).unwrap();
-    let source = Source {
-        src: "x() if y.z;".to_owned(),
-        filename: None,
-    };
+    let source = Source::new("x() if y.z;");
     let sources: JsValue = serde_wasm_bindgen::to_value(&vec![source]).unwrap();
     polar.wasm_load(sources).unwrap();
     let mut query = polar.wasm_new_query_from_str("x()").unwrap();
@@ -88,7 +81,7 @@ fn app_error_succeeds() {
     let event_data: Object = event_data.dyn_into().unwrap();
     let event_field: JsValue = "call_id".into();
     let call_id = Reflect::get(&event_data, &event_field).unwrap();
-    assert_eq!(call_id, 3.0);
+    assert_eq!(call_id, 1);
 
     let msg = "doin' the hokey-pokey";
     query.wasm_app_error(msg).unwrap();

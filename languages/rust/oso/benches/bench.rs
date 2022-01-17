@@ -14,8 +14,6 @@ pub fn rust_get_attribute(c: &mut Criterion) {
         b.iter_batched_ref(
             || {
                 let mut oso = Oso::new();
-                oso.load_str("foo_x_is_one(foo: Foo) if foo.x = 1;")
-                    .unwrap();
                 oso.register_class(
                     Class::builder::<Foo>()
                         .name("Foo")
@@ -23,6 +21,8 @@ pub fn rust_get_attribute(c: &mut Criterion) {
                         .build(),
                 )
                 .unwrap();
+                oso.load_str("foo_x_is_one(foo: Foo) if foo.x = 1;")
+                    .unwrap();
                 oso
             },
             |oso| {

@@ -1,5 +1,6 @@
 use std::str::FromStr;
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use crate::lexer::{self, Token};
 use crate::parser::Line;
@@ -9,15 +10,17 @@ use crate::rules::*;
 use crate::terms::*;
 use crate::numerics::*;
 use crate::resource_block;
+use crate::sources::Source;
+
 use super::ValueOrLogical;
 
 use lalrpop_util::ParseError;
 
-grammar(src_id: u64);
+grammar(source: &Arc<Source>);
 
 extern {
     type Location = usize;
-    type Error = error::ParseError;
+    type Error = error::ParseErrorKind;
 
     enum Token {
         "Integer" => lexer::Token::Integer(<i64>),
@@ -178,7 +181,7 @@ New: Value = {
 Field<T>: (Symbol, Term) = {
     <name:Name> ":" <value:T> => (name, value),
     <w:ResWord> ":" <value:T> => (Symbol(w), value),
-    <name:Spanned<Variable>> => (name.value().as_symbol().unwrap().clone(), name),
+    <name:Spanned<Variable>> => (name.as_symbol().unwrap().clone(), name),
 }
 
 Fields<T>: BTreeMap<Symbol, Term> = {
@@ -192,7 +195,7 @@ Fields<T>: BTreeMap<Symbol, Term> = {
         Some((name, value)) => {
             let existing = fields.insert(name.clone(), value);
             if existing.is_some() {
-                return Err(ParseError::User { error: error::ParseError::DuplicateKey { loc, key: name.0 } })
+                return Err(ParseError::User { error: error::ParseErrorKind::DuplicateKey { loc, key: name.0 } })
             }
             Ok(fields)
         }
@@ -215,7 +218,7 @@ Kwargs<T>: BTreeMap<Symbol, Term> = {
         Some((name, value)) => {
             let existing = fields.insert(name.clone(), value);
             if existing.is_some() {
-                return Err(ParseError::User { error: error::ParseError::DuplicateKey { loc, key: name.0 } })
+                return Err(ParseError::User { error: error::ParseErrorKind::DuplicateKey { loc, key: name.0 } })
             }
             Ok(fields)
         }
@@ -349,7 +352,7 @@ ExpectValue<T>: Term = {
     <loc:@L> <term:T> =>? {
         match term {
             ValueOrLogical::Logical(term) => {
-                Err(ParseError::User { error: error::ParseError::WrongValueType { loc, term, expected: "value".to_string() } })
+                Err(ParseError::User { error: error::ParseErrorKind::WrongValueType { loc, term, expected: "value".to_string() } })
             },
             ValueOrLogical::Value(t) | ValueOrLogical::Either(t) => Ok(t)
         }
@@ -360,7 +363,7 @@ ExpectLogical<T>: Term = {
     <loc:@L> <term:T> =>? {
         match term {
             ValueOrLogical::Value(term) => {
-                Err(ParseError::User { error: error::ParseError::WrongValueType { loc, term, expected: "logical expression".to_string() } })
+                Err(ParseError::User { error: error::ParseErrorKind::WrongValueType { loc, term, expected: "logical expression".to_string() } })
             },
             ValueOrLogical::Logical(t) | ValueOrLogical::Either(t) => Ok(t)
         }
@@ -627,7 +630,7 @@ Value: ValueOrLogical = {
 
 // ****** Terms + Patterns ******* //
 
-Spanned<T>: Term = <start:@L> <value:T> <end:@R> =>  Term::new_from_parser(src_id, start, end, value);
+Spanned<T>: Term = <start:@L> <value:T> <end:@R> => Term::new_from_parser(source.clone(), start, end, value);
 
 pub Term = TermExp;
 
@@ -677,8 +680,8 @@ Define = {"if"};
 BodilessRule: Rule = <start_head:@L> <head:RuleHead> <start:@L> <end:@R> ";" => {
     let (name, params) = head;
     let op = Operation{operator: Operator::And, args: vec![]};
-    let body = Term::new_from_parser(src_id, start, end, Value::Expression(op));
-    Rule::new_from_parser(src_id, start_head, start, name, params, body)
+    let body = Term::new_from_parser(source.clone(), start, end, Value::Expression(op));
+    Rule::new_from_parser(source.clone(), start_head, start, name, params, body)
 };
 
 Rule: Rule = {
@@ -694,7 +697,7 @@ Rule: Rule = {
                 body.clone_with_value(Value::Expression(op))
             }
         };
-        Rule::new_from_parser(src_id, start_head, end_head, name, params, body)
+        Rule::new_from_parser(source.clone(), start_head, end_head, name, params, body)
     }
 }
 
@@ -739,7 +742,7 @@ Line: Line = {
     "?=" <TermExp> ";" => Line::Query(<>),
 
     <start:@L> <keyword:Spanned<Variable>?> <resource:Variable> "{" <productions:ResourceBlockProductions> "}" <end:@R> => {
-        let resource = Term::new_from_parser(src_id, start, end, resource);
+        let resource = Term::new_from_parser(source.clone(), start, end, resource);
         Line::ResourceBlock { keyword, resource, productions }
     }
 }

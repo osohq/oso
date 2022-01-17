@@ -343,7 +343,9 @@ impl PolarLanguageServer {
         };
 
         let lines = self.documents.values();
-        let lines = lines.filter_map(|d| parse_lines(0, &d.text).ok()).flatten();
+        let lines = lines
+            .filter_map(|d| parse_lines(Source::new_with_name(&d.uri, &d.text)).ok())
+            .flatten();
         for line in lines {
             match line {
                 Line::Query(_) => event.policy_stats.inline_queries += 1,
@@ -374,15 +376,15 @@ impl PolarLanguageServer {
                                     match declaration {
                                         ParsedDeclaration::Permissions(permissions) => {
                                             event.resource_block_stats.permissions +=
-                                                permissions.value().as_list().unwrap().len();
+                                                permissions.as_list().unwrap().len();
                                         }
                                         ParsedDeclaration::Relations(relations) => {
                                             event.resource_block_stats.relations +=
-                                                relations.value().as_dict().unwrap().fields.len();
+                                                relations.as_dict().unwrap().fields.len();
                                         }
                                         ParsedDeclaration::Roles(roles) => {
                                             event.resource_block_stats.roles +=
-                                                roles.value().as_list().unwrap().len();
+                                                roles.as_list().unwrap().len();
                                         }
                                     }
                                 }
@@ -453,13 +455,13 @@ impl PolarLanguageServer {
 
         // Ignore diagnostics that depend on app data.
         match &diagnostic {
-            PolarDiagnostic::Error(e) => match e.kind {
+            PolarDiagnostic::Error(e) => match e.0 {
                 Validation(UnregisteredClass { .. }) | Validation(SingletonVariable { .. }) => {
                     return vec![];
                 }
                 _ => (),
             },
-            PolarDiagnostic::Warning(w) if matches!(w.kind, UnknownSpecializer { .. }) => {
+            PolarDiagnostic::Warning(w) if matches!(w.0, UnknownSpecializer { .. }) => {
                 return vec![];
             }
             _ => (),
@@ -468,8 +470,8 @@ impl PolarLanguageServer {
         // NOTE(gj): We stringify the error / warning variant instead of the full `PolarError` /
         // `PolarWarning` because we don't want source context as part of the error message.
         let (message, severity) = match &diagnostic {
-            PolarDiagnostic::Error(e) => (e.kind.to_string(), DiagnosticSeverity::Error),
-            PolarDiagnostic::Warning(w) => (w.kind.to_string(), DiagnosticSeverity::Warning),
+            PolarDiagnostic::Error(e) => (e.0.to_string(), DiagnosticSeverity::Error),
+            PolarDiagnostic::Warning(w) => (w.0.to_string(), DiagnosticSeverity::Warning),
         };
 
         // If the diagnostic applies to a single doc, use it; otherwise, default to emitting a
@@ -500,10 +502,7 @@ impl PolarLanguageServer {
     fn documents_to_polar_sources(&self) -> Vec<Source> {
         self.documents
             .values()
-            .map(|doc| Source {
-                filename: Some(doc.uri.to_string()),
-                src: doc.text.clone(),
-            })
+            .map(|doc| Source::new_with_name(&doc.uri, &doc.text))
             .collect()
     }
 
