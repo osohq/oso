@@ -1,10 +1,5 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
 
-/*
- * TODO(gj): when projectRoots are declared, search for *all* Polar files and
- * warn if any aren't included in *any* policies.
- */
-
 import { posix, join } from 'path';
 
 import { debounce } from 'lodash';
@@ -133,57 +128,51 @@ export const osoConfigKey = 'oso.polarLanguageServer';
 const projectRootsKey = 'projectRoots';
 const fullProjectRootsKey = `${osoConfigKey}.${projectRootsKey}`;
 
-async function startClients(
-  workspaceFolder: WorkspaceFolder,
-  context: ExtensionContext
-) {
-  const server = context.asAbsolutePath(join('out', 'server.js'));
-
-  const rawProjectRoots = workspace
-    .getConfiguration(osoConfigKey, workspaceFolder)
-    .get<string[]>(projectRootsKey, []);
-
-  type InvalidProjectRootReason = "isn't a directory" | "doesn't exist";
-
+async function validateRoots(root: Uri, candidates: string[]) {
   const projectRoots = [];
-  const errors: [InvalidProjectRootReason, string][] = [];
-  for (const path of [...new Set(rawProjectRoots)]) {
+  for (const path of [...new Set(candidates)]) {
     // Split configured path on POSIX-style separator.
     const segments = path.split(posix.sep);
     // But join with platform-specific separator.
-    const joinedPath = join(workspaceFolder.uri.fsPath, ...segments);
-    const uri = workspaceFolder.uri.with({ path: joinedPath });
+    const joinedPath = join(root.fsPath, ...segments);
+    const uri = root.with({ path: joinedPath });
     try {
       const { type } = await workspace.fs.stat(uri);
       if (type === FileType.Directory) {
         projectRoots.push(uri);
       } else {
-        errors.push(["isn't a directory", path]);
+        void window.showErrorMessage(
+          `Invalid ${fullProjectRootsKey} configuration — path isn't a directory: ${path}`
+        );
       }
     } catch (e) {
-      errors.push(["doesn't exist", path]);
+      void window.showErrorMessage(
+        `Invalid ${fullProjectRootsKey} configuration — path doesn't exist: ${path}`
+      );
     }
   }
+  return projectRoots;
+}
 
-  // Display any errors and early return.
-  if (errors.length > 0) {
-    errors.forEach(
-      ([reason, path]) =>
-        void window.showErrorMessage(
-          `Invalid ${fullProjectRootsKey} configuration — path ${reason}: ${path}`
-        )
-    );
-    return;
-  }
+async function startClients(folder: WorkspaceFolder, ctx: ExtensionContext) {
+  const server = ctx.asAbsolutePath(join('out', 'server.js'));
+
+  const rawProjectRoots = workspace
+    .getConfiguration(osoConfigKey, folder)
+    .get<string[]>(projectRootsKey, []);
+  const roots = await validateRoots(folder.uri, rawProjectRoots);
+
+  // If any roots were found to be invalid, early return.
+  if (roots.length < rawProjectRoots.length) return;
 
   // If no project roots were specified, default to treating the workspace
   // folder as the root.
-  if (projectRoots.length === 0) projectRoots.push(workspaceFolder.uri);
+  if (roots.length === 0) roots.push(folder.uri);
 
   const workspaceFolderClients: WorkspaceFolderClients = new Map();
   const polarFilesIncluded: Set<string> = new Set();
 
-  for (const root of projectRoots) {
+  for (const root of roots) {
     // Watch `FileChangeType.Deleted` events for Polar files in the current
     // workspace, including those not open in any editor in the workspace.
     //
@@ -211,8 +200,8 @@ async function startClients(
     );
 
     // Clean up watchers when extension is deactivated.
-    context.subscriptions.push(deleteWatcher);
-    context.subscriptions.push(createChangeWatcher);
+    ctx.subscriptions.push(deleteWatcher);
+    ctx.subscriptions.push(createChangeWatcher);
 
     const serverOpts = { module: server, transport: TransportKind.ipc };
     const clientOpts: LanguageClientOptions = {
@@ -223,16 +212,16 @@ async function startClients(
       ],
       synchronize: { fileEvents: deleteWatcher },
       diagnosticCollectionName: extensionName,
-      workspaceFolder,
+      workspaceFolder: folder,
       outputChannel,
     };
     const client = new LanguageClient(extensionName, serverOpts, clientOpts);
 
     const recordTelemetry = debounce(event => recordEvent(root, event), 1_000);
-    context.subscriptions.push(client.onTelemetry(recordTelemetry));
+    ctx.subscriptions.push(client.onTelemetry(recordTelemetry));
 
     // Start client and mark it for cleanup when the extension is deactivated.
-    context.subscriptions.push(client.start());
+    ctx.subscriptions.push(client.start());
 
     // When a Polar document in `root` (even documents not currently open in VS
     // Code) is created or changed, trigger a [`didOpen`][didOpen] event if the
@@ -242,8 +231,8 @@ async function startClients(
     //
     // [didOpen]: https://code.visualstudio.com/api/references/vscode-api#workspace.onDidOpenTextDocument
     // [didChange]: https://code.visualstudio.com/api/references/vscode-api#workspace.onDidChangeTextDocument
-    context.subscriptions.push(createChangeWatcher.onDidCreate(openDocument));
-    context.subscriptions.push(createChangeWatcher.onDidChange(openDocument));
+    ctx.subscriptions.push(createChangeWatcher.onDidCreate(openDocument));
+    ctx.subscriptions.push(createChangeWatcher.onDidChange(openDocument));
 
     // Transmit the initial file system state for `root` (including files not
     // currently open in VS Code) to the server.
@@ -255,14 +244,14 @@ async function startClients(
 
   // Ensure that all Polar files across the workspace were included in at least
   // one project root.
-  (await openPolarFilesInFolder(workspaceFolder.uri)).forEach(f => {
+  (await openPolarFilesInFolder(folder.uri)).forEach(f => {
     if (!polarFilesIncluded.has(f.toString()))
       outputChannel.appendLine(
         `[pls] Polar file not included by any project root: ${f}`
       );
   });
 
-  clients.set(workspaceFolder.uri.toString(), workspaceFolderClients);
+  clients.set(folder.uri.toString(), workspaceFolderClients);
 }
 
 function stopClient([client, recordTelemetry]: WorkspaceFolderClient) {
