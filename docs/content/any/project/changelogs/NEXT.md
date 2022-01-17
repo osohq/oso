@@ -43,7 +43,7 @@ const (
 )
 ```
 
-Where previously it was possible to utilize this `Role` type as interchangeable with that of `string`:
+Where previously it was possible to utilize this `Action` type as interchangeable with that of `string`:
 ```polar
 user_has_action(user: User, action: String, resource: Resource) if ...
 ```
