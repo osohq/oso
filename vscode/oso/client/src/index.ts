@@ -50,6 +50,10 @@ import {
 const extensionName = 'Polar Language Server';
 const outputChannel = window.createOutputChannel(extensionName);
 
+export const osoConfigKey = 'oso.polarLanguageServer';
+const projectRootsKey = 'projectRoots';
+const fullProjectRootsKey = `${osoConfigKey}.${projectRootsKey}`;
+
 // Bi-level map from workspaceFolder -> projectRoot -> client & metrics
 // recorder.
 //
@@ -123,10 +127,6 @@ async function openDocument(uri: Uri) {
   if (doc === undefined) await workspace.openTextDocument(uri);
   return uri;
 }
-
-export const osoConfigKey = 'oso.polarLanguageServer';
-const projectRootsKey = 'projectRoots';
-const fullProjectRootsKey = `${osoConfigKey}.${projectRootsKey}`;
 
 async function validateRoots(root: Uri, candidates: string[]) {
   const projectRoots = [];
