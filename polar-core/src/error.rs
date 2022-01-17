@@ -8,7 +8,7 @@ use super::{
     resource_block::Declaration,
     rules::Rule,
     sources::{Context, Source},
-    terms::{Operation, Symbol, Term, Value},
+    terms::{Operation, Symbol, Term},
 };
 
 pub type PolarResult<T> = Result<T, PolarError>;
@@ -66,6 +66,7 @@ impl PolarError {
 
     pub fn get_context(&self) -> Option<Context> {
         use ErrorKind::*;
+        use OperationalError::*;
         use ParseErrorKind::*;
         use RuntimeError::*;
         use ValidationError::*;
@@ -150,7 +151,12 @@ impl PolarError {
                 }
             },
 
-            Operational(_) => None,
+            Operational(e) => match e {
+                // These errors track `received`, from which we calculate the context.
+                UnexpectedValue { received, .. } => received.parsed_context().cloned(),
+                // These errors never have context.
+                InvalidState { .. } | Serialization { .. } | Unknown => None,
+            },
         }
     }
 }
@@ -479,7 +485,7 @@ pub enum OperationalError {
     // system, e.g., `Term<String>` instead of `Term::value().as_string()`.
     UnexpectedValue {
         expected: &'static str,
-        received: Arc<Value>,
+        received: Term,
     },
     /// Rust panics caught in the `polar-c-api` crate.
     Unknown,
@@ -619,7 +625,7 @@ where
     Err(OperationalError::InvalidState { msg }.into())
 }
 
-pub(crate) fn unexpected_value<T>(expected: &'static str, received: Arc<Value>) -> PolarResult<T> {
+pub(crate) fn unexpected_value<T>(expected: &'static str, received: Term) -> PolarResult<T> {
     Err(OperationalError::UnexpectedValue { expected, received }.into())
 }
 

@@ -334,22 +334,18 @@ impl Term {
         &self.value
     }
 
-    pub(crate) fn clone_value(&self) -> Arc<Value> {
-        self.value.clone()
-    }
-
     pub(crate) fn as_symbol(&self) -> PolarResult<&Symbol> {
         match self.value() {
             Value::Variable(name) => Ok(name),
             Value::RestVariable(name) => Ok(name),
-            _ => unexpected_value("(rest) variable", self.clone_value()),
+            _ => unexpected_value("(rest) variable", self.clone()),
         }
     }
 
     pub(crate) fn as_string(&self) -> PolarResult<&str> {
         match self.value() {
             Value::String(string) => Ok(string.as_ref()),
-            _ => unexpected_value("string", self.clone_value()),
+            _ => unexpected_value("string", self.clone()),
         }
     }
 
@@ -357,21 +353,21 @@ impl Term {
     pub fn as_expression(&self) -> PolarResult<&Operation> {
         match self.value() {
             Value::Expression(op) => Ok(op),
-            _ => unexpected_value("expression", self.clone_value()),
+            _ => unexpected_value("expression", self.clone()),
         }
     }
 
     pub(crate) fn as_call(&self) -> PolarResult<&Call> {
         match self.value() {
             Value::Call(pred) => Ok(pred),
-            _ => unexpected_value("call", self.clone_value()),
+            _ => unexpected_value("call", self.clone()),
         }
     }
 
     pub(crate) fn as_pattern(&self) -> PolarResult<&Pattern> {
         match self.value() {
             Value::Pattern(p) => Ok(p),
-            _ => unexpected_value("pattern", self.clone_value()),
+            _ => unexpected_value("pattern", self.clone()),
         }
     }
 
@@ -379,7 +375,7 @@ impl Term {
     pub fn as_list(&self) -> PolarResult<&TermList> {
         match self.value() {
             Value::List(l) => Ok(l),
-            _ => unexpected_value("list", self.clone_value()),
+            _ => unexpected_value("list", self.clone()),
         }
     }
 
@@ -387,7 +383,7 @@ impl Term {
     pub fn as_dict(&self) -> PolarResult<&Dictionary> {
         match self.value() {
             Value::Dictionary(d) => Ok(d),
-            _ => unexpected_value("dictionary", self.clone_value()),
+            _ => unexpected_value("dictionary", self.clone()),
         }
     }
 

@@ -1689,7 +1689,7 @@ impl PolarVirtualMachine {
                 let result = args.pop().unwrap();
                 match result.value() {
                     Value::Variable(_) => (),
-                    _ => return unexpected_value("variable", result.clone_value()),
+                    _ => return unexpected_value("variable", result),
                 }
                 let constructor = args.pop().unwrap();
 
@@ -1964,7 +1964,7 @@ impl PolarVirtualMachine {
 
         match result.value() {
             Value::Variable(_) => (),
-            _ => return unexpected_value("variable", result.clone_value()),
+            _ => return unexpected_value("variable", result.clone()),
         }
 
         match (left.value(), right.value()) {
