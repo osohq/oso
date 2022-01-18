@@ -28,9 +28,6 @@ class UserType:
     cls: type
     id: int
     fields: Dict[str, Any]
-    build_query: Optional[Callable]
-    exec_query: Optional[Callable]
-    combine_query: Optional[Callable]
 
 
 class Host:
@@ -52,9 +49,6 @@ class Host:
         self.types = (types or {}).copy()
         self.instances = (instances or {}).copy()
         self._accept_expression = False  # default, see set_accept_expression
-        self.build_query = None
-        self.exec_query = None
-        self.combine_query = None
         self.adapter = adapter
 
         self.get_field = get_field or self.types_get_field
@@ -109,9 +103,6 @@ class Host:
         cls,
         name=None,
         fields=None,
-        build_query=None,
-        exec_query=None,
-        combine_query=None,
     ):
         """Cache Python class by name."""
         name = cls.__name__ if name is None else name
@@ -123,9 +114,6 @@ class Host:
             cls=cls,
             id=self.cache_instance(cls),
             fields=fields or {},
-            build_query=build_query or self.build_query,
-            exec_query=exec_query or self.exec_query,
-            combine_query=combine_query or self.combine_query,
         )
         return name
 

@@ -277,13 +277,6 @@ module Oso
         host.adapter.build_query filter
       end
 
-      def old_authorized_query(actor, action, resource_cls)
-        results = partial_query(actor, action, resource_cls)
-        ::Oso::Polar::DataFiltering::FilterPlan
-          .parse(self, results, class_to_name(resource_cls))
-          .build_query
-      end
-
       # handle Isa constraints in a partial query
       def prefilter_isas(key, val) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         # this will usually be the case! sometimes not, if it's an instance.
