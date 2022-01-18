@@ -137,7 +137,6 @@ export class Query<Q, R> {
    *
    * @internal
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async handleRelation(receiver: obj, rel: Relation): Promise<unknown> {
     // TODO(gj|gw): we should add validation for UserType relations once we
     // have a nice hook where we know every class has been registered
@@ -146,11 +145,7 @@ export class Query<Q, R> {
     const typ = this.#host.getType(rel.otherType);
     if (typ === undefined) throw new UnregisteredClassError(rel.otherType);
 
-    // NOTE(gj): disabling ESLint for following line b/c we're fine if
-    // `receiver[rel.myField]` blows up -- we catch the error and relay it to
-    // the core in `handleCall`.
-    const value = receiver[rel.myField]; // eslint-disable-line
-
+    const value = receiver[rel.myField];
     const condition: FilterCondition = {
       lhs: {
         typeName: rel.otherType,
@@ -171,9 +166,9 @@ export class Query<Q, R> {
     if (rel.kind === 'one') {
       if (results.length !== 1)
         throw new Error(`Wrong number of parents: ${results.length}`);
-      return results[0]; // eslint-disable-line @typescript-eslint/no-unsafe-return
+      return results[0];
     } else {
-      return results; // eslint-disable-line @typescript-eslint/no-unsafe-return
+      return results;
     }
   }
 
