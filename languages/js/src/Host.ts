@@ -61,14 +61,14 @@ export class UserType<Type extends Class<T>, T = any> {
  *
  * @internal
  */
-export class Host<Q, R> {
+export class Host<Query, Resource> {
   #ffiPolar: FfiPolar;
   #instances: Map<number, unknown>;
   types: Map<string | Class, UserType<any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   #opts: HostOpts;
 
-  adapter: Adapter<Q, R>;
+  adapter: Adapter<Query, Resource>;
 
   /**
    * Shallow clone a host to extend its state for the duration of a particular
@@ -76,9 +76,12 @@ export class Host<Q, R> {
    *
    * @internal
    */
-  static clone<Q, R>(host: Host<Q, R>, opts: Partial<HostOpts>): Host<Q, R> {
+  static clone<Query, Resource>(
+    host: Host<Query, Resource>,
+    opts: Partial<HostOpts>
+  ): Host<Query, Resource> {
     const options = { ...host.#opts, ...opts };
-    const clone = new Host<Q, R>(host.#ffiPolar, options);
+    const clone = new Host<Query, Resource>(host.#ffiPolar, options);
     clone.#instances = new Map(host.#instances);
     clone.types = new Map(host.types);
     clone.adapter = host.adapter;

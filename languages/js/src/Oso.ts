@@ -15,13 +15,13 @@ import { parseFilter, Adapter, FilterJson } from './filter';
 // TODO(gj): maybe pass DF options to constructor & try to parametrize a
 // `Query` type w/ the return type of the provided buildQuery fn.
 export class Oso<
-  Q = unknown,
+  Query = unknown,
   Resource = unknown,
   Actor = unknown,
   Action = unknown,
   Field = unknown,
   Request = unknown
-> extends Polar<Q, Resource> {
+> extends Polar<Query, Resource> {
   #notFoundError: CustomError = NotFoundError;
   #forbiddenError: CustomError = ForbiddenError;
   #readAction: unknown = 'read';
@@ -259,7 +259,7 @@ export class Oso<
     actor: Actor,
     action: Action,
     resourceCls: Class<Resource>
-  ): Promise<Q> {
+  ): Promise<Query> {
     const resource = new Variable('resource');
     const host = this.getHost();
     const clsName = host.getType(resourceCls)?.name;
@@ -327,7 +327,7 @@ export class Oso<
   /**
    * Register adapter for data filtering query functions.
    */
-  setDataFilteringAdapter(adapter: Adapter<Q, Resource>): void {
+  setDataFilteringAdapter(adapter: Adapter<Query, Resource>): void {
     this.getHost().adapter = adapter;
   }
 }
