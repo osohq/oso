@@ -27,7 +27,7 @@ pub enum Production {
 }
 
 fn validate_relation_keyword(keyword: &Term) -> PolarResult<()> {
-    if keyword.value().as_symbol()?.0 != "on" {
+    if keyword.as_symbol()?.0 != "on" {
         return Err(ValidationError::ResourceBlock {
             msg: format!(
                 "Unexpected relation keyword '{}'. Did you mean 'on'?",
@@ -48,7 +48,7 @@ pub enum ParsedDeclaration {
 }
 
 pub fn validate_parsed_declaration((name, term): (Term, Term)) -> PolarResult<ParsedDeclaration> {
-    match (name.value().as_symbol()?.0.as_ref(), term.value()) {
+    match (name.as_symbol()?.0.as_ref(), term.value()) {
         ("roles", Value::List(_)) => Ok(ParsedDeclaration::Roles(term)),
         ("permissions", Value::List(_)) => Ok(ParsedDeclaration::Permissions(term)),
         ("relations", Value::Dictionary(_)) => Ok(ParsedDeclaration::Relations(term)),
@@ -76,7 +76,7 @@ pub fn validate_parsed_declaration((name, term): (Term, Term)) -> PolarResult<Pa
 
 pub fn block_type_from_keyword(keyword: Option<Term>, resource: &Term) -> PolarResult<BlockType> {
     if let Some(keyword) = keyword {
-        match keyword.value().as_symbol()?.0.as_ref() {
+        match keyword.as_symbol()?.0.as_ref() {
             "actor" => Ok(BlockType::Actor),
             "resource" => Ok(BlockType::Resource),
             other => Err(ValidationError::ResourceBlock {
@@ -426,7 +426,7 @@ fn index_declarations(
     let mut declarations = HashMap::new();
 
     if let Some(roles) = roles {
-        for role in roles.value().as_list()? {
+        for role in roles.as_list()? {
             if let Some(existing) = declarations.insert(role.clone(), Declaration::Role) {
                 return Err(ValidationError::DuplicateResourceBlockDeclaration {
                     resource: resource.clone(),
@@ -440,7 +440,7 @@ fn index_declarations(
     }
 
     if let Some(permissions) = permissions {
-        for permission in permissions.value().as_list()? {
+        for permission in permissions.as_list()? {
             if let Some(existing) = declarations.insert(permission.clone(), Declaration::Permission)
             {
                 return Err(ValidationError::DuplicateResourceBlockDeclaration {
@@ -455,7 +455,7 @@ fn index_declarations(
     }
 
     if let Some(relations) = relations {
-        for (relation, relation_type) in &relations.value().as_dict()?.fields {
+        for (relation, relation_type) in &relations.as_dict()?.fields {
             // Stringify relation so that we can index into the declarations map with a string
             // reference to the relation. E.g., relation `creator: User` gets stored as
             // `"creator" => Relation(User)` so that when we encounter a shorthand rule
@@ -481,7 +481,7 @@ fn index_declarations(
 }
 
 fn resource_name_as_var(resource_name: &Term, related: bool) -> PolarResult<Value> {
-    let name = &resource_name.value().as_symbol()?.0;
+    let name = &resource_name.as_symbol()?.0;
     let mut lowercased = name.to_lowercase();
 
     // If the resource's name is already lowercase, append "_instance" to distinguish the variable
@@ -576,7 +576,7 @@ fn shorthand_rule_body_to_rule_body(
 
 /// Turn a shorthand rule head into a trio of params that go in the head of the rewritten rule.
 fn shorthand_rule_head_to_params(head: &Term, resource: &Term) -> PolarResult<Vec<Parameter>> {
-    let resource_name = &resource.value().as_symbol()?.0;
+    let resource_name = &resource.as_symbol()?.0;
     let params = vec![
         Parameter {
             parameter: head.clone_with_value(value!(sym!("actor"))),

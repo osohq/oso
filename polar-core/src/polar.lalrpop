@@ -181,7 +181,7 @@ New: Value = {
 Field<T>: (Symbol, Term) = {
     <name:Name> ":" <value:T> => (name, value),
     <w:ResWord> ":" <value:T> => (Symbol(w), value),
-    <name:Spanned<Variable>> => (name.value().as_symbol().unwrap().clone(), name),
+    <name:Spanned<Variable>> => (name.as_symbol().unwrap().clone(), name),
 }
 
 Fields<T>: BTreeMap<Symbol, Term> = {

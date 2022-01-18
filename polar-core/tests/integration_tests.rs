@@ -242,9 +242,9 @@ fn query_results_with_externals(query: Query) -> (QueryResults, MockExternal) {
 
 /// equality test for polar expressions that takes symmetric operators
 /// into account, eg. a = b == b = a
-fn commute_ops(u: &Value, v: &Value) -> bool {
-    fn a2p(a: &[Term]) -> (&Value, &Value) {
-        (a[0].value(), a[1].value())
+fn commute_ops(u: &Term, v: &Term) -> bool {
+    fn a2p(a: &[Term]) -> (&Term, &Term) {
+        (&a[0], &a[1])
     }
     match (u.as_expression(), v.as_expression()) {
         (
@@ -272,7 +272,7 @@ fn commute_ops(u: &Value, v: &Value) -> bool {
                 arg_a
                     .iter()
                     .enumerate()
-                    .all(|(i, x)| commute_ops(arg_b[i].value(), x.value()))
+                    .all(|(i, x)| commute_ops(&arg_b[i], x))
             }
         }
         _ => u == v,
@@ -1948,7 +1948,7 @@ fn test_data_filtering_dict_specializers() -> TestResult {
     let key = sym!("x");
     let res_a = res_a[0].0.remove(&key).unwrap();
     let res_b = res_b[0].0.remove(&key).unwrap();
-    assert!(commute_ops(&res_a, &res_b));
+    assert!(commute_ops(&term!(res_a), &term!(res_b)));
     Ok(())
 }
 
@@ -1968,7 +1968,7 @@ fn test_data_filtering_pattern_specializers() -> TestResult {
     let key = sym!("x");
     let res_a = res_a[0].0.remove(&key).unwrap();
     let res_b = res_b[0].0.remove(&key).unwrap();
-    assert!(commute_ops(&res_a, &res_b));
+    assert!(commute_ops(&term!(res_a), &term!(res_b)));
     Ok(())
 }
 
