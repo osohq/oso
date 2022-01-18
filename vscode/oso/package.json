@@ -67,6 +67,16 @@
           ],
           "default": "default",
           "markdownDescription": "Share usage data to help us make Oso better. Defaults to the `#telemetry.telemetryLevel#` setting."
+        },
+        "oso.polarLanguageServer.projectRoots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^([^/]+\/)*[^/]+\/?$",
+            "patternErrorMessage": "Project root must be a POSIX-style relative path that doesn't begin with a forward slash and has its path segments separated by single forward slashes. E.g.: `mypath` or `my/path/` or `./my/path`"
+          },
+          "default": [],
+          "markdownDescription": "When a workspace contains multiple distinct Oso policies, list of **POSIX-style, relative paths** from workspace folder root to directory containing each Oso policy."
         }
       }
     }
@@ -105,6 +115,6 @@
     "mocha": "^9.1.3",
     "semver": "^7.3.5",
     "typescript": "^4.4.3",
-    "vsce": "^2.5.3"
+    "vsce": "^2.6.3"
   }
 }
