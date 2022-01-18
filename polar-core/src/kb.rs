@@ -275,7 +275,7 @@ impl KnowledgeBase {
                             // Turn `member` into an `InstanceLiteral` by copying fields from
                             // `rule_type_instance`.
                             let rule_type_instance = InstanceLiteral {
-                                tag: member.value().as_symbol()?.clone(),
+                                tag: member.as_symbol()?.clone(),
                                 fields: rule_type_instance.fields.clone()
                             };
                             match self.check_rule_instance_is_subclass_of_rule_type_instance(rule_instance, &rule_type_instance, index) {
@@ -592,14 +592,12 @@ impl KnowledgeBase {
     // core, so it's up to callers to ensure this is only called with terms we expect to be
     // registered as a _class_.
     pub fn get_registered_class(&self, class: &Term) -> PolarResult<&Term> {
-        self.constants
-            .get(class.value().as_symbol()?)
-            .ok_or_else(|| {
-                ValidationError::UnregisteredClass {
-                    term: class.clone(),
-                }
-                .into()
-            })
+        self.constants.get(class.as_symbol()?).ok_or_else(|| {
+            ValidationError::UnregisteredClass {
+                term: class.clone(),
+            }
+            .into()
+        })
     }
 
     /// Add the Method Resolution Order (MRO) list for a registered class.
@@ -774,9 +772,9 @@ impl KnowledgeBase {
         }
 
         let mut rule_types = rule_types_to_create.into_iter().map(|((subject, relation, object), required)| {
-            let subject_specializer = pattern!(instance!(&subject.value().as_symbol()?.0));
-            let relation_name = relation.value().as_string()?;
-            let object_specializer = pattern!(instance!(&object.value().as_symbol()?.0));
+            let subject_specializer = pattern!(instance!(&subject.as_symbol()?.0));
+            let relation_name = relation.as_string()?;
+            let object_specializer = pattern!(instance!(&object.as_symbol()?.0));
 
             let name = sym!("has_relation");
             let mut params = args!("subject"; subject_specializer, relation_name, "object"; object_specializer);
