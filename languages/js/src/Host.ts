@@ -94,10 +94,10 @@ export class Host<Q, R> {
 
     this.adapter = {
       buildQuery: () => {
-        throw new DataFilteringConfigurationError('adapter');
+        throw new DataFilteringConfigurationError();
       },
       executeQuery: () => {
-        throw new DataFilteringConfigurationError('adapter');
+        throw new DataFilteringConfigurationError();
       },
     };
   }
