@@ -147,14 +147,6 @@ func (MethodVariants) GetEmptyIter() interfaces.Iterator {
 
 type ParentClass struct{}
 
-// TODO: this kind of inheritance doesn't fit Go conventions
-// There is no way to use this kind of subclassing for composition, and
-// so it doesn't fit with our model of inheritance. Leaving for posterity
-// but these are not tested
-type ChildClass ParentClass
-
-type GrandchildClass ChildClass
-
 type Animal struct {
 	Species string
 	Genus   string
@@ -242,19 +234,17 @@ func (a Comparable) Lt(b interface{}) bool {
 }
 
 var CLASSES = map[string]reflect.Type{
-	"UnitClass":       reflect.TypeOf(UnitClass{}),
-	"ValueFactory":    reflect.TypeOf(ValueFactory{}),
-	"IterableClass":   reflect.TypeOf(IterableClass{}),
-	"Constructor":     reflect.TypeOf(Constructor{}),
-	"MethodVariants":  reflect.TypeOf(MethodVariants{}),
-	"ParentClass":     reflect.TypeOf(ParentClass{}),
-	"ChildClass":      reflect.TypeOf(ChildClass{}),
-	"GrandchildClass": reflect.TypeOf(GrandchildClass{}),
-	"Animal":          reflect.TypeOf(Animal{}),
-	"ImplementsEq":    reflect.TypeOf(ImplementsEq{}),
-	"Comparable":      reflect.TypeOf(Comparable{}),
-	"Least":           reflect.TypeOf(Least{}),
-	"NaNLike":         reflect.TypeOf(NaNLike{}),
+	"UnitClass":      reflect.TypeOf(UnitClass{}),
+	"ValueFactory":   reflect.TypeOf(ValueFactory{}),
+	"IterableClass":  reflect.TypeOf(IterableClass{}),
+	"Constructor":    reflect.TypeOf(Constructor{}),
+	"MethodVariants": reflect.TypeOf(MethodVariants{}),
+	"ParentClass":    reflect.TypeOf(ParentClass{}),
+	"Animal":         reflect.TypeOf(Animal{}),
+	"ImplementsEq":   reflect.TypeOf(ImplementsEq{}),
+	"Comparable":     reflect.TypeOf(Comparable{}),
+	"Least":          reflect.TypeOf(Least{}),
+	"NaNLike":        reflect.TypeOf(NaNLike{}),
 }
 
 func setStructFields(instance reflect.Value, args []interface{}) error {

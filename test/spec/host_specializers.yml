@@ -9,17 +9,6 @@ cases:
     query: is_parentclass
     input: [{type: UnitClass}]
     result: []
-  # - description: can specialize on subclasses
-  #   query: is_parentclass
-  #   input: [{type: ChildClass}]
-  # - description: can specialize on either subclass or class
-  #   query: has_subclass
-  #   input: [{type: ChildClass}]
-  #   result: [{}, {}]
-  # - description: can order rules by specificity
-  #   query: level
-  #   input: [{type: GrandchildClass}, {var: x}]
-  #   result: [{x: 3}, {x: 2}, {x: 1}]
 
   # using dictionaries as specializers on classes
   - description: can specialize on dictionaries 1/3

@@ -42,9 +42,11 @@ func TestIsInstance(t *testing.T) {
 		t.Error("roles should be instances of the role class")
 	}
 
-	// TODO: not currently passing since we don't/cannot implement "inheritance" checks
+	// @patrickod #1468 changed Go instance type checking behavior such that
+	// NewTypes are no longer considered to be instances of their wrapped
+	// underlying type.
 	if isInstance(Admin, stringClass) {
-		t.Error("this is expected to fail at the moment")
+		t.Error("Admin is not an instance of String")
 	}
 
 }
