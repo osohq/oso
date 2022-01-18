@@ -48,7 +48,7 @@ export type SerializedFields = {
   [field: string]: SerializedRelation | { Base: { class_tag: string } };
 };
 
-export interface FilterRelation {
+interface FilterRelation {
   fromTypeName: string;
   fromFieldName: string;
   toTypeName: string;
