@@ -159,7 +159,7 @@ impl<'kb> Folder for Rewriter<'kb> {
                     .args
                     .into_iter()
                     .map(|arg| {
-                        let arg_operator = arg.value().as_expression().map(|e| e.operator).ok();
+                        let arg_operator = arg.as_expression().map(|e| e.operator).ok();
 
                         self.stack.push(vec![]);
                         let arg = self.fold_term(arg);
@@ -233,7 +233,7 @@ impl<'kb> Folder for Rewriter<'kb> {
 fn only_pure(rewrites: &[Term]) -> bool {
     use Operator::*;
     rewrites.iter().all(|t| {
-        t.value().as_expression().map_or(false, |op| {
+        t.as_expression().map_or(false, |op| {
             matches!(op.operator, Dot | Add | Sub | Mul | Div | Rem)
         })
     })

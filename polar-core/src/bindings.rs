@@ -206,7 +206,7 @@ impl BindingManager {
     pub fn bind(&mut self, var: &Symbol, val: Term) -> PolarResult<Option<Goal>> {
         use BindingManagerVariableState::*;
         let mut goal = None;
-        if let Ok(symbol) = val.value().as_symbol() {
+        if let Ok(symbol) = val.as_symbol() {
             goal = self.bind_variables(var, symbol)?;
         } else {
             match self._variable_state(var) {
@@ -262,7 +262,7 @@ impl BindingManager {
         use BindingManagerVariableState::*;
         self.do_followers(|_, follower| follower.add_constraint(term))?;
 
-        assert!(term.value().as_expression().is_ok());
+        assert!(term.as_expression().is_ok());
         let mut op = op!(And, term.clone());
 
         // include all constraints applying to any of its variables.

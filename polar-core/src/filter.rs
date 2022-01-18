@@ -118,7 +118,7 @@ impl PathVar {
                 operator: Operator::Dot,
                 args,
             }) => {
-                let dot = args[1].value().as_string()?.to_string();
+                let dot = args[1].as_string()?.to_string();
                 let mut pv = Self::from_term(&args[0])?;
                 pv.path.push(dot);
                 Ok(pv)
@@ -168,7 +168,7 @@ impl Filter {
             eprintln!("{}", ands);
         }
 
-        let term2expr = |i: Term| match i.value().as_expression() {
+        let term2expr = |i: Term| match i.as_expression() {
             Ok(x) => x.clone(),
             _ => op!(Unify, var!(var), i),
         };
@@ -327,7 +327,7 @@ impl FilterInfo {
         use Operator::*;
         // The only case this currently handles is `not in`.
         match op.operator {
-            Not => match op.args[0].value().as_expression() {
+            Not => match op.args[0].as_expression() {
                 Ok(Operation { operator: In, args }) if args.len() == 2 => {
                     let (left, right) = (self.term2datum(&args[0])?, self.term2datum(&args[1])?);
                     self.add_condition(left, Comparison::Nin, right);
@@ -590,7 +590,7 @@ where
 fn vec_of_ands(t: Term) -> Vec<Term> {
     fn or_of_ands(t: Term) -> Vec<Term> {
         use Operator::*;
-        match t.value().as_expression() {
+        match t.as_expression() {
             Ok(Operation { operator, args }) if *operator == Or => {
                 args.iter().cloned().flat_map(or_of_ands).collect()
             }
@@ -605,7 +605,7 @@ fn vec_of_ands(t: Term) -> Vec<Term> {
 
     fn ands(t: Term) -> Vec<Term> {
         use Operator::*;
-        match t.value().as_expression() {
+        match t.as_expression() {
             Ok(Operation { operator, args }) if *operator == And => {
                 args.iter().cloned().flat_map(ands).collect()
             }

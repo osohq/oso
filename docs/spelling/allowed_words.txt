@@ -58,6 +58,7 @@ OAuth
 ORM
 ORMs
 Oso's
+POSIX
 Polar's
 Postgres
 Pre
