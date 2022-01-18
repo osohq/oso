@@ -63,9 +63,9 @@ export interface Immediate {
   value: unknown;
 }
 
-export interface Adapter<Q, R> {
-  buildQuery: (f: Filter) => Q;
-  executeQuery: (q: Q) => Promise<R[]>;
+export interface Adapter<Query, Resource> {
+  buildQuery: (f: Filter) => Query;
+  executeQuery: (q: Query) => Promise<Resource[]>;
 }
 
 export type Datum = Projection | Immediate;
@@ -91,9 +91,9 @@ export interface FilterJson {
   root: string;
 }
 
-export async function parseFilter<Q, R>(
+export async function parseFilter<Query, Resource>(
   filter_json: FilterJson,
-  host: Host<Q, R>
+  host: Host<Query, Resource>
 ): Promise<Filter> {
   const filter = {
     model: filter_json.root,
@@ -105,7 +105,10 @@ export async function parseFilter<Q, R>(
   for (const [fromTypeName, fromFieldName, toTypeName] of filter_json.relations)
     filter.relations.push({ fromTypeName, fromFieldName, toTypeName });
 
-  async function parseDatum(d: obj, host: Host<Q, R>): Promise<Datum> {
+  async function parseDatum(
+    d: obj,
+    host: Host<Query, Resource>
+  ): Promise<Datum> {
     const k = Object.getOwnPropertyNames(d)[0];
     switch (k) {
       case 'Field': {
