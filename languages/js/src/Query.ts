@@ -188,49 +188,25 @@ export class Query<Q, R> {
       const receiver = (await this.#host.toJs(
         instance
       )) as NullishOrHasConstructor;
-      const rel = this.#host.getType(receiver?.constructor)?.fields?.get(attr);
-      if (rel instanceof Relation) {
-        value = await this.handleRelation(receiver as obj, rel);
-      } else {
-        // NOTE(gj): disabling ESLint for following line b/c we're fine if
-        // `receiver[attr]` blows up -- we catch the error and relay it to the
-        // core below.
-        value = (receiver as any)[attr]; // eslint-disable-line
-        if (args !== undefined) {
-          if (typeof value === 'function') {
-            // If value is a function, call it with the provided args.
-            const jsArgs = await Promise.all(
-              args.map(async a => await this.#host.toJs(a))
-            );
-            // NOTE(gj): disabling ESLint for following line b/c we know
-            // `receiver[attr]` (A) won't blow up (because if it was going to
-            // it already would've happened above) and (B) is a function
-            // (thanks to the `typeof value === 'function'` check above).
-            //
-            // The function invocation could still blow up with a `TypeError`
-            // if `receiver[attr]` is a class constructor (e.g., if instance
-            // were something like `{x: class{}}`), but that'll be caught &
-            // relayed to the core down below.
-            value = ((receiver as any)[attr] as CallableFunction)(...jsArgs); // eslint-disable-line
-          } else {
-            // Error on attempt to call non-function.
-            throw new InvalidCallError(receiver, attr);
-          }
-        } else {
-          // If value isn't a property anywhere in receiver's prototype chain,
-          // throw an error.
-          //
-          // NOTE(gj): disabling TS for following line b/c we're fine if `attr
-          // in receiver` blows up -- we catch the error and relay it to the
-          // core below.
-          //
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          if (value === undefined && !(attr in receiver)) {
-            throw new InvalidAttributeError(receiver, attr);
-          }
-        }
-      }
+
+      if (receiver === null || receiver === undefined)
+        throw new (args ? InvalidCallError : InvalidAttributeError)(
+          receiver,
+          attr
+        );
+
+      const rel = this.#host.getType(receiver.constructor)?.fields?.get(attr);
+      const self = receiver as obj;
+
+      if (rel instanceof Relation) value = await this.handleRelation(self, rel);
+      else if (args) {
+        if (typeof self[attr] !== 'function')
+          throw new InvalidCallError(receiver, attr);
+        const jsArgs = await Promise.all(args.map(a => this.#host.toJs(a)));
+        value = (self[attr] as CallableFunction)(...jsArgs); // eslint-disable-line @typescript-eslint/no-unsafe-assignment
+      } else if (!(attr in self))
+        throw new InvalidAttributeError(receiver, attr);
+      else value = self[attr];
     } catch (e) {
       if (
         e instanceof TypeError ||
