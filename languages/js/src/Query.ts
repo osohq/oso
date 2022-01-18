@@ -47,15 +47,15 @@ function getLogLevelsFromEnv() {
  *
  * @internal
  */
-export class Query<Q, R> {
+export class Query<AdapterQuery, Resource> {
   #ffiQuery: FfiQuery;
   #calls: Map<number, AsyncGenerator>;
-  #host: Host<Q, R>;
+  #host: Host<AdapterQuery, Resource>;
   results: QueryResult;
 
   constructor(
     ffiQuery: FfiQuery,
-    host: Host<Q, R>,
+    host: Host<AdapterQuery, Resource>,
     bindings?: Map<string, unknown>
   ) {
     ffiQuery.setLoggingOptions(...getLogLevelsFromEnv());
