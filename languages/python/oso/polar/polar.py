@@ -20,7 +20,7 @@ from .query import Query
 from .predicate import Predicate
 from .variable import Variable
 from .expression import Expression, Pattern
-from .data_filtering import serialize_types, filter_data
+from .data_filtering import serialize_types
 from .data import DataFilter
 
 
