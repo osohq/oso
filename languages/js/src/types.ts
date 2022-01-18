@@ -727,8 +727,6 @@ export interface UserTypeParams<Type extends Class> {
   isaCheck: IsaCheck;
 }
 
-export type Constructable = { constructor: Class };
-
 /**
  * Utility type to represent a JS value that either does or does not have a
  * constructor property.
@@ -737,4 +735,4 @@ export type Constructable = { constructor: Class };
  * `constructor` property (e.g., `(1).constructor` returns `[Function:
  * Number]`), but I'm not 100% sure of that.
  */
-export type NullishOrHasConstructor = Constructable | null | undefined;
+export type NullishOrHasConstructor = { constructor: Class } | null | undefined;

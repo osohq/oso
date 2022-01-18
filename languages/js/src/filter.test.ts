@@ -271,29 +271,29 @@ async function fixtures() {
   function typeOrmAdapter<R>(
     connection: Connection
   ): Adapter<SelectQueryBuilder<R>, R> {
-    const ops = { Eq: '=', Geq: '>=', Gt: '>', Leq: '<=', Lt: '<', Neq: '!=' },
-      isProj = (d: Projection | Immediate): d is Projection =>
-        (d as Projection).typeName !== undefined,
-      idCheck = (
-        c: FilterCondition,
-        a: FilterConditionSide,
-        b: FilterConditionSide
-      ) => {
-        const q: Datum = c[a];
-        if (isProj(q) && q.fieldName === undefined) {
-          c[a] = {
-            typeName: q.typeName,
-            fieldName: 'id',
-          };
-          c[b] = {
-            value: ((c[b] as Immediate).value as { id: number }).id,
-          };
-        }
-      },
-      writeClauses = (sep: string, z: string, ss: string[]) =>
-        ss.length ? `(${ss.join(` ${sep} `)})` : z,
-      queryBuilder = (r: string) =>
-        connection.getRepository(r).createQueryBuilder(r);
+    const ops = { Eq: '=', Geq: '>=', Gt: '>', Leq: '<=', Lt: '<', Neq: '!=' };
+    const isProj = (d: Projection | Immediate): d is Projection =>
+      (d as Projection).typeName !== undefined;
+    const idCheck = (
+      c: FilterCondition,
+      a: FilterConditionSide,
+      b: FilterConditionSide
+    ) => {
+      const q: Datum = c[a];
+      if (isProj(q) && q.fieldName === undefined) {
+        c[a] = {
+          typeName: q.typeName,
+          fieldName: 'id',
+        };
+        c[b] = {
+          value: ((c[b] as Immediate).value as { id: number }).id,
+        };
+      }
+    };
+    const writeClauses = (sep: string, z: string, ss: string[]) =>
+      ss.length ? `(${ss.join(` ${sep} `)})` : z;
+    const queryBuilder = (r: string) =>
+      connection.getRepository(r).createQueryBuilder(r);
 
     return {
       executeQuery: (query: SelectQueryBuilder<R>) => query.getMany(),
