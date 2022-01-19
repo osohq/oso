@@ -3,7 +3,6 @@ import {
   Datum,
   Filter,
   FilterCondition,
-  FilterConditionSide,
   Immediate,
   Projection,
   Relation,
@@ -271,70 +270,85 @@ async function fixtures() {
   function typeOrmAdapter<R>(
     connection: Connection
   ): Adapter<SelectQueryBuilder<R>, R> {
+    // helpers for writing SQL
     const ops = { Eq: '=', Geq: '>=', Gt: '>', Leq: '<=', Lt: '<', Neq: '!=' };
-    const isProj = (d: Projection | Immediate): d is Projection =>
+    const orClauses = (clauses: string[]): string =>
+      clauses.length === 0 ? '1=0' : `(${clauses.join(' OR ')})`;
+    const andClauses = (clauses: string[]): string =>
+      clauses.length === 0 ? '1=1' : `(${clauses.join(' AND ')})`;
+
+    // Data in filters can be immediate values like 1, false, or "green", or projections,
+    // which have a type name and an optional field: "User.name", "Post.user_id", "Tag", etc.
+    const isProjection = (d: Projection | Immediate): d is Projection =>
       (d as Projection).typeName !== undefined;
-    const idCheck = (
-      c: FilterCondition,
-      a: FilterConditionSide,
-      b: FilterConditionSide
-    ) => {
-      const q: Datum = c[a];
-      if (isProj(q) && q.fieldName === undefined) {
-        c[a] = {
-          typeName: q.typeName,
-          fieldName: 'id',
-        };
-        c[b] = {
-          value: ((c[b] as Immediate).value as { id: number }).id,
-        };
+
+    // Expand conditions like "user = #<user id=12>" to "user.id = 12"
+    // Only the ORM knows how to do this, so we need to do it here.
+    const expandObjectComparison = (c: FilterCondition): FilterCondition => {
+      for (const { a, b } of [
+        { a: 'lhs', b: 'rhs' },
+        { a: 'rhs', b: 'lhs' },
+      ] as { a: 'lhs' | 'rhs'; b: 'lhs' | 'rhs' }[]) {
+        const q: Datum = c[a];
+        if (isProjection(q) && q.fieldName === undefined)
+          return {
+            [a]: { typeName: q.typeName, fieldName: 'id' },
+            cmp: c.cmp,
+            [b]: { value: ((c[b] as Immediate).value as { id: number }).id },
+          } as unknown as FilterCondition;
       }
+      return c;
     };
-    const writeClauses = (sep: string, z: string, ss: string[]) =>
-      ss.length ? `(${ss.join(` ${sep} `)})` : z;
-    const queryBuilder = (r: string) =>
-      connection.getRepository(r).createQueryBuilder(r);
 
     return {
       executeQuery: (query: SelectQueryBuilder<R>) => query.getMany(),
-      buildQuery: (filter: Filter): SelectQueryBuilder<R> => {
-        const sqlValues: obj = {};
+      buildQuery: ({
+        model,
+        conditions,
+        relations,
+        types,
+      }: Filter): SelectQueryBuilder<R> => {
+        // make a query builder
+        const queryBuilder = connection
+          .getRepository(model)
+          .createQueryBuilder(model);
 
-        let nextId = 0;
-        function toSql(d: Datum): string {
-          if (isProj(d)) return `${d.typeName}.${d.fieldName}`;
-          const key = `${nextId++}`;
-          sqlValues[key] = d.value;
-          return `:${key}`;
-        }
-
-        const sqlQuery = writeClauses(
-          'OR',
-          '1=0',
-          filter.conditions.map(cs =>
-            writeClauses(
-              'AND',
-              '1=1',
-              cs.map(
-                c => (
-                  idCheck(c, 'lhs', 'rhs'),
-                  idCheck(c, 'rhs', 'lhs'),
-                  `${toSql(c.lhs)} ${ops[c.cmp]} ${toSql(c.rhs)}`
-                )
-              )
-            )
-          )
+        // join all the tables in the relation
+        const relation = relations.reduce(
+          (query, { fromTypeName, fromFieldName, toTypeName }) => {
+            // extract the fields we're joining on
+            const { my_field, other_field } = (
+              types[fromTypeName][fromFieldName] as SerializedRelation
+            ).Relation;
+            // write the join condition
+            const join = `${fromTypeName}.${my_field} = ${toTypeName}.${other_field}`;
+            return query.innerJoin(toTypeName, toTypeName, join);
+          },
+          queryBuilder as SelectQueryBuilder<R>
         );
 
-        return filter.relations
-          .reduce((query, { fromTypeName, fromFieldName, toTypeName }) => {
-            const { my_field, other_field } = (
-              filter.types[fromTypeName][fromFieldName] as SerializedRelation
-            ).Relation;
-            const join = `${fromTypeName}.${my_field} = ${toTypeName}.${other_field}`;
-            return query.innerJoin(toTypeName, toTypeName, join); // lol typeorm ??
-          }, queryBuilder(filter.model) as SelectQueryBuilder<R>)
-          .where(sqlQuery, sqlValues);
+        // now write the where clause
+        //
+        // condition to sql
+        const sqlCondition = (c: FilterCondition): string => {
+          c = expandObjectComparison(c);
+          return `${sqlData(c.lhs)} ${ops[c.cmp]} ${sqlData(c.rhs)}`;
+        };
+        // for storing interpolated values
+        const values: obj = {};
+        // data to sql. calling this on filter data populates the values object
+        const sqlData = (d: Datum): string => {
+          if (isProjection(d)) return `${d.typeName}.${d.fieldName}`;
+          const key = Object.keys(values).length;
+          values[key] = d.value;
+          return `:${key}`;
+        };
+
+        const whereClause = orClauses(
+          conditions.map(ands => andClauses(ands.map(sqlCondition)))
+        );
+
+        return relation.where(whereClause, values);
       },
     };
   }

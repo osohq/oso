@@ -9,7 +9,6 @@ export {
   Projection,
   Filter,
   FilterCondition,
-  FilterConditionSide,
   Adapter,
 } from './filter';
 export { defaultEqualityFn } from './helpers';

@@ -63,6 +63,10 @@ export interface Immediate {
   value: unknown;
 }
 
+export function isProjection(x: unknown): x is Projection {
+  return (x as Projection).typeName !== undefined;
+}
+
 export interface Adapter<Query, Resource> {
   buildQuery: (f: Filter) => Query;
   executeQuery: (q: Query) => Promise<Resource[]>;
@@ -75,8 +79,6 @@ export interface FilterCondition {
   cmp: PolarComparisonOperator;
   rhs: Datum;
 }
-
-export type FilterConditionSide = 'lhs' | 'rhs';
 
 export interface Filter {
   model: string;
