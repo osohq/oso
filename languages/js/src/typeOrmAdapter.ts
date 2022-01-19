@@ -1,4 +1,5 @@
-import { Connection, SelectQueryBuilder } from 'typeorm';
+import type { Connection, SelectQueryBuilder } from 'typeorm';
+import { obj } from './types';
 import {
   Adapter,
   isProjection,
@@ -8,36 +9,35 @@ import {
   SerializedRelation,
   Immediate,
 } from './filter';
-import { obj } from './types';
+
+// helpers for writing SQL
+const ops = { Eq: '=', Geq: '>=', Gt: '>', Leq: '<=', Lt: '<', Neq: '!=' };
+const orClauses = (clauses: string[]): string =>
+  clauses.length === 0 ? '1=0' : `(${clauses.join(' OR ')})`;
+const andClauses = (clauses: string[]): string =>
+  clauses.length === 0 ? '1=1' : `(${clauses.join(' AND ')})`;
+
+// Expand conditions like "user = #<user id=12>" to "user.id = 12"
+// Only the ORM knows how to do this, so we need to do it here.
+const expandObjectComparison = (c: FilterCondition): FilterCondition => {
+  for (const { a, b } of [
+    { a: 'lhs', b: 'rhs' },
+    { a: 'rhs', b: 'lhs' },
+  ] as { a: 'lhs' | 'rhs'; b: 'lhs' | 'rhs' }[]) {
+    const q: Datum = c[a];
+    if (isProjection(q) && q.fieldName === undefined)
+      return {
+        [a]: { typeName: q.typeName, fieldName: 'id' },
+        cmp: c.cmp,
+        [b]: { value: ((c[b] as Immediate).value as { id: number }).id },
+      } as unknown as FilterCondition;
+  }
+  return c;
+};
 
 export function typeOrmAdapter<R>(
   connection: Connection
 ): Adapter<SelectQueryBuilder<R>, R> {
-  // helpers for writing SQL
-  const ops = { Eq: '=', Geq: '>=', Gt: '>', Leq: '<=', Lt: '<', Neq: '!=' };
-  const orClauses = (clauses: string[]): string =>
-    clauses.length === 0 ? '1=0' : `(${clauses.join(' OR ')})`;
-  const andClauses = (clauses: string[]): string =>
-    clauses.length === 0 ? '1=1' : `(${clauses.join(' AND ')})`;
-
-  // Expand conditions like "user = #<user id=12>" to "user.id = 12"
-  // Only the ORM knows how to do this, so we need to do it here.
-  const expandObjectComparison = (c: FilterCondition): FilterCondition => {
-    for (const { a, b } of [
-      { a: 'lhs', b: 'rhs' },
-      { a: 'rhs', b: 'lhs' },
-    ] as { a: 'lhs' | 'rhs'; b: 'lhs' | 'rhs' }[]) {
-      const q: Datum = c[a];
-      if (isProjection(q) && q.fieldName === undefined)
-        return {
-          [a]: { typeName: q.typeName, fieldName: 'id' },
-          cmp: c.cmp,
-          [b]: { value: ((c[b] as Immediate).value as { id: number }).id },
-        } as unknown as FilterCondition;
-    }
-    return c;
-  };
-
   return {
     executeQuery: (query: SelectQueryBuilder<R>) => query.getMany(),
     buildQuery: ({

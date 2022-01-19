@@ -13,3 +13,4 @@ export {
 } from './filter';
 export { defaultEqualityFn } from './helpers';
 export type { Class } from './types';
+export { typeOrmAdapter } from './typeOrmAdapter';
