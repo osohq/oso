@@ -37,7 +37,7 @@ func newPolar() (*Polar, error) {
 
 	builtinClasses := map[string]reflect.Type{
 		"Boolean":    reflect.TypeOf(true),
-		"Integer":    reflect.TypeOf(int(1)),
+		"Integer":    reflect.TypeOf(int64(1)),
 		"Float":      reflect.TypeOf(float64(1.0)),
 		"String":     reflect.TypeOf(""),
 		"List":       reflect.TypeOf(make([]interface{}, 0)),

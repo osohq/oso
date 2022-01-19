@@ -214,8 +214,7 @@ func (h Host) Isa(value types.Term, classTag string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	instanceType := reflect.TypeOf(instance)
-	res := instanceType.ConvertibleTo(*class)
+	res := isInstance(instance, *class)
 	return res, nil
 }
 
