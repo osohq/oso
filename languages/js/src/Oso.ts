@@ -2,21 +2,14 @@ import { Polar } from './Polar';
 import { Variable } from './Variable';
 import { Expression } from './Expression';
 import { Pattern } from './Pattern';
-import type {
-  Options,
-  CustomError,
-  Class,
-  PolarTerm,
-  DataFilteringQueryParams,
-} from './types';
+import type { Options, CustomError, Class, PolarTerm } from './types';
 import {
   NotFoundError,
   ForbiddenError,
   OsoError,
   UnregisteredClassError,
 } from './errors';
-import { filterData } from './dataFiltering';
-import type { FilterPlan } from './dataFiltering';
+import { parseFilter, Adapter, FilterJson } from './filter';
 
 /** The Oso authorization API. */
 // TODO(gj): maybe pass DF options to constructor & try to parametrize a
@@ -26,8 +19,9 @@ export class Oso<
   Action = unknown,
   Resource = unknown,
   Field = unknown,
-  Request = unknown
-> extends Polar {
+  Request = unknown,
+  Query = unknown
+> extends Polar<Query, Resource> {
   #notFoundError: CustomError = NotFoundError;
   #forbiddenError: CustomError = ForbiddenError;
   #readAction: unknown = 'read';
@@ -265,7 +259,7 @@ export class Oso<
     actor: Actor,
     action: Action,
     resourceCls: Class<Resource>
-  ): Promise<unknown> {
+  ): Promise<Query> {
     const resource = new Variable('resource');
     const host = this.getHost();
     const clsName = host.getType(resourceCls)?.name;
@@ -301,13 +295,14 @@ export class Oso<
       });
     }
 
-    const plan = this.getFfi().buildFilterPlan(
+    const dataFilter = this.getFfi().buildDataFilter(
       host.serializeTypes(),
       queryResults,
       'resource',
       clsName
-    ) as FilterPlan;
-    return filterData(host, plan);
+    ) as FilterJson;
+    const filter = await parseFilter(dataFilter, host);
+    return host.adapter.buildQuery(filter);
   }
 
   /**
@@ -319,28 +314,20 @@ export class Oso<
    * @param resourceCls Object type.
    * @returns An array of authorized resources.
    */
-  async authorizedResources<T extends Resource>(
+  async authorizedResources(
     actor: Actor,
     action: Action,
-    resourceCls: Class<T>
-  ): Promise<T[]> {
+    resourceCls: Class<Resource>
+  ): Promise<Resource[]> {
     const query = await this.authorizedQuery(actor, action, resourceCls);
     if (!query) return [];
-    const userType = this.getHost().getType(resourceCls);
-    if (userType === undefined)
-      throw new UnregisteredClassError(resourceCls.name);
-    return (await userType.execQuery(query)) as T[];
+    return this.getHost().adapter.executeQuery(query);
   }
 
   /**
-   * Register default values for data filtering query functions.
-   * These can be overridden by passing specific implementations to
-   * `registerClass`.
+   * Register adapter for data filtering query functions.
    */
-  setDataFilteringQueryDefaults(options: DataFilteringQueryParams): void {
-    if (options.buildQuery) this.getHost().buildQuery = options.buildQuery;
-    if (options.execQuery) this.getHost().execQuery = options.execQuery;
-    if (options.combineQuery)
-      this.getHost().combineQuery = options.combineQuery;
+  setDataFilteringAdapter(adapter: Adapter<Query, Resource>): void {
+    this.getHost().adapter = adapter;
   }
 }

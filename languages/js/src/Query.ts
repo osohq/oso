@@ -21,6 +21,7 @@ import type {
   ExternalOp,
   MakeExternal,
   NextExternal,
+  obj,
   NullishOrHasConstructor,
   PolarTerm,
   QueryResult,
@@ -34,8 +35,7 @@ import {
   isIterableIterator,
   QueryEventKind,
 } from './types';
-import { Relation } from './dataFiltering';
-import type { FilterKind } from './dataFiltering';
+import { Relation, Filter, FilterCondition } from './filter';
 
 function getLogLevelsFromEnv() {
   if (typeof process?.env === 'undefined') return [undefined, undefined];
@@ -47,13 +47,17 @@ function getLogLevelsFromEnv() {
  *
  * @internal
  */
-export class Query {
+export class Query<AdapterQuery, Resource> {
   #ffiQuery: FfiQuery;
   #calls: Map<number, AsyncGenerator>;
-  #host: Host;
+  #host: Host<AdapterQuery, Resource>;
   results: QueryResult;
 
-  constructor(ffiQuery: FfiQuery, host: Host, bindings?: Map<string, unknown>) {
+  constructor(
+    ffiQuery: FfiQuery,
+    host: Host<AdapterQuery, Resource>,
+    bindings?: Map<string, unknown>
+  ) {
     ffiQuery.setLoggingOptions(...getLogLevelsFromEnv());
     this.#ffiQuery = ffiQuery;
     this.#calls = new Map();
@@ -133,8 +137,10 @@ export class Query {
    *
    * @internal
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private async handleRelation(receiver: any, rel: Relation): Promise<unknown> {
+  private async handleRelation(
+    receiver: obj,
+    rel: Relation
+  ): Promise<Resource | Resource[]> {
     // TODO(gj|gw): we should add validation for UserType relations once we
     // have a nice hook where we know every class has been registered
     // (e.g., once we enforce that all registerCalls() have to happen
@@ -142,22 +148,30 @@ export class Query {
     const typ = this.#host.getType(rel.otherType);
     if (typ === undefined) throw new UnregisteredClassError(rel.otherType);
 
-    // NOTE(gj): disabling ESLint for following line b/c we're fine if
-    // `receiver[rel.myField]` blows up -- we catch the error and relay it to
-    // the core in `handleCall`.
-    const value = receiver[rel.myField] as unknown; // eslint-disable-line
+    const value = receiver[rel.myField];
+    const condition: FilterCondition = {
+      lhs: {
+        typeName: rel.otherType,
+        fieldName: rel.otherField,
+      },
+      cmp: 'Eq',
+      rhs: { value },
+    };
+    const filter: Filter = {
+      model: rel.otherType,
+      relations: [],
+      conditions: [[condition]],
+      types: this.#host.types,
+    };
+    const query = this.#host.adapter.buildQuery(filter);
+    const results = await this.#host.adapter.executeQuery(query);
 
-    // Use the fetcher for the other type to traverse
-    // the relationship.
-    const filter = { kind: 'Eq' as FilterKind, value, field: rel.otherField };
-    const query = await typ.buildQuery([filter]); // eslint-disable-line @typescript-eslint/no-unsafe-assignment
-    const results = await typ.execQuery(query);
     if (rel.kind === 'one') {
       if (results.length !== 1)
         throw new Error(`Wrong number of parents: ${results.length}`);
-      return results[0]; // eslint-disable-line @typescript-eslint/no-unsafe-return
+      return results[0];
     } else {
-      return results; // eslint-disable-line @typescript-eslint/no-unsafe-return
+      return results;
     }
   }
 
@@ -177,49 +191,25 @@ export class Query {
       const receiver = (await this.#host.toJs(
         instance
       )) as NullishOrHasConstructor;
-      const rel = this.#host.getType(receiver?.constructor)?.fields?.get(attr);
-      if (rel instanceof Relation) {
-        value = await this.handleRelation(receiver, rel);
-      } else {
-        // NOTE(gj): disabling ESLint for following line b/c we're fine if
-        // `receiver[attr]` blows up -- we catch the error and relay it to the
-        // core below.
-        value = (receiver as any)[attr]; // eslint-disable-line
-        if (args !== undefined) {
-          if (typeof value === 'function') {
-            // If value is a function, call it with the provided args.
-            const jsArgs = await Promise.all(
-              args.map(async a => await this.#host.toJs(a))
-            );
-            // NOTE(gj): disabling ESLint for following line b/c we know
-            // `receiver[attr]` (A) won't blow up (because if it was going to
-            // it already would've happened above) and (B) is a function
-            // (thanks to the `typeof value === 'function'` check above).
-            //
-            // The function invocation could still blow up with a `TypeError`
-            // if `receiver[attr]` is a class constructor (e.g., if instance
-            // were something like `{x: class{}}`), but that'll be caught &
-            // relayed to the core down below.
-            value = ((receiver as any)[attr] as CallableFunction)(...jsArgs); // eslint-disable-line
-          } else {
-            // Error on attempt to call non-function.
-            throw new InvalidCallError(receiver, attr);
-          }
-        } else {
-          // If value isn't a property anywhere in receiver's prototype chain,
-          // throw an error.
-          //
-          // NOTE(gj): disabling TS for following line b/c we're fine if `attr
-          // in receiver` blows up -- we catch the error and relay it to the
-          // core below.
-          //
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          if (value === undefined && !(attr in receiver)) {
-            throw new InvalidAttributeError(receiver, attr);
-          }
-        }
-      }
+
+      if (receiver === null || receiver === undefined)
+        throw new (args ? InvalidCallError : InvalidAttributeError)(
+          receiver,
+          attr
+        );
+
+      const rel = this.#host.getType(receiver.constructor)?.fields?.get(attr);
+      const self = receiver as obj;
+
+      if (rel instanceof Relation) value = await this.handleRelation(self, rel);
+      else if (args) {
+        if (typeof self[attr] !== 'function')
+          throw new InvalidCallError(receiver, attr);
+        const jsArgs = await Promise.all(args.map(a => this.#host.toJs(a)));
+        value = (self[attr] as CallableFunction)(...jsArgs); // eslint-disable-line @typescript-eslint/no-unsafe-assignment
+      } else if (!(attr in self))
+        throw new InvalidAttributeError(receiver, attr);
+      else value = self[attr];
     } catch (e) {
       if (
         e instanceof TypeError ||

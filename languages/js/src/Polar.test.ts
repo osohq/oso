@@ -775,7 +775,7 @@ Type error: can only use \`in\` on an iterable value, this is Number(Integer(2))
   000: undefined.foo
     in query at line 1, column 1
 
-Application error: Cannot read propert`
+Application error: foo not found on undefined`
       );
     });
   });

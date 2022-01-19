@@ -7,13 +7,7 @@ import {
   UnregisteredInstanceError,
   UnexpectedExpressionError,
 } from './errors';
-import {
-  ancestors,
-  isConstructor,
-  isString,
-  promisify1,
-  repr,
-} from './helpers';
+import { ancestors, isConstructor, isString, repr } from './helpers';
 import type { Polar as FfiPolar } from './polar_wasm_api';
 import { Expression } from './Expression';
 import { Pattern } from './Pattern';
@@ -25,14 +19,11 @@ import type {
   HostOpts,
   PolarComparisonOperator,
   PolarTerm,
-  UserTypeParams,
-  BuildQueryFn,
-  ExecQueryFn,
-  CombineQueryFn,
-  DataFilteringQueryParams,
   NullishOrHasConstructor,
-  IsaCheck,
+  HostTypes,
+  obj,
 } from './types';
+import { UserType } from './types';
 import {
   Dict,
   isPolarBool,
@@ -46,60 +37,21 @@ import {
   isPolarStr,
   isPolarVariable,
 } from './types';
-import { Relation } from './dataFiltering';
-import type { SerializedFields } from './dataFiltering';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export class UserType<Type extends Class<T>, T = any, Query = any> {
-  name: string;
-  cls: Type;
-  id: number;
-  fields: Map<string, Class | Relation>;
-  buildQuery: BuildQueryFn<Promise<Query>>;
-  execQuery: ExecQueryFn<Query, Promise<T[]>>;
-  combineQuery: CombineQueryFn<Query>;
-  isaCheck: IsaCheck;
-
-  constructor({
-    name,
-    cls,
-    id,
-    fields,
-    buildQuery,
-    execQuery,
-    combineQuery,
-    isaCheck,
-  }: UserTypeParams<Type>) {
-    this.name = name;
-    this.cls = cls;
-    this.fields = fields;
-    // NOTE(gj): these `promisify1()` calls are for Promisifying synchronous
-    // return values from {build,exec}Query. Since a user's implementation
-    // *might* return a Promise, we want to `await` _all_ invocations.
-    this.buildQuery = promisify1(buildQuery);
-    this.execQuery = promisify1(execQuery);
-    this.combineQuery = combineQuery;
-    this.id = id;
-    this.isaCheck = isaCheck;
-  }
-}
+import { Relation, Adapter } from './filter';
 
 /**
  * Translator between Polar and JavaScript.
  *
  * @internal
  */
-export class Host implements Required<DataFilteringQueryParams> {
+export class Host<Query, Resource> {
   #ffiPolar: FfiPolar;
   #instances: Map<number, unknown>;
-  types: Map<string | Class, UserType<any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  types: HostTypes;
 
   #opts: HostOpts;
 
-  // global data filtering config
-  buildQuery: BuildQueryFn;
-  execQuery: ExecQueryFn;
-  combineQuery: CombineQueryFn;
+  adapter: Adapter<Query, Resource>;
 
   /**
    * Shallow clone a host to extend its state for the duration of a particular
@@ -107,14 +59,15 @@ export class Host implements Required<DataFilteringQueryParams> {
    *
    * @internal
    */
-  static clone(host: Host, opts: Partial<HostOpts>): Host {
+  static clone<Query, Resource>(
+    host: Host<Query, Resource>,
+    opts: Partial<HostOpts>
+  ): Host<Query, Resource> {
     const options = { ...host.#opts, ...opts };
-    const clone = new Host(host.#ffiPolar, options);
+    const clone = new Host<Query, Resource>(host.#ffiPolar, options);
     clone.#instances = new Map(host.#instances);
     clone.types = new Map(host.types);
-    clone.buildQuery = host.buildQuery;
-    clone.execQuery = host.execQuery;
-    clone.combineQuery = host.combineQuery;
+    clone.adapter = host.adapter;
     return clone;
   }
 
@@ -125,14 +78,13 @@ export class Host implements Required<DataFilteringQueryParams> {
     this.#instances = new Map();
     this.types = new Map();
 
-    this.buildQuery = () => {
-      throw new DataFilteringConfigurationError('buildQuery');
-    };
-    this.execQuery = () => {
-      throw new DataFilteringConfigurationError('execQuery');
-    };
-    this.combineQuery = () => {
-      throw new DataFilteringConfigurationError('combineQuery');
+    this.adapter = {
+      buildQuery: () => {
+        throw new DataFilteringConfigurationError();
+      },
+      executeQuery: () => {
+        throw new DataFilteringConfigurationError();
+      },
     };
   }
 
@@ -167,12 +119,12 @@ export class Host implements Required<DataFilteringQueryParams> {
     for (const [name, typ] of this.types) if (isString(name)) yield typ;
   }
 
-  serializeTypes(): { [tag: string]: SerializedFields } {
-    const polarTypes: { [tag: string]: SerializedFields } = {};
+  serializeTypes(): obj {
+    const polarTypes: obj = {};
     for (const [tag, userType] of this.types) {
       if (isString(tag)) {
         const fields = userType.fields;
-        const fieldTypes: SerializedFields = {};
+        const fieldTypes: obj = {};
         for (const [k, v] of fields) {
           if (v instanceof Relation) {
             fieldTypes[k] = v.serialize();
@@ -204,7 +156,7 @@ export class Host implements Required<DataFilteringQueryParams> {
     let fields = params.fields || {};
     if (!(fields instanceof Map)) fields = new Map(Object.entries(fields));
 
-    const { name, buildQuery, execQuery, combineQuery } = params;
+    const { name } = params;
     if (!isConstructor(cls)) throw new InvalidConstructorError(cls);
     const clsName: string = name ? name : cls.name;
     const existing = this.types.get(clsName);
@@ -224,9 +176,6 @@ export class Host implements Required<DataFilteringQueryParams> {
       name: clsName,
       cls,
       fields,
-      buildQuery: buildQuery || this.buildQuery,
-      execQuery: execQuery || this.execQuery,
-      combineQuery: combineQuery || this.combineQuery,
       id: this.cacheInstance(cls),
       isaCheck: params.isaCheck || defaultCheck,
     });
