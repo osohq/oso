@@ -3,7 +3,6 @@ export { Variable } from './Variable';
 export { AuthorizationError, ForbiddenError, NotFoundError } from './errors';
 export {
   Relation,
-  SerializedRelation,
   Datum,
   Immediate,
   Projection,

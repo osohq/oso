@@ -1,13 +1,13 @@
 import type { Connection, SelectQueryBuilder } from 'typeorm';
-import { obj } from './types';
+import { UserType, Class, obj } from './types';
 import {
   Adapter,
   isProjection,
   Filter,
   Datum,
   FilterCondition,
-  SerializedRelation,
   Immediate,
+  Relation,
 } from './filter';
 
 // helpers for writing SQL
@@ -55,11 +55,11 @@ export function typeOrmAdapter<R>(
       const relation = relations.reduce(
         (query, { fromTypeName, fromFieldName, toTypeName }) => {
           // extract the fields we're joining on
-          const { my_field, other_field } = (
-            types[fromTypeName][fromFieldName] as SerializedRelation
-          ).Relation;
+          const { myField, otherField } = (
+            types.get(fromTypeName) as UserType<Class<unknown>, unknown>
+          ).fields.get(fromFieldName) as Relation;
           // write the join condition
-          const join = `${fromTypeName}.${my_field} = ${toTypeName}.${other_field}`;
+          const join = `${fromTypeName}.${myField} = ${toTypeName}.${otherField}`;
           return query.innerJoin(toTypeName, toTypeName, join);
         },
         queryBuilder as SelectQueryBuilder<R>

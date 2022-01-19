@@ -1,15 +1,11 @@
 import type { Host } from './Host';
-import type { PolarComparisonOperator, PolarValue, obj } from './types';
+import type {
+  PolarComparisonOperator,
+  PolarValue,
+  HostTypes,
+  obj,
+} from './types';
 import { OsoError } from './errors';
-
-export interface SerializedRelation {
-  Relation: {
-    kind: string;
-    other_class_tag: string;
-    my_field: string;
-    other_field: string;
-  };
-}
 
 type RelationKind = 'one' | 'many';
 
@@ -32,7 +28,7 @@ export class Relation {
     this.otherField = otherField;
   }
 
-  serialize(): SerializedRelation {
+  serialize(): obj {
     return {
       Relation: {
         kind: this.kind,
@@ -44,16 +40,12 @@ export class Relation {
   }
 }
 
-export type SerializedFields = {
-  [field: string]: SerializedRelation | { Base: { class_tag: string } };
-};
-
 // Represents an abstract query over a data source
 export interface Filter {
   model: string; // type of query / source of data
   relations: FilterRelation[]; // named relations to other data sources
   conditions: FilterCondition[][]; // query conditions: an OR of ANDs
-  types: { [tag: string]: SerializedFields }; // type information for use by the adapter (see below)
+  types: HostTypes; // type information for use by the adapter (see below)
 }
 
 // Represents a named relation between two data sources, eg. an organizaion to its members
@@ -109,7 +101,7 @@ export async function parseFilter<Query, Resource>(
     model: filter_json.root,
     relations: [] as FilterRelation[],
     conditions: [] as FilterCondition[][],
-    types: host.serializeTypes(),
+    types: host.types,
   };
 
   for (const [fromTypeName, fromFieldName, toTypeName] of filter_json.relations)

@@ -161,7 +161,7 @@ export class Query<AdapterQuery, Resource> {
       model: rel.otherType,
       relations: [],
       conditions: [[condition]],
-      types: this.#host.serializeTypes(),
+      types: this.#host.types,
     };
     const query = this.#host.adapter.buildQuery(filter);
     const results = await this.#host.adapter.executeQuery(query);

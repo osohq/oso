@@ -19,10 +19,11 @@ import type {
   HostOpts,
   PolarComparisonOperator,
   PolarTerm,
-  UserTypeParams,
   NullishOrHasConstructor,
-  IsaCheck,
+  HostTypes,
+  obj,
 } from './types';
+import { UserType } from './types';
 import {
   Dict,
   isPolarBool,
@@ -37,24 +38,6 @@ import {
   isPolarVariable,
 } from './types';
 import { Relation, Adapter } from './filter';
-import type { SerializedFields } from './filter';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export class UserType<Type extends Class<T>, T = any> {
-  name: string;
-  cls: Type;
-  id: number;
-  fields: Map<string, Class | Relation>;
-  isaCheck: IsaCheck;
-
-  constructor({ name, cls, id, fields, isaCheck }: UserTypeParams<Type>) {
-    this.name = name;
-    this.cls = cls;
-    this.fields = fields;
-    this.id = id;
-    this.isaCheck = isaCheck;
-  }
-}
 
 /**
  * Translator between Polar and JavaScript.
@@ -64,7 +47,7 @@ export class UserType<Type extends Class<T>, T = any> {
 export class Host<Query, Resource> {
   #ffiPolar: FfiPolar;
   #instances: Map<number, unknown>;
-  types: Map<string | Class, UserType<any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  types: HostTypes;
 
   #opts: HostOpts;
 
@@ -136,12 +119,12 @@ export class Host<Query, Resource> {
     for (const [name, typ] of this.types) if (isString(name)) yield typ;
   }
 
-  serializeTypes(): { [tag: string]: SerializedFields } {
-    const polarTypes: { [tag: string]: SerializedFields } = {};
+  serializeTypes(): obj {
+    const polarTypes: obj = {};
     for (const [tag, userType] of this.types) {
       if (isString(tag)) {
         const fields = userType.fields;
-        const fieldTypes: SerializedFields = {};
+        const fieldTypes: obj = {};
         for (const [k, v] of fields) {
           if (v instanceof Relation) {
             fieldTypes[k] = v.serialize();

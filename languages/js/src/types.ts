@@ -736,3 +736,22 @@ export interface UserTypeParams<Type extends Class> {
  * Number]`), but I'm not 100% sure of that.
  */
 export type NullishOrHasConstructor = { constructor: Class } | null | undefined;
+
+export type HostTypes = Map<string | Class, UserType<any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export class UserType<Type extends Class<T>, T = any> {
+  name: string;
+  cls: Type;
+  id: number;
+  fields: Map<string, Class | Relation>;
+  isaCheck: IsaCheck;
+
+  constructor({ name, cls, id, fields, isaCheck }: UserTypeParams<Type>) {
+    this.name = name;
+    this.cls = cls;
+    this.fields = fields;
+    this.id = id;
+    this.isaCheck = isaCheck;
+  }
+}
