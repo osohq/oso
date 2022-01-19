@@ -389,11 +389,3 @@ const isArrayOf = <T>(x: unknown, p: Pred<T>): x is Array<T> =>
 function isSafeInteger(x: unknown): x is number {
   return Number.isSafeInteger(x);
 }
-
-/**
- * Promisify a 1-arity function.
- */
-export const promisify1 =
-  <A, B>(f: (a: A) => B) =>
-  (a: A): Promise<B> =>
-    Promise.resolve(f(a));
