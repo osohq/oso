@@ -671,6 +671,14 @@ type OperationalErrorSerialization struct {
 
 func (OperationalErrorSerialization) isOperationalError() {}
 
+// OperationalErrorUnexpectedValue struct
+type OperationalErrorUnexpectedValue struct {
+	// Received
+	Received Term `json:"received"`
+}
+
+func (OperationalErrorUnexpectedValue) isOperationalError() {}
+
 type OperationalErrorUnknown struct{}
 
 func (OperationalErrorUnknown) isOperationalError() {}
@@ -729,6 +737,17 @@ func (result *OperationalError) UnmarshalJSON(b []byte) error {
 		*result = OperationalError{variant}
 		return nil
 
+	case "UnexpectedValue":
+		var variant OperationalErrorUnexpectedValue
+		if variantValue != nil {
+			err := json.Unmarshal(*variantValue, &variant)
+			if err != nil {
+				return err
+			}
+		}
+		*result = OperationalError{variant}
+		return nil
+
 	case "Unknown":
 		var variant OperationalErrorUnknown
 		if variantValue != nil {
@@ -756,6 +775,11 @@ func (variant OperationalError) MarshalJSON() ([]byte, error) {
 	case OperationalErrorSerialization:
 		return json.Marshal(map[string]OperationalErrorSerialization{
 			"Serialization": inner,
+		})
+
+	case OperationalErrorUnexpectedValue:
+		return json.Marshal(map[string]OperationalErrorUnexpectedValue{
+			"UnexpectedValue": inner,
 		})
 
 	case OperationalErrorUnknown:
