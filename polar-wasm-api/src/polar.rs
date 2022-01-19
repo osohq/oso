@@ -79,8 +79,8 @@ impl Polar {
             .map_err(Error::into)
     }
 
-    #[wasm_bindgen(js_class = Polar, js_name = buildFilterPlan)]
-    pub fn wasm_build_filter_plan(
+    #[wasm_bindgen(js_class = Polar, js_name = buildDataFilter)]
+    pub fn wasm_build_data_filter(
         &self,
         types: JsValue,
         partial_results: JsValue,
@@ -90,7 +90,7 @@ impl Polar {
         let types = serde_wasm_bindgen::from_value(types)?;
         let partial_results = serde_wasm_bindgen::from_value(partial_results)?;
         self.0
-            .build_filter_plan(types, partial_results, variable, class_tag)
+            .build_data_filter(types, partial_results, variable, class_tag)
             .map_err(Error::from)
             .map_err(Error::into)
             .and_then(|plan| {
