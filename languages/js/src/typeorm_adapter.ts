@@ -5,10 +5,8 @@ import {
   Filter,
   Datum,
   FilterCondition,
-  Relation,
   SerializedRelation,
   Immediate,
-  Projection,
 } from './filter';
 import { obj } from './types';
 

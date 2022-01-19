@@ -1,14 +1,5 @@
 import { Oso } from './Oso';
-import {
-  Datum,
-  Filter,
-  FilterCondition,
-  Immediate,
-  Projection,
-  Relation,
-  SerializedRelation,
-  Adapter,
-} from './filter';
+import { Relation } from './filter';
 import 'reflect-metadata';
 import {
   OneToMany,
@@ -24,7 +15,7 @@ import {
   DeepPartial,
 } from 'typeorm';
 import { typeOrmAdapter } from './typeorm_adapter';
-import { Class, obj } from './types';
+import { Class } from './types';
 
 class TestOso<R, A> extends Oso<SelectQueryBuilder<R>, R, A> {
   async checkAuthz(
