@@ -2,9 +2,9 @@
 authorizedResources: authorizedResources
 authorizedQuery: authorizedQuery
 buildQuery: buildQuery
-execQuery: execQuery
+executeQuery: executeQuery
 combineQuery: combineQuery
-setDataFilteringQueryDefaults: setDataFilteringQueryDefaults
+setDataFilteringAdapter: setDataFilteringAdapter
 map: object
 none: undefined
 

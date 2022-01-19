@@ -51,40 +51,6 @@ class OrgRole {
 // docs: end-b1
 
 // docs: begin-b2
-const constrain = (query, filter) => {
-  if (filter.field === undefined)
-    filter.field = 'id';
-
-  if (filter.field instanceof Array) {
-    for (const i in filter.field) {
-      const val = filter.value[i];
-      const fld = filter.field[i];
-      query[fld] = filter.kind === 'In' ? val : Not(val);
-    }
-  } else {
-    switch (filter.kind) {
-      case "Eq": query[filter.field] = filter.value; break;
-      case "Neq": query[filter.field] = Not(filter.value); break;
-      case "In": query[filter.field] = In(filter.value); break;
-      case "Nin": query[filter.field] = Not(In(filter.value)); break;
-      default:
-        throw new Error(`Unknown filter kind: ${filter.kind}`);
-    }
-  }
-
-  return query;
-};
-
-// Create a query from a list of filters
-const buildQuery = filters => {
-  if (!filters.length) return { id: Not(null) };
-  return filters.reduce(constrain, {});
-};
-
-// Combine two queries into one
-const lift = x => x instanceof Array ? x : [x];
-const combineQuery = (a, b) => lift(a).concat(lift(b));
-
 createConnection({
   type: 'sqlite',
   database: ':memory:',

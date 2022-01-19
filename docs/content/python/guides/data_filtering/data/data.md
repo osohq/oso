@@ -2,9 +2,9 @@
 authorizedResources: authorized_resources
 authorizedQuery: authorized_query
 buildQuery: build_query
-execQuery: exec_query
+executeQuery: execute_query
 combineQuery: combine_query
-setDataFilteringQueryDefaults: set_data_filtering_query_defaults
+setDataFilteringAdapter: set_data_filtering_adapter
 map: dictionary
 none: None
 
