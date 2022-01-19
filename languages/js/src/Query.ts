@@ -137,7 +137,10 @@ export class Query<AdapterQuery, Resource> {
    *
    * @internal
    */
-  private async handleRelation(receiver: obj, rel: Relation): Promise<unknown> {
+  private async handleRelation(
+    receiver: obj,
+    rel: Relation
+  ): Promise<Resource | Resource[]> {
     // TODO(gj|gw): we should add validation for UserType relations once we
     // have a nice hook where we know every class has been registered
     // (e.g., once we enforce that all registerCalls() have to happen
