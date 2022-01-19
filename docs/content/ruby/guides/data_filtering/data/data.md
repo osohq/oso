@@ -4,7 +4,7 @@ authorizedQuery: authorized_query
 buildQuery: build_query
 execQuery: exec_query
 combineQuery: combine_query
-setDataFilteringQueryDefaults: set_data_filtering_query_defaults
+setDataFilteringAdapter: set_data_filtering_adapter
 map: map
 none: nil
 
