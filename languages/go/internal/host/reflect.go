@@ -6,9 +6,10 @@ import (
 )
 
 // Checking for type equality is currently done with exact matching
-// We will not check if Go would permit a conversion between types,
-// or if the instance is an instance of a newtype, as doing so allows for type
-// confusion between structs of identical schemas at query time.
+// We will not check if Go would permit a conversion between types or whether a
+// NewType "matches" its wrapped inner type. This is because doing so has the
+// side-effect of allowing runtime type confusion between structs of identical
+// schemas at query time.
 func isInstance(instance interface{}, class reflect.Type) bool {
 	instanceType := reflect.TypeOf(instance)
 	res := instanceType == class
