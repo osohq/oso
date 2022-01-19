@@ -11,6 +11,5 @@ export {
   FilterCondition,
   Adapter,
 } from './filter';
-export { typeOrmAdapter } from './typeorm_adapter';
 export { defaultEqualityFn } from './helpers';
 export type { Class } from './types';

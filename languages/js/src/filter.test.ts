@@ -14,7 +14,7 @@ import {
   SelectQueryBuilder,
   DeepPartial,
 } from 'typeorm';
-import { typeOrmAdapter } from './typeorm_adapter';
+import { typeOrmAdapter } from './typeOrmAdapter';
 import { Class } from './types';
 
 class TestOso<R, A> extends Oso<SelectQueryBuilder<R>, R, A> {
