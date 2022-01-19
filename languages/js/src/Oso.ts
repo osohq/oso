@@ -15,12 +15,12 @@ import { parseFilter, Adapter, FilterJson } from './filter';
 // TODO(gj): maybe pass DF options to constructor & try to parametrize a
 // `Query` type w/ the return type of the provided buildQuery fn.
 export class Oso<
-  Query = unknown,
-  Resource = unknown,
   Actor = unknown,
   Action = unknown,
+  Resource = unknown,
   Field = unknown,
-  Request = unknown
+  Request = unknown,
+  Query = unknown
 > extends Polar<Query, Resource> {
   #notFoundError: CustomError = NotFoundError;
   #forbiddenError: CustomError = ForbiddenError;

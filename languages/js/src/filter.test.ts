@@ -17,7 +17,14 @@ import {
 import { typeOrmAdapter } from './typeOrmAdapter';
 import { Class } from './types';
 
-class TestOso<R, A> extends Oso<SelectQueryBuilder<R>, R, A> {
+class TestOso<R, A> extends Oso<
+  A,
+  string | number,
+  R,
+  unknown,
+  unknown,
+  SelectQueryBuilder<R>
+> {
   async checkAuthz(
     actor: A,
     action: string | number,

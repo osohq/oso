@@ -3,7 +3,7 @@ import { BaseActor, User, Widget } from '../test/classes';
 import { ForbiddenError, NotFoundError, OsoError } from './errors';
 
 describe(Oso, () => {
-  let oso: Oso<unknown, unknown, BaseActor, string>;
+  let oso: Oso<BaseActor, string>;
 
   beforeEach(() => {
     oso = new Oso();
