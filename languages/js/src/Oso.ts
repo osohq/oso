@@ -321,7 +321,7 @@ export class Oso<
   ): Promise<Resource[]> {
     const query = await this.authorizedQuery(actor, action, resourceCls);
     if (!query) return [];
-    return await this.getHost().adapter.executeQuery(query);
+    return this.getHost().adapter.executeQuery(query);
   }
 
   /**
