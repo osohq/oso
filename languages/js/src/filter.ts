@@ -48,43 +48,51 @@ export type SerializedFields = {
   [field: string]: SerializedRelation | { Base: { class_tag: string } };
 };
 
+// Represents an abstract query over a data source
+export interface Filter {
+  model: string; // type of query / source of data
+  relations: FilterRelation[]; // named relations to other data sources
+  conditions: FilterCondition[][]; // query conditions: an OR of ANDs
+  types: { [tag: string]: SerializedFields }; // type information for use by the adapter (see below)
+}
+
+// Represents a named relation between two data sources, eg. an organizaion to its members
 interface FilterRelation {
   fromTypeName: string;
   fromFieldName: string;
   toTypeName: string;
 }
 
-export interface Projection {
-  typeName: string;
-  fieldName: string;
-}
-
-export interface Immediate {
-  value: unknown;
-}
-
-export function isProjection(x: unknown): x is Projection {
-  return (x as Projection).typeName !== undefined;
-}
-
-export interface Adapter<Query, Resource> {
-  buildQuery: (f: Filter) => Query;
-  executeQuery: (q: Query) => Promise<Resource[]>;
-}
-
-export type Datum = Projection | Immediate;
-
+// Represents a boolean condition over a set of data sources.
 export interface FilterCondition {
   lhs: Datum;
   cmp: PolarComparisonOperator;
   rhs: Datum;
 }
 
-export interface Filter {
-  model: string;
-  relations: FilterRelation[];
-  conditions: FilterCondition[][];
-  types: { [tag: string]: SerializedFields };
+// Data in conditions can be immediate values (strings, numbers, etc) or "projections"
+export type Datum = Projection | Immediate;
+
+export interface Immediate {
+  value: unknown;
+}
+
+// A projection is a type and an optional field, like "User.name", "Post.user_id", or "Tag".
+// If the field name is absent, the adapter should substitute the primary key (eg. "Tag"
+// becomes "Tag.id")
+export interface Projection {
+  typeName: string;
+  fieldName?: string;
+}
+
+export function isProjection(x: unknown): x is Projection {
+  return (x as Projection).typeName !== undefined;
+}
+
+// An Adapter can send a Filter to a query, and a query to a list of resources.
+export interface Adapter<Query, Resource> {
+  buildQuery: (f: Filter) => Query;
+  executeQuery: (q: Query) => Promise<Resource[]>;
 }
 
 export interface FilterJson {
