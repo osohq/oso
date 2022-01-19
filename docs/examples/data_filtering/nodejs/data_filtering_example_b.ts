@@ -3,6 +3,7 @@ import { Relation, Oso, ForbiddenError, NotFoundError } from "oso";
 import { createConnection, In, Not, Entity, PrimaryGeneratedColumn, Column, PrimaryColumn, JoinColumn, ManyToOne } from "typeorm";
 import { readFileSync } from "fs";
 import * as assert from 'assert';
+import { typeOrmAdapter } from 'oso/dist/src/typeOrmAdapter';
 
 @Entity()
 class Repository {
@@ -58,16 +59,10 @@ createConnection({
   synchronize: true,
 }).then(async connection => {
 
-  // Produce an exec_query function for a class
-  const execFromRepo = repo => q =>
-    connection.getRepository(repo).find({ where: q });
-
   const oso = new Oso();
-
-  oso.setDataFilteringQueryDefaults({ combineQuery, buildQuery });
+  oso.setDataFilteringAdapter(typeOrmAdapter);
 
   oso.registerClass(Repository, {
-    execQuery: execFromRepo(Repository),
     types: {
       id: String,
       organization: new Relation("one", "Organization", "org_id", "id"),
@@ -75,7 +70,6 @@ createConnection({
   });
 
   oso.registerClass(Organization, {
-    execQuery: execFromRepo(Organization),
     types: {
       id: String,
       repos: new Relation("many", "Repo", "id", "org_id"),
@@ -83,7 +77,6 @@ createConnection({
   });
 
   oso.registerClass(User, {
-    execQuery: execFromRepo(User),
     types: {
       id: String,
       repo_roles: new Relation("many", "RepoRole", "id", "user_id"),
@@ -92,7 +85,6 @@ createConnection({
   });
 
   oso.registerClass(RepoRole, {
-    execQuery: execFromRepo(RepoRole),
     types: {
       id: Number,
       user: new Relation("one", "User", "user_id", "id"),
@@ -101,7 +93,6 @@ createConnection({
   });
 
   oso.registerClass(OrgRole, {
-    execQuery: execFromRepo(OrgRole),
     types: {
       id: Number,
       user: new Relation("one", "User", "user_id", "id"),

@@ -13,6 +13,7 @@ import {
 } from 'typeorm';
 import { readFileSync } from "fs";
 import * as assert from 'assert';
+import { typeOrmAdapter } from 'oso/dist/src/typeOrmAdapter';
 
 @Entity()
 class Repository {
@@ -41,42 +42,6 @@ class RepoRole {
 // docs: end-a1
 
 // docs: begin-a2
-// This function applies a filter to an existing query.
-const constrain = (query, filter) => {
-  if (filter.field === undefined)
-    filter.field = 'id';
-
-  if (filter.field instanceof Array) {
-    for (const i in filter.field) {
-      const val = filter.value[i];
-      const fld = filter.field[i];
-      query[fld] = filter.kind === 'In' ? val : Not(val);
-    }
-  } else {
-    switch (filter.kind) {
-      case "Eq": query[filter.field] = filter.value; break;
-      case "Neq": query[filter.field] = Not(filter.value); break;
-      case "In": query[filter.field] = In(filter.value); break;
-      case "Nin": query[filter.field] = Not(In(filter.value)); break;
-      default:
-        throw new Error(`Unknown filter kind: ${filter.kind}`);
-    }
-  }
-
-  return query;
-};
-
-// Create a query from a list of filters
-const buildQuery = filters => {
-  // TypeORM dislikes empty queries, so give it this instead.
-  if (!filters.length) return { id: Not(IsNull()) };
-  return filters.reduce(constrain, {});
-};
-
-// Combine two queries into one
-const lift = x => x instanceof Array ? x : [x];
-const combineQuery = (a, b) => lift(a).concat(lift(b));
-
 createConnection({
   type: 'sqlite',
   database: ':memory:',
@@ -92,15 +57,13 @@ createConnection({
 
   // The build and combine query implementations are shared in this case,
   // so register them as defaults.
-  oso.setDataFilteringQueryDefaults({ combineQuery, buildQuery });
+  oso.setDataFilteringAdapter(typeOrmAdapter);
 
   oso.registerClass(Repository, {
-    execQuery: execFromRepo(Repository),
     types: { id: String }
   });
 
   oso.registerClass(User, {
-    execQuery: execFromRepo(User),
     types: {
       id: String,
       repo_roles: new Relation("many", "RepoRole", "id", "user_id")
@@ -108,7 +71,6 @@ createConnection({
   });
 
   oso.registerClass(RepoRole, {
-    execQuery: execFromRepo(RepoRole),
     types: {
       id: Number,
       user: new Relation("one", "User", "user_id", "id"),
