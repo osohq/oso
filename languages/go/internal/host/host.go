@@ -73,11 +73,19 @@ func (h Host) Copy() Host {
 	}
 }
 
-func (h Host) getClass(name string) (*reflect.Type, error) {
+func (h Host) GetAdapter() *Adapter {
+	return &h.adapter
+}
+
+func (h Host) GetClass(name string) (*reflect.Type, error) {
 	if v, ok := h.classes[name]; ok {
 		return &v, nil
 	}
 	return nil, errors.NewUnregisteredClassError(name)
+}
+
+func (h Host) GetField(cls string, field string) interface{} {
+	return h.fields[cls][field]
 }
 
 func (h Host) CacheClass(cls reflect.Type, name string, constructor reflect.Value, fields map[string]interface{}) error {
@@ -119,7 +127,7 @@ func (h Host) MakeInstance(call types.ValueCall, id uint64) error {
 	name := string(call.Name)
 	args := call.Args
 
-	cls, err := h.getClass(name)
+	cls, err := h.GetClass(name)
 	if err != nil {
 		return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(types.Value{ValueVariant: call}), Info: err.Error()}
 	}
@@ -210,7 +218,7 @@ func (h Host) Isa(value types.Term, classTag string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	class, err := h.getClass(classTag)
+	class, err := h.GetClass(classTag)
 	if err != nil {
 		return false, err
 	}
@@ -219,11 +227,11 @@ func (h Host) Isa(value types.Term, classTag string) (bool, error) {
 }
 
 func (h Host) IsSubclass(leftTag string, rightTag string) (bool, error) {
-	left, err := h.getClass(leftTag)
+	left, err := h.GetClass(leftTag)
 	if err != nil {
 		return false, err
 	}
-	right, err := h.getClass(rightTag)
+	right, err := h.GetClass(rightTag)
 	if err != nil {
 		return false, err
 	}
@@ -450,6 +458,14 @@ func (h *Host) SetAcceptExpression(acceptExpression bool) {
 	h.acceptExpression = acceptExpression
 }
 
+func (h *Host) GetRelationFields(rel FilterRelation) (string, string, error) {
+	switch rec := h.fields[rel.FromTypeName][rel.FromFieldName].(type) {
+	case types.Relation:
+		return rec.MyField, rec.OtherField, nil
+	}
+	return "", "", errors.NewMissingAttributeError(h.classes[rel.FromTypeName], rel.FromFieldName)
+}
+
 // sorry bout the type
 func (h *Host) SerializeTypes() (map[string]map[string]interface{}, map[string]map[string]map[string]map[string]string, error) {
 	type_map := make(map[string]map[string]map[string]map[string]string, 0)
@@ -498,7 +514,7 @@ func (h *Host) BuildQuery(filter *Filter) (interface{}, error) {
 	return (h.adapter).BuildQuery(filter)
 }
 
-func (h *Host) ExecuteQuery(query interface{}) (interface{}, error) {
+func (h *Host) ExecuteQuery(query interface{}) ([]interface{}, error) {
 	if h.adapter == nil {
 		return nil, fmt.Errorf("must register an adapter to use data filtering")
 	}
