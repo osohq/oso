@@ -517,7 +517,7 @@ jobs:
       - name: "test"
         run: |
           go build
-          go test -v ./tests/
+          go test -v ./tests/ ./internal/host
         working-directory: go
       - name: "test musl"
         # TODO(gj): the dependency fetching step in the
@@ -526,12 +526,12 @@ jobs:
         # create our own image that extends tetafro/golang-gcc:1.12-alpine and
         # contains Git, but for now I'm skipping it.
         if: runner.os == 'Linux' && matrix.go-version != '1.12'
-        run: docker run --rm -v `pwd`:/oso tetafro/golang-gcc:${{ matrix.go-version }}-alpine /bin/sh -c 'cd /oso && go test -v ./tests/'
+        run: docker run --rm -v `pwd`:/oso tetafro/golang-gcc:${{ matrix.go-version }}-alpine /bin/sh -c 'cd /oso && go test -v ./tests/ ./internal/host'
         working-directory: go
         # TODO(steve) buster has the same problem on 1.12. But is it the same problem???
       - name: "test buster"
         if: runner.os == 'Linux' && matrix.go-version != '1.12'
-        run: docker run --rm -v `pwd`:/oso golang:${{ matrix.go-version }}-buster /bin/sh -c 'cd /oso && go test -v ./tests/'
+        run: docker run --rm -v `pwd`:/oso golang:${{ matrix.go-version }}-buster /bin/sh -c 'cd /oso && go test -v ./tests/ ./internal/host'
         working-directory: go
 
   validate_go_macos_arm:
@@ -554,7 +554,7 @@ jobs:
       - name: "test"
         run: |
           ~/go/bin/go${{ matrix.go-version }} build
-          ~/go/bin/go${{ matrix.go-version }} test -v ./tests/ 
+          ~/go/bin/go${{ matrix.go-version }} test -v ./tests/ ./internal/host
         working-directory: go
         env:
           CGO_ENABLED: 1
