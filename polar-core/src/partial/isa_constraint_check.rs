@@ -78,12 +78,12 @@ impl IsaConstraintCheck {
 
         let just_vars = constraint_path.len() == 1
             && proposed_path.len() == 1
-            && matches!(&constraint.args[0].value().as_symbol(), Ok(Symbol(_)))
-            && matches!(&self.proposed.args[0].value().as_symbol(), Ok(Symbol(_)));
+            && matches!(&constraint.args[0].as_symbol(), Ok(Symbol(_)))
+            && matches!(&self.proposed.args[0].as_symbol(), Ok(Symbol(_)));
 
         // FIXME(gw): this logic is hard to follow!
         if just_vars {
-            let sym = constraint.args[0].value().as_symbol()?;
+            let sym = constraint.args[0].as_symbol()?;
             if !self.proposed_names.contains(sym) {
                 return Ok(Check::None);
             }

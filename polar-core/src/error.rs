@@ -66,6 +66,7 @@ impl PolarError {
 
     pub fn get_context(&self) -> Option<Context> {
         use ErrorKind::*;
+        use OperationalError::*;
         use ParseErrorKind::*;
         use RuntimeError::*;
         use ValidationError::*;
@@ -84,12 +85,12 @@ impl PolarError {
                 }
 
                 // These errors track `loc` and only pertain to a single character, so right bound
-                // of span is also `loc`.
+                // of context is also `loc`.
                 InvalidTokenCharacter { loc, .. }
                 | InvalidToken { loc }
                 | UnrecognizedEOF { loc } => Some(Context::new(e.source.clone(), *loc, *loc)),
 
-                // These errors track `term`, from which we calculate the span.
+                // These errors track `term`, from which we calculate the context.
                 WrongValueType { term, .. } => term.parsed_context().cloned(),
             },
 
@@ -115,7 +116,7 @@ impl PolarError {
             },
 
             Validation(e) => match e {
-                // These errors track `term`, from which we calculate the span.
+                // These errors track `term`, from which we calculate the context.
                 ResourceBlock { term, .. }
                 | SingletonVariable { term, .. }
                 | UndefinedRuleCall { term }
@@ -124,13 +125,13 @@ impl PolarError {
                 }
                 | UnregisteredClass { term, .. } => term.parsed_context().cloned(),
 
-                // These errors track `rule`, from which we calculate the span.
+                // These errors track `rule`, from which we calculate the context.
                 InvalidRule { rule, .. }
                 | InvalidRuleType {
                     rule_type: rule, ..
                 } => rule.parsed_context().cloned(),
 
-                // These errors track `rule_type`, from which we sometimes calculate the span.
+                // These errors track `rule_type`, from which we sometimes calculate the context.
                 MissingRequiredRule { rule_type } => {
                     if rule_type.name.0 == "has_relation" {
                         rule_type.parsed_context().cloned()
@@ -141,7 +142,7 @@ impl PolarError {
                     }
                 }
 
-                // These errors always pertain to a specific file but not to a specific place therein.
+                // These errors pertain to a specific file but not to a specific place therein.
                 FileLoading {
                     filename, contents, ..
                 } => {
@@ -150,7 +151,12 @@ impl PolarError {
                 }
             },
 
-            Operational(_) => None,
+            Operational(e) => match e {
+                // These errors track `received`, from which we calculate the context.
+                UnexpectedValue { received, .. } => received.parsed_context().cloned(),
+                // These errors never have context.
+                InvalidState { .. } | Serialization { .. } | Unknown => None,
+            },
         }
     }
 }
@@ -475,6 +481,12 @@ pub enum OperationalError {
     InvalidState { msg: String },
     /// Serialization errors in the `polar-c-api` crate.
     Serialization { msg: String },
+    // This should go away once we can constrain the value variant of a particular term in the type
+    // system, e.g., `Term<String>` instead of `Term::value().as_string()`.
+    UnexpectedValue {
+        expected: &'static str,
+        received: Term,
+    },
     /// Rust panics caught in the `polar-c-api` crate.
     Unknown,
 }
@@ -490,6 +502,10 @@ impl fmt::Display for OperationalError {
         match self {
             Self::InvalidState { msg } => write!(f, "Invalid state: {}", msg),
             Self::Serialization { msg } => write!(f, "Serialization error: {}", msg),
+            Self::UnexpectedValue { expected, received } => write!(
+                f,
+                "Unexpected value.\n  Expected: {expected}\n  Received: {received}"
+            ),
             Self::Unknown => write!(
                 f,
                 "We hit an unexpected error.\n\
@@ -607,6 +623,10 @@ where
 {
     let msg = msg.as_ref().into();
     Err(OperationalError::InvalidState { msg }.into())
+}
+
+pub(crate) fn unexpected_value<T>(expected: &'static str, received: Term) -> PolarResult<T> {
+    Err(OperationalError::UnexpectedValue { expected, received }.into())
 }
 
 pub(crate) fn unsupported<T, U, V>(msg: T, term: U) -> PolarResult<V>

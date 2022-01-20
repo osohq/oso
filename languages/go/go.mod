@@ -1,6 +1,6 @@
 module github.com/osohq/go-oso
 
-go 1.12
+go 1.14
 
 require (
 	github.com/fatih/color v1.13.0 // indirect

@@ -1127,10 +1127,7 @@ impl PolarVirtualMachine {
             .into_iter()
             .filter_map(|con| match con.operator {
                 Operator::Unify | Operator::Eq => {
-                    if let (Ok(l), Ok(r)) = (
-                        con.args[0].value().as_symbol(),
-                        con.args[1].value().as_symbol(),
-                    ) {
+                    if let (Ok(l), Ok(r)) = (con.args[0].as_symbol(), con.args[1].as_symbol()) {
                         Some((l.clone(), r.clone()))
                     } else {
                         None
@@ -1169,7 +1166,7 @@ impl PolarVirtualMachine {
                 // TODO(gj): assert that a simplified expression contains at most 1 unification
                 // involving a particular variable.
                 // TODO(gj): Ensure `op!(And) matches X{}` doesn't die after these changes.
-                let var = left.value().as_symbol()?;
+                let var = left.as_symbol()?;
 
                 // Get the existing partial on the LHS variable.
                 let partial = self.binding_manager.get_constraints(var);
@@ -1180,7 +1177,7 @@ impl PolarVirtualMachine {
                 let partial = partial.into();
                 let (simplified, _) = simplify_partial(var, partial, output, false);
 
-                let simplified = simplified.value().as_expression()?;
+                let simplified = simplified.as_expression()?;
 
                 // TODO (dhatch): what if there is more than one var = dot_op constraint?
                 // What if the one there is is in a not, or an or, or something
@@ -1194,12 +1191,12 @@ impl PolarVirtualMachine {
                         // `var` or an alias thereof, use the dot op as the LHS of the matches.
                         if c.operator != Operator::Unify && c.operator != Operator::In {
                             None
-                        } else if matches!(c.args[0].value().as_symbol(), Ok(s) if names.contains(s)) &&
-                            matches!(c.args[1].value().as_expression(), Ok(o) if o.operator == Operator::Dot) {
+                        } else if matches!(c.args[0].as_symbol(), Ok(s) if names.contains(s)) &&
+                            matches!(c.args[1].as_expression(), Ok(o) if o.operator == Operator::Dot) {
                             Some(c.args[1].clone())
-                        } else if c.operator == Operator::Unify && matches!(c.args[1].value().as_symbol(), Ok(s) if names.contains(s)) &&
+                        } else if c.operator == Operator::Unify && matches!(c.args[1].as_symbol(), Ok(s) if names.contains(s)) &&
                             // only look for var on the RHS of a unfication (i.e. not on the RHS of an `in`)
-                            matches!(c.args[0].value().as_expression(), Ok(o) if o.operator == Operator::Dot) {
+                            matches!(c.args[0].as_expression(), Ok(o) if o.operator == Operator::Dot) {
                             Some(c.args[0].clone())
                         } else {
                             None
@@ -1265,7 +1262,7 @@ impl PolarVirtualMachine {
             let members = kb.get_union_members(union).iter();
             members
                 .map(|member| {
-                    let tag = member.value().as_symbol().unwrap().0.as_str();
+                    let tag = member.as_symbol().unwrap().0.as_str();
                     member.clone_with_value(value!(pattern!(instance!(tag))))
                 })
                 .map(|pattern| {
@@ -1568,7 +1565,7 @@ impl PolarVirtualMachine {
     }
 
     fn query_for_operation(&mut self, term: &Term) -> PolarResult<QueryEvent> {
-        let operation = term.value().as_expression().unwrap();
+        let operation = term.as_expression().unwrap();
         let mut args = operation.args.clone();
         let wrong_arity = || invalid_state(format!("query_for_operation: wrong arity: {}", term));
         match operation.operator {
@@ -1688,14 +1685,12 @@ impl PolarVirtualMachine {
                     return wrong_arity();
                 }
                 let result = args.pop().unwrap();
-                if !matches!(result.value(), Value::Variable(_)) {
-                    return invalid_state(format!("Not a variable: {}", result));
-                }
+                result.as_symbol()?; // Ensure `result` is a variable.
                 let constructor = args.pop().unwrap();
 
                 let instance_id = self.new_id();
 
-                let class = &constructor.value().as_call()?.name;
+                let class = &constructor.as_call()?.name;
                 let class_repr = if self.kb().is_constant(class) {
                     Some(class.0.clone())
                 } else {
@@ -1803,7 +1798,7 @@ impl PolarVirtualMachine {
     where
         F: Fn(&mut Self, &Term) -> PolarResult<QueryEvent>,
     {
-        let Operation { operator: op, args } = term.value().as_expression().unwrap();
+        let Operation { operator: op, args } = term.as_expression().unwrap();
 
         let mut args = args.clone();
         if args.len() < 2 {
@@ -1884,7 +1879,7 @@ impl PolarVirtualMachine {
                     })),
                 })?;
                 return Ok(QueryEvent::None);
-            } else if !handle_unbound_right_var && left.value().as_symbol().is_err() {
+            } else if !handle_unbound_right_var && left.as_symbol().is_err() {
                 return eval(self, term);
             }
         }
@@ -1899,12 +1894,12 @@ impl PolarVirtualMachine {
                     })),
                 })?;
                 return Ok(QueryEvent::None);
-            } else if !handle_unbound_left_var && right.value().as_symbol().is_err() {
+            } else if !handle_unbound_left_var && right.as_symbol().is_err() {
                 return eval(self, term);
             }
         }
 
-        if left.value().as_symbol().is_ok() || right.value().as_symbol().is_ok() {
+        if left.as_symbol().is_ok() || right.as_symbol().is_ok() {
             self.add_constraint(term)?;
             return Ok(QueryEvent::None);
         }
@@ -1914,7 +1909,7 @@ impl PolarVirtualMachine {
 
     /// Evaluate comparison operations.
     fn comparison_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {
-        let Operation { operator: op, args } = term.value().as_expression().unwrap();
+        let Operation { operator: op, args } = term.as_expression().unwrap();
 
         if args.len() != 2 {
             return invalid_state(format!("comparison_op_helper: wrong arity: {}", term));
@@ -1953,7 +1948,7 @@ impl PolarVirtualMachine {
     // like we do for dots; e.g., `+(a, b, c)` → `c = +(a, b)`.
     /// Evaluate arithmetic operations.
     fn arithmetic_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {
-        let Operation { operator: op, args } = term.value().as_expression().unwrap();
+        let Operation { operator: op, args } = term.as_expression().unwrap();
 
         if args.len() != 3 {
             return invalid_state(format!("arithmetic_op_helper: wrong arity: {}", term));
@@ -1961,10 +1956,7 @@ impl PolarVirtualMachine {
         let left = &args[0];
         let right = &args[1];
         let result = &args[2];
-
-        if !matches!(result.value(), Value::Variable(_)) {
-            return invalid_state(format!("arithmetic_op_helper: not a variable: {}", result));
-        }
+        result.as_symbol()?; // Ensure `result` is a variable.
 
         match (left.value(), right.value()) {
             (Value::Number(left), Value::Number(right)) => {
@@ -1992,7 +1984,7 @@ impl PolarVirtualMachine {
 
     /// Push appropriate goals for lookups on dictionaries and instances.
     fn dot_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {
-        let Operation { args, .. } = term.value().as_expression().unwrap();
+        let Operation { args, .. } = term.as_expression().unwrap();
 
         if args.len() != 3 {
             return invalid_state(format!("dot_op_helper: wrong arity: {}", term));
@@ -2062,7 +2054,7 @@ impl PolarVirtualMachine {
     }
 
     fn in_op_helper(&mut self, term: &Term) -> PolarResult<QueryEvent> {
-        let Operation { args, .. } = term.value().as_expression().unwrap();
+        let Operation { args, .. } = term.as_expression().unwrap();
 
         if args.len() != 2 {
             return invalid_state(format!("in_op_helper: wrong arity: {}", term));

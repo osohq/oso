@@ -52,12 +52,15 @@ MyPy
 NFA
 NaN
 NestJS
+NewType
+NewTypes
 NotFoundError
 NotFoundException
 OAuth
 ORM
 ORMs
 Oso's
+POSIX
 Polar's
 Postgres
 Pre
