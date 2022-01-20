@@ -85,7 +85,10 @@ func (a GormAdapter) BuildQuery(f *osoTypes.Filter) (interface{}, error) {
 	for _, rel := range f.Relations {
 		myTable := a.tableName(rel.FromTypeName)
 		otherTable := a.tableName(rel.ToTypeName)
-		myField, otherField := a.host.GetRelationFields(rel)
+		myField, otherField, err := a.host.GetRelationFields(rel)
+		if err != nil {
+			return nil, err
+		}
 		myColumn := a.columnName(myTable, myField)
 		otherColumn := a.columnName(otherTable, otherField)
 		join := "INNER JOIN " + otherTable + " ON " + myTable + "." + myColumn + " = " + otherTable + "." + otherColumn

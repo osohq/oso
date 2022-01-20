@@ -459,12 +459,12 @@ func (h *Host) SetAcceptExpression(acceptExpression bool) {
 	h.acceptExpression = acceptExpression
 }
 
-func (h *Host) GetRelationFields(rel FilterRelation) (string, string) {
+func (h *Host) GetRelationFields(rel FilterRelation) (string, string, error) {
 	switch rec := h.fields[rel.FromTypeName][rel.FromFieldName].(type) {
 	case types.Relation:
-		return rec.MyField, rec.OtherField
+		return rec.MyField, rec.OtherField, nil
 	}
-	return "", "" // FIXME return error
+	return "", "", errors.NewMissingAttributeError(h.classes[rel.FromTypeName], rel.FromFieldName)
 }
 
 // sorry bout the type
