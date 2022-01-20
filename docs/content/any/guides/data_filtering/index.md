@@ -69,7 +69,7 @@ the query.
 
 ##### Conditions
 
-A condition has three properties `{{% exampleGer "conditionLeft" %}}`, `{{% exampleGet "conditionOp" %}}`, and `{{% exampleGet "conditionRight" %}}`.
+A condition has three properties `{{% exampleGet "conditionLeft" %}}`, `{{% exampleGet "conditionOp" %}}`, and `{{% exampleGet "conditionRight" %}}`.
 The left and right fields will be either `Immediate` objects with a `{{% exampleGet "immediateValue" %}}` field that can
 be inserted directly into a query, or `Projection` objects with string properties
 `{{% exampleGet "projectionType" %}}` and optionally `{{% exampleGet "projectionField" %}}`. A
