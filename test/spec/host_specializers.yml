@@ -5,17 +5,10 @@ cases:
   - description: can specialize on classes
     query: is_unitclass
     input: [{type: UnitClass}]
-  - description: can specialize on subclasses
+  - description: specialize correctly fails for distinct class
     query: is_parentclass
-    input: [{type: ChildClass}]
-  - description: can specialize on either subclass or class
-    query: has_subclass
-    input: [{type: ChildClass}]
-    result: [{}, {}]
-  - description: can order rules by specificity
-    query: level
-    input: [{type: GrandchildClass}, {var: x}]
-    result: [{x: 3}, {x: 2}, {x: 1}]
+    input: [{type: UnitClass}]
+    result: []
 
   # using dictionaries as specializers on classes
   - description: can specialize on dictionaries 1/3
@@ -84,11 +77,10 @@ cases:
     input:
      - {type: Animal, kwargs: {Species: "canis lupus", Genus: "canis", Family: "canidae"}}
      - {var: res}
-    result: 
+    result:
       - res: wolf_class
       - res: canine_class
       - res: canid_class
       - res: animal_class
       - res: wolf_dict
       - res: canine_dict
-  
