@@ -70,7 +70,7 @@ requirements:
 - Ruby: 2.4+
   - Bundler 2.1.4+
 - Rust: 1.46+
-- Go: 1.12+
+- Go: 1.14+
 
 ## Contributing & Jobs
 
