@@ -8,16 +8,14 @@ import (
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	//	"gorm.io/gorm/logger"
 
 	oso "github.com/osohq/go-oso"
-	"github.com/osohq/go-oso/internal/host"
 	osoTypes "github.com/osohq/go-oso/types"
 )
 
 type GormAdapter struct {
-	db   *gorm.DB
-	host *host.Host
+	db  *gorm.DB
+	oso *oso.Oso
 }
 
 func (a GormAdapter) sqlize(fc osoTypes.FilterCondition) (string, []interface{}) {
@@ -85,7 +83,7 @@ func (a GormAdapter) BuildQuery(f *osoTypes.Filter) (interface{}, error) {
 	for _, rel := range f.Relations {
 		myTable := a.tableName(rel.FromTypeName)
 		otherTable := a.tableName(rel.ToTypeName)
-		myField, otherField, err := a.host.GetRelationFields(rel)
+		myField, otherField, err := a.oso.GetHost().GetRelationFields(rel)
 		if err != nil {
 			return nil, err
 		}
@@ -175,9 +173,7 @@ type Person struct {
 
 func gormDb(dbFile string) *gorm.DB {
 	os.Remove(dbFile)
-	db, _ := gorm.Open(sqlite.Open(dbFile), &gorm.Config{
-		//	Logger: logger.Default.LogMode(logger.Info),
-	})
+	db, _ := gorm.Open(sqlite.Open(dbFile), &gorm.Config{})
 	db.AutoMigrate(&Planet{})
 	db.AutoMigrate(&Sign{})
 	db.AutoMigrate(&Person{})
@@ -222,7 +218,7 @@ func gormDb(dbFile string) *gorm.DB {
 
 func testOso() oso.Oso {
 	o, _ := oso.NewOso()
-	o.SetDataFilteringAdapter(GormAdapter{gormDb("test.sqlite"), o.GetHost()})
+	o.SetDataFilteringAdapter(GormAdapter{gormDb("test.sqlite"), &o})
 	o.RegisterClassWithNameAndFields(reflect.TypeOf(Person{}), nil, "Person", map[string]interface{}{
 		"Name":   "String",
 		"ID":     "Integer",
