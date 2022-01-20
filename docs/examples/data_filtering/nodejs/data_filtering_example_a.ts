@@ -1,6 +1,6 @@
 // docs: begin-a1
 // We're using TypeORM in this example, but you can use any ORM with data filtering.
-import { Relation, Oso, ForbiddenError, NotFoundError } from "oso";
+import { Relation, Oso, ForbiddenError, NotFoundError } from 'oso';
 import {
   createConnection,
   In,
@@ -9,12 +9,11 @@ import {
   Column,
   PrimaryColumn,
   PrimaryGeneratedColumn,
-  IsNull,
+  IsNull
 } from 'typeorm';
 import { readFileSync } from "fs";
 import * as assert from 'assert';
-import { typeOrmAdapter } from 'oso/dist/src/typeOrmAdapter';
-
+import { typeOrmAdapter } from 'oso/dist/src/typeOrmAdapter'
 @Entity()
 class Repository {
   @PrimaryColumn()
@@ -42,12 +41,14 @@ class RepoRole {
 // docs: end-a1
 
 // docs: begin-a2
-createConnection({
-  type: 'sqlite',
-  database: ':memory:',
-  entities: [User, Repository, RepoRole],
-  synchronize: true,
-}).then(async connection => {
+async function test() {
+  const connection = await createConnection({
+    type: 'sqlite',
+    database: ':memory:',
+    entities: [User, Repository, RepoRole],
+    synchronize: true,
+    logging: false,
+  });
 
   // Produce an exec_query function for a class
   const execFromRepo = repo => q =>
@@ -57,21 +58,21 @@ createConnection({
 
   // The build and combine query implementations are shared in this case,
   // so register them as defaults.
-  oso.setDataFilteringAdapter(typeOrmAdapter);
+  oso.setDataFilteringAdapter(typeOrmAdapter(connection));
 
   oso.registerClass(Repository, {
-    types: { id: String }
+    fields: { id: String }
   });
 
   oso.registerClass(User, {
-    types: {
+    fields: {
       id: String,
       repo_roles: new Relation("many", "RepoRole", "id", "user_id")
     }
   });
 
   oso.registerClass(RepoRole, {
-    types: {
+    fields: {
       id: Number,
       user: new Relation("one", "User", "user_id", "id"),
       repo: new Relation("one", "Repo", "repo_id", "id")
@@ -109,5 +110,6 @@ createConnection({
     users.findOne({ id: 'leina' }).then(leina =>
       oso.authorizedResources(leina, 'read', Repository).then(result =>
         assert.deepEqual(result.sort(compare), repos.sort(compare)))));
-});
-// docs: end-a3
+}
+test()
+// // docs: end-a3

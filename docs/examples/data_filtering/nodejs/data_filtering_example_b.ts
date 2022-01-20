@@ -52,32 +52,35 @@ class OrgRole {
 // docs: end-b1
 
 // docs: begin-b2
-createConnection({
-  type: 'sqlite',
-  database: ':memory:',
-  entities: [User, Repository, RepoRole, Organization, OrgRole],
-  synchronize: true,
-}).then(async connection => {
+async function test() {
+
+  const connection = await createConnection({
+    type: 'sqlite',
+    database: ':memory:',
+    entities: [User, Repository, RepoRole, Organization, OrgRole],
+    synchronize: true,
+    logging: false,
+  });
 
   const oso = new Oso();
-  oso.setDataFilteringAdapter(typeOrmAdapter);
+  oso.setDataFilteringAdapter(typeOrmAdapter(connection));
 
   oso.registerClass(Repository, {
-    types: {
+    fields: {
       id: String,
       organization: new Relation("one", "Organization", "org_id", "id"),
     }
   });
 
   oso.registerClass(Organization, {
-    types: {
+    fields: {
       id: String,
       repos: new Relation("many", "Repo", "id", "org_id"),
     }
   });
 
   oso.registerClass(User, {
-    types: {
+    fields: {
       id: String,
       repo_roles: new Relation("many", "RepoRole", "id", "user_id"),
       org_roles: new Relation("many", "OrgRole", "id", "user_id")
@@ -85,7 +88,7 @@ createConnection({
   });
 
   oso.registerClass(RepoRole, {
-    types: {
+    fields: {
       id: Number,
       user: new Relation("one", "User", "user_id", "id"),
       repo: new Relation("one", "Repo", "repo_id", "id")
@@ -93,7 +96,7 @@ createConnection({
   });
 
   oso.registerClass(OrgRole, {
-    types: {
+    fields: {
       id: Number,
       user: new Relation("one", "User", "user_id", "id"),
       organization: new Relation("one", "Organization", "org_id", "id")
@@ -128,5 +131,6 @@ createConnection({
     users.findOne({ id: 'leina' }).then(leina =>
       oso.authorizedResources(leina, 'read', Repository).then(result =>
         assert.deepEqual(result.sort(compare), repos.sort(compare)))));
-});
+}
+test()
 // docs: end-b3
