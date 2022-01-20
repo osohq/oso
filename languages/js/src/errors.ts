@@ -123,9 +123,9 @@ export class UnregisteredInstanceError extends PolarError {
 }
 
 export class DataFilteringConfigurationError extends PolarError {
-  constructor(fn: 'buildQuery' | 'execQuery' | 'combineQuery') {
+  constructor() {
     super(
-      `Missing '${fn}' implementation. Did you forget to call \`Oso.setDataFilteringQueryDefaults()\`?`
+      "Missing 'adapter' implementation. Did you forget to call `Oso.setDataFilteringAdapter()`?"
     );
   }
 }

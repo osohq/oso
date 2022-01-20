@@ -145,12 +145,7 @@ func (MethodVariants) GetEmptyIter() interfaces.Iterator {
 	return IterableClass{}
 }
 
-// TODO: I don't think these make sense. Maybe as interfaces?
 type ParentClass struct{}
-
-type ChildClass struct{}
-
-type GrandchildClass struct{}
 
 type Animal struct {
 	Species string
@@ -239,19 +234,17 @@ func (a Comparable) Lt(b interface{}) bool {
 }
 
 var CLASSES = map[string]reflect.Type{
-	"UnitClass":       reflect.TypeOf(UnitClass{}),
-	"ValueFactory":    reflect.TypeOf(ValueFactory{}),
-	"IterableClass":   reflect.TypeOf(IterableClass{}),
-	"Constructor":     reflect.TypeOf(Constructor{}),
-	"MethodVariants":  reflect.TypeOf(MethodVariants{}),
-	"ParentClass":     reflect.TypeOf(ParentClass{}),
-	"ChildClass":      reflect.TypeOf(ChildClass{}),
-	"GrandchildClass": reflect.TypeOf(GrandchildClass{}),
-	"Animal":          reflect.TypeOf(Animal{}),
-	"ImplementsEq":    reflect.TypeOf(ImplementsEq{}),
-	"Comparable":      reflect.TypeOf(Comparable{}),
-	"Least":           reflect.TypeOf(Least{}),
-	"NaNLike":         reflect.TypeOf(NaNLike{}),
+	"UnitClass":      reflect.TypeOf(UnitClass{}),
+	"ValueFactory":   reflect.TypeOf(ValueFactory{}),
+	"IterableClass":  reflect.TypeOf(IterableClass{}),
+	"Constructor":    reflect.TypeOf(Constructor{}),
+	"MethodVariants": reflect.TypeOf(MethodVariants{}),
+	"ParentClass":    reflect.TypeOf(ParentClass{}),
+	"Animal":         reflect.TypeOf(Animal{}),
+	"ImplementsEq":   reflect.TypeOf(ImplementsEq{}),
+	"Comparable":     reflect.TypeOf(Comparable{}),
+	"Least":          reflect.TypeOf(Least{}),
+	"NaNLike":        reflect.TypeOf(NaNLike{}),
 }
 
 func setStructFields(instance reflect.Value, args []interface{}) error {
