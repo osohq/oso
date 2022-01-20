@@ -517,15 +517,15 @@ jobs:
       - name: "test"
         run: |
           go build
-          go test -v ./tests/
+          go test -v ./tests/ ./internal/host
         working-directory: go
       - name: "test musl"
         if: runner.os == 'Linux'
-        run: docker run --rm -v `pwd`:/oso tetafro/golang-gcc:${{ matrix.go-version }}-alpine /bin/sh -c 'cd /oso && go test -v ./tests/'
+        run: docker run --rm -v `pwd`:/oso tetafro/golang-gcc:${{ matrix.go-version }}-alpine /bin/sh -c 'cd /oso && go test -v ./tests/ ./internal/host'
         working-directory: go
       - name: "test buster"
         if: runner.os == 'Linux'
-        run: docker run --rm -v `pwd`:/oso golang:${{ matrix.go-version }}-buster /bin/sh -c 'cd /oso && go test -v ./tests/'
+        run: docker run --rm -v `pwd`:/oso golang:${{ matrix.go-version }}-buster /bin/sh -c 'cd /oso && go test -v ./tests/ ./internal/host'
         working-directory: go
 
   validate_go_macos_arm:
@@ -548,7 +548,7 @@ jobs:
       - name: "test"
         run: |
           ~/go/bin/go${{ matrix.go-version }} build
-          ~/go/bin/go${{ matrix.go-version }} test -v ./tests/ 
+          ~/go/bin/go${{ matrix.go-version }} test -v ./tests/ ./internal/host
         working-directory: go
         env:
           CGO_ENABLED: 1
