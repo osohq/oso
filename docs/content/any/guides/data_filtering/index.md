@@ -129,13 +129,14 @@ use the adapter to query for the related resources when you access them.
 
 ## Limitations
 
-There are a few limitations to what you can do while using data filtering. You
-can not call any methods on the passed in resource and you can not pass the
-resource as an argument to any methods. Many cases where you would want to do
-this are better handled by Relation fields.
+Some Polar operators including `cut` and arithmetic operators aren't supported in
+data filtering queries.
 
-Some Polar expressions are not supported. `not`, `cut` and `forall` are not
-allowed in policies that want to use data filtering. Numeric comparisons with
-the `<` `>` `<=` and `>=` are not currently supported either.
+You can't call any methods on the resource argument or pass the resource as an
+argument to other methods. Many cases where you would want to do this are better
+handled by Relation fields.
 
-The new data filtering backend doesn't support queries where a given resource occurs more than once, so direct or indirect relations from a type to itself are currently unsupported. This limitation will be removed in an upcoming release.
+The new data filtering backend doesn't support queries where a given resource
+type occurs more than once, so direct or indirect relations from a type to itself
+are currently unsupported. This limitation will be removed in an upcoming release.
+
