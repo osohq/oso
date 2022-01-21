@@ -160,11 +160,65 @@ func (q Query) handleMakeExternal(event types.QueryEventMakeExternal) error {
 	return q.host.MakeInstance(call, id)
 }
 
+func (q Query) handleRelation(event types.QueryEventExternalCall, instance interface{}, attr string, rel Relation) error {
+	print("looking up relation ")
+	println(attr)
+	// otherwise look up the field
+	value := reflect.ValueOf(instance).FieldByName(rel.MyField)
+	if !value.IsValid() {
+		q.ffiQuery.ApplicationError((errors.NewMissingAttributeError(instance, attr)).Error())
+		q.ffiQuery.CallResult(event.CallId, nil)
+		return nil
+	}
+
+	cond := FilterCondition{
+		Datum{Projection{rel.OtherType, rel.OtherField}},
+		Eq,
+		Datum{Immediate{value.Interface()}},
+	}
+
+	filter := Filter{
+		rel.OtherType,
+		[]FilterRelation{},
+		[][]FilterCondition{{cond}},
+		q.host.GetFields(),
+	}
+
+	adapter := *q.host.GetAdapter()
+	query, err := adapter.BuildQuery(&filter)
+	if err != nil {
+		return err
+	}
+	res, err := adapter.ExecuteQuery(query)
+	if err != nil {
+		return err
+	}
+
+	if rel.Kind == "one" {
+		if len(res) != 1 {
+			return fmt.Errorf("Expected one result, got %d", len(res))
+		}
+		polarValue, err := q.host.ToPolar(res[0])
+		if err != nil {
+			return err
+		}
+		return q.ffiQuery.CallResult(event.CallId, &Term{*polarValue})
+	} else {
+		polarValue, err := q.host.ToPolar(res)
+		if err != nil {
+			return err
+		}
+		return q.ffiQuery.CallResult(event.CallId, &Term{*polarValue})
+	}
+}
+
 func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 	instance, err := q.host.ToGo(event.Instance)
 	if err != nil {
 		return err
 	}
+
+	attr := string(event.Attribute)
 
 	var result interface{}
 
@@ -174,7 +228,7 @@ func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 		typ := reflect.TypeOf(instance)
 		iv := reflect.New(typ)
 		iv.Elem().Set(reflect.ValueOf(instance))
-		method := iv.MethodByName(string(event.Attribute))
+		method := iv.MethodByName(attr)
 
 		if !method.IsValid() {
 			q.ffiQuery.ApplicationError((errors.NewMissingAttributeError(instance, string(event.Attribute))).Error())
@@ -202,17 +256,26 @@ func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 				result = interface{}(arrayResult)
 			}
 		} else {
-			return errors.NewInvalidCallError(instance, string(event.Attribute))
+			return errors.NewInvalidCallError(instance, attr)
 		}
 	} else {
-		// look up field
-		attr := reflect.ValueOf(instance).FieldByName(string(event.Attribute))
-		if !attr.IsValid() {
-			q.ffiQuery.ApplicationError((errors.NewMissingAttributeError(instance, string(event.Attribute))).Error())
+		// this might be a relation
+		rel, err := q.host.GetRelation(instance, attr)
+		if err != nil {
+			return err
+		}
+		if rel != nil {
+			return q.handleRelation(event, instance, attr, *rel)
+		}
+
+		// otherwise look up the field
+		value := reflect.ValueOf(instance).FieldByName(attr)
+		if !value.IsValid() {
+			q.ffiQuery.ApplicationError((errors.NewMissingAttributeError(instance, attr)).Error())
 			q.ffiQuery.CallResult(event.CallId, nil)
 			return nil
 		}
-		result = attr.Interface()
+		result = value.Interface()
 	}
 
 	polarValue, err := q.host.ToPolar(result)
