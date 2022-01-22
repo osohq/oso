@@ -3,6 +3,8 @@ title: "Build Authorization for Resource Hierarchies"
 metaTitle: Build Authorization for Resource Hierarchies in $LANG
 weight: 4
 showContentForAnyLanguage: true
+aliases:
+- /guides/hierarchies.html
 ---
 
 # Build Authorization for Resource Hierarchies in {{% lang %}}
