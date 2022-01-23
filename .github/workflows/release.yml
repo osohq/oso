@@ -553,9 +553,11 @@ jobs:
       - name: "test"
         run: |
           ~/go/bin/go${{ matrix.go-version }} build
-          ~/go/bin/go${{ matrix.go-version }} test -v ./tests/ ./internal/host
+          ~/go/bin/go${{ matrix.go-version }} test -v ./internal/host
+          cd tests && ~/go/bin/go${{ matrix.go-version }} test -v
         working-directory: go
         env:
+          POLAR_IGNORE_NO_ALLOW_WARNING: 1
           CGO_ENABLED: 1
           GOOS: darwin
           GOARCH: arm64
