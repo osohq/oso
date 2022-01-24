@@ -241,9 +241,6 @@ export class Polar<Query, Resource> {
    * @param params An optional object with extra parameters.
    */
   registerClass(cls: Class, params?: ClassParams): void {
-    params = params ? params : {};
-    params.id = this.#ffiPolar.newId();
-
     const clsName = this.getHost().cacheClass(cls, params);
     this.registerConstant(cls, clsName);
     this.getHost().registerMros();
