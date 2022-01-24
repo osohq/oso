@@ -95,7 +95,6 @@ class Polar:
 
     # Register MROs, load Polar code, and check inline queries.
     def _load_sources(self, sources: List[Source]):
-        self.host.register_mros()
         self.ffi_polar.load(sources)
         self.check_inline_queries()
 
@@ -241,12 +240,14 @@ class Polar:
             data filtering.
         """
         # TODO: let's add example usage here or at least a proper docstring for the arguments
-        cls_name = self.host.cache_class(
+
+        name = self.host.cache_class(
             cls,
             name=name,
             fields=fields,
         )
-        self.register_constant(cls, cls_name)
+        self.register_constant(cls, name)
+        self.host.register_mros()
 
     def register_constant(self, value, name):
         """

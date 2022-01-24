@@ -319,17 +319,24 @@ module Oso
                   end
                 else
                   instance_id = nil
-                  instance_id = types[value].id if value.is_a?(Class) && types.key?(value)
-
-                  # only pass class_repr for registered types
+                  class_id = nil
                   class_repr = nil
-                  class_repr = value.class.to_s if types.key?(value.class)
+                  # id=class_id,
+
+                  # pass `class_id` & `class_repr` for registered types
+                  if value.is_a?(Class) && types.key?(value)
+                    instance_id = class_id = types[value].id
+                  elsif types.key?(value.class)
+                    class_id = types[value.class].id
+                    class_repr = types[value.class].name
+                  end
 
                   {
                     'ExternalInstance' => {
                       'instance_id' => cache_instance(value, id: instance_id),
                       'repr' => nil,
-                      'class_repr' => class_repr
+                      'class_repr' => class_repr,
+                      'class_id' => class_id
                     }
                   }
                 end
