@@ -248,7 +248,6 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
 end
 
 class User < ActiveRecord::Base
-  include DFH::ActiveRecordFetcher
   self.primary_key = :name
   belongs_to :org, foreign_key: :org_name
   has_many :org_roles, foreign_key: :user_name
@@ -256,7 +255,6 @@ class User < ActiveRecord::Base
 end
 
 class Repo < ActiveRecord::Base
-  include DFH::ActiveRecordFetcher
   self.primary_key = :name
   belongs_to :org, foreign_key: :org_name
   has_many :issues, foreign_key: :repo_name
@@ -264,7 +262,6 @@ class Repo < ActiveRecord::Base
 end
 
 class Org < ActiveRecord::Base
-  include DFH::ActiveRecordFetcher
   self.primary_key = :name
   has_many :users, foreign_key: :org_name
   has_many :repos, foreign_key: :org_name
@@ -272,19 +269,16 @@ class Org < ActiveRecord::Base
 end
 
 class Issue < ActiveRecord::Base
-  include DFH::ActiveRecordFetcher
   self.primary_key = :name
   belongs_to :repo, foreign_key: :repo_name
 end
 
 class RepoRole < ActiveRecord::Base
-  include DFH::ActiveRecordFetcher
   belongs_to :user, foreign_key: :user_name
   belongs_to :repo, foreign_key: :repo_name
 end
 
 class OrgRole < ActiveRecord::Base
-  include DFH::ActiveRecordFetcher
   belongs_to :user, foreign_key: :user_name
   belongs_to :org, foreign_key: :org_name
 end
