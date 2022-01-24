@@ -1,4 +1,4 @@
-import type { Filter, Relation } from './dataFiltering';
+import type { Relation } from './filter';
 import { isObj } from './helpers';
 
 /**
@@ -259,7 +259,7 @@ export function isPolarPattern(v: PolarValue): v is PolarPattern {
  *
  * @internal
  */
-type PolarValue =
+export type PolarValue =
   | PolarStr
   | PolarNum
   | PolarBool
@@ -680,33 +680,12 @@ export class Dict extends Object {
   [index: string]: unknown;
 }
 
-export type BuildQueryFn<Q = any> = (filters: Filter[]) => Q; // eslint-disable-line @typescript-eslint/no-explicit-any
-export type ExecQueryFn<Q = any, ReturnType = any> = (query: Q) => ReturnType; // eslint-disable-line @typescript-eslint/no-explicit-any
-export type CombineQueryFn<Q = any> = (a: Q, b: Q) => Q; // eslint-disable-line @typescript-eslint/no-explicit-any
-
-// NOTE(gj): these are *required* if the user wants to use Data Filtering.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface DataFilteringQueryParams<Query = any, ReturnType = any> {
-  /**
-   * A function to produce a query.
-   */
-  buildQuery?: BuildQueryFn<Query>;
-  /**
-   * A function to execute a query produced by [[`ClassParams.buildQuery`]].
-   */
-  execQuery?: ExecQueryFn<Query, ReturnType>;
-  /**
-   * A function to merge two queries produced by [[`ClassParams.buildQuery`]].
-   */
-  combineQuery?: CombineQueryFn<Query>;
-}
-
 export type IsaCheck = (instance: NullishOrHasConstructor) => boolean;
 
 /**
  * Optional parameters for [[`Polar.registerClass`]] and [[`Host.cacheClass`]].
  */
-export interface ClassParams extends DataFilteringQueryParams {
+export interface ClassParams {
   /**
    * Explicit name to use for the class in Polar. Defaults to the class's
    * `name` property.
@@ -724,8 +703,7 @@ export interface ClassParams extends DataFilteringQueryParams {
 /**
  * Parameters for [[`UserType`]].
  */
-export interface UserTypeParams<Type extends Class>
-  extends Required<DataFilteringQueryParams> {
+export interface UserTypeParams<Type extends Class> {
   /**
    * Class registered as a user type.
    */
@@ -758,3 +736,22 @@ export interface UserTypeParams<Type extends Class>
  * Number]`), but I'm not 100% sure of that.
  */
 export type NullishOrHasConstructor = { constructor: Class } | null | undefined;
+
+export type HostTypes = Map<string | Class, UserType<any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export class UserType<Type extends Class<T>, T = any> {
+  name: string;
+  cls: Type;
+  id: number;
+  fields: Map<string, Class | Relation>;
+  isaCheck: IsaCheck;
+
+  constructor({ name, cls, id, fields, isaCheck }: UserTypeParams<Type>) {
+    this.name = name;
+    this.cls = cls;
+    this.fields = fields;
+    this.id = id;
+    this.isaCheck = isaCheck;
+  }
+}

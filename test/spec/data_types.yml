@@ -54,6 +54,23 @@ cases:
     input: [[3, 2, 1]]
   - query: is_dict
     input: [{x: 1, y: 2}]
+  # failure cases
+  - query: is_string
+    input: [2]
+    result: []
+  - query: is_integer
+    input: ["cba"]
+    result: []
+  - query: is_integer
+    input: [false]
+    result: []
+  - query: is_integer
+    input: [[3, 2, 1]]
+    result: []
+  - query: is_integer
+    input: [{x: 1, y: 2}]
+    result: []
+
 
   # nil/none
   - query: is_null

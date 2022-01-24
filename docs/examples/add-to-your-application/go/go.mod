@@ -1,6 +1,6 @@
 module github.com/osohq/oso/add-to-app
 
-go 1.12
+go 1.14
 
 require (
 	github.com/andybalholm/brotli v1.0.3 // indirect

@@ -1,6 +1,6 @@
 module github.com/osohq/go-oso
 
-go 1.12
+go 1.14
 
 require (
 	github.com/fatih/color v1.13.0 // indirect
@@ -15,4 +15,6 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.7 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
+	gorm.io/driver/sqlite v1.2.6 // indirect
+	gorm.io/gorm v1.22.5 // indirect
 )
