@@ -407,10 +407,6 @@ module Oso
           get_instance(Regexp.last_match[1].to_i).to_s
         end
       end
-
-      def use_new_data_filtering?
-        !adapter.nil?
-      end
     end
   end
 end

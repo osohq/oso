@@ -182,16 +182,7 @@ module Oso
     #
     # @return A query for resources accessible to the actor.
     def authorized_query(actor, action, resource_cls)
-      if host.use_new_data_filtering?
-
-        unless host.types[resource_cls].build_query == ::Oso::Polar::Host::DEFAULT_BUILD_QUERY
-          warn 'Warning: redundant data filtering configuration detected'
-        end
-
-        new_authorized_query(actor, action, resource_cls)
-      else
-        old_authorized_query(actor, action, resource_cls)
-      end
+      new_authorized_query(actor, action, resource_cls)
     end
 
     # Determine the resources of type +resource_cls+ that +actor+
@@ -203,25 +194,7 @@ module Oso
     #
     # @return A list of resources accessible to the actor.
     def authorized_resources(actor, action, resource_cls)
-      q = authorized_query(actor, action, resource_cls)
-
-      if host.use_new_data_filtering?
-        host.adapter.execute_query q
-      elsif q.nil?
-        []
-      else
-        host.types[resource_cls].exec_query[q]
-      end
-    end
-
-    # Register default values for data filtering query functions.
-    # These can be overridden by passing specific implementations to
-    # `register_class` or by defining `build_query`, `exec_query` and
-    # `combine_query` methods on the class object.
-    def set_data_filtering_query_defaults(build_query: nil, exec_query: nil, combine_query: nil)
-      host.build_query = build_query if build_query
-      host.exec_query = exec_query if exec_query
-      host.combine_query = combine_query if combine_query
+      host.adapter.execute_query authorized_query(actor, action, resource_cls)
     end
 
     def data_filtering_adapter=(adapter)

@@ -17,6 +17,7 @@ module DF
   class Repository < Sequel::Model(:repositories)
   end
 
+
   r = Repository.new(name: "gmail", is_public: false)
   r.save
 
@@ -25,34 +26,57 @@ module DF
   # docs: begin-data-filtering
   # This is an example implementation for the Sequel ORM, but you can
   # use any ORM with this API.
-  def self.get_repositories(filters)
-    query = Repository
-    filters.each do |filter|
-      value = filter.value
-
-      if filter.field.nil?
-        value = value.name
-        field = :name
-      else
-        field = filter.field.to_sym
+  class SequelAdapter
+    def build_query(filter)
+      types = filter.types
+      query = filter.relations.reduce(filter.model) do |q, rel|
+        rec = types[rel.left].fields[rel.name]
+        q.join( rel.right.table_name,
+          "#{rel.left.table_name}.#{rec.my_field}" =>
+        "#{rel.right.table_name}.#{rec.other_field}"
+        )
       end
 
-      if filter.kind == "Eq"
-        query = query.where(field => value)
-      else
-        raise "unimplemented constraint kind #{filter.kind}"
-      end
+      args = []
+      sql = filter.conditions.map do |conjs|
+        conjs.reduce('true') do |sql, conj|
+          "(#{sql} AND #{sqlize(conj, args)})"
+        end
+      end.reduce('false') do |sql, clause|
+        "(#{sql} OR #{clause})"
+      end 
+
+      query.where(Sequel.lit(sql, *args)).distinct
     end
 
-    query
-  end
+    def execute_query(query)
+      query.to_a
+    end
 
-  def self.combine_query(q1, q2)
-    q1.union(q2)
-  end
+    OPS = {
+      'Eq' => '=', 'In' => 'IN', 'Nin' => 'NOT IN', 'Neq' => '!=',
+      'Lt' => '<', 'Gt' => '>', 'Leq' => '<=', 'Geq' => '>='
+    }.freeze
 
-  def self.exec_query(q)
-    q.all
+    private
+
+    def sqlize(cond, args)
+      lhs = add_side cond.left, args
+      rhs = add_side cond.right, args
+      "#{lhs} #{OPS[cond.cmp]} #{rhs}"
+    end
+
+    def add_side(side, args)
+      if side.is_a? ::Oso::Polar::Data::Filter::Projection
+        "#{side.source.table_name}.#{side.field || :name}"
+      elsif side.is_a? DF::Repository
+        args.push side.name
+        '?'
+      else
+        args.push side
+        '?'
+      end
+    end
   end
 
   OSO.register_class(User)
@@ -62,10 +86,9 @@ module DF
     fields: {
       is_public: PolarBoolean
     },
-    build_query: method(:get_repositories),
-    combine_query: method(:combine_query),
-    exec_query: method(:exec_query)
   )
+
+  OSO.data_filtering_adapter = SequelAdapter.new
 
   OSO.load_files(["main.polar"])
   # docs: end-data-filtering
