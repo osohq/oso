@@ -408,7 +408,7 @@ func TestNotInRelation(t *testing.T) {
 	o := testOso()
 	o.LoadString("allow(_: Sign{People}, _, person: Person) if not person in People;")
 	var signs []Sign
-	(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("People").Find(&signs)
+	(*o.GetHost().GetAdapter()).(GormAdapter).db.Find(&signs)
 	for _, sign := range signs {
 		res, err := o.AuthorizedResources(sign, "get", "Person")
 		if err != nil {
@@ -431,7 +431,7 @@ func TestForallNotInRelation(t *testing.T) {
     allow(_: Planet{Signs}, _, person: Person) if
       forall(sign in Signs, not person in sign.People);`)
 	var planets []Planet
-	(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("Signs.People").Find(&planets)
+	(*o.GetHost().GetAdapter()).(GormAdapter).db.Find(&planets)
 	for _, planet := range planets {
 		res, err := o.AuthorizedResources(planet, "get", "Person")
 		if err != nil {
@@ -456,7 +456,7 @@ func TestForallForall(t *testing.T) {
         forall(person in sign.People,
           person.Name != "sam"));`)
 	var jupiter Planet
-	(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("Signs.People").First(&jupiter, 6)
+	(*o.GetHost().GetAdapter()).(GormAdapter).db.First(&jupiter, 6)
 	if jupiter.Name != "jupiter" {
 		t.Error("not jupiter")
 	}
@@ -475,7 +475,7 @@ func TestForall(t *testing.T) {
     allow(_: Planet{Signs}, _, _) if
       forall(sign in Signs, sign.Element != "fire");`)
 	var planets []Planet
-	(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("Signs").Find(&planets)
+	(*o.GetHost().GetAdapter()).(GormAdapter).db.Find(&planets)
 	for _, planet := range planets {
 		res, err := o.AuthorizedResources(planet, "get", "Person")
 		if err != nil {
@@ -675,7 +675,7 @@ func TestPartialInCollection(t *testing.T) {
 	o := testOso()
 	o.LoadString("allow(_: Planet{Signs}, _, sign) if sign in Signs;")
 	var planets []Planet
-	(*o.GetHost().GetAdapter()).(GormAdapter).db.Preload("Signs").Find(&planets)
+	(*o.GetHost().GetAdapter()).(GormAdapter).db.Find(&planets)
 	for _, planet := range planets {
 		res, err := o.AuthorizedResources(planet, "", "Sign")
 		if err != nil {
@@ -792,7 +792,7 @@ func TestAuthorizeScalarAttributeEq(t *testing.T) {
     allow(_, _, _: Sign{Element: "fire"});
     allow(person, _, sign: Sign) if sign = person.Sign;`)
 	var sam Person
-	(*o.GetHost().GetAdapter()).(GormAdapter).db.Where("name = ?", "sam").Preload("Sign").First(&sam)
+	(*o.GetHost().GetAdapter()).(GormAdapter).db.Where("name = ?", "sam").First(&sam)
 	res, err := o.AuthorizedResources(sam, "", "Sign")
 	if err != nil {
 		t.Error(err.Error())

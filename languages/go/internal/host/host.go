@@ -77,6 +77,10 @@ func (h Host) GetAdapter() *Adapter {
 	return &h.adapter
 }
 
+func (h Host) GetFields() map[string]map[string]interface{} {
+	return h.fields
+}
+
 func (h Host) GetClass(name string) (*reflect.Type, error) {
 	if v, ok := h.classes[name]; ok {
 		return &v, nil
@@ -456,6 +460,29 @@ func (h Host) ToGo(v types.Term) (interface{}, error) {
 
 func (h *Host) SetAcceptExpression(acceptExpression bool) {
 	h.acceptExpression = acceptExpression
+}
+
+func (h *Host) GetRelation(instance interface{}, attr string) (*Relation, error) {
+	nom, err := h.getTypeName(reflect.TypeOf(instance))
+	if err != nil {
+		return nil, nil
+	}
+	switch rel := h.fields[nom][attr].(type) {
+	case Relation:
+		return &rel, nil
+	default:
+		return nil, nil
+	}
+}
+
+func (h *Host) getTypeName(t reflect.Type) (string, error) {
+	for nom, typ := range h.classes {
+		if typ == t {
+			return nom, nil
+		}
+	}
+
+	return "", fmt.Errorf("Unregistered type: %v", t)
 }
 
 func (h *Host) GetRelationFields(rel FilterRelation) (string, string, error) {
