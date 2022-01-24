@@ -133,8 +133,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         it 'test_nested_relationship_many_many_constrained' do
           subject.load_str <<~POL
             allow(person: Person{name: "eden"}, _, _: Planet{signs}) if
-              sign in signs and
-              person in sign.people;
+              sign in signs and person in sign.people;
           POL
 
           Person.all.each do |person|
@@ -159,8 +158,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
 
         it 'test_empty_constraints_in' do
           subject.load_str <<~POL
-            allow(_, _, _: Planet{signs}) if
-              _ in signs;
+            allow(_, _, _: Planet{signs}) if _ in signs;
           POL
           query = subject.authorized_query 'gwen', 'get', Planet
           expect(query.to_a).to contain_exactly(*Planet.where.not(name: 'pluto'))

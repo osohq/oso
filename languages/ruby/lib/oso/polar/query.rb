@@ -245,31 +245,22 @@ module Oso
       def handle_relationship(call_id, instance, rel) # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
         typ = host.types[rel.other_type]
 
-        if host.use_new_data_filtering?
-          cls = typ.klass.get
+        cls = typ.klass.get
 
-          condition = ::Oso::Polar::Data::Filter::Condition.new(
-            ::Oso::Polar::Data::Filter::Projection.new(cls, rel.other_field),
-            'Eq',
-            instance.send(rel.my_field)
-          )
+        condition = ::Oso::Polar::Data::Filter::Condition.new(
+          ::Oso::Polar::Data::Filter::Projection.new(cls, rel.other_field),
+          'Eq',
+          instance.send(rel.my_field)
+        )
 
-          filter = ::Oso::Polar::Data::Filter.new(
-            model: cls,
-            relations: [],
-            conditions: [[condition]],
-            types: host.types
-          )
+        filter = ::Oso::Polar::Data::Filter.new(
+          model: cls,
+          relations: [],
+          conditions: [[condition]],
+          types: host.types
+        )
 
-          res = host.adapter.execute_query host.adapter.build_query(filter)
-        else
-          constraint = ::Oso::Polar::DataFiltering::Filter.new(
-            kind: 'Eq',
-            field: rel.other_field,
-            value: instance.send(rel.my_field)
-          )
-          res = typ.exec_query[typ.build_query[[constraint]]]
-        end
+        res = host.adapter.execute_query host.adapter.build_query(filter)
 
         if rel.kind == 'one'
           raise "multiple parents: #{res}" unless res.length == 1
