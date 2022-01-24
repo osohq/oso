@@ -38,7 +38,8 @@ executed query.
 This lets you add additional filters or sorts or any other data to it before
 executing it.
 
-The mapping from polar to a query is defined by an `Adapter`. If an adapter exists for your ORM or database you can use it, otherwise you may have to implement your own.
+The mapping from Polar to a query is defined by an `Adapter`. If an adapter exists
+for your ORM or database you can use it, otherwise you may have to implement your own.
 
 ## Implementing an Adapter
 
@@ -48,15 +49,32 @@ An adapter is an interface that defines two methods.
 
 #### Build a Query
 
-`{{% exampleGet "buildQuery" %}}` takes some type information and an oso `Filter` object and returns a `Query`.
+`{{% exampleGet "buildQuery" %}}` takes some type information and a `Filter` object and returns a `Query`.
 
 A `Filter` is a representation of a query. It is very similar to a SQL query.
-It has three fields
+It has four fields:
 
-- `root` Is the type we are filtering.
-- `relations` Are the related types, typically turned into joins.
-- `conditions` Are the individual pieces of logic that must be true. These typically get
-turned into where clauses.
+- `{{% exampleGet "filterRoot" %}}` Is the name of the type we are filtering.
+- `{{% exampleGet "filterRelations" %}}` Are named relations to other types, typically turned into joins.
+- `{{% exampleGet "filterConditions" %}}` Are the individual pieces of logic that must be true with respect to objects
+  matching the filter. These typically get turned into where clauses.
+- `{{% exampleGet "filterTypes" %}}` Is a map from type names to user type information, including registered relations.
+  We use this to generate the join SQL.
+
+##### Relations
+
+A relation has three properties: `{{% exampleGet "relationFrom" %}}`, `{{% exampleGet "relationName" %}}, and {{% exampleGet "relationTo" %}}`.
+The adapter uses these properties to look up the tables and fields to join together for
+the query.
+
+##### Conditions
+
+A condition has three properties `{{% exampleGet "conditionLeft" %}}`, `{{% exampleGet "conditionOp" %}}`, and `{{% exampleGet "conditionRight" %}}`.
+The left and right fields will be either `Immediate` objects with a `{{% exampleGet "immediateValue" %}}` field that can
+be inserted directly into a query, or `Projection` objects with string properties
+`{{% exampleGet "projectionType" %}}` and optionally `{{% exampleGet "projectionField" %}}`. A
+missing `{{% exampleGet "projectionField" %}}` property indicates the adapter should substitute
+an appropriate unique identifier, usually a primary key.
 
 #### Execute a Query
 
@@ -134,7 +152,7 @@ data filtering queries.
 
 You can't call any methods on the resource argument or pass the resource as an
 argument to other methods. Many cases where you would want to do this are better
-handled by Relation fields.
+handled by `Relation` fields.
 
 The new data filtering backend doesn't support queries where a given resource
 type occurs more than once, so direct or indirect relations from a type to itself
