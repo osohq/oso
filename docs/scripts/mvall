@@ -3,6 +3,7 @@ set -eou pipefail
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 pushd $SCRIPT_DIR
+pushd ..
 
 for lang in content/*; do
     pushd $lang
