@@ -13,7 +13,7 @@ description: Learn about writing Oso policies - the source of truth for authoriz
 
 Oso provides policy building blocks for common authorization models like [role-based
 access control](/guides/rbac), [attribute-based access control](/guides/more/attributes), and
-[resource hierarchies](/guides/hierarchies).
+[resource hierarchies](/guides/more/hierarchies).
 
 This guide covers how to extend those building blocks by writing rules in Oso's
 policy language, Polar. You will learn the basic structure and operations of
