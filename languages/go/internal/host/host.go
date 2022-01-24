@@ -465,7 +465,7 @@ func (h *Host) SetAcceptExpression(acceptExpression bool) {
 func (h *Host) GetRelation(instance interface{}, attr string) (*Relation, error) {
 	nom, err := h.getTypeName(reflect.TypeOf(instance))
 	if err != nil {
-		return nil, err
+		return nil, nil
 	}
 	switch rel := h.fields[nom][attr].(type) {
 	case Relation:
