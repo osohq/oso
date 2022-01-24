@@ -24,6 +24,8 @@ Oso offers libraries for [Node.js][badge-nodejs-link],
 [Rust][badge-rust-link], [Ruby][badge-ruby-link], and
 [Java][badge-java-link].
 
+Our latest creation Oso Cloud (Preview) makes authorization across services as easy as oso.authorize(user, action, resource). [Learn about it.](https://www.osohq.com/oso-cloud)
+
 ## Documentation
 
 - To get up and running with Oso, try the [Getting Started guide](https://docs.osohq.com/getting-started/quickstart.html).
@@ -70,7 +72,7 @@ requirements:
 - Ruby: 2.4+
   - Bundler 2.1.4+
 - Rust: 1.46+
-- Go: 1.12+
+- Go: 1.14+
 
 ## Contributing & Jobs
 

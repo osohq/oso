@@ -1,7 +1,7 @@
 module github.com/osohq/oso
 
-go 1.12
+go 1.14
 
-require github.com/osohq/go-oso v0.25.0
+require github.com/osohq/go-oso v0.25.1
 
 replace github.com/osohq/go-oso => ../../../../languages/go

@@ -52,6 +52,8 @@ MyPy
 NFA
 NaN
 NestJS
+NewType
+NewTypes
 NotFoundError
 NotFoundException
 OAuth
