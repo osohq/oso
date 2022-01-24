@@ -239,10 +239,7 @@ class Oso(Polar):
         :return: A query to fetch the resources,
         """
 
-        if self.is_new_data_filtering_configured():
-            return self.new_authorized_query(actor, action, resource_cls)
-        else:
-            return self.old_authorized_query(actor, action, resource_cls)
+        return self.new_authorized_query(actor, action, resource_cls)
 
     def authorized_resources(self, actor, action, resource_cls) -> List[Any]:
         """Determine the resources of type ``resource_cls`` that ``actor``
@@ -255,27 +252,7 @@ class Oso(Polar):
         :return: The requested resources.
         """
         query = self.authorized_query(actor, action, resource_cls)
-
-        if self.is_new_data_filtering_configured():
-            return self.host.adapter.execute_query(query)
-        elif query is None:
-            return []
-        else:
-            return self.host.types[resource_cls].exec_query(query)
-
-    def set_data_filtering_query_defaults(
-        self, build_query=None, exec_query=None, combine_query=None
-    ):
-        """Register default values for data filtering query functions.
-        These can be overridden by passing specific implementations to
-        `register_class`"""
-
-        if build_query is not None:
-            self.host.build_query = build_query
-        if exec_query is not None:
-            self.host.exec_query = exec_query
-        if combine_query is not None:
-            self.host.combine_query = combine_query
+        return self.host.adapter.execute_query(query)
 
     def set_data_filtering_adapter(self, adapter):
         """Set a global adapter for the new data filtering interface."""

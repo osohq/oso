@@ -20,7 +20,7 @@ from .query import Query
 from .predicate import Predicate
 from .variable import Variable
 from .expression import Expression, Pattern
-from .data_filtering import serialize_types, filter_data
+from .data_filtering import serialize_types
 from .data import DataFilter
 
 
@@ -229,9 +229,6 @@ class Polar:
         *,
         name=None,
         fields=None,
-        build_query=None,
-        exec_query=None,
-        combine_query=None
     ):
         """
         Register `cls` as a class accessible by Polar.
@@ -242,22 +239,12 @@ class Polar:
         :param fields:
             Optional dict mapping field names to types or Relation objects for
             data filtering.
-        :param build_query:
-            Optional function to generate a query for resources of type `cls`
-            from a list of Filters.
-        :param exec_query:
-            Optional function to execute a query produced by `build_query`.
-        :param combine_query:
-            Optional function to merge two queries produced by `build_query`.
         """
         # TODO: let's add example usage here or at least a proper docstring for the arguments
         cls_name = self.host.cache_class(
             cls,
             name=name,
             fields=fields,
-            build_query=build_query,
-            exec_query=exec_query,
-            combine_query=combine_query,
         )
         self.register_constant(cls, cls_name)
 
@@ -303,15 +290,6 @@ class Polar:
 
     def is_new_data_filtering_configured(self):
         return self.host.adapter is not None
-
-    def old_authorized_query(self, actor, action, resource_cls):
-        results = self.partial_query(actor, action, resource_cls)
-
-        types = serialize_types(self.host.distinct_user_types(), self.host.types)
-        class_name = self.host.types[resource_cls].name
-        plan = self.ffi_polar.build_filter_plan(types, results, "resource", class_name)
-
-        return filter_data(self, plan)
 
     def new_authorized_query(self, actor, action, resource_cls):
         results = self.partial_query(actor, action, resource_cls)
