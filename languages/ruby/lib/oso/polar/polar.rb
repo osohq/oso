@@ -207,11 +207,9 @@ module Oso
       # under a previously-registered name.
       # @raise [FFI::Error] if the FFI call returns an error.
       # @return [self] for chaining.
-      def register_class(cls, name: nil, fields: nil, combine_query: nil, build_query: nil, exec_query: nil) # rubocop:disable Metrics/ParameterLists,Metrics/MethodLength
-        class_id = ffi_polar.new_id
+      def register_class(cls, name: nil, fields: nil, combine_query: nil, build_query: nil, exec_query: nil) # rubocop:disable Metrics/ParameterLists
         name = host.cache_class(
           cls,
-          id: class_id,
           name: name || cls.name,
           fields: fields,
           build_query: build_query || maybe_mtd(cls, :build_query),

@@ -108,7 +108,6 @@ class Host:
         self,
         cls,
         name=None,
-        id=None,
         fields=None,
         build_query=None,
         exec_query=None,
@@ -122,7 +121,7 @@ class Host:
         self.types[name] = self.types[cls] = UserType(
             name=name,
             cls=cls,
-            id=self.cache_instance(cls, id=id),
+            id=self.cache_instance(cls),
             fields=fields or {},
             build_query=build_query or self.build_query,
             exec_query=exec_query or self.exec_query,
