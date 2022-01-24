@@ -118,6 +118,8 @@ func (q *Query) Next() (*map[string]interface{}, error) {
 			err = q.handleExternalCall(ev)
 		case QueryEventExternalIsa:
 			err = q.handleExternalIsa(ev)
+		case QueryEventExternalIsaWithPath:
+			err = q.handleExternalIsaWithPath(ev)
 		case QueryEventExternalIsSubSpecializer:
 			err = q.handleExternalIsSubSpecializer(ev)
 		case QueryEventExternalIsSubclass:
@@ -158,11 +160,65 @@ func (q Query) handleMakeExternal(event types.QueryEventMakeExternal) error {
 	return q.host.MakeInstance(call, id)
 }
 
+func (q Query) handleRelation(event types.QueryEventExternalCall, instance interface{}, attr string, rel Relation) error {
+	print("looking up relation ")
+	println(attr)
+	// otherwise look up the field
+	value := reflect.ValueOf(instance).FieldByName(rel.MyField)
+	if !value.IsValid() {
+		q.ffiQuery.ApplicationError((errors.NewMissingAttributeError(instance, attr)).Error())
+		q.ffiQuery.CallResult(event.CallId, nil)
+		return nil
+	}
+
+	cond := FilterCondition{
+		Datum{Projection{rel.OtherType, rel.OtherField}},
+		Eq,
+		Datum{Immediate{value.Interface()}},
+	}
+
+	filter := Filter{
+		rel.OtherType,
+		[]FilterRelation{},
+		[][]FilterCondition{{cond}},
+		q.host.GetFields(),
+	}
+
+	adapter := *q.host.GetAdapter()
+	query, err := adapter.BuildQuery(&filter)
+	if err != nil {
+		return err
+	}
+	res, err := adapter.ExecuteQuery(query)
+	if err != nil {
+		return err
+	}
+
+	if rel.Kind == "one" {
+		if len(res) != 1 {
+			return fmt.Errorf("Expected one result, got %d", len(res))
+		}
+		polarValue, err := q.host.ToPolar(res[0])
+		if err != nil {
+			return err
+		}
+		return q.ffiQuery.CallResult(event.CallId, &Term{*polarValue})
+	} else {
+		polarValue, err := q.host.ToPolar(res)
+		if err != nil {
+			return err
+		}
+		return q.ffiQuery.CallResult(event.CallId, &Term{*polarValue})
+	}
+}
+
 func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 	instance, err := q.host.ToGo(event.Instance)
 	if err != nil {
 		return err
 	}
+
+	attr := string(event.Attribute)
 
 	var result interface{}
 
@@ -172,7 +228,7 @@ func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 		typ := reflect.TypeOf(instance)
 		iv := reflect.New(typ)
 		iv.Elem().Set(reflect.ValueOf(instance))
-		method := iv.MethodByName(string(event.Attribute))
+		method := iv.MethodByName(attr)
 
 		if !method.IsValid() {
 			q.ffiQuery.ApplicationError((errors.NewMissingAttributeError(instance, string(event.Attribute))).Error())
@@ -200,17 +256,26 @@ func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 				result = interface{}(arrayResult)
 			}
 		} else {
-			return errors.NewInvalidCallError(instance, string(event.Attribute))
+			return errors.NewInvalidCallError(instance, attr)
 		}
 	} else {
-		// look up field
-		attr := reflect.ValueOf(instance).FieldByName(string(event.Attribute))
-		if !attr.IsValid() {
-			q.ffiQuery.ApplicationError((errors.NewMissingAttributeError(instance, string(event.Attribute))).Error())
+		// this might be a relation
+		rel, err := q.host.GetRelation(instance, attr)
+		if err != nil {
+			return err
+		}
+		if rel != nil {
+			return q.handleRelation(event, instance, attr, *rel)
+		}
+
+		// otherwise look up the field
+		value := reflect.ValueOf(instance).FieldByName(attr)
+		if !value.IsValid() {
+			q.ffiQuery.ApplicationError((errors.NewMissingAttributeError(instance, attr)).Error())
 			q.ffiQuery.CallResult(event.CallId, nil)
 			return nil
 		}
-		result = attr.Interface()
+		result = value.Interface()
 	}
 
 	polarValue, err := q.host.ToPolar(result)
@@ -219,12 +284,40 @@ func (q Query) handleExternalCall(event types.QueryEventExternalCall) error {
 	}
 	return q.ffiQuery.CallResult(event.CallId, &Term{*polarValue})
 }
+
 func (q Query) handleExternalIsa(event types.QueryEventExternalIsa) error {
 	isa, err := q.host.Isa(event.Instance, string(event.ClassTag))
 	if err != nil {
 		return err
 	}
 	return q.ffiQuery.QuestionResult(event.CallId, isa)
+}
+
+func (q Query) handleExternalIsaWithPath(event types.QueryEventExternalIsaWithPath) error {
+	sup := string(event.ClassTag)
+	bas := string(event.BaseTag)
+	path := []interface{}{}
+	for _, term := range event.Path {
+		val, err := q.host.ToGo(term)
+		if err != nil {
+			return err
+		}
+		path = append(path, val)
+	}
+	sub := bas
+	for _, item := range path {
+		switch it := q.host.GetField(sub, item.(string)).(type) {
+		case types.Relation:
+			sub = it.OtherType
+		case string:
+			sub = it
+		}
+	}
+	answer, err := q.host.IsSubclass(sub, sup)
+	if err != nil {
+		return err
+	}
+	return q.ffiQuery.QuestionResult(event.CallId, answer)
 }
 
 func (q Query) handleExternalIsSubSpecializer(event types.QueryEventExternalIsSubSpecializer) error {

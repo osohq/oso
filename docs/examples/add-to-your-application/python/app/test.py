@@ -3,12 +3,15 @@ import pytest
 from .oso import oso
 from .routes import app
 
+
 def test_policy_loads_and_oso_inits():
     assert oso
+
 
 def test_route_works():
     with app.test_client() as c:
         assert c.get("/repo/gmail").status_code == 200
+
 
 def test_data_filtering_works():
     from .data_filtering import oso, Repository, Session

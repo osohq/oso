@@ -8,6 +8,7 @@ from .exceptions import (
     PolarRuntimeError,
 )
 from .data_filtering import Relation
+from .data import DataFilter, Condition, Projection
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 
@@ -87,36 +88,17 @@ class Query:
         self.host.make_instance(cls_name, args, kwargs, id)
 
     def handle_relation(self, instance, rel):
-        if self.host.adapter is not None:
-            from .data import DataFilter, Condition, Projection
 
-            other_cls = self.host.types[rel.other_type].cls
-            condition = Condition(
-                Projection(other_cls, rel.other_field),
-                "Eq",
-                getattr(instance, rel.my_field),
-            )
-            filter = DataFilter(other_cls, [], [[condition]], self.host.types)
-            adapter = self.host.adapter
-            query = adapter.build_query(filter)
-            results = adapter.execute_query(query)
-
-        else:
-            from .data_filtering import Filter
-
-            # Use the fetcher for the other type to traverse the relationship
-            build_query = self.host.types[rel.other_type].build_query
-            exec_query = self.host.types[rel.other_type].exec_query
-            assert build_query is not None
-            assert exec_query is not None
-            constraint = Filter(
-                kind="Eq",
-                field=rel.other_field,
-                value=getattr(instance, rel.my_field),
-            )
-            constraints = [constraint]
-            query = build_query(constraints)
-            results = exec_query(query)
+        other_cls = self.host.types[rel.other_type].cls
+        condition = Condition(
+            Projection(other_cls, rel.other_field),
+            "Eq",
+            getattr(instance, rel.my_field),
+        )
+        filter = DataFilter(other_cls, [], [[condition]], self.host.types)
+        adapter = self.host.adapter
+        query = adapter.build_query(filter)
+        results = adapter.execute_query(query)
 
         if rel.kind == "one":
             assert len(results) == 1

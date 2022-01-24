@@ -21,7 +21,8 @@ endif
 endif
 
 test: copy_lib
-	POLAR_IGNORE_NO_ALLOW_WARNING=1 go test -v ./tests/ ./internal/host -count=1
+	POLAR_IGNORE_NO_ALLOW_WARNING=1 go test -v ./internal/host -count=1
+	cd tests && POLAR_IGNORE_NO_ALLOW_WARNING=1 go test -v -count=1
 
 fmt:
 	go fmt ./...

@@ -6,6 +6,7 @@ import (
 	"os"
 
 	osoErrors "github.com/osohq/go-oso/errors"
+	"github.com/osohq/go-oso/internal/host"
 	"github.com/osohq/go-oso/types"
 )
 
@@ -38,6 +39,10 @@ func NewOso() (Oso, error) {
 			notFoundError:  func() error { return &osoErrors.NotFoundError{} },
 		}, nil
 	}
+}
+
+func (o *Oso) GetHost() *host.Host {
+	return &o.p.host
 }
 
 /*
@@ -504,7 +509,7 @@ func (o Oso) AuthorizedQuery(actor interface{}, action interface{}, resource_typ
 	return q, err
 }
 
-func (o Oso) AuthorizedResources(actor interface{}, action interface{}, resource_type string) (interface{}, error) {
+func (o Oso) AuthorizedResources(actor interface{}, action interface{}, resource_type string) ([]interface{}, error) {
 	query, q, err := o.dataFilter(actor, action, resource_type)
 	if err != nil {
 		return nil, err

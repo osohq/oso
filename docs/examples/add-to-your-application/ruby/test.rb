@@ -24,6 +24,7 @@ class TestEverything < Test::Unit::TestCase
 
   def test_data_filtering_works
     get "/repos"
+    puts last_response.inspect
     # make sure some repo is returned
     assert last_response.body.length > 4
     assert last_response.ok?
