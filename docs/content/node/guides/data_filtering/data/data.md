@@ -11,13 +11,13 @@ policyAPath: examples/data_filtering/policy_a.polar
 exampleBPath: examples/data_filtering/nodejs/data_filtering_example_b.ts
 policyBPath: examples/data_filtering/policy_b.polar
 
-conditionLeft: lhs
-conditionRight: rhs
-conditionOp: cmp
-
 relationFrom: fromTypeName
 relationTo: toTypeName
 relationName: fromFieldName
+
+conditionLeft: lhs
+conditionRight: rhs
+conditionOp: cmp
 
 projectionType: typeName
 projectionField: fieldName

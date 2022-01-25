@@ -12,8 +12,8 @@ exampleBPath: examples/data_filtering/python/data_filtering_example_b.py
 policyBPath: examples/data_filtering/policy_b.polar
 
 relationFrom: left
+relationTo: right
 relationName: name
-relationRight: right
 
 conditionLeft: left
 conditionOp: cmp

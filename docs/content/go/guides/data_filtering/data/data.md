@@ -11,13 +11,13 @@ policyAPath: examples/data_filtering/policy_a.polar
 exampleBPath: examples/data_filtering/go/data_filtering_example_b.go
 policyBPath: examples/data_filtering/policy_b.polar
 
-conditionLeft: Lhs
-conditionRight: Rhs
-conditionOp: Cmp
-
 relationFrom: FromTypeName
 relationTo: ToTypeName
 relationName: FromFieldName
+
+conditionLeft: Lhs
+conditionRight: Rhs
+conditionOp: Cmp
 
 projectionType: TypeName
 projectionField: FieldName
