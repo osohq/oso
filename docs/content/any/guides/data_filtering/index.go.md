@@ -2,39 +2,10 @@
 title: "Filter Data"
 weight: 1
 showContentForAnyLanguage: true
+no_nav: true
 ---
 
 # Filter Data
-
-{{% ifLang "rust" %}}
-
-{{% callout "Coming soon" %}}
-
-Data filtering is coming soon for Rust!
-
-If you want to register your interest for Data Filtering in
-Rust, [drop into our Slack](https://join-slack.osohq.com).
-
-Below is the documentation for Data Filtering in Python.
-
-{{% /callout %}}
-
-{{% /ifLang %}}
-
-{{% ifLang "java" %}}
-
-{{% callout "Coming soon" %}}
-
-Data filtering is coming soon for Java!
-
-If you want to register your interest for Data Filtering in
-Java, [drop into our Slack](https://join-slack.osohq.com).
-
-Below is the documentation for Data Filtering in Python.
-
-{{% /callout %}}
-
-{{% /ifLang %}}
 
 When you call `authorize(actor, action, resource)` , Oso evaluates the allow
 rule(s) you have defined in your policy to determine if `actor` is allowed
@@ -144,27 +115,14 @@ know what fields to match up with building a query for the other type.
 
 ## Example
 
-{{< literalInclude
-      dynPath="exampleBPath"
-      from="docs: begin-b1"
-      to="docs: end-b1"
-      fallback="no" >}}
+For an example of how to implement an adapter in Go, see our [data
+filtering test
+adapter](https://github.com/osohq/oso/blob/70188629cb4630bab1b4128860520d4f28134706/languages/go/tests/data_filtering_test.go#L80)
+which uses [GORM][]. Or, you can see [this example][] that uses [SQLBoiler][].
 
-{{< literalInclude
-      dynPath="exampleBPath"
-      from="docs: begin-b2"
-      to="docs: end-b2"
-      fallback="no" >}}
-
-{{< literalInclude
-      dynPath="policyBPath"
-      fallback="no" >}}
-
-{{< literalInclude
-      dynPath="exampleBPath"
-      from="docs: begin-b3"
-      to="docs: end-b3"
-      fallback="no" >}}
+[this example]: https://github.com/osohq/oso-go-df-sqlboiler
+[GORM]: https://gorm.io
+[SQLBoiler]: https://github.com/volatiletech/sqlboiler
 
 ## Evaluation
 When Oso is evaluating data filtering methods it uses the adapter to build queries
