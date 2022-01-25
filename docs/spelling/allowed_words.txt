@@ -25,6 +25,7 @@ ForbiddenException
 FriendsOnlyFields
 GC
 GDB
+GORM
 GSuite
 GitClub
 GitLab
@@ -78,6 +79,7 @@ SLA
 SQL
 SQLAlchemy
 SQLAlchemy's
+SQLBoiler
 SQLite
 STDIN
 SaaS
@@ -116,10 +118,12 @@ cURL
 cgo
 changelog
 classpath
+cmp
 codebase
 constructable
 coroutine
 customizations
+dataFilter
 dataloader
 dataloaders
 dataset
@@ -140,8 +144,12 @@ enum
 enumerables
 enums
 favoriteAnimal
+fieldName
 filesystem
+filterRelation
 forbiddenerror
+fromFieldName
+fromTypeName
 frontend
 glibc
 gmail
@@ -163,6 +171,7 @@ js
 lastCheckInLocation
 lastLogin
 latencies
+lhs
 lifecycle
 loadFile
 loadStr
@@ -203,6 +212,7 @@ registerClass
 repl
 repo
 repositoryRoles
+rhs
 roadmap
 roleName
 runnable
@@ -219,10 +229,12 @@ subclasses
 submittedBy
 superclasses
 superset
+toTypeName
 toolchain
 traceback
 transactional
 txt
+typeName
 un
 unary
 unifications

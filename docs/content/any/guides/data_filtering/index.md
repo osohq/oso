@@ -3,16 +3,38 @@ title: "Filter Data"
 weight: 1
 showContentForAnyLanguage: true
 ---
+
 # Filter Data
 
-{{< ifLang "ruby" >}}
-{{% callout "Filter Data - Adapter API (Preview)" "blue" %}}
-We are working on a new version of the data filtering internals that makes it
-easier and more performant to build adapters. It is currently in preview for
-Ruby, and you can check out the docs [`here`]({{< ref
-path="guides/data_filtering_next" lang="ruby" >}}).
+{{% ifLang "rust" %}}
+
+{{% callout "Coming soon" %}}
+
+Data filtering is coming soon for Rust!
+
+If you want to register your interest for Data Filtering in
+Rust, [drop into our Slack](https://join-slack.osohq.com).
+
+Below is the documentation for Data Filtering in Python.
+
 {{% /callout %}}
-{{< /ifLang >}}
+
+{{% /ifLang %}}
+
+{{% ifLang "java" %}}
+
+{{% callout "Coming soon" %}}
+
+Data filtering is coming soon for Java!
+
+If you want to register your interest for Data Filtering in
+Java, [drop into our Slack](https://join-slack.osohq.com).
+
+Below is the documentation for Data Filtering in Python.
+
+{{% /callout %}}
+
+{{% /ifLang %}}
 
 When you call `authorize(actor, action, resource)` , Oso evaluates the allow
 rule(s) you have defined in your policy to determine if `actor` is allowed
@@ -28,16 +50,6 @@ that have the owner `"steve"`. Instead of fetching every document and passing
 it into Oso, it's better to ask the database for only the documents that
 have the owner `"steve"`. Using Oso to filter the data in your data
 store based on the logic in your policy is what we call “Data Filtering”.
-
-{{< ifLang "python" >}}
-{{% callout "ORM Integrations" "blue" %}}
-If you are using one of our ORM adapter libraries like
-[`sqlalchemy-oso`]({{< ref path="reference/frameworks/data_filtering/sqlalchemy" lang="python" >}})
-or [`django-oso`]({{< ref path="reference/frameworks/data_filtering/django" lang="python" >}}) then
-data filtering is already built in and you won't have to worry about integrating
-it yourself. See docs for the ORM library instead.
-{{% /callout %}}
-{{< /ifLang >}}
 
 You can use data filtering to enforce authorization on queries made to your data
 store. Oso will take the logic in the policy and turn it into a query for the
@@ -55,61 +67,49 @@ executed query.
 This lets you add additional filters or sorts or any other data to it before
 executing it.
 
-You must define how to build queries and a few other details when you register classes to enable these methods.
+The mapping from Polar to a query is defined by an `Adapter`. If an adapter exists
+for your ORM or database you can use it, otherwise you may have to implement your own.
 
-## Implementing data filtering
+## Implementing an Adapter
 
-### Query Functions
+### Adapters
 
-There are three Query functions that must be implemented. These define what a query is for your application,
-how the logic in the policy maps to them, how to execute them and how to combine two queries.
+An adapter is an interface that defines two methods. Once you've defined an adapter, you
+can configure your Oso instance to use it with the
+`{{% exampleGet "setDataFilteringAdapter" %}}` method.
 
 #### Build a Query
 
-`{{% exampleGet "buildQuery" %}}` takes a list of `Filter`s and returns a
-`Query`
+`{{% exampleGet "buildQuery" %}}` takes some type information and a `Filter` object and returns a `Query`.
 
-`Filter`s are individual pieces of logic that must apply to the data being
-fetched.
+A `{{% exampleGet "filterName" %}}` is a representation of a query. It is very similar to a SQL query.
+It has four fields:
 
-Filters have a `kind`, a `field` and a `value`. Their meaning depends on the
-`kind` field.
+- `{{% exampleGet "filterRoot" %}}` Is the name of the type we are filtering.
+- {{% exampleGet "filterRelations" %}} Are named relations to other types, typically turned into joins.
+- `{{% exampleGet "filterConditions" %}}` Are the individual pieces of logic that must be true with respect to objects
+  matching the filter. These typically get turned into where clauses.
+- `{{% exampleGet "filterTypes" %}}` Is a map from type names to user type information, including registered relations.
+  We use this to generate the join SQL.
 
-- `Eq` means that the field must be equal to the value.
-- `Neq` means that the field must not be equal to the value.
-- `In` means that the field must be equal to one of the values in value.
-Value will be a list.
-- `Nin` means that the field must not be equal to one of the values in value.
-Value will be a list.
-- `Contains` means that the field must contain the value. This only applies
-if the field is a list.
+##### Relations
 
-The condition described by a `Filter` applies to the data stored in the attribute
-`field` of a resource.
+A relation has three properties: `{{% exampleGet "relationFrom" %}}`, `{{% exampleGet "relationName" %}}`, and `{{% exampleGet "relationTo" %}}`.
+The adapter uses these properties to look up the tables and fields to join together for
+the query.
 
-The `field` of a `Filter` may be `{{< exampleGet "none" >}}`, in which case the
-condition applies to the resource directly. It may also be a list, in which case each
-element of the list will be a string or `{{< exampleGet "none" >}}`, and `value` will
-be a list of lists where each element is the value of the corresponding field on a
-resource. For example, if `field` is `['foo', 'bar', 'baz']`, then `value` will contain
-the triple `[resource.foo, resource.bar, resource.baz]` for each `resource` in the
-input set. `kind` will be `In` or `Nin`.
+##### Conditions
+
+A condition has three properties `{{% exampleGet "conditionLeft" %}}`, `{{% exampleGet "conditionOp" %}}`, and `{{% exampleGet "conditionRight" %}}`.
+The left and right fields will be either `Immediate` objects with a `{{% exampleGet "immediateValue" %}}` field that can
+be inserted directly into a query, or `Projection` objects with string properties
+`{{% exampleGet "projectionType" %}}` and optionally `{{% exampleGet "projectionField" %}}`. A
+missing `{{% exampleGet "projectionField" %}}` property indicates the adapter should substitute
+an appropriate unique identifier, usually a primary key.
 
 #### Execute a Query
 
-`{{% exampleGet "execQuery" %}}` takes a query and returns a list of the results.
-
-#### Combine Queries
-
-`{{% exampleGet "combineQuery" %}}` takes two queries and returns a new
-query that returns the union of the other two. For example if the two
-queries are SQL queries combine could `UNION` them. If they were HTTP
-requests `{{% exampleGet "combineQuery" %}}` could put them in an array and 
-could handle executing an array of queries and combining the results.
-
-You can define functions that apply to all types with
-`{{% exampleGet "setDataFilteringQueryDefaults" %}}`. Or you can pass type
-specific ones when you register a class.
+`{{% exampleGet "executeQuery" %}}` takes a query and returns a list of the results.
 
 ### Fields
 
@@ -118,36 +118,6 @@ for registered classes. This lets Oso know what the types of an object's fields
 are. Oso needs this information to handle specializers and other things in the
 policy when we don't have a concrete resource. The fields are a 
 {{% exampleGet "map" %}} from field name to type.
-
-## Example
-
-In this example we'll model access to code repositories in a simple Git hosting application.
-
-{{< literalInclude
-      dynPath="exampleAPath"
-      from="docs: begin-a1"
-      to="docs: end-a1"
-      fallback="no" >}}
-
-For each class we need to register it and define the query functions.
-
-{{< literalInclude
-      dynPath="exampleAPath"
-      from="docs: begin-a2"
-      to="docs: end-a2"
-      fallback="no" >}}
-
-Then we can load a policy and query it.
-
-{{< literalInclude
-      dynPath="policyAPath"
-      fallback="no" >}}
-
-{{< literalInclude
-      dynPath="exampleAPath"
-      from="docs: begin-a3"
-      to="docs: end-a3"
-      fallback="no" >}}
 
 ## Relations
 
@@ -174,19 +144,11 @@ know what fields to match up with building a query for the other type.
 
 ## Example
 
-This time our data will be a little more complicated in order to model a more
-sophisticated policy.
-
 {{< literalInclude
       dynPath="exampleBPath"
       from="docs: begin-b1"
       to="docs: end-b1"
       fallback="no" >}}
-
-We now have two sets of query functions. Our `{{% exampleGet "buildQuery" %}}`
-function depends on the class but our `{{% exampleGet "execQuery" %}}` and
-`{{% exampleGet "combineQuery" %}}` functions are the same for all types so we
-can set them with `{{% exampleGet "setDataFilteringQueryDefaults" %}}`.
 
 {{< literalInclude
       dynPath="exampleBPath"
@@ -205,32 +167,23 @@ can set them with `{{% exampleGet "setDataFilteringQueryDefaults" %}}`.
       fallback="no" >}}
 
 ## Evaluation
-When Oso is evaluating data filtering methods it uses queries to fetch objects.
-If there are multiple types involved it will make multiple queries and
-substitute in the results when needed. In the above example we are fetching
-Repositories, but we are basing our fetch on some information about their
-related Organization. To resolve the query Oso first fetches the relevant
-Organizations (based in this case on role assignments), and then uses the
-`Relation` definition to substitute in their ids to the query for Repositories.
-This is the main reason to use `Relation`s, they let Oso know how different
-classes are related so we can resolve data filtering queries.
-Relation fields also work when you are not using data filtering methods and are
-just using `authorize` or another method where you have an object to pass in. In
-that case the query functions are still called to get related objects so if
-you're using a `Relation` to a type, you must define query functions for that
-type.
+When Oso is evaluating data filtering methods it uses the adapter to build queries
+and execute them.
+
+Relation fields also work when you are not using data filtering methods are also
+use the adapter to query for the related resources when you access them.
+
 
 ## Limitations
 
-There are a few limitations to what you can do while using data filtering. You
-can not call any methods on the passed in resource and you can not pass the
-resource as an argument to any methods. Many cases where you would want to do
-this are better handled by Relation fields.
+Some Polar operators including `cut` and arithmetic operators aren't supported in
+data filtering queries.
 
-Some Polar expressions are not supported. `not`, `cut` and `forall` are not
-allowed in policies that want to use data filtering. Numeric comparisons with
-the `<` `>` `<=` and `>=` are not currently supported either.
+You can't call any methods on the resource argument or pass the resource as an
+argument to other methods. Many cases where you would want to do this are better
+handled by `Relation` fields.
 
-Relations only support matching on a single field. For example, relating a
-`Student` to their classmates with matching `school_id` and `homeroom_id`
-fields isn't currently possible.
+The new data filtering backend doesn't support queries where a given resource
+type occurs more than once, so direct or indirect relations from a type to itself
+are currently unsupported. This limitation will be removed in an upcoming release.
+

@@ -82,67 +82,18 @@ session.commit()
 # docs: end-b1
 
 # docs: begin-b2
-# The query functions are the same.
-def build_query_cls(cls):
-    handlers = {
-        'Eq': lambda a, b: a == b,
-        'Neq': lambda a, b: a != b,
-        'In': lambda a, b: a.in_(b),
-        'Nin': lambda a, b: not_(a.in_(b)),
-    }
-    def build_query(filters):
-        query = session.query(cls)
-        for filter in filters:
-            assert filter.kind in ["Eq", "In"]
-            if filter.field is None:
-                field = cls.id
-                if filter.kind != 'Nin':
-                    value = filter.value.id
-                else:
-                    value = [value.id for value in filter.value]
-            elif isinstance(filter.field, list):
-                field = [cls.id if fld is None else getattr(cls, fld)]
-                value = filter.value
-            else:
-                field = getattr(cls, filter.field)
-                value = filter.value
-
-            if not isinstance(field, list):
-                cond = handlers[filter.kind](field, value)
-            else:
-                combine = handlers['Eq' if filter.kind == 'In' else 'Neq']
-                conds = [and_(*[co(*fv) for fv in zip(field, val)]) for val in value]
-                cond = or_(*conds) if conds else false()
-
-            query = query.filter(cond)
-        return query
-    return build_query
-
-
-def exec_query(query):
-    return query.all()
-
-
-def combine_query(q1, q2):
-    return q1.union(q2)
-
-
 from oso import Oso, Relation
+from polar.data.adapter.sqlalchemy_adapter import SqlAlchemyAdapter
 
 oso = Oso()
 
-# All the combine/exec query functions are the same, so we
-# can set defaults.
-oso.set_data_filtering_query_defaults(
-    exec_query=exec_query, combine_query=combine_query
-)
+oso.set_data_filtering_adapter(SqlAlchemyAdapter(session))
 
 oso.register_class(
     Organization,
     fields={
         "id": str,
     },
-    build_query=build_query_cls(Organization),
 )
 
 oso.register_class(
@@ -156,7 +107,6 @@ oso.register_class(
             kind="one", other_type="Organization", my_field="org_id", other_field="id"
         ),
     },
-    build_query=build_query_cls(Repository),
 )
 
 oso.register_class(User, fields={"id": str, "repo_roles": list})
