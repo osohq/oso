@@ -27,7 +27,7 @@ relationName: Relation
 filterName: Filter
 
 filterRoot: root
-filterConditions: conditions
 filterRelations: relations
+filterConditions: conditions
 filterTypes: types
 ---
