@@ -21,12 +21,10 @@ conditionOp: Cmp
 
 projectionType: TypeName
 projectionField: FieldName
-
 immediateValue: Value
 
 relationName: FilterRelation
 filterName: Filter
-adapterName: Adapter
 
 filterRoot: Root
 filterRelations: Relations

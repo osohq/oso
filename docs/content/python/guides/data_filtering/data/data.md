@@ -16,8 +16,8 @@ relationTo: right
 relationName: name
 
 conditionLeft: left
-conditionOp: cmp
 conditionRight: right
+conditionOp: cmp
 
 projectionType: source
 projectionField: field
@@ -25,7 +25,6 @@ immediateValue: value
 
 relationName: Relation
 filterName: DataFilter
-adapterName: Adapter
 
 filterRoot: root
 filterConditions: conditions

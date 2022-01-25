@@ -21,10 +21,10 @@ conditionOp: cmp
 
 projectionType: typeName
 projectionField: fieldName
+immediateValue: value
 
 relationName: FilterRelation
 filterName: Filter
-immediateValue: value
 
 filterRoot: model
 filterRelations: relations

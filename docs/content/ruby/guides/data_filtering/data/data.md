@@ -16,15 +16,15 @@ relationTo: right
 relationName: name
 
 conditionLeft: left
-conditionOp: cmp
 conditionRight: right
+conditionOp: cmp
 
 projectionType: source
 projectionField: field
+immediateValue: value
 
 relationName: Relation
 filterName: Filter
-immediateValue: value
 
 filterRoot: root
 filterConditions: conditions
