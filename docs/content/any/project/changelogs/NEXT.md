@@ -1,11 +1,11 @@
 ---
-title: Release YYYY-MM-DD
-menuTitle: YYYY-MM-DD
+title: Release 2022-01-25
+menuTitle: 2022-01-25
 any: true
 description: >-
-  Changelog for Release YYYY-MM-DD (oso 0.26.0, VS Code extension 0.26.0)
-  containing new features, bug fixes, and more.
-draft: true
+  Changelog for Release 2022-01-25 (oso 0.26.0, VS Code extension 0.26.0,
+  django-oso 0.26.0, flask-oso 0.26.0, sqlalchemy-oso 0.26.0) containing new
+  features, bug fixes, and more.
 ---
 
 ## `oso` 0.26.0
@@ -15,7 +15,7 @@ draft: true
 #### Other bugs & improvements
 
 - Fixed a bug affecting runtime type checking on nested object attributes.
-  
+
 ### Go
 
 #### Breaking changes
@@ -43,6 +43,7 @@ const (
 ```
 
 Where previously it was possible to utilize this `Action` type as interchangeable with that of `string`:
+
 ```polar
 user_has_action(user: User, action: String, resource: Resource) if ...
 ```
@@ -60,22 +61,6 @@ user_has_action(user: User, action: Action, resource: Resource) if ...
 ##### `@polar_class` is deprecated in favor of `Oso#register_class`
 
 The `@polar_class` decorator used to register classes with Polar has been deprecated. To register a class with Polar it is now necessary to use the [`Oso#register_class`](https://docs.osohq.com/reference/api/index.html#oso.Oso.register_class) API.
-
-### `LANGUAGE`
-
-#### New features
-
-##### Feature 1
-
-Summary of user-facing changes.
-
-Link to [relevant documentation section]().
-
-#### Other bugs & improvements
-
-- Bulleted list
-- Of smaller improvements
-- Potentially with doc [links]().
 
 ## VS Code extension 0.26.0
 
