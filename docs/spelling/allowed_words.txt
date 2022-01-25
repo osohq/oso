@@ -243,4 +243,5 @@ unsafety
 unspecialized
 untaken
 vec
+vendoring
 webpack
