@@ -53,7 +53,7 @@ can configure your Oso instance to use it with the
 
 `{{% exampleGet "buildQuery" %}}` takes some type information and a `Filter` object and returns a `Query`.
 
-A `Filter` is a representation of a query. It is very similar to a SQL query.
+A `{{% exampleGet "filterName" %}}` is a representation of a query. It is very similar to a SQL query.
 It has four fields:
 
 - `{{% exampleGet "filterRoot" %}}` Is the name of the type we are filtering.

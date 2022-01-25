@@ -25,7 +25,6 @@ immediateValue: value
 
 immediateName: Immediate
 projectionName: Projection
-conditionName: Condition
 relationName: Relation
 filterName: DataFilter
 adapterName: Adapter

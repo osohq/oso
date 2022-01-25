@@ -23,7 +23,6 @@ projectionType: typeName
 projectionField: fieldName
 
 relationName: FilterRelation
-conditionName: FilterCondition
 filterName: Filter
 projectionName: Projection
 immediateName: Immediate
