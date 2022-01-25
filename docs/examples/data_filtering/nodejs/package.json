@@ -1,0 +1,16 @@
+{
+    "name": "osohq-oso-docs-examples-data-filtering",
+    "version": "0",
+    "dependencies": {
+        "jest": "^27.1.1",
+        "oso": "../../../../languages/js",
+        "sqlite3": "^5.0.2",
+        "ts-node": "^10.4.0",
+        "typeorm": "^0.2.37",
+        "typescript": "^4.5.5"
+    },
+    "scripts": {
+        "a": "ts-node ./data_filtering_example_a.ts",
+        "b": "ts-node ./data_filtering_example_b.ts"
+    }
+}
