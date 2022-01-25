@@ -2,7 +2,7 @@
 authorizedResources: AuthorizedResources
 authorizedQuery: AuthorizedQuery
 buildQuery: BuildQuery
-execQuery: ExecQuery
+executeQuery: ExecQuery
 setDataFilteringAdapter: SetDataFilteringAdapter
 map: map
 none: nil
