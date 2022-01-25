@@ -5,7 +5,6 @@ buildQuery: build_query
 executeQuery: execute_query
 setDataFilteringAdapter: set_data_filtering_adapter
 map: map
-none: nil
 
 exampleAPath: examples/data_filtering/ruby/data_filtering_example_a.rb
 policyAPath: examples/data_filtering/policy_a.polar

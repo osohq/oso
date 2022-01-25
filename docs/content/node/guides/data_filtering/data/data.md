@@ -5,7 +5,6 @@ buildQuery: buildQuery
 executeQuery: executeQuery
 setDataFilteringAdapter: setDataFilteringAdapter
 map: object
-none: undefined
 
 exampleAPath: examples/data_filtering/nodejs/data_filtering_example_a.ts
 policyAPath: examples/data_filtering/policy_a.polar

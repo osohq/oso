@@ -5,7 +5,6 @@ buildQuery: BuildQuery
 executeQuery: ExecuteQuery
 setDataFilteringAdapter: SetDataFilteringAdapter
 map: map
-none: nil
 
 exampleAPath: examples/data_filtering/go/data_filtering_example_a.go
 policyAPath: examples/data_filtering/policy_a.polar
