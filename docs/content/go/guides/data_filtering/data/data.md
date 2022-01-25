@@ -24,8 +24,6 @@ projectionField: FieldName
 
 immediateValue: Value
 
-immediateName: Immediate
-projectionName: Projection
 relationName: FilterRelation
 filterName: Filter
 adapterName: Adapter

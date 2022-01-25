@@ -24,8 +24,6 @@ projectionField: field
 
 relationName: Relation
 filterName: Filter
-projectionName: Projection
-immediateName: Immediate
 immediateValue: value
 
 filterRoot: root

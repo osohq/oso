@@ -23,8 +23,6 @@ projectionType: source
 projectionField: field
 immediateValue: value
 
-immediateName: Immediate
-projectionName: Projection
 relationName: Relation
 filterName: DataFilter
 adapterName: Adapter
