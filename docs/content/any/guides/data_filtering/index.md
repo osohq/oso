@@ -56,26 +56,26 @@ can configure your Oso instance to use it with the
 A `Filter` is a representation of a query. It is very similar to a SQL query.
 It has four fields:
 
-- {{% exampleGet "filterRoot" %}} Is the name of the type we are filtering.
+- `{{% exampleGet "filterRoot" %}}` Is the name of the type we are filtering.
 - {{% exampleGet "filterRelations" %}} Are named relations to other types, typically turned into joins.
-- {{% exampleGet "filterConditions" %}} Are the individual pieces of logic that must be true with respect to objects
+- `{{% exampleGet "filterConditions" %}}` Are the individual pieces of logic that must be true with respect to objects
   matching the filter. These typically get turned into where clauses.
-- {{% exampleGet "filterTypes" %}} Is a map from type names to user type information, including registered relations.
+- `{{% exampleGet "filterTypes" %}}` Is a map from type names to user type information, including registered relations.
   We use this to generate the join SQL.
 
 ##### Relations
 
-A relation has three properties: {{% exampleGet "relationFrom" %}}, {{% exampleGet "relationName" %}}, and {{% exampleGet "relationTo" %}}.
+A relation has three properties: `{{% exampleGet "relationFrom" %}}`, `{{% exampleGet "relationName" %}}`, and `{{% exampleGet "relationTo" %}}`.
 The adapter uses these properties to look up the tables and fields to join together for
 the query.
 
 ##### Conditions
 
 A condition has three properties {{% exampleGet "conditionLeft" %}}, {{% exampleGet "conditionOp" %}}, and {{% exampleGet "conditionRight" %}}.
-The left and right fields will be either `Immediate` objects with a {{% exampleGet "immediateValue" %}} field that can
+The left and right fields will be either `Immediate` objects with a `{{% exampleGet "immediateValue" %}}` field that can
 be inserted directly into a query, or `Projection` objects with string properties
-{{% exampleGet "projectionType" %}} and optionally {{% exampleGet "projectionField" %}}. A
-missing {{% exampleGet "projectionField" %}} property indicates the adapter should substitute
+`{{% exampleGet "projectionType" %}}` and optionally `{{% exampleGet "projectionField" %}}`. A
+missing `{{% exampleGet "projectionField" %}}` property indicates the adapter should substitute
 an appropriate unique identifier, usually a primary key.
 
 #### Execute a Query
