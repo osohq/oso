@@ -134,6 +134,8 @@ use the adapter to query for the related resources when you access them.
 
 ## Limitations
 
+Go data filtering is currently unsupported on Windows.
+
 Some Polar operators including `cut` and arithmetic operators aren't supported in
 data filtering queries.
 
