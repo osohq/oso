@@ -3,6 +3,7 @@ package oso_test
 import (
 	"fmt"
 	"reflect"
+	"runtime"
 	"testing"
 
 	oso "github.com/osohq/go-oso"
@@ -225,6 +226,11 @@ func (a TestAdapter) ExecuteQuery(query interface{}) ([]interface{}, error) {
 }
 
 func TestAuthorizedQuery(t *testing.T) {
+	// skip on windows
+	os := runtime.GOOS
+	if os == "windows" {
+		return
+	}
 	o := getOso(t)
 	var err error
 

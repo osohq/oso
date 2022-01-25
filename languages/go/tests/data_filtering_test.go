@@ -1,6 +1,10 @@
+//go:build !windows
+// +build !windows
+
 package oso_test
 
 import (
+	"fmt"
 	"os"
 	"reflect"
 	"strings"
@@ -482,7 +486,8 @@ func TestForall(t *testing.T) {
 			t.Error(err.Error())
 		}
 		if len(res) == 0 != (planet.Name == "mars" || planet.Name == "sun" || planet.Name == "jupiter") {
-			t.Errorf("Unexpected results")
+			msg := fmt.Sprintf("Unexpected results len=%v, planet.Name=%v", len(res), planet.Name)
+			t.Error(msg)
 		}
 	}
 }

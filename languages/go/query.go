@@ -161,8 +161,6 @@ func (q Query) handleMakeExternal(event types.QueryEventMakeExternal) error {
 }
 
 func (q Query) handleRelation(event types.QueryEventExternalCall, instance interface{}, attr string, rel Relation) error {
-	print("looking up relation ")
-	println(attr)
 	// otherwise look up the field
 	value := reflect.ValueOf(instance).FieldByName(rel.MyField)
 	if !value.IsValid() {
