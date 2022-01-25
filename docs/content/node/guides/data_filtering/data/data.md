@@ -32,7 +32,7 @@ immediateName: Immediate
 immediateValue: value
 
 filterRoot: model
-filterRelation: relations
+filterRelations: relations
 filterConditions: conditions
 filterTypes: types
 ---
