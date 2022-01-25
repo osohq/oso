@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 pub use super::bindings::Bindings;
+use super::constants::Constants;
 use super::counter::Counter;
 use super::diagnostic::Diagnostic;
 use super::error::{invalid_state, PolarError, PolarResult, RuntimeError, ValidationError};
@@ -26,9 +27,9 @@ impl RuleParamMatch {
 pub struct KnowledgeBase {
     /// A map of bindings: variable name → value. The VM uses a stack internally,
     /// but can translate to and from this type.
-    constants: Bindings,
+    constants: Constants,
     /// Map of class name -> MRO list where the MRO list is a list of class instance IDs
-    mro: HashMap<Symbol, Vec<u64>>,
+    pub mro: HashMap<Symbol, Vec<u64>>,
 
     /// Map from contents to filename for files loaded into the KB.
     loaded_content: HashMap<String, String>,
@@ -574,7 +575,26 @@ impl KnowledgeBase {
             }
             .into());
         }
-        self.constants.insert(name, value);
+
+        if let Value::ExternalInstance(ExternalInstance {
+            class_id,
+            instance_id,
+            ..
+        }) = *value.value()
+        {
+            if class_id.map_or(false, |id| id == instance_id) {
+                // ExternalInstance values with matching class_id & instance_id represent *classes*
+                // whose class_id we want to index for later type checking & MRO resolution
+                self.constants.insert_class(name, value, instance_id)
+            } else {
+                // ExternalInstance values with differing `class_id` and
+                // `instance_id` represent *instances* of classes whose class_id
+                // should not be registered
+                self.constants.insert(name, value)
+            }
+        } else {
+            self.constants.insert(name, value)
+        }
         Ok(())
     }
 
@@ -585,7 +605,15 @@ impl KnowledgeBase {
 
     /// Getter for `constants` map without exposing it for mutation.
     pub fn get_registered_constants(&self) -> &Bindings {
-        &self.constants
+        &self.constants.symbol_to_term
+    }
+
+    pub(crate) fn get_symbol_for_class_id(&self, id: &u64) -> Option<&Symbol> {
+        self.constants.get_symbol_for_class_id(id)
+    }
+
+    pub(crate) fn get_class_id_for_symbol(&self, symbol: &Symbol) -> Option<&u64> {
+        self.constants.get_class_id_for_symbol(symbol)
     }
 
     // TODO(gj): currently no way to distinguish classes from other registered constants in the
@@ -879,6 +907,7 @@ mod tests {
                     constructor: None,
                     repr: None,
                     class_repr: None,
+                    class_id: None,
                 })),
             )
             .unwrap();
@@ -1321,6 +1350,7 @@ mod tests {
                 constructor: None,
                 repr: None,
                 class_repr: None,
+                class_id: None,
             })),
         )
         .unwrap();
@@ -1331,6 +1361,7 @@ mod tests {
                 constructor: None,
                 repr: None,
                 class_repr: None,
+                class_id: None,
             })),
         )
         .unwrap();
@@ -1341,6 +1372,7 @@ mod tests {
                 constructor: None,
                 repr: None,
                 class_repr: None,
+                class_id: None,
             })),
         )
         .unwrap();
@@ -1401,6 +1433,7 @@ mod tests {
                 constructor: None,
                 repr: None,
                 class_repr: None,
+                class_id: None,
             })),
         )
         .unwrap();
@@ -1411,6 +1444,7 @@ mod tests {
                 constructor: None,
                 repr: None,
                 class_repr: None,
+                class_id: None,
             })),
         )
         .unwrap();
@@ -1421,6 +1455,7 @@ mod tests {
                 constructor: None,
                 repr: None,
                 class_repr: None,
+                class_id: None,
             })),
         )
         .unwrap();
@@ -1432,6 +1467,7 @@ mod tests {
                 constructor: None,
                 repr: None,
                 class_repr: None,
+                class_id: None,
             })),
         )
         .unwrap();

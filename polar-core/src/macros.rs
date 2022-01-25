@@ -241,6 +241,7 @@ impl From<u64> for ExternalInstance {
             constructor: None,
             repr: None,
             class_repr: None,
+            class_id: None,
         }
     }
 }

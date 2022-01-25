@@ -820,6 +820,7 @@ mod tests {
             constructor: None,
             repr: None,
             class_repr: None,
+            class_id: None,
         };
         let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
         let repo_name = sym!("Repo");
@@ -976,6 +977,7 @@ mod tests {
             constructor: None,
             repr: None,
             class_repr: None,
+            class_id: None,
         };
         let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
         let repo_name = sym!("Repo");
@@ -1062,6 +1064,7 @@ mod tests {
             constructor: None,
             repr: None,
             class_repr: None,
+            class_id: None,
         };
         let user_term = term!(Value::ExternalInstance(user_instance.clone()));
         let user_name = sym!("User");
@@ -1534,6 +1537,7 @@ mod tests {
                 constructor: None,
                 repr: None,
                 class_repr: None,
+                class_id: None,
             })),
         )
         .unwrap();
@@ -1544,6 +1548,7 @@ mod tests {
                 constructor: None,
                 repr: None,
                 class_repr: None,
+                class_id: None,
             })),
         )
         .unwrap();
@@ -1554,6 +1559,7 @@ mod tests {
                 constructor: None,
                 repr: None,
                 class_repr: None,
+                class_id: None,
             })),
         )
         .unwrap();
@@ -1570,6 +1576,7 @@ mod tests {
                 constructor: None,
                 repr: None,
                 class_repr: None,
+                class_id: None,
             })),
         )
         .unwrap();
@@ -1704,6 +1711,7 @@ mod tests {
             constructor: None,
             repr: None,
             class_repr: None,
+            class_id: None,
         };
         let repo_term = term!(Value::ExternalInstance(repo_instance.clone()));
         let repo_name = sym!("Repository");
@@ -1715,6 +1723,7 @@ mod tests {
             constructor: None,
             repr: None,
             class_repr: None,
+            class_id: None,
         };
         let org_term = term!(Value::ExternalInstance(org_instance.clone()));
         let org_name = sym!("Organization");
@@ -1759,6 +1768,7 @@ mod tests {
             constructor: None,
             repr: None,
             class_repr: None,
+            class_id: None,
         };
         let team_term = term!(Value::ExternalInstance(team_instance.clone()));
         let team_name = sym!("Team");

@@ -180,6 +180,7 @@ interface PolarInstance {
     instance_id: number;
     repr: string;
     class_repr?: string;
+    class_id?: number;
     constructor?: PolarTerm;
   };
 }
@@ -691,6 +692,7 @@ export interface ClassParams {
    * `name` property.
    */
   name?: string;
+
   /**
    * A Map or object with string keys containing types for fields. Used for
    * data filtering.

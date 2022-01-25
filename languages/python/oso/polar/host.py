@@ -294,23 +294,30 @@ class Host:
         #       ]
         #   }
         else:
-            instance_id = None
             import inspect
+
+            instance_id = None
+            class_id = None
 
             # maintain consistent IDs for registered classes
             if inspect.isclass(v):
                 if v in self.types:
-                    instance_id = self.types[v].id
+                    class_id = instance_id = self.types[v].id
 
             # pass the class_repr only for registered types otherwise None
-            class_repr = type(v).__name__
-            class_repr = class_repr if class_repr in self.types else None
+            class_repr = self.types[type(v)].name if type(v) in self.types else None
+
+            # pass class_id for classes & instances of registered classes,
+            # otherwise pass None
+            if type(v) in self.types:
+                class_id = self.types[type(v)].id
 
             val = {
                 "ExternalInstance": {
                     "instance_id": self.cache_instance(v, instance_id),
                     "repr": None,
                     "class_repr": class_repr,
+                    "class_id": class_id,
                 }
             }
         term = {"value": val}

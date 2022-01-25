@@ -171,7 +171,6 @@ export class Polar<Query, Resource> {
 
   // Register MROs, load Polar code, and check inline queries.
   private async loadSources(sources: Source[]): Promise<void> {
-    this.getHost().registerMros();
     this.#ffiPolar.load(sources);
     this.processMessages();
     return this.checkInlineQueries();
@@ -244,6 +243,7 @@ export class Polar<Query, Resource> {
   registerClass(cls: Class, params?: ClassParams): void {
     const clsName = this.getHost().cacheClass(cls, params);
     this.registerConstant(cls, clsName);
+    this.getHost().registerMros();
   }
 
   /**

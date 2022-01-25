@@ -515,17 +515,21 @@ jobs:
         with:
           name: go
       - name: "test"
+        env:
+          POLAR_IGNORE_NO_ALLOW_WARNING: 1
         run: |
           go build
-          go test -v ./tests/ ./internal/host
+          go test -v ./internal/host
+          cd tests && go test -v
+
         working-directory: go
       - name: "test musl"
         if: runner.os == 'Linux'
-        run: docker run --rm -v `pwd`:/oso tetafro/golang-gcc:${{ matrix.go-version }}-alpine /bin/sh -c 'cd /oso && go test -v ./tests/ ./internal/host'
+        run: docker run --rm --env POLAR_IGNORE_NO_ALLOW_WARNING=1 -v `pwd`:/oso tetafro/golang-gcc:${{ matrix.go-version }}-alpine /bin/sh -c 'cd /oso && go test -v ./internal/host && cd tests && go test -v'
         working-directory: go
       - name: "test buster"
         if: runner.os == 'Linux'
-        run: docker run --rm -v `pwd`:/oso golang:${{ matrix.go-version }}-buster /bin/sh -c 'cd /oso && go test -v ./tests/ ./internal/host'
+        run: docker run --rm --env POLAR_IGNORE_NO_ALLOW_WARNING=1 -v `pwd`:/oso golang:${{ matrix.go-version }}-buster /bin/sh -c 'cd /oso && go test -v ./internal/host && cd tests && go test -v'
         working-directory: go
 
   validate_go_macos_arm:
@@ -548,9 +552,11 @@ jobs:
       - name: "test"
         run: |
           ~/go/bin/go${{ matrix.go-version }} build
-          ~/go/bin/go${{ matrix.go-version }} test -v ./tests/ ./internal/host
+          ~/go/bin/go${{ matrix.go-version }} test -v ./internal/host
+          cd tests && ~/go/bin/go${{ matrix.go-version }} test -v
         working-directory: go
         env:
+          POLAR_IGNORE_NO_ALLOW_WARNING: 1
           CGO_ENABLED: 1
           GOOS: darwin
           GOARCH: arm64

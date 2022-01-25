@@ -1103,11 +1103,39 @@ impl PolarVirtualMachine {
                         right_literal.fields.clone(),
                     ))),
                 })?;
-                // Check class
-                self.push_goal(Goal::IsaExternal {
-                    instance: left.clone(),
-                    literal: right_literal.clone(),
-                })?;
+
+                // attempt an in-core IsA check if we have the necessary
+                // class_id information
+                if let Value::ExternalInstance(ExternalInstance {
+                    class_id: Some(class_id),
+                    ..
+                }) = *left.value()
+                {
+                    let isa = {
+                        let kb = self.kb.read().unwrap();
+                        let right_id = kb
+                            .get_class_id_for_symbol(&right_literal.tag)
+                            .expect("no class ID for symbol");
+                        let left_symbol = kb
+                            .get_symbol_for_class_id(&class_id)
+                            .expect("no symbol for class ID");
+                        if let Some(mro) = kb.mro.get(left_symbol) {
+                            mro.contains(right_id)
+                        } else {
+                            false
+                        }
+                    };
+                    if !isa {
+                        self.push_goal(Goal::Backtrack)?;
+                    }
+                // default to IsaExternal when no `class_id` information is available
+                } else {
+                    // Check class
+                    self.push_goal(Goal::IsaExternal {
+                        instance: left.clone(),
+                        literal: right_literal.clone(),
+                    })?;
+                }
             }
 
             // Default case: x isa y if x = y.
@@ -1702,6 +1730,7 @@ impl PolarVirtualMachine {
                         constructor: Some(constructor.clone()),
                         repr: Some(constructor.to_string()),
                         class_repr,
+                        class_id: None,
                     }));
 
                 // A goal is used here in case the result is already bound to some external
@@ -3656,6 +3685,7 @@ mod tests {
             constructor: None,
             repr: None,
             class_repr: None,
+            class_id: None,
         });
         let query = query!(call!("bar", [sym!("x")]));
         let mut vm = PolarVirtualMachine::new_test(kb.clone(), false, vec![query]);
@@ -3730,6 +3760,7 @@ mod tests {
             constructor: None,
             repr: None,
             class_repr: None,
+            class_id: None,
         });
 
         let mut vm = PolarVirtualMachine::new_test(
@@ -3797,6 +3828,7 @@ mod tests {
             constructor: None,
             repr: None,
             class_repr: None,
+            class_id: None,
         }));
         let left = term!(value!(Pattern::Instance(InstanceLiteral {
             tag: sym!("Any"),
