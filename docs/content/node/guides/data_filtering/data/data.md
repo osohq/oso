@@ -3,7 +3,6 @@ authorizedResources: authorizedResources
 authorizedQuery: authorizedQuery
 buildQuery: buildQuery
 executeQuery: executeQuery
-combineQuery: combineQuery
 setDataFilteringAdapter: setDataFilteringAdapter
 map: object
 none: undefined

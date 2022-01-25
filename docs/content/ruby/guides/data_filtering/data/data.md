@@ -3,7 +3,6 @@ authorizedResources: authorized_resources
 authorizedQuery: authorized_query
 buildQuery: build_query
 executeQuery: exec_query
-combineQuery: combine_query
 setDataFilteringAdapter: set_data_filtering_adapter
 map: map
 none: nil
