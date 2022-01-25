@@ -25,6 +25,7 @@ ForbiddenException
 FriendsOnlyFields
 GC
 GDB
+GORM
 GSuite
 GitClub
 GitLab
@@ -78,6 +79,7 @@ SLA
 SQL
 SQLAlchemy
 SQLAlchemy's
+SQLBoiler
 SQLite
 STDIN
 SaaS
