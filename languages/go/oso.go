@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 
 	osoErrors "github.com/osohq/go-oso/errors"
 	"github.com/osohq/go-oso/internal/host"
@@ -417,6 +418,11 @@ func (o Oso) SetDataFilteringAdapter(adapter types.Adapter) {
 }
 
 func (o Oso) dataFilter(actor interface{}, action interface{}, resource_type string) (*Query, interface{}, error) {
+	os := runtime.GOOS
+	if os == "windows" {
+		return nil, nil, fmt.Errorf("Data filtering is not yet supported on Windows")
+	}
+
 	query, err := (*o.p).queryRule("allow", actor, action, types.Variable("resource"))
 	if err != nil {
 		return nil, nil, err
