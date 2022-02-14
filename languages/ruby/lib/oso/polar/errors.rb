@@ -96,6 +96,7 @@ module Oso
 
     class ValidationError < Error; end
 
+    # @!visibility private
     UNEXPECTED_EXPRESSION_MESSAGE = <<~MSG
       Received Expression from Polar VM. The Expression type is not yet supported in this language.
 
