@@ -180,17 +180,20 @@ def translate_isa(expression: Expression, session: Session, model, get_model):
     assert expression.operator == "Isa"
     left, right = expression.args
     left_path = dot_path(left)
-
-    assert left_path[0] == Variable("_this")
-    left_path = left_path[1:]  # Drop _this.
     if left_path:
+        assert left_path[0] == Variable("_this")
+        left_path = left_path[1:]  # Drop _this.
         for field_name in left_path:
             _, model, __ = get_relationship(model, field_name)
 
     assert not right.fields, "Unexpected fields in isa expression"
     constraint_type = get_model(right.tag)
     model_type = inspect(model, raiseerr=True).class_
-    return sql.true() if issubclass(model_type, constraint_type) else sql.false()
+    return (
+        sql.true()
+        if issubclass(model_type, constraint_type) or isinstance(left, constraint_type)
+        else sql.false()
+    )
 
 
 def translate_compare(expression: Expression, session: Session, model, get_model):
