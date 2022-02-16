@@ -110,6 +110,8 @@ def flip_op(operator):
 
 
 def and_filter(current, new):
+    if isinstance(current, bool):
+        current = sql.true() if current else sql.false()
     if isinstance(current, True_):
         return new
     else:
