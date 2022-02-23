@@ -230,8 +230,7 @@ change that and see how Oso can leverage parent-child relationships like the
 one between `Repository` and `Organization` to grant a role on a child resource
 to a role on the parent.
 
-<!-- TODO(gj): better heading -->
-## Grant a role on a child resource to a role on the parent
+## Inherit a role on a child resource from the parent
 
 If you've used ~~GitHub~~ *GitClub* before, you know that having a role on an
 organization grants certain roles and permissions on that organization's
