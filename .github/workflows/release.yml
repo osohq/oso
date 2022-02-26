@@ -36,9 +36,66 @@ jobs:
           event-type: oso_release
           client-payload: '{"commit": "${{ github.sha }}"}'
 
-  linux_libs:
-    name: Build release libraries on Linux
-    runs-on: ubuntu-latest
+  build_libs:
+    name: Build release libraries
+    strategy:
+      matrix:
+        build:
+          - name: Linux (x86)
+            host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            shared:
+              src: libpolar.so
+              dest: libpolar.so
+            static:
+              src: libpolar.a
+              dest: libpolar-Linux.a
+
+          - name: Linux (x86 musl)
+            host: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            flags: -C target-feature=-crt-static
+            static:
+              src: libpolar.a
+              dest: libpolar-musl.a
+
+          - name: MacOS (ARM)
+            host: macos-latest
+            target: aarch64-apple-darwin
+            shared:
+              src: libpolar.dylib
+              dest: libpolar-arm.dylib
+            static:
+              src: libpolar.a
+              dest: libpolar-macOS-arm.a
+
+          - name: MacOS (x86)
+            host: macos-latest
+            target: x86_64-apple-darwin
+            shared:
+              src: libpolar.dylib
+              dest: libpolar.dylib
+            static:
+              src: libpolar.a
+              dest: libpolar-macOS.a
+
+          - name: Windows (GNU)
+            host: windows-latest
+            target: x86_64-pc-windows-gnu
+            static:
+              src: libpolar.a
+              dest: libpolar-Windows.a
+
+          - name: Windows (MSVC)
+            host: windows-latest
+            target: x86_64-pc-windows-msvc
+            shared:
+              src: polar.dll
+              dest: polar.dll
+            static:
+              src: polar.lib
+              dest: polar.lib
+    runs-on: ${{ matrix.build.host }}
     needs: [version]
     steps:
       - uses: actions/checkout@v2
@@ -55,133 +112,45 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+          target: ${{ matrix.build.target }}
       - name: Build release libraries
-        run: cargo build --release -p polar-c-api
-      - name: Build release musl library
-        run: |
-          rustup target add x86_64-unknown-linux-musl
-          RUSTFLAGS="-C target-feature=-crt-static" cargo build --target x86_64-unknown-linux-musl --release -p polar-c-api
-      - name: Rename static lib
-        run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
-      - name: Rename static lib
-        run: mv target/x86_64-unknown-linux-musl/release/libpolar.a target/x86_64-unknown-linux-musl/release/libpolar-musl.a
-      - uses: actions/upload-artifact@v2
-        with:
-          name: oso_library
-          path: target/release/libpolar.so
+        run: cargo build --release --target ${{ matrix.build.target }} -p polar-c-api
+        env:
+          RUSTFLAGS: ${{ matrix.build.flags }}
+      - name: Rename shared lib
+        if: matrix.build.shared.src != matrix.build.shared.dest
+        working-directory: target/${{ matrix.build.target }}/release
+        run: mv ${{ matrix.build.shared.src }} ${{ matrix.build.shared.dest }}
+        shell: bash
       - uses: actions/upload-artifact@v2
         with:
           name: oso_library
           path: polar-c-api/polar.h
       - uses: actions/upload-artifact@v2
+        if: matrix.build.shared
         with:
-          name: oso_static_library
-          path: target/release/libpolar-${{runner.os}}.a
+          name: oso_library
+          path: target/${{ matrix.build.target }}/release/${{ matrix.build.shared.dest }}
+      - name: Rename static lib
+        if: matrix.build.static.src != matrix.build.static.dest
+        working-directory: target/${{ matrix.build.target }}/release
+        run: mv ${{ matrix.build.static.src }} ${{ matrix.build.static.dest }}
+        shell: bash
       - uses: actions/upload-artifact@v2
-        with:
-          name: oso_static_library
-          path: target/x86_64-unknown-linux-musl/release/libpolar-musl.a
-      - uses: actions/upload-artifact@v2
+        if: matrix.build.static
         with:
           name: oso_static_library
           path: polar-c-api/polar.h
-
-  macos_libs:
-    name: Build release libraries on MacOS
-    runs-on: macos-11
-    needs: [version]
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install Rust stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - name: Build release library
-        run: cargo build --release -p polar-c-api
-      - name: Build release arm library
-        run: |
-          rustup target add aarch64-apple-darwin
-          SDKROOT=$(xcrun -sdk macosx11.0 --show-sdk-path) \
-            MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx11.0 --show-sdk-platform-version) \
-            cargo build --target aarch64-apple-darwin --release -p polar-c-api
-      - name: Rename static lib
-        run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
-      - name: Rename static lib
-        run: mv target/aarch64-apple-darwin/release/libpolar.a target/aarch64-apple-darwin/release/libpolar-macOS-arm.a
-      - name: Rename dynamic lib
-        run: mv target/aarch64-apple-darwin/release/libpolar.dylib target/aarch64-apple-darwin/release/libpolar-arm.dylib
       - uses: actions/upload-artifact@v2
-        with:
-          name: oso_library
-          path: target/release/libpolar.dylib
-      - uses: actions/upload-artifact@v2
-        with:
-          name: oso_library
-          path: target/aarch64-apple-darwin/release/libpolar-arm.dylib
-      - uses: actions/upload-artifact@v2
+        if: matrix.build.static
         with:
           name: oso_static_library
-          path: target/release/libpolar-${{runner.os}}.a
-      - uses: actions/upload-artifact@v2
-        with:
-          name: oso_static_library
-          path: target/aarch64-apple-darwin/release/libpolar-macOS-arm.a
-      - uses: actions/upload-artifact@v2
-        with:
-          name: oso_static_library
-          path: polar-c-api/polar.h
-
-  windows_libs:
-    name: Build release libraries on Windows
-    runs-on: windows-latest
-    needs: [version]
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install Rust stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - name: Build release library
-        run: cargo build --release -p polar-c-api
-      - name: Build release MinGW library
-        run: |
-          rustup target add x86_64-pc-windows-gnu
-          cargo build --target x86_64-pc-windows-gnu --release -p polar-c-api
-      - name: Rename static lib
-        run: |
-          mv -Force target/x86_64-pc-windows-gnu/release/libpolar.a target/x86_64-pc-windows-gnu/release/libpolar-${{runner.os}}.a
-      - uses: actions/upload-artifact@v2
-        with:
-          name: oso_library
-          path: target/release/polar.dll
-      - uses: actions/upload-artifact@v2
-        with:
-          name: oso_static_library
-          path: target/release/polar.lib
-      - uses: actions/upload-artifact@v2
-        with:
-          name: oso_static_library
-          path: target/x86_64-pc-windows-gnu/release/libpolar-${{runner.os}}.a
-      - uses: actions/upload-artifact@v2
-        with:
-          name: oso_static_library
-          path: polar-c-api/polar.h
+          path: target/${{ matrix.build.target }}/release/${{ matrix.build.static.dest }}
 
   build_go:
     name: Build go.
     runs-on: ubuntu-latest
-    needs: [linux_libs, macos_libs, windows_libs]
+    needs: [build_libs]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -218,7 +187,7 @@ jobs:
   build_jar:
     name: Build jar.
     runs-on: ubuntu-latest
-    needs: [linux_libs, macos_libs, windows_libs]
+    needs: [build_libs]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -255,7 +224,7 @@ jobs:
   build_gem:
     name: Build Gem.
     runs-on: ubuntu-latest
-    needs: [linux_libs, macos_libs, windows_libs]
+    needs: [build_libs]
     steps:
       - uses: actions/checkout@v2
       - name: Install Ruby + gems
@@ -294,7 +263,7 @@ jobs:
   build_linux_wheels:
     name: Build wheels on Linux
     runs-on: ubuntu-latest
-    needs: [version, linux_libs]
+    needs: [version, build_libs]
     env:
       # Skip Python 2.7 and Python 3.5
       CIBW_SKIP: "cp27-* cp35-* pp27-*"
@@ -339,7 +308,7 @@ jobs:
     # May have to drop once github actions switches to macos-11 by default
     # because 3.6 isn't supported on 11.
     runs-on: macos-10.15
-    needs: [version, macos_libs]
+    needs: [version, build_libs]
     env:
       # Skip Python 2.7 and Python 3.5
       CIBW_SKIP: "cp27-* cp35-* pp27-*"
@@ -381,7 +350,7 @@ jobs:
   build_macos_arm_wheels:
     name: Build macOS arm wheels
     runs-on: [self-hosted, m1]
-    needs: [version, macos_libs]
+    needs: [version, build_libs]
     env:
       OSO_ENV: CI
     steps:
@@ -413,7 +382,7 @@ jobs:
   build_windows_wheels:
     name: Build wheels on Windows
     runs-on: windows-latest
-    needs: [version, windows_libs]
+    needs: [version, build_libs]
     env:
       # Skip Python 2.7 and Python 3.5
       CIBW_SKIP: "cp27-* cp35-* pp27-*"
