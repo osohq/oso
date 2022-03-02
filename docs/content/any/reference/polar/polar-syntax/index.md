@@ -10,9 +10,21 @@ description: |
 
 # Polar Syntax
 
-Polar is a declarative logic programming language, specialized for making
-authorization decisions and tightly integrating with your application’s native
-language.
+Polar is a declarative logic programming language used to define and query 
+graphs. With Polar, your graph is specialized for making authorization 
+decisions and tightly integrating with your application’s native language.
+
+You can start by using Polar to **describe the "nouns"** in your graph - 
+your vertex structures. A vertex can be an `actor` or a `resource`.
+
+For each vertex, we **define the relationships** between vertices with `roles`
+and `relations` attributes.
+
+Finally, you will use Polar to **perform graph traversal** (like you would in
+Gremlin or Cypher). 
+We traverse the graph with the `has_role` and `has_relation` functions.
+
+### This Guide
 
 This guide is a brief description of the core syntax elements of Polar.
 
