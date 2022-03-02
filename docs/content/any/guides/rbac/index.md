@@ -9,6 +9,7 @@ aliases:
   - /guides/roles/index.html
   - /guides/roles/sqlalchemy/index.html
   - /getting-started/rbac.html
+  - /guides/new-roles.html
 ---
 
 # Build Role-Based Access Control (RBAC) in {{% lang %}} with Oso
