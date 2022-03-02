@@ -1388,12 +1388,12 @@ impl PolarVirtualMachine {
                 msg.push('(');
                 let args = args
                     .clone()
-                    .unwrap_or_else(Vec::new)
+                    .unwrap_or_default()
                     .into_iter()
                     .map(|a| a.to_string());
                 let kwargs = kwargs
                     .clone()
-                    .unwrap_or_else(BTreeMap::new)
+                    .unwrap_or_default()
                     .into_iter()
                     .map(|(k, v)| format!("{}: {}", k, v));
                 msg.push_str(&args.chain(kwargs).collect::<Vec<_>>().join(", "));
@@ -2292,7 +2292,7 @@ impl PolarVirtualMachine {
             (Value::Call(left), Value::Call(right)) => {
                 if left.kwargs.is_some() || right.kwargs.is_some() {
                     // Handled in the parser.
-                    return invalid_state("unify: unexpected kwargs".to_string());
+                    return invalid_state("unify: unexpected kwargs");
                 }
                 if left.name == right.name && left.args.len() == right.args.len() {
                     self.append_goals(left.args.iter().zip(right.args.iter()).map(
@@ -2562,11 +2562,11 @@ impl PolarVirtualMachine {
         if rules.is_empty() {
             return self.push_goal(Goal::Backtrack);
         } else if outer > rules.len() {
-            return invalid_state("bad outer index".to_string());
+            return invalid_state("bad outer index");
         } else if inner > rules.len() {
-            return invalid_state("bad inner index".to_string());
+            return invalid_state("bad inner index");
         } else if inner > outer {
-            return invalid_state("bad insertion sort state".to_string());
+            return invalid_state("bad insertion sort state");
         }
 
         let next_outer = Goal::SortRules {
@@ -2599,7 +2599,7 @@ impl PolarVirtualMachine {
                 self.choose_conditional(vec![compare], vec![next_inner], vec![next_outer])?;
             } else {
                 if inner != 0 {
-                    return invalid_state("inner == 0".to_string());
+                    return invalid_state("inner == 0");
                 }
                 self.push_goal(next_outer)?;
             }
