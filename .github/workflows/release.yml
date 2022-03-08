@@ -44,6 +44,7 @@ jobs:
           - name: Linux (ARM musl)
             host: ubuntu-latest
             target: aarch64-unknown-linux-musl
+            flags: -C target-feature=-crt-static -C linker=/tmp/aarch64-linux-musl-cross/bin/aarch64-linux-musl-gcc
             static:
               src: libpolar.a
               dest: libpolar-Linux-arm.a
@@ -120,6 +121,12 @@ jobs:
           toolchain: stable
           override: true
           target: ${{ matrix.build.target }}
+      # Awkwardly, rustup alone can't get us a cross-compiled Linux build
+      - name: Install C cross-compilation toolchain
+        if: matrix.build.target == 'aarch64-unknown-linux-musl'
+        run: |
+          curl -Lo /tmp/aarch64-linux-musl-cross.tgz https://musl.cc/aarch64-linux-musl-cross.tgz
+          cd /tmp && tar xzf /tmp/aarch64-linux-musl-cross.tgz
       - name: Build release libraries
         run: cargo build --release --target ${{ matrix.build.target }} -p polar-c-api
         env:
@@ -177,6 +184,8 @@ jobs:
           cp -r oso_static_library/polar.h languages/go/internal/ffi/native/polar.h
           mkdir -p languages/go/internal/ffi/native/linux/amd64
           cp -r oso_static_library/libpolar-musl.a languages/go/internal/ffi/native/linux/amd64/libpolar.a
+          mkdir -p languages/go/internal/ffi/native/linux/arm64
+          cp -r oso_static_library/libpolar-Linux-arm.a languages/go/internal/ffi/native/linux/arm64/libpolar.a
           mkdir -p languages/go/internal/ffi/native/macos/amd64
           cp -r oso_static_library/libpolar-macOS.a languages/go/internal/ffi/native/macos/amd64/libpolar.a
           mkdir -p languages/go/internal/ffi/native/macos/arm64
@@ -507,6 +516,35 @@ jobs:
         if: runner.os == 'Linux'
         run: docker run --rm --env POLAR_IGNORE_NO_ALLOW_WARNING=1 -v `pwd`:/oso golang:${{ matrix.go-version }}-buster /bin/sh -c 'cd /oso && go test -v ./internal/host && cd tests && go test -v'
         working-directory: go
+
+  validate_go_linux_arm:
+    name: Test go ${{ matrix.go-version }} on m1
+    needs: [build_go]
+    runs-on: [self-hosted, Linux, ARM64]
+    strategy:
+      matrix:
+        # go 1.16 is the earliest version supported on m1 (which is the easiest way to run ARM)
+        go-version: ["1.16", "1.17"]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set version env
+        id: version
+        run: echo "::set-output name=oso_version::$(cat VERSION)"
+      - name: Download go package from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: go
+      - name: "test"
+        run: |
+          ~/go/bin/go${{ matrix.go-version }} build
+          ~/go/bin/go${{ matrix.go-version }} test -v ./internal/host
+          cd tests && ~/go/bin/go${{ matrix.go-version }} test -v
+        working-directory: go
+        env:
+          POLAR_IGNORE_NO_ALLOW_WARNING: 1
+          CGO_ENABLED: 1
+          GOOS: linux
+          GOARCH: arm64
 
   validate_go_macos_arm:
     name: Test go ${{ matrix.go-version }} on m1
