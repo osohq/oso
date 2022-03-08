@@ -10,7 +10,9 @@ UNAME_M := $(shell uname -m)
 copy_lib:
 	cp ../../polar-c-api/polar.h internal/ffi/native/
 ifeq ($(UNAME_S),Linux)
-	cp ../../target/debug/libpolar.a internal/ffi/native/linux/
+ifeq ($(UNAME_M),x86_64)
+	cp ../../target/debug/libpolar.a internal/ffi/native/linux/amd64/
+endif
 endif
 ifeq ($(UNAME_S),Darwin)
 ifeq ($(UNAME_M),x86_64)

@@ -175,8 +175,8 @@ jobs:
         run: |
           mkdir -p languages/go/internal/ffi/native
           cp -r oso_static_library/polar.h languages/go/internal/ffi/native/polar.h
-          mkdir -p languages/go/internal/ffi/native/linux
-          cp -r oso_static_library/libpolar-musl.a languages/go/internal/ffi/native/linux/libpolar.a
+          mkdir -p languages/go/internal/ffi/native/linux/amd64
+          cp -r oso_static_library/libpolar-musl.a languages/go/internal/ffi/native/linux/amd64/libpolar.a
           mkdir -p languages/go/internal/ffi/native/macos/amd64
           cp -r oso_static_library/libpolar-macOS.a languages/go/internal/ffi/native/macos/amd64/libpolar.a
           mkdir -p languages/go/internal/ffi/native/macos/arm64
