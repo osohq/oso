@@ -20,6 +20,12 @@ fn types() -> anyhow::Result<()> {
     };
     assert!(oso.is_allowed(user1, "foo", "bar")?);
 
+    Ok(())
+}
+
+fn types2() -> anyhow::Result<()> {
+    let mut oso = Oso::new();
+
     #[derive(Clone, PolarClass)]
     struct User2 {
         #[polar(attribute)]
@@ -44,8 +50,8 @@ fn types() -> anyhow::Result<()> {
             .add_method("is_called_alice", User2::is_called_alice)
             .build(),
     )?;
-    // oso.load_str(r#"allow(user: User2, _, _) if user.is_admin;"#)?;
-    // oso.load_str(r#"?= allow(new User2("bob", true), "foo", "bar");"#)?;
+    oso.load_str(r#"allow(user: User2, _, _) if user.is_admin;"#)?;
+    oso.load_str(r#"?= allow(new User2("bob", true), "foo", "bar");"#)?;
     // oso.load_str(r#"?= new User2("alice", true).is_called_alice();"#)?;
 
     // #[derive(Clone, PolarClass)]
@@ -184,6 +190,7 @@ fn main() -> anyhow::Result<()> {
     enums()?;
     iters()?;
     types()?;
+    types2()?;
     println!("Examples passed");
 
     Ok(())
