@@ -21,7 +21,7 @@ import (
 
 type GormAdapter struct {
 	db   *gorm.DB
-	host *host.Host
+	oso *oso.Oso
 }
 
 func (a GormAdapter) sqlize(fc osoTypes.FilterCondition) (string, []interface{}) {
@@ -89,7 +89,7 @@ func (a GormAdapter) BuildQuery(f *osoTypes.Filter) (interface{}, error) {
 	for _, rel := range f.Relations {
 		myTable := a.tableName(rel.FromTypeName)
 		otherTable := a.tableName(rel.ToTypeName)
-		myField, otherField, err := a.host.GetRelationFields(rel)
+		myField, otherField, err := a.oso.GetHost().GetRelationFields(rel)
 		if err != nil {
 			return nil, err
 		}
