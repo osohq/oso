@@ -20,7 +20,7 @@ import (
 
 type GormAdapter struct {
 	db   *gorm.DB
-	oso *oso.Oso
+	oso  *oso.Oso
 }
 
 func (a GormAdapter) sqlize(fc osoTypes.FilterCondition) (string, []interface{}) {
@@ -225,7 +225,7 @@ func gormDb(dbFile string) *gorm.DB {
 
 func testOso() oso.Oso {
 	o, _ := oso.NewOso()
-	o.SetDataFilteringAdapter(GormAdapter{gormDb("test.sqlite"), o})
+	o.SetDataFilteringAdapter(GormAdapter{gormDb("test.sqlite"), &o})
 	o.RegisterClassWithNameAndFields(reflect.TypeOf(Person{}), nil, "Person", map[string]interface{}{
 		"Name":   "String",
 		"ID":     "Integer",
