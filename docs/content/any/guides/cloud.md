@@ -1,5 +1,5 @@
 ---
-title: Get Authorization Across Services
+title: Authorize Across Services
 weight: 10
 description: |
   If you want to start diving into how to handle authorization in two or
@@ -8,13 +8,19 @@ description: |
   action, resource).
 ---
 
-# Get Authorization Across Services
+# Authorize Across Services
 
-This guide is coming soon!
+{{% callout "Head over to Authorization Academy" "primary" %}}
+  [Authorization Academy Chapter
+  VI](https://www.osohq.com/academy/microservices-authorization) discusses
+  how to build an authorization system that works across multiple services.
+{{% /callout %}}
 
-In the meantime,
-[here’s](https://www.osohq.com/post/microservices-authorization-patterns)
-a blog post on patterns for authorization in microservices. And if
-you're interested in learning how we think about solving
-authorization across services [here's](https://www.osohq.com/oso-cloud)
-a preview of what we’re building.
+Here are some other resources that might be useful:
+
+- [Oso Cloud](https://www.osohq.com/oso-cloud): Oso's managed authorization
+  service supports microservice environments out of the box.
+- [Patterns for Authorization in
+  Microservices](https://www.osohq.com/post/microservices-authorization-patterns):
+  from the Oso engineering blog, a discussion of the most common patterns we've
+  seen for modeling authorization data in a microservices environment.
