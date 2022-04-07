@@ -2664,7 +2664,7 @@ impl PolarVirtualMachine {
     }
 
     /// Succeed if `left` is more specific than `right` with respect to `args`.
-    #[allow(clippy::ptr_arg)]
+    #[allow(clippy::ptr_arg, clippy::wrong_self_convention)]
     fn is_more_specific(&mut self, left: &Rule, right: &Rule, args: &TermList) -> PolarResult<()> {
         let zipped = left.params.iter().zip(right.params.iter()).zip(args.iter());
         for ((left_param, right_param), arg) in zipped {
@@ -2731,6 +2731,7 @@ impl PolarVirtualMachine {
     }
 
     /// Determine if `left` is a more specific specializer ("subspecializer") than `right`
+    #[allow(clippy::wrong_self_convention)]
     fn is_subspecializer(
         &mut self,
         answer: &Symbol,
