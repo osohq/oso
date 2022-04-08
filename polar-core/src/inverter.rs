@@ -77,7 +77,7 @@ impl Inverter {
 fn results_to_constraints(results: Vec<BindingManager>) -> Bindings {
     let inverted = results.into_iter().map(invert_partials).collect();
     let reduced = reduce_constraints(inverted);
-    let simplified = simplify_bindings(reduced).unwrap_or_else(Bindings::new);
+    let simplified = simplify_bindings(reduced).unwrap_or_default();
 
     simplified
         .into_iter()
@@ -105,7 +105,7 @@ fn invert_partials(bindings: BindingManager) -> Bindings {
         new_bindings.insert(var.clone(), term!(constraint));
     }
 
-    let simplified = simplify_bindings(new_bindings).unwrap_or_else(Bindings::new);
+    let simplified = simplify_bindings(new_bindings).unwrap_or_default();
 
     simplified
         .into_iter()
