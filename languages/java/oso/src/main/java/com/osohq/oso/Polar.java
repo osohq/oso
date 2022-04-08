@@ -1,10 +1,11 @@
 package com.osohq.oso;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Optional.ofNullable;
+
 import com.osohq.oso.Exceptions.OsoException;
 import com.osohq.oso.Exceptions.ParseError;
 import com.osohq.oso.Exceptions.PolarRuntimeException;
-import org.json.JSONArray;
-
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -16,9 +17,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Optional.ofNullable;
+import org.json.JSONArray;
 
 public class Polar {
 
@@ -71,10 +70,10 @@ public class Polar {
     for (String filename : filenames) {
       // check file extension
       ofNullable(filename)
-              .filter(f -> f.contains("."))
-              .map(f -> f.substring(filename.lastIndexOf(".") + 1))
-              .filter(extention -> extention.equals(POLAR_EXTENTION))
-              .orElseThrow(() -> new Exceptions.PolarFileExtensionError(filename));
+          .filter(f -> f.contains("."))
+          .map(f -> f.substring(filename.lastIndexOf(".") + 1))
+          .filter(extention -> extention.equals(POLAR_EXTENTION))
+          .orElseThrow(() -> new Exceptions.PolarFileExtensionError(filename));
 
       try {
         String contents = new String(Files.readAllBytes(Paths.get(filename)));
@@ -106,10 +105,10 @@ public class Polar {
     for (String filename : filenames) {
       // check file extension
       ofNullable(filename)
-              .filter(f -> f.contains("."))
-              .map(f -> f.substring(filename.lastIndexOf(".") + 1))
-              .filter(extention -> extention.equals(POLAR_EXTENTION))
-              .orElseThrow(() -> new Exceptions.PolarFileExtensionError(filename));
+          .filter(f -> f.contains("."))
+          .map(f -> f.substring(filename.lastIndexOf(".") + 1))
+          .filter(extention -> extention.equals(POLAR_EXTENTION))
+          .orElseThrow(() -> new Exceptions.PolarFileExtensionError(filename));
 
       try (InputStream inputStream = getClass().getResourceAsStream(filename)) {
         if (inputStream == null) {

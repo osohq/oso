@@ -532,23 +532,25 @@ public class PolarTest {
   public void testLoadFilesFromResources() throws Exception {
     p.loadFilesFromResources("/test.polar", "/test2.polar");
     assertTrue(
-            p.query("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
+        p.query("f(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
     assertTrue(
-            p.query("g(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
+        p.query("g(x)").results().equals(List.of(Map.of("x", 1), Map.of("x", 2), Map.of("x", 3))));
   }
 
   @Test
   @DisplayName("testLoadFilesFromResources throws exception when tries loading missing file")
   public void testLoadFilesFromResourcesTriesLoadingMissingFile() throws Exception {
-    assertThrows(Exceptions.PolarFileNotFoundError.class,
-            () -> p.loadFilesFromResources("/missing.polar"));
+    assertThrows(
+        Exceptions.PolarFileNotFoundError.class, () -> p.loadFilesFromResources("/missing.polar"));
   }
 
   @Test
-  @DisplayName("testLoadFilesFromResources throws exception when tries loading file with non-polar extension")
+  @DisplayName(
+      "testLoadFilesFromResources throws exception when tries loading file with non-polar"
+          + " extension")
   public void testLoadFilesFromResourcesTriesLoadingNonPolarFile() throws Exception {
-    assertThrows(Exceptions.PolarFileExtensionError.class,
-            () -> p.loadFilesFromResources("/test.file"));
+    assertThrows(
+        Exceptions.PolarFileExtensionError.class, () -> p.loadFilesFromResources("/test.file"));
   }
 
   @Test
