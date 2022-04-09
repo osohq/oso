@@ -77,7 +77,7 @@ from sqlalchemy.sql.elements import True_
 from polar.partial import dot_path
 from polar.expression import Expression
 from polar.variable import Variable
-from polar.exceptions import UnsupportedError
+from polar.exceptions import UnsupportedError, PolarRuntimeError
 
 from sqlalchemy_oso.preprocess import preprocess
 
@@ -218,7 +218,13 @@ def translate_compare(expression: Expression, session: Session, model, get_model
     # Dot operation is on the left hand side
     if left_path[1:]:
         assert left_path[0] == Variable("_this")
-        assert not right_path
+        try:
+            assert not right_path
+        except AssertionError as e:
+            raise PolarException(
+                "Invalid comparison in policy. This may be caused by comparing the "
+                + "foreign key field rather than the relationship property"
+            ) from e
         path, field_name = left_path[1:-1], left_path[-1]
         return translate_dot(
             path,
