@@ -222,7 +222,7 @@ def translate_compare(expression: Expression, session: Session, model, get_model
             raise PolarRuntimeError(
                 "Invalid comparison in policy. This may be caused by comparing the "
                 + "foreign key field rather than the relationship property"
-            ) from e
+            )
         path, field_name = left_path[1:-1], left_path[-1]
         return translate_dot(
             path,
