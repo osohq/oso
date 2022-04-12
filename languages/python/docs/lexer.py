@@ -63,9 +63,7 @@ class GenericShellLexer(Lexer):
                     insertions = []
                 yield match.start(), token.Generic.Output, line
         if curcode:
-            yield from do_insertions(
-                insertions, lexer.get_tokens_unprocessed(curcode)
-            )
+            yield from do_insertions(insertions, lexer.get_tokens_unprocessed(curcode))
 
 
 class JShellLexer(GenericShellLexer):
