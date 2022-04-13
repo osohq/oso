@@ -1,10 +1,11 @@
 .PHONY: build test
 
 CARGO_FLAGS ?= --dev
+OUT_DIR ?= ../vscode/oso/out
 
 build:
-	wasm-pack --quiet build $(CARGO_FLAGS) --target nodejs --out-dir ../vscode/oso/out
-	rm -f ../vscode/oso/out/.gitignore ../vscode/oso/out/package.json
+	wasm-pack --quiet build $(CARGO_FLAGS) --target nodejs --out-dir $(OUT_DIR)
+	rm -f $(OUT_DIR)/.gitignore $(OUT_DIR)/package.json
 
 test:
 	wasm-pack test --node
