@@ -1,7 +1,6 @@
 .PHONY: build test
 
 CARGO_FLAGS ?= --dev
-OUT_DIR ?= ../vscode/oso/out
 
 build:
 	wasm-pack --quiet build $(CARGO_FLAGS) --target nodejs --out-dir $(OUT_DIR)
