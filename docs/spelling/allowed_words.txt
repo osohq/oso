@@ -183,6 +183,7 @@ mailto
 mainClass
 metacharacter
 metacharacters
+microservice
 microservices
 middleware
 mixin

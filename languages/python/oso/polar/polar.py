@@ -60,7 +60,7 @@ class Polar:
             path = Path(filename)
             extension = path.suffix
             filename = str(path)
-            if not extension == ".polar":
+            if extension != ".polar":
                 raise PolarFileExtensionError(filename)
 
             try:
