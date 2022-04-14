@@ -104,17 +104,16 @@ args
 arities
 arity
 authorizationerror
-authorizeField
-authorizeRequest
 authorizedActions
 authorizedFields
+authorizeField
+authorizeRequest
 autoboxed
 backend
 bodiless
 boolean
 booleans
 bundlers
-cURL
 cgo
 changelog
 classpath
@@ -122,6 +121,7 @@ cmp
 codebase
 constructable
 coroutine
+cURL
 customizations
 dataFilter
 dataloader
@@ -168,6 +168,7 @@ isAllowed
 iterable
 iterables
 js
+kovacstamasx
 lastCheckInLocation
 lastLogin
 latencies
@@ -231,8 +232,8 @@ subclasses
 submittedBy
 superclasses
 superset
-toTypeName
 toolchain
+toTypeName
 traceback
 transactional
 txt
