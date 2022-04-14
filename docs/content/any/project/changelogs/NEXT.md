@@ -10,6 +10,13 @@ draft: true
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
+### Java
+
+#### Other bugs & improvements.
+
+A new `loadFilesFromResources` API has been added to allow loading policy source code from resource files contained in your packaged `.jar`. Special thanks to [kovacstamasx](https://github.com/kovacstamasx) for this contribution.
+
+
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
 #### Breaking changes
