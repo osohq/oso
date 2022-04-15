@@ -14,6 +14,11 @@ except ImportError:
     )
     raise
 
+try:
+    from greenlet import getcurrent as _get_ident
+except ImportError:
+    from threading import get_ident as _get_ident
+
 from sqlalchemy_oso.session import authorized_sessionmaker, scoped_session
 
 
@@ -47,7 +52,7 @@ class AuthorizedSQLAlchemy(SQLAlchemy):
         if options is None:
             options = {}
 
-        scopefunc = options.pop("scopefunc", _app_ctx_stack.__ident_func__)
+        scopefunc = options.pop("scopefunc", _get_ident)
         return scoped_session(
             get_oso=self._get_oso,
             get_user=self._get_user,
