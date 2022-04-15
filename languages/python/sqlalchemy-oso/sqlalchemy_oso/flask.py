@@ -14,9 +14,9 @@ except ImportError:
     raise
 
 try:
-    from greenlet import getcurrent as _get_ident
+    from greenlet import getcurrent as _get_ident  # type: ignore
 except ImportError:
-    from threading import get_ident as _get_ident
+    from threading import get_ident as _get_ident  # type: ignore
 
 from sqlalchemy_oso.session import authorized_sessionmaker, scoped_session
 
