@@ -11,7 +11,7 @@ CURL_EMPTY = "curl: (52) Empty reply from server\n"
 
 
 quickstarts = {
-  go: { setup: 'go build', server: './oso-go-quickstart' },
+  go: { setup: 'go mod tidy && go build', server: './oso-go-quickstart' },
   # TODO: add local_setup that tests against local Oso install for java
   java: { setup: 'make install', server: 'make run' },
   # TODO: add local_setup that tests against local Oso install for nodejs
