@@ -456,7 +456,7 @@ RBAC, you need to define an `allow` rule that calls a `has_permission` rule:
 
 ```polar
 allow(user, action, resource) if
-    has_permission(actor, action, resource);
+    has_permission(user, action, resource);
 ```
 
 All three parameters are variables, so they are [bound](#bindings) to any three

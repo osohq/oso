@@ -112,6 +112,8 @@ jobs:
         run: mv target/aarch64-apple-darwin/release/libpolar.a target/aarch64-apple-darwin/release/libpolar-macOS-arm.a
       - name: Rename dynamic lib
         run: mv target/aarch64-apple-darwin/release/libpolar.dylib target/aarch64-apple-darwin/release/libpolar-arm.dylib
+      - name: Merge dynamic libs into fat dynamic lib
+        run: lipo -create target/release/libpolar.dylib target/aarch64-apple-darwin/release/libpolar-arm.dylib -output target/libpolar-fat.dylib
       - uses: actions/upload-artifact@v2
         with:
           name: oso_library
@@ -120,6 +122,10 @@ jobs:
         with:
           name: oso_library
           path: target/aarch64-apple-darwin/release/libpolar-arm.dylib
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_library
+          path: target/libpolar-fat.dylib
       - uses: actions/upload-artifact@v2
         with:
           name: oso_static_library
@@ -236,7 +242,7 @@ jobs:
           mkdir -p languages/java/oso/src/main/resources/linux
           cp -r oso_library/libpolar.so languages/java/oso/src/main/resources/linux/
           mkdir -p languages/java/oso/src/main/resources/macos
-          cp -r oso_library/libpolar.dylib languages/java/oso/src/main/resources/macos/
+          cp -r oso_library/libpolar-fat.dylib languages/java/oso/src/main/resources/macos/libpolar.dylib
           mkdir -p languages/java/oso/src/main/resources/win
           cp -r oso_library/polar.dll languages/java/oso/src/main/resources/win/
       - name: Test
