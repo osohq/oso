@@ -4,13 +4,12 @@
 """
 
 try:
-    from flask import _app_ctx_stack  # type: ignore
     from flask_sqlalchemy import SQLAlchemy, SignallingSession
 except ImportError:
     import warnings
 
     warnings.warn(
-        "Missing depenedencies for Flask. Install sqlalchemy-oso with the flask extra."
+        "Missing dependencies for Flask. Install sqlalchemy-oso with the flask extra."
     )
     raise
 
