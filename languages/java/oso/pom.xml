@@ -12,16 +12,16 @@
 
   <groupId>com.osohq</groupId>
   <artifactId>oso</artifactId>
-  <!-- oso_version --><version>0.26.0</version>
+  <!-- oso_version --><version>0.26.1</version>
 
   <distributionManagement>
     <snapshotRepository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+      <id>artifact-registry</id>
+      <url>artifactregistry://europe-west2-maven.pkg.dev/infra-240614/main</url>
     </snapshotRepository>
     <repository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+      <id>artifact-registry</id>
+      <url>artifactregistry://europe-west2-maven.pkg.dev/infra-240614/main</url>
     </repository>
   </distributionManagement>
 
@@ -76,7 +76,28 @@
     </dependency>
   </dependencies>
 
+  <repositories>
+    <repository>
+      <id>artifact-registry</id>
+      <url>artifactregistry://europe-west2-maven.pkg.dev/infra-240614/main</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+
   <build>
+    <extensions>
+      <extension>
+        <groupId>com.google.cloud.artifactregistry</groupId>
+        <artifactId>artifactregistry-maven-wagon</artifactId>
+        <version>2.1.1</version>
+      </extension>
+    </extensions>
+
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
