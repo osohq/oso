@@ -1,6 +1,6 @@
 {
-  "name": "oso",
-  "version": "0.26.0",
+  "name": "@superblocksteam/oso",
+  "version": "0.26.0-sb-patch-1",
   "description": "oso authorization library.",
   "bin": "bin/repl.js",
   "main": "dist/src/index.js",
@@ -11,7 +11,10 @@
     "./dist/src/polar_wasm_api.js": "./dist/bundler/polar_wasm_api.js",
     "./dist/src/polar_wasm_api_bg.js": "./dist/bundler/polar_wasm_api_bg.js"
   },
-  "repository": "https://github.com/osohq/oso",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": "https://github.com/superblocksteam/oso",
   "collaborators": [
     "Oso Security <support@osohq.com>"
   ],
