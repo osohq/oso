@@ -648,7 +648,7 @@ describe('Data filtering parity tests', () => {
   test('test_empty_constraints_in', async () => {
     const { oso, foos, fooLogs } = await fixtures();
     await oso.loadStr(`
-      allow(_, "read", foo: Foo) if _ in foo.logs;
+      allow(_, "read", foo: Foo) if x in foo.logs and (x.data = "" or x.data != "");
     `);
     const expected = foos.filter((foo: Foo) => fooLogs(foo).length);
     //    console.log(expected);
@@ -669,9 +669,10 @@ describe('Data filtering parity tests', () => {
   test('test_unify_ins', async () => {
     const { oso, bars, foos } = await fixtures();
     await oso.loadStr(`
-      allow(_, _, _: Bar{foos: foos}) if
-        foo in foos and
-        goo in foos and
+      allow(_, _, bar: Bar) if
+        x in bar.foos and (x.id = "" or x.id != "") and
+        foo in bar.foos and
+        goo in bar.foos and
         foo = goo;
     `);
     const expected = bars.filter((bar: Bar) => {
@@ -685,13 +686,24 @@ describe('Data filtering parity tests', () => {
   test('test_unify_ins_field_eq', async () => {
     const { oso, bars, barFoos } = await fixtures();
     await oso.loadStr(`
-      allow(_, _, _: Bar{foos:foos}) if
-        foo in foos and
-        goo in foos and
+      allow(_, _, bar: Bar) if
+        x in bar.foos and (x.id = "" or x.id != "") and
+        foo in bar.foos and
+        goo in bar.foos and
         foo.id = goo.id;
     `);
     const expected = bars.filter(bar => barFoos(bar).length);
     await oso.checkAuthz('gwen', 'get', Bar, expected);
+  });
+
+  test('test_condition_disjunction', async () => {
+    const { oso, foos } = await fixtures();
+    await oso.loadStr(`
+      allow(_, "read", foo: Foo) if x in foo.logs and (x.data = "" or x.data != "");
+      allow(_, "read", _: Foo) if true;
+    `);
+    const expected = foos;
+    await oso.checkAuthz('gwen', 'read', Foo, expected);
   });
 
   test('test_var_in_value', async () => {

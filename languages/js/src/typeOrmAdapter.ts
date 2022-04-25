@@ -60,7 +60,7 @@ export function typeOrmAdapter<R>(
           ).fields.get(fromFieldName) as Relation;
           // write the join condition
           const join = `${fromTypeName}.${myField} = ${toTypeName}.${otherField}`;
-          return query.innerJoin(toTypeName, toTypeName, join);
+          return query.leftJoin(toTypeName, toTypeName, join);
         },
         queryBuilder as SelectQueryBuilder<R>
       );
