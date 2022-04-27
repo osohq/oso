@@ -5,7 +5,7 @@ class Variable(str):
         return f"Variable({super().__repr__()})"
 
     def __str__(self):
-        return repr(self)
+        return f"Variable({super().__str__()})"
 
     def __eq__(self, other):
         return super().__eq__(other)
