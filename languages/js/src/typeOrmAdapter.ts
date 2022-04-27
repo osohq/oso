@@ -70,16 +70,31 @@ export function typeOrmAdapter<R>(
       // condition to sql
       const sqlCondition = (c: FilterCondition): string => {
         c = expandObjectComparison(c);
-        return `${sqlData(c.lhs)} ${ops[c.cmp]} ${sqlData(c.rhs)}`;
+        // handle null equality special case
+        for (const { a, b } of [
+          { a: 'lhs', b: 'rhs' },
+          { a: 'rhs', b: 'lhs' },
+        ] as { a: 'lhs' | 'rhs'; b: 'lhs' | 'rhs' }[]) {
+          const q: Datum = c[a];
+          if (!isProjection(q) && q.value === null) {
+            if (c.cmp === 'Eq') {
+              return `${sqlData(c[b])} is ${sqlData(q)}`;
+            } else if (c.cmp === 'Neq') {
+              return `${sqlData(c[b])} is not ${sqlData(q)}`;
+            }
+          }
+        }
+
+        return `${sqlData(c.lhs)} ${ops[c.cmp]} ${sqlData(c.rhs)} `;
       };
       // for storing interpolated values
       const values: obj = {};
       // data to sql. calling this on filter data populates the values object
       const sqlData = (d: Datum): string => {
-        if (isProjection(d)) return `${d.typeName}.${d.fieldName as string}`;
+        if (isProjection(d)) return `${d.typeName}.${d.fieldName as string} `;
         const key = Object.keys(values).length;
         values[key] = d.value;
-        return `:${key}`;
+        return `:${key} `;
       };
 
       const whereClause = orClauses(
