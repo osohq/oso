@@ -126,13 +126,13 @@ Control (RBAC)](/guides/rbac) guide.
   **If you are using Polar Roles or SQLAlchemy Roles with a previous version of
   Oso and want to upgrade to the 0.20 release, please reach out via
   [Slack](https://join-slack.osohq.com/) or [schedule a 1-on-1 with an engineer
-  from the core team](https://calendly.com/osohq/1-on-1).**
+  from the core team](https://calendly.com/osohq/1-on-1?utm_source=library_docs&utm_content=upgrade_to_020).**
 {{% /ifLang %}}
 {{% ifLang not="python" %}}
   **If you are using Polar Roles with a previous version of Oso and want to
   upgrade to the 0.20 release, please reach out via
   [Slack](https://join-slack.osohq.com/) or [schedule a 1-on-1 with an engineer
-  from the core team](https://calendly.com/osohq/1-on-1).**
+  from the core team](https://calendly.com/osohq/1-on-1?utm_source=library_docs&utm_content=upgrade_to_020).**
 {{% /ifLang %}}
 
 {{% ifLang not="rust" %}}
