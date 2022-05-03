@@ -57,7 +57,9 @@ def get_model_by_path(
 
 class FilterBuilder:
     def __init__(self, model: Model, name="_this", parent=None):
-        self.name = name
+        self.name = (
+            super(Variable, name).__str__() if isinstance(name, Variable) else name
+        )
         self.model = model
         self.filter = TRUE_FILTER
         # Map variables to subquery

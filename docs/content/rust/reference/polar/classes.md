@@ -207,12 +207,12 @@ dependency. In `Cargo.toml`, an Oso dependency that supports UUIDs looks as
 follows:
 
 ```toml
-oso = { version = "X.Y.Z", features = ["uuid-07"] }
+oso = { version = "X.Y.Z", features = ["uuid-10"] }
 ```
 
 **Note that the numbers in the feature flags do not refer to [the UUID
 version][wiki] but to the version of the `uuid` crate.** Most people will want
-the `uuid-07` feature flag, as it supports recent versions of the `uuid` crate.
+the `uuid-10` feature flag, as it supports recent versions of the `uuid` crate.
 
 [wiki]: https://en.wikipedia.org/wiki/Universally_unique_identifier#Versions
 
@@ -220,6 +220,7 @@ the `uuid-07` feature flag, as it supports recent versions of the `uuid` crate.
 |----------------------|--------------|
 | `0.6.5` - `0.6.x`    | `uuid-06`    |
 | `0.7.0` - `0.8.x`    | `uuid-07`    |
+| `1.0.0` - `2.0.0`    | `uuid-10`    |
 
 ### Rust → Polar Types Summary
 

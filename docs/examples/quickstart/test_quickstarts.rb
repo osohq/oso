@@ -11,7 +11,7 @@ CURL_EMPTY = "curl: (52) Empty reply from server\n"
 
 
 quickstarts = {
-  go: { setup: 'go build', server: './oso-go-quickstart' },
+  go: { setup: 'go mod tidy && go build', server: './oso-go-quickstart' },
   # TODO: add local_setup that tests against local Oso install for java
   java: { setup: 'make install', server: 'make run' },
   # TODO: add local_setup that tests against local Oso install for nodejs
@@ -22,7 +22,7 @@ quickstarts = {
 }
 
 if ARGV.include? "local"
-  quickstarts[:go][:setup] = "make -C ../../../../languages/go copy_lib && go mod edit -replace github.com/osohq/go-oso=../../../../languages/go && go build"
+  quickstarts[:go][:setup] = "make -C ../../../../languages/go copy_lib && go mod edit -replace github.com/osohq/go-oso=../../../../languages/go && go mod tidy && go build"
   quickstarts[:python][:setup] = "pip install -e ../../../../languages/python/oso && pip install --upgrade -r requirements.txt"
   quickstarts[:ruby][:setup] = "BUNDLE_GEMFILE=../Gemfile-local bundle"
   quickstarts[:ruby][:server] = "BUNDLE_GEMFILE=../Gemfile-local bundle exec ruby server.rb"
