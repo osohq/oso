@@ -15,3 +15,12 @@ impl crate::PolarClass for uuid_07::Uuid {
             .with_equality_check()
     }
 }
+
+#[cfg(feature = "uuid-10")]
+impl crate::PolarClass for uuid_10::Uuid {
+    fn get_polar_class_builder() -> crate::host::ClassBuilder<uuid_10::Uuid> {
+        crate::host::Class::builder()
+            .name("Uuid")
+            .with_equality_check()
+    }
+}
