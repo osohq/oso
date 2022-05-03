@@ -167,6 +167,7 @@ io
 isAllowed
 iterable
 iterables
+jackdreillyvia
 js
 lastCheckInLocation
 lastLogin
@@ -182,6 +183,7 @@ mailto
 mainClass
 metacharacter
 metacharacters
+microservice
 microservices
 middleware
 mixin
