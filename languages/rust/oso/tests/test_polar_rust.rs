@@ -776,3 +776,15 @@ fn test_uuid_07() -> Result<(), Box<dyn std::error::Error>> {
     test.oso.query_rule("f", (x, y))?.next().unwrap()?;
     Ok(())
 }
+
+#[cfg(feature = "uuid-10")]
+#[test]
+fn test_uuid_10() -> Result<(), Box<dyn std::error::Error>> {
+    use uuid_10::Uuid;
+    let mut test = OsoTest::new();
+    test.oso.register_class(Uuid::get_polar_class())?;
+    test.load_str("f(x: Uuid, y: Uuid) if x = y;");
+    let (x, y) = (Uuid::nil(), Uuid::nil());
+    test.oso.query_rule("f", (x, y))?.next().unwrap()?;
+    Ok(())
+}
