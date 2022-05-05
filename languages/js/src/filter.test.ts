@@ -375,21 +375,21 @@ async function fixtures() {
       billing_address: 'cupertino,  CA',
       base_repo_role: 'reader',
     })
-  ),
-    osohq = await orgs.findOneOrFail(
-      await orgs.save({
-        name: 'osohq',
-        billing_address: 'new york, NY',
-        base_repo_role: 'reader',
-      })
-    ),
-    tiktok = await orgs.findOneOrFail(
-      await orgs.save({
-        name: 'tiktok',
-        billing_address: 'beijing, CN',
-        base_repo_role: 'reader',
-      })
-    );
+  );
+  const osohq = await orgs.findOneOrFail(
+    await orgs.save({
+      name: 'osohq',
+      billing_address: 'new york, NY',
+      base_repo_role: 'reader',
+    })
+  );
+  const tiktok = await orgs.findOneOrFail(
+    await orgs.save({
+      name: 'tiktok',
+      billing_address: 'beijing, CN',
+      base_repo_role: 'reader',
+    })
+  );
 
   async function make<T>(r: Repository<T>, x: DeepPartial<T>): Promise<T> {
     return await r.findOneOrFail(await r.save(x));
