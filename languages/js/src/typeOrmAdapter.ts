@@ -94,7 +94,7 @@ export function typeOrmAdapter<R>(
         if (isProjection(d)) return `${d.typeName}.${d.fieldName as string} `;
         const key = Object.keys(values).length;
         values[key] = d.value;
-        return `:${key} `;
+        return `:${key}`;
       };
 
       const whereClause = orClauses(
