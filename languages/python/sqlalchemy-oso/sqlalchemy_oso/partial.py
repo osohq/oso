@@ -223,8 +223,7 @@ def translate_compare(expression: Expression, session: Session, model, get_model
     # Dot operation is on the left hand side
     if left_path[1:]:
         assert left_path[0] == Variable("_this")
-        if not right_path:
-            print(right_path) # debug only
+        if right_path:
             raise PolarRuntimeError(
                 "Invalid comparison in policy. This may be caused by comparing the "
                 + "foreign key field rather than the relationship property"
