@@ -91,7 +91,7 @@ export function typeOrmAdapter<R>(
       const values: obj = {};
       // data to sql. calling this on filter data populates the values object
       const sqlData = (d: Datum): string => {
-        if (isProjection(d)) return `${d.typeName}.${d.fieldName as string} `;
+        if (isProjection(d)) return `${d.typeName}.${d.fieldName as string}`;
         const key = Object.keys(values).length;
         values[key] = d.value;
         return `:${key}`;

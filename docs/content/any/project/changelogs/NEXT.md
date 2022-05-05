@@ -10,6 +10,13 @@ draft: true
 
 ## `RELEASED_PACKAGE_1` NEW_VERSION
 
+### Python
+
+#### Other bugs & improvements
+
+- Resolved an `IndexError` exception in `sqlalchemy-oso` Data Filtering. (thanks to @jackdreillyvia for the contribution)
+- Resolved a false-negative in `sqlalchemy-oso` Data Filtering when comparing ORM objects. (thanks to @jackdreillyvia for the contribution)
+
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
 #### Breaking changes
@@ -40,3 +47,5 @@ Link to [relevant documentation section]().
 - Bulleted list
 - Of smaller improvements
 - Potentially with doc [links]().
+
+
