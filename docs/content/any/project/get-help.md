@@ -13,7 +13,7 @@ The Oso engineering team is available to help you as you build out authorization
 - Authorization model and design reviews
 
 We're available in [Slack](https://join-slack.osohq.com/), along with hundreds of other developers working on
-authorization. You can also [set up a 1x1 with an Oso engineer](https://calendly.com/osohq/1-on-1).
+authorization. You can also [set up a 1x1 with an Oso engineer](https://calendly.com/osohq/1-on-1?utm_source=library_docs&utm_content=get_help).
 
 For customers who want an SLA on support, we provide paid support. This includes:
 
