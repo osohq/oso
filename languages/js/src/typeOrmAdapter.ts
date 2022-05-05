@@ -85,7 +85,7 @@ export function typeOrmAdapter<R>(
           }
         }
 
-        return `${sqlData(c.lhs)} ${ops[c.cmp]} ${sqlData(c.rhs)} `;
+        return `${sqlData(c.lhs)} ${ops[c.cmp]} ${sqlData(c.rhs)}`;
       };
       // for storing interpolated values
       const values: obj = {};
