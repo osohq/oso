@@ -50,8 +50,12 @@ fn types2() -> anyhow::Result<()> {
             .add_method("is_called_alice", User2::is_called_alice)
             .build(),
     )?;
-    oso.load_str(r#"allow(user: User2, _, _) if user.is_admin;"#)?;
-    oso.load_str(r#"?= allow(new User2("bob", true), "foo", "bar");"#)?;
+    oso.load_str(
+        r#"
+        allow(user: User2, _, _) if user.is_admin;
+        ?= allow(new User2("bob", true), "foo", "bar");
+    "#,
+    )?;
     // oso.load_str(r#"?= new User2("alice", true).is_called_alice();"#)?;
 
     // #[derive(Clone, PolarClass)]
@@ -84,7 +88,9 @@ fn strings() -> anyhow::Result<()> {
 
     oso.register_class(User::get_polar_class())?;
 
-    oso.load_str(r#"allow(actor, _action, _resource) if actor.username.ends_with("example.com");"#)?;
+    oso.load_str(
+        r#"allow(actor, _action, _resource) if actor.username.ends_with("example.com");"#,
+    )?;
 
     let user = User {
         username: "alice@example.com".to_owned(),
