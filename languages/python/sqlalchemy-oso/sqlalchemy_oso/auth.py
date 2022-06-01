@@ -33,7 +33,7 @@ def register_models(oso: Oso, base_or_registry):
             # skip models that were manually registered
             continue
         try:
-            oso.register_class(model)
+            oso.register_class(model, name=default_polar_model_name(model))
         except DuplicateClassAliasError as e:
             raise OsoError(
                 (
