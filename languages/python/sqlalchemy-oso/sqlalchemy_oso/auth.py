@@ -1,6 +1,6 @@
 from oso import Oso
 from polar import Variable
-from polar.exceptions import PolarRuntimeError
+from polar.exceptions import DuplicateClassAliasError, OsoError, PolarRuntimeError
 from polar.partial import TypeConstraint
 
 from sqlalchemy.orm.query import Query
@@ -14,7 +14,7 @@ from sqlalchemy_oso.compat import iterate_model_classes
 from functools import reduce
 
 
-def polar_model_name(model) -> str:
+def default_polar_model_name(model) -> str:
     """Return polar class name for SQLAlchemy model."""
     return model.__name__
 
@@ -29,7 +29,22 @@ def register_models(oso: Oso, base_or_registry):
     """Register all models in registry (SQLAlchemy 1.4) or declarative base
     class (1.3 and 1.4) ``base_or_registry`` with Oso as classes."""
     for model in iterate_model_classes(base_or_registry):
-        oso.register_class(model)
+        if model in oso.host.types:
+            # skip models that were manually registered
+            continue
+        try:
+            oso.register_class(model)
+        except DuplicateClassAliasError as e:
+            raise OsoError(
+                (
+                    "Attempted to register two classes with the same name when automatically registering SQLAlchemy models\n"
+                    "To fix this, try manually registering the new class. E.g.\n"
+                    '  oso.register_class(MyModel, "models::MyModel")\n'
+                    "  register_models(oso, Base)\n"
+                )
+            ) from e
+        except Exception as e:
+            breakpoint()
 
 
 def authorize_model(oso: Oso, actor, action, session: Session, model):
@@ -66,8 +81,11 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
     except AttributeError:
         raise TypeError(f"Expected a model; received: {model}")
 
+    model_name = oso.host.types.get(mapped_class).name or default_polar_model_name(
+        mapped_class
+    )
     resource = Variable("resource")
-    constraint = TypeConstraint(resource, polar_model_name(mapped_class))
+    constraint = TypeConstraint(resource, model_name)
     results = oso.query_rule(
         "allow",
         actor,
