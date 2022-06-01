@@ -402,7 +402,7 @@ def test_parser_errors(polar):
         polar.load_str(rules)
     assert str(e.value).startswith(
         "'\\u{0}' is not a valid character. Found in this is not allowed\\u{0} at line 2, column 17"
-    )
+    ), e
 
     # InvalidToken -- not sure what causes this
 
