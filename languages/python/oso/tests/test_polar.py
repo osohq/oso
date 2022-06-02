@@ -401,7 +401,7 @@ def test_parser_errors(polar):
     with pytest.raises(exceptions.InvalidTokenCharacter) as e:
         polar.load_str(rules)
     assert str(e.value).startswith(
-        "\'\\0\' is not a valid character. Found in this is not allowed\\0 at line 2, column 17"
+        "'\\0' is not a valid character. Found in this is not allowed\\0 at line 2, column 17"
     ), e
 
     # InvalidToken -- not sure what causes this

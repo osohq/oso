@@ -43,8 +43,6 @@ def register_models(oso: Oso, base_or_registry):
                     "  register_models(oso, Base)\n"
                 )
             ) from e
-        except Exception as e:
-            breakpoint()
 
 
 def authorize_model(oso: Oso, actor, action, session: Session, model):

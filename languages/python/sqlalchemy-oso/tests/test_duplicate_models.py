@@ -7,7 +7,6 @@ from sqlalchemy_oso.session import (
     authorized_sessionmaker,
 )
 
-from .models import Post
 from .conftest import print_query
 
 from oso import Oso
