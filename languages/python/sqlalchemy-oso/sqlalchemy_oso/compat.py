@@ -17,7 +17,15 @@ def iterate_model_classes(base_or_registry):
     try:  # 1.3 declarative base.
         # TODO (dhatch): Not sure this is legit b/c it uses an internal interface?
         models = base_or_registry._decl_class_registry.items()
-        yield from {model for name, model in models if name != "_sa_module_registry"}
+        for name, model in models:
+            if name != "_sa_module_registry":
+                if isinstance(
+                    model, sqlalchemy.ext.declarative.clsregistry._MultipleClassMarker
+                ):
+                    for model_ref in model.contents:
+                        yield model_ref()
+                else:
+                    yield model
     except AttributeError:
         try:  # 1.4 declarative base.
             mappers = base_or_registry.registry.mappers
