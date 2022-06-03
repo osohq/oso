@@ -6,7 +6,7 @@ on:
         description: "docs s3 path (docs.oso.dev or docs-preview.oso.dev)"
       oso_version:
         description: "oso release to build docs for"
-        default: "0.26.0" # oso_version
+        default: "0.26.1" # oso_version
       flask_oso_version:
         description: "flask oso release to build docs for"
         default: "0.26.0" # flask_oso_version
