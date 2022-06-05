@@ -29,7 +29,7 @@ lalrpop = { version = "0.19.6", default-features = false }
 
 [dev-dependencies]
 criterion = { version = "0.3.3", default-features = false }
-permute = "0.1.0"
+permute = "0.2.1"
 pipe = "0.4.0"
 pretty_assertions = "1.0.0"
 maplit = "1.0.2"
