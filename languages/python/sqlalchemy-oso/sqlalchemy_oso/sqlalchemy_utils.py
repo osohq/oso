@@ -66,7 +66,7 @@ try:
 
         return entities
 
-    def default_load_entities(entities, seen_relationships = None):
+    def default_load_entities(entities, seen_relationships=None):
         """Find related entities that will be loaded on all queries to ``entities``
            due to the default loader strategy.
 
