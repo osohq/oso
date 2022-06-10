@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import os
 from pathlib import Path
 import sys
-from typing import List, Union
+from typing import List, Union, Optional
 
 from .exceptions import (
     PolarRuntimeError,
@@ -49,8 +49,11 @@ class Polar:
         del self.host
         del self.ffi_polar
 
-    def load_files(self, filenames: List[Union[Path, str]] = []):
+    def load_files(self, filenames: Optional[List[Union[Path, str]]] = None):
         """Load Polar policy from ".polar" files."""
+        if filenames is None:
+            filenames = []
+
         if not filenames:
             return
 
