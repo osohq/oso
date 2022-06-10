@@ -133,7 +133,9 @@ class Query:
             self.ffi_query.application_error(str(e))
             self.ffi_query.call_result(call_id, None)
             return
-        if callable(attr) and data["args"] is not None:  # If it's a function, call it with the args.
+        if (
+            callable(attr) and data["args"] is not None
+        ):  # If it's a function, call it with the args.
             args = [self.host.to_python(arg) for arg in data["args"]]
             kwargs = data["kwargs"] or {}
             kwargs = {k: self.host.to_python(v) for k, v in kwargs.items()}
