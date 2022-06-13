@@ -304,7 +304,9 @@ try:
             # If permissions map does not specify an action to authorize for entity
             # or if the specified action is `None`, deny access.
             if action is None:
-                logger.warning(f"No allowed action for entity {entity}")
+                logger.warning(
+                    f"No allowed action for entity {entity} in checked_permissions"
+                )
                 where = with_loader_criteria(entity, expr.false(), include_aliases=True)
                 execute_state.statement = execute_state.statement.options(where)
             else:
