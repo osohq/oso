@@ -133,8 +133,7 @@ class Polar:
         else:
             raise InvalidQueryTypeError()
 
-        for res in Query(query, host=host, bindings=bindings).run():
-            yield res
+        yield from Query(query, host=host, bindings=bindings).run()
 
     def query_rule(self, name, *args, **kwargs):
         """Query for rule with name ``name`` and arguments ``args``.
