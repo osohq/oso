@@ -95,9 +95,9 @@ class Query:
             "Eq",
             getattr(instance, rel.my_field),
         )
-        filter = DataFilter(other_cls, [], [[condition]], self.host.types)
+        data_filter = DataFilter(other_cls, [], [[condition]], self.host.types)
         adapter = self.host.adapter
-        query = adapter.build_query(filter)
+        query = adapter.build_query(data_filter)
         results = adapter.execute_query(query)
 
         if rel.kind == "one":
