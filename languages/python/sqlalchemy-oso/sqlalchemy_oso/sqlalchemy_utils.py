@@ -93,7 +93,7 @@ try:
                 seen_relationships = set()
             for rel in relationships.values():
                 if rel in seen_relationships:
-                    # prevent infinitely recursing when we're already seen the relationship
+                    # prevent infinitely recursing when we've already seen the relationship
                     continue
                 seen_relationships.add(rel)
                 # We only detect `"joined"` here because `"selectin"` and `"subquery"`
