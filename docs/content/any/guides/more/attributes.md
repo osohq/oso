@@ -41,7 +41,7 @@ resource Repository {
 has_permission(_: User, "read", repo: Repository) if repo.is_public;
 {{< /code >}}
 
-The `has_permission` rule above tells Oso to look up the `is_public` attribute on the `Repository` application type in order to determine whether or not someone shoud be granted `"read"` access.
+The `has_permission` rule above tells Oso to look up the `is_public` attribute on the `Repository` application type in order to determine whether or not someone should be granted `"read"` access.
 This rule will be evaluated alongside the `"read" if "contributor"` shorthand rule in the resource block so that a user can read a repository if they have the `"contributor"` role OR if the repository is public.
 
 ## Grant roles with attributes

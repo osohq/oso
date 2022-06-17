@@ -347,7 +347,7 @@ except ImportError:
         # TODO (dhatch): This is necessary to allow ``authorize_query`` to work
         # on queries that have already been made.  If a query has a LIMIT or OFFSET
         # applied, SQLAlchemy will by default throw an error if filters are applied.
-        # This prevents these errors from occuring, but could result in some
+        # This prevents these errors from occurring, but could result in some
         # incorrect queries. We should remove this if possible.
         query = query.enable_assertions(False)  # type: ignore
 
