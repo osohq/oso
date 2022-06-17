@@ -141,7 +141,7 @@ func (h Host) MakeInstance(call types.ValueCall, id uint64) error {
 			return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(types.Value{ValueVariant: call}), Info: err.Error()}
 		}
 		if len(results) != 1 {
-			return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(types.Value{ValueVariant: call}), Info: fmt.Sprintf("Constructor must retun 1 result; returned %v", len(results))}
+			return &errors.ErrorWithAdditionalInfo{Inner: errors.NewInvalidConstructorError(types.Value{ValueVariant: call}), Info: fmt.Sprintf("Constructor must return 1 result; returned %v", len(results))}
 		}
 		instance := results[0]
 		if instance.Type() != *cls {

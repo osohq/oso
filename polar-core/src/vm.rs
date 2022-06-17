@@ -711,7 +711,7 @@ impl PolarVirtualMachine {
             .bindings_after(include_temps, &self.csp)
     }
 
-    /// Retrive internal binding stack for debugger.
+    /// Retrieve internal binding stack for debugger.
     pub fn bindings_debug(&self) -> &BindingStack {
         self.binding_manager.bindings_debug()
     }
@@ -1478,7 +1478,7 @@ impl PolarVirtualMachine {
         // - Print INFO event for queries for rules.
         // - Print TRACE (a superset of INFO) event for all other queries.
         // - We filter out single-element ANDs, which many rule bodies take the form of, to instead
-        //   log only their inner operations for readibility|brevity reasons.
+        //   log only their inner operations for readability|brevity reasons.
         match &term.value() {
             Value::Call(predicate) => {
                 self.log(
@@ -2401,7 +2401,7 @@ impl PolarVirtualMachine {
         }
     }
 
-    /// Unify two list that end with a rest-variable with eachother.
+    /// Unify two list that end with a rest-variable with each other.
     /// A helper method for `unify_lists`.
     #[allow(clippy::ptr_arg)]
     fn unify_two_lists_with_rest<F>(
