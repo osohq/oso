@@ -42,7 +42,7 @@ Would be represented as the expression::
 - :py:func:`translate_expr`: Translate an expression.
 - :py:func:`translate_and`: Translate an and operation
 - :py:func:`translate_compare`: Translate a comparison operation (=, <, etc.)
-- :py:func:`translate_in`: Translate an in opertaion.
+- :py:func:`translate_in`: Translate an in operation.
 - :py:func:`translate_isa`: Translate an isa.
 - :py:func:`translate_dot`: Translate a dot operation.
 
@@ -214,7 +214,7 @@ def translate_compare(expression: Expression, session: Session, model, get_model
     _this = val => model.pk1 = val.pk1 and model.pk2 = val.pk2
 
     Where Target is the type that the dot path refers to and mirror flips an
-    operaiton.
+    operation.
     """
     (left, right) = expression.args
     left_path = dot_path(left)

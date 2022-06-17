@@ -2136,7 +2136,7 @@ mod test {
                     // Right now we output "y" => "_this <= 1".
                     // This constraint is incorrect. If x = 1, then y <= 1
                     // (we reach the y > x constraint in the
-                    // negation). Otherwise, the query suceeds because x = 1 fails
+                    // negation). Otherwise, the query succeeds because x = 1 fails
                     // and y > x is never reached.
                     "y" => "(_this <= 1 or _this < 3 or _this <= 5)"
                 );
@@ -2156,7 +2156,7 @@ mod test {
             &[|r: Bindings| {
                 assert_partial_expression!(r, "x", "_this > y and 1 >= y");
                 // Expected: x > _this and (z >= _this or z != 1)
-                assert_partial_expression!(r, "y", "x > _this and z >= _this"); // 1 has been subsituted for z which is incorrect.
+                assert_partial_expression!(r, "y", "x > _this and z >= _this"); // 1 has been substituted for z which is incorrect.
                                                                                 // Expected: z >= _this or z != 1
                 assert_partial_expression!(r, "z", "_this != 1"); // MISSING or z >= y
                 Ok(())
@@ -2177,7 +2177,7 @@ mod test {
                     // Right now we output "y" => "_this <= 1".
                     // This constraint is incorrect. If x = 1, then y <= 1
                     // (we reach the y > x constraint in the
-                    // negation). Otherwise, the query suceeds because x = 1 fails
+                    // negation). Otherwise, the query succeeds because x = 1 fails
                     // and y > x is never reached.
                     "y" => "x != 1 or _this <= 1"
                 );
@@ -2199,7 +2199,7 @@ mod test {
                     // Right now we output "y" => "1 < 1 or _this <= 1".
                     // This constraint is incorrect. If x = 1, then y <= 1
                     // (we reach the y > x constraint in the
-                    // negation). Otherwise, the query suceeds because x = 1 fails
+                    // negation). Otherwise, the query succeeds because x = 1 fails
                     // and y > x is never reached.
                     "y" => "x != 1 or _this <= 1"
                 );
@@ -2223,7 +2223,7 @@ mod test {
                     // Right now we output "y" => "_this <= 1".
                     // This constraint is incorrect. If x = 1, then y <= 1
                     // (we reach the y > x constraint in the
-                    // negation). Otherwise, the query suceeds because x = 1 fails
+                    // negation). Otherwise, the query succeeds because x = 1 fails
                     // and y > x is never reached.
                     "y" => "1 < 1 or _this <= 1 or 1 < 3 and _this < 3 or _this <= 5"
                 );

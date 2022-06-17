@@ -88,7 +88,7 @@ public class PolarTest {
     }
   }
 
-  /** Rigourous Test :-) */
+  /** Rigorous Test :-) */
   @Test
   public void testApp() {
     assertTrue(true);
