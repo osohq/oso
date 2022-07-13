@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::fmt::Write;
 use std::sync::Arc;
 
 pub use super::bindings::Bindings;
@@ -128,10 +129,12 @@ impl KnowledgeBase {
                     let found_match = results.iter().any(|(result, rule_type)| match result {
                         RuleParamMatch::True => true,
                         RuleParamMatch::False(message) => {
-                            msg.push_str(&format!(
+                            write!(
+                                msg,
                                 "\n{}\n\tFailed to match because: {}\n",
                                 rule_type, message
-                            ));
+                            )
+                            .unwrap();
                             false
                         }
                     });
@@ -288,17 +291,18 @@ impl KnowledgeBase {
                         if !success {
                             let mut err = format!("Rule specializer {} on parameter {} must be a member of rule type specializer {}", rule_instance.tag,index, rule_type_instance.tag);
                             if rule_type_instance.tag.0 == ACTOR_UNION_NAME {
-                                err.push_str(&format!("
+                                write!(err, "
 
 \tPerhaps you meant to add an actor block to the top of your policy, like this:
 
-\t  actor {} {{}}", rule_instance.tag));
+\t  actor {} {{}}", rule_instance.tag).unwrap();
                             } else if rule_type_instance.tag.0 == RESOURCE_UNION_NAME {
-                                err.push_str(&format!("
+                                write!(err, "
 
 \tPerhaps you meant to add a resource block to your policy, like this:
 
-\t  resource {} {{ .. }}", rule_instance.tag));
+\t  resource {} {{ .. }}", rule_instance.tag).unwrap();
+
                             }
 
                             return Ok(RuleParamMatch::False(err));
