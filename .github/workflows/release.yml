@@ -4,7 +4,7 @@ on:
     tags:
       - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
     branches:
-      - main
+      - sam/ruby-arm
 
 jobs:
   version:
@@ -16,7 +16,7 @@ jobs:
       - name: Set version env
         run: echo "oso_version=$(cat VERSION)" >> $GITHUB_ENV
       - name: Check github ref matches
-        if: github.ref != 'refs/heads/main'
+        if: github.ref != 'refs/heads/sam/ruby-arm'
         env:
           github_ref: ${{ github.ref }}
         run: grep "${github_ref/refs\/tags\/v/}" VERSION
@@ -891,7 +891,7 @@ jobs:
   release:
     name: Create release
     runs-on: ubuntu-latest
-    if: github.ref != 'refs/heads/main'
+    if: github.ref != 'refs/heads/sam/ruby-arm'
     needs:
       [
         build_linux_wheels,
@@ -1021,31 +1021,31 @@ jobs:
           asset_name: go-oso-${{ steps.version.outputs.oso_version }}.zip
           asset_content_type: application/zip
   # TODO(gj): update this to post to Quill or a private channel on community Slack.
-  alert-failure:
-    name: Alert on failure
-    if: ${{ !success() }}
-    runs-on: ubuntu-latest
-    needs:
-      [
-        validate_python_linux,
-        validate_python_macos_old,
-        validate_python_macos_11,
-        validate_python_macos_arm,
-        validate_python_windows,
-        validate_python_musl,
-        validate_ruby,
-        validate_java,
-        validate_js,
-        validate_go,
-        validate_go_macos_arm,
-        test_quickstarts,
-      ]
-    steps:
-      - uses: rtCamp/action-slack-notify@master
-        env:
-          SLACK_CHANNEL: firehose
-          SLACK_COLOR: "danger"
-          SLACK_MESSAGE: "${{ github.event.head_commit.url }}"
-          SLACK_TITLE: "Release job failed."
-          SLACK_USERNAME: github-actions
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_TO_FIREHOSE }}
+  # alert-failure:
+  #   name: Alert on failure
+  #   if: ${{ !success() }}
+  #   runs-on: ubuntu-latest
+  #   needs:
+  #     [
+  #       validate_python_linux,
+  #       validate_python_macos_old,
+  #       validate_python_macos_11,
+  #       validate_python_macos_arm,
+  #       validate_python_windows,
+  #       validate_python_musl,
+  #       validate_ruby,
+  #       validate_java,
+  #       validate_js,
+  #       validate_go,
+  #       validate_go_macos_arm,
+  #       test_quickstarts,
+  #     ]
+  #   steps:
+  #     - uses: rtCamp/action-slack-notify@master
+  #       env:
+  #         SLACK_CHANNEL: firehose
+  #         SLACK_COLOR: "danger"
+  #         SLACK_MESSAGE: "${{ github.event.head_commit.url }}"
+  #         SLACK_TITLE: "Release job failed."
+  #         SLACK_USERNAME: github-actions
+  #         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_TO_FIREHOSE }}
