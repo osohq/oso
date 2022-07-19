@@ -79,8 +79,11 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
     except AttributeError:
         raise TypeError(f"Expected a model; received: {model}")
 
-    model_name = oso.host.types.get(mapped_class).name or default_polar_model_name(
-        mapped_class
+    mapped_model = oso.host.types.get(mapped_class)
+    model_name = (
+        mapped_model.name or default_polar_model_name(mapped_class)
+        if mapped_model
+        else default_polar_model_name(mapped_class)
     )
     resource = Variable("resource")
     constraint = TypeConstraint(resource, model_name)
