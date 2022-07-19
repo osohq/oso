@@ -1,7 +1,7 @@
 """Exceptions used within Oso."""
 # @TODO: Should we just generate these from the rust code?
 from textwrap import dedent
-
+from typing import Any, Optional
 
 # @TODO(gkaemmer): Move this to an `exceptions` module so that it can be shared
 # between here and oso/exceptions.py without causing a circular dependency.
@@ -15,7 +15,7 @@ class OsoError(Exception):
         super().__init__(self.add_get_help(self.message))
 
     @classmethod
-    def add_get_help(cls, message):
+    def add_get_help(cls, message) -> str:
         return (
             str(message)
             + f"\n\tGet help with Oso from our engineers: https://help.osohq.com/error/{cls.__name__}"

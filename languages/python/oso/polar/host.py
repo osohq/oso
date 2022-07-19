@@ -75,7 +75,7 @@ class Host:
         else:
             raise PolarRuntimeError(f"Invalid kind {field_type.kind}")
 
-    def copy(self):
+    def copy(self) -> "Host":
         """Copy an existing cache."""
         return type(self)(
             self.ffi_polar,
@@ -117,7 +117,7 @@ class Host:
         )
         return name
 
-    def register_mros(self):
+    def register_mros(self) -> None:
         """Register the MRO of each registered class to be used for rule type validation."""
         # Get MRO of all registered classes
         for rec in self.distinct_user_types():
@@ -207,7 +207,7 @@ class Host:
                 f"External operation '{type(args[0])} {op} {type(args[1])}' failed."
             )
 
-    def enrich_message(self, message: str):
+    def enrich_message(self, message: str) -> str:
         """
         "Enrich" a message from the polar core, such as a log line, debug
         message, or error trace.

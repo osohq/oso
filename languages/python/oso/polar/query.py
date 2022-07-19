@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from typing import List, Any, Generator, Dict
 import json
 
 from .exceptions import (
@@ -16,7 +17,7 @@ NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 class QueryResult:
     """Response type of a call to the `query` API"""
 
-    def __init__(self, results: list):
+    def __init__(self, results: List[Any]) -> None:
         self.success = len(results) > 0
         self.results = [r["bindings"] for r in results]
         self.traces = [r["trace"] for r in results]
@@ -33,7 +34,7 @@ class Query:
         for (k, v) in (bindings or {}).items():
             self.bind(k, v)
 
-    def __del__(self):
+    def __del__(self) -> None:
         del self.host
         del self.ffi_query
 
@@ -41,7 +42,7 @@ class Query:
         """Bind `name` to `value` for the duration of the query."""
         self.ffi_query.bind(name, self.host.to_polar(value))
 
-    def run(self):
+    def run(self) -> Generator[Dict[str, Any], None, None]:
         """Run the event loop and yield results."""
         assert self.ffi_query, "no query to run"
         while True:
