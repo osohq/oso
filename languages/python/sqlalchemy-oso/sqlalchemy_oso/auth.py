@@ -79,10 +79,10 @@ def authorize_model(oso: Oso, actor, action, session: Session, model):
     except AttributeError:
         raise TypeError(f"Expected a model; received: {model}")
 
-    retrieved_cls = oso.host.types.get(mapped_class)
+    user_type = oso.host.types.get(mapped_class)
     model_name = (
-        retrieved_cls.name or default_polar_model_name(mapped_class)
-        if retrieved_cls
+        user_type.name or default_polar_model_name(mapped_class)
+        if user_type
         else default_polar_model_name(mapped_class)
     )
     resource = Variable("resource")
