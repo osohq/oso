@@ -1,7 +1,6 @@
 """Exceptions used within Oso."""
 # @TODO: Should we just generate these from the rust code?
 from textwrap import dedent
-from typing import Any, Optional
 
 # @TODO(gkaemmer): Move this to an `exceptions` module so that it can be shared
 # between here and oso/exceptions.py without causing a circular dependency.
