@@ -360,7 +360,7 @@ jobs:
           # Used in build.py to find right files
           CIBW_ENVIRONMENT: OSO_ENV=CI
           # Build a macos wheel that works for x86 and ARM
-          CIBW_ARCHS: x86_64 universal2 arm64
+          CIBW_ARCHS: x86_64 universal2
         with:
           package-dir: languages/python/oso
       - uses: actions/upload-artifact@v2
@@ -954,6 +954,7 @@ jobs:
       ]
     steps:
       - uses: rtCamp/action-slack-notify@master
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           SLACK_CHANNEL: firehose
           SLACK_COLOR: "danger"
