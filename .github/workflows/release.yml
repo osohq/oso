@@ -63,9 +63,9 @@ jobs:
           rustup target add x86_64-unknown-linux-musl
           RUSTFLAGS="-C target-feature=-crt-static" cargo build --target x86_64-unknown-linux-musl --release -p polar-c-api
       - name: Rename static lib
-        run: mv target/release/libpolar.a target/release/libpolar-${{runner.os}}.a
+        run: mv target/release/libpolar.a target/libpolar-${{runner.os}}.a
       - name: Rename static lib
-        run: mv target/x86_64-unknown-linux-musl/release/libpolar.a target/x86_64-unknown-linux-musl/release/libpolar-musl.a
+        run: mv target/x86_64-unknown-linux-musl/release/libpolar.a target/libpolar-musl.a
       - uses: actions/upload-artifact@v2
         with:
           name: oso_library
@@ -77,11 +77,9 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: oso_static_library
-          path: target/release/libpolar-${{runner.os}}.a
-      - uses: actions/upload-artifact@v2
-        with:
-          name: oso_static_library
-          path: target/x86_64-unknown-linux-musl/release/libpolar-musl.a
+          path: |
+            target/libpolar-${{runner.os}}.a
+            target/libpolar-musl.a
       - uses: actions/upload-artifact@v2
         with:
           name: oso_static_library
@@ -116,9 +114,9 @@ jobs:
       - name: Rename dynamic ARM lib
         run: mv target/aarch64-apple-darwin/release/libpolar.dylib target/libpolar-macOS-arm.dylib
       - name: Merge dynamic libs into fat dynamic lib
-        run: lipo -create target/release/libpolar-macOS.dylib target/release/libpolar--macOS-arm.dylib -output target/libpolar-macOS-fat.dylib
+        run: lipo -create target/libpolar-macOS.dylib target/libpolar-macOS-arm.dylib -output target/libpolar-macOS-fat.dylib
       - name: Merge static libs into fat static lib
-        run: lipo -create target/release/libpolar-macOS.a target/release/libpolar-macOS-arm.a -output target/libpolar-macOS-fat.a
+        run: lipo -create target/libpolar-macOS.a target/libpolar-macOS-arm.a -output target/libpolar-macOS-fat.a
       - uses: actions/upload-artifact@v2
         with:
           name: oso_library
@@ -129,11 +127,16 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: oso_static_library
+          if-no-files-found: error
           path: |
             target/libpolar-macOS-fat.a
             target/libpolar-macOS.a
             target/libpolar-macOS-arm.a
-            polar-c-api/polar.h
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_static_library
+          path: polar-c-api/polar.h
+          if-no-files-found: error
 
   windows_libs:
     name: Build release libraries on Windows
