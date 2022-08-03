@@ -275,7 +275,7 @@ jobs:
         run: |
           mkdir -p languages/ruby/ext/oso-oso/lib
           cp -r oso_library/libpolar.so languages/ruby/ext/oso-oso/lib/
-          cp -r oso_library/libpolar.dylib languages/ruby/ext/oso-oso/lib/
+          cp -r oso_library/libpolar-fat.dylib languages/ruby/ext/oso-oso/lib/libpolar.dylib
           cp -r oso_library/polar.dll languages/ruby/ext/oso-oso/lib/
       - name: Test
         run: |
