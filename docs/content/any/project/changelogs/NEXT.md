@@ -8,7 +8,7 @@ description: >-
 draft: true
 ---
 
-## `RELEASED_PACKAGE_1` NEW_VERSION
+## `oso 0.26.2`
 
 ### Java
 
@@ -53,5 +53,3 @@ Link to [relevant documentation section]().
 - Bulleted list
 - Of smaller improvements
 - Potentially with doc [links]().
-
-

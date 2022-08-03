@@ -304,7 +304,9 @@ try:
             # If permissions map does not specify an action to authorize for entity
             # or if the specified action is `None`, deny access.
             if action is None:
-                logger.warning(f"No allowed action for entity {entity}")
+                logger.warning(
+                    f"No allowed action for entity {entity} in checked_permissions"
+                )
                 where = with_loader_criteria(entity, expr.false(), include_aliases=True)
                 execute_state.statement = execute_state.statement.options(where)
             else:
@@ -345,7 +347,7 @@ except ImportError:
         # TODO (dhatch): This is necessary to allow ``authorize_query`` to work
         # on queries that have already been made.  If a query has a LIMIT or OFFSET
         # applied, SQLAlchemy will by default throw an error if filters are applied.
-        # This prevents these errors from occuring, but could result in some
+        # This prevents these errors from occurring, but could result in some
         # incorrect queries. We should remove this if possible.
         query = query.enable_assertions(False)  # type: ignore
 

@@ -7,7 +7,7 @@ JS_DIR := $(OSO_ROOT)/languages/js
 RUBY_DIR := $(OSO_ROOT)/languages/ruby
 
 # Needed for tests
-JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/oso/target/oso-0.26.0.jar
+JAVA_PACKAGE_JAR_PATH := $(JAVA_DIR)/oso/target/oso-0.26.1.jar
 
 # Note: if you are using bundler in a sub-makefile (in a docs test for example),
 # you need to add `unexport BUNDLE_GEMFILE` to that makefile. Otherwise this
