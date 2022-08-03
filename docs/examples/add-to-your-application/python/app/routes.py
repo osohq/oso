@@ -11,7 +11,7 @@ def serialize(r):
     return str(r)
 
 
-# implemented here to not polute code samples in model.md
+# implemented here to not pollute code samples in model.md
 class User:
     @staticmethod
     def get_current_user():

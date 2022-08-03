@@ -319,7 +319,7 @@ def test_null_with_partial(engine, oso):
     if USING_SQLAlchemy_v1_3:
         where_clause = " \nWHERE posts.contents IS NULL"
     else:
-        # NOTE(gj): In constrast to the `Query.before_compile` event we listen
+        # NOTE(gj): In contrast to the `Query.before_compile` event we listen
         # for in 1.3, the `Session.do_orm_execute` event we listen for in
         # SQLAlchemy 1.4 (unsurprisingly) happens at ORM execution time. Because
         # of this, the WHERE clauses we add as authorization constraints are
@@ -358,7 +358,7 @@ def test_unconditional_policy_has_no_filter(engine, oso, fixture_data):
     if USING_SQLAlchemy_v1_3:
         where_clause = " \nWHERE 1 = 1"
     else:
-        # NOTE(gj): In constrast to the `Query.before_compile` event we listen
+        # NOTE(gj): In contrast to the `Query.before_compile` event we listen
         # for in 1.3, the `Session.do_orm_execute` event we listen for in
         # SQLAlchemy 1.4 (unsurprisingly) happens at ORM execution time. Because
         # of this, the WHERE clauses we add as authorization constraints are

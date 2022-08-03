@@ -6,7 +6,7 @@
 
 #! If you add another dependency to this you must also add it to the Test
 #! github action or it won't run in CI. All jobs run in parallel on CI and
-#! `make test` is just a local convienence.
+#! `make test` is just a local convenience.
 test: go-test rust-test python-test ruby-test java-test python-flask-test \
 	python-django-test python-sqlalchemy-test wasm-test js-test
 

@@ -42,7 +42,7 @@ Would be represented as the expression::
 - :py:func:`translate_expr`: Translate an expression.
 - :py:func:`translate_and`: Translate an and operation
 - :py:func:`translate_compare`: Translate a comparison operation (=, <, etc.)
-- :py:func:`translate_in`: Translate an in opertaion.
+- :py:func:`translate_in`: Translate an in operation.
 - :py:func:`translate_isa`: Translate an isa.
 - :py:func:`translate_dot`: Translate a dot operation.
 
@@ -77,7 +77,7 @@ from sqlalchemy.sql.elements import True_
 from polar.partial import dot_path
 from polar.expression import Expression
 from polar.variable import Variable
-from polar.exceptions import UnsupportedError
+from polar.exceptions import UnsupportedError, PolarRuntimeError
 
 from sqlalchemy_oso.preprocess import preprocess
 
@@ -110,6 +110,8 @@ def flip_op(operator):
 
 
 def and_filter(current, new):
+    if isinstance(current, bool):
+        current = sql.true() if current else sql.false()
     if isinstance(current, True_):
         return new
     else:
@@ -180,17 +182,20 @@ def translate_isa(expression: Expression, session: Session, model, get_model):
     assert expression.operator == "Isa"
     left, right = expression.args
     left_path = dot_path(left)
-
-    assert left_path[0] == Variable("_this")
-    left_path = left_path[1:]  # Drop _this.
     if left_path:
+        assert left_path[0] == Variable("_this")
+        left_path = left_path[1:]  # Drop _this.
         for field_name in left_path:
             _, model, __ = get_relationship(model, field_name)
 
     assert not right.fields, "Unexpected fields in isa expression"
     constraint_type = get_model(right.tag)
     model_type = inspect(model, raiseerr=True).class_
-    return sql.true() if issubclass(model_type, constraint_type) else sql.false()
+    return (
+        sql.true()
+        if issubclass(model_type, constraint_type) or isinstance(left, constraint_type)
+        else sql.false()
+    )
 
 
 def translate_compare(expression: Expression, session: Session, model, get_model):
@@ -209,7 +214,7 @@ def translate_compare(expression: Expression, session: Session, model, get_model
     _this = val => model.pk1 = val.pk1 and model.pk2 = val.pk2
 
     Where Target is the type that the dot path refers to and mirror flips an
-    operaiton.
+    operation.
     """
     (left, right) = expression.args
     left_path = dot_path(left)
@@ -218,7 +223,11 @@ def translate_compare(expression: Expression, session: Session, model, get_model
     # Dot operation is on the left hand side
     if left_path[1:]:
         assert left_path[0] == Variable("_this")
-        assert not right_path
+        if right_path:
+            raise PolarRuntimeError(
+                "Invalid comparison in policy. This may be caused by comparing the "
+                + "foreign key field rather than the relationship property"
+            )
         path, field_name = left_path[1:-1], left_path[-1]
         return translate_dot(
             path,

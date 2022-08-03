@@ -18,14 +18,17 @@ Role-based access control (RBAC) is so ubiquitous that Oso provides
 syntax for modeling RBAC. This syntax makes it easy to create a role-based
 authorization policy with roles and permissions -- for example, declaring that
 the `"maintainer"` role on a repository allows a user to `"push"` to that
-repository.
+repository. In this guide, we'll walk through building an RBAC policy for [GitClub][].
 
-In this guide, we'll walk through building an RBAC policy for [GitClub][].
+This guide assumes you're building authorization in a monolith application.
+If you're building with microservices, read about [how to model roles using Oso Cloud](https://cloud-docs.osohq.com/guides/modeling-building-blocks).
 
+
+<!--
 {{% ifLang python %}}
 To learn more about the fundamentals of Role-Based Access Control in
 Python, visit our page on [RBAC Python][].
-{{% /ifLang %}}
+{{% /ifLang %}} -->
 
 [RBAC Python]: https://www.osohq.com/learn/rbac-python
 [GitClub]: https://github.com/osohq/gitclub
@@ -331,3 +334,5 @@ Our complete policy looks like this:
 
 If you'd like to play around with a more fully-featured version of this policy
 and application, check out the GitClub repository on [GitHub][GitClub].
+
+If you're building with microservices, read about [how to model roles using Oso Cloud](https://cloud-docs.osohq.com/guides/modeling-building-blocks).
