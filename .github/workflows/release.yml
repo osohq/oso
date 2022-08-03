@@ -115,30 +115,23 @@ jobs:
         run: mv target/aarch64-apple-darwin/release/libpolar.dylib target/aarch64-apple-darwin/release/libpolar-arm.dylib
       - name: Merge dynamic libs into fat dynamic lib
         run: lipo -create target/release/libpolar.dylib target/aarch64-apple-darwin/release/libpolar-arm.dylib -output target/libpolar-fat.dylib
+      - name: Merge static libs into fat static lib
+        run: lipo -create target/release/libpolar.a target/aarch64-apple-darwin/release/libpolar-macOS-arm.a -output target/libpolar-fat.a
       - uses: actions/upload-artifact@v2
         with:
           name: oso_library
-          path: target/release/libpolar.dylib
-      - uses: actions/upload-artifact@v2
-        with:
-          name: oso_library
-          path: target/aarch64-apple-darwin/release/libpolar-arm.dylib
-      - uses: actions/upload-artifact@v2
-        with:
-          name: oso_library
-          path: target/libpolar-fat.dylib
+          path: |
+            target/release/libpolar.dylib
+            target/libpolar-fat.dylib
+            target/aarch64-apple-darwin/release/libpolar-arm.dylib
       - uses: actions/upload-artifact@v2
         with:
           name: oso_static_library
-          path: target/release/libpolar-${{runner.os}}.a
-      - uses: actions/upload-artifact@v2
-        with:
-          name: oso_static_library
-          path: target/aarch64-apple-darwin/release/libpolar-macOS-arm.a
-      - uses: actions/upload-artifact@v2
-        with:
-          name: oso_static_library
-          path: polar-c-api/polar.h
+          path: |
+            target/release/libpolar-${{runner.os}}.a
+            target/libpolar-fat.a
+            target/aarch64-apple-darwin/release/libpolar-macOS-arm.a
+            polar-c-api/polar.h
 
   windows_libs:
     name: Build release libraries on Windows
@@ -335,55 +328,8 @@ jobs:
 
   build_macos_wheels:
     name: Build wheels on MacOS
-    # Build on 10.15 so we can still build a 3.6 wheel.
-    # May have to drop once github actions switches to macos-11 by default
-    # because 3.6 isn't supported on 11.
-    runs-on: macos-10.15
+    runs-on: macos-12
     needs: [version, macos_libs]
-    env:
-      # Skip Python 2.7 and Python 3.5
-      CIBW_SKIP: "cp27-* cp35-* pp27-*"
-      # 64-bit builds only
-      CIBW_BUILD: "*64"
-      # Used in build.py to find right files
-      CIBW_ENVIRONMENT: OSO_ENV=CI
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        name: Install Python
-        with:
-          python-version: "3.7"
-      - name: Install cibuildwheel
-        run: |
-          python -m pip install cibuildwheel==2.2.2
-      - name: Download static libs
-        uses: actions/download-artifact@v1
-        with:
-          name: oso_static_library
-      - name: Copy static library.
-        run: |
-          mkdir -p languages/python/oso/native
-          cp -r oso_static_library/libpolar-macOS.a languages/python/oso/native/libpolar.a
-          cp -r oso_static_library/polar.h languages/python/oso/native/polar.h
-      - name: Copy in readme
-        run: |
-          rm languages/python/oso/README.md
-          cp README.md languages/python/oso/README.md
-      - name: Build wheels
-        run: |
-          python -m cibuildwheel --output-dir wheelhouse
-        working-directory: languages/python/oso
-      - uses: actions/upload-artifact@v2
-        with:
-          name: wheel
-          path: languages/python/oso/wheelhouse/*.whl
-
-  build_macos_arm_wheels:
-    name: Build macOS arm wheels
-    runs-on: [self-hosted, m1]
-    needs: [version, macos_libs]
-    env:
-      OSO_ENV: CI
     steps:
       - uses: actions/checkout@v2
       - name: Download static libs
@@ -393,43 +339,36 @@ jobs:
       - name: Copy static library.
         run: |
           mkdir -p languages/python/oso/native
-          cp -r oso_static_library/libpolar-macOS-arm.a languages/python/oso/native/libpolar.a
+          cp -r oso_static_library/libpolar-fat.a languages/python/oso/native/libpolar.a
           cp -r oso_static_library/polar.h languages/python/oso/native/polar.h
       - name: Copy in readme
         run: |
           rm languages/python/oso/README.md
           cp README.md languages/python/oso/README.md
       - name: Build wheels
-        run: |
-          arch -arm64 /opt/homebrew/opt/python@3.8/bin/python3 setup.py sdist bdist_wheel
-          arch -arm64 /opt/homebrew/opt/python@3.9/bin/python3 setup.py sdist bdist_wheel
-          arch -arm64 /opt/homebrew/opt/python@3.10/bin/python3 setup.py sdist bdist_wheel
-        working-directory: languages/python/oso
+        uses: pypa/cibuildwheel@v2.8.1
+        env:
+          # Skip Python 2.7 and Python 3.5
+          CIBW_SKIP: "cp27-* cp35-* pp27-*"
+          # 64-bit builds only
+          CIBW_BUILD: "*64"
+          # Used in build.py to find right files
+          CIBW_ENVIRONMENT: OSO_ENV=CI
+          # Build a macos wheel that works for x86 and ARM
+          CIBW_ARCHS: universal2
+        with:
+          package-dir: languages/python/oso
       - uses: actions/upload-artifact@v2
         with:
           name: wheel
-          path: languages/python/oso/dist/*.whl
+          path: ./wheelhouse/*.whl
 
   build_windows_wheels:
     name: Build wheels on Windows
     runs-on: windows-latest
     needs: [version, windows_libs]
-    env:
-      # Skip Python 2.7 and Python 3.5
-      CIBW_SKIP: "cp27-* cp35-* pp27-*"
-      # 64-bit builds only
-      CIBW_BUILD: "*64"
-      # Used in build.py to find right files
-      CIBW_ENVIRONMENT: OSO_ENV=CI
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        name: Install Python
-        with:
-          python-version: "3.7"
-      - name: Install cibuildwheel
-        run: |
-          python -m pip install cibuildwheel==2.2.2
       - name: Download static libs
         uses: actions/download-artifact@v1
         with:
@@ -444,13 +383,20 @@ jobs:
           rm languages/python/oso/README.md
           cp README.md languages/python/oso/README.md
       - name: Build wheels
-        run: |
-          python -m cibuildwheel --output-dir wheelhouse
-        working-directory: languages/python/oso
+        uses: pypa/cibuildwheel@v2.8.1
+        env:
+          # Skip Python 2.7 and Python 3.5
+          CIBW_SKIP: "cp27-* cp35-* pp27-*"
+          # 64-bit builds only
+          CIBW_BUILD: "*64"
+          # Used in build.py to find right files
+          CIBW_ENVIRONMENT: OSO_ENV=CI
+        with:
+          package-dir: languages/python/oso
       - uses: actions/upload-artifact@v2
         with:
           name: wheel
-          path: languages/python/oso/wheelhouse/*.whl
+          path: ./wheelhouse/*.whl
 
   build_js:
     name: Build js.
@@ -590,37 +536,6 @@ jobs:
           python test.py
         working-directory: test
 
-  validate_python_macos_old:
-    name: Test python ${{ matrix.python-version }} on MacOS
-    needs: [build_macos_wheels]
-    runs-on: macos-10.15
-    strategy:
-      matrix:
-        # Skip 3.10 due to a broken python link.
-        # Turn back on after this is resolved https://github.com/pypa/cibuildwheel/issues/902
-        python-version: ["3.6", "3.7", "3.8", "3.9"]
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set version env
-        id: version
-        run: echo "::set-output name=oso_version::$(cat VERSION)"
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Download oso python wheels from package run
-        uses: actions/download-artifact@v1
-        with:
-          name: wheel
-      - name: "test"
-        run: |
-          # first install _only_ the wheel and make sure it's available
-          pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel --no-deps --no-index
-          # then install deps too
-          pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
-          python test.py
-        working-directory: test
-
   validate_python_macos_11:
     name: Test python ${{ matrix.python-version }} on MacOS
     needs: [build_macos_wheels]
@@ -653,7 +568,7 @@ jobs:
 
   validate_python_macos_arm:
     name: Test python on MacOS M1
-    needs: [build_macos_arm_wheels]
+    needs: [build_macos_wheels]
     runs-on: [self-hosted, m1]
     steps:
       - uses: actions/checkout@v2
@@ -895,7 +810,6 @@ jobs:
         build_gem,
         build_go,
         validate_python_linux,
-        validate_python_macos_old,
         validate_python_macos_11,
         validate_python_windows,
         validate_python_musl,
@@ -1022,7 +936,6 @@ jobs:
     needs:
       [
         validate_python_linux,
-        validate_python_macos_old,
         validate_python_macos_11,
         validate_python_macos_arm,
         validate_python_windows,
