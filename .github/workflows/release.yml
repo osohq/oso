@@ -328,7 +328,7 @@ jobs:
           CIBW_ENVIRONMENT: OSO_ENV=CI
         with:
           package-dir: languages/python/oso
-          output-dir: wheelhouse
+          output-dir: lanugages/python/oso/wheelhouse
       - uses: actions/upload-artifact@v2
         with:
           name: wheel
