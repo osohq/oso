@@ -17,6 +17,8 @@ matrix:
               close: '</div>'
             - open: '<script>'
               close: '</script>'
+            - open: '<img'
+              close: '/>'
 
       # HTML comments
       - pyspelling.filters.context:
