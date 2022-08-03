@@ -5,6 +5,7 @@ on:
       - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
     branches:
       - main
+      - sam/fix-python-ci
 
 jobs:
   version:
@@ -301,22 +302,8 @@ jobs:
     name: Build wheels on Linux
     runs-on: ubuntu-latest
     needs: [version, linux_libs]
-    env:
-      # Skip Python 2.7 and Python 3.5
-      CIBW_SKIP: "cp27-* cp35-* pp27-*"
-      # 64-bit builds only
-      CIBW_BUILD: "*64"
-      # Used in build.py to find right files
-      CIBW_ENVIRONMENT: OSO_ENV=CI
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        name: Install Python
-        with:
-          python-version: "3.7"
-      - name: Install cibuildwheel
-        run: |
-          python -m pip install cibuildwheel==2.2.2
       - name: Download static libs
         uses: actions/download-artifact@v1
         with:
@@ -331,9 +318,17 @@ jobs:
           rm languages/python/oso/README.md
           cp README.md languages/python/oso/README.md
       - name: Build wheels
-        run: |
-          python -m cibuildwheel --output-dir wheelhouse
-        working-directory: languages/python/oso
+        uses: pypa/cibuildwheel@v2.8.1
+        env:
+          # Skip Python 2.7 and Python 3.5
+          CIBW_SKIP: "cp27-* cp35-* pp27-*"
+          # 64-bit builds only
+          CIBW_BUILD: "*64"
+          # Used in build.py to find right files
+          CIBW_ENVIRONMENT: OSO_ENV=CI
+        with:
+          package-dir: languages/python/oso
+          output-dir: wheelhouse
       - uses: actions/upload-artifact@v2
         with:
           name: wheel
