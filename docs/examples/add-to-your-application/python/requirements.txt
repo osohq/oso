@@ -2,4 +2,4 @@
 pytest
 black
 sqlalchemy
-flask
+flask==2.1

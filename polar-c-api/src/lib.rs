@@ -147,7 +147,7 @@ pub extern "C" fn polar_register_mro(
 }
 // @Note(steve): trace is treated as a bool. 0 for false, anything else for true.
 // If we get more than one flag on these ffi methods, consider renaming it flags and making it a bitflags field.
-// Then we wont have to update the ffi to add new optional things like logging or tracing or whatever.
+// Then we won't have to update the ffi to add new optional things like logging or tracing or whatever.
 #[no_mangle]
 pub extern "C" fn polar_next_inline_query(polar_ptr: *mut Polar, trace: u32) -> *mut Query {
     let polar = unsafe { ffi_ref!(polar_ptr) };

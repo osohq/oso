@@ -142,7 +142,7 @@ import('monaco-editor-core').then(monaco => {
     }
   });
 
-  // Define a new theme that constains only rules that match this language
+  // Define a new theme that contains only rules that match this language
   monaco.editor.defineTheme('polarTheme', {
     base: 'vs-dark',
     rules: [

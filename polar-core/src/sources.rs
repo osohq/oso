@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use std::{fmt, sync::Arc};
 
 use serde::{Deserialize, Serialize};
@@ -35,9 +36,9 @@ impl Context {
     pub(crate) fn source_position(&self) -> String {
         let mut f = String::new();
         let (row, column) = loc_to_pos(&self.source.src, self.left);
-        f += &format!(" at line {}, column {}", row + 1, column + 1);
+        write!(f, " at line {}, column {}", row + 1, column + 1).unwrap();
         if let Some(ref filename) = self.source.filename {
-            f += &format!(" of file {}", filename);
+            write!(f, " of file {}", filename).unwrap();
         }
         f
     }

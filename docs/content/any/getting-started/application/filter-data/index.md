@@ -11,6 +11,8 @@ weight: 4
 
 # Filter collections of data
 
+<!-- // TODO: call out oso cloud by saying what data filtering is and how you can avoid it? -->
+
 Many applications perform authorization over large collections of data
 that cannot be loaded into memory. Often index pages showing users a
 number of resources, like the repositories they can access, will need to

@@ -68,7 +68,7 @@ requirements:
   - Maven: 3.6+
 - Node.js: 12.20.0+
   - Yarn 1.22+
-- Python: 3.6+
+- Python: 3.7+
 - Ruby: 2.4+
   - Bundler 2.1.4+
 - Rust: 1.46+

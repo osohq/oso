@@ -381,7 +381,7 @@ CallTerm: Value = {
     <w:ResWord> => Value::String(w),
     <s:"Symbol"> => Value::String(s.0),
     // These provide ways to get keys that aren't
-    // expressable as `foo.bar`
+    // expressible as `foo.bar`
     "(" <Variable> ")",
     "(" <PolarString> ")",
 }
