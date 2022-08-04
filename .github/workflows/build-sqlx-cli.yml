@@ -1,0 +1,26 @@
+name: build CI-compatible artifact for the sqlx-cli
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build the sqlx-cli binary and upload it as an artifact
+    steps:
+      - name: install dependencies
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      # install `stable` toolchain
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: x86_64-unknown-linux-musl
+      - name: build sqlx-cli
+        # build sqlx-cli, and put the binary in the current directory
+        run: cargo install sqlx-cli --root . --target x86_64-unknown-linux-musl --features openssl-vendored
+      - name: upload sqlx-cli binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: sqlx-cli
+          path: .
