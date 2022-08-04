@@ -7,7 +7,8 @@ class DataFilter:
         self.conditions = conditions
         self.types = types
 
-    def parse(polar, blob):
+    @classmethod
+    def parse(cls, polar, blob):
         types = polar.host.types
         model = types[blob["root"]].cls
         relations = [Relation.parse(polar, *rel) for rel in blob["relations"]]
@@ -16,9 +17,7 @@ class DataFilter:
             for disj in blob["conditions"]
         ]
 
-        return DataFilter(
-            model=model, relations=relations, conditions=conditions, types=types
-        )
+        return cls(model=model, relations=relations, conditions=conditions, types=types)
 
 
 class Projection:
@@ -41,10 +40,11 @@ class Relation:
         self.name = name
         self.right = right
 
-    def parse(polar, left, name, right):
+    @classmethod
+    def parse(cls, polar, left, name, right):
         left = polar.host.types[left].cls
         right = polar.host.types[right].cls
-        return Relation(left=left, name=name, right=right)
+        return cls(left=left, name=name, right=right)
 
 
 class Condition:
@@ -61,11 +61,13 @@ class Condition:
         self.cmp = cmp
         self.right = right
 
-    def parse(polar, left, cmp, right):
-        left = Condition.parse_side(polar, left)
-        right = Condition.parse_side(polar, right)
-        return Condition(left=left, cmp=cmp, right=right)
+    @classmethod
+    def parse(cls, polar, left, cmp, right):
+        left = cls.parse_side(polar, left)
+        right = cls.parse_side(polar, right)
+        return cls(left=left, cmp=cmp, right=right)
 
+    @staticmethod
     def parse_side(polar, side):
         key = next(iter(side.keys()))
         val = side[key]

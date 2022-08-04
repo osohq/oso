@@ -39,6 +39,7 @@ class SqlAlchemyAdapter(DataAdapter):
     def execute_query(self, query):
         return query.all()
 
+    @staticmethod
     def sqlize(cond):
         op = cond.cmp
         lhs = SqlAlchemyAdapter.add_side(cond.left)
@@ -52,6 +53,7 @@ class SqlAlchemyAdapter(DataAdapter):
         elif op == "Nin":
             return lhs not in rhs
 
+    @staticmethod
     def add_side(side):
         if isinstance(side, Projection):
             source = side.source

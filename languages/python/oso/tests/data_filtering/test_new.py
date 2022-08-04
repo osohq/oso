@@ -1,3 +1,4 @@
+import itertools
 import pytest
 from oso import Relation
 from polar.data.adapter.sqlalchemy_adapter import SqlAlchemyAdapter
@@ -361,9 +362,8 @@ def test_parent_child_cases(oso):
         allow(log: Log{foo: foo}, 2, foo: Foo{logs: logs}) if log in logs;
     """
     oso.load_str(policy)
-    for action in range(3):
-        for log in logs:
-            oso.check_authz(log, action, Foo, [log.foo()])
+    for action, log in itertools.product(range(3), logs):
+        oso.check_authz(log, action, Foo, [log.foo()])
 
 
 def test_specializers(oso):
@@ -388,9 +388,8 @@ def test_specializers(oso):
     oso.load_str(policy)
     parts = ["None", "Cls", "Dict", "Ptn"]
     for a in parts:
-        for b in parts:
-            for log in logs:
-                oso.check_authz(log.foo(), a + b, Log, [log])
+        for b, log in itertools.product(parts, logs):
+            oso.check_authz(log.foo(), a + b, Log, [log])
 
 
 def test_var_in_value(oso):

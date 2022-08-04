@@ -912,7 +912,7 @@ def test_iterators(polar, qeval, qvar):
 
     class Bar(list):
         def sum(self):
-            return sum(x for x in self)
+            return sum(self)
 
     polar.register_class(Bar)
     assert qvar("x in new Bar([1, 2, 3])", "x") == [1, 2, 3]
