@@ -350,8 +350,6 @@ jobs:
         run: |
           rm languages/python/oso/README.md
           cp README.md languages/python/oso/README.md
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.8.1
         env:
