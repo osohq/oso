@@ -9,6 +9,8 @@
 //! In addition, there are special cases like traces and sources that have their own
 //! formatting requirements.
 
+use std::fmt::Write;
+
 use super::{lexer::loc_to_pos, rules::*, sources::*, terms::*, traces::*};
 
 impl Trace {
@@ -86,7 +88,7 @@ pub(crate) fn source_lines(source: &Source, offset: usize, context_lines: usize)
     if let Some(target) = lines.get_mut(target_line) {
         // Calculate length of line number prefix.
         let prefix_len = "123: ".len();
-        *target += &format!("\n{}^", " ".repeat(prefix_len + target_column));
+        write!(*target, "\n{}^", " ".repeat(prefix_len + target_column)).unwrap();
     }
 
     lines.join("\n")
@@ -372,6 +374,8 @@ mod display {
 }
 
 mod to_polar {
+    use std::fmt::Write;
+
     use crate::formatting::{format_args, format_params, to_polar_parens};
     use crate::resource_block::{BlockType, ResourceBlock, ShorthandRule};
     use crate::rules::*;
@@ -689,16 +693,16 @@ mod to_polar {
                 self.resource.to_polar()
             );
             if let Some(ref roles) = self.roles {
-                s += &format!("  roles = {};\n", roles.to_polar());
+                writeln!(s, "  roles = {};", roles.to_polar()).unwrap();
             }
             if let Some(ref permissions) = self.permissions {
-                s += &format!("  permissions = {};\n", permissions.to_polar());
+                writeln!(s, "  permissions = {};", permissions.to_polar()).unwrap();
             }
             if let Some(ref relations) = self.relations {
-                s += &format!("  relations = {};\n", relations.to_polar());
+                writeln!(s, "  relations = {};", relations.to_polar()).unwrap();
             }
             for rule in &self.shorthand_rules {
-                s += &format!("  {}\n", rule.to_polar());
+                writeln!(s, "  {}", rule.to_polar()).unwrap();
             }
             s += "}";
             s

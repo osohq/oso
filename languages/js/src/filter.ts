@@ -48,7 +48,7 @@ export interface Filter {
   types: HostTypes; // type information for use by the adapter (see below)
 }
 
-// Represents a named relation between two data sources, eg. an organizaion to its members
+// Represents a named relation between two data sources, eg. an organization to its members
 interface FilterRelation {
   fromTypeName: string;
   fromFieldName: string;

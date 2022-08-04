@@ -237,7 +237,7 @@ where
         self.set_equality_check(|a, b| PartialEq::eq(a, b))
     }
 
-    /// Add an attribute getter for statments like `foo.bar`
+    /// Add an attribute getter for statements like `foo.bar`
     /// `class.add_attribute_getter("bar", |instance| instance.bar)
     pub fn add_attribute_getter<F, R>(mut self, name: &'static str, f: F) -> Self
     where
@@ -326,7 +326,7 @@ where
 /// register the class if not seen before.
 ///
 /// A reference to the underlying type of the Instance can be
-/// retrived using `Instance::downcast`.
+/// retrieved using `Instance::downcast`.
 #[derive(Clone)]
 pub struct Instance {
     inner: Arc<dyn std::any::Any + Send + Sync>,

@@ -95,9 +95,9 @@ class Query:
             "Eq",
             getattr(instance, rel.my_field),
         )
-        filter = DataFilter(other_cls, [], [[condition]], self.host.types)
+        data_filter = DataFilter(other_cls, [], [[condition]], self.host.types)
         adapter = self.host.adapter
-        query = adapter.build_query(filter)
+        query = adapter.build_query(data_filter)
         results = adapter.execute_query(query)
 
         if rel.kind == "one":
@@ -134,7 +134,7 @@ class Query:
             self.ffi_query.call_result(call_id, None)
             return
         if (
-            callable(attr) and not data["args"] is None
+            callable(attr) and data["args"] is not None
         ):  # If it's a function, call it with the args.
             args = [self.host.to_python(arg) for arg in data["args"]]
             kwargs = data["kwargs"] or {}

@@ -20,12 +20,12 @@ def preprocess(expression: Expression) -> Expression:
     # Join each expression by AND.
     expressions = {var: Expression("And", args) for var, args in variables.items()}
 
-    # Subsitute _this for each variable.
+    # Substitute _this for each variable.
     expressions = {
         var: sub_this(var, expression) for var, expression in expressions.items()
     }
 
-    # Subsitute new expressions for variables in original expression.
+    # Substitute new expressions for variables in original expression.
     for var, expr in expressions.items():
         new_expr = sub_var(var, expr, preprocess(new_expr))
 

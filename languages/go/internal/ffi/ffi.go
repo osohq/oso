@@ -85,7 +85,7 @@ func checkResultVoid(res *C.polar_CResult_c_void) error {
 func checkResultString(res *C.polar_CResult_c_char) (*string, error) {
 	err := res.error
 	resultPtr := res.result
-	// it's fine to cast this pointer to result c_void, since Rust wont
+	// it's fine to cast this pointer to result c_void, since Rust won't
 	// do anything with inner pointers anyway
 	defer C.result_free((*C.polar_CResult_c_void)((unsafe.Pointer)(res)))
 	if err != nil {
@@ -101,7 +101,7 @@ func checkResultString(res *C.polar_CResult_c_char) (*string, error) {
 func checkResultQuery(res *C.polar_CResult_Query) (*QueryFfi, error) {
 	err := res.error
 	resultPtr := res.result
-	// it's fine to cast this pointer to result c_void, since Rust wont
+	// it's fine to cast this pointer to result c_void, since Rust won't
 	// do anything with inner pointers anyway
 	defer C.result_free((*C.polar_CResult_c_void)((unsafe.Pointer)(res)))
 	if err != nil {
