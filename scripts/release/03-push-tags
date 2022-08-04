@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -eou pipefail
+
+if [[ "$#" -ne 1 ]]; then
+  echo "$0: VERSION"
+  exit 1
+fi
+
+if [[ `git branch --show-current` != "main" ]]; then
+  echo "Must create tags from main."
+  echo "Switch to main and pull to ensure the release commit is included."
+  exit 1
+fi
+
+SCRIPTDIR=`dirname "$0"`
+VERSION="$1"
+pushd $SCRIPTDIR
+
+OSO_TAG="v${VERSION}"
+DJANGO_TAG="django-v${VERSION}"
+FLASK_TAG="flask-v${VERSION}"
+SQLALCHEMY_TAG="sqlalchemy-v${VERSION}"
+
+git tag -a "${OSO_TAG}" -m "${OSO_TAG}"
+git tag -a "${DJANGO_TAG}" -m "${DJANGO_TAG}"
+git tag -a "${FLASK_TAG}" -m "${FLASK_TAG}"
+git tag -a "${SQLALCHEMY_TAG}" -m "${SQLALCHEMY_TAG}"
+
+git push origin ${OSO_TAG}
+git push origin ${DJANGO_TAG}
+git push origin ${FLASK_TAG}
+git push origin ${SQLALCHEMY_TAG}

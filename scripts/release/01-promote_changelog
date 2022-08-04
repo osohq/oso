@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -eou pipefail
+
+if [[ "$#" -ne 1 ]]; then
+  echo "$0: RELEASE"
+  exit 1
+fi
+
+SCRIPT_DIR=`dirname "$0"`
+OSO_DIR="${SCRIPT_DIR}/../.."
+RELEASE=$1
+
+pushd $OSO_DIR
+pushd docs/content/any/project/changelogs
+
+cp NEXT.md "${RELEASE}".md
+cp TEMPLATE.md NEXT.md

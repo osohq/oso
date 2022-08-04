@@ -1,11 +1,15 @@
 package com.osohq.oso;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Optional.ofNullable;
+
 import com.osohq.oso.Exceptions.OsoException;
 import com.osohq.oso.Exceptions.ParseError;
 import com.osohq.oso.Exceptions.PolarRuntimeException;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -13,10 +17,12 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import org.json.JSONArray;
 
 public class Polar {
+
+  private static final String POLAR_EXTENTION = "polar";
+
   private Ffi.Polar ffiPolar;
   protected Host host; // visible for tests only
 
@@ -55,22 +61,19 @@ public class Polar {
    * @throws IOException If unable to open or read the file.
    */
   public void loadFiles(String[] filenames) throws IOException, OsoException {
-    if (filenames.length == 0) {
+    if (filenames == null || filenames.length == 0) {
       return;
     }
 
     JSONArray sources = new JSONArray();
 
     for (String filename : filenames) {
-      Optional<String> ext =
-          Optional.ofNullable(filename)
-              .filter(f -> f.contains("."))
-              .map(f -> f.substring(filename.lastIndexOf(".") + 1));
-
       // check file extension
-      if (!ext.isPresent() || !ext.get().equals("polar")) {
-        throw new Exceptions.PolarFileExtensionError(filename);
-      }
+      ofNullable(filename)
+          .filter(f -> f.contains("."))
+          .map(f -> f.substring(filename.lastIndexOf(".") + 1))
+          .filter(extention -> extention.equals(POLAR_EXTENTION))
+          .orElseThrow(() -> new Exceptions.PolarFileExtensionError(filename));
 
       try {
         String contents = new String(Files.readAllBytes(Paths.get(filename)));
@@ -78,6 +81,43 @@ public class Polar {
         sources.put(source.toJSON());
       } catch (FileNotFoundException e) {
         throw new Exceptions.PolarFileNotFoundError(filename);
+      }
+    }
+
+    loadSources(sources);
+  }
+
+  /**
+   * Load Polar policy files from resources. File contents are loaded into a String and saved here,
+   * so changes to a file made after a call to loadFiles will not be recognized.
+   *
+   * @throws Exceptions.PolarFileExtensionError On incorrect file extension.
+   * @throws Exceptions.PolarFileNotFoundError On nonexistent file.
+   * @throws Exceptions.InlineQueryFailedError On a failed inline query.
+   * @throws IOException If unable to open or read the file.
+   */
+  public void loadFilesFromResources(String... filenames) throws IOException, OsoException {
+    if (filenames == null || filenames.length == 0) {
+      return;
+    }
+
+    JSONArray sources = new JSONArray();
+    for (String filename : filenames) {
+      // check file extension
+      ofNullable(filename)
+          .filter(f -> f.contains("."))
+          .map(f -> f.substring(filename.lastIndexOf(".") + 1))
+          .filter(extention -> extention.equals(POLAR_EXTENTION))
+          .orElseThrow(() -> new Exceptions.PolarFileExtensionError(filename));
+
+      try (InputStream inputStream = getClass().getResourceAsStream(filename)) {
+        if (inputStream == null) {
+          throw new Exceptions.PolarFileNotFoundError(filename);
+        }
+
+        String contents = new String(inputStream.readAllBytes(), UTF_8);
+
+        sources.put(new Source(contents, filename).toJSON());
       }
     }
 
