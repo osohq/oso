@@ -1,4 +1,5 @@
 use criterion::{criterion_group, BenchmarkId, Criterion};
+use std::fmt::Write;
 
 use polar_core::*;
 use polar_core::{kb::Bindings, polar::Polar, terms::*};
@@ -134,7 +135,7 @@ pub fn indexed_rules(c: &mut Criterion) {
         let mut runner = runner_from_query(&format!("f({})", n / 2));
         let mut policy = "f(0);".to_owned();
         for i in 1..=n {
-            policy += &format!("f({});", i);
+            write!(policy, "f({});", i).unwrap();
         }
         runner.load_str(&policy).unwrap();
         runner.expected_result(Bindings::new());
@@ -168,7 +169,7 @@ pub fn many_rules(c: &mut Criterion) {
         let mut runner = runner_from_query(&format!("f({})", TARGET));
         let mut policy = "f(0);".to_owned();
         for i in 1..=TARGET {
-            policy += &format!("f({}) if f({});", i, i - 1);
+            write!(policy, "f({}) if f({});", i, i - 1).unwrap();
         }
         runner.load_str(&policy).unwrap();
         runner.expected_result(Bindings::new());

@@ -799,14 +799,16 @@ impl PolarVirtualMachine {
                     // print BINDINGS: { .. } only for TRACE logs
                     if !terms.is_empty() && configured_log_level == LogLevel::Trace {
                         let relevant_bindings = self.relevant_bindings(terms);
-                        msg.push_str(&format!(
+                        write!(
+                            msg,
                             ", BINDINGS: {{{}}}",
                             relevant_bindings
                                 .iter()
                                 .map(|(var, val)| format!("{} => {}", var.0, val))
                                 .collect::<Vec<String>>()
                                 .join(", ")
-                        ));
+                        )
+                        .unwrap();
                     }
                     self.print(msg);
                     for line in &lines[1..] {
@@ -2617,7 +2619,7 @@ impl PolarVirtualMachine {
                             .parsed_context()
                             .map_or_else(|| "".into(), Context::source_position);
 
-                        rule_strs.push_str(&format!("\n  {}{}", rule.head_as_string(), context));
+                        write!(rule_strs, "\n  {}{}", rule.head_as_string(), context).unwrap();
                     }
                     rule_strs
                 },
@@ -2974,7 +2976,7 @@ impl Runnable for PolarVirtualMachine {
                 } else {
                     let mut out = "RESULT: {\n".to_string(); // open curly & newline
                     for (key, value) in &bindings {
-                        out.push_str(&format!("  {}: {}\n", key, value)); // key-value pairs spaced w/ newlines
+                        writeln!(out, "  {}: {}", key, value).unwrap(); // key-value pairs spaced w/ newlines
                     }
                     out.push('}'); // closing curly
                     out
