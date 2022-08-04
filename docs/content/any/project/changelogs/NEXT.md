@@ -8,7 +8,20 @@ description: >-
 draft: true
 ---
 
-## `RELEASED_PACKAGE_1` NEW_VERSION
+## `oso 0.26.2`
+
+### Java
+
+#### Other bugs & improvements.
+
+A new `loadFilesFromResources` API has been added to allow loading policy source code from resource files contained in your packaged `.jar`. Special thanks to [`@kovacstamasx`](https://github.com/kovacstamasx) for this contribution.
+
+### Python
+
+#### Other bugs & improvements
+
+- Resolved an `IndexError` exception in `sqlalchemy-oso` Data Filtering. (thanks to @jackdreillyvia for the contribution)
+- Resolved a false-negative in `sqlalchemy-oso` Data Filtering when comparing ORM objects. (thanks to @jackdreillyvia for the contribution)
 
 ### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 

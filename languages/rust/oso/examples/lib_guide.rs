@@ -13,12 +13,14 @@ fn types() -> anyhow::Result<()> {
         is_admin: bool,
     }
     oso.register_class(User1::get_polar_class())?;
-    oso.load_str(r#"allow(actor: User1, action, resource) if actor.is_admin;"#)?;
+    oso.load_str(r#"allow(actor: User1, _action, _resource) if actor.is_admin;"#)?;
     let user1 = User1 {
         name: "alice".to_string(),
         is_admin: true,
     };
     assert!(oso.is_allowed(user1, "foo", "bar")?);
+
+    let mut oso = Oso::new();
 
     #[derive(Clone, PolarClass)]
     struct User2 {
@@ -44,9 +46,15 @@ fn types() -> anyhow::Result<()> {
             .add_method("is_called_alice", User2::is_called_alice)
             .build(),
     )?;
-    oso.load_str(r#"allow(user: User2, _, _) if user.is_admin;"#)?;
-    oso.load_str(r#"?= allow(new User2("bob", true), "foo", "bar");"#)?;
-    oso.load_str(r#"?= new User2("alice", true).is_called_alice();"#)?;
+    oso.load_str(
+        r#"
+        allow(user: User2, _, _) if user.is_admin;
+        ?= allow(new User2("bob", true), "foo", "bar");
+        ?= new User2("alice", true).is_called_alice();
+    "#,
+    )?;
+
+    let mut oso = Oso::new();
 
     #[derive(Clone, PolarClass)]
     struct User3 {
@@ -56,7 +64,7 @@ fn types() -> anyhow::Result<()> {
         is_admin: bool,
     }
     oso.register_class(User3::get_polar_class())?;
-    oso.load_str(r#"allow(actor, action, resource) if actor matches User3{name: "alice"};"#)?;
+    oso.load_str(r#"allow(actor, _action, _resource) if actor matches User3{name: "alice"};"#)?;
     let user3 = User3 {
         name: "alice".to_string(),
         is_admin: true,
@@ -78,7 +86,9 @@ fn strings() -> anyhow::Result<()> {
 
     oso.register_class(User::get_polar_class())?;
 
-    oso.load_str(r#"allow(actor, action, resource) if actor.username.ends_with("example.com");"#)?;
+    oso.load_str(
+        r#"allow(actor, _action, _resource) if actor.username.ends_with("example.com");"#,
+    )?;
 
     let user = User {
         username: "alice@example.com".to_owned(),
@@ -99,7 +109,7 @@ fn vecs() -> anyhow::Result<()> {
 
     oso.register_class(User::get_polar_class()).unwrap();
 
-    oso.load_str(r#"allow(actor, action, resource) if "HR" in actor.groups;"#)?;
+    oso.load_str(r#"allow(actor, _action, _resource) if "HR" in actor.groups;"#)?;
 
     let user = User {
         groups: vec!["HR".to_string(), "payroll".to_string()],
@@ -118,7 +128,7 @@ fn maps() -> anyhow::Result<()> {
     }
 
     oso.register_class(User::get_polar_class())?;
-    oso.load_str(r#"allow(actor, action, resource) if actor.roles.project1 = "admin";"#)?;
+    oso.load_str(r#"allow(actor, _action, _resource) if actor.roles.project1 = "admin";"#)?;
 
     let user = User {
         roles: maplit::hashmap! { "project1".to_string() => "admin".to_string() },
@@ -144,7 +154,7 @@ fn enums() -> anyhow::Result<()> {
             .add_method("is_admin", |u: &UserType| matches!(u, UserType::Admin))
             .build(),
     )?;
-    oso.load_str(r#"allow(actor, action, resource) if actor.is_admin();"#)?;
+    oso.load_str(r#"allow(actor, _action, _resource) if actor.is_admin();"#)?;
 
     let user = UserType::Admin;
     assert!(oso.is_allowed(user, "foo", "bar")?);
@@ -168,7 +178,7 @@ fn iters() -> anyhow::Result<()> {
     )
     .unwrap();
 
-    oso.load_str(r#"allow(actor, action, resource) if "payroll" in actor.get_group();"#)?;
+    oso.load_str(r#"allow(actor, _action, _resource) if "payroll" in actor.get_group();"#)?;
 
     let user = User {
         groups: vec!["HR".to_string(), "payroll".to_string()],
