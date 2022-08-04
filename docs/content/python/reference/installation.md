@@ -18,7 +18,7 @@ $ pip install oso=={{< version >}}
 
 ## Requirements
 
-- Python version 3.6 or greater
+- Python version 3.7 or greater
 - Supported platforms:
   - Linux (x64)
   - macOS (x64 and M1)

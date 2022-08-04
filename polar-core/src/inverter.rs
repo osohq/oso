@@ -94,7 +94,7 @@ fn results_to_constraints(results: Vec<BindingManager>) -> Bindings {
 /// Invert constraints in `bindings`.
 ///
 /// Constraints are inverted by getting each binding as a constraint.
-/// Simplification is performed, to subsitute bindings and remove temporary variables.
+/// Simplification is performed, to substitute bindings and remove temporary variables.
 /// Then, each simplified expression is inverted.
 /// A binding of `var` to `val` after simplification is converted into `var != val`.
 fn invert_partials(bindings: BindingManager) -> Bindings {

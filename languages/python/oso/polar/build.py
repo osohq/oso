@@ -17,13 +17,17 @@ include_dirs = {
 env = os.environ.get("OSO_ENV", "DEVELOPMENT")
 libs = []
 if sys.platform.startswith("win"):
-    libs.append(lib_dirs[env] + "/polar.lib")
-    libs.append("Ws2_32.lib")
-    libs.append("advapi32.lib")
-    libs.append("userenv.lib")
-    libs.append("bcrypt.lib")
+    libs.extend(
+        (
+            f"{lib_dirs[env]}/polar.lib",
+            "Ws2_32.lib",
+            "advapi32.lib",
+            "userenv.lib",
+            "bcrypt.lib",
+        )
+    )
 else:
-    libs.append(lib_dirs[env] + "/libpolar.a")
+    libs.append(f"{lib_dirs[env]}/libpolar.a")
 include_dir = include_dirs[env]
 
 ffibuilder.set_source(
