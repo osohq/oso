@@ -33,7 +33,7 @@ public class Oso extends Polar {
    * }</pre>
    *
    * @param actor the actor performing the request
-   * @param action the action the actor is attempting to peform
+   * @param action the action the actor is attempting to perform
    * @param resource the resource being accessed
    * @return boolean
    * @throws Exceptions.OsoException

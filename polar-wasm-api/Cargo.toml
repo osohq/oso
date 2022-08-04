@@ -1,6 +1,6 @@
 [package]
 name = "polar-wasm-api"
-version = "0.26.0"
+version = "0.26.1"
 authors = ["Oso Security, Inc. <support@osohq.com>"]
 edition = "2021"
 
@@ -11,7 +11,7 @@ bench = false
 [dependencies]
 console_error_panic_hook = "0.1.6"
 js-sys = "0.3.53"
-polar-core = { path = "../polar-core", version = "=0.26.0" }
+polar-core = { path = "../polar-core", version = "=0.26.1" }
 serde = { version = "1.0.119", features = ["rc"] }
 serde-wasm-bindgen = "0.3.1"
 wasm-bindgen = "0.2.76"

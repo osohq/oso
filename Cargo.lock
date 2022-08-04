@@ -655,7 +655,7 @@ checksum = "0ab1bc2a289d34bd04a330323ac98a1b4bc82c9d9fcb1e66b63caa84da26b575"
 
 [[package]]
 name = "oso"
-version = "0.26.0"
+version = "0.26.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -679,7 +679,7 @@ dependencies = [
 
 [[package]]
 name = "oso-derive"
-version = "0.26.0"
+version = "0.26.1"
 dependencies = [
  "quote",
  "syn",
@@ -795,7 +795,7 @@ dependencies = [
 
 [[package]]
 name = "polar-c-api"
-version = "0.26.0"
+version = "0.26.1"
 dependencies = [
  "cbindgen",
  "polar-core",
@@ -805,7 +805,7 @@ dependencies = [
 
 [[package]]
 name = "polar-core"
-version = "0.26.0"
+version = "0.26.1"
 dependencies = [
  "criterion",
  "indoc",
@@ -825,7 +825,7 @@ dependencies = [
 
 [[package]]
 name = "polar-language-server"
-version = "0.26.0"
+version = "0.26.1"
 dependencies = [
  "console_error_panic_hook",
  "js-sys",
@@ -839,7 +839,7 @@ dependencies = [
 
 [[package]]
 name = "polar-wasm-api"
-version = "0.26.0"
+version = "0.26.1"
 dependencies = [
  "console_error_panic_hook",
  "js-sys",

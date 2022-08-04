@@ -140,7 +140,7 @@ impl TypeError {
     }
 
     /// Convert `self` into `OsoError`, indicating a user originating type error.
-    /// For example, calling a method with a paramter of an incorrect type from within Polar.
+    /// For example, calling a method with a parameter of an incorrect type from within Polar.
     pub fn user(self) -> OsoError {
         OsoError::TypeError(self)
     }
