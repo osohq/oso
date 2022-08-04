@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -eou pipefail
+
+echo 'Publishing docs...'
+gh workflow run publish-docs.yml -f url=docs.oso.dev
