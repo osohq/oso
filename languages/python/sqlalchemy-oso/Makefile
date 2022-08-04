@@ -33,4 +33,4 @@ package:
 	python setup.py sdist bdist_wheel
 
 tox: dev-requirements
-	TOX_PARALLEL_NO_SPINNER=1 tox -p
+	tox
