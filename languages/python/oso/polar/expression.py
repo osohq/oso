@@ -1,6 +1,3 @@
-from typing import Any
-
-
 class Expression:
     def __init__(self, operator, args):
         self.operator = operator
@@ -12,7 +9,7 @@ class Expression:
     def __str__(self) -> str:
         return f"Expression({self.operator}, {self.args})"
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, type(self))
             and self.operator == other.operator
@@ -31,7 +28,7 @@ class Pattern:
     def __str__(self) -> str:
         return repr(self)
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, type(self))
             and self.tag == other.tag
