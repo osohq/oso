@@ -1,6 +1,8 @@
 """Exceptions used within Oso."""
 # @TODO: Should we just generate these from the rust code?
+from pathlib import Path
 from textwrap import dedent
+from typing import Any, Mapping, Optional, Type, Union
 
 
 # @TODO(gkaemmer): Move this to an `exceptions` module so that it can be shared
@@ -8,14 +10,16 @@ from textwrap import dedent
 class OsoError(Exception):
     """Base exception class for Oso."""
 
-    def __init__(self, message=None, details=None):
+    def __init__(
+        self, message: Optional[str] = None, details: Optional[Mapping[str, Any]] = None
+    ) -> None:
         self.message = message
         self.details = details
         self.stack_trace = details.get("stack_trace") if details else None
         super().__init__(self.add_get_help(self.message))
 
     @classmethod
-    def add_get_help(cls, message) -> str:
+    def add_get_help(cls, message: object) -> str:
         return (
             str(message)
             + f"\n\tGet help with Oso from our engineers: https://help.osohq.com/error/{cls.__name__}"
@@ -66,7 +70,7 @@ class UnregisteredClassError(PolarRuntimeError):
 class DuplicateClassAliasError(PolarRuntimeError):
     """Raised on attempts to register a class with the same name as a class that has already been registered"""
 
-    def __init__(self, name, old, new):
+    def __init__(self, name: str, old: Type[object], new: Type[object]) -> None:
         super().__init__(
             f"Attempted to alias {new} as '{name}', but {old} already has that alias."
         )
@@ -77,14 +81,14 @@ class DuplicateInstanceRegistrationError(PolarRuntimeError):
 
 
 class PolarFileExtensionError(PolarRuntimeError):
-    def __init__(self, file):
+    def __init__(self, file: Union[Path, str]) -> None:
         super().__init__(
             f"Polar files must have .polar extension. Offending file: {file}"
         )
 
 
 class PolarFileNotFoundError(PolarRuntimeError):
-    def __init__(self, file):
+    def __init__(self, file: Union[Path, str]) -> None:
         super().__init__(f"Could not find file: {file}")
 
 
@@ -93,7 +97,7 @@ class UnregisteredInstanceError(PolarRuntimeError):
 
 
 class InlineQueryFailedError(PolarRuntimeError):
-    def __init__(self, source):
+    def __init__(self, source: str) -> None:
         super().__init__(f"Inline query failed: {source}")
 
 
