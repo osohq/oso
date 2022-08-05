@@ -1,6 +1,3 @@
-from typing import Any
-
-
 class Variable(str):
     """An unbound variable type, can be used to query the KB for information"""
 
@@ -10,7 +7,7 @@ class Variable(str):
     def __str__(self) -> str:
         return repr(self)
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         return super().__eq__(other)
 
     def __hash__(self) -> int:
