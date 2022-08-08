@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from math import inf, isnan, nan
 import re
 import inspect
-from typing import Any, Dict, Union
+from typing import Any, Dict, Mapping, Sequence, Type, Union, Optional
 
 
 from .exceptions import (
@@ -20,6 +20,7 @@ from .variable import Variable
 from .predicate import Predicate
 from .expression import Expression, Pattern
 from .data_filtering import Relation
+from .data import DataAdapter
 
 
 @dataclass
@@ -33,6 +34,8 @@ class UserType:
 class Host:
     """Maintain mappings and caches for Python classes & instances."""
 
+    _accept_expression: bool
+    adapter: Optional[DataAdapter]
     types: Dict[Union[str, type], UserType]
 
     def __init__(
@@ -85,14 +88,16 @@ class Host:
             adapter=self.adapter,
         )
 
-    def get_class(self, name):
+    def get_class(self, name: Union[str, type]) -> type:
         """Fetch a Python class from the cache."""
         try:
             return self.types[name].cls
         except KeyError:
-            raise UnregisteredClassError(name)
+            raise UnregisteredClassError(
+                name if isinstance(name, str) else name.__name__
+            )
 
-    def distinct_user_types(self):
+    def distinct_user_types(self) -> map[UserType]:
         return map(
             lambda k: self.types[k],
             filter(lambda k: isinstance(k, str), self.types.keys()),
@@ -100,10 +105,10 @@ class Host:
 
     def cache_class(
         self,
-        cls,
-        name=None,
-        fields=None,
-    ):
+        cls: Type[object],
+        name: Optional[str] = None,
+        fields: Optional[Dict[str, Any]] = None,
+    ) -> str:
         """Cache Python class by name."""
         name = cls.__name__ if name is None else name
         if name in self.types.keys():
@@ -184,7 +189,7 @@ class Host:
         except ValueError:
             return False
 
-    def operator(self, op, args):
+    def operator(self, op: str, args: Sequence[Any]) -> Any:
         try:
             if op == "Lt":
                 return args[0] < args[1]
@@ -378,6 +383,6 @@ class Host:
 
         raise UnexpectedPolarTypeError(tag)
 
-    def set_accept_expression(self, accept):
+    def set_accept_expression(self, accept: bool) -> None:
         """Set whether the Host accepts Expression types from Polar, or raises an error."""
         self._accept_expression = accept
