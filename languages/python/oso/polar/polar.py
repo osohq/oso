@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import os
 from pathlib import Path
 import sys
-from typing import List, Union, Optional
+from typing import Any, List, Union, Optional, Dict, Type, Generator, Mapping
 
 from .exceptions import (
     PolarRuntimeError,
@@ -116,7 +116,13 @@ class Polar:
     def clear_rules(self) -> None:
         self.ffi_polar.clear_rules()
 
-    def query(self, query, *, bindings=None, accept_expression=False):
+    def query(
+        self,
+        query: Union[Predicate, str],
+        *,
+        bindings: Optional[Mapping[str, Any]] = None,
+        accept_expression: bool = False,
+    ) -> Generator[Dict[str, Any], None, None]:
         """Query for a predicate, parsing it if necessary.
 
         :param query: The predicate to query for.
@@ -135,7 +141,9 @@ class Polar:
 
         yield from Query(query, host=host, bindings=bindings).run()
 
-    def query_rule(self, name, *args, **kwargs):
+    def query_rule(
+        self, name: str, *args: Any, **kwargs: Any
+    ) -> Generator[Dict[str, Any], None, None]:
         """Query for rule with name ``name`` and arguments ``args``.
 
         :param name: The name of the predicate to query.
@@ -145,7 +153,7 @@ class Polar:
         """
         return self.query(Predicate(name=name, args=args), **kwargs)
 
-    def query_rule_once(self, name, *args, **kwargs):
+    def query_rule_once(self, name: str, *args: Any, **kwargs: Any) -> bool:
         """Check a rule with name ``name`` and arguments ``args``.
 
         :param name: The name of the predicate to query.
@@ -159,8 +167,10 @@ class Polar:
         except StopIteration:
             return False
 
-    def repl(self, files=[]):
+    def repl(self, files: Optional[List[Union[Path, str]]] = None) -> None:
         """Start an interactive REPL session."""
+        if files is None:
+            files = []
         try:
             # importing readline on compatible platforms
             # changes how `input` works for the REPL
@@ -169,7 +179,7 @@ class Polar:
             pass
 
         # https://github.com/django/django/blob/3e753d3de33469493b1f0947a2e0152c4000ed40/django/core/management/color.py
-        def supports_color():
+        def supports_color() -> bool:
             supported_platform = sys.platform != "win32" or "ANSICON" in os.environ
             is_a_tty = hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
             return supported_platform and is_a_tty
@@ -188,7 +198,7 @@ class Polar:
             FG_BLUE = "\001\x1b[34m\002"
             FG_RED = "\001\x1b[31m\002"
 
-        def print_error(error):
+        def print_error(error: BaseException) -> None:
             print(FG_RED + type(error).__name__ + RESET)
             print(error)
 
@@ -226,11 +236,11 @@ class Polar:
 
     def register_class(
         self,
-        cls,
+        cls: Type[object],
         *,
-        name=None,
-        fields=None,
-    ):
+        name: Optional[str] = None,
+        fields: Optional[Dict[str, Any]] = None,
+    ) -> None:
         """
         Register `cls` as a class accessible by Polar.
 
@@ -251,7 +261,9 @@ class Polar:
         self.register_constant(cls, name)
         self.host.register_mros()
 
-    def register_constant(self, value, name):
+    def register_constant(
+        self, value: Optional[Type[object]], name: Optional[str]
+    ) -> None:
         """
         Register `value` as a Polar constant variable called `name`.
 
@@ -262,7 +274,7 @@ class Polar:
         """
         self.ffi_polar.register_constant(self.host.to_polar(value), name)
 
-    def get_class(self, name):
+    def get_class(self, name: str) -> type:
         """Return class registered for ``name``.
 
         :raises UnregisteredClassError: If the class is not registered.
