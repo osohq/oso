@@ -116,13 +116,13 @@ class Polar:
     def next_message(self):
         return lib.polar_next_polar_message(self.ptr)
 
-    def set_message_enricher(self, enrich_message):
+    def set_message_enricher(self, enrich_message: Callable[[str], str]) -> None:
         self.enrich_message = enrich_message
 
     def check_result(self, result):
         return check_result(result, self.enrich_message)
 
-    def process_messages(self):
+    def process_messages(self) -> None:
         assert self.enrich_message, (
             "No message enricher on this instance of FfiPolar. You must call "
             "set_message_enricher before using process_messages."
@@ -141,7 +141,7 @@ class Query:
     def __init__(self, ptr):
         self.ptr = ptr
 
-    def __del__(self):
+    def __del__(self) -> None:
         lib.query_free(self.ptr)
 
     def call_result(self, call_id, value):
@@ -172,7 +172,7 @@ class Query:
     def next_message(self):
         return lib.polar_next_query_message(self.ptr)
 
-    def source(self):
+    def source(self) -> str:
         source = lib.polar_query_source_info(self.ptr)
         source = read_c_str(self.check_result(source))
         return source
@@ -185,13 +185,13 @@ class Query:
         self.process_messages()
         self.check_result(result)
 
-    def set_message_enricher(self, enrich_message):
+    def set_message_enricher(self, enrich_message: Callable[[str], str]) -> None:
         self.enrich_message = enrich_message
 
     def check_result(self, result):
         return check_result(result, self.enrich_message)
 
-    def process_messages(self):
+    def process_messages(self) -> None:
         assert self.enrich_message, (
             "No message enricher on this instance of FfiQuery. You must call "
             "set_message_enricher before using process_messages."
@@ -225,7 +225,7 @@ def check_result(result, enrich_message=None):
         raise error
 
 
-def is_null(result):
+def is_null(result: object) -> bool:
     return result == ffi.NULL
 
 
