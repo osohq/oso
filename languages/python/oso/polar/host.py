@@ -97,7 +97,7 @@ class Host:
                 name if isinstance(name, str) else name.__name__
             )
 
-    def distinct_user_types(self) -> map[UserType]:
+    def distinct_user_types(self) -> "map[UserType]":
         return map(
             lambda k: self.types[k],
             filter(lambda k: isinstance(k, str), self.types.keys()),
