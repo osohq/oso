@@ -22,16 +22,16 @@ def read_c_str(c_str) -> str:
 
 
 class Polar:
-    enrich_message: Callable
+    enrich_message: Callable[[str], str]
     """
     A method that can be called to enrich a debug, log, or error message from
     the core.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.ptr = lib.polar_new()
 
-    def __del__(self):
+    def __del__(self) -> None:
         lib.polar_free(self.ptr)
 
     def new_id(self):
@@ -66,13 +66,13 @@ class Polar:
         # @TODO(Steve): Decode Filter Plan to not just json?
         return filter_plan
 
-    def load(self, sources: List[PolarSource]):
+    def load(self, sources: List[PolarSource]) -> None:
         """Load Polar policies."""
         result = lib.polar_load(self.ptr, ffi_serialize([s.__dict__ for s in sources]))
         self.process_messages()
         self.check_result(result)
 
-    def clear_rules(self):
+    def clear_rules(self) -> None:
         """Clear all rules from the Polar KB"""
         result = lib.polar_clear_rules(self.ptr)
         self.process_messages()
@@ -132,7 +132,7 @@ class Polar:
 
 
 class Query:
-    enrich_message: Callable
+    enrich_message: Callable[[str], str]
     """
     A method that can be called to enrich a debug, log, or error message from
     the core.
