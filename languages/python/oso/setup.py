@@ -17,7 +17,7 @@ with open("requirements.txt") as fp:
     install_requires += fp.read()
 
 
-def read(rel_path):
+def read(rel_path: str) -> str:
     here = os.path.abspath(os.path.dirname(__file__))
     # intentionally *not* adding an encoding option to open, See:
     #   https://github.com/pypa/virtualenv/issues/201#issuecomment-3145690
@@ -25,7 +25,7 @@ def read(rel_path):
         return fp.read()
 
 
-def get_version(rel_path):
+def get_version(rel_path: str) -> str:
     """Get version from file. Copied from pip: https://github.com/pypa/pip/blob/master/setup.py#L19"""
     for line in read(rel_path).splitlines():
         if line.startswith("__version__"):
