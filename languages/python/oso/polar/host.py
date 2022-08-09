@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from math import inf, isnan, nan
 import re
 import inspect
-from typing import Any, Dict, Mapping, Sequence, Type, Union, Optional
+from typing import Any, Dict, Sequence, Type, Union, Optional
 
 
 from .exceptions import (
