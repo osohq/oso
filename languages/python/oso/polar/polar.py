@@ -4,7 +4,18 @@ from datetime import datetime, timedelta
 import os
 from pathlib import Path
 import sys
-from typing import Any, List, Union, Optional, Dict, Type, Generator, Mapping
+from typing import (
+    Any,
+    Iterable,
+    List,
+    Sequence,
+    Union,
+    Optional,
+    Dict,
+    Type,
+    Generator,
+    Mapping,
+)
 
 from .exceptions import (
     PolarRuntimeError,
@@ -49,7 +60,9 @@ class Polar:
         del self.host
         del self.ffi_polar
 
-    def load_files(self, filenames: Optional[List[Union[Path, str]]] = None) -> None:
+    def load_files(
+        self, filenames: Optional[Iterable[Union[Path, str]]] = None
+    ) -> None:
         """Load Polar policy from ".polar" files."""
         if filenames is None:
             filenames = []
@@ -167,7 +180,7 @@ class Polar:
         except StopIteration:
             return False
 
-    def repl(self, files: Optional[List[Union[Path, str]]] = None) -> None:
+    def repl(self, files: Optional[Iterable[Union[Path, str]]] = None) -> None:
         """Start an interactive REPL session."""
         if files is None:
             files = []
