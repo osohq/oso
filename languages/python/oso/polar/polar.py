@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta
 import os
+from contextlib import suppress
 from pathlib import Path
 import sys
 from typing import (
@@ -179,16 +180,16 @@ class Polar:
         except StopIteration:
             return False
 
-    def repl(self, files: Optional[Iterable[Union[Path, str]]] = None) -> None:
+    def repl(
+        self, files: Optional[Union[Iterable[Path], Iterable[str]]] = None
+    ) -> None:
         """Start an interactive REPL session."""
         if files is None:
             files = []
-        try:
+        with suppress(ImportError):
             # importing readline on compatible platforms
             # changes how `input` works for the REPL
             import readline  # noqa: F401
-        except ImportError:
-            pass
 
         # https://github.com/django/django/blob/3e753d3de33469493b1f0947a2e0152c4000ed40/django/core/management/color.py
         def supports_color() -> bool:

@@ -117,7 +117,7 @@ class Polar:
         return lib.polar_next_polar_message(self.ptr)
 
     def set_message_enricher(self, enrich_message: Callable[[str], str]) -> None:
-        self.enrich_message = enrich_message
+        self.enrich_message = enrich_message  # type: ignore[misc]
 
     def check_result(self, result):
         return check_result(result, self.enrich_message)

@@ -42,7 +42,7 @@ class Query:
         """Bind `name` to `value` for the duration of the query."""
         self.ffi_query.bind(name, self.host.to_polar(value))
 
-    def run(self) -> Generator[Dict[str, Any], None, None]:
+    def run(self):
         """Run the event loop and yield results."""
         assert self.ffi_query, "no query to run"
         while True:
