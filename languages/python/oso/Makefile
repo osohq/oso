@@ -17,6 +17,7 @@ test: test-requirements
 	pytest
 
 fmt:
+	isort .
 	black .
 
 typecheck:
@@ -30,4 +31,3 @@ package:
 
 repl:
 	python -m oso
-

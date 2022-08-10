@@ -1,1 +1,4 @@
 black
+isort
+example-isort-formatting-plugin
+example-isort-sorting-plugin
