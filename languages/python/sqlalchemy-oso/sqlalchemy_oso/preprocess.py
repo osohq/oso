@@ -80,7 +80,7 @@ def get_variable(
     return None
 
 
-def is_this(variable: Variable) -> bool:
+def is_this(variable: Optional[Variable]) -> bool:
     """Return true if ``variable`` is ``_this``."""
     return variable == Variable("_this")
 
