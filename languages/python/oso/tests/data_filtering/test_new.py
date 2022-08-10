@@ -1,14 +1,16 @@
 import itertools
+from typing import List
+
 import pytest
+from helpers import DfTestOso, unord_eq
+from sqlalchemy import create_engine, not_
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.schema import Column, ForeignKey
+from sqlalchemy.types import Boolean, String
+
 from oso import Relation
 from polar.data.adapter.sqlalchemy_adapter import SqlAlchemyAdapter
-from sqlalchemy import create_engine, not_
-from sqlalchemy.types import String, Boolean
-from sqlalchemy.schema import Column, ForeignKey
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
-from helpers import unord_eq, DfTestOso
-from typing import List
 
 Base = declarative_base()
 

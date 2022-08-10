@@ -1,12 +1,14 @@
 """Tests the Enforcement API"""
 
-from oso.exceptions import ForbiddenError, NotFoundError
 from pathlib import Path
+
 import pytest
 
 from oso import Oso
+from oso.exceptions import ForbiddenError, NotFoundError
 from polar import exceptions
-from .test_oso import User, Widget, Company, Foo, Bar
+
+from .test_oso import Bar, Company, Foo, User, Widget
 
 test_oso_file = Path(__file__).parent / "test_oso.polar"
 
