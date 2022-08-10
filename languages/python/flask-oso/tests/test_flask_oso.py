@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 from flask import Flask
+from oso import Oso, OsoError
 from werkzeug.exceptions import Forbidden
 
-from oso import Oso, OsoError
 from flask_oso import FlaskOso, authorize, skip_authorization
 
 
