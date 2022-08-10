@@ -4,7 +4,7 @@
 """
 
 try:
-    from flask_sqlalchemy import SQLAlchemy, SignallingSession
+    from flask_sqlalchemy import SignallingSession, SQLAlchemy
 except ImportError:
     import warnings
 

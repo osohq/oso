@@ -68,16 +68,15 @@ used.
 import functools
 from typing import Any, Callable, Tuple
 
-from sqlalchemy.orm.session import Session
+from polar.exceptions import PolarRuntimeError, UnsupportedError
+from polar.expression import Expression
+from polar.partial import dot_path
+from polar.variable import Variable
 from sqlalchemy import inspect
 from sqlalchemy.orm import RelationshipProperty
+from sqlalchemy.orm.session import Session
 from sqlalchemy.sql import expression as sql
 from sqlalchemy.sql.elements import True_
-
-from polar.partial import dot_path
-from polar.expression import Expression
-from polar.variable import Variable
-from polar.exceptions import UnsupportedError, PolarRuntimeError
 
 from sqlalchemy_oso.preprocess import preprocess
 
