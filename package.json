@@ -1,0 +1,64 @@
+{
+  "name": "oso",
+  "version": "0.26.1",
+  "description": "oso authorization library.",
+  "bin": "bin/repl.js",
+  "main": "dist/src/index.js",
+  "browser": {
+    "fs": false,
+    "readline": false,
+    "repl": false,
+    "./dist/src/polar_wasm_api.js": "./dist/bundler/polar_wasm_api.js",
+    "./dist/src/polar_wasm_api_bg.js": "./dist/bundler/polar_wasm_api_bg.js"
+  },
+  "repository": "https://github.com/osohq/oso",
+  "collaborators": [
+    "Oso Security <support@osohq.com>"
+  ],
+  "license": "Apache-2.0",
+  "private": false,
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "engines": {
+    "node": ">=12.20.0",
+    "npm": ">=6.4.1"
+  },
+  "scripts": {
+    "lint": "gts lint -- . --max-warnings 0",
+    "clean": "gts clean",
+    "fix": "gts fix",
+    "fmt": "prettier --write 'src/**/*.[jt]s' 'test/**/*.[jt]s'",
+    "fmtcheck": "prettier --check 'src/**/*.[jt]s' 'test/**/*.[jt]s'",
+    "test": "POLAR_IGNORE_NO_ALLOW_WARNING=1 jest",
+    "docs-build": "typedoc --options typedoc.js",
+    "docs-watch": "chokidar 'src/**/*.ts' -c 'yarn docs-build'",
+    "docs-serve": "live-server docs",
+    "build": "yarn tsc --project tsconfig.build.json"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.9",
+    "@types/lodash": "^4.14.175",
+    "@types/lodash.isequal": "^4.5.5",
+    "@types/node": "^15.14.7",
+    "chokidar-cli": "^2.1.0",
+    "gts": "^3.1.0",
+    "jest": "^27.0.4",
+    "live-server": "^1.2.1",
+    "reflect-metadata": "^0.1.13",
+    "sqlite3": "^5.0.2",
+    "temp-write": "^4.0.0",
+    "ts-jest": "^27.0.3",
+    "ts-node": "^8.10.2",
+    "typedoc": "^0.21.0",
+    "typeorm": "^0.2.37",
+    "typescript": "^4.3.4"
+  },
+  "resolutions": {
+    "live-server/object-assign": "^4.1.0"
+  },
+  "dependencies": {
+    "lodash.isequal": "^4.5.0"
+  }
+}
