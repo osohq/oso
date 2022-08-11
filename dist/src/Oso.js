@@ -212,9 +212,15 @@ class Oso extends Polar_1.Polar {
         var _a;
         const resource = new Variable_1.Variable('resource');
         const host = this.getHost();
-        const clsName = (_a = host.getType(resourceCls)) === null || _a === void 0 ? void 0 : _a.name;
-        if (clsName === undefined)
-            throw new errors_1.UnregisteredClassError(resourceCls.name);
+        var clsName;
+        if (typeof resourceCls === 'string') {
+            clsName = resourceCls;
+        }
+        else {
+            clsName = (_a = host.getType(resourceCls)) === null || _a === void 0 ? void 0 : _a.name;
+            if (clsName === undefined)
+                throw new errors_1.UnregisteredClassError(resourceCls.name);
+        }
         const constraint = new Expression_1.Expression('And', [
             new Expression_1.Expression('Isa', [
                 resource,
@@ -244,7 +250,7 @@ class Oso extends Polar_1.Polar {
      *
      * @param actor Subject.
      * @param action Verb.
-     * @param resourceCls Object type.
+     * @param resourceCls Object type or string name of class
      * @returns An array of authorized resources.
      */
     async authorizedResources(actor, action, resourceCls) {

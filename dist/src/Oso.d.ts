@@ -112,17 +112,17 @@ export declare class Oso<Actor = unknown, Action = unknown, Resource = unknown, 
      * @param resourceCls Object type.
      * @returns A query that selects authorized resources of type `resourceCls`
      */
-    authorizedQuery(actor: Actor, action: Action, resourceCls: Class<Resource>): Promise<Query>;
+    authorizedQuery(actor: Actor, action: Action, resourceCls: Class<Resource> | string): Promise<Query>;
     /**
      * Determine the resources of type `resourceCls` that `actor`
      * is allowed to perform `action` on.
      *
      * @param actor Subject.
      * @param action Verb.
-     * @param resourceCls Object type.
+     * @param resourceCls Object type or string name of class
      * @returns An array of authorized resources.
      */
-    authorizedResources(actor: Actor, action: Action, resourceCls: Class<Resource>): Promise<Resource[]>;
+    authorizedResources(actor: Actor, action: Action, resourceCls: Class<Resource> | string): Promise<Resource[]>;
     /**
      * Register adapter for data filtering query functions.
      */

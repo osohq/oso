@@ -352,7 +352,7 @@ class Host {
      * @internal
      */
     toPolar(v) {
-        var _a, _b, _c;
+        var _a, _b, _c, _d;
         switch (true) {
             case typeof v === 'boolean':
                 return { value: { Boolean: v } };
@@ -412,14 +412,15 @@ class Host {
                 let classRepr = undefined;
                 if (helpers_1.isConstructor(v)) {
                     instanceId = (_a = this.getType(v)) === null || _a === void 0 ? void 0 : _a.id;
-                    classRepr = "Class";
+                    classId = instanceId;
+                    classRepr = (_b = this.getType(v)) === null || _b === void 0 ? void 0 : _b.name;
                 }
                 else {
                     const v_constructor = v_cast === null || v_cast === void 0 ? void 0 : v_cast.constructor;
                     // pass classId for instances of *registered classes* only
                     if (v_constructor !== undefined && this.types.has(v_constructor)) {
-                        classId = (_b = this.getType(v_constructor)) === null || _b === void 0 ? void 0 : _b.id;
-                        classRepr = (_c = this.getType(v_constructor)) === null || _c === void 0 ? void 0 : _c.name;
+                        classId = (_c = this.getType(v_constructor)) === null || _c === void 0 ? void 0 : _c.id;
+                        classRepr = (_d = this.getType(v_constructor)) === null || _d === void 0 ? void 0 : _d.name;
                     }
                 }
                 // pass classRepr for *registered* classes only, pass undefined
@@ -427,12 +428,11 @@ class Host {
                 if (classRepr !== undefined && !this.types.has(classRepr)) {
                     classRepr = undefined;
                 }
-                // cache it if not already cached
-                instanceId = instanceId || this.cacheInstance(v);
+                const instance_id = this.cacheInstance(v, instanceId);
                 return {
                     value: {
                         ExternalInstance: {
-                            instance_id: instanceId,
+                            instance_id,
                             constructor: undefined,
                             repr: helpers_1.repr(v),
                             class_repr: classRepr,
