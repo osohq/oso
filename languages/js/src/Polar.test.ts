@@ -833,7 +833,7 @@ describe('iterators', () => {
     expect(
       await qvar(
         p,
-        'd = {a: 1, b: 2} and x in Dictionary.entries({a: 1, b: 2}) and x in d',
+        'd = {a: 1, b: 2} and x in new Dictionary([["a", 1], ["b", 2]]) and x in d',
         'x'
       )
     ).toStrictEqual([

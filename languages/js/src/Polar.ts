@@ -79,7 +79,7 @@ export class Polar<Query, Resource> {
     this.registerClass(Number, { name: 'Float' });
     this.registerClass(String);
     this.registerClass(Array, { name: 'List' });
-    this.registerClass(Object, { name: 'Dictionary' });
+    this.registerClass(Map, { name: 'Dictionary' });
   }
 
   /**
