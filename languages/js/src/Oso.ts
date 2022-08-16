@@ -21,7 +21,7 @@ export class Oso<
   Field = unknown,
   Request = unknown,
   Query = unknown
-  > extends Polar<Query, Resource> {
+> extends Polar<Query, Resource> {
   #notFoundError: CustomError = NotFoundError;
   #forbiddenError: CustomError = ForbiddenError;
   #readAction: unknown = 'read';
