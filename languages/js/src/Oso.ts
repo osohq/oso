@@ -262,9 +262,9 @@ export class Oso<
   ): Promise<Query> {
     const resource = new Variable('resource');
     const host = this.getHost();
-    var clsName: string | undefined;
+    let clsName: string | undefined;
     if (typeof resourceCls === 'string') {
-      clsName = resourceCls as string;
+      clsName = resourceCls;
     } else {
       clsName = host.getType(resourceCls)?.name;
       if (clsName === undefined)
