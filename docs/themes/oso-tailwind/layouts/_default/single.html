@@ -23,7 +23,7 @@
           {{ range $pageIdx, $page := .CurrentSection.RegularPages }}
             {{ if and (eq $currentPage $page) (lt (add $pageIdx 1) (len .CurrentSection.RegularPages)) }}
               {{ $nextRegPage := index .CurrentSection.RegularPages (add $pageIdx 1) }}
-              {{ if not (eq $nextRegPage.Params._build.render "never" }}
+              {{ if not (eq $nextRegPage.Params._build.render "never") }}
               <a class="flex justify-end" href="{{$nextRegPage.RelPermalink}}">
                 <button class="btn btn-purple">
                   Read next: {{$nextRegPage.Title}}
