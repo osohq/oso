@@ -1,6 +1,6 @@
 baseURL = "https://docs.osohq.com/"
 languageCode = "en-us"
-title = "Oso Documentation"
+title = "Oso Library Documentation"
 theme = ["oso-tailwind", "oso-webpack"]
 uglyurls = true
 
