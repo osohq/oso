@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use super::sources::{Context, Source, SourceInfo};
 use super::terms::*;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Parameter {
     pub parameter: Term,
     pub specializer: Option<Term>,

@@ -16,8 +16,10 @@ type TypeErasedFunction<R> = Arc<dyn Fn(Vec<PolarValue>) -> crate::Result<R> + S
 type TypeErasedMethod<R> =
     Arc<dyn Fn(&Instance, Vec<PolarValue>, &mut Host) -> crate::Result<R> + Send + Sync>;
 
+type RegisterMethod = Arc<dyn Fn(&mut crate::Oso) -> crate::Result<()> + Send + Sync + 'static>;
+
 #[derive(Clone)]
-pub struct RegisterHook(Arc<dyn Fn(&mut crate::Oso) -> crate::Result<()> + Send + Sync + 'static>);
+pub struct RegisterHook(RegisterMethod);
 
 impl RegisterHook {
     pub fn new<F>(f: F) -> Self
@@ -52,10 +54,11 @@ impl Constructor {
     }
 }
 
+type AttributeGetterMethod =
+    Arc<dyn Fn(&Instance, &mut Host) -> crate::Result<PolarValue> + Send + Sync>;
+
 #[derive(Clone)]
-pub struct AttributeGetter(
-    Arc<dyn Fn(&Instance, &mut Host) -> crate::Result<PolarValue> + Send + Sync>,
-);
+pub struct AttributeGetter(AttributeGetterMethod);
 
 impl AttributeGetter {
     pub fn new<T, F, R>(f: F) -> Self

@@ -12,15 +12,15 @@ description: |
 
 If you're performing authorization in multiple services, you'll need a way to share
 authorization data (like roles or resource groups) between your applications.
-Oso's authorization-as-a-service product, called [Oso Cloud](https://cloud-docs.osohq.com/), lets you store
+Oso's authorization-as-a-service product, called [Oso Cloud](https://www.osohq.com/docs/), lets you store
 authorization data and perform authorization from any of your applications. Like
-the Oso Library, Oso Cloud is powered by [the Polar language](https://cloud-docs.osohq.com/reference/polar-syntax).
+the Oso Library, Oso Cloud is powered by [the Polar language](https://www.osohq.com/docs/reference/polar-syntax).
 
 <img src="basic-architecture.png" class="block mx-auto" style="max-width: 600px" />
 
 Here are some other resources that might be useful:
 
-- [How Oso Cloud Works](https://cloud-docs.osohq.com/concepts/how-it-works): a
+- [How Oso Cloud Works](https://www.osohq.com/docs/concepts/how-it-works): a
   high-level overview of how Oso Cloud enforces authorization in all of your services.
 - [Authorization Academy Chapter
   VI](https://www.osohq.com/academy/microservices-authorization) discusses

@@ -43,7 +43,7 @@ constraints into queries against your data store, such as SQL queries or ORM
 query objects.
 
 If you're using Oso Cloud as an authorization service, data filtering is built in. Read about how to [list
-authorized resources using the Oso Cloud API](https://cloud-docs.osohq.com/guides/filter-data).
+authorized resources using the Oso Cloud API](https://www.osohq.com/docs/guides/filter-data).
 
 ## Why do you need Data Filtering?
 
