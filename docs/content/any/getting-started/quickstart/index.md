@@ -34,7 +34,7 @@ are three steps:
 <!-- {{% minicallout %}} -->
 
 The Oso Library works best in monolithic applications. If you're building authorization for more than one service or want to share a policy across multiple applications, read how to [get
-started with Oso Cloud](https://cloud-docs.osohq.com/get-started/quickstart).
+started with Oso Cloud](https://www.osohq.com/docs/get-started/quickstart).
 
 <!-- {{% /minicallout %}} -->
 
