@@ -83,7 +83,7 @@ impl SourceInfo {
 
 // TODO(gj): `Serialize` makes some `polar-wasm-api` tests easier to write. We could look into
 // https://serde.rs/remote-derive.html if we cared to preserve that while removing this impl.
-#[derive(PartialEq, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Serialize, Deserialize)]
 pub struct Source {
     pub filename: Option<String>,
     pub src: String,

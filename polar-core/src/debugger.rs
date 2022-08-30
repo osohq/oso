@@ -185,7 +185,7 @@ impl Debugger {
             Some(s) => s,
             _ => "help".to_owned(),
         };
-        let command = *parts.get(0).unwrap_or(&&default_command[..]);
+        let command = *parts.first().unwrap_or(&&default_command[..]);
         self.last = Some(String::from(command));
         match command {
             "c" | "continue" | "q" | "quit" => self.step = None,

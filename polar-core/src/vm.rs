@@ -34,7 +34,7 @@ use crate::visitor::{walk_term, Visitor};
 pub const MAX_STACK_SIZE: usize = 10_000;
 pub const DEFAULT_TIMEOUT_MS: u64 = 30_000;
 
-#[derive(Debug, Copy, Clone, PartialOrd, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Eq)]
 pub enum LogLevel {
     Trace,
     Debug,

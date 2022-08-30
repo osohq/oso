@@ -6,7 +6,7 @@ on:
         description: "docs s3 path (docs.oso.dev or docs-preview.oso.dev)"
       oso_version:
         description: "oso release to build docs for"
-        default: "0.26.1" # oso_version
+        default: "0.26.2" # oso_version
       flask_oso_version:
         description: "flask oso release to build docs for"
         default: "0.26.0" # flask_oso_version
@@ -45,7 +45,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v1
         with:
-          node-version: '12'
+          node-version: "12"
 
       # Uncomment this when we want WASM on the docs site again
       # - name: Install Rust stable toolchain
@@ -89,12 +89,11 @@ jobs:
       - name: Install sqlalchemy-oso from release
         run: pip install sqlalchemy_oso[flask]==${{ github.event.inputs.sqlalchemy_oso_version }} -f sqlalchemy-oso-python
 
-
       ### Build docs
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v2
         with:
-          hugo-version: '0.79.1'
+          hugo-version: "0.79.1"
       - name: Build Hugo docs (docs-preview.oso.dev)
         if: github.event.inputs.url == 'docs-preview.oso.dev'
         run: |

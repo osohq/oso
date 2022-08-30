@@ -21,7 +21,7 @@ the `"maintainer"` role on a repository allows a user to `"push"` to that
 repository. In this guide, we'll walk through building an RBAC policy for [GitClub][].
 
 This guide assumes you're building authorization in a monolith application.
-If you're building with microservices, read about [how to model roles using Oso Cloud](https://cloud-docs.osohq.com/guides/modeling-building-blocks).
+If you're building with microservices, read about [how to model roles using Oso Cloud](https://www.osohq.com/docs/guides/modeling-building-blocks).
 
 
 <!--
@@ -335,4 +335,4 @@ Our complete policy looks like this:
 If you'd like to play around with a more fully-featured version of this policy
 and application, check out the GitClub repository on [GitHub][GitClub].
 
-If you're building with microservices, read about [how to model roles using Oso Cloud](https://cloud-docs.osohq.com/guides/modeling-building-blocks).
+If you're building with microservices, read about [how to model roles using Oso Cloud](https://www.osohq.com/docs/guides/modeling-building-blocks).

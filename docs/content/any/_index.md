@@ -2,7 +2,7 @@
 ---
 # Batteries-Included Framework for Application Authorization
 
-Oso is a batteries-included framework for building authorization in your application.
+The Oso Library is a batteries-included framework for building authorization in your application.
 With Oso, you can:
 
 - **Model**: Set up common permissions patterns like RBAC and
