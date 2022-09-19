@@ -10,7 +10,7 @@ module Oso
             types = filter.types
             query = filter.relations.reduce(filter.model.all) do |q, rel|
               rec = types[rel.left].fields[rel.name]
-              join_type = if rec.kind == "one" then "LEFT" else "INNER" end
+              join_type = rec.kind == 'one' ? 'LEFT' : 'INNER'
               q.joins(
                 "#{join_type} JOIN #{rel.right.table_name} ON " \
                 "#{rel.left.table_name}.#{rec.my_field} = " \

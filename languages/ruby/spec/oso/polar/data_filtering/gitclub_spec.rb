@@ -250,7 +250,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           other_type: 'User',
           my_field: 'reviewer_name',
           other_field: 'name'
-        ),
+        )
       }
     )
 
