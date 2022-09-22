@@ -56,15 +56,19 @@ module Oso
             end
 
             projection = cond[projection_key]
-            if projection.is_a?(::Oso::Polar::Data::Filter::Projection)
-              if projection.field.present? && projection.field.end_with?("?") &&
-                 projection.source.defined_enums?
+            if projection.is_a?(::Oso::Polar::Data::Filter::Projection) && projection.field.present?
 
+              if projection.field.end_with?("?") &&
+                 projection.source.defined_enums?
+                # unpacking enums shortcut methods
                 enum = projection.source.defined_enums.find { |_k, v| v.key?(projection.field.chomp("?")) }
                 if enum.present?
                   cond[value_key] = enum[1][projection.field.chomp("?")]
                   projection.field = enum[0]
                 end
+              elsif projection.source.defined_enums[projection.field]&.fetch(cond[value_key], nil)&.present?
+                # unify enums
+                cond[value_key] = projection.source.defined_enums[projection.field][cond[value_key]]
               end
             end
 
