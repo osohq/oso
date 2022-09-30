@@ -1014,7 +1014,11 @@ mod test {
         A: Eq,
     {
         for x in a {
-            match b.iter().enumerate().find_map(|(i, y)| (x == *y).then_some(i)) {
+            match b
+                .iter()
+                .enumerate()
+                .find_map(|(i, y)| (x == *y).then_some(i))
+            {
                 Some(i) => b.remove(i),
                 None => return false,
             };
