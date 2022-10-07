@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 use crate::{
     error::{PolarResult, RuntimeError},
     folder::{fold_list, fold_term, Folder},
-    terms::{has_rest_var, Operation, Operator, Symbol, Term, Value},
+    terms::{has_rest_var, Operation, Symbol, Term, Value},
     vm::Goal,
 };
 

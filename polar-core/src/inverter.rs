@@ -10,7 +10,7 @@ use crate::events::QueryEvent;
 use crate::kb::Bindings;
 use crate::partial::simplify_bindings;
 use crate::runnable::Runnable;
-use crate::terms::{Operation, Operator, Term, Value};
+use crate::terms::{Term, Value};
 use crate::vm::{Goals, PolarVirtualMachine};
 
 /// The inverter implements the `not` operation in Polar.
