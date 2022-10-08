@@ -636,7 +636,7 @@ mod to_polar {
         fn to_polar(&self) -> String {
             match self {
                 Value::Number(i) => format!("{}", i),
-                Value::String(s) => format!("\"{}\"", s),
+                Value::String(s) => format!("\"{}\"", s.replace('\\', r"\\").replace('"', r#"\""#)),
                 Value::Boolean(b) => {
                     if *b {
                         "true".to_string()
