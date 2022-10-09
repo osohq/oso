@@ -487,17 +487,30 @@ mod to_polar {
                 }
                 // Lookup operator
                 Dot => {
-                    let call_term = if let Value::String(s) = self.args[1].value() {
-                        s.to_string()
+                    // WARN: `value = Value::String(s)` is no longer
+                    // special-cased to `obj.${s.value()}` because this fails to
+                    // correctly serialize accesses to strings which are not
+                    // expressible as unquoted string accesses.  For example:
+                    // ```
+                    // obj.("a b")
+                    // ```
+                    // The safest serialization strategy is to use
+                    // `obj.(value.to_polar())` since this also properly handles
+                    // `value = Value::Symbol(s)`.  However, this means that
+                    // `Value::Call` *does* need to be special-cased since
+                    // `actor.call(args)` cannot be expressed as
+                    // `actor.(call(args))`.
+                    let lookup = if let Value::Call(call) = self.args[1].value() {
+                        call.to_polar()
                     } else {
-                        self.args[1].to_polar()
+                        format!("({})", self.args[1].to_polar())
                     };
                     match self.args.len() {
-                        2 => format!("{}.{}", self.args[0].to_polar(), call_term),
+                        2 => format!("{}.{}", self.args[0].to_polar(), lookup),
                         3 => format!(
                             "{}.{} = {}",
                             self.args[0].to_polar(),
-                            call_term,
+                            lookup,
                             self.args[2].to_polar()
                         ),
                         // Invalid
