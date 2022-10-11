@@ -258,13 +258,18 @@ export class Oso<
   async authorizedQuery(
     actor: Actor,
     action: Action,
-    resourceCls: Class<Resource>
+    resourceCls: Class<Resource> | string
   ): Promise<Query> {
     const resource = new Variable('resource');
     const host = this.getHost();
-    const clsName = host.getType(resourceCls)?.name;
-    if (clsName === undefined)
-      throw new UnregisteredClassError(resourceCls.name);
+    let clsName: string | undefined;
+    if (typeof resourceCls === 'string') {
+      clsName = resourceCls;
+    } else {
+      clsName = host.getType(resourceCls)?.name;
+      if (clsName === undefined)
+        throw new UnregisteredClassError(resourceCls.name);
+    }
 
     const constraint = new Expression('And', [
       new Expression('Isa', [
@@ -311,13 +316,13 @@ export class Oso<
    *
    * @param actor Subject.
    * @param action Verb.
-   * @param resourceCls Object type.
+   * @param resourceCls Object type or string name of class
    * @returns An array of authorized resources.
    */
   async authorizedResources(
     actor: Actor,
     action: Action,
-    resourceCls: Class<Resource>
+    resourceCls: Class<Resource> | string
   ): Promise<Resource[]> {
     const query = await this.authorizedQuery(actor, action, resourceCls);
     if (!query) return [];

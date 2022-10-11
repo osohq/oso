@@ -11,4 +11,4 @@ export {
   Adapter,
 } from './filter';
 export { defaultEqualityFn } from './helpers';
-export type { Class } from './types';
+export type { Class, Dict } from './types';
