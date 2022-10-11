@@ -263,9 +263,9 @@ module Oso
         res = host.adapter.execute_query host.adapter.build_query(filter)
 
         if rel.kind == 'one'
-          raise "multiple parents: #{res}" unless res.length == 1
+          raise "multiple parents: #{res}" if res.length > 1
 
-          res = res[0]
+          res = res[0] if res.length == 1
         end
 
         call_result(host.to_polar(res), call_id: call_id)

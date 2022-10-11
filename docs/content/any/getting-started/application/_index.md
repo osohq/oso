@@ -38,3 +38,5 @@ enforcing authorization in your application. To go further with Oso:
   pages showing users a number of resources, like the repositories they
   can access, will need to use data filtering. The *data filtering API*
   provides support for these use cases.
+
+The Oso Library works best in monolithic applications. If you're building authorization for more than one service or want to share a policy across multiple applications, read how to [add Oso Cloud to your app](https://www.osohq.com/docs/get-started/add-to-your-app).

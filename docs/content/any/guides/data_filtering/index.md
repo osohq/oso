@@ -36,6 +36,17 @@ Below is the documentation for Data Filtering in Python.
 
 {{% /ifLang %}}
 
+This guide shows you how to use **Data Filtering** in the Oso Library. Data
+filtering lets you select certain data from your data store, based on the logic
+in your policy. In the Oso Library, data filtering works by telling Oso how to turn Polar
+constraints into queries against your data store, such as SQL queries or ORM
+query objects.
+
+If you're using Oso Cloud as an authorization service, data filtering is built in. Read about how to [list
+authorized resources using the Oso Cloud API](https://www.osohq.com/docs/guides/filter-data).
+
+## Why do you need Data Filtering?
+
 When you call `authorize(actor, action, resource)` , Oso evaluates the allow
 rule(s) you have defined in your policy to determine if `actor` is allowed
 to perform `action` on `resource`.  For example, if `jane` wants to `"edit"`
@@ -48,8 +59,7 @@ call `is_allowed` on it. This isn’t efficient and many times is just
 impossible. There could be thousands of documents in a database but only three
 that have the owner `"steve"`. Instead of fetching every document and passing
 it into Oso, it's better to ask the database for only the documents that
-have the owner `"steve"`. Using Oso to filter the data in your data
-store based on the logic in your policy is what we call “Data Filtering”.
+have the owner `"steve"`. Oso provides a "data filtering" API to do this.
 
 You can use data filtering to enforce authorization on queries made to your data
 store. Oso will take the logic in the policy and turn it into a query for the
@@ -116,7 +126,7 @@ an appropriate unique identifier, usually a primary key.
 The other thing you have to provide to use data filtering is type information
 for registered classes. This lets Oso know what the types of an object's fields
 are. Oso needs this information to handle specializers and other things in the
-policy when we don't have a concrete resource. The fields are a 
+policy when we don't have a concrete resource. The fields are a
 {{% exampleGet "map" %}} from field name to type.
 
 ## Relations

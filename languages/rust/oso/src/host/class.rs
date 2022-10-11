@@ -21,8 +21,11 @@ type RegisterHooks = Vec<RegisterHook>;
 type ClassMethods = HashMap<&'static str, ClassMethod>;
 type InstanceMethods = HashMap<&'static str, InstanceMethod>;
 
-fn equality_not_supported(
-) -> Box<dyn Fn(&Host, &Instance, &Instance) -> crate::Result<bool> + Send + Sync> {
+type EqualityMethod = Arc<dyn Fn(&Host, &Instance, &Instance) -> crate::Result<bool> + Send + Sync>;
+type IteratorMethod =
+    Arc<dyn Fn(&Host, &Instance) -> crate::Result<crate::host::PolarIterator> + Send + Sync>;
+
+fn equality_not_supported() -> EqualityMethod {
     let eq = move |host: &Host, lhs: &Instance, _: &Instance| -> crate::Result<bool> {
         Err(OsoError::UnsupportedOperation {
             operation: String::from("equals"),
@@ -30,11 +33,10 @@ fn equality_not_supported(
         })
     };
 
-    Box::new(eq)
+    Arc::new(eq)
 }
 
-fn iterator_not_supported(
-) -> Box<dyn Fn(&Host, &Instance) -> crate::Result<crate::host::PolarIterator> + Send + Sync> {
+fn iterator_not_supported() -> IteratorMethod {
     let into_iter = move |host: &Host, instance: &Instance| {
         Err(OsoError::UnsupportedOperation {
             operation: String::from("in"),
@@ -42,7 +44,7 @@ fn iterator_not_supported(
         })
     };
 
-    Box::new(into_iter)
+    Arc::new(into_iter)
 }
 
 #[derive(Clone)]
@@ -61,10 +63,9 @@ pub struct Class {
 
     /// A function that accepts arguments of this class and compares them for equality.
     /// Limitation: Only works on comparisons of the same type.
-    equality_check: Arc<dyn Fn(&Host, &Instance, &Instance) -> crate::Result<bool> + Send + Sync>,
+    equality_check: EqualityMethod,
 
-    into_iter:
-        Arc<dyn Fn(&Host, &Instance) -> crate::Result<crate::host::PolarIterator> + Send + Sync>,
+    into_iter: IteratorMethod,
 
     // Hooks to be called on the class once it's been registered with host.
     pub register_hooks: RegisterHooks,
@@ -143,8 +144,8 @@ where
                 attributes: HashMap::new(),
                 instance_methods: InstanceMethods::new(),
                 class_methods: ClassMethods::new(),
-                equality_check: Arc::from(equality_not_supported()),
-                into_iter: Arc::from(iterator_not_supported()),
+                equality_check: equality_not_supported(),
+                into_iter: iterator_not_supported(),
                 type_id: TypeId::of::<T>(),
                 register_hooks: RegisterHooks::new(),
             },
@@ -237,7 +238,7 @@ where
         self.set_equality_check(|a, b| PartialEq::eq(a, b))
     }
 
-    /// Add an attribute getter for statments like `foo.bar`
+    /// Add an attribute getter for statements like `foo.bar`
     /// `class.add_attribute_getter("bar", |instance| instance.bar)
     pub fn add_attribute_getter<F, R>(mut self, name: &'static str, f: F) -> Self
     where
@@ -326,7 +327,7 @@ where
 /// register the class if not seen before.
 ///
 /// A reference to the underlying type of the Instance can be
-/// retrived using `Instance::downcast`.
+/// retrieved using `Instance::downcast`.
 #[derive(Clone)]
 pub struct Instance {
     inner: Arc<dyn std::any::Any + Send + Sync>,

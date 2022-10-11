@@ -34,7 +34,7 @@ use crate::visitor::{walk_term, Visitor};
 pub const MAX_STACK_SIZE: usize = 10_000;
 pub const DEFAULT_TIMEOUT_MS: u64 = 30_000;
 
-#[derive(Debug, Copy, Clone, PartialOrd, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Eq)]
 pub enum LogLevel {
     Trace,
     Debug,
@@ -711,7 +711,7 @@ impl PolarVirtualMachine {
             .bindings_after(include_temps, &self.csp)
     }
 
-    /// Retrive internal binding stack for debugger.
+    /// Retrieve internal binding stack for debugger.
     pub fn bindings_debug(&self) -> &BindingStack {
         self.binding_manager.bindings_debug()
     }
@@ -799,14 +799,16 @@ impl PolarVirtualMachine {
                     // print BINDINGS: { .. } only for TRACE logs
                     if !terms.is_empty() && configured_log_level == LogLevel::Trace {
                         let relevant_bindings = self.relevant_bindings(terms);
-                        msg.push_str(&format!(
+                        write!(
+                            msg,
                             ", BINDINGS: {{{}}}",
                             relevant_bindings
                                 .iter()
                                 .map(|(var, val)| format!("{} => {}", var.0, val))
                                 .collect::<Vec<String>>()
                                 .join(", ")
-                        ));
+                        )
+                        .unwrap();
                     }
                     self.print(msg);
                     for line in &lines[1..] {
@@ -1478,7 +1480,7 @@ impl PolarVirtualMachine {
         // - Print INFO event for queries for rules.
         // - Print TRACE (a superset of INFO) event for all other queries.
         // - We filter out single-element ANDs, which many rule bodies take the form of, to instead
-        //   log only their inner operations for readibility|brevity reasons.
+        //   log only their inner operations for readability|brevity reasons.
         match &term.value() {
             Value::Call(predicate) => {
                 self.log(
@@ -2401,7 +2403,7 @@ impl PolarVirtualMachine {
         }
     }
 
-    /// Unify two list that end with a rest-variable with eachother.
+    /// Unify two list that end with a rest-variable with each other.
     /// A helper method for `unify_lists`.
     #[allow(clippy::ptr_arg)]
     fn unify_two_lists_with_rest<F>(
@@ -2617,7 +2619,7 @@ impl PolarVirtualMachine {
                             .parsed_context()
                             .map_or_else(|| "".into(), Context::source_position);
 
-                        rule_strs.push_str(&format!("\n  {}{}", rule.head_as_string(), context));
+                        write!(rule_strs, "\n  {}{}", rule.head_as_string(), context).unwrap();
                     }
                     rule_strs
                 },
@@ -2974,7 +2976,7 @@ impl Runnable for PolarVirtualMachine {
                 } else {
                     let mut out = "RESULT: {\n".to_string(); // open curly & newline
                     for (key, value) in &bindings {
-                        out.push_str(&format!("  {}: {}\n", key, value)); // key-value pairs spaced w/ newlines
+                        writeln!(out, "  {}: {}", key, value).unwrap(); // key-value pairs spaced w/ newlines
                     }
                     out.push('}'); // closing curly
                     out

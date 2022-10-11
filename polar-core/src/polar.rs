@@ -209,8 +209,8 @@ impl Polar {
     pub fn new_query_from_term(&self, mut term: Term, trace: bool) -> Query {
         use crate::vm::{Goal, PolarVirtualMachine};
         {
-            let mut kb = self.kb.write().unwrap();
-            term = rewrite_term(term, &mut kb);
+            let kb = self.kb.read().unwrap();
+            term = rewrite_term(term, &kb);
         }
         let query = Goal::Query { term: term.clone() };
         let vm =

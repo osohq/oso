@@ -182,7 +182,7 @@ def test_default_loader_strategies_all_entities_in_statement():
 
 @pytest.mark.parametrize("strategy", ("joined", "subquery", "selectin", "select"))
 def test_default_loader_strategies(engine, strategy):
-    """Test that deafult loader strategies are authorized correctly by running a query."""
+    """Test that default loader strategies are authorized correctly by running a query."""
     Base2 = declarative_base()
 
     class A1(Base2):

@@ -31,6 +31,13 @@ are three steps:
 3. [Make a small change](#3-update-the-policy) to the policy to allow a new type
    of access.
 
+<!-- {{% minicallout %}} -->
+
+The Oso Library works best in monolithic applications. If you're building authorization for more than one service or want to share a policy across multiple applications, read how to [get
+started with Oso Cloud](https://www.osohq.com/docs/get-started/quickstart).
+
+<!-- {{% /minicallout %}} -->
+
 ## 1. Clone the repo and install dependencies
 
 First, clone [the {{< lang >}} quickstart repo]({{< exampleGet "githubUrl" >}}),

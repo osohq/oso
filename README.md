@@ -24,7 +24,7 @@ Oso offers libraries for [Node.js][badge-nodejs-link],
 [Rust][badge-rust-link], [Ruby][badge-ruby-link], and
 [Java][badge-java-link].
 
-Our latest creation Oso Cloud (Preview) makes authorization across services as easy as oso.authorize(user, action, resource). [Learn about it.](https://www.osohq.com/oso-cloud)
+Our latest creation Oso Cloud makes authorization across services as easy as oso.authorize(user, action, resource). [Learn about it.](https://www.osohq.com/oso-cloud)
 
 ## Documentation
 
@@ -68,7 +68,7 @@ requirements:
   - Maven: 3.6+
 - Node.js: 12.20.0+
   - Yarn 1.22+
-- Python: 3.6+
+- Python: 3.7+
 - Ruby: 2.4+
   - Bundler 2.1.4+
 - Rust: 1.46+

@@ -66,7 +66,7 @@ try:
 
         return entities
 
-    def default_load_entities(entities):
+    def default_load_entities(entities, seen_relationships=None):
         """Find related entities that will be loaded on all queries to ``entities``
            due to the default loader strategy.
 
@@ -89,12 +89,20 @@ try:
                 mapper = mapper.mapper
 
             relationships = mapper.relationships
+            if seen_relationships is None:
+                seen_relationships = set()
             for rel in relationships.values():
+                if rel in seen_relationships:
+                    # prevent infinitely recursing when we've already seen the relationship
+                    continue
+                seen_relationships.add(rel)
                 # We only detect `"joined"` here because `"selectin"` and `"subquery"`
                 # issue multiple queries that we capture in the `do_orm_execute` event
                 # handler.
                 if rel.lazy == "joined":
-                    default_entities |= default_load_entities([rel.mapper])
+                    default_entities |= default_load_entities(
+                        [rel.mapper], seen_relationships
+                    )
                     default_entities.add(rel.mapper)
 
         return default_entities

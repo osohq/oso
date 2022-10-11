@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use std::{fmt, sync::Arc};
 
 use serde::{Deserialize, Serialize};
@@ -35,9 +36,9 @@ impl Context {
     pub(crate) fn source_position(&self) -> String {
         let mut f = String::new();
         let (row, column) = loc_to_pos(&self.source.src, self.left);
-        f += &format!(" at line {}, column {}", row + 1, column + 1);
+        write!(f, " at line {}, column {}", row + 1, column + 1).unwrap();
         if let Some(ref filename) = self.source.filename {
-            f += &format!(" of file {}", filename);
+            write!(f, " of file {}", filename).unwrap();
         }
         f
     }
@@ -82,7 +83,7 @@ impl SourceInfo {
 
 // TODO(gj): `Serialize` makes some `polar-wasm-api` tests easier to write. We could look into
 // https://serde.rs/remote-derive.html if we cared to preserve that while removing this impl.
-#[derive(PartialEq, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Serialize, Deserialize)]
 pub struct Source {
     pub filename: Option<String>,
     pub src: String,

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -eou pipefail
+
+if [[ "$#" -ne 1 ]]; then
+  echo "$0: VERSION"
+  exit 1
+fi
+
+SCRIPTDIR=`dirname "$0"`
+VERSION="$1"
+pushd $SCRIPTDIR
+
+python ./bump_versions.py --oso_version "${VERSION}" \
+                          --sqlalchemy_version "${VERSION}" \
+                          --flask_version "${VERSION}" \
+                          --django_version "${VERSION}"

@@ -45,10 +45,10 @@ def app_ctx(flask_app):
 
 def test_initialization_with_set(flask_app, oso, simple_policy, app_ctx, user):
     """Test that setting oso works correctly."""
-    # Establish that an improperly initalized flask oso throws an exception.
+    # Establish that an improperly initialized flask oso throws an exception.
     flask_oso = FlaskOso()
     flask_oso.set_get_actor(lambda: user)
-    with pytest.raises(AttributeError):
+    with pytest.raises(OsoError):
         flask_oso.authorize(action="read", resource="resource")
 
     # Works after set oso.
