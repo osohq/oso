@@ -7,7 +7,7 @@ We must detect all entities properly to apply authorization.
 """
 import sqlalchemy
 from sqlalchemy import inspect
-from sqlalchemy.orm.util import AliasedClass
+from sqlalchemy.orm.util import AliasedClass, AliasedInsp
 
 
 def to_class(entity):
@@ -85,7 +85,7 @@ try:
         for entity in entities:
             mapper = sqlalchemy.inspect(entity)
             # If the entity is an alias, get the mapper for the underlying entity.
-            if isinstance(mapper, sqlalchemy.orm.util.AliasedInsp):
+            if isinstance(mapper, AliasedInsp):
                 mapper = mapper.mapper
 
             relationships = mapper.relationships

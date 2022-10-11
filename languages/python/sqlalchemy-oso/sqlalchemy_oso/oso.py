@@ -20,7 +20,7 @@ class SQLAlchemyOso(Oso):
 
     """
 
-    def __init__(self, sqlalchemy_base):
+    def __init__(self, sqlalchemy_base: type) -> None:
         super().__init__()
 
         # Register all sqlalchemy models on sqlalchemy_base

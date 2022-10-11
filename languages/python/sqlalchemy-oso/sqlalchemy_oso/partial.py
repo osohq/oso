@@ -95,7 +95,7 @@ COMPARISONS = {
 }
 
 
-def flip_op(operator):
+def flip_op(operator: str) -> str:
     flips = {
         "Eq": "Eq",
         "Unify": "Unify",
@@ -264,7 +264,7 @@ def translate_compare(expression: Expression, session: Session, model, get_model
         return pk_filter
 
 
-def translate_in(expression, session, model, get_model):
+def translate_in(expression: Expression, session: Session, model, get_model):
     """Translate the in operator.
 
     Relationship contains at least one value that matches expr.
@@ -341,7 +341,7 @@ def translate_dot(path: Tuple[str, ...], session: Session, model, func: EmitFunc
             return property.any(translate_dot(path[1:], session, model, func))
 
 
-def get_relationship(model, field_name: str):
+def get_relationship(model: type, field_name: str):
     """Get the property object for field on model. field must be a relationship field.
 
     :returns: (property, model, is_multi_valued)
@@ -354,7 +354,7 @@ def get_relationship(model, field_name: str):
     return (property, model, relationship.uselist)
 
 
-def emit_compare(field_name, value, operator, session, model):
+def emit_compare(field_name: str, value, operator, session: Session, model):
     """Emit a comparison operation comparing the value of ``field_name`` on ``model`` to ``value``."""
     assert not isinstance(value, Variable), "value is a variable"
     property = getattr(model, field_name)
@@ -366,7 +366,7 @@ def emit_subexpression(sub_expression: Expression, get_model, session: Session, 
     return translate_expr(sub_expression, session, model, get_model)
 
 
-def emit_contains(field_name, value, session, model):
+def emit_contains(field_name: str, value, session: Session, model):
     """Emit a contains operation, checking that multi-valued relationship field ``field_name`` contains ``value``."""
     # TODO (dhatch): Could this be valid for fields that are not relationship fields?
     property, model, is_multi_valued = get_relationship(model, field_name)

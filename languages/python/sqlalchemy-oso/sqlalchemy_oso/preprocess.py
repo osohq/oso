@@ -1,7 +1,7 @@
 """Convert expressions from oso into a format that the SQLAlchemy translation can use."""
 
 from collections import defaultdict
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from polar.exceptions import UnsupportedError
 from polar.expression import Expression
@@ -66,7 +66,9 @@ def preprocess_and(
     return Expression("And", new_expression)
 
 
-def get_variable(expression_or_variable):
+def get_variable(
+    expression_or_variable: Union[Expression, Variable, object]
+) -> Optional[Variable]:
     """Get variable out of nested dot or single variable."""
     if isinstance(expression_or_variable, Variable):
         return expression_or_variable
@@ -77,7 +79,7 @@ def get_variable(expression_or_variable):
     return None
 
 
-def is_this(variable):
+def is_this(variable: Optional[Variable]) -> bool:
     """Return true if ``variable`` is ``_this``."""
     return variable == Variable("_this")
 

@@ -4,7 +4,9 @@ from typing import Any, Callable, Dict, Optional, Type
 
 from oso import Oso
 from sqlalchemy import event, inspect, orm
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
+from sqlalchemy.orm import scoped_session as sqlalchemy_scoped_session
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy.sql import expression as expr
 
@@ -16,20 +18,21 @@ logger = logging.getLogger(__name__)
 
 class _OsoSession:
     set = False
+    _get: Optional[Callable[[], Session]]
 
     @classmethod
-    def get(cls):
-        session = cls._get()
+    def get(cls) -> Session:
+        session = cls._get()  # type: ignore
         new_session = Session(bind=session.bind)
         return new_session
 
     @classmethod
-    def set_get_session(cls, get_session):
+    def set_get_session(cls, get_session: Callable[[], Session]) -> None:
         cls.set = True
-        _OsoSession._get = get_session
+        cls._get = get_session
 
 
-def set_get_session(oso: Oso, get_session_func):
+def set_get_session(oso: Oso, get_session_func: Callable[[], Session]) -> None:
     """Set the function that oso uses to expose a SQLAlchemy session to the policy
 
     :param oso: The Oso instance used to evaluate the policy.
@@ -55,9 +58,9 @@ def authorized_sessionmaker(
     get_oso: Callable[[], Oso],
     get_user: Callable[[], Any],
     get_checked_permissions: Callable[[], Permissions],
-    class_: Type[Session] = None,
-    **kwargs,
-):
+    class_: Optional[Type[Session]] = None,
+    **kwargs: Any,
+) -> sessionmaker:
     """Session factory for sessions with Oso authorization applied.
 
     :param get_oso: Callable that returns the Oso instance to use for
@@ -106,7 +109,7 @@ def authorized_sessionmaker(
     # session. This is to prevent unauthorized objects from ending up in the
     # session's identity map.
     class Sess(AuthorizedSessionBase, class_):  # type: ignore
-        def __init__(self, **options):
+        def __init__(self, **options: Any) -> None:
             options.setdefault("oso", get_oso())
             options.setdefault("user", get_user())
             options.setdefault("checked_permissions", get_checked_permissions())
@@ -125,8 +128,8 @@ def scoped_session(
     get_user: Callable[[], Any],
     get_checked_permissions: Callable[[], Permissions],
     scopefunc: Optional[Callable[..., Any]] = None,
-    **kwargs,
-):
+    **kwargs: Any,
+) -> sqlalchemy_scoped_session:
     """Return a scoped session maker that uses the Oso instance, user, and
     checked permissions (resource-action pairs) as part of the scope function.
 
@@ -201,7 +204,9 @@ class AuthorizedSessionBase(object):
     .. _baked_queries: https://docs.sqlalchemy.org/en/14/orm/extensions/baked.html
     """
 
-    def __init__(self, oso: Oso, user, checked_permissions: Permissions, **options):
+    def __init__(
+        self, oso: Oso, user: object, checked_permissions: Permissions, **options: Any
+    ) -> None:
         """Create an authorized session using ``oso``.
 
         :param oso: The Oso instance to use for authorization.
@@ -240,7 +245,7 @@ class AuthorizedSessionBase(object):
         if USING_SQLAlchemy_v1_3:  # Disable baked queries on SQLAlchemy 1.3.
             options["enable_baked_queries"] = False
 
-        super().__init__(**options)  # type: ignore
+        super().__init__(**options)
 
     @property
     def oso_context(self):
@@ -321,7 +326,7 @@ except ImportError:
     from sqlalchemy.orm.query import Query
 
     @event.listens_for(Query, "before_compile", retval=True)
-    def _before_compile(query):
+    def _before_compile(query: Query) -> Optional[Query]:
         """Enable before compile hook."""
         return _authorize_query(query)
 
@@ -348,7 +353,7 @@ except ImportError:
         # applied, SQLAlchemy will by default throw an error if filters are applied.
         # This prevents these errors from occurring, but could result in some
         # incorrect queries. We should remove this if possible.
-        query = query.enable_assertions(False)  # type: ignore
+        query = query.enable_assertions(False)
 
         entities = {column["entity"] for column in query.column_descriptions}
         for entity in entities:
@@ -358,19 +363,19 @@ except ImportError:
 
             # If entity is an alias, get the action for the underlying class.
             if isinstance(entity, AliasedClass):
-                action = checked_permissions.get(inspect(entity).class_)  # type: ignore
+                action = checked_permissions.get(inspect(entity).class_)
             else:
                 action = checked_permissions.get(entity)
 
             # If permissions map does not specify an action to authorize for entity
             # or if the specified action is `None`, deny access.
             if action is None:
-                query = query.filter(expr.false())  # type: ignore
+                query = query.filter(expr.false())
                 continue
 
             assert isinstance(session, Session)
             authorized_filter = authorize_model(oso, user, action, session, entity)
             if authorized_filter is not None:
-                query = query.filter(authorized_filter)  # type: ignore
+                query = query.filter(authorized_filter)
 
         return query

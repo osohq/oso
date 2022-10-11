@@ -13,12 +13,12 @@ from sqlalchemy_oso.compat import iterate_model_classes
 from sqlalchemy_oso.partial import partial_to_filter
 
 
-def default_polar_model_name(model) -> str:
+def default_polar_model_name(model: type) -> str:
     """Return polar class name for SQLAlchemy model."""
     return model.__name__
 
 
-def null_query(session: Session, model) -> Query:
+def null_query(session: Session, model: type) -> Query:
     """Return an intentionally empty query."""
     # TODO (dhatch): Make this not hit the database.
     return session.query(model).filter(sql.false())
@@ -44,7 +44,9 @@ def register_models(oso: Oso, base_or_registry):
             ) from e
 
 
-def authorize_model(oso: Oso, actor, action, session: Session, model):
+def authorize_model(
+    oso: Oso, actor: object, action: str, session: Session, model: type
+):
     """Return SQLAlchemy expression that applies the policy to ``model``.
 
     Executing this query will return only authorized objects. If the request is
