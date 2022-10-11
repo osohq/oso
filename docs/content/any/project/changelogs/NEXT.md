@@ -24,9 +24,9 @@ draft: true
 ##### Fixed type checking of objects and custom checks
 
 Previously, any JavaScript object would type check as a `Dictionary`, and it wasn't possible
-to override this with a custom isa check.
+to override this with a custom `isa` check.
 
-In this version, only an object explicitly created with `new Dict({x: 1})` will be recognised
+In this version, only an object explicitly created with `new Dict({x: 1})` will be recognized
 as a Polar dictionary.
 
 This fixes the ability to use custom `isa` checks. For example:
@@ -37,6 +37,7 @@ This fixes the ability to use custom `isa` checks. For example:
     isaCheck: (instance) => instance instanceof Object && instance.typename && instance.typename == "Bar"
   })
 ```
+
 registers a class with Polar named `Bar`, and Polar will consider any object with a field `typename` set to `"Bar"`
 as an instance of the type `Bar`.
 
