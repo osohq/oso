@@ -1,4 +1,7 @@
-black~=22.1.0
+black~=22.10.0
+isort==5.10.1
+example-isort-formatting-plugin==0.0.4
+example-isort-sorting-plugin==0.0.3
 flake8==4.0.1
 mypy==0.931
 sqlalchemy-stubs==0.4

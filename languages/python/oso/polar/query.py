@@ -1,15 +1,15 @@
-from collections.abc import Iterable
-from typing import List, Any, Generator, Dict
 import json
+from collections.abc import Iterable
+from typing import Any, Dict, Generator, List
 
+from .data import Condition, DataFilter, Projection
+from .data_filtering import Relation
 from .exceptions import (
-    InvalidIteratorError,
     InvalidCallError,
     InvalidConstructorError,
+    InvalidIteratorError,
     PolarRuntimeError,
 )
-from .data_filtering import Relation
-from .data import DataFilter, Condition, Projection
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 

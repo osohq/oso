@@ -1,9 +1,9 @@
-from django.urls import path
 from django.http import HttpResponse, HttpResponseServerError
+from django.urls import path
 
+from django_oso import decorators
 from django_oso.auth import authorize
 from django_oso.decorators import authorize_request
-from django_oso import decorators
 
 
 def root(request):

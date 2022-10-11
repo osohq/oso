@@ -1,14 +1,12 @@
 """SQLAlchemy session classes and factories for oso."""
-from typing import Any, Callable, Dict, Optional, Type
 import logging
-
-from sqlalchemy import event, inspect
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.orm.util import AliasedClass
-from sqlalchemy import orm
-from sqlalchemy.sql import expression as expr
+from typing import Any, Callable, Dict, Optional, Type
 
 from oso import Oso
+from sqlalchemy import event, inspect, orm
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm.util import AliasedClass
+from sqlalchemy.sql import expression as expr
 
 from sqlalchemy_oso.auth import authorize_model
 from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
@@ -275,6 +273,7 @@ class AuthorizedSession(AuthorizedSessionBase, Session):
 try:
     # TODO(gj): remove type ignore once we upgrade to 1.4-aware MyPy types.
     from sqlalchemy.orm import with_loader_criteria  # type: ignore
+
     from sqlalchemy_oso.sqlalchemy_utils import all_entities_in_statement
 
     @event.listens_for(Session, "do_orm_execute")

@@ -1,19 +1,13 @@
-from polar.exceptions import OsoError
 import pytest
+from oso import Oso
+from polar.exceptions import DuplicateClassAliasError, OsoError
 from sqlalchemy import Column, Integer, String, create_engine
+from sqlalchemy.ext.declarative import declarative_base
 
-
-from sqlalchemy_oso.session import (
-    authorized_sessionmaker,
-)
+from sqlalchemy_oso.auth import register_models
+from sqlalchemy_oso.session import authorized_sessionmaker
 
 from .conftest import print_query
-
-from oso import Oso
-from polar.exceptions import DuplicateClassAliasError
-
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy_oso.auth import register_models
 
 Base = declarative_base(name="Base")
 

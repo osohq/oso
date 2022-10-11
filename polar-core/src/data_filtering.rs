@@ -158,7 +158,7 @@ impl VarInfo {
             _ => match self
                 .eq_values
                 .iter()
-                .find_map(|(x, y)| (y == val).then(|| x))
+                .find_map(|(x, y)| (y == val).then_some(x))
             {
                 Some(var) => var.clone(),
                 _ => {
@@ -179,7 +179,7 @@ impl VarInfo {
         match self
             .field_relationships
             .iter()
-            .find_map(|(p, f, c)| (*p == sym && f == field_str).then(|| c))
+            .find_map(|(p, f, c)| (*p == sym && f == field_str).then_some(c))
         {
             Some(var) => var.clone(),
             _ => {
@@ -359,7 +359,7 @@ impl FilterPlan {
             self.result_sets
                 .iter()
                 .enumerate()
-                .find_map(|(j, rs2)| (i != j && rs1 == rs2).then(|| j))
+                .find_map(|(j, rs2)| (i != j && rs1 == rs2).then_some(j))
         }) {
             None => self.opt_fin(explain),
             Some(plan_id) => {
@@ -595,7 +595,7 @@ impl<'a> ResultSetBuilder<'a> {
             .vars
             .in_relationships
             .iter()
-            .filter_map(|(l, r)| (*r == id).then(|| l))
+            .filter_map(|(l, r)| (*r == id).then_some(l))
         {
             self.constrain_var(*l, var_type)?;
             if let Some(other) = self.result_set.requests.get(l) {
@@ -953,7 +953,7 @@ impl Vars {
 /// try to find an existing id for this variable.
 fn seek_var_id(vars: &HashMap<Id, HashSet<VarName>>, var: &VarName) -> Option<Id> {
     vars.iter()
-        .find_map(|(id, set)| set.contains(var).then(|| *id))
+        .find_map(|(id, set)| set.contains(var).then_some(*id))
 }
 
 /// get the id for this variable, or create one if the variable is new.
@@ -1014,7 +1014,11 @@ mod test {
         A: Eq,
     {
         for x in a {
-            match b.iter().enumerate().find_map(|(i, y)| (x == *y).then(|| i)) {
+            match b
+                .iter()
+                .enumerate()
+                .find_map(|(i, y)| (x == *y).then_some(i))
+            {
                 Some(i) => b.remove(i),
                 None => return false,
             };

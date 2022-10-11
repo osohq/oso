@@ -1,5 +1,6 @@
+from sqlalchemy import Boolean, Column, Integer
+
 from .test_duplicate_models import Base
-from sqlalchemy import Column, Integer, Boolean
 
 
 class Post(Base):

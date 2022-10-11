@@ -1,5 +1,6 @@
-from oso import Oso
 from functools import reduce
+
+from oso import Oso
 
 
 class DfTestOso(Oso):

@@ -1,9 +1,11 @@
 from functools import reduce
+
 from sqlalchemy.inspection import inspect
-from sqlalchemy.sql import false, true
 from sqlalchemy.orm import Session
-from .adapter import DataAdapter
+from sqlalchemy.sql import false, true
+
 from ..filter import Projection
+from .adapter import DataAdapter
 
 
 class SqlAlchemyAdapter(DataAdapter):
