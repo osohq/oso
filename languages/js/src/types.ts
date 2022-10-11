@@ -679,9 +679,16 @@ export function isAsyncIterable(x: unknown): x is AsyncIterable<unknown> {
  */
 export class Dict extends Object {
   [index: string]: unknown;
+
+  constructor(obj?: Object) {
+    super();
+    if (obj) {
+      Object.assign(this, obj);
+    }
+  }
 }
 
-export type IsaCheck = (instance: NullishOrHasConstructor) => boolean;
+export type IsaCheck = (instance: any) => boolean;
 
 /**
  * Optional parameters for [[`Polar.registerClass`]] and [[`Host.cacheClass`]].
