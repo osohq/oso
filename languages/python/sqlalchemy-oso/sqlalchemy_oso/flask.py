@@ -4,7 +4,21 @@
 """
 
 try:
-    from flask_sqlalchemy import SQLAlchemy, SignallingSession
+    from packaging.version import parse
+
+    from flask_sqlalchemy import (
+        SQLAlchemy,
+        SignallingSession,
+        __version__ as fv,  # type: ignore
+    )
+
+    if parse(fv) >= parse("3.0"):
+        import warnings
+
+        warnings.warn(
+            "Flask-SQLAlchemy versions greater than 2.x are not supported. More info: https://github.com/osohq/oso/issues/1631"
+        )
+        raise
 except ImportError:
     import warnings
 
