@@ -679,9 +679,17 @@ export function isAsyncIterable(x: unknown): x is AsyncIterable<unknown> {
  */
 export class Dict extends Object {
   [index: string]: unknown;
+
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  constructor(obj?: Object) {
+    super();
+    if (obj) {
+      Object.assign(this, obj);
+    }
+  }
 }
 
-export type IsaCheck = (instance: NullishOrHasConstructor) => boolean;
+export type IsaCheck = (instance: any) => boolean; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 /**
  * Optional parameters for [[`Polar.registerClass`]] and [[`Host.cacheClass`]].

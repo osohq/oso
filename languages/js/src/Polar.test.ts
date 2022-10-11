@@ -42,6 +42,7 @@ import {
   UnexpectedExpressionError,
 } from './errors';
 import * as rolesHelpers from '../test/rolesHelpers';
+import { Dict } from './types';
 
 test('it works', async () => {
   const p = new Polar();
@@ -1042,4 +1043,54 @@ test('can specialize on a dict with undefineds', async () => {
 
   const result3 = await query(p, pred('f', noAttr));
   expect(result3).toStrictEqual([map()]);
+});
+
+test('can specialize with custom `isa` check', async () => {
+  const p = new Polar();
+  class Foo {}
+  class Bar {}
+  p.registerClass(Foo);
+  p.registerClass(Bar, {
+    isaCheck: instance =>
+      instance instanceof Object &&
+      !!instance.typename && // eslint-disable-line @typescript-eslint/no-unsafe-member-access
+      instance.typename === 'Bar', // eslint-disable-line @typescript-eslint/no-unsafe-member-access
+  });
+
+  const foo = new Foo();
+  const bar = { typename: 'Bar' };
+  const dict = new Dict({});
+  const neither = { typename: 'Foo' };
+
+  await p.loadStr('is_foo(_: Foo); is_bar(_: Bar); is_dict(_: Dictionary);');
+
+  const result1 = await query(p, pred('is_foo', foo));
+  expect(result1).toStrictEqual([map()]);
+
+  const result2 = await query(p, pred('is_foo', bar));
+  expect(result2).toStrictEqual([]);
+
+  const result3 = await query(p, pred('is_foo', neither));
+  expect(result3).toStrictEqual([]);
+
+  const result4 = await query(p, pred('is_bar', foo));
+  expect(result4).toStrictEqual([]);
+
+  const result5 = await query(p, pred('is_bar', bar));
+  expect(result5).toStrictEqual([map()]);
+
+  const result6 = await query(p, pred('is_bar', neither));
+  expect(result6).toStrictEqual([]);
+
+  const result7 = await query(p, pred('is_dict', foo));
+  expect(result7).toStrictEqual([]);
+
+  const result8 = await query(p, pred('is_dict', bar));
+  expect(result8).toStrictEqual([]);
+
+  const result9 = await query(p, pred('is_dict', neither));
+  expect(result9).toStrictEqual([]);
+
+  const result10 = await query(p, pred('is_dict', dict));
+  expect(result10).toStrictEqual([map()]);
 });
