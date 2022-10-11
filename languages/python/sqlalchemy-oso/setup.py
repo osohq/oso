@@ -1,7 +1,8 @@
 import codecs
 import os
-from setuptools import setup, find_packages
 from os import path
+
+from setuptools import find_packages, setup
 
 here = path.abspath(path.dirname(__file__))
 
@@ -64,7 +65,7 @@ setup(
     #
     # Similar to `install_requires` above, these must be valid existing
     # projects.
-    extras_require={"flask": ["flask", "flask_sqlalchemy"]},
+    extras_require={"flask": ["flask", "flask_sqlalchemy<3.0"]},
     # If there are data files included in your packages that need to be
     # installed, specify them here.
     #

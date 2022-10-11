@@ -1,12 +1,11 @@
 """Convert expressions from oso into a format that the SQLAlchemy translation can use."""
 
 from collections import defaultdict
-from typing import Dict, Optional, List, Union
+from typing import Dict, List, Optional, Union
 
+from polar.exceptions import UnsupportedError
 from polar.expression import Expression
 from polar.variable import Variable
-from polar.exceptions import UnsupportedError
-
 
 TGroupedExpressions = Dict[Variable, List[Expression]]
 

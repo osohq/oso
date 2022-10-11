@@ -11,33 +11,29 @@ See: https://docs.sqlalchemy.org/en/14/orm/loading_relationships.html
 # conftest.py because even running the imports requires SQLAlchemy 1.4.
 
 import pytest
-
 import sqlalchemy
-from sqlalchemy import Column, ForeignKey, Integer, select, String, create_engine
-
+from oso import Oso
+from sqlalchemy import Column, ForeignKey, Integer, String, create_engine, select
 from sqlalchemy.orm import (
-    declarative_base,
-    joinedload,
-    selectinload,
-    subqueryload,
-    contains_eager,
-    with_loader_criteria,
     Load,
     Session,
+    contains_eager,
+    declarative_base,
+    joinedload,
     relationship,
+    selectinload,
+    subqueryload,
+    with_loader_criteria,
 )
 
-from oso import Oso
-
-from sqlalchemy_oso.session import AuthorizedSession
 from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
+from sqlalchemy_oso.session import AuthorizedSession
 from sqlalchemy_oso.sqlalchemy_utils import (
     all_entities_in_statement,
     get_column_entities,
     get_joinedload_entities,
     to_class,
 )
-
 
 pytestmark = pytest.mark.skipif(
     USING_SQLAlchemy_v1_3, reason="Only runs on SQLAlchemy 1.4"

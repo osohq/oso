@@ -1,6 +1,7 @@
 """Tests the Polar API as an external consumer"""
 
 from pathlib import Path
+
 import pytest
 
 from oso import Oso
@@ -166,11 +167,11 @@ def test_get_allowed_actions(test_oso):
 
 def test_forall_with_dot_lookup_and_method_call():
     """Thanks to user Alex Pearce for this test case!"""
+    import uuid
     from dataclasses import dataclass, field
     from typing import List
-    import uuid
 
-    from oso import ForbiddenError, Oso, NotFoundError
+    from oso import ForbiddenError, NotFoundError, Oso
 
     @dataclass(frozen=True)
     class User:

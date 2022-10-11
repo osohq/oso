@@ -31,9 +31,10 @@ resource Repo {
 
 resource Issue {
   permissions = ["read", "edit"];
-  relations = { parent: Repo };
+  relations = { parent: Repo, reviewer: User };
   "read" if "reader" on "parent";
   "edit" if "writer" on "parent";
+  "edit" if "reviewer";
 }
 
 has_role(_: User{org_roles}, name: String, org: Org) if
@@ -44,5 +45,7 @@ has_role(_: User{repo_roles}, name: String, repo: Repo) if
 
 has_relation(org: Org, "parent", _: Repo{org});
 has_relation(repo: Repo, "parent", _: Issue{repo});
+has_relation(reviewer: User, "reviewer", _: Issue{reviewer});
+
 
 allow(actor, action, resource) if has_permission(actor, action, resource);

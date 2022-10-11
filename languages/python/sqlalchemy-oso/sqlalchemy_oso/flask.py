@@ -4,7 +4,17 @@
 """
 
 try:
-    from flask_sqlalchemy import SQLAlchemy, SignallingSession
+    from flask_sqlalchemy import SignallingSession, SQLAlchemy
+    from flask_sqlalchemy import __version__ as fv  # type: ignore
+    from packaging.version import parse
+
+    if parse(fv) >= parse("3.0"):
+        import warnings
+
+        warnings.warn(
+            "Flask-SQLAlchemy versions greater than 2.x are not supported. More info: https://github.com/osohq/oso/issues/1631"
+        )
+        raise
 except ImportError:
     import warnings
 
@@ -18,12 +28,14 @@ try:
 except ImportError:
     from threading import get_ident as _get_ident  # type: ignore
 
-from typing import Any, Callable, MutableMapping, Optional, Mapping
+from typing import Any, Callable, Mapping, MutableMapping, Optional
+
+import sqlalchemy.orm
+from oso import Oso
+
+from sqlalchemy_oso.session import authorized_sessionmaker, scoped_session
 
 from .session import Permissions
-from oso import Oso
-from sqlalchemy_oso.session import authorized_sessionmaker, scoped_session
-import sqlalchemy.orm
 
 
 class AuthorizedSQLAlchemy(SQLAlchemy):
