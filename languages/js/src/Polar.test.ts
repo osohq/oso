@@ -1053,8 +1053,8 @@ test('can specialize with custom `isa` check', async () => {
   p.registerClass(Bar, {
     isaCheck: instance =>
       instance instanceof Object &&
-      instance.typename &&
-      instance.typename == 'Bar',
+      !!instance.typename && // eslint-disable-line @typescript-eslint/no-unsafe-member-access
+      instance.typename === 'Bar', // eslint-disable-line @typescript-eslint/no-unsafe-member-access
   });
 
   const foo = new Foo();
