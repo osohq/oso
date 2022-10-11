@@ -3,8 +3,7 @@
 __version__ = "0.26.2"
 
 import os
-
-from typing import List, Any, Set, Type
+from typing import Any, List, Set, Type
 
 from polar import Polar, Variable, exceptions
 from polar.data.adapter import DataAdapter
