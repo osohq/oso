@@ -1,9 +1,9 @@
-from flask import g, current_app, request, Flask
-from flask.wrappers import Request, Response
-from werkzeug.exceptions import Forbidden
 from typing import Any, Callable, NoReturn, Optional
 
+from flask import Flask, current_app, g, request
+from flask.wrappers import Request, Response
 from oso import Oso, OsoError
+from werkzeug.exceptions import Forbidden
 
 from .context import _app_context
 

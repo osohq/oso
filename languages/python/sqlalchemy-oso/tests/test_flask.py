@@ -1,12 +1,11 @@
 import pytest
-
-from sqlalchemy.orm import Session
 from sqlalchemy import Column, Integer
+from sqlalchemy.orm import Session
+
 from sqlalchemy_oso.flask import AuthorizedSQLAlchemy
 from sqlalchemy_oso.session import Permissions
 
-
-from .models import Post, ModelBase
+from .models import ModelBase, Post
 
 flask = pytest.importorskip("flask")
 flask_sqlalchemy = pytest.importorskip("flask_sqlalchemy")

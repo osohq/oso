@@ -1,9 +1,9 @@
 import pytest
-
 from polar import Variable
+from test_app.models import User
+
 from django_oso.oso import Oso, reset_oso
 from django_oso.partial import partial_to_query_filter
-from test_app.models import User
 
 
 @pytest.fixture(autouse=True)

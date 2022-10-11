@@ -38,7 +38,7 @@ has_relation(subject: A, "a", object: Aprime) if
     from dataclasses import dataclass
 
     from oso import Oso, Variable
-    from polar import Pattern, Expression
+    from polar import Expression, Pattern
 
     @dataclass
     class Group:

@@ -1,25 +1,24 @@
 """Translate between Polar and the host language (Python)."""
 
+import inspect
+import re
 from dataclasses import dataclass
 from math import inf, isnan, nan
-import re
-import inspect
 from typing import Any, Dict, Union
 
-
-from .exceptions import (
-    PolarRuntimeError,
-    UnregisteredClassError,
-    DuplicateClassAliasError,
-    UnregisteredInstanceError,
-    DuplicateInstanceRegistrationError,
-    UnexpectedPolarTypeError,
-    UNEXPECTED_EXPRESSION_MESSAGE,
-)
-from .variable import Variable
-from .predicate import Predicate
-from .expression import Expression, Pattern
 from .data_filtering import Relation
+from .exceptions import (
+    UNEXPECTED_EXPRESSION_MESSAGE,
+    DuplicateClassAliasError,
+    DuplicateInstanceRegistrationError,
+    PolarRuntimeError,
+    UnexpectedPolarTypeError,
+    UnregisteredClassError,
+    UnregisteredInstanceError,
+)
+from .expression import Expression, Pattern
+from .predicate import Predicate
+from .variable import Variable
 
 
 @dataclass

@@ -1,5 +1,5 @@
 from .adapter import DataAdapter
-from .filter import DataFilter, Projection, Relation, Condition
+from .filter import Condition, DataFilter, Projection, Relation
 
 __all__ = [
     "Condition",

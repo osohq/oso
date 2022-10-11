@@ -1,27 +1,28 @@
 """Communicate with the Polar virtual machine: load rules, make queries, etc."""
 
-from datetime import datetime, timedelta
 import os
-from pathlib import Path
 import sys
-from typing import List, Union, Optional
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import List, Optional, Union
 
+from .data import DataFilter
+from .data_filtering import serialize_types
 from .exceptions import (
-    PolarRuntimeError,
     InlineQueryFailedError,
+    InvalidQueryTypeError,
     ParserError,
     PolarFileExtensionError,
     PolarFileNotFoundError,
-    InvalidQueryTypeError,
+    PolarRuntimeError,
 )
-from .ffi import Polar as FfiPolar, PolarSource as Source
-from .host import Host
-from .query import Query
-from .predicate import Predicate
-from .variable import Variable
 from .expression import Expression, Pattern
-from .data_filtering import serialize_types
-from .data import DataFilter
+from .ffi import Polar as FfiPolar
+from .ffi import PolarSource as Source
+from .host import Host
+from .predicate import Predicate
+from .query import Query
+from .variable import Variable
 
 
 class Polar:

@@ -3,10 +3,11 @@
 __version__ = "0.26.2"
 
 import os
-from typing import List, Any, Set
+from typing import Any, List, Set
 
 from polar import Polar, Variable, exceptions
-from .exceptions import NotFoundError, ForbiddenError
+
+from .exceptions import ForbiddenError, NotFoundError
 
 
 class Oso(Polar):

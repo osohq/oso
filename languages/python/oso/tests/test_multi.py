@@ -1,8 +1,8 @@
+import concurrent.futures
 import random
 import time
-from contextlib import suppress
 from concurrent.futures import ThreadPoolExecutor
-import concurrent.futures
+from contextlib import suppress
 
 from oso import Oso, OsoError
 
