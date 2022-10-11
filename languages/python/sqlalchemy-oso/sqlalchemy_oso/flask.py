@@ -4,10 +4,13 @@
 """
 
 try:
-    from flask_sqlalchemy import SignallingSession, SQLAlchemy, __version__ as fv
-    if int(fv.split('.')[0]) > 2:
+    from flask_sqlalchemy import SignallingSession, SQLAlchemy
+    from flask_sqlalchemy import __version__ as fv
+
+    if int(fv.split(".")[0]) > 2:
         import warnings
-        warnings.warn('Flask-SQLAlchemy versions greater than 2.x are not supported')
+
+        warnings.warn("Flask-SQLAlchemy versions greater than 2.x are not supported")
 except ImportError:
     import warnings
 
