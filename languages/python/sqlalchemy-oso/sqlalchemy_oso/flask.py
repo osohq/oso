@@ -4,13 +4,9 @@
 """
 
 try:
+    from flask_sqlalchemy import SignallingSession, SQLAlchemy
+    from flask_sqlalchemy import __version__ as fv  # type: ignore
     from packaging.version import parse
-
-    from flask_sqlalchemy import (
-        SQLAlchemy,
-        SignallingSession,
-        __version__ as fv,  # type: ignore
-    )
 
     if parse(fv) >= parse("3.0"):
         import warnings
