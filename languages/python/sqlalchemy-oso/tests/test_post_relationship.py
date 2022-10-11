@@ -8,8 +8,8 @@ import pytest
 from sqlalchemy_oso.auth import authorize_model
 from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
 
-from .models import Post, Tag, User, Category
 from .conftest import print_query
+from .models import Category, Post, Tag, User
 
 
 def assert_query_equals(query, expected_str):

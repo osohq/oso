@@ -19,7 +19,7 @@ class NotFoundError(AuthorizationError):
     ``read_action`` on your ``Oso`` instance.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             "Oso NotFoundError -- The current user does not have permission to read "
             "the given resource. You should handle this error by returning a 404 "
@@ -36,7 +36,7 @@ class ForbiddenError(AuthorizationError):
     error to the client.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             "Oso ForbiddenError -- The requested action was not allowed for the "
             "given resource. You should handle this error by returning a 403 error "

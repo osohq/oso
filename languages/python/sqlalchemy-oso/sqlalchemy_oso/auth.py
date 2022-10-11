@@ -1,17 +1,16 @@
+from functools import reduce
+
 from oso import Oso
 from polar import Variable
 from polar.exceptions import DuplicateClassAliasError, OsoError, PolarRuntimeError
 from polar.partial import TypeConstraint
-
+from sqlalchemy import inspect
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.session import Session
-from sqlalchemy import inspect
 from sqlalchemy.sql import expression as sql
 
-from sqlalchemy_oso.partial import partial_to_filter
 from sqlalchemy_oso.compat import iterate_model_classes
-
-from functools import reduce
+from sqlalchemy_oso.partial import partial_to_filter
 
 
 def default_polar_model_name(model) -> str:

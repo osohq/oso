@@ -20,6 +20,7 @@ test:
 	$(MAKE) tox
 
 fmt: dev-requirements
+	isort .
 	black .
 
 lint: dev-requirements

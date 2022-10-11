@@ -1,7 +1,6 @@
 # External class definitions for use in `test_api.py` tests
-from dataclasses import dataclass
 import re
-
+from dataclasses import dataclass
 from typing import List, Optional
 
 
