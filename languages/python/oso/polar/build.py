@@ -1,6 +1,7 @@
 import os
-from cffi import FFI
 import sys
+
+from cffi import FFI
 
 ffibuilder = FFI()
 
@@ -41,7 +42,7 @@ ffibuilder.set_source(
     extra_link_args=libs,
 )
 
-with open(include_dir + "/polar.h") as f:
+with open(f"{include_dir}/polar.h") as f:
     header = f.read()
     ffibuilder.cdef(header)
 

@@ -1,6 +1,8 @@
 from polar import Variable
 from sqlalchemy.orm import Session
+
 from sqlalchemy_oso.partial import partial_to_filter
+
 from .models import User
 
 

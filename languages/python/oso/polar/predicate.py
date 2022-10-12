@@ -7,14 +7,14 @@ class Predicate:
     name: str
     args: Sequence[Any]
 
-    def __init__(self, name: str, args: Sequence[Any]):
+    def __init__(self, name: str, args: Sequence[Any]) -> None:
         self.name = name
         self.args = args
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.name}({", ".join(self.args)})'
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Predicate):
             return False
         return (

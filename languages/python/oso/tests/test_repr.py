@@ -1,9 +1,10 @@
+import io
 import os
 import re
-import io
+
+import pytest
 
 from polar.exceptions import PolarRuntimeError
-import pytest
 
 FOO_REPR = "SPECIAL FOO REPR"
 

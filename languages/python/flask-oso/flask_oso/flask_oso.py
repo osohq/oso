@@ -1,7 +1,9 @@
-from flask import g, current_app, request, Request
-from werkzeug.exceptions import Forbidden
+from typing import Any, Callable, NoReturn, Optional
 
-from oso import OsoError
+from flask import Flask, current_app, g, request
+from flask.wrappers import Request, Response
+from oso import Oso, OsoError
+from werkzeug.exceptions import Forbidden
 
 from .context import _app_context
 
@@ -34,11 +36,14 @@ class FlaskOso:
       Call `authorize(resource=flask.request)` before every request.
     """
 
-    def __init__(self, oso=None, app=None):
+    _app: Optional[Flask]
+    _oso: Optional[Oso]
+
+    def __init__(self, oso: Optional[Oso] = None, app: Optional[Flask] = None) -> None:
         self._app = app
         self._oso = None
 
-        def unauthorized():
+        def unauthorized() -> NoReturn:
             raise Forbidden("Unauthorized")
 
         self._unauthorized_action = unauthorized
@@ -57,7 +62,7 @@ class FlaskOso:
 
     # Initialization
 
-    def set_oso(self, oso):
+    def set_oso(self, oso: Oso) -> None:
         """Set the oso instance to use for authorization
 
         Must be called if ``oso`` is not provided to the constructor.
@@ -68,7 +73,7 @@ class FlaskOso:
         self._oso = oso
         self._oso.register_class(Request)
 
-    def init_app(self, app):
+    def init_app(self, app: Flask) -> None:
         """Initialize ``app`` for use with this instance of ``FlaskOso``.
 
         Must be called if ``app`` isn't provided to the constructor.
@@ -76,7 +81,7 @@ class FlaskOso:
         app.teardown_appcontext(self.teardown)
         app.before_request(self._provide_oso)
 
-    def set_get_actor(self, func):
+    def set_get_actor(self, func: Callable[[], Any]) -> None:
         """Provide a function that oso will use to get the current actor.
 
         :param func: A function to call with no parameters to get the actor if
@@ -85,7 +90,7 @@ class FlaskOso:
         """
         self._get_actor = func
 
-    def set_unauthorized_action(self, func):
+    def set_unauthorized_action(self, func: Callable[[], Any]) -> None:
         """Set a function that will be called to handle an authorization failure.
 
         The default behavior is to raise a Forbidden exception, returning a 403
@@ -98,7 +103,7 @@ class FlaskOso:
 
     # Middleware-like functions that affect every request.
 
-    def require_authorization(self, app=None):
+    def require_authorization(self, app: Optional[Flask] = None) -> None:
         """Enforce authorization on every request to ``app``.
 
         :param app: The app to require authorization for. Can be omitted if
@@ -112,11 +117,12 @@ class FlaskOso:
         request.
         """
         if app is None:
-            app = self.app
-
+            app = self._app
+        if app is None:
+            raise OsoError("Cannot require authorization without Flask app object")
         app.after_request(self._require_authorization)
 
-    def perform_route_authorization(self, app=None):
+    def perform_route_authorization(self, app: Optional[Flask] = None) -> None:
         """Perform route authorization before every request.
 
         Route authorization will call :py:meth:`oso.Oso.is_allowed` with the
@@ -128,13 +134,17 @@ class FlaskOso:
                     constructor.
         """
         if app is None:
-            app = self.app
+            app = self._app
+        if app is None:
+            raise OsoError(
+                "Cannot perform route authorization without Flask app object"
+            )
 
         app.before_request(self._perform_route_authorization)
 
     # During request decorator or functions.
 
-    def skip_authorization(self, reason=None):
+    def skip_authorization(self, reason: Optional[str] = None) -> None:
         """Opt-out of authorization for the current request.
 
         Will prevent ``require_authorization`` from causing an error.
@@ -143,7 +153,13 @@ class FlaskOso:
         """
         _authorize_called()
 
-    def authorize(self, resource, *, actor=None, action=None):
+    def authorize(
+        self,
+        resource: Any,
+        *,
+        actor: Optional[Any] = None,
+        action: Optional[str] = None
+    ) -> None:
         """Check whether the current request should be allowed.
 
         Calls :py:meth:`oso.Oso.is_allowed` to check authorization. If a request
@@ -179,7 +195,10 @@ class FlaskOso:
         # We use *is* here because == would actually need to get the request object.
         # We want to check that the resource is the proxy.
         if resource is request:
-            resource = request._get_current_object()
+            resource = request._get_current_object()  # type: ignore
+
+        if self.oso is None:
+            raise OsoError("Cannot perform authorization without oso instance")
 
         allowed = self.oso.is_allowed(actor, action, resource)
         _authorize_called()
@@ -188,24 +207,24 @@ class FlaskOso:
             self._unauthorized_action()
 
     @property
-    def app(self):
+    def app(self) -> Flask:
         return self._app or current_app
 
     @property
-    def oso(self):
+    def oso(self) -> Optional[Oso]:
         return self._oso
 
     @property
-    def current_actor(self):
+    def current_actor(self) -> Any:
         return self._get_actor()
 
     # Before / after
-    def _provide_oso(self):
+    def _provide_oso(self) -> None:
         top = _app_context()
         if not hasattr(top, "oso_flask_oso"):
             top.oso_flask_oso = self
 
-    def _perform_route_authorization(self):
+    def _perform_route_authorization(self) -> None:
         if not request.url_rule:
             # If request isn't going to match any route, just return and
             # let flask handle it the normal way.
@@ -213,7 +232,7 @@ class FlaskOso:
 
         self.authorize(resource=request)
 
-    def _require_authorization(self, response):
+    def _require_authorization(self, response: Response) -> Response:
         if not request.url_rule:
             # No rule matched this request
             # Skip requiring authorization.
@@ -230,6 +249,6 @@ class FlaskOso:
         pass
 
 
-def _authorize_called():
+def _authorize_called() -> None:
     """Mark current request as authorized."""
     _app_context().oso_flask_authorize_called = True

@@ -1,14 +1,15 @@
-from collections.abc import Iterable
 import json
+from collections.abc import Iterable
+from typing import Any, Dict, Generator, List
 
+from .data import Condition, DataFilter, Projection
+from .data_filtering import Relation
 from .exceptions import (
-    InvalidIteratorError,
     InvalidCallError,
     InvalidConstructorError,
+    InvalidIteratorError,
     PolarRuntimeError,
 )
-from .data_filtering import Relation
-from .data import DataFilter, Condition, Projection
 
 NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 
@@ -16,7 +17,7 @@ NATIVE_TYPES = [int, float, bool, str, dict, type(None), list]
 class QueryResult:
     """Response type of a call to the `query` API"""
 
-    def __init__(self, results: list):
+    def __init__(self, results: List[Any]) -> None:
         self.success = len(results) > 0
         self.results = [r["bindings"] for r in results]
         self.traces = [r["trace"] for r in results]
@@ -33,7 +34,7 @@ class Query:
         for (k, v) in (bindings or {}).items():
             self.bind(k, v)
 
-    def __del__(self):
+    def __del__(self) -> None:
         del self.host
         del self.ffi_query
 
@@ -41,7 +42,7 @@ class Query:
         """Bind `name` to `value` for the duration of the query."""
         self.ffi_query.bind(name, self.host.to_polar(value))
 
-    def run(self):
+    def run(self) -> Generator[Dict[str, Any], None, None]:
         """Run the event loop and yield results."""
         assert self.ffi_query, "no query to run"
         while True:
@@ -76,16 +77,15 @@ class Query:
                 raise PolarRuntimeError(f"Unhandled event: {json.dumps(event)}")
 
     def handle_make_external(self, data):
-        id = data["instance_id"]
+        instance_id = data["instance_id"]
         constructor = data["constructor"]["value"]
-        if "Call" in constructor:
-            cls_name = constructor["Call"]["name"]
-            args = [self.host.to_python(arg) for arg in constructor["Call"]["args"]]
-            kwargs = constructor["Call"]["kwargs"] or {}
-            kwargs = {k: self.host.to_python(v) for k, v in kwargs.items()}
-        else:
+        if "Call" not in constructor:
             raise InvalidConstructorError()
-        self.host.make_instance(cls_name, args, kwargs, id)
+        cls_name = constructor["Call"]["name"]
+        args = [self.host.to_python(arg) for arg in constructor["Call"]["args"]]
+        kwargs = constructor["Call"]["kwargs"] or {}
+        kwargs = {k: self.host.to_python(v) for k, v in kwargs.items()}
+        self.host.make_instance(cls_name, args, kwargs, instance_id)
 
     def handle_relation(self, instance, rel):
 
@@ -140,7 +140,7 @@ class Query:
             kwargs = data["kwargs"] or {}
             kwargs = {k: self.host.to_python(v) for k, v in kwargs.items()}
             result = attr(*args, **kwargs)
-        elif not data["args"] is None:
+        elif data["args"] is not None:
             raise InvalidCallError(
                 f"tried to call '{attribute}' but it is not callable"
             )

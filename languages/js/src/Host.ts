@@ -309,16 +309,15 @@ export class Host<Query, Resource> {
    * @internal
    */
   async isa(polarInstance: PolarTerm, name: string): Promise<boolean> {
-    const instance = (await this.toJs(
-      polarInstance
-    )) as NullishOrHasConstructor;
+    const instance = await this.toJs(polarInstance);
 
     const userType = this.types.get(name);
     if (userType !== undefined) {
       return userType.isaCheck(instance);
     } else {
       const cls = this.getClass(name);
-      return instance instanceof cls || instance?.constructor === cls;
+      const inst = instance as NullishOrHasConstructor;
+      return inst instanceof cls || inst?.constructor === cls;
     }
   }
 
@@ -541,7 +540,7 @@ export class Host<Query, Resource> {
       return entries.reduce((dict: Dict, [k, v]) => {
         dict[k] = v;
         return dict;
-      }, new Dict());
+      }, new Dict({}));
     } else if (isPolarInstance(t)) {
       const i = this.getInstance(t.ExternalInstance.instance_id);
       return i instanceof Promise ? await i : i; // eslint-disable-line @typescript-eslint/no-unsafe-return

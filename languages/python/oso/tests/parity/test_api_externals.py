@@ -1,14 +1,15 @@
 # External class definitions for use in `test_api.py` tests
-from dataclasses import dataclass
 import re
-
+from dataclasses import dataclass
 from typing import List, Optional
 
 
 class Http:
     """A resource accessed via HTTP."""
 
-    def __init__(self, hostname="", path="", query={}):
+    def __init__(self, hostname="", path="", query=None):
+        if query is None:
+            query = {}
         self.hostname = hostname
         self.path = path
         self.query = query
@@ -17,7 +18,7 @@ class Http:
         return str(self)
 
     def __str__(self):
-        q = {k: v for k, v in self.query.items()}
+        q = dict(self.query.items())
         host_str = f'hostname="{self.hostname}"' if self.hostname else None
         path_str = f'path="{self.path}"' if self.path != "" else None
         query_str = f"query={q}" if q != {} else None
@@ -39,7 +40,7 @@ class PathMapper:
                 template = template.replace(outer, ".*")
             else:
                 template = template.replace(outer, f"(?P<{inner}>[^/]+)")
-        self.pattern = re.compile("^" + template + "$")
+        self.pattern = re.compile(f"^{template}$")
 
     def map(self, string):
         match = self.pattern.match(string)

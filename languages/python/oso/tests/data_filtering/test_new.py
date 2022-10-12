@@ -1,13 +1,16 @@
+import itertools
+from typing import List
+
 import pytest
+from helpers import DfTestOso, unord_eq
+from sqlalchemy import create_engine, not_
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.schema import Column, ForeignKey
+from sqlalchemy.types import Boolean, String
+
 from oso import Relation
 from polar.data.adapter.sqlalchemy_adapter import SqlAlchemyAdapter
-from sqlalchemy import create_engine, not_
-from sqlalchemy.types import String, Boolean
-from sqlalchemy.schema import Column, ForeignKey
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
-from helpers import unord_eq, DfTestOso
-from typing import List
 
 Base = declarative_base()
 
@@ -361,9 +364,8 @@ def test_parent_child_cases(oso):
         allow(log: Log{foo: foo}, 2, foo: Foo{logs: logs}) if log in logs;
     """
     oso.load_str(policy)
-    for action in range(3):
-        for log in logs:
-            oso.check_authz(log, action, Foo, [log.foo()])
+    for action, log in itertools.product(range(3), logs):
+        oso.check_authz(log, action, Foo, [log.foo()])
 
 
 def test_specializers(oso):
@@ -388,9 +390,8 @@ def test_specializers(oso):
     oso.load_str(policy)
     parts = ["None", "Cls", "Dict", "Ptn"]
     for a in parts:
-        for b in parts:
-            for log in logs:
-                oso.check_authz(log.foo(), a + b, Log, [log])
+        for b, log in itertools.product(parts, logs):
+            oso.check_authz(log.foo(), a + b, Log, [log])
 
 
 def test_var_in_value(oso):

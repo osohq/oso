@@ -1,22 +1,15 @@
+from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
 from math import inf, isnan, nan
 from pathlib import Path
-from enum import Enum
-
-from polar import (
-    exceptions,
-    Polar,
-    Predicate,
-    Variable,
-    Expression,
-    Pattern,
-)
-from polar.partial import TypeConstraint
-from polar.errors import ValidationError
-from dataclasses import dataclass
 from typing import List
 
 import pytest
+
+from polar import Expression, Pattern, Polar, Predicate, Variable, exceptions
+from polar.errors import ValidationError
+from polar.partial import TypeConstraint
 
 
 def test_anything_works(polar, query):
@@ -912,7 +905,7 @@ def test_iterators(polar, qeval, qvar):
 
     class Bar(list):
         def sum(self):
-            return sum(x for x in self)
+            return sum(self)
 
     polar.register_class(Bar)
     assert qvar("x in new Bar([1, 2, 3])", "x") == [1, 2, 3]

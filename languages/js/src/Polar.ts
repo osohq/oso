@@ -16,9 +16,10 @@ import { Polar as FfiPolar } from './polar_wasm_api';
 import { Predicate } from './Predicate';
 import type { Message } from './messages';
 import { processMessage } from './messages';
-import type {
+import {
   Class,
   ClassParams,
+  Dict,
   Options,
   QueryOpts,
   QueryResult,
@@ -79,7 +80,7 @@ export class Polar<Query, Resource> {
     this.registerClass(Number, { name: 'Float' });
     this.registerClass(String);
     this.registerClass(Array, { name: 'List' });
-    this.registerClass(Object, { name: 'Dictionary' });
+    this.registerClass(Dict, { name: 'Dictionary' });
   }
 
   /**

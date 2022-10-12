@@ -8,9 +8,9 @@ description: >-
 draft: true
 ---
 
-## `RELEASED_PACKAGE_1` NEW_VERSION
+## `0.26.3` NEW_VERSION
 
-### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
+### Node.js (e.g., 'Core' or 'Python' or 'Node.js')
 
 #### Breaking changes
 
@@ -21,22 +21,38 @@ draft: true
   before upgrading.
 {{% /callout %}}
 
-##### Breaking change 1
+##### Fixed type checking of objects and custom checks
 
-Summary of breaking change.
+Previously, any JavaScript object would type check as a `Dictionary`, and it wasn't possible
+to override this with a custom `isa` check.
 
-Link to [migration guide]().
+In this version, only an object explicitly created with `new Dict({x: 1})` will be recognized
+as a Polar dictionary.
 
-#### New features
+This fixes the ability to use custom `isa` checks. For example:
 
-##### Feature 1
+```js
+  p.registerClass(Object, {
+    name: 'Bar',
+    isaCheck: (instance) => instance instanceof Object && instance.typename && instance.typename == "Bar"
+  })
+```
 
-Summary of user-facing changes.
+registers a class with Polar named `Bar`, and Polar will consider any object with a field `typename` set to `"Bar"`
+as an instance of the type `Bar`.
 
-Link to [relevant documentation section]().
 
-#### Other bugs & improvements
 
-- Bulleted list
-- Of smaller improvements
-- Potentially with doc [links]().
+## `sqlalchemy-oso` 0.26.3
+
+### Other bugs & improvements
+
+- A missing version constraint on the Flask-SQLAlchemy extra allowed
+  Flask-SQLAlchemy versions greater than 2.x to be used with `sqlalchemy-oso`.
+  The `sqlalchemy-oso` library requires some updates for compatibility with
+  Flask-SQLAlchemy 3.0, and progress on those updates will be tracked in
+  https://github.com/osohq/oso/issues/1631. Until compatibility with
+  Flask-SQLAlchemy 3.0 is achieved, we've added a runtime check on the
+  Flask-SQLAlchemy version that will raise an error if an incompatible version
+  is found. Thanks to [`@snstanton`](https://github.com/snstanton) for the
+  report and PR!

@@ -1,5 +1,9 @@
-black~=21.12b
-flake8==3.9.2
-mypy==0.812
+black~=22.10.0
+isort==5.10.1
+example-isort-formatting-plugin==0.0.4
+example-isort-sorting-plugin==0.0.3
+flake8==4.0.1
+mypy==0.931
 sqlalchemy-stubs==0.4
-tox==3.23.1
+types-dataclasses==0.6.4
+tox==3.24.5

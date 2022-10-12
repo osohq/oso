@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -eou pipefail
+
+if [[ "$#" -ne 1 ]]; then
+  echo "$0: VERSION"
+  exit 1
+fi
+
+VERSION=$1
+
+function check_status () {
+  out=$(mktemp /tmp/osorelease.XXXXX)
+  RES=$(gh api -X GET repos/{owner}/{repo}/actions/runs -f "q='branch:v${VERSION}'" | \
+    jq ".workflow_runs[] | {name, id, conclusion, head_branch} | select((.name | contains(\"Release\")) and (.head_branch | contains(\"${VERSION}\")))" | tee "$out" | jq '.conclusion == "success"')
+
+  echo "Status"
+  cat "${out}"
+  rm "${out}"
+
+  echo -n "${RES}" | jq -es 'all'
+}
+
+echo "Waiting for release jobs to succeed..."
+
+until check_status
+do
+  echo "Waiting..."
+  sleep 5
+done
+
+echo "Jobs done"
+
+echo "Running oso release workflow"
+
+gh workflow run publish.yml -f version=${VERSION}
+
+echo 'Watching main release job'
+sleep 10
+WORKFLOW_ID=$(gh api -X GET repos/{owner}/{repo}/actions/workflows/publish.yml/runs -f q='branch:v0.25.1' | jq '.workflow_runs | first | .id')
+
+gh run watch "${WORKFLOW_ID}"
+
+echo 'Checking main release result'
+gh api -X GET repos/{owner}/{repo}/actions/workflows/publish.yml/runs -f q='branch:v0.25.1' | jq -e '.workflow_runs | first | .conclusion == "success"'
+
+echo 'Running package releases...'
+gh workflow run publish-django-release.yml -f version=${VERSION}
+gh workflow run publish-sqlalchemy-release.yml -f version=${VERSION}
+gh workflow run publish-flask-release.yml -f version=${VERSION}
+
+echo 'Check status of releases before publishing documentation.'

@@ -1,12 +1,21 @@
 """Core oso functionality"""
 
-__version__ = "0.26.1"
+__version__ = "0.26.2"
 
 import os
-from typing import List, Any, Set
+from typing import Any, List, Set, Type
 
 from polar import Polar, Variable, exceptions
-from .exceptions import NotFoundError, ForbiddenError
+from polar.data.adapter import DataAdapter
+
+from .exceptions import ForbiddenError, NotFoundError
+
+# Type-Aliases
+_Actor = object
+_Action = str
+_Request = object
+_Resource = object
+_ResourceCls = Type[object]
 
 
 class Oso(Polar):
@@ -22,10 +31,10 @@ class Oso(Polar):
     def __init__(
         self,
         *,
-        forbidden_error=ForbiddenError,
-        not_found_error=NotFoundError,
-        read_action="read"
-    ):
+        forbidden_error: Type[BaseException] = ForbiddenError,
+        not_found_error: Type[BaseException] = NotFoundError,
+        read_action: _Action = "read"
+    ) -> None:
         """
         Create an Oso object.
 
@@ -49,7 +58,7 @@ class Oso(Polar):
         self.not_found_error = not_found_error
         self.read_action = read_action
 
-    def is_allowed(self, actor, action, resource) -> bool:
+    def is_allowed(self, actor: _Actor, action: _Action, resource: _Resource) -> bool:
         """Evaluate whether ``actor`` is allowed to perform ``action`` on ``resource``.
 
         Uses allow rules in the Polar policy to determine whether a request is
@@ -69,14 +78,23 @@ class Oso(Polar):
         except StopIteration:
             return False
 
-    def get_allowed_actions(self, actor, resource, allow_wildcard=False) -> List[Any]:
+    def get_allowed_actions(
+        self, actor: _Actor, resource: _Resource, allow_wildcard: bool = False
+    ) -> List[Any]:
         """Determine the actions ``actor`` is allowed to take on ``resource``.
 
         Deprecated. Use ``authorized_actions`` instead.
         """
         return list(self.authorized_actions(actor, resource, allow_wildcard))
 
-    def authorize(self, actor, action, resource, *, check_read=True):
+    def authorize(
+        self,
+        actor: _Actor,
+        action: _Action,
+        resource: _Resource,
+        *,
+        check_read: bool = True
+    ) -> None:
         """Ensure that ``actor`` is allowed to perform ``action`` on
         ``resource``.
 
@@ -109,7 +127,7 @@ class Oso(Polar):
             raise self.not_found_error()
         raise self.forbidden_error()
 
-    def authorize_request(self, actor, request):
+    def authorize_request(self, actor: _Actor, request: _Request) -> None:
         """Ensure that ``actor`` is allowed to send ``request`` to the server.
 
         Checks the ``allow_request`` rule of a policy.
@@ -125,7 +143,9 @@ class Oso(Polar):
         if not self.query_rule_once("allow_request", actor, request):
             raise self.forbidden_error()
 
-    def authorized_actions(self, actor, resource, allow_wildcard=False) -> Set[Any]:
+    def authorized_actions(
+        self, actor: _Actor, resource: _Resource, allow_wildcard: bool = False
+    ) -> Set[Any]:
         """Determine the actions ``actor`` is allowed to take on ``resource``.
 
         Collects all actions allowed by allow rules in the Polar policy for the
@@ -166,7 +186,9 @@ class Oso(Polar):
 
         return actions
 
-    def authorize_field(self, actor, action, resource, field):
+    def authorize_field(
+        self, actor: _Actor, action: _Action, resource: _Resource, field: str
+    ) -> None:
         """Ensure that ``actor`` is allowed to perform ``action`` on a given
         ``resource``'s ``field``.
 
@@ -184,7 +206,11 @@ class Oso(Polar):
             raise self.forbidden_error()
 
     def authorized_fields(
-        self, actor, action, resource, allow_wildcard=False
+        self,
+        actor: _Actor,
+        action: _Action,
+        resource: _Resource,
+        allow_wildcard: bool = False,
     ) -> Set[Any]:
         """Determine the fields of ``resource`` on which ``actor`` is allowed to
         perform  ``action``.
@@ -226,7 +252,9 @@ class Oso(Polar):
 
         return fields
 
-    def authorized_query(self, actor, action, resource_cls):
+    def authorized_query(
+        self, actor: _Actor, action: _Action, resource_cls: _ResourceCls
+    ):
         """Create a query for resources of type ``resource_cls``
         that ``actor`` is allowed to perform ``action`` on. The
         query is built by using the ``build_query`` and ``combine_query``
@@ -241,7 +269,9 @@ class Oso(Polar):
 
         return self.new_authorized_query(actor, action, resource_cls)
 
-    def authorized_resources(self, actor, action, resource_cls) -> List[Any]:
+    def authorized_resources(
+        self, actor: _Actor, action: _Action, resource_cls: _ResourceCls
+    ) -> List[Any]:
         """Determine the resources of type ``resource_cls`` that ``actor``
         is allowed to perform ``action`` on.
 
@@ -254,11 +284,11 @@ class Oso(Polar):
         query = self.authorized_query(actor, action, resource_cls)
         return self.host.adapter.execute_query(query)
 
-    def set_data_filtering_adapter(self, adapter):
+    def set_data_filtering_adapter(self, adapter: DataAdapter) -> None:
         """Set a global adapter for the new data filtering interface."""
         self.host.adapter = adapter
 
-    def _print_polar_log_message(self):
+    def _print_polar_log_message(self) -> None:
         if os.environ.get("POLAR_LOG", "0") not in ("off", "0"):
             print(
                 "Polar tracing enabled. Get help with "

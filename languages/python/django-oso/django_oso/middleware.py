@@ -1,10 +1,10 @@
 """Middleware"""
 from django.conf import settings
-from django_oso.oso import reset_oso
-
 from oso import OsoError
 
-from .auth import request_authorized, authorize
+from django_oso.oso import reset_oso
+
+from .auth import authorize, request_authorized
 
 # TODO (dhatch): Make this configurable.
 # HTTP status codes that are permitted without authorization.

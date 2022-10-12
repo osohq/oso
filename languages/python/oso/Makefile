@@ -2,6 +2,7 @@
 build:
 	rm -rf build
 	rm -f _polar_lib.abi3.so
+	pip install -r requirements.txt
 	python setup.py build
 	python setup.py develop
 
@@ -16,6 +17,7 @@ test: test-requirements
 	pytest
 
 fmt:
+	isort .
 	black .
 
 typecheck:
@@ -29,4 +31,3 @@ package:
 
 repl:
 	python -m oso
-

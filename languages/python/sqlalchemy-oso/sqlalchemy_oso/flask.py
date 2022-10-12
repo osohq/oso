@@ -4,7 +4,17 @@
 """
 
 try:
-    from flask_sqlalchemy import SQLAlchemy, SignallingSession
+    from flask_sqlalchemy import SignallingSession, SQLAlchemy
+    from flask_sqlalchemy import __version__ as fv  # type: ignore
+    from packaging.version import parse
+
+    if parse(fv) >= parse("3.0"):
+        import warnings
+
+        warnings.warn(
+            "Flask-SQLAlchemy versions greater than 2.x are not supported. More info: https://github.com/osohq/oso/issues/1631"
+        )
+        raise
 except ImportError:
     import warnings
 
@@ -18,7 +28,14 @@ try:
 except ImportError:
     from threading import get_ident as _get_ident  # type: ignore
 
+from typing import Any, Callable, Mapping, MutableMapping, Optional
+
+import sqlalchemy.orm
+from oso import Oso
+
 from sqlalchemy_oso.session import authorized_sessionmaker, scoped_session
+
+from .session import Permissions
 
 
 class AuthorizedSQLAlchemy(SQLAlchemy):
@@ -41,13 +58,21 @@ class AuthorizedSQLAlchemy(SQLAlchemy):
     .. _flask_sqlalchemy: https://flask-sqlalchemy.palletsprojects.com/en/2.x/
     """
 
-    def __init__(self, get_oso, get_user, get_checked_permissions, **kwargs):
+    def __init__(
+        self,
+        get_oso: Callable[[], Oso],
+        get_user: Callable[[], object],
+        get_checked_permissions: Callable[[], Permissions],
+        **kwargs: Any
+    ) -> None:
         self._get_oso = get_oso
         self._get_user = get_user
         self._get_checked_permissions = get_checked_permissions
         super().__init__(**kwargs)
 
-    def create_scoped_session(self, options=None):
+    def create_scoped_session(
+        self, options: Optional[MutableMapping[str, Any]] = None
+    ) -> sqlalchemy.orm.scoped_session:
         if options is None:
             options = {}
 
@@ -62,7 +87,7 @@ class AuthorizedSQLAlchemy(SQLAlchemy):
             **options
         )
 
-    def create_session(self, options):
+    def create_session(self, options: Mapping[str, Any]) -> sqlalchemy.orm.sessionmaker:
         return authorized_sessionmaker(
             get_oso=self._get_oso,
             get_user=self._get_user,

@@ -1,12 +1,15 @@
 from functools import reduce
+
 from sqlalchemy.inspection import inspect
+from sqlalchemy.orm import Session
 from sqlalchemy.sql import false, true
-from .adapter import DataAdapter
+
 from ..filter import Projection
+from .adapter import DataAdapter
 
 
 class SqlAlchemyAdapter(DataAdapter):
-    def __init__(self, session):
+    def __init__(self, session: Session) -> None:
         self.session = session
 
     def build_query(self, filter):
@@ -39,6 +42,7 @@ class SqlAlchemyAdapter(DataAdapter):
     def execute_query(self, query):
         return query.all()
 
+    @staticmethod
     def sqlize(cond):
         op = cond.cmp
         lhs = SqlAlchemyAdapter.add_side(cond.left)
@@ -52,6 +56,7 @@ class SqlAlchemyAdapter(DataAdapter):
         elif op == "Nin":
             return lhs not in rhs
 
+    @staticmethod
     def add_side(side):
         if isinstance(side, Projection):
             source = side.source

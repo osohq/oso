@@ -78,6 +78,11 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
         check_authz gabe, 'edit', Issue, [bug]
       end
     end
+    context 'issue reviewer' do
+      it 'can access the right resources' do
+        check_authz sam, 'edit', Issue, [laggy]
+      end
+    end
   end
 
   let(:policy_file) { File.join(__dir__, 'gitclub.polar') }
@@ -90,6 +95,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
 
   let(:steve) { User.find 'steve' }
   let(:leina) { User.find 'leina' }
+  let(:sam) { User.find 'sam' }
   let(:gabe) { User.find 'gabe' }
   let(:graham) { User.find 'graham' }
 
@@ -122,7 +128,8 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
       db.execute <<-SQL
         create table issues (
           name varchar(16) not null primary key,
-          repo_name varchar(16) not null
+          repo_name varchar(16) not null,
+          reviewer_name varchar(16)
         );
       SQL
 
@@ -159,6 +166,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     ios = Repo.create name: 'ios', org: apple
 
     steve = User.create name: 'steve', org: osohq
+    sam = User.create name: 'sam', org: osohq
     leina = User.create name: 'leina', org: osohq
     gabe = User.create name: 'gabe', org: osohq
     graham = User.create name: 'graham', org: apple
@@ -171,7 +179,7 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
     RepoRole.create name: 'reader', user: graham, repo: demo
 
     Issue.create name: 'bug', repo: oso
-    Issue.create name: 'laggy', repo: ios
+    Issue.create name: 'laggy', repo: ios, reviewer: sam
 
     subject.register_class(
       User,
@@ -236,6 +244,12 @@ RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
           other_type: 'Repo',
           my_field: 'repo_name',
           other_field: 'name'
+        ),
+        reviewer: Relation.new(
+          kind: 'one',
+          other_type: 'User',
+          my_field: 'reviewer_name',
+          other_field: 'name'
         )
       }
     )
@@ -271,6 +285,7 @@ end
 class Issue < ActiveRecord::Base
   self.primary_key = :name
   belongs_to :repo, foreign_key: :repo_name
+  belongs_to :reviewer, class_name: 'User', foreign_key: 'reviewer_name', optional: true
 end
 
 class RepoRole < ActiveRecord::Base

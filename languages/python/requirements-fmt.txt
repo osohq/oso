@@ -1,1 +1,4 @@
-black
+black~=22.10.0
+isort==5.10.1
+example-isort-formatting-plugin==0.0.4
+example-isort-sorting-plugin==0.0.3

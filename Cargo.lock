@@ -655,7 +655,7 @@ checksum = "0ab1bc2a289d34bd04a330323ac98a1b4bc82c9d9fcb1e66b63caa84da26b575"
 
 [[package]]
 name = "oso"
-version = "0.26.1"
+version = "0.26.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -679,7 +679,7 @@ dependencies = [
 
 [[package]]
 name = "oso-derive"
-version = "0.26.1"
+version = "0.26.2"
 dependencies = [
  "quote",
  "syn",
@@ -727,9 +727,9 @@ checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
 
 [[package]]
 name = "permute"
-version = "0.1.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "add5cf6a6a9e572d398fc2e73500305c18b6eb66c46cc730ee3737025a4e9209"
+checksum = "4fddb8f2cf68c74002bde337a2472e18c870e3464b1f637cc9718f51687e88ca"
 
 [[package]]
 name = "petgraph"
@@ -795,7 +795,7 @@ dependencies = [
 
 [[package]]
 name = "polar-c-api"
-version = "0.26.1"
+version = "0.26.2"
 dependencies = [
  "cbindgen",
  "polar-core",
@@ -805,7 +805,7 @@ dependencies = [
 
 [[package]]
 name = "polar-core"
-version = "0.26.1"
+version = "0.26.2"
 dependencies = [
  "criterion",
  "indoc",
@@ -825,7 +825,7 @@ dependencies = [
 
 [[package]]
 name = "polar-language-server"
-version = "0.26.1"
+version = "0.26.2"
 dependencies = [
  "console_error_panic_hook",
  "js-sys",
@@ -839,7 +839,7 @@ dependencies = [
 
 [[package]]
 name = "polar-wasm-api"
-version = "0.26.1"
+version = "0.26.2"
 dependencies = [
  "console_error_panic_hook",
  "js-sys",

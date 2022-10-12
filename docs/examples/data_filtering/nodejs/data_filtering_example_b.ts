@@ -75,7 +75,7 @@ async function test() {
   oso.registerClass(Organization, {
     fields: {
       id: String,
-      repos: new Relation("many", "Repo", "id", "org_id"),
+      repos: new Relation("many", "Repository", "id", "org_id"),
     }
   });
 
@@ -91,7 +91,7 @@ async function test() {
     fields: {
       id: Number,
       user: new Relation("one", "User", "user_id", "id"),
-      repo: new Relation("one", "Repo", "repo_id", "id")
+      repo: new Relation("one", "Repository", "repo_id", "id")
     }
   });
 

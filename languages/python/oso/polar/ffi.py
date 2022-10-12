@@ -1,6 +1,6 @@
 import json
-from typing import Callable, List, Optional
 from dataclasses import dataclass
+from typing import Callable, List, Optional
 
 from _polar_lib import ffi, lib
 

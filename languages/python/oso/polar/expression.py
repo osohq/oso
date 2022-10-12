@@ -1,15 +1,18 @@
+from typing import Any
+
+
 class Expression:
     def __init__(self, operator, args):
         self.operator = operator
         self.args = args
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Expression({self.operator}, {self.args})"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Expression({self.operator}, {self.args})"
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, type(self))
             and self.operator == other.operator
@@ -22,13 +25,13 @@ class Pattern:
         self.tag = tag
         self.fields = fields
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Pattern({self.tag}, {self.fields})"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return repr(self)
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, type(self))
             and self.tag == other.tag

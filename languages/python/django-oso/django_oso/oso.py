@@ -1,12 +1,11 @@
+import contextlib
 import logging
 import os.path
 
 from django.apps import apps
 from django.http import HttpRequest
-
 from oso import Oso as _Oso
 from polar.exceptions import DuplicateClassAliasError
-
 
 _logger = logging.getLogger(__name__)
 
@@ -31,10 +30,8 @@ def init_oso():
     Oso.host.get_field = lambda model, field: model._meta.get_field(field).related_model
 
     def register_class(model, name=None):
-        try:
+        with contextlib.suppress(DuplicateClassAliasError):
             Oso.register_class(model, name=name)
-        except DuplicateClassAliasError:
-            pass
 
     # Register all models.
     for app in apps.get_app_configs():

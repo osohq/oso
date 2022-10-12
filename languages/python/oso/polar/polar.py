@@ -1,33 +1,34 @@
 """Communicate with the Polar virtual machine: load rules, make queries, etc."""
 
-from datetime import datetime, timedelta
 import os
-from pathlib import Path
 import sys
-from typing import List, Union, Optional
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import List, Optional, Union
 
+from .data import DataFilter
+from .data_filtering import serialize_types
 from .exceptions import (
-    PolarRuntimeError,
     InlineQueryFailedError,
+    InvalidQueryTypeError,
     ParserError,
     PolarFileExtensionError,
     PolarFileNotFoundError,
-    InvalidQueryTypeError,
+    PolarRuntimeError,
 )
-from .ffi import Polar as FfiPolar, PolarSource as Source
-from .host import Host
-from .query import Query
-from .predicate import Predicate
-from .variable import Variable
 from .expression import Expression, Pattern
-from .data_filtering import serialize_types
-from .data import DataFilter
+from .ffi import Polar as FfiPolar
+from .ffi import PolarSource as Source
+from .host import Host
+from .predicate import Predicate
+from .query import Query
+from .variable import Variable
 
 
 class Polar:
     """Polar API"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.ffi_polar = FfiPolar()
         self.host = Host(self.ffi_polar)
         self.ffi_polar.set_message_enricher(self.host.enrich_message)
@@ -45,11 +46,11 @@ class Polar:
         self.register_class(datetime, name="Datetime")
         self.register_class(timedelta, name="Timedelta")
 
-    def __del__(self):
+    def __del__(self) -> None:
         del self.host
         del self.ffi_polar
 
-    def load_files(self, filenames: Optional[List[Union[Path, str]]] = None):
+    def load_files(self, filenames: Optional[List[Union[Path, str]]] = None) -> None:
         """Load Polar policy from ".polar" files."""
         if filenames is None:
             filenames = []
@@ -75,7 +76,7 @@ class Polar:
 
         self._load_sources(sources)
 
-    def load_file(self, filename: Union[Path, str]):
+    def load_file(self, filename: Union[Path, str]) -> None:
         """Load Polar policy from a ".polar" file.
 
         `Oso.load_file` has been deprecated in favor of `Oso.load_files` as of
@@ -89,7 +90,7 @@ class Polar:
         )
         self.load_files([filename])
 
-    def load_str(self, string: str):
+    def load_str(self, string: str) -> None:
         """Load a Polar string, checking that all inline queries succeed."""
         # NOTE: not ideal that the MRO gets updated each time load_str is
         # called, but since we are planning to move to only calling load once
@@ -97,11 +98,11 @@ class Polar:
         self._load_sources([Source(string)])
 
     # Register MROs, load Polar code, and check inline queries.
-    def _load_sources(self, sources: List[Source]):
+    def _load_sources(self, sources: List[Source]) -> None:
         self.ffi_polar.load(sources)
         self.check_inline_queries()
 
-    def check_inline_queries(self):
+    def check_inline_queries(self) -> None:
         while True:
             query = self.ffi_polar.next_inline_query()
             if query is None:  # Load is done
@@ -113,7 +114,7 @@ class Polar:
                     source = query.source()
                     raise InlineQueryFailedError(source)
 
-    def clear_rules(self):
+    def clear_rules(self) -> None:
         self.ffi_polar.clear_rules()
 
     def query(self, query, *, bindings=None, accept_expression=False):
@@ -291,7 +292,7 @@ class Polar:
             for k, v in result["bindings"].items()
         ]
 
-    def is_new_data_filtering_configured(self):
+    def is_new_data_filtering_configured(self) -> bool:
         return self.host.adapter is not None
 
     def new_authorized_query(self, actor, action, resource_cls):

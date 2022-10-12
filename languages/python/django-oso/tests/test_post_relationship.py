@@ -2,13 +2,13 @@
 
 Tests come from the relationship document & operations laid out there.
 """
-from django_oso.partial import TRUE_FILTER
 import pytest
 from django.core.exceptions import PermissionDenied
+from test_app2.models import Post, Tag, User
 
 from django_oso.models import authorize_model
 from django_oso.oso import reset_oso
-from test_app2.models import Post, Tag, User
+from django_oso.partial import TRUE_FILTER
 
 from .conftest import is_true, parenthesize
 
