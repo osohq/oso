@@ -124,6 +124,8 @@ export class Issue {
   id!: number;
   @Column()
   title!: string;
+  @Column({ nullable: true })
+  subtitle!: string;
   @Column()
   repoId!: number;
   @ManyToOne(() => Repo, repo => repo.issues)
@@ -303,6 +305,7 @@ async function fixtures() {
     fields: {
       id: Number,
       title: String,
+      subtitle: String,
       repoId: Number,
       repo: new Relation('one', 'Repo', 'repoId', 'id'),
     },
@@ -367,26 +370,26 @@ async function fixtures() {
     },
   });
   const apple = await orgs.findOneOrFail(
-      await orgs.save({
-        name: 'apple',
-        billing_address: 'cupertino,  CA',
-        base_repo_role: 'reader',
-      })
-    ),
-    osohq = await orgs.findOneOrFail(
-      await orgs.save({
-        name: 'osohq',
-        billing_address: 'new york, NY',
-        base_repo_role: 'reader',
-      })
-    ),
-    tiktok = await orgs.findOneOrFail(
-      await orgs.save({
-        name: 'tiktok',
-        billing_address: 'beijing, CN',
-        base_repo_role: 'reader',
-      })
-    );
+    await orgs.save({
+      name: 'apple',
+      billing_address: 'cupertino,  CA',
+      base_repo_role: 'reader',
+    })
+  );
+  const osohq = await orgs.findOneOrFail(
+    await orgs.save({
+      name: 'osohq',
+      billing_address: 'new york, NY',
+      base_repo_role: 'reader',
+    })
+  );
+  const tiktok = await orgs.findOneOrFail(
+    await orgs.save({
+      name: 'tiktok',
+      billing_address: 'beijing, CN',
+      base_repo_role: 'reader',
+    })
+  );
 
   async function make<T>(r: Repository<T>, x: DeepPartial<T>): Promise<T> {
     return await r.findOneOrFail(await r.save(x));
@@ -395,7 +398,7 @@ async function fixtures() {
     ios = await make(repos, { name: 'ios', org: apple }),
     app = await make(repos, { name: 'app', org: tiktok }),
     bug = await make(issues, { title: 'bug', repo: pol }),
-    lag = await make(issues, { title: 'lag', repo: ios }),
+    lag = await make(issues, { title: 'lag', subtitle: 'fix', repo: ios }),
     steve = await make(users, { email: 'steve@osohq.com' }),
     leina = await make(users, { email: 'leina@osohq.com' }),
     gabe = await make(users, { email: 'gabe@osohq.com' }),
@@ -844,6 +847,19 @@ describe('Data filtering using typeorm/sqlite', () => {
     const { oso } = await fixtures();
     await oso.loadStr('allow("gwen", "put", _: Foo);');
     expect(await oso.authorizedResources('gwen', 'delete', Foo)).toEqual([]);
+  });
+
+  test('nil in policy', async () => {
+    const { oso, bug, lag } = await fixtures();
+    await oso.loadStr(`
+    allow("steve", "read", issue: Issue) if
+      (issue.title = "bug" and  issue.subtitle = nil) 
+      or
+      (issue.title = "lag" and issue.subtitle != nil)
+      ;`);
+    expect(await oso.authorizedResources('steve', 'read', Issue)).toEqual(
+      expect.arrayContaining([bug, lag])
+    );
   });
 
   test('not equals', async () => {
