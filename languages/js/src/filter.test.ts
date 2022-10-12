@@ -857,7 +857,6 @@ describe('Data filtering using typeorm/sqlite', () => {
       or
       (issue.title = "lag" and issue.subtitle != nil)
       ;`);
-    const query = await oso.authorizedQuery('steve', 'read', Issue);
     expect(await oso.authorizedResources('steve', 'read', Issue)).toEqual(
       expect.arrayContaining([bug, lag])
     );
