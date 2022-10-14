@@ -12,7 +12,7 @@
 
   <groupId>com.osohq</groupId>
   <artifactId>oso</artifactId>
-  <!-- oso_version --><version>0.26.2</version>
+  <!-- oso_version --><version>0.26.3</version>
 
   <distributionManagement>
     <snapshotRepository>
