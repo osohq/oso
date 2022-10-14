@@ -224,12 +224,9 @@ public class Ffi {
     }
 
     public String get() {
-      return ptr.getString(0);
-    }
-
-    @Override
-    protected void finalize() {
+      String event = ptr.getString(0);
       polarLib.string_free(ptr);
+      return event;
     }
   }
 
