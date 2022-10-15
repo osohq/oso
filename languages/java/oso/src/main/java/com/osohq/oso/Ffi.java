@@ -217,16 +217,16 @@ public class Ffi {
   }
 
   protected class QueryEvent {
-    private Pointer ptr;
+    private final String event;
 
     private QueryEvent(Pointer ptr) {
-      this.ptr = ptr;
+      String event = ptr.getString(0);
+      polarLib.string_free(ptr);
+      this.event = event;
     }
 
     public String get() {
-      String event = ptr.getString(0);
-      polarLib.string_free(ptr);
-      return event;
+      return this.event;
     }
   }
 
