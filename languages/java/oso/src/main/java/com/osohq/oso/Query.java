@@ -171,7 +171,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
   /** Generate the next Query result */
   private HashMap<String, Object> nextResult() throws Exceptions.OsoException {
     while (true) {
-      String eventStr = ffiQuery.nextEvent().get();
+      String eventStr = ffiQuery.nextEvent();
       String kind, className;
       JSONObject data, instance;
       Long callId;
