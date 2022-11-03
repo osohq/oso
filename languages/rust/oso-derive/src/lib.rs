@@ -60,7 +60,7 @@ fn get_nested_attr(nested: NestedMeta, oso_attrs: &mut Vec<OsoAttribute>) {
 }
 
 fn get_oso_attrs(attr: Attribute, oso_attrs: &mut Vec<OsoAttribute>) {
-    println!(attr.parse_meta());
+    println!("{:?}", attr.parse_meta());
     let meta = attr.parse_meta().unwrap();
     if let Meta::List(list) = meta {
         match get_single_segment(&list.path) {
