@@ -63,7 +63,10 @@ fn get_oso_attrs(attr: Attribute, oso_attrs: &mut Vec<OsoAttribute>) {
     println!("attr: {:?}", attr);
     println!("attr.parse_meta(): {:?}", attr.parse_meta());
     println!("attr.parse_args(): {:?}", attr.parse_args());
-    println!("attr.parse_inner(): {:?}", attr.parse_inner());
+    println!(
+        "Attribute::parse_inner(attr): {:?}",
+        Attribute::parse_inner(attr)
+    );
     println!("attr.parse_outer(): {:?}", attr.parse_outer());
     let meta = attr.parse_meta().unwrap();
     if let Meta::List(list) = meta {
