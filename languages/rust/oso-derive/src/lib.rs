@@ -63,6 +63,7 @@ fn get_oso_attrs(attr: Attribute, oso_attrs: &mut Vec<OsoAttribute>) {
     println!("attr: {:?}", attr);
     println!("attr: {:?}", attr.path);
     println!("attr: {:?}", attr.path.segments);
+    println!("attr: {:?}", attr.path.get_ident());
     let meta = attr.parse_meta().unwrap();
     if let Meta::List(list) = meta {
         match get_single_segment(&list.path) {
