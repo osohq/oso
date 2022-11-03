@@ -67,6 +67,9 @@ fn get_oso_attrs(attr: Attribute, oso_attrs: &mut Vec<OsoAttribute>) {
     if let Some(ident) = attr.path.get_ident() {
         println!("ident: {:?}", ident);
         println!("ident.to_string(): {:?}", ident.to_string());
+        if ident.to_string() == "diesel" {
+            return ();
+        }
     }
     let meta = attr.parse_meta().unwrap();
     if let Meta::List(list) = meta {
