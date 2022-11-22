@@ -51,6 +51,7 @@ impl PolarLanguageServer {
     ///
     /// This function receives a notification's `method` and `params` and dispatches to the
     /// appropriate handler function based on `method`.
+    #[allow(unused_variables)]
     #[wasm_bindgen(js_class = PolarLanguageServer, js_name = onNotification)]
     pub fn on_notification(&mut self, method: &str, params: JsValue) {
         log(method);

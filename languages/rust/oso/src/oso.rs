@@ -183,7 +183,7 @@ impl Oso {
             if !file.extension().map_or(false, |ext| ext == "polar") {
                 return Err(crate::OsoError::IncorrectFileType { filename });
             }
-            let mut f = File::open(&file)?;
+            let mut f = File::open(file)?;
             let mut src = String::new();
             f.read_to_string(&mut src)?;
             sources.push(Source::new_with_name(filename, src));
