@@ -1,6 +1,6 @@
 //! Code for making interactive Oso queries from a REPL.
 
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use rustyline::error::ReadlineError;
 use rustyline::validate::{ValidationContext, ValidationResult, Validator};
 use rustyline::Editor;
@@ -12,14 +12,15 @@ use std::env;
 use std::fs::OpenOptions;
 
 /// Build the App for handling command line parameters
-fn build_app() -> App<'static, 'static> {
-    App::new(env!("CARGO_PKG_NAME"))
+fn build_app() -> Command<'static> {
+    Command::new(env!("CARGO_PKG_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
         .about("Oso REPL. See https://docs.osohq.com/rust/reference/tooling/repl.html")
         .arg(
             Arg::with_name("FILES")
                 .multiple(true)
+                .multiple_values(true)
                 .help("Specify one or more .polar files to load"),
         )
 }

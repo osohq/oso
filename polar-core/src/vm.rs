@@ -195,7 +195,7 @@ pub fn compare(
     // Coerce booleans to integers.
     // FIXME(gw) why??
     fn to_int(x: bool) -> Numeric {
-        Numeric::Integer(if x { 1 } else { 0 })
+        Numeric::Integer(i64::from(x))
     }
 
     fn compare<T: PartialOrd>(op: Operator, left: T, right: T) -> PolarResult<bool> {
@@ -347,7 +347,7 @@ impl PolarVirtualMachine {
     }
 
     pub fn set_logging_options(&mut self, rust_log: Option<String>, polar_log: Option<String>) {
-        let polar_log = polar_log.unwrap_or_else(|| "".to_string());
+        let polar_log = polar_log.unwrap_or_default();
         let polar_log_vars: HashSet<String> = polar_log
             .split(',')
             .filter(|v| !v.is_empty())
