@@ -8,6 +8,7 @@ use crate::Query;
 #[wasm_bindgen]
 pub struct Polar(polar::Polar);
 
+#[allow(unused_variables)]
 #[wasm_bindgen]
 impl Polar {
     #[wasm_bindgen(constructor)]
