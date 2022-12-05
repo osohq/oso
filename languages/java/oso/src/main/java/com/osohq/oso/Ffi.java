@@ -174,10 +174,12 @@ public class Ffi {
       polarLib.polar_application_error(ptr, message).check();
     }
 
-    protected QueryEvent nextEvent() throws Exceptions.OsoException {
+    protected String nextEvent() throws Exceptions.OsoException {
       Pointer eventPtr = polarLib.polar_next_query_event(ptr).check();
       processMessages();
-      return new QueryEvent(eventPtr);
+      String event = eventPtr.getString(0);
+      polarLib.string_free(eventPtr);
+      return event;
     }
 
     protected void debugCommand(String value) throws Exceptions.OsoException {
@@ -213,23 +215,6 @@ public class Ffi {
     @Override
     protected void finalize() {
       polarLib.query_free(ptr);
-    }
-  }
-
-  protected class QueryEvent {
-    private Pointer ptr;
-
-    private QueryEvent(Pointer ptr) {
-      this.ptr = ptr;
-    }
-
-    public String get() {
-      return ptr.getString(0);
-    }
-
-    @Override
-    protected void finalize() {
-      polarLib.string_free(ptr);
     }
   }
 
