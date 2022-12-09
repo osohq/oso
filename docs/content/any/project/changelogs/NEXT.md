@@ -40,3 +40,8 @@ Link to [relevant documentation section]().
 - Thank you to [`FinnRG`](https://github.com/FinnRG) and
   [`onalante-msft`](https://github.com/onalante-msft) for updating dependencies
   across the core, the C API crate, and the Rust language library.
+- Use `$crate` references in `polar_core` macros to allow macro usage
+  without a `use polar_core::*;` glob import.
+- Fix `Value::String` serialization bug that allows string injection.
+- Fix `Operator::Dot` serialization bug that breaks member access with
+  keys that cannot be used unquoted (e.g. `obj.("a b")`).
