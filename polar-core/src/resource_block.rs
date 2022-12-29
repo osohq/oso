@@ -629,9 +629,9 @@ impl ResourceBlock {
 
 #[cfg(test)]
 mod tests {
-    use permute::permute;
-
     use std::collections::HashSet;
+
+    use permutohedron::Heap;
 
     use super::*;
     use crate::error::{
@@ -1314,8 +1314,8 @@ mod tests {
             _ => false,
         };
 
-        let test_case = |parts: Vec<&str>, expected: &ResourceBlock| {
-            for permutation in permute(parts).into_iter() {
+        let test_case = |mut parts: Vec<&str>, expected: &ResourceBlock| {
+            for permutation in Heap::new(&mut parts) {
                 let mut policy = "resource Repo {\n".to_owned();
                 policy += &permutation.join("\n");
                 policy += "}";

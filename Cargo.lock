@@ -763,10 +763,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "478c572c3d73181ff3c2539045f6eb99e5491218eae919370993b890cdbdd98e"
 
 [[package]]
-name = "permute"
-version = "0.2.1"
+name = "permutohedron"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fddb8f2cf68c74002bde337a2472e18c870e3464b1f637cc9718f51687e88ca"
+checksum = "b687ff7b5da449d39e418ad391e5e08da53ec334903ddbb921db208908fc372c"
 
 [[package]]
 name = "petgraph"
@@ -850,7 +850,7 @@ dependencies = [
  "lalrpop",
  "lalrpop-util",
  "maplit",
- "permute",
+ "permutohedron",
  "pipe",
  "pretty_assertions",
  "serde",
