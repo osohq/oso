@@ -81,7 +81,7 @@ mod host;
 mod oso;
 mod query;
 
-pub use crate::oso::{Action, Oso};
+pub use crate::oso::{Action, Field, Oso};
 pub use errors::{OsoError, Result};
 pub use host::{Class, ClassBuilder, FromPolar, FromPolarList, PolarValue, ToPolar, ToPolarList};
 pub use query::{Query, ResultSet};

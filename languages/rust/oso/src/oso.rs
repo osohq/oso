@@ -46,6 +46,26 @@ impl<T: FromPolar> FromPolar for Action<T> {
     }
 }
 
+/// Represents a `field` used in an `allow_field` rule.
+/// When the field is bound to a concrete value (e.g. a string)
+/// this returns an `Field::Typed(field)`.
+/// If _any_ field is allowed, then the `Field::Any` variant is returned.
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+pub enum Field<T = String> {
+    Any,
+    Typed(T),
+}
+
+impl<T: FromPolar> FromPolar for Field<T> {
+    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+        if matches!(val, PolarValue::Variable(_)) {
+            Ok(Field::Any)
+        } else {
+            T::from_polar(val).map(Field::Typed)
+        }
+    }
+}
+
 impl Oso {
     /// Create a new instance of Oso. Each instance is separate and can have different rules and classes loaded into it.
     pub fn new() -> Self {
@@ -126,7 +146,7 @@ impl Oso {
     }
 
     /// Get the actions actor is allowed to take on resource.
-    /// Returns a [std::collections::HashSet] of actions, typed according the return value.
+    /// Returns a [std::collections::HashSet] of actions, typed according to the return value.
     /// # Examples
     /// ```ignore
     /// oso.load_str(r#"allow(actor: Actor{name: "sally"}, action, resource: Widget{id: 1}) if
@@ -161,6 +181,48 @@ impl Oso {
                 Some(Ok(result)) => {
                     if let Some(action) = result.get("action") {
                         set.insert(T::from_polar(action)?);
+                    }
+                }
+                Some(Err(e)) => return Err(e),
+                None => break,
+            };
+        }
+
+        Ok(set)
+    }
+
+    /// Get the fields of resource on which actor is allowed to perform action.
+    /// Returns a [std::collections::HashSet] of actions, typed according to the return value.
+    pub fn get_allowed_fields<Actor, Action, Resource, T>(
+        &self,
+        actor: Actor,
+        action: Action,
+        resource: Resource,
+    ) -> crate::Result<HashSet<T>>
+    where
+        Actor: ToPolar,
+        Action: ToPolar,
+        Resource: ToPolar,
+        T: FromPolar + Eq + Hash,
+    {
+        let mut query = self
+            .query_rule(
+                "allow_field",
+                (
+                    actor,
+                    action,
+                    resource,
+                    PolarValue::Variable("field".to_owned()),
+                ),
+            )
+            .unwrap();
+
+        let mut set = HashSet::new();
+        loop {
+            match query.next() {
+                Some(Ok(result)) => {
+                    if let Some(field) = result.get("field") {
+                        set.insert(T::from_polar(field)?);
                     }
                 }
                 Some(Err(e)) => return Err(e),
