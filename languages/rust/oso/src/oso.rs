@@ -83,6 +83,48 @@ impl Oso {
         }
     }
 
+    /// High level interface for authorization decisions. Makes an allow query with the given actor, action, resource and field and returns true or false.
+    pub fn is_field_allowed<Actor, Action, Resource, Field>(
+        &self,
+        actor: Actor,
+        action: Action,
+        resource: Resource,
+        field: Field,
+    ) -> crate::Result<bool>
+    where
+        Actor: ToPolar,
+        Action: ToPolar,
+        Resource: ToPolar,
+        Field: ToPolar,
+    {
+        let mut query = self
+            .query_rule("allow_field", (actor, action, resource, field))
+            .unwrap();
+        match query.next() {
+            Some(Ok(_)) => Ok(true),
+            Some(Err(e)) => Err(e),
+            None => Ok(false),
+        }
+    }
+
+    /// High level interface for authorization decisions. Makes an allow query with the given actor and request and returns true or false.
+    pub fn is_request_allowed<Actor, Request>(
+        &self,
+        actor: Actor,
+        request: Request,
+    ) -> crate::Result<bool>
+    where
+        Actor: ToPolar,
+        Request: ToPolar,
+    {
+        let mut query = self.query_rule("allow_request", (actor, request)).unwrap();
+        match query.next() {
+            Some(Ok(_)) => Ok(true),
+            Some(Err(e)) => Err(e),
+            None => Ok(false),
+        }
+    }
+
     /// Get the actions actor is allowed to take on resource.
     /// Returns a [std::collections::HashSet] of actions, typed according the return value.
     /// # Examples
