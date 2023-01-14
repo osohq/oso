@@ -114,13 +114,7 @@ public class Query implements Enumeration<HashMap<String, Object>> {
           }
           result = method.invoke(instance, args.get().toArray());
         } else {
-          // Look for a field with the given name.
-          try {
-            Field field = cls.getField(attrName);
-            result = field.get(instance);
-          } catch (NoSuchFieldException f) {
-            throw new Exceptions.InvalidAttributeError(cls.getName(), attrName);
-          }
+          result = getFromFieldOrRecordAccessor(attrName, instance, cls);
         }
         String term = host.toPolarTerm(result).toString();
         ffiQuery.callResult(callId, term);
@@ -138,6 +132,22 @@ public class Query implements Enumeration<HashMap<String, Object>> {
       ffiQuery.applicationError(e.getMessage());
       ffiQuery.callResult(callId, "null");
       return;
+    }
+  }
+
+  private Object getFromFieldOrRecordAccessor(String attrName, Object instance, Class<?> cls) throws IllegalAccessException {
+    // Look for a field with the given name.
+    try {
+      Field field = cls.getField(attrName);
+      return field.get(instance);
+    } catch (NoSuchFieldException ignored) {
+    }
+    // Assume record so try the no args accessor method instead.
+    try {
+      Method method = cls.getMethod(attrName);
+      return method.invoke(instance);
+    } catch (NoSuchMethodException | InvocationTargetException e) {
+      throw new Exceptions.InvalidAttributeError(cls.getName(), attrName);
     }
   }
 
