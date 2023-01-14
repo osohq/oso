@@ -16,6 +16,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.commons.beanutils.MethodUtils;
+import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.collections4.IteratorUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -142,13 +143,18 @@ public class Query implements Enumeration<HashMap<String, Object>> {
       return field.get(instance);
     } catch (NoSuchFieldException ignored) {
     }
-    // Assume record so try the no args accessor method instead.
+    // Assume record, try foo() for attrName=foo
     try {
       Method method = cls.getMethod(attrName);
       return method.invoke(instance);
-    } catch (NoSuchMethodException | InvocationTargetException e) {
-      throw new Exceptions.InvalidAttributeError(cls.getName(), attrName);
+    } catch (NoSuchMethodException | InvocationTargetException ignored) {
     }
+    // For kotlin data classes, try getFoo() for attrName=foo
+    try {
+      return PropertyUtils.getProperty(instance, attrName);
+    } catch (NoSuchMethodException | InvocationTargetException ignored) {
+    }
+    throw new Exceptions.InvalidAttributeError(cls.getName(), attrName);
   }
 
   /** Helper for `NextExternal` query events */

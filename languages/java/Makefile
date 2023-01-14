@@ -16,7 +16,7 @@ test: rust
 	cd oso && mvn $(MVN_FLAGS) clean test
 
 package: rust
-	cd oso && mvn $(MVN_FLAGS) clean package
+	cd oso && mvn $(MVN_FLAGS) clean install
 
 repl: rust
 	cd oso && mvn $(MVN_FLAGS) exec:java -Dexec.mainClass="com.osohq.oso.Oso" -Dexec.args="$(ARGS)"
