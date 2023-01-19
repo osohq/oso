@@ -12,7 +12,6 @@
     "devDependencies": {
         "@fullhuman/postcss-purgecss": "^2.3.0",
         "@tailwindcss/typography": "^0.4.1",
-        "autoprefixer": "^9.8.6",
         "lodash": "^4.17.20",
         "postcss": "^8.2.2",
         "postcss-cli": "^8.3.1",
