@@ -139,10 +139,3 @@ Check out the full code for the example below:
 - [Add Oso to Your Application](application)
 
 {{% /callout %}}
-
-## Want to talk it through?
-
-If you have any questions, are getting stuck, or just want to talk something
-through, jump into [Slack](https://join-slack.osohq.com/) and an engineer from
-the core team (or one of the hundreds of developers in the growing community)
-will help you out.
