@@ -2,7 +2,7 @@
 title: Installation
 weight: 1
 description: Installation instructions for Oso's Java library.
-aliases: 
+aliases:
   - ./lib.html
 ---
 
@@ -18,7 +18,7 @@ your Java project.
 
 ## Requirements
 
-- Java version 10 or greater
+- Java version 11 or greater
 - Supported platforms:
   - Linux
   - macOS
