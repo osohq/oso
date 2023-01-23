@@ -702,7 +702,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-11, windows-latest]
-        java-version: [11, 12, 13, 14] # @TODO: 8 and 9 not working.
+        java-version: [11, 12, 13, 14]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
