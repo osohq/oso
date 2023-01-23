@@ -1703,8 +1703,7 @@ impl PolarVirtualMachine {
             }
             Operator::Print => {
                 self.print(
-                    &args
-                        .iter()
+                    args.iter()
                         .map(|arg| self.deref(arg).to_string())
                         .collect::<Vec<_>>()
                         .join(", "),

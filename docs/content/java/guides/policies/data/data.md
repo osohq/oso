@@ -31,7 +31,7 @@ registerClass: |
   ```
 
   You may register a Java class with a particular
-  [Constructor](https://docs.oracle.com/javase/10/docs/api/java/lang/reflect/Constructor.html),
+  [Constructor](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/reflect/Constructor.html),
   but the default behavior is to choose one at instantiation time based on the
   classes of the supplied arguments. For the example above, this would probably
   be a constructor with a signature like `public User(String name, bool
