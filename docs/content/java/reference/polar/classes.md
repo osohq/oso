@@ -46,7 +46,7 @@ oso.registerClass(Person.class, "User")
 ```
 
 At instantiation time, Oso will search the list returned by
-[`Class.getConstructors()`](<https://docs.oracle.com/javase/10/docs/api/java/lang/Class.html#getConstructors()>)
+[`Class.getConstructors()`](<https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Class.html#getConstructors()>)
 for a constructor that is applicable to the supplied positional constructor
 arguments. For example, given the Polar expression `new User("alice@example.com")`, Oso will search for a `Constructor` with one
 parameter compatible with `String.class`, e.g.:
@@ -56,7 +56,7 @@ public User(String username) { ... }
 ```
 
 Applicability is determined using [`Class.isAssignableFrom(Class<?>
-cls)`](<https://docs.oracle.com/javase/10/docs/api/java/lang/Class.html#isAssignableFrom(java.lang.Class)>),
+cls)`](<https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Class.html#isAssignableFrom(java.lang.Class)>),
 which allows arguments that are instances of subclasses or implementations of
 interfaces to properly match the constructor’s parameter types.
 
@@ -118,7 +118,7 @@ public class User {
 Java
 [Arrays](https://docs.oracle.com/javase/tutorial/java/nutsandbolts/arrays.html)
 _and_ objects that implement the
-[List](https://docs.oracle.com/javase/10/docs/api/java/util/List.html)
+[List](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/List.html)
 interface are mapped to Polar [lists](polar-syntax#lists). Java’s `List`
 methods may be accessed from policies:
 
@@ -174,7 +174,7 @@ public class User {
 ```
 
 Java methods like
-[`List.get`](<https://docs.oracle.com/javase/10/docs/api/java/util/List.html#get(int)>)
+[`List.get`](<https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/List.html#get(int)>)
 may be used for random access to list elements, but there is currently no Polar
 syntax for that is equivalent to the Java expression `user.groups[1]`. To
 access the elements of a list without using a method, you may iterate over it
@@ -184,7 +184,7 @@ with [pattern matching](polar-syntax#patterns-and-matching).
 ### Maps
 
 Java objects that implement the
-[Map](https://docs.oracle.com/javase/10/docs/api/java/util/Map.html) interface
+[Map](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Map.html) interface
 are mapped to Polar [dictionaries](polar-syntax#dictionaries):
 
 ```polar
@@ -211,7 +211,7 @@ Likewise, dictionaries constructed in Polar may be passed into Java methods.
 ### Enumerations
 
 You may iterate over a Java
-[Enumeration](https://docs.oracle.com/javase/10/docs/api/java/util/Enumeration.html)
+[Enumeration](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Enumeration.html)
 (or anything that can be converted to one, such as a `Collection` or
 `Iterable`) using Polar's [`in` operator](polar-syntax#in-list-membership):
 
