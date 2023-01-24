@@ -1,6 +1,7 @@
 ---
 title: Authorize Across Services
 weight: 10
+no_one_on_one: 1
 description: |
   If you want to start diving into how to handle authorization in two or
   thousands of services learn more about Oso Cloud. Our latest creation
@@ -29,3 +30,10 @@ Here are some other resources that might be useful:
   Microservices](https://www.osohq.com/post/microservices-authorization-patterns):
   from the Oso engineering blog, a discussion of the most common patterns we've
   seen for modeling authorization data in a microservices environment.
+
+
+### Set up a 1x1 with an Oso Engineer
+
+Our team is happy to help you get started with Oso. If you'd like to learn more
+about using Oso in your app or have any questions,
+[schedule a 1x1 with an Oso engineer](https://calendly.com/osohq/1-on-1?utm_source=library_docs&utm_content=guides_cloud).
