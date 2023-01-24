@@ -35,5 +35,5 @@ Here are some other resources that might be useful:
 ### Set up a 1x1 with an Oso Engineer
 
 Our team is happy to help you get started with Oso. If you'd like to learn more
-about using Oso in your app or have any questions,
+about using Oso Cloud in your app or have any questions,
 [schedule a 1x1 with an Oso engineer](https://calendly.com/osohq/1-on-1?utm_source=library_docs&utm_content=guides_cloud).
