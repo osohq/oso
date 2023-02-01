@@ -35,12 +35,10 @@ def register_models(oso: Oso, base_or_registry):
             oso.register_class(model, name=default_polar_model_name(model))
         except DuplicateClassAliasError as e:
             raise OsoError(
-                (
                     "Attempted to register two classes with the same name when automatically registering SQLAlchemy models\n"
                     "To fix this, try manually registering the new class. E.g.\n"
                     '  oso.register_class(MyModel, name="models::MyModel")\n'
                     "  register_models(oso, Base)\n"
-                )
             ) from e
 
 

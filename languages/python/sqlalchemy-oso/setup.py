@@ -10,7 +10,7 @@ here = path.abspath(path.dirname(__file__))
 try:
     with open(path.join(here, "README.md"), encoding="utf-8") as f:
         long_description = f.read()
-except IOError:
+except OSError:
     long_description = ""
 
 # Hack around tox, don't count oso as a dependency when running under tox.
