@@ -45,11 +45,11 @@ setup(
     author="Oso Security, Inc.",
     classifiers=[
         "Development Status :: 4 - Beta",
-        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
         "License :: OSI Approved :: Apache Software License",
     ],
     packages=find_packages(exclude=["tests", "tests.*"]),
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     setup_requires=["cffi>=1.0.0", "wheel"],
     cffi_modules=["polar/build.py:ffibuilder"],
     install_requires=install_requires,
