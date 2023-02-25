@@ -147,7 +147,9 @@ def test_get_allowed_actions(test_oso):
         user = User(name="Sally")
         resource = Widget(id="1")
         assert set(test_oso.get_allowed_actions(user, resource)) == {
-            "read", "CREATE", "UPDATE"
+            "read",
+            "CREATE",
+            "UPDATE",
         }
 
         test_oso.clear_rules()
