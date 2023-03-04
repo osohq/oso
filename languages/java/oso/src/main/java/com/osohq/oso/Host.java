@@ -174,8 +174,10 @@ public class Host implements Cloneable {
 
   /** Check if a Java instance is an instance of a class. */
   public boolean isa(JSONObject instance, String classTag)
-      throws Exceptions.UnregisteredClassError, Exceptions.UnregisteredInstanceError,
-          Exceptions.UnexpectedPolarTypeError, Exceptions.OsoException {
+      throws Exceptions.UnregisteredClassError,
+          Exceptions.UnregisteredInstanceError,
+          Exceptions.UnexpectedPolarTypeError,
+          Exceptions.OsoException {
     Class<?> cls = getClass(classTag);
     return cls.isInstance(toJava(instance));
   }
@@ -350,7 +352,8 @@ public class Host implements Cloneable {
 
   /** Turn a Polar term passed across the FFI boundary into a Java Object. */
   public Object toJava(JSONObject term)
-      throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError,
+      throws Exceptions.UnregisteredInstanceError,
+          Exceptions.UnexpectedPolarTypeError,
           Exceptions.OsoException {
     JSONObject value = term.getJSONObject("value");
     String tag = value.keys().next();
@@ -420,7 +423,8 @@ public class Host implements Cloneable {
 
   /** Convert a JSONified Polar dictionary to a Java Map */
   public HashMap<String, Object> polarDictToJava(JSONObject dict)
-      throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError,
+      throws Exceptions.UnregisteredInstanceError,
+          Exceptions.UnexpectedPolarTypeError,
           Exceptions.OsoException {
     HashMap<String, Object> resMap = new HashMap<String, Object>();
     for (String key : dict.keySet()) {
@@ -431,7 +435,8 @@ public class Host implements Cloneable {
 
   /** Convert a JSONified Polar List to a Java List */
   public List<Object> polarListToJava(JSONArray list)
-      throws Exceptions.UnregisteredInstanceError, Exceptions.UnexpectedPolarTypeError,
+      throws Exceptions.UnregisteredInstanceError,
+          Exceptions.UnexpectedPolarTypeError,
           Exceptions.OsoException {
     ArrayList<Object> resArray = new ArrayList<Object>();
     for (int i = 0; i < list.length(); i++) {

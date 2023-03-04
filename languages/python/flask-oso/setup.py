@@ -10,7 +10,7 @@ here = path.abspath(path.dirname(__file__))
 try:
     with open(path.join(here, "README.md"), encoding="utf-8") as f:
         long_description = f.read()
-except IOError:
+except OSError:
     long_description = ""
 
 install_requires = ""
@@ -46,11 +46,11 @@ setup(
     author="Oso Security, Inc.",
     classifiers=[
         "Development Status :: 4 - Beta",
-        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
         "License :: OSI Approved :: Apache Software License",
     ],
     packages=find_packages(exclude=["tests", "tests.*"]),
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     install_requires=install_requires,
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"
