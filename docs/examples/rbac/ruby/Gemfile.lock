@@ -1,14 +1,14 @@
 PATH
   remote: ../../../../languages/ruby
   specs:
-    oso-oso (0.25.0)
+    oso-oso (0.26.4)
       ffi (~> 1.0)
 
 GEM
   remote: https://rubygems.org/
   specs:
     diff-lcs (1.4.4)
-    ffi (1.15.4)
+    ffi (1.15.5)
     rspec (3.10.0)
       rspec-core (~> 3.10.0)
       rspec-expectations (~> 3.10.0)
@@ -32,4 +32,4 @@ DEPENDENCIES
   rspec (~> 3.10)
 
 BUNDLED WITH
-   2.2.22
+   2.3.6

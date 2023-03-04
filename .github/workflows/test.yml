@@ -48,7 +48,7 @@ jobs:
         with:
           python-version: "3.7"
       - name: Install Python formatter
-        run: pip install black
+        run: pip install black~=22.10.0
       - name: Check Python formatting
         run: black --check languages/python
 
@@ -90,9 +90,10 @@ jobs:
       - name: Check formatting of Java library
         uses: axel-op/googlejavaformat-action@v3
         with:
-          skipCommit: true
           args: "--dry-run --set-exit-if-changed"
           files: languages/java/**/*.java
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          skipCommit: true
 
       ## Check Go
       - name: Check formatting of Go library

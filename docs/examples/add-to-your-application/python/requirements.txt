@@ -1,5 +1,5 @@
 -e ../../../../languages/python/oso
 pytest
 black
-sqlalchemy
+sqlalchemy<2
 flask==2.1
