@@ -4,7 +4,8 @@ package ffi
 // #include <stdint.h>
 // #include <stdlib.h>
 // #include "native/polar.h"
-// #cgo linux,amd64 LDFLAGS: ${SRCDIR}/native/linux/libpolar.a -ldl -lm
+// #cgo linux,amd64 LDFLAGS: ${SRCDIR}/native/linux/amd64/libpolar.a -ldl -lm
+// #cgo linux,arm64 LDFLAGS: ${SRCDIR}/native/linux/arm64/libpolar.a -ldl -lm
 // #cgo darwin,amd64 LDFLAGS: ${SRCDIR}/native/macos/amd64/libpolar.a -ldl -lm
 // #cgo darwin,arm64 LDFLAGS: ${SRCDIR}/native/macos/arm64/libpolar.a -ldl -lm
 // #cgo windows,amd64 LDFLAGS: ${SRCDIR}/native/windows/libpolar.a -lm -lws2_32 -luserenv -lbcrypt
