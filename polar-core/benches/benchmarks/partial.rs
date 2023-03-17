@@ -20,7 +20,6 @@ pub fn partial_and(c: &mut Criterion) {
                 || {
                     let runner = runner_from_query("partial_and(r)");
                     let lookups = (0..*n)
-                        .into_iter()
                         .map(|n| format!("r.foo_{n} = {n}", n = n))
                         .collect::<Vec<String>>()
                         .join(" and ");
@@ -67,7 +66,6 @@ pub fn partial_rule_depth(c: &mut Criterion) {
                 || {
                     let runner = runner_from_query("partial_rule_depth(r)");
                     let rules = (1..(n + 1))
-                        .into_iter()
                         .map(|n| {
                             format!(
                                 r#"

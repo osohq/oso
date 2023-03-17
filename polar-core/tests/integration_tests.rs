@@ -597,7 +597,7 @@ fn test_result_permutations() -> TestResult {
         (4, "foo(4)"),
         (5, "foo(5)"),
     ];
-    for permutation in Heap::new(&mut parts).into_iter() {
+    for permutation in Heap::new(&mut parts) {
         eprintln!("{:?}", permutation);
         let p = polar();
         let (results, rules): (Vec<_>, Vec<_>) = permutation.into_iter().unzip();
