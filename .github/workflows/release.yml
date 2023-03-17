@@ -230,7 +230,7 @@ jobs:
         run: echo "::set-output name=oso_version::$(cat VERSION)"
       - uses: actions/setup-java@v1
         with:
-          java-version: "10"
+          java-version: "11"
       - name: Download dylibs
         uses: actions/download-artifact@v1
         with:
@@ -517,7 +517,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -546,7 +546,6 @@ jobs:
     runs-on: macos-11
     strategy:
       matrix:
-        # There is no python 3.6 for macos-11
         python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
     steps:
       - uses: actions/checkout@v2
@@ -648,7 +647,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -702,7 +701,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-11, windows-latest]
-        java-version: [10, 11, 12, 13, 14] # @TODO: 8 and 9 not working.
+        java-version: [11, 12, 13, 14]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -791,10 +790,10 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: "12"
-      - name: Use Java 10
+      - name: Use Java 11
         uses: actions/setup-java@v1
         with:
-          java-version: 10
+          java-version: "11"
       - name: Use stable Rust
         uses: actions-rs/toolchain@v1
         with:

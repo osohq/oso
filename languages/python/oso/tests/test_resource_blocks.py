@@ -81,9 +81,9 @@ def test_resource_blocks(polar, is_allowed):
     [polar.register_class(c) for c in [User, Team, Org, Repo, Issue]]
     polar.load_file("tests/resource_blocks.polar")
 
-    annie, dave, gabe, graham, leina, lito, sam, shraddha, stephie, steve, tim = [
+    annie, dave, gabe, graham, leina, lito, sam, shraddha, stephie, steve, tim = (
         User() for _ in range(11)
-    ]
+    )
     oso_eng_team = Team().add_users(gabe, leina, steve)
     oso_mgr_team = Team().add_users(dave)
 

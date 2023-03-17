@@ -60,7 +60,7 @@ jobs:
       - run: unzip oso-lib-${{ github.event.inputs.version }}.zip -d oso-lib-${{ github.event.inputs.version }}
       - uses: actions/setup-java@v1
         with:
-          java-version: "10"
+          java-version: "11"
       - name: Copy libraries into resources.
         run: |
           mkdir -p languages/java/oso/src/main/resources/linux

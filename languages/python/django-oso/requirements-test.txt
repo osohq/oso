@@ -2,4 +2,3 @@ django==3.1.5
 pytest==7.0.1
 pytest-django==3.9.0
 six # required for pytest-django it seems?
-asgiref==3.4.1; python_version<"3.7" # required until we test against Python 3.7 instead of 3.6

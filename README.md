@@ -12,7 +12,7 @@
 
 ## What is Oso?
 
-Oso is a batteries-included framework for building authorization in your application. 
+Oso is a batteries-included framework for building authorization in your application.
 
 With Oso, you can:
 - **Model**: Set up common permissions patterns like role-based access control (RBAC) and relationships using Oso’s built-in primitives. Extend them however you need with Oso’s declarative policy language, Polar.
@@ -64,7 +64,7 @@ To build the WebAssembly core for the Node.js library, you will need to have
 To work on a language library, you will need to meet the following version
 requirements:
 
-- Java: 10+
+- Java: 11+
   - Maven: 3.6+
 - Node.js: 12.20.0+
   - Yarn 1.22+
