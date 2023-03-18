@@ -23,13 +23,13 @@ serde = { version = "1.0.119", features = ["derive", "rc"] }
 indoc = "1.0.3"
 strum_macros = "0.24.0"
 
-[build_dependencies]
+[build-dependencies]
 serde_derive = "1.0"
 lalrpop = { version = "0.19.6", default-features = false }
 
 [dev-dependencies]
 criterion = { version = "0.3.3", default-features = false }
-permute = "0.2.1"
+permutohedron = "0.2.4"
 pipe = "0.4.0"
 pretty_assertions = "1.0.0"
 maplit = "1.0.2"

@@ -3069,7 +3069,8 @@ impl Runnable for PolarVirtualMachine {
 
 #[cfg(test)]
 mod tests {
-    use permute::permute;
+
+    use permutohedron::Heap;
 
     use super::*;
     use crate::error::ErrorKind;
@@ -3185,8 +3186,8 @@ mod tests {
         assert_query_events!(vm, [QueryEvent::Done { result: true }]);
 
         // Querying for f(1), f(2), f(3)
-        let parts = vec![f1, f2, f3];
-        for permutation in permute(parts) {
+        let mut parts = vec![f1, f2, f3];
+        for permutation in Heap::new(&mut parts) {
             vm.push_goal(Goal::Query {
                 term: Term::new_from_test(Value::Expression(Operation {
                     operator: Operator::And,
