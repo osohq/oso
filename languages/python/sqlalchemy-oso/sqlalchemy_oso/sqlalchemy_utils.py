@@ -52,7 +52,7 @@ try:
         def _entities_in_statement(statement):
             try:
                 entities = (cd["entity"] for cd in statement.column_descriptions)
-                return set(e for e in entities if e is not None)
+                return {e for e in entities if e is not None}
             except AttributeError:
                 return set()
 

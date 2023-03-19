@@ -13,6 +13,7 @@ impl From<query::Query> for Query {
     }
 }
 
+#[allow(unused_variables)]
 #[wasm_bindgen]
 impl Query {
     #[wasm_bindgen(js_class = Query, js_name = nextEvent)]

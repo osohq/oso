@@ -6,7 +6,7 @@ license = "Apache-2.0"
 name = "oso"
 readme = "README.md"
 
-version = "0.26.3"
+version = "0.26.4"
 
 edition = "2021"
 
@@ -30,13 +30,13 @@ required-features = ["anyhow"]
 [dependencies]
 impl-trait-for-tuples = "0.2.1"
 maplit = "1.0.2"
-oso-derive = { path = "../oso-derive", version = "=0.26.3", optional = true }
-polar-core = { path = "../../../polar-core", version = "=0.26.3" }
+oso-derive = { path = "../oso-derive", version = "=0.26.4", optional = true }
+polar-core = { path = "../../../polar-core", version = "=0.26.4" }
 thiserror = "1.0.30"
 tracing = { version = "0.1.29", features = ["log"] }
 
 anyhow = { version = "1.0.44", optional = true }
-clap = { version = "2.33.3", optional = true }
+clap = { version = "3.1.18", optional = true }
 lazy_static = "1.4.0"
 rustyline = { version = "9.0.0", optional = true }
 rustyline-derive = { version = "0.5.0", optional = true }
@@ -50,8 +50,8 @@ uuid-10 = { package = "uuid", version = ">=1.0.0, <2.0.0", optional = true }
 
 [dev-dependencies]
 anyhow = "1.0.44"
-criterion = "0.3.5"
-oso-derive = { path = "../oso-derive", version = "=0.26.3" }
+criterion = { version = "0.3.5", default-features = false }
+oso-derive = { path = "../oso-derive", version = "=0.26.4" }
 static_assertions = "1.1.0"
 tempfile = "3.2.0"
 tracing-subscriber = { version = "0.3.1", default-features = false, features = [

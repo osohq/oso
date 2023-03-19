@@ -230,7 +230,7 @@ jobs:
         run: echo "::set-output name=oso_version::$(cat VERSION)"
       - uses: actions/setup-java@v1
         with:
-          java-version: "10"
+          java-version: "11"
       - name: Download dylibs
         uses: actions/download-artifact@v1
         with:
@@ -315,7 +315,7 @@ jobs:
           rm languages/python/oso/README.md
           cp README.md languages/python/oso/README.md
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.8.1
+        uses: pypa/cibuildwheel@v2.11.2
         env:
           # Skip Python 2.7 and Python 3.5
           CIBW_SKIP: "cp27-* cp35-* pp27-*"
@@ -350,7 +350,7 @@ jobs:
           rm languages/python/oso/README.md
           cp README.md languages/python/oso/README.md
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.8.1
+        uses: pypa/cibuildwheel@v2.11.2
         env:
           # Skip Python 2.7 and Python 3.5
           CIBW_SKIP: "cp27-* cp35-* pp27-*"
@@ -387,7 +387,7 @@ jobs:
           rm languages/python/oso/README.md
           cp README.md languages/python/oso/README.md
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.8.1
+        uses: pypa/cibuildwheel@v2.11.2
         env:
           # Skip Python 2.7 and Python 3.5
           CIBW_SKIP: "cp27-* cp35-* pp27-*"
@@ -517,7 +517,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -546,8 +546,7 @@ jobs:
     runs-on: macos-11
     strategy:
       matrix:
-        # There is no python 3.6 for macos-11
-        python-version: ["3.7", "3.8", "3.9", "3.10"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -605,6 +604,13 @@ jobs:
           arch -arm64 ./venv310/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
           arch -arm64 ./venv310/bin/python test.py
         working-directory: test
+      - name: "test python 3.11"
+        run: |
+          arch -arm64 /opt/homebrew/opt/python@3.11/bin/python3 -m venv venv311
+          arch -arm64 ./venv311/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel --no-deps --no-index
+          arch -arm64 ./venv311/bin/pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
+          arch -arm64 ./venv311/bin/python test.py
+        working-directory: test
 
   validate_python_windows:
     name: Test python ${{ matrix.python-version }} on Windows
@@ -612,7 +618,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -641,7 +647,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -695,7 +701,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-11, windows-latest]
-        java-version: [10, 11, 12, 13, 14] # @TODO: 8 and 9 not working.
+        java-version: [11, 12, 13, 14]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -784,10 +790,10 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: "12"
-      - name: Use Java 10
+      - name: Use Java 11
         uses: actions/setup-java@v1
         with:
-          java-version: 10
+          java-version: "11"
       - name: Use stable Rust
         uses: actions-rs/toolchain@v1
         with:
