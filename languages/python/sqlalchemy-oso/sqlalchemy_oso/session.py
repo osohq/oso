@@ -188,7 +188,7 @@ def scoped_session(
     return orm.scoped_session(factory, scopefunc=_scopefunc)
 
 
-class AuthorizedSessionBase(object):
+class AuthorizedSessionBase:
     """Mixin for SQLAlchemy Session that uses oso authorization for queries.
 
     Can be used to create a custom session class that uses oso::

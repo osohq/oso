@@ -2,7 +2,7 @@ mod mock_externals;
 
 use indoc::indoc;
 use maplit::btreemap;
-use permute::permute;
+use permutohedron::Heap;
 
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
@@ -538,7 +538,7 @@ fn test_bad_functions() -> TestResult {
 #[test]
 fn test_functions_reorder() -> TestResult {
     // TODO (dhatch): Reorder f(x), h(x), g(x)
-    let parts = vec![
+    let mut parts = vec![
         "f(1)",
         "f(2)",
         "g(1)",
@@ -547,7 +547,7 @@ fn test_functions_reorder() -> TestResult {
         "k(x) if f(x) and g(x) and h(x)",
     ];
 
-    for (i, permutation) in permute(parts).into_iter().enumerate() {
+    for (i, permutation) in Heap::new(&mut parts).enumerate() {
         let p = polar();
 
         let mut joined = permutation.join(";");
@@ -590,14 +590,14 @@ fn test_results() -> TestResult {
 
 #[test]
 fn test_result_permutations() -> TestResult {
-    let parts = vec![
+    let mut parts = vec![
         (1, "foo(1)"),
         (2, "foo(2)"),
         (3, "foo(3)"),
         (4, "foo(4)"),
         (5, "foo(5)"),
     ];
-    for permutation in permute(parts).into_iter() {
+    for permutation in Heap::new(&mut parts) {
         eprintln!("{:?}", permutation);
         let p = polar();
         let (results, rules): (Vec<_>, Vec<_>) = permutation.into_iter().unzip();

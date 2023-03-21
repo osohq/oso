@@ -517,7 +517,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
@@ -546,7 +546,6 @@ jobs:
     runs-on: macos-11
     strategy:
       matrix:
-        # There is no python 3.6 for macos-11
         python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
     steps:
       - uses: actions/checkout@v2
@@ -648,7 +647,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
     steps:
       - uses: actions/checkout@v2
       - name: Set version env
