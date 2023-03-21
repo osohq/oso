@@ -41,7 +41,7 @@ If you have any questions on Oso or authorization more generally, you can join o
 
 ## Share your story
 
-We'd love to hear about your use case and experience with Oso. Share your story in our [Success Stories issue.](https://github.com/osohq/oso/issues/1081) 
+We'd love to hear about your use case and experience with Oso. Share your story in our [Success Stories issue](https://github.com/osohq/oso/issues/1081).
 
 ## Development
 
