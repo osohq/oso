@@ -943,8 +943,10 @@ osenv@0, osenv@^0.1.4:
     os-homedir "^1.0.0"
     os-tmpdir "^1.0.0"
 
-"oso@file:../../../../languages/js":
-  version "0.25.0"
+oso@0.26.4:
+  version "0.26.4"
+  resolved "https://registry.yarnpkg.com/oso/-/oso-0.26.4.tgz#aa91412f48ef3d1254b551d5374acdb83cde8d62"
+  integrity sha512-xFxXIpvLoz3wrQlxNy/hBnLV0GpCNP9mCE7zivrmlwukPuFAYeIVfG9wk990DWNrQgLbud88Q3HWN3fskvfEkA==
   dependencies:
     lodash.isequal "^4.5.0"
 
