@@ -15,6 +15,7 @@ ifeq ($(UNAME_M),x86_64)
 else
 	cp ../../target/debug/libpolar.a internal/ffi/native/linux/arm64/
 endif
+endif
 ifeq ($(UNAME_S),Darwin)
 ifeq ($(UNAME_M),x86_64)
 	cp ../../target/debug/libpolar.a internal/ffi/native/macos/amd64/
