@@ -14,7 +14,7 @@
         "webpack-merge": "^5.7.3"
     },
     "dependencies": {
-        "algoliasearch": "^4.9.0",
+        "algoliasearch": "^4.15.0",
         "handlebars": "^4.7.7",
         "handlebars-loader": "^1.7.1",
         "monaco-editor-core": "0.22.3",
