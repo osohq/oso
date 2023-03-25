@@ -43,25 +43,25 @@ jobs:
     needs: [version]
     steps:
       - uses: actions/checkout@v2
-      # - uses: actions/cache@v2
-      #   with:
-      #     path: |
-      #       ~/.cargo/registry
-      #       ~/.cargo/git
-      #       target
-      #     key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           override: true
-      # - name: Build release libraries
-      #   run: cargo build --release -p polar-c-api
-      # - name: Build x86_64 release musl library
-      #   run: |
-      #     rustup target add x86_64-unknown-linux-musl
-      #     RUSTFLAGS="-C target-feature=-crt-static" cargo build --target x86_64-unknown-linux-musl --release -p polar-c-api
+      - name: Build release libraries
+        run: cargo build --release -p polar-c-api
+      - name: Build x86_64 release musl library
+        run: |
+          rustup target add x86_64-unknown-linux-musl
+          RUSTFLAGS="-C target-feature=-crt-static" cargo build --target x86_64-unknown-linux-musl --release -p polar-c-api
       - name: Download cross
         env:
           GH_TOKEN: ${{ github.token }}
@@ -71,31 +71,31 @@ jobs:
           rustup target add aarch64-unknown-linux-musl
           tar -xzvf cross-x86_64-unknown-linux-gnu.tar.gz
           RUSTFLAGS="-C target-feature=-crt-static" ./cross build --target aarch64-unknown-linux-musl --release -p polar-c-api
-      # - name: Rename static lib
-      #   run: mv target/release/libpolar.a target/libpolar-${{runner.os}}.a
-      # - name: Rename x86_64 static lib
-      #   run: mv target/x86_64-unknown-linux-musl/release/libpolar.a target/libpolar-musl-x86_64.a
+      - name: Rename static lib
+        run: mv target/release/libpolar.a target/libpolar-${{runner.os}}.a
+      - name: Rename x86_64 static lib
+        run: mv target/x86_64-unknown-linux-musl/release/libpolar.a target/libpolar-musl-x86_64.a
       - name: Rename aarch64 static lib
         run: mv target/aarch64-unknown-linux-musl/release/libpolar.a target/libpolar-musl-aarch64.a
-      # - uses: actions/upload-artifact@v2
-      #   with:
-      #     name: oso_library
-      #     path: target/release/libpolar.so
-      # - uses: actions/upload-artifact@v2
-      #   with:
-      #     name: oso_library
-      #     path: polar-c-api/polar.h
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_library
+          path: target/release/libpolar.so
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_library
+          path: polar-c-api/polar.h
       - uses: actions/upload-artifact@v2
         with:
           name: oso_static_library
           path: |
-            # target/libpolar-${{runner.os}}.a
-            # target/libpolar-musl-x86_64.a
+            target/libpolar-${{runner.os}}.a
+            target/libpolar-musl-x86_64.a
             target/libpolar-musl-aarch64.a
-      # - uses: actions/upload-artifact@v2
-      #   with:
-      #     name: oso_static_library
-      #     path: polar-c-api/polar.h
+      - uses: actions/upload-artifact@v2
+        with:
+          name: oso_static_library
+          path: polar-c-api/polar.h
 
   # macos_libs:
   #   name: Build release libraries on MacOS
@@ -220,12 +220,12 @@ jobs:
           cp -r oso_static_library/libpolar-musl-x86_64.a languages/go/internal/ffi/native/linux/amd64/libpolar.a
           mkdir -p languages/go/native/linux/arm64
           cp -r oso_static_library/libpolar-musl-aarch64.a languages/go/internal/ffi/native/linux/arm64/libpolar.a
-          mkdir -p languages/go/native/macos/amd64
-          cp -r oso_static_library/libpolar-macOS.a languages/go/internal/ffi/native/macos/amd64/libpolar.a
-          mkdir -p languages/go/native/macos/arm64
-          cp -r oso_static_library/libpolar-macOS-arm.a languages/go/internal/ffi/native/macos/arm64/libpolar.a
-          mkdir -p languages/go/native/windows
-          cp -r oso_static_library/libpolar-Windows.a languages/go/internal/ffi/native/windows/libpolar.a
+          # mkdir -p languages/go/native/macos/amd64
+          # cp -r oso_static_library/libpolar-macOS.a languages/go/internal/ffi/native/macos/amd64/libpolar.a
+          # mkdir -p languages/go/native/macos/arm64
+          # cp -r oso_static_library/libpolar-macOS-arm.a languages/go/internal/ffi/native/macos/arm64/libpolar.a
+          # mkdir -p languages/go/native/windows
+          # cp -r oso_static_library/libpolar-Windows.a languages/go/internal/ffi/native/windows/libpolar.a
           rm languages/go/Makefile
       - name: Copy license.
         run: cp LICENSE languages/go/LICENSE
