@@ -56,22 +56,17 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-          target: aarch64-unknown-linux-musl
       # - name: Build release libraries
       #   run: cargo build --release -p polar-c-api
       # - name: Build x86_64 release musl library
       #   run: |
       #     rustup target add x86_64-unknown-linux-musl
       #     RUSTFLAGS="-C target-feature=-crt-static" cargo build --target x86_64-unknown-linux-musl --release -p polar-c-api
-      - name: Build aarch64 release musl library
-        uses: actions-rs/cargo@v1
-        env:
-          RUSTFLAGS: "-C target-feature=-crt-static"
-        with:
-          use-cross: true
-          command: build
-          toolchain: aarch64-unknown-linux-musl
-          args: "-p polar-c-api"
+      - run: |
+          rustup target add aarch64-unknown-linux-musl
+          gh release download --repo cross-rs/cross --pattern 'cross-x86_64-unknown-linux-gnu\.tar\.gz'
+          tar -xzvf cross-x86_64-unknown-linux-gnu.tar.gz
+          RUSTFLAGS="-C target-feature=-crt-static" ./cross build --target aarch64-unknown-linux-musl --release -p polar-c-api
       # - name: Rename static lib
       #   run: mv target/release/libpolar.a target/libpolar-${{runner.os}}.a
       # - name: Rename x86_64 static lib
