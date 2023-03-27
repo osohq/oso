@@ -97,7 +97,7 @@
   },
   "dependencies": {
     "lodash": "^4.17.21",
-    "mixpanel": "^0.14.0",
+    "mixpanel": "^0.17.0",
     "vscode-languageclient": "^7.0.0",
     "vscode-languageserver": "^7.0.0"
   },
