@@ -35,7 +35,7 @@
     {{- if eq $.Site.BaseURL "https://docs.osohq.com/"}}
     <meta id="search-index" name="search-index" content="prod_OSODOCS" />
     {{ else }}
-    <meta id="search-index" name="search-index" content="preview_OSODOCS" />    
+    <meta id="search-index" name="search-index" content="preview_OSODOCS" />
     {{ end }}
 
     <script async src="{{ $.Site.BaseURL }}bundle.js"></script>
@@ -59,4 +59,6 @@
     {{ end }}
     {{ end }}
     {{ end }}
+
+    <script defer data-domain="osohq.com,docs.osohq.com" src="https://plausible.io/js/script.outbound-links.local.js"></script>
 </head>
