@@ -1,8 +1,8 @@
 {
     "scripts": {
-        "build": "webpack",
-        "build-prod": "webpack --config webpack.prod.config.js",
-        "serve": "webpack --watch"
+        "build": "NODE_OPTIONS=--openssl-legacy-provider webpack",
+        "build-prod": "NODE_OPTIONS=--openssl-legacy-provider webpack --config webpack.prod.config.js",
+        "serve": "NODE_OPTIONS=--openssl-legacy-provider webpack --watch"
     },
     "devDependencies": {
         "css-loader": "^5.2.7",
