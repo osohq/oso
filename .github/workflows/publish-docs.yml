@@ -43,9 +43,9 @@ jobs:
       - name: Install yard
         run: gem install yard
       - name: Setup Node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
-          node-version: "12"
+          node-version: "18"
 
       # Uncomment this when we want WASM on the docs site again
       # - name: Install Rust stable toolchain
