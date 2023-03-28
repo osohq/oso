@@ -18,14 +18,14 @@ name = "bench_main"
 harness = false
 
 [dependencies]
-lalrpop-util = { version = "0.19.6", default-features = false }
+lalrpop-util = { version = "0.19.9", default-features = false }
 serde = { version = "1.0.119", features = ["derive", "rc"] }
 indoc = "1.0.3"
 strum_macros = "0.24.0"
 
 [build-dependencies]
 serde_derive = "1.0"
-lalrpop = { version = "0.19.6", default-features = false }
+lalrpop = { version = "0.19.9", default-features = false }
 
 [dev-dependencies]
 criterion = { version = "0.3.3", default-features = false }
