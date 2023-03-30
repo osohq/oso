@@ -61,4 +61,22 @@
     {{ end }}
 
     <script defer data-domain="osohq.com,docs.osohq.com" src="https://plausible.io/js/script.outbound-links.local.js"></script>
+    <script>
+      window.koalaSettings = {
+          host: 'https://koala-proxy.analytics.osohq.com'
+      };
+
+      !function (t) {
+          if (window.ko) return;
+          window.ko = [], ["identify", "track", "removeListeners", "open", "on", "off", "qualify", "ready"].forEach(function (t) {
+              ko[t] = function () {
+              var n = [].slice.call(arguments);
+              return n.unshift(t), ko.push(n), ko
+          }
+      });
+
+      var n = document.createElement("script");
+          n.async = !0, n.setAttribute("src", "https://koala-cdn.analytics.osohq.com/v1/oso/sdk.js"), (document.body || document.head).appendChild(n)
+      }();
+    </script>
 </head>
