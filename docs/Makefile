@@ -69,10 +69,10 @@ webpack-deps: .make.webpack-deps.installed
 	cd themes/oso-webpack && npm install && npm run-script build
 	touch $@
 
-build: install api_docs clean
+build: install api_docs clean require-HUGO_SEGMENT_API_KEY
 	HUGO_ENV=production hugo -b https://docs-preview.oso.dev/
 
-build-prod: install api_docs
+build-prod: install api_docs require-HUGO_SEGMENT_API_KEY
 	cd themes/oso-webpack && npm run-script build-prod
 	HUGO_ENV=production hugo -b https://docs.osohq.com/
 

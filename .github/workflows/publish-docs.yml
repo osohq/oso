@@ -95,11 +95,15 @@ jobs:
         with:
           hugo-version: "0.79.1"
       - name: Build Hugo docs (docs-preview.oso.dev)
+        env:
+          HUGO_SEGMENT_API_KEY: ${{ secrets.SEGMENT_API_KEY_DEV }}
         if: github.event.inputs.url == 'docs-preview.oso.dev'
         run: |
           make ci-preview-docs
         working-directory: docs
       - name: Build Hugo docs (docs.oso.dev)
+        env:
+          HUGO_SEGMENT_API_KEY: ${{ secrets.SEGMENT_API_KEY_PROD }}
         if: github.event.inputs.url == 'docs.oso.dev'
         run: |
           make ci-prod-docs
