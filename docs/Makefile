@@ -69,17 +69,17 @@ webpack-deps: .make.webpack-deps.installed
 	cd themes/oso-webpack && npm install && npm run-script build
 	touch $@
 
-build: install api_docs clean
+build: install api_docs clean require-HUGO_SEGMENT_API_KEY
 	HUGO_ENV=production hugo -b https://docs-preview.oso.dev/
 
-build-prod: install api_docs
+build-prod: install api_docs require-HUGO_SEGMENT_API_KEY
 	cd themes/oso-webpack && npm run-script build-prod
 	HUGO_ENV=production hugo -b https://docs.osohq.com/
 
 # Look for the s3deploy binary: https://github.com/bep/s3deploy
 S3DEPLOY := $(shell command -v s3deploy 2> /dev/null)
 
-deploy-ci: install api_docs clean
+deploy-ci: install api_docs clean require-HUGO_SEGMENT_API_KEY
 ifndef S3DEPLOY
 	$(error "you need to install s3deploy to deploy the docs")
 endif

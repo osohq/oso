@@ -12,7 +12,7 @@ on:
         default: "0.26.0" # flask_oso_version
       django_oso_version:
         description: "django oso release to build docs for"
-        default: "0.26.0" # django_oso_version
+        default: "0.26.2" # django_oso_version
       sqlalchemy_oso_version:
         description: "sqlalchemy oso release to build docs for"
         default: "0.26.3" # sqlalchemy_oso_version
@@ -95,11 +95,15 @@ jobs:
         with:
           hugo-version: "0.79.1"
       - name: Build Hugo docs (docs-preview.oso.dev)
+        env:
+          HUGO_SEGMENT_API_KEY: ${{ secrets.SEGMENT_API_KEY_DEV }}
         if: github.event.inputs.url == 'docs-preview.oso.dev'
         run: |
           make ci-preview-docs
         working-directory: docs
       - name: Build Hugo docs (docs.oso.dev)
+        env:
+          HUGO_SEGMENT_API_KEY: ${{ secrets.SEGMENT_API_KEY_PROD }}
         if: github.event.inputs.url == 'docs.oso.dev'
         run: |
           make ci-prod-docs

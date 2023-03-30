@@ -80,6 +80,8 @@ jobs:
       # This slows down releasing.
       # Try to retry, and get some more info about why the flake is happening.
       - name: Build docs for CI preview
+        env:
+          HUGO_SEGMENT_API_KEY: ${{ secrets.SEGMENT_API_KEY_DEV }}
         uses: nick-invision/retry@v2
         with:
           max_attempts: 2
