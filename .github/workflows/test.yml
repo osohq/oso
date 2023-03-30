@@ -352,10 +352,10 @@ jobs:
         with:
           ruby-version: 2.4
           bundler-cache: true
-      - name: Use Node.js 12
-        uses: actions/setup-node@v1
+      - name: Use Node.js 18
+        uses: actions/setup-node@v3
         with:
-          node-version: "12"
+          node-version: "18"
       - name: Install Java
         uses: actions/setup-java@v1
         with:
