@@ -12,7 +12,7 @@ on:
         default: "0.26.0" # flask_oso_version
       django_oso_version:
         description: "django oso release to build docs for"
-        default: "0.26.0" # django_oso_version
+        default: "0.26.2" # django_oso_version
       sqlalchemy_oso_version:
         description: "sqlalchemy oso release to build docs for"
         default: "0.26.3" # sqlalchemy_oso_version
