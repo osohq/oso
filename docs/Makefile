@@ -79,7 +79,7 @@ build-prod: install api_docs require-HUGO_SEGMENT_API_KEY
 # Look for the s3deploy binary: https://github.com/bep/s3deploy
 S3DEPLOY := $(shell command -v s3deploy 2> /dev/null)
 
-deploy-ci: install api_docs clean
+deploy-ci: install api_docs clean require-HUGO_SEGMENT_API_KEY
 ifndef S3DEPLOY
 	$(error "you need to install s3deploy to deploy the docs")
 endif
