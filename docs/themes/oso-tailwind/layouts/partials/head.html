@@ -97,6 +97,12 @@
           groupId = cookies['ajs_group_id'];
         } catch (e) {}
 
+        // Attempt to delete cookies where the userId is a tenant ID.
+        if (userId.slice(0, 2) === 't_') {
+          document.cookie = 'ajs_user_id=' + userId + '; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=.osohq.com';
+          userId = undefined;
+        }
+
         analytics.page(
           "Library Docs",
           undefined,
