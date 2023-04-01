@@ -87,6 +87,8 @@ jobs:
           hugo-version: '0.79.1'
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Build Hugo docs
+        env:
+          HUGO_SEGMENT_API_KEY: ""
         run: make build
         if: steps.cache.outputs.cache-hit != 'true'
         working-directory: docs
@@ -172,6 +174,8 @@ jobs:
           hugo-version: '0.79.1'
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Build Hugo docs
+        env:
+          HUGO_SEGMENT_API_KEY: ""
         run: make build
         working-directory: docs
         if: steps.cache.outputs.cache-hit != 'true'
