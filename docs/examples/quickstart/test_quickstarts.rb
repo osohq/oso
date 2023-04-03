@@ -6,8 +6,8 @@ require 'timeout'
 
 require 'bundler'
 
-CURL_ERROR = "curl: (7) Failed to connect to localhost port 5000: Connection refused\n"
-CURL_EMPTY = "curl: (52) Empty reply from server\n"
+CURL_ERROR = "curl: (7) Failed to connect to localhost port 5000"
+CURL_EMPTY = "curl: (52) Empty reply from server"
 
 
 quickstarts = {
@@ -32,7 +32,7 @@ end
 def start_server(server, repo)
   server = spawn server
   received = CURL_ERROR
-  while [CURL_ERROR, CURL_EMPTY].include? received
+  while received.include?(CURL_ERROR) || received.include?(CURL_EMPTY)
     sleep 0.5
     received = `curl -sS localhost:5000/repo/#{repo} 2>&1`
   end
