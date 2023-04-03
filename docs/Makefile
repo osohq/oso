@@ -69,17 +69,17 @@ webpack-deps: .make.webpack-deps.installed
 	cd themes/oso-webpack && npm install && npm run-script build
 	touch $@
 
-build: install api_docs clean require-HUGO_SEGMENT_API_KEY
+build: install api_docs clean
 	HUGO_ENV=production hugo -b https://docs-preview.oso.dev/
 
-build-prod: install api_docs require-HUGO_SEGMENT_API_KEY
+build-prod: install api_docs
 	cd themes/oso-webpack && npm run-script build-prod
 	HUGO_ENV=production hugo -b https://docs.osohq.com/
 
 # Look for the s3deploy binary: https://github.com/bep/s3deploy
 S3DEPLOY := $(shell command -v s3deploy 2> /dev/null)
 
-deploy-ci: install api_docs clean require-HUGO_SEGMENT_API_KEY
+deploy-ci: install api_docs clean
 ifndef S3DEPLOY
 	$(error "you need to install s3deploy to deploy the docs")
 endif
@@ -103,11 +103,11 @@ build-search:
 require-algolia-vars: require-ALGOLIA_APPLICATION_ID require-ALGOLIA_ADMIN_API_KEY require-ALGOLIA_INDEX
 
 ## This is the entry for all doc stuff for preview
-ci-preview-docs: require-ALGOLIA_ADMIN_API_KEY build build-search
+ci-preview-docs: require-ALGOLIA_ADMIN_API_KEY build build-search require-HUGO_SEGMENT_API_KEY
 	./searcher -index='preview_OSODOCS' -app_id='KROZ8F05YT'
 
 ## This is the entry for all doc stuff for production
-ci-prod-docs: require-ALGOLIA_ADMIN_API_KEY build-prod build-search
+ci-prod-docs: require-ALGOLIA_ADMIN_API_KEY build-prod build-search require-HUGO_SEGMENT_API_KEY
 	./searcher -index='prod_OSODOCS' -app_id='KROZ8F05YT'
 
 search: require-algolia-vars build-prod build-search
