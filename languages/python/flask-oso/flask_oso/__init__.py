@@ -1,4 +1,4 @@
-__version__ = "0.26.0"
+__version__ = "0.27.0"
 
 from .decorators import authorize, skip_authorization
 from .flask_oso import FlaskOso
