@@ -3,14 +3,13 @@
   {{ if (or (ne .Language.Lang "any") (or .Params.any (and (not (isset .Params "any")) .Parent.Params.any))) }}
     <main id="content-wrapper" class="min-w-0 w-full flex-auto lg:static lg:max-h-full lg:overflow-visible">
       <div class="w-full flex">
-        <div class="min-w-0 flex-auto px-4 sm:px-6 xl:px-8 pt-10 pb-24
-        lg:pb-16">
-        <div class="max-w-none min-w-0 flex-auto px-4 sm:px-6 xl:px-8">
-          <div class="flex pb-8 align-middle items-center">
-            <p class="font-bold mr-3">Pick a language:</p>
-            {{- partial "language-dropdown.html" . }}
+        <div class="min-w-0 flex-auto px-4 sm:px-6 xl:px-8 pt-10 pb-24 lg:pb-16">
+          <div class="max-w-none min-w-0 flex-auto px-4 sm:px-6 xl:px-8">
+            <div class="flex pb-8 align-middle items-center">
+              <p class="font-bold mr-3">Pick a language:</p>
+              {{- partial "language-dropdown.html" . }}
+            </div>
           </div>
-        </div>
           <article class="prose max-w-none min-w-0 flex-auto px-4 sm:px-6 xl:px-8 pb-24 lg:pb-16">
             {{ .Content }}
           </article>
@@ -24,9 +23,9 @@
           <!--/ Post Content-->
         {{ if not (isset .Params "no_one_on_one") }}
           <div class="prose max-w-none min-w-0 flex-auto px-4 pt-12 sm:px-6 xl:px-8">
-          <h3>Connect with us on Slack</h3>
-          <p>If you have any questions, or just want to talk something through, jump into <a id="slack-join" href="https://join-slack.osohq.com/">Slack</a>. An Oso engineer or
-            one of the thousands of developers in the growing community will be happy to help.</p>
+            <h3>Connect with us on Slack</h3>
+            <p>If you have any questions, or just want to talk something through, jump into <a id="slack-join" href="https://join-slack.osohq.com/">Slack</a>. An Oso engineer or
+              one of the thousands of developers in the growing community will be happy to help.</p>
           </div>
         {{ end }}
         </div>
