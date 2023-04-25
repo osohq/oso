@@ -1,7 +1,8 @@
 [package]
 authors = ["Oso Security, Inc. <support@osohq.com>"]
 description = "oso is an open source policy engine for authorization that’s embedded in your application"
-homepage = "https://github.com/osohq/oso"
+homepage = "https://www.osohq.com/"
+repository = "https://github.com/osohq/oso"
 license = "Apache-2.0"
 name = "oso"
 readme = "README.md"
