@@ -507,9 +507,6 @@ func (o Oso) dataFilter(actor interface{}, action interface{}, resource_type str
 	return query, q, nil
 }
 
-/*
-
- */
 func (o Oso) AuthorizedQuery(actor interface{}, action interface{}, resource_type string) (interface{}, error) {
 	_, q, err := o.dataFilter(actor, action, resource_type)
 	return q, err
