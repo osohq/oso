@@ -2037,7 +2037,7 @@ mod test {
         test_grounding(
             "f(x) if x in y and x > 0 and y = [1, 2, 3] and x = 1;",
             term!(call!("f", [sym!("x")])),
-            &[|r: Bindings| {
+            [|r: Bindings| {
                 assert_eq!(r.get(&sym!("x")).unwrap(), &term!(1));
                 Ok(())
             }],
@@ -2051,7 +2051,7 @@ mod test {
             f(x, y) if x > y and x = 1;
         "#,
             term!(call!("f", [sym!("x"), sym!("y")])),
-            &[|r: Bindings| {
+            [|r: Bindings| {
                 assert_eq!(r.get(&sym!("x")).unwrap(), &term!(1));
                 assert_partial_expression!(r, "y", "1 > _this");
                 Ok(())
@@ -2066,7 +2066,7 @@ mod test {
             f(x) if x > 0 and not (x > 5 and x = 3);
         "#,
             term!(call!("f", [sym!("x")])),
-            &[|r: Bindings| {
+            [|r: Bindings| {
                 // x > 5 and x = 3 is always false so negation always succeeds.
                 assert_partial_expression!(r, "x", "_this > 0");
                 Ok(())
@@ -2081,7 +2081,7 @@ mod test {
             f(x) if x > 0 and not (x >= 1 and x = 1);
         "#,
             term!(call!("f", [sym!("x")])),
-            &[|r: Bindings| {
+            [|r: Bindings| {
                 // x >= 1 and x = 1 are compatible, so the negation binds x to 1
                 // if x is 1 the negated query succeeds, failing overall query
                 assert_partial_expression!(r, "x", "_this > 0 and _this != 1");
@@ -2099,7 +2099,7 @@ mod test {
             f(x, y) if x > 0 and (x < 1 or x != 1 or y <= x);
         "#,
             term!(call!("f", [sym!("x"), sym!("y")])),
-            &[
+            [
                 |r: Bindings| {
                     assert_partial_expression!(r, "x", "_this > 0 and _this < 1");
                     assert_eq!(r.get(&sym!("y")).unwrap(), &term!(sym!("y")));
@@ -2130,7 +2130,7 @@ mod test {
             g(1, y) if y >= 3 and y > 5;
         "#,
             term!(call!("f", [sym!("x"), sym!("y")])),
-            &[|r: Bindings| {
+            [|r: Bindings| {
                 assert_partial_expressions!(r,
                     "x" => "_this > 0 and _this != 1",
                     // Right now we output "y" => "_this <= 1".
