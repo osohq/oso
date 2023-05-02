@@ -379,6 +379,10 @@ impl Instance {
             .unwrap_or_else(|_| self.debug_type_name)
     }
 
+    pub(crate) fn debug_name(&self) -> &'static str {
+        &self.debug_type_name
+    }
+
     /// Lookup an attribute on the instance via the registered `Class`
     pub fn get_attr(&self, name: &str, host: &mut Host) -> crate::Result<PolarValue> {
         tracing::trace!({ method = %name }, "get_attr");
