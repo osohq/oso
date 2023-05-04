@@ -60,7 +60,7 @@
     {{ end }}
     {{ end }}
 
-    <script defer data-domain="osohq.com,docs.osohq.com" src="https://plausible.io/js/script.outbound-links.local.js"></script>
+    <script defer data-domain="osohq.com,docs.osohq.com" src="https://plausible-proxy.analytics.osohq.com/js/script.outbound-links.js"></script>
     <script>
       window.koalaSettings = {
           host: 'https://koala-proxy.analytics.osohq.com'
@@ -95,13 +95,13 @@
 
           userId = cookies['ajs_user_id'];
           groupId = cookies['ajs_group_id'];
-        } catch (e) {}
 
-        // Attempt to delete cookies where the userId is a tenant ID.
-        if (userId.slice(0, 2) === 't_') {
-          document.cookie = 'ajs_user_id=' + userId + '; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=.osohq.com';
-          userId = undefined;
-        }
+          // Attempt to delete cookies where the userId is a tenant ID.
+          if (typeof userId === 'string' && userId.slice(0, 2) === 't_') {
+            document.cookie = 'ajs_user_id=' + userId + '; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=.osohq.com';
+            userId = undefined;
+          }
+        } catch (e) {}
 
         analytics.page(
           "Library Docs",

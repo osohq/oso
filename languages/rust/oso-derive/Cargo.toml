@@ -3,7 +3,8 @@ name = "oso-derive"
 description = "macros for oso, an open source policy engine for authorization that’s embedded in your application"
 authors = ["Oso Security, Inc. <support@osohq.com>"]
 license = "Apache-2.0"
-homepage = "https://github.com/osohq/oso"
+repository = "https://github.com/osohq/oso"
+homepage = "https://www.osohq.com/"
 readme = "README.md"
 
 version = "0.27.0"
