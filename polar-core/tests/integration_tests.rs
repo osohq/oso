@@ -1621,6 +1621,7 @@ fn test_anonymous_vars() {
 #[test]
 fn test_singleton_vars() {
     qvalidation!("f(x,y,z) if y = z;", SingletonVariable { .. });
+    qvalidation!("f(Test::Typo,y,z) if y = z;", SingletonVariable { .. });
 }
 
 #[test]
