@@ -47,10 +47,20 @@ fn iterator_not_supported() -> IteratorMethod {
     Arc::new(into_iter)
 }
 
+/// Class that can be registered with [`Oso`](crate::Oso).
+///
+/// A class represents an entity, such as an *actor* or a *resource*. It is typically backed by
+/// a Rust struct and can carry some internal state, as well as have methods that can be made
+/// accessible from within the policy file.
+///
+/// While the instance of the class itself is stored as a [`PolarValue::Instance`], the [`Class`]
+/// struct contains metadata, such as the constructor, attributes, instance methods, comparison
+/// functions as well as the name.
 #[derive(Clone)]
 pub struct Class {
-    /// The class name. Defaults to the `std::any::type_name`
+    /// The class name. Defaults to [`std::any::type_name`].
     pub name: String,
+    /// Type ID of the class.
     pub type_id: TypeId,
     /// A wrapped method that constructs an instance of `T` from `PolarValue`s
     constructor: Option<Constructor>,
@@ -67,15 +77,20 @@ pub struct Class {
 
     into_iter: IteratorMethod,
 
-    // Hooks to be called on the class once it's been registered with host.
+    /// Hooks to be called on the class once it's been registered with host.
     pub register_hooks: RegisterHooks,
 }
 
 impl Class {
+    /// Builder instance to build class.
+    ///
+    /// Use this when you want to hook your own class into [`Oso`](crate::Oso).
+    /// See [`ClassBuilder`] for usage examples.
     pub fn builder<T: 'static>() -> ClassBuilder<T> {
         ClassBuilder::new()
     }
 
+    /// Initialize new class instance.
     pub fn init(&self, fields: Vec<PolarValue>) -> crate::Result<Instance> {
         if let Some(constructor) = &self.constructor {
             constructor.invoke(fields)
@@ -88,7 +103,7 @@ impl Class {
 
     /// Call class method `attr` on `self` with arguments from `args`.
     ///
-    /// Returns: The result as a `PolarValue`
+    /// Returns the result as a `PolarValue`.
     pub fn call(&self, attr: &str, args: Vec<PolarValue>) -> crate::Result<PolarValue> {
         let attr =
             self.class_methods
@@ -122,6 +137,16 @@ impl Class {
     }
 }
 
+/// Builder for new Oso [`Class`].
+///
+/// This helps you create a `Class` instance which holds metadata for your custom type. Using the
+/// builder, you can add attribute getters, class methods, instance methods, constants, iterator
+/// methods, override the class name, set the constructor or equality check.
+///
+/// You can create a new instance of [`ClassBuilder`] using
+/// [`PolarClass::get_polar_class_builder()`](crate::PolarClass::get_polar_class_builder), using
+/// [`Class::builder()`] or using one of the [`ClassBuilder::with_default()`] or
+/// [`ClassBuilder::with_constructor()`] methods.
 #[derive(Clone)]
 pub struct ClassBuilder<T> {
     class: Class,
@@ -153,7 +178,23 @@ where
         }
     }
 
-    /// Create a new class builder for a type that implements Default and use that as the constructor.
+    /// Create a new class builder for a type that implements [`Default`] and use that as the
+    /// constructor.
+    ///
+    /// This is equivalent to setting the constructor to [`Default::default()`].
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use oso::ClassBuilder;
+    ///
+    /// #[derive(Default)]
+    /// struct MyClass;
+    ///
+    /// let class = ClassBuilder::<MyClass>::with_default().build();
+    /// ```
     pub fn with_default() -> Self
     where
         T: std::default::Default,
@@ -163,6 +204,19 @@ where
     }
 
     /// Create a new class builder with a given constructor.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use oso::ClassBuilder;
+    ///
+    /// struct MyClass(u16);
+    ///
+    /// let class = ClassBuilder::<MyClass>::with_constructor(|| MyClass(42)).build();
+    ///
+    /// ```
     pub fn with_constructor<F, Args>(f: F) -> Self
     where
         F: Function<Args, Result = T>,
@@ -175,6 +229,12 @@ where
     }
 
     /// Set the constructor function to use for polar `new` statements.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use oso::ClassBuilder;
+    /// ```
     pub fn set_constructor<F, Args>(mut self, f: F) -> Self
     where
         F: Function<Args, Result = T>,
@@ -186,6 +246,21 @@ where
     }
 
     /// Set an equality function to be used for polar `==` statements.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use oso::ClassBuilder;
+    ///
+    /// #[derive(Default)]
+    /// struct MyClass;
+    ///
+    /// let class = ClassBuilder::<MyClass>::with_default()
+    ///     .set_equality_check(|left, right| true)
+    ///     .build();
+    /// ```
     pub fn set_equality_check<F>(mut self, f: F) -> Self
     where
         F: Fn(&T, &T) -> bool + Send + Sync + 'static,
@@ -230,7 +305,22 @@ where
         self.set_into_iter(|t| t.clone().into_iter())
     }
 
-    /// Use PartialEq::eq as the equality check for polar `==` statements.
+    /// Use [`PartialEq`] as the equality check for Polar `==` statements.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use oso::ClassBuilder;
+    ///
+    /// #[derive(Default, PartialEq)]
+    /// struct MyClass(u64);
+    ///
+    /// let class = ClassBuilder::<MyClass>::with_default()
+    ///     .with_equality_check()
+    ///     .build();
+    /// ```
     pub fn with_equality_check(self) -> Self
     where
         T: PartialEq<T>,
@@ -238,8 +328,32 @@ where
         self.set_equality_check(|a, b| PartialEq::eq(a, b))
     }
 
-    /// Add an attribute getter for statements like `foo.bar`
-    /// `class.add_attribute_getter("bar", |instance| instance.bar)
+    /// Add an attribute getter.
+    ///
+    /// An attribute getter allows you to write statements like `foo.bar`, where `foo` is a class
+    /// instance and `bar` is an attribute.
+    ///
+    /// Typically, if you use the [`PolarClass`] derive macro, you can use `#[polar(attribute)]` to
+    /// generate this automatically.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// use oso::ClassBuilder;
+    ///
+    /// #[derive(Default)]
+    /// struct MyClass {
+    ///     name: String,
+    ///     age: u32,
+    /// };
+    ///
+    /// let class = ClassBuilder::<MyClass>::with_default()
+    ///     .add_attribute_getter("name", |instance| instance.name.clone())
+    ///     .add_attribute_getter("age", |instance| instance.age)
+    ///     .build();
+    /// ```
     pub fn add_attribute_getter<F, R>(mut self, name: &'static str, f: F) -> Self
     where
         F: Fn(&T) -> R + Send + Sync + 'static,

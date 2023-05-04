@@ -12,26 +12,48 @@ use crate::PolarValue;
 
 /// Convert Rust types to Polar types.
 ///
-/// This trait is automatically implemented for any
-/// type that implements the `PolarClass` marker trait,
-/// which should be preferred.
+/// This trait is automatically implemented for any type that implements the [`PolarClass`] marker
+/// trait, which should be preferred. You can use the [`PolarClass`](oso_derive::PolarClass) derive
+/// macro to derive that trait.
 ///
-/// This is also implemented automatically using the
-/// `#[derive(PolarClass)]` macro.
+/// For non-primitive types, the instance will be stored on the provided `Host`.
 ///
-/// For non-primitive types, the instance will be stored
-/// on the provided `Host`.
+/// # Trait bounds
 ///
-/// ## Trait bounds
+/// The default implementation for [`PolarClass`] requires types to be [`Send`] and [`Sync`], since
+/// it is possible to store a [`ToPolar`] value on an [`Oso`](crate::Oso) instance which can be
+/// shared between threads.
 ///
-/// The default implementation for `PolarClass`
-/// requires types to be `Send + Sync`, since it
-/// is possible to store a `ToPolar` value on an `Oso` instance
-/// which can be shared between threads.
+/// [`ToPolar`] implementors must also be concrete, sized types without any borrows.
 ///
-/// `ToPolar` implementors must also be concrete, sized types without
-/// any borrows.
+/// # Examples
+///
+/// Convert a primitive type into a polar value:
+///
+/// ```rust
+/// use oso::{PolarValue, ToPolar};
+///
+/// let string = "This is a string";
+/// let value = string.to_polar();
+///
+/// assert_eq!(value, PolarValue::String(string.into()));
+/// ```
+///
+/// Convert a custom type into a polar value:
+///
+/// ```
+/// use oso::{PolarValue, PolarClass, ToPolar};
+///
+/// #[derive(PolarClass)]
+/// struct MyClass;
+///
+/// let class = MyClass;
+/// let value = class.to_polar();
+///
+/// assert!(matches!(value, PolarValue::Instance(_)));
+/// ```
 pub trait ToPolar {
+    /// Convert this value into a Polar value.
     fn to_polar(self) -> PolarValue;
 }
 
@@ -81,7 +103,42 @@ mod private {
     pub trait Sealed {}
 }
 
+/// Convert tuples to Polar types.
+///
+/// This is a helper trait to convert Rust tuples (of types which implement [`ToPolar`]) into a
+/// [`Vec<PolarValue>`].
+///
+/// # Examples
+///
+/// Empty tuple:
+///
+/// ```
+/// use oso::ToPolarList;
+///
+/// assert_eq!(().to_polar_list(), vec![]);
+/// ```
+///
+/// Mixed tuples:
+///
+/// ```rust
+/// use oso::{PolarValue, PolarClass, ToPolarList};
+///
+/// #[derive(PolarClass)]
+/// struct MyClass;
+///
+/// let class = MyClass;
+/// let string = "Hello, World!";
+/// let number = 42;
+///
+/// let list = (class, string, number).to_polar_list();
+///
+/// assert_eq!(list.len(), 3);
+/// assert!(matches!(list[0], PolarValue::Instance(_)));
+/// assert_eq!(list[1], PolarValue::String(string.to_string()));
+/// assert_eq!(list[2], PolarValue::Integer(number));
+/// ```
 pub trait ToPolarList: private::Sealed {
+    /// Convert these values into an array of Polar values.
     fn to_polar_list(self) -> Vec<PolarValue>
     where
         Self: Sized;

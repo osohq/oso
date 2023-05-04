@@ -1,8 +1,8 @@
-//! oso policy engine for authorization
+//! Oso policy engine for authorization
 //!
 //! # Overview
 //!
-//! oso is a policy engine for authorization that's embedded in your application.
+//! Oso is a policy engine for authorization that's embedded in your application.
 //! It provides a declarative policy language for expressing authorization logic.
 //! You define this logic separately from the rest of your application code,
 //! but it executes inside the application and can call directly into it.
@@ -14,12 +14,12 @@
 //!
 //! ## Note
 //!
-//! The oso Rust library is still in early development relative to the other
-//! oso libraries.
+//! The Oso Rust library is still in early development relative to the other
+//! Oso libraries.
 //!
 //! # Example
 //!
-//! To get started, create a new `Oso` instance, and load Polar policies from either a
+//! To get started, create a new [`Oso`] instance, and load Polar policies from either a
 //! string or a file:
 //!
 //! ```
@@ -31,14 +31,13 @@
 //! # }
 //! ```
 //!
-//! You can register classes with oso, which makes it possible to use them for type checking,
-//! as well as accessing attributes in policies.
-//! The `PolarClass` derive macro can handle some of this
+//! You can register classes with oso, which makes it possible to use them for type checking, as
+//! well as accessing attributes in policies.
+//! The [`PolarClass`](oso_derive::PolarClass) derive macro can handle some of this.
+//!
 //! ```
 //! # fn main() -> anyhow::Result<()> {
 //! use oso::{Oso, PolarClass};
-//!
-//! let mut oso = Oso::new();
 //!
 //! #[derive(Clone, PolarClass)]
 //! struct User {
@@ -52,6 +51,8 @@
 //!     }
 //! }
 //!
+//! let mut oso = Oso::new();
+//!
 //! oso.register_class(
 //!    User::get_polar_class_builder()
 //!         .add_class_method("superusers", User::superuser)
@@ -64,11 +65,12 @@
 //! let user = User {
 //!     username: "alice@example.com".to_owned(),
 //! };
+//!
 //! assert!(oso.is_allowed(user, "foo", "bar")?);
-//! Ok(())
+//! # Ok(())
 //! # }
 //! ```
-//! For more examples, see the [oso documentation](https://docs.osohq.com).
+//! For more examples, see the [Oso documentation](https://docs.osohq.com).
 //!
 
 #[macro_use]
@@ -90,16 +92,51 @@ use polar_core::polar::Polar;
 
 /// Classes that can be used as types in Polar policies.
 ///
-/// Implementing this trait and `Clone` automatically makes the
-/// type `FromPolar` and `ToPolar`, so it can be used with
-/// `Oso::is_allowed` calls.
+/// Implementing this trait and [`Clone`] automatically makes the type [`FromPolar`] and
+/// [`ToPolar`], so it can be used with [`Oso::is_allowed()`] calls.
 ///
-/// The default implementation creates a class definition with
-/// no attributes or methods registered. Either use `get_polar_class_builder`
-/// or the `#[derive(PolarClass)]` proc macro to register attributes and methods.
+/// The default implementation creates a class definition with no attributes or methods registered.
+/// Either use [`get_polar_class_builder()`](PolarClass::get_polar_class_builder) or the
+/// [`PolarClass`](oso_derive::PolarClass) proc macro to register attributes and methods.
 ///
-/// **Note** that the returned `Class` still must be registered on an `Oso`
-/// instance using `Oso::register_class`.
+/// **Note**: the returned [`Class`] still must be registered on an [`Oso`] instance using
+/// [`Oso::register_class()`].
+///
+/// # Examples
+///
+/// Register polar class:
+///
+/// ```
+/// use oso::{Oso, PolarClass};
+///
+/// #[derive(PolarClass)]
+/// struct MyClass {
+///     #[polar(attribute)]
+///     name: String,
+/// }
+///
+/// let mut oso = Oso::new();
+/// oso.register_class(MyClass::get_polar_class());
+/// ```
+///
+/// Register polar class with customisations:
+///
+/// ```
+/// use oso::{Oso, PolarClass};
+///
+/// #[derive(PolarClass, Default, PartialEq)]
+/// struct MyClass {
+///     name: String,
+/// }
+///
+/// let class = MyClass::get_polar_class_builder()
+///     .add_attribute_getter("name", |value| value.name.clone())
+///     .with_equality_check()
+///     .build();
+///
+/// let mut oso = Oso::new();
+/// oso.register_class(class);
+/// ```
 pub trait PolarClass: Sized + 'static {
     /// Returns the `Class` ready for registration
     fn get_polar_class() -> Class {
