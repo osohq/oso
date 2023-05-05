@@ -1,4 +1,4 @@
-use oso::{Action, Oso, PolarClass};
+use oso::{Action, Field, Oso, PolarClass};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
@@ -98,6 +98,29 @@ fn test_is_allowed() -> oso::Result<()> {
     let action = "create";
 
     assert!(oso.is_allowed(actor, action, resource)?);
+
+    Ok(())
+}
+
+#[test]
+fn test_is_request_allowed() -> oso::Result<()> {
+    common::setup();
+    let oso = test_oso();
+
+    let actor = User::new(String::from("guest"));
+    let request = "/login";
+
+    assert!(oso.is_request_allowed(actor, request)?);
+
+    let actor = User::new(String::from("guest"));
+    let request = "/payments";
+
+    assert!(!oso.is_request_allowed(actor, request)?);
+
+    let actor = User::new(String::from("auditor"));
+    let request = "/payments";
+
+    assert!(oso.is_request_allowed(actor, request)?);
 
     Ok(())
 }
@@ -219,6 +242,56 @@ fn test_get_allowed_actions() -> oso::Result<()> {
     assert!(actions.contains(&Action::Typed(2)));
     assert!(actions.contains(&Action::Typed(3)));
     assert!(actions.contains(&Action::Typed(4)));
+
+    Ok(())
+}
+
+#[test]
+fn test_get_allowed_fields() -> oso::Result<()> {
+    common::setup();
+    let mut oso = Oso::new();
+
+    oso.register_class(User::get_polar_class()).unwrap();
+    oso.register_class(Widget::get_polar_class()).unwrap();
+
+    oso.load_str(
+        r#"allow_field(_actor: User{name: "sally"}, action, _resource: Widget{id: 1}, "id") if
+           action in ["CREATE", "READ"];"#,
+    )?;
+
+    let actor = User::new(String::from("sally"));
+    let action = "READ";
+    let resource = Widget::new(1);
+    let fields: HashSet<Field> = oso.get_allowed_fields(actor, action, resource)?;
+
+    assert_eq!(fields.len(), 1);
+    assert!(fields.contains(&Field::Typed("id".to_string())));
+
+    let actor = User::new(String::from("sally"));
+    let resource = Widget::new(1);
+    let action = "read";
+    let fields: HashSet<String> = oso.get_allowed_fields(actor, action, resource)?;
+
+    assert_eq!(fields.len(), 0);
+
+    oso.clear_rules().unwrap();
+
+    oso.load_str(r#"allow_field(_actor: User{name: "fred"}, _, _resource: Widget{id: 2}, _);"#)?;
+
+    let actor = User::new(String::from("fred"));
+    let resource = Widget::new(2);
+    let action = "read";
+    let fields: HashSet<Field> = oso.get_allowed_fields(actor, action, resource)?;
+
+    assert_eq!(fields.len(), 1);
+    assert!(fields.contains(&Field::Any));
+
+    let actor = User::new(String::from("not_fred"));
+    let resource = Widget::new(2);
+    let action = "read";
+    let actions: HashSet<Field> = oso.get_allowed_fields(actor, action, resource)?;
+
+    assert_eq!(actions.len(), 0);
 
     Ok(())
 }

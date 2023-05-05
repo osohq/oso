@@ -16,3 +16,8 @@ allow(actor: User, "frob", resource: Company) if
 
 allow(actor: User, "list", Company) if
    actor.name = "auditor";
+
+allow_request(_, "/login");
+
+allow_request(actor: User, "/payments") if
+    actor.name = "auditor";
