@@ -1,29 +1,33 @@
-use std::collections::BTreeMap;
-use std::collections::HashMap;
-
-use crate::errors::OsoError;
-use crate::host::{Host, Instance, PolarIterator};
-use crate::{FromPolar, PolarValue};
-
-use polar_core::events::*;
-use polar_core::terms::*;
+use crate::{
+    errors::OsoError,
+    host::{Host, Instance, PolarIterator},
+    FromPolar, PolarValue, Result,
+};
+use polar_core::{events::*, kb::Bindings, query::Query as PolarQuery, terms::*};
+use std::collections::{BTreeMap, HashMap};
+use tracing::{debug, error, trace};
 
 impl Iterator for Query {
-    type Item = crate::Result<ResultSet>;
+    type Item = Result<ResultSet>;
     fn next(&mut self) -> Option<Self::Item> {
         Query::next_result(self)
     }
 }
 
+/// Query that can be run against the rules loaded into Oso.
+///
+/// This is usually not used directly, but rather through [`Oso::query`](crate::Oso::query) or
+/// [`Oso::query_rule`](crate::Oso::query_rule).
 pub struct Query {
-    inner: polar_core::query::Query,
+    inner: PolarQuery,
     /// Stores a map from call_id to the iterator the call iterates through
     iterators: HashMap<u64, PolarIterator>,
     host: Host,
 }
 
 impl Query {
-    pub fn new(inner: polar_core::query::Query, host: Host) -> Self {
+    /// Create a new query.
+    pub fn new(inner: PolarQuery, host: Host) -> Self {
         Self {
             iterators: HashMap::new(),
             inner,
@@ -31,11 +35,13 @@ impl Query {
         }
     }
 
+    /// Source of the query.
     pub fn source(&self) -> String {
         self.inner.source_info()
     }
 
-    pub fn next_result(&mut self) -> Option<crate::Result<ResultSet>> {
+    /// Fetch the next result from this query.
+    pub fn next_result(&mut self) -> Option<Result<ResultSet>> {
         loop {
             let event = self.inner.next()?;
             check_messages!(self.inner);
@@ -43,7 +49,7 @@ impl Query {
                 return Some(Err(e.into()));
             }
             let event = event.unwrap();
-            tracing::debug!(event=?event);
+            debug!(event=?event);
             let result = match event {
                 QueryEvent::None => Ok(()),
                 QueryEvent::Done { .. } => return None,
@@ -97,7 +103,7 @@ impl Query {
             match result {
                 // Only call errors get passed back.
                 Err(call_error @ OsoError::InvalidCallError { .. }) => {
-                    tracing::error!("application invalid call error {}", call_error);
+                    error!("application invalid call error {}", call_error);
                     if let Err(e) = self.application_error(call_error) {
                         return Some(Err(e));
                     }
@@ -110,17 +116,17 @@ impl Query {
         }
     }
 
-    fn question_result(&mut self, call_id: u64, result: bool) -> crate::Result<()> {
+    fn question_result(&mut self, call_id: u64, result: bool) -> Result<()> {
         Ok(self.inner.question_result(call_id, result)?)
     }
 
-    fn call_result(&mut self, call_id: u64, result: PolarValue) -> crate::Result<()> {
+    fn call_result(&mut self, call_id: u64, result: PolarValue) -> Result<()> {
         Ok(self
             .inner
             .call_result(call_id, Some(result.to_term(&mut self.host)))?)
     }
 
-    fn call_result_none(&mut self, call_id: u64) -> crate::Result<()> {
+    fn call_result_none(&mut self, call_id: u64) -> Result<()> {
         Ok(self.inner.call_result(call_id, None)?)
     }
 
@@ -130,11 +136,11 @@ impl Query {
     /// TODO (dhatch): Refactor Polar API so this is clear.
     ///
     /// All other errors must be returned directly from query.
-    fn application_error(&mut self, error: crate::OsoError) -> crate::Result<()> {
+    fn application_error(&mut self, error: OsoError) -> Result<()> {
         Ok(self.inner.application_error(error.to_string())?)
     }
 
-    fn handle_make_external(&mut self, instance_id: u64, constructor: Term) -> crate::Result<()> {
+    fn handle_make_external(&mut self, instance_id: u64, constructor: Term) -> Result<()> {
         match constructor.value() {
             Value::Call(Call { name, args, kwargs }) => {
                 if !kwargs.is_none() {
@@ -143,7 +149,7 @@ impl Query {
                     let args = args
                         .iter()
                         .map(|term| PolarValue::from_term(term, &self.host))
-                        .collect::<crate::Result<Vec<PolarValue>>>()?;
+                        .collect::<Result<Vec<PolarValue>>>()?;
                     self.host.make_instance(&name.0, args, instance_id)
                 }
             }
@@ -151,11 +157,11 @@ impl Query {
         }
     }
 
-    fn next_call_result(&mut self, call_id: u64) -> Option<crate::Result<PolarValue>> {
+    fn next_call_result(&mut self, call_id: u64) -> Option<Result<PolarValue>> {
         self.iterators.get_mut(&call_id).and_then(|c| c.next())
     }
 
-    fn handle_next_external(&mut self, call_id: u64, iterable: Term) -> crate::Result<()> {
+    fn handle_next_external(&mut self, call_id: u64, iterable: Term) -> Result<()> {
         if self.iterators.get(&call_id).is_none() {
             let iterable_instance =
                 Instance::from_polar(PolarValue::from_term(&iterable, &self.host)?)?;
@@ -180,17 +186,17 @@ impl Query {
         name: Symbol,
         args: Option<Vec<Term>>,
         kwargs: Option<BTreeMap<Symbol, Term>>,
-    ) -> crate::Result<()> {
+    ) -> Result<()> {
         if kwargs.is_some() {
             return lazy_error!("Invalid call error: kwargs not supported in Rust.");
         }
-        tracing::trace!(call_id, name = %name, args = ?args, "call");
+        trace!(call_id, name = %name, args = ?args, "call");
         let instance = Instance::from_polar(PolarValue::from_term(&instance, &self.host)?)?;
         let result = if let Some(args) = args {
             let args = args
                 .iter()
                 .map(|v| PolarValue::from_term(v, &self.host))
-                .collect::<crate::Result<Vec<PolarValue>>>()?;
+                .collect::<Result<Vec<PolarValue>>>()?;
             instance.call(&name.0, args, &mut self.host)
         } else {
             instance.get_attr(&name.0, &mut self.host)
@@ -209,7 +215,7 @@ impl Query {
         call_id: u64,
         operator: Operator,
         args: Vec<Term>,
-    ) -> crate::Result<()> {
+    ) -> Result<()> {
         assert_eq!(args.len(), 2);
         let res = {
             let args = [
@@ -227,8 +233,8 @@ impl Query {
         call_id: u64,
         instance: Term,
         class_tag: Symbol,
-    ) -> crate::Result<()> {
-        tracing::debug!(instance = ?instance, class = %class_tag, "isa");
+    ) -> Result<()> {
+        debug!(instance = ?instance, class = %class_tag, "isa");
         let res = self
             .host
             .isa(PolarValue::from_term(&instance, &self.host)?, &class_tag.0)?;
@@ -242,7 +248,7 @@ impl Query {
         instance_id: u64,
         left_class_tag: Symbol,
         right_class_tag: Symbol,
-    ) -> crate::Result<()> {
+    ) -> Result<()> {
         let res = self
             .host
             .is_subspecializer(instance_id, &left_class_tag.0, &right_class_tag.0);
@@ -255,31 +261,30 @@ impl Query {
         call_id: u64,
         left_class_tag: Symbol,
         right_class_tag: Symbol,
-    ) -> crate::Result<()> {
+    ) -> Result<()> {
         let res = left_class_tag == right_class_tag;
         self.question_result(call_id, res)?;
         Ok(())
     }
 
     #[allow(clippy::unnecessary_wraps)]
-    fn handle_debug(&mut self, message: String) -> crate::Result<()> {
+    fn handle_debug(&mut self, message: String) -> Result<()> {
         eprintln!("TODO: {}", message);
         check_messages!(self.inner);
         Ok(())
     }
 }
 
+/// Set of results from Oso query.
 #[derive(Clone)]
 pub struct ResultSet {
-    bindings: polar_core::kb::Bindings,
-    host: crate::host::Host,
+    bindings: Bindings,
+    host: Host,
 }
 
 impl ResultSet {
-    pub fn from_bindings(
-        bindings: polar_core::kb::Bindings,
-        host: crate::host::Host,
-    ) -> crate::Result<Self> {
+    /// Create new ResultSet from bindings.
+    pub fn from_bindings(bindings: Bindings, host: Host) -> Result<Self> {
         // Check for expression.
         for term in bindings.values() {
             if term.as_expression().is_ok() && !host.accept_expression {
@@ -302,26 +307,31 @@ This may mean you performed an operation in your policy over an unbound variable
         Box::new(self.bindings.keys().map(|sym| sym.0.as_ref()))
     }
 
+    /// Iterator over the bindings of this result.
     pub fn iter_bindings(&self) -> Box<dyn std::iter::Iterator<Item = (&str, &Value)> + '_> {
         Box::new(self.bindings.iter().map(|(k, v)| (k.0.as_ref(), v.value())))
     }
 
+    /// Check if the bindings in this result are empty.
     pub fn is_empty(&self) -> bool {
         self.bindings.is_empty()
     }
 
+    /// Get a value from the bindings.
     pub fn get(&self, name: &str) -> Option<crate::PolarValue> {
         self.bindings
             .get(&Symbol(name.to_string()))
             .map(|t| PolarValue::from_term(t, &self.host).unwrap())
     }
 
-    pub fn get_typed<T: crate::host::FromPolar>(&self, name: &str) -> crate::Result<T> {
+    /// Get a value from the bindings, and decode them into a Rust type.
+    pub fn get_typed<T: FromPolar>(&self, name: &str) -> Result<T> {
         self.get(name)
-            .ok_or(crate::OsoError::FromPolar)
+            .ok_or(OsoError::FromPolar)
             .and_then(T::from_polar)
     }
 
+    /// Turn self into an event.
     pub fn into_event(self) -> ResultEvent {
         ResultEvent::new(self.bindings)
     }
@@ -333,9 +343,7 @@ impl std::fmt::Debug for ResultSet {
     }
 }
 
-impl<S: AsRef<str>, T: crate::host::FromPolar + PartialEq<T>> PartialEq<HashMap<S, T>>
-    for ResultSet
-{
+impl<S: AsRef<str>, T: FromPolar + PartialEq<T>> PartialEq<HashMap<S, T>> for ResultSet {
     fn eq(&self, other: &HashMap<S, T>) -> bool {
         other.iter().all(|(k, v)| {
             self.get_typed::<T>(k.as_ref())

@@ -1,3 +1,4 @@
+/// Create a custom [`OsoError`](crate::errors::OsoError), with a syntax similar to `format!()`.
 #[macro_export]
 macro_rules! lazy_error {
     ($($input:tt)*) => {

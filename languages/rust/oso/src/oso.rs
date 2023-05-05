@@ -1,22 +1,52 @@
-//! Communicate with the Polar virtual machine: load rules, make queries, etc/
-use polar_core::sources::Source;
-use polar_core::terms::{Call, Symbol, Term, Value};
+//! # Oso module
+//!
+//! Communicate with the Polar virtual machine: load rules, make queries, etc.
+use crate::{
+    host::Host, query::Query, Class, FromPolar, OsoError, PolarValue, Result, ToPolar, ToPolarList,
+};
+use polar_core::{
+    polar::Polar,
+    sources::Source,
+    terms::{Call, Symbol, Term, Value},
+};
+use std::{collections::HashSet, fs::File, hash::Hash, io::Read, sync::Arc};
 
-use std::collections::HashSet;
-use std::fs::File;
-use std::hash::Hash;
-use std::io::Read;
-use std::sync::Arc;
-
-use crate::host::Host;
-use crate::query::Query;
-use crate::{FromPolar, OsoError, PolarValue, ToPolar, ToPolarList};
-
-/// Oso is the main struct you interact with. It is an instance of the Oso authorization library
-/// and contains the polar language knowledge base and query engine.
+/// Instance of the Oso authorization library.
+///
+/// This is the main struct you interact with. Contains the polar language knowledge base and query
+/// engine.
+///
+/// # Usage
+///
+/// Typically, you will create a new instance of Oso, load some definitions into it that you
+/// can use to determine authorization and then use [`is_allowed()`](Oso::is_allowed) to check for
+/// authorization.
+///
+/// ```rust
+/// # use oso::Oso;
+/// let mut oso = Oso::new();
+///
+/// // allow any actor to perform read on any resource
+/// oso.load_str(r#"allow(_actor, "read", _resource);"#).unwrap();
+///
+/// assert!(oso.is_allowed("me", "read", "book").unwrap());
+/// ```
+///
+/// To make Oso more useful to you, you can augment it with your own custom Rust types by using the
+/// [`register_class()`](Oso::register_class) method.
+///
+/// Besides only checking if something is allowed, Oso can also tell you all of the actions that an
+/// actor may take on a resource using the [`get_allowed_actions()`](Oso::get_allowed_actions)
+/// method.
+///
+/// # Quickstart
+///
+/// You can check out the [Quickstart
+/// guide](https://docs.osohq.com/rust/getting-started/quickstart.html) for more information on how
+/// to get started using Oso.
 #[derive(Clone)]
 pub struct Oso {
-    inner: Arc<polar_core::polar::Polar>,
+    inner: Arc<Polar>,
     host: Host,
 }
 
@@ -40,7 +70,7 @@ pub enum Action<T = String> {
 }
 
 impl<T: FromPolar> FromPolar for Action<T> {
-    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+    fn from_polar(val: PolarValue) -> Result<Self> {
         if matches!(val, PolarValue::Variable(_)) {
             Ok(Action::Any)
         } else {
@@ -50,7 +80,18 @@ impl<T: FromPolar> FromPolar for Action<T> {
 }
 
 impl Oso {
-    /// Create a new instance of Oso. Each instance is separate and can have different rules and classes loaded into it.
+    /// Create a new instance of Oso.
+    ///
+    /// Each instance is separate and can have different rules and classes loaded into it.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```rust
+    /// # use oso::Oso;
+    /// let oso = Oso::new();
+    /// ```
     pub fn new() -> Self {
         let inner = Arc::new(polar_core::polar::Polar::new());
         let host = Host::new(inner.clone());
@@ -61,18 +102,36 @@ impl Oso {
             oso.register_class(class)
                 .expect("failed to register builtin class");
         }
-        oso.register_constant(Option::<crate::PolarValue>::None, "nil")
+        oso.register_constant(Option::<PolarValue>::None, "nil")
             .expect("failed to register the constant None");
         oso
     }
 
-    /// High level interface for authorization decisions. Makes an allow query with the given actor, action and resource and returns true or false.
+    /// Test if an `actor` is allowed to perform an `action` on a `resource`.
+    ///
+    /// High level interface for authorization decisions. Makes an allow query with the given
+    /// actor, action and resource and returns `true` or `false`.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```rust
+    /// # use oso::Oso;
+    /// let mut oso = Oso::new();
+    ///
+    /// // allow any actor to perform read on any resource
+    /// oso.load_str(r#"allow(_actor, "read", _resource);"#).unwrap();
+    ///
+    /// assert_eq!(oso.is_allowed("me", "read", "book").unwrap(), true);
+    /// assert_eq!(oso.is_allowed("me", "steal", "book").unwrap(), false);
+    /// ```
     pub fn is_allowed<Actor, Action, Resource>(
         &self,
         actor: Actor,
         action: Action,
         resource: Resource,
-    ) -> crate::Result<bool>
+    ) -> Result<bool>
     where
         Actor: ToPolar,
         Action: ToPolar,
@@ -87,23 +146,77 @@ impl Oso {
     }
 
     /// Get the actions actor is allowed to take on resource.
-    /// Returns a [std::collections::HashSet] of actions, typed according the return value.
+    ///
+    /// Returns a [`HashSet`] of actions, typed according the return value. It can return
+    /// [`Action`] structs, which can encode that an actor can do anything with [`Action::Any`], or
+    /// any type that implements [`FromPolar`].
+    ///
     /// # Examples
-    /// ```ignore
-    /// oso.load_str(r#"allow(actor: Actor{name: "sally"}, action, resource: Widget{id: 1}) if
-    ///               action in ["CREATE", "READ"];"#);
     ///
-    /// // get a HashSet of oso::Actions
-    /// let actions: HashSet<Action> = oso.get_allowed_actions(actor, resource)?;
+    /// Basic usage:
     ///
-    /// // or Strings
-    /// let actions: HashSet<String> = oso.get_allowed_actions(actor, resource)?;
+    /// ```rust
+    /// # use oso::{Action, Oso};
+    /// # use std::collections::HashSet;
+    /// let mut oso = Oso::new();
+    ///
+    /// // anyone can read anything, and thomas can drive and sell a car.
+    /// oso.load_str(r#"
+    ///     allow(_actor, "read", "book");
+    ///     allow("thomas", action, "car") if action in ["drive", "sell"];
+    /// "#).unwrap();
+    ///
+    /// // anyone can read a book
+    /// let actions: HashSet<Action> = oso.get_allowed_actions("thomas", "book").unwrap();
+    /// assert_eq!(actions, [Action::Typed("read".into())].into());
+    ///
+    /// // only thomas can drive and sell his car
+    /// let actions: HashSet<String> = oso.get_allowed_actions("thomas", "car").unwrap();
+    /// assert_eq!(actions, [
+    ///     "drive".into(),
+    ///     "sell".into()
+    /// ].into());
+    /// ```
+    ///
+    /// If you prefer not to use "stringly-typed" actions, you can define your own action type.
+    /// This method even works when using that action type. Here is an example, where an enum is
+    /// used as an action type:
+    ///
+    /// ```rust
+    /// # use oso::{Action, Oso, PolarClass};
+    /// # use std::collections::HashSet;
+    /// let mut oso = Oso::new();
+    ///
+    /// #[derive(PolarClass, PartialEq, Clone, Debug, Eq, Hash)]
+    /// enum MyAction {
+    ///     Read,
+    ///     Write,
+    /// }
+    ///
+    /// oso.register_class(
+    ///     MyAction::get_polar_class_builder()
+    ///     .with_equality_check()
+    ///     .add_constant(MyAction::Read, "Read")
+    ///     .add_constant(MyAction::Write, "Write")
+    ///     .build()
+    /// ).unwrap();
+    ///
+    /// oso.load_str(r#"
+    ///     allow("backend", MyAction::Read, _resource);
+    ///     allow("backend", MyAction::Write, "database");
+    /// "#).unwrap();
+    ///
+    /// let actions: HashSet<MyAction> = oso.get_allowed_actions("backend", "database").unwrap();
+    /// assert_eq!(actions, [
+    ///     MyAction::Read,
+    ///     MyAction::Write,
+    /// ].into());
     /// ```
     pub fn get_allowed_actions<Actor, Resource, T>(
         &self,
         actor: Actor,
         resource: Resource,
-    ) -> crate::Result<HashSet<T>>
+    ) -> Result<HashSet<T>>
     where
         Actor: ToPolar,
         Resource: ToPolar,
@@ -133,17 +246,32 @@ impl Oso {
     }
 
     /// Clear out all files and rules that have been loaded.
-    pub fn clear_rules(&mut self) -> crate::Result<()> {
+    ///
+    /// This message may return an error.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use oso::Oso;
+    /// let mut oso = Oso::new();
+    ///
+    /// // load some rules
+    /// oso.load_str("allow(_actor, _action, _resource) if true;").unwrap();
+    ///
+    /// // clear rules
+    /// oso.clear_rules().unwrap();
+    /// ```
+    pub fn clear_rules(&mut self) -> Result<()> {
         self.inner.clear_rules();
         check_messages!(self.inner);
         Ok(())
     }
 
-    fn check_inline_queries(&self) -> crate::Result<()> {
+    fn check_inline_queries(&self) -> Result<()> {
         while let Some(q) = self.inner.next_inline_query(false) {
             let location = q.source_info();
             let query = Query::new(q, self.host.clone());
-            match query.collect::<crate::Result<Vec<_>>>() {
+            match query.collect::<Result<Vec<_>>>() {
                 Ok(v) if !v.is_empty() => continue,
                 Ok(_) => return Err(OsoError::InlineQueryFailedError { location }),
                 Err(e) => return lazy_error!("error in inline query: {}", e),
@@ -154,7 +282,7 @@ impl Oso {
     }
 
     // Register MROs, load Polar code, and check inline queries.
-    fn load_sources(&mut self, sources: Vec<Source>) -> crate::Result<()> {
+    fn load_sources(&mut self, sources: Vec<Source>) -> Result<()> {
         self.host.register_mros()?;
         self.inner.load(sources)?;
         self.check_inline_queries()
@@ -163,17 +291,23 @@ impl Oso {
     /// Load a file containing Polar rules. All Polar files must end in `.polar`.
     #[deprecated(
         since = "0.20.1",
-        note = "`Oso::load_file` has been deprecated in favor of `Oso::load_files` as of the 0.20 release.\n\nPlease see changelog for migration instructions: https://docs.osohq.com/project/changelogs/2021-09-15.html"
+        note = "`Oso::load_file` has been deprecated in favor of `Oso::load_files` as of the 0.20 release. Please see changelog for migration instructions: <https://docs.osohq.com/project/changelogs/2021-09-15.html>"
     )]
-    pub fn load_file<P: AsRef<std::path::Path>>(&mut self, filename: P) -> crate::Result<()> {
+    pub fn load_file<P: AsRef<std::path::Path>>(&mut self, filename: P) -> Result<()> {
         self.load_files(vec![filename])
     }
 
-    /// Load files containing Polar rules. All Polar files must end in `.polar`.
-    pub fn load_files<P: AsRef<std::path::Path>>(
-        &mut self,
-        filenames: Vec<P>,
-    ) -> crate::Result<()> {
+    /// Load files containing Polar rules.
+    ///
+    /// All Polar files must have the `.polar` extension.
+    ///
+    /// ```rust
+    /// # use oso::Oso;
+    /// let mut oso = Oso::new();
+    ///
+    /// oso.load_files(vec!["../test.polar"]).unwrap();
+    /// ```
+    pub fn load_files<P: AsRef<std::path::Path>>(&mut self, filenames: Vec<P>) -> Result<()> {
         if filenames.is_empty() {
             return Ok(());
         }
@@ -184,7 +318,7 @@ impl Oso {
             let file = file.as_ref();
             let filename = file.to_string_lossy().into_owned();
             if !file.extension().map_or(false, |ext| ext == "polar") {
-                return Err(crate::OsoError::IncorrectFileType { filename });
+                return Err(OsoError::IncorrectFileType { filename });
             }
             let mut f = File::open(file)?;
             let mut src = String::new();
@@ -196,21 +330,48 @@ impl Oso {
     }
 
     /// Load a string of polar source directly.
+    ///
     /// # Examples
-    /// ```ignore
-    /// oso.load_str("allow(a, b, c) if true;");
+    ///
+    /// Basic usage:
+    ///
+    /// ```rust
+    /// # use oso::Oso;
+    /// let mut oso = Oso::new();
+    ///
+    /// oso.load_str("allow(_actor, _action, _resource) if true;").unwrap();
     /// ```
-    pub fn load_str(&mut self, src: &str) -> crate::Result<()> {
+    ///
+    /// Loading a source that is baked into the binary at compile-time:
+    ///
+    /// ```rust
+    /// # use oso::Oso;
+    /// let mut oso = Oso::new();
+    ///
+    /// oso.load_str(include_str!("../test.polar")).unwrap();
+    /// ```
+    pub fn load_str(&mut self, src: &str) -> Result<()> {
         // TODO(gj): emit... some sort of warning?
         self.load_sources(vec![Source::new(src)])
     }
 
-    /// Query the knowledge base. This can be an allow query or any other polar expression.
+    /// Query the knowledge base.
+    ///
+    /// This can be an allow query (like `allow(actor, "read", resource) or any other Polar expression.
+    ///
     /// # Examples
-    /// ```ignore
-    /// oso.query("x = 1 or x = 2");
+    ///
+    /// Basic usage:
+    ///
+    /// ```rust
+    /// # use oso::Oso;
+    /// let mut oso = Oso::new();
+    ///
+    /// oso.register_constant(2, "x").unwrap();
+    ///
+    /// oso.query("x = 1 or x = 2").unwrap();
     /// ```
-    pub fn query(&self, s: &str) -> crate::Result<Query> {
+    pub fn query(&self, s: &str) -> Result<Query> {
         let query = self.inner.new_query(s, false)?;
         check_messages!(self.inner);
         let query = Query::new(query, self.host.clone());
@@ -224,7 +385,7 @@ impl Oso {
     /// oso.query_rule("is_admin", vec![User{name: "steve"}]);
     /// ```
     #[must_use = "Query that is not consumed does nothing."]
-    pub fn query_rule(&self, name: &str, args: impl ToPolarList) -> crate::Result<Query> {
+    pub fn query_rule(&self, name: &str, args: impl ToPolarList) -> Result<Query> {
         let mut query_host = self.host.clone();
         let args = args
             .to_polar_list()
@@ -244,8 +405,48 @@ impl Oso {
     }
 
     /// Register a rust type as a Polar class.
-    /// See [`oso::Class`] docs.
-    pub fn register_class(&mut self, class: crate::host::Class) -> crate::Result<()> {
+    ///
+    /// See also the [`Class`] docs.
+    ///
+    /// Typically, you can simply derive [`PolarClass`] for your custom types and then use the
+    /// [`get_polar_class()`](crate::PolarClass::get_polar_class) method.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use oso::{PolarClass, Oso};
+    /// #[derive(PolarClass)]
+    /// struct MyClass;
+    ///
+    /// let mut oso = Oso::new();
+    ///
+    /// oso.register_class(MyClass::get_polar_class());
+    /// ```
+    ///
+    /// In order to customize your class for Polar, you can use the methods of
+    /// [`ClassBuilder`](crate::ClassBuilder).
+    ///
+    /// ```rust
+    /// # use oso::{PolarClass, Oso};
+    /// #[derive(PolarClass, PartialEq, Clone, Debug, Eq, Hash)]
+    /// enum Service {
+    ///     Database,
+    ///     Frontend,
+    ///     Backend,
+    /// }
+    ///
+    /// let class = Service::get_polar_class_builder()
+    ///     .with_equality_check()
+    ///     .add_constant(Service::Frontend, "Frontend")
+    ///     .add_constant(Service::Backend, "Backend")
+    ///     .add_constant(Service::Database, "Database")
+    ///     .build();
+    ///
+    /// let mut oso = Oso::new();
+    ///
+    /// oso.register_class(class).unwrap();
+    /// ```
+    pub fn register_class(&mut self, class: Class) -> Result<()> {
         let name = class.name.clone();
         let class_name = self.host.cache_class(class.clone(), name)?;
 
@@ -255,13 +456,25 @@ impl Oso {
         self.register_constant(class, &class_name)
     }
 
-    /// Register a rust type as a Polar constant.
-    /// See [`oso::Class`] docs.
-    pub fn register_constant<V: crate::host::ToPolar + Send + Sync>(
+    /// Register a Rust value as a Polar constant.
+    ///
+    /// The Rust value must implement [`ToPolar`].
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```rust
+    /// # use oso::Oso;
+    /// let mut oso = Oso::new();
+    ///
+    /// oso.register_constant(std::f64::consts::PI, "PI");
+    /// ```
+    pub fn register_constant<V: ToPolar + Send + Sync>(
         &mut self,
         value: V,
         name: &str,
-    ) -> crate::Result<()> {
+    ) -> Result<()> {
         self.inner.register_constant(
             Symbol(name.to_string()),
             value.to_polar().to_term(&mut self.host),
