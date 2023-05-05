@@ -8,18 +8,6 @@ any: false
 weight: 1
 ---
 
-{{< ifLang "rust" >}}
-{{% callout "Rust quickstart coming soon" %}}
-
-{{< coming_soon >}}
-
-This guide uses Python.
-
-{{% /callout %}}
-<div class="pb-10"></div>
-{{< /ifLang >}}
-
-
 # Quickstart for {{% lang %}}
 
 This guide will walk you through your first change to an Oso policy file. There
