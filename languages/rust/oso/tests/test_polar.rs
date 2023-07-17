@@ -436,7 +436,7 @@ fn test_register_class() -> oso::Result<()> {
 
     let mut oso = test_oso();
 
-    #[derive(PolarClass, Default, Debug, Clone)]
+    #[derive(PolarClass, Debug, Clone)]
     struct Bar;
 
     impl Bar {
@@ -474,7 +474,7 @@ fn test_register_class() -> oso::Result<()> {
         }
 
         pub fn bar(&self) -> Bar {
-            Bar::default()
+            Bar
         }
 
         pub fn e(&self) -> Vec<i64> {
