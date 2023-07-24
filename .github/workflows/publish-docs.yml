@@ -16,18 +16,29 @@ on:
       sqlalchemy_oso_version:
         description: "sqlalchemy oso release to build docs for"
         default: "0.27.0" # sqlalchemy_oso_version
+
+# Needed to get an AWS token
+permissions:
+  contents: read # (default) needed for the actions/checkout task
+  id-token: write # Retrieve ID token for AWS OIDC authentication
+
 jobs:
   publish:
     name: Publish docs
     runs-on: ubuntu-latest
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET }}
       AWS_REGION: "us-east-1"
       PUBLISH_DOCS: 1
       ALGOLIA_ADMIN_API_KEY: ${{ secrets.ALGOLIA_ADMIN_API_KEY }}
     steps:
       - uses: actions/checkout@v2
+
+      - name: configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          role-to-assume: arn:aws:iam::145452666862:role/oso-docs-github-actions-role
+          role-duration-seconds: 900
+          aws-region: us-east-1
 
       ### Setup dependencies
       - uses: actions/setup-python@v2
