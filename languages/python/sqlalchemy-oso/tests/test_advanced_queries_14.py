@@ -118,7 +118,6 @@ def test_get_column_entities(stmt, o):
         (select(A), set()),
         (select(A).options(joinedload(A.bs)), {B}),
         (select(A).options(joinedload(A.bs).joinedload(B.cs)), {B, C}),
-        (select(A).options(Load(A).joinedload("bs")), {B}),
         pytest.param(
             select(A).options(Load(A).joinedload("*")),
             set(),
@@ -134,19 +133,6 @@ def test_get_column_entities(stmt, o):
 def test_get_joinedload_entities(stmt, o):
     assert set(map(to_class, get_joinedload_entities(stmt))) == o
 
-
-@pytest.mark.parametrize(
-    "stmt,o",
-    (
-        pytest.param(
-            select(A).options(joinedload("A.bs")),
-            {B},
-            marks=pytest.mark.xfail(reason="String doesn't work"),
-        ),
-    ),
-)
-def test_get_joinedload_entities_str(stmt, o):
-    assert set(map(to_class, get_joinedload_entities(stmt))) == o
 
 
 def test_default_loader_strategies_all_entities_in_statement():

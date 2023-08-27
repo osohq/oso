@@ -1,6 +1,12 @@
+from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3, USING_SQLAlchemy_v2_0
+
 from sqlalchemy import Boolean, Column, Enum, ForeignKey, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
+if USING_SQLAlchemy_v1_3:
+    from sqlalchemy.ext.declarative import declarative_base
+else:
+    from sqlalchemy.orm import declarative_base
+
 from sqlalchemy.schema import Table
 
 ModelBase = declarative_base(name="ModelBase")
