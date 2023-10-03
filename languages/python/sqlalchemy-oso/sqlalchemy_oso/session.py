@@ -301,7 +301,7 @@ try:
             return
 
         entities = all_entities_in_statement(execute_state.statement)
-        logger.info(f"Authorizing entities: {entities}")
+        logger.debug(f"Authorizing entities: {entities}")
         for entity in entities:
             action = checked_permissions.get(entity)
 
@@ -316,7 +316,7 @@ try:
             else:
                 filter = authorize_model(oso, user, action, session, entity)
                 if filter is not None:
-                    logger.info(f"Applying filter {filter} to entity {entity}")
+                    logger.debug(f"Applying filter {filter} to entity {entity}")
                     where = with_loader_criteria(entity, filter, include_aliases=True)
                     execute_state.statement = execute_state.statement.options(where)
                 else:
