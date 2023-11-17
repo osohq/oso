@@ -22,7 +22,7 @@ jobs:
           remote-repository-name: cla-signatures
           path-to-signatures: individual.json
           branch: main
-          allowlist: djanatyn,gj,gneray,jedgresham,killpack,laxjesse,orez-,patrickod,samscott89,ssglaser,uncommoncense,vrama628,dependabot,dependabot[bot]
+          allowlist: djanatyn,edaniels,gj,gneray,gsarjeant,jedgresham,killpack,laxjesse,orez-,samscott89,ssglaser,sverch,uncommoncense,vrama628,dependabot,dependabot[bot]
           use-dco-flag: false
           create-file-commit-message: 'Creating file for storing CLA signatures'
           signed-commit-message: '$contributorName has signed the CLA in osohq/oso#$pullRequestNo'
