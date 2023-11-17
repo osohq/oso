@@ -329,7 +329,7 @@ pub extern "C" fn string_free(s: *mut c_char) -> i32 {
     if s.is_null() {
         return POLAR_FAILURE;
     }
-    unsafe { CString::from_raw(s) };
+    unsafe { let _ = CString::from_raw(s); };
     POLAR_SUCCESS
 }
 

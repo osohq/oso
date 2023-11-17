@@ -211,9 +211,8 @@ impl VarInfo {
     }
 
     fn do_and(self, args: &[Term]) -> PolarResult<Self> {
-        args.iter().fold(Ok(self), |this, arg| {
-            this?.process_exp(arg.as_expression()?)
-        })
+        args.iter()
+            .try_fold(self, |this, arg| this.process_exp(arg.as_expression()?))
     }
 
     fn do_dot(mut self, lhs: &Term, rhs: &Term) -> Self {
@@ -795,8 +794,7 @@ impl<'a> ResultSetBuilder<'a> {
     fn constrain_fields(&mut self, id: Id, var_type: &str) -> PolarResult<&mut Self> {
         match self.vars.field_relationships.get(&id) {
             None => Ok(self),
-            Some(fs) => fs.iter().fold(Ok(self), |this, (field, child)| {
-                let this = this?;
+            Some(fs) => fs.iter().try_fold(self, |this, (field, child)| {
                 match this.types.get(var_type).and_then(|m| m.get(field)) {
                     None => df_field_missing(var_type, field),
                     Some(Type::Relation {
