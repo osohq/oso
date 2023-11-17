@@ -832,7 +832,7 @@ impl PolarVirtualMachine {
             trace = trace_stack
                 .pop()
                 .map(|ts| ts.as_ref().clone())
-                .unwrap_or_else(Vec::new);
+                .unwrap_or_default();
         }
 
         stack.reverse();
@@ -1261,7 +1261,7 @@ impl PolarVirtualMachine {
                 });
 
                 let mut add_constraints = vec![type_constraint];
-                add_constraints.extend(field_constraints.into_iter());
+                add_constraints.extend(field_constraints);
 
                 // Run compatibility check.
                 self.choose_conditional(

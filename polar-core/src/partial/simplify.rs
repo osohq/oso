@@ -286,8 +286,8 @@ impl PerfCounters {
             return;
         }
 
-        self.simplify_term.extend(other.simplify_term.into_iter());
-        self.preprocess_and.extend(other.preprocess_and.into_iter());
+        self.simplify_term.extend(other.simplify_term);
+        self.preprocess_and.extend(other.preprocess_and);
     }
 
     pub fn is_enabled(&self) -> bool {
