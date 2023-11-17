@@ -518,14 +518,14 @@ mod tests {
             lexer.next(),
             Some(Ok((_, Token::Integer(123), _)))
         ));
-        assert!(matches!(lexer.next(), None));
+        assert!(lexer.next().is_none());
         let s = "123 #comment";
         let mut lexer = Lexer::new(s);
         assert!(matches!(
             lexer.next(),
             Some(Ok((_, Token::Integer(123), _)))
         ));
-        assert!(matches!(lexer.next(), None));
+        assert!(lexer.next().is_none());
     }
 
     #[test]
@@ -595,14 +595,14 @@ mod tests {
         assert!(
             matches!(lexer.next(), Some(Ok((4, Token::Symbol(x), 7))) if x == Symbol::new("bar"))
         );
-        assert!(matches!(lexer.next(), None));
+        assert!(lexer.next().is_none());
 
         let s = "foo::bar";
         let mut lexer = Lexer::new(s);
         assert!(
             matches!(lexer.next(), Some(Ok((0, Token::Symbol(x), 8))) if x == Symbol::new("foo::bar"))
         );
-        assert!(matches!(lexer.next(), None));
+        assert!(lexer.next().is_none());
 
         let s = "foo:::bar";
         let mut lexer = Lexer::new(s);
@@ -651,7 +651,7 @@ mod tests {
         assert!(
             matches!(lexer.next(), Some(Ok((66, Token::Symbol(ruby_namespace), 81))) if ruby_namespace == Symbol::new("Ruby::Namespace"))
         );
-        assert!(matches!(lexer.next(), None));
+        assert!(lexer.next().is_none());
     }
 
     #[test]

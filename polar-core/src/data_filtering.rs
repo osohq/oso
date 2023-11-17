@@ -991,7 +991,7 @@ where
     A: Eq + Hash,
     B: Eq + Hash,
 {
-    map.entry(a).or_insert_with(HashSet::new).insert(b);
+    map.entry(a).or_default().insert(b);
     map
 }
 
