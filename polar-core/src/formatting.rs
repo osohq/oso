@@ -574,7 +574,7 @@ mod to_polar {
                     if args.is_empty() {
                         kwargs
                     } else {
-                        vec![args, kwargs].join(", ")
+                        [args, kwargs].join(", ")
                     }
                 }
                 None => args,
