@@ -96,7 +96,7 @@ A `{{% exampleGet "filterName" %}}` is a representation of a query. It is very s
 It has four fields:
 
 - `{{% exampleGet "filterRoot" %}}` Is the name of the type we are filtering.
-- {{% exampleGet "filterRelations" %}} Are named relations to other types, typically turned into joins.
+- `{{% exampleGet "filterRelations" %}}` Are named relations to other types, typically turned into joins.
 - `{{% exampleGet "filterConditions" %}}` Are the individual pieces of logic that must be true with respect to objects
   matching the filter. These typically get turned into where clauses.
 - `{{% exampleGet "filterTypes" %}}` Is a map from type names to user type information, including registered relations.
