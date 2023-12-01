@@ -362,6 +362,8 @@ jobs:
           java-version: "11"
       - name: Build python lib
         run: make python-build
+      - name: Build ruby lib
+        run: make ruby-build
       - name: Python test deps
         run: make -C languages/python/oso test-requirements
       - name: Build js lib

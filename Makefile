@@ -42,6 +42,9 @@ python-django-test: python-build python-django-build
 python-sqlalchemy-test: python-build
 	$(MAKE) -C languages/python/sqlalchemy-oso test
 
+ruby-build: rust-build
+	$(MAKE) -C languages/ruby copy_lib
+
 ruby-test:
 	$(MAKE) -C languages/ruby test
 
@@ -55,7 +58,7 @@ java-test:
 go-test: rust-build
 	$(MAKE) -C languages/go test
 
-docs-test: python-build
+docs-test: python-build ruby-build
 	$(MAKE) -C docs test
 
 fmt: fmt-java fmt-rust fmt-python fmt-js fmt-go
