@@ -49,7 +49,7 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-          ruby-version: 2.4
+          ruby-version: "3.2"
           working-directory: "languages/ruby"
       - name: Install yard
         run: gem install yard
