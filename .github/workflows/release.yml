@@ -61,25 +61,36 @@ jobs:
         run: |
           rustup target add x86_64-unknown-linux-musl
           RUSTFLAGS="-C target-feature=-crt-static" cargo build --target x86_64-unknown-linux-musl --release -p polar-c-api
-      - name: Download cross
+      - name: Install cross
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release download --repo cross-rs/cross --pattern 'cross-x86_64-unknown-linux-gnu\.tar\.gz'
+        run: |
+          gh release download --repo cross-rs/cross --pattern 'cross-x86_64-unknown-linux-gnu\.tar\.gz'
+          tar -xzvf cross-x86_64-unknown-linux-gnu.tar.gz
       - name: Build aarch64 release musl library
         run: |
           rustup target add aarch64-unknown-linux-musl
-          tar -xzvf cross-x86_64-unknown-linux-gnu.tar.gz
           RUSTFLAGS="-C target-feature=-crt-static" ./cross build --target aarch64-unknown-linux-musl --release -p polar-c-api
+      - name: Build aarch64 dynamic lib
+        run: |
+          rustup target add aarch64-unknown-linux-gnu
+          RUSTFLAGS="-C target-feature=-crt-static" ./cross build --target aarch64-unknown-linux-gnu --release -p polar-c-api
       - name: Rename static lib
         run: mv target/release/libpolar.a target/libpolar-${{runner.os}}.a
       - name: Rename x86_64 static lib
         run: mv target/x86_64-unknown-linux-musl/release/libpolar.a target/libpolar-musl-x86_64.a
       - name: Rename aarch64 static lib
         run: mv target/aarch64-unknown-linux-musl/release/libpolar.a target/libpolar-musl-aarch64.a
+      - name: Rename x86_64 dynamic lib
+        run: mv target/release/libpolar.so target/libpolar-x86_64.so
+      - name: Rename aarch64 dynamic lib
+        run: mv target/aarch64-unknown-linux-gnu/release/libpolar.so target/libpolar-aarch64.so
       - uses: actions/upload-artifact@v2
         with:
           name: oso_library
-          path: target/release/libpolar.so
+          path: |
+            target/libpolar-x86_64.so
+            target/libpolar-aarch64.so
       - uses: actions/upload-artifact@v2
         with:
           name: oso_library
@@ -252,7 +263,7 @@ jobs:
       - name: Copy libraries into resources.
         run: |
           mkdir -p languages/java/oso/src/main/resources/linux
-          cp -r oso_library/libpolar.so languages/java/oso/src/main/resources/linux/
+          cp -r oso_library/libpolar-x86_64.so languages/java/oso/src/main/resources/linux/libpolar.so
           mkdir -p languages/java/oso/src/main/resources/macos
           cp -r oso_library/libpolar-macOS-fat.dylib languages/java/oso/src/main/resources/macos/libpolar.dylib
           mkdir -p languages/java/oso/src/main/resources/win
@@ -292,7 +303,8 @@ jobs:
       - name: Copy libraries into resources.
         run: |
           mkdir -p languages/ruby/ext/oso-oso/lib
-          cp -r oso_library/libpolar.so languages/ruby/ext/oso-oso/lib/
+          cp -r oso_library/libpolar-x86_64.so languages/ruby/ext/oso-oso/lib/
+          cp -r oso_library/libpolar-aarch64.so languages/ruby/ext/oso-oso/lib/
           cp -r oso_library/libpolar-macOS-fat.dylib languages/ruby/ext/oso-oso/lib/libpolar.dylib
           cp -r oso_library/polar.dll languages/ruby/ext/oso-oso/lib/
       - name: Test
