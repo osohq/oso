@@ -32,7 +32,7 @@ Gem::Specification.new do |spec|
 
   # Development dependencies
   spec.add_development_dependency 'activerecord'
-  spec.add_development_dependency 'pry-byebug', '~> 3.9.0'
+  spec.add_development_dependency 'pry-byebug', '~> 3.10.1'
   spec.add_development_dependency 'rake', '~> 12.0'
   spec.add_development_dependency 'rspec', '~> 3.0'
   spec.add_development_dependency 'rubocop', '~> 0.89.1'
