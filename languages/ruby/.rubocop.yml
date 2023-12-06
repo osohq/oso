@@ -5,6 +5,7 @@ AllCops:
     - "bin/oso"
     - "vendor/**/*"
   NewCops: enable
+  SuggestExtensions: false
 
 Naming/FileName:
   Exclude:
