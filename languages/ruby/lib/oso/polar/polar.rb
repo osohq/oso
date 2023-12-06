@@ -153,14 +153,11 @@ module Oso
 
       # Query for a Polar predicate or string.
       #
-      # @overload query(query)
-      #   @param query [String]
-      #   @return [Enumerator] of resulting bindings
-      #   @raise [Error] if the FFI call raises one.
-      # @overload query(query)
-      #   @param query [Predicate]
-      #   @return [Enumerator] of resulting bindings
-      #   @raise [Error] if the FFI call raises one.
+      # @param query [String, Predicate]
+      # @param host [Host]
+      # @param bindings [Hash]
+      # @return [Enumerator] of resulting bindings
+      # @raise [Error] if the FFI call raises one.
       def query(query, host: self.host.dup, bindings: {})
         case query
         when String
