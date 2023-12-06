@@ -84,7 +84,7 @@ jobs:
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v2
         with:
-          hugo-version: '0.79.1'
+          hugo-version: "0.79.1"
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Build Hugo docs
         env:
@@ -171,7 +171,7 @@ jobs:
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v2
         with:
-          hugo-version: '0.79.1'
+          hugo-version: "0.79.1"
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Build Hugo docs
         env:
