@@ -53,7 +53,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: 1.69.0
           override: true
       - name: Build release libraries
         run: cargo build --release -p polar-c-api
@@ -106,7 +106,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: 1.69.0
           override: true
       - name: Build release library
         run: cargo build --release -p polar-c-api
@@ -166,7 +166,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: 1.69.0
           override: true
       - name: Build release library
         run: cargo build --release -p polar-c-api
@@ -438,7 +438,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: 1.69.0
           override: true
       - name: Add WebAssembly target
         run: rustup target add wasm32-unknown-unknown
@@ -812,7 +812,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: 1.69.0
           override: true
       - name: Use Go 1.14
         uses: actions/setup-go@v2
