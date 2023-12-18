@@ -1,3 +1,7 @@
+# Deprecated
+
+We have deprecated the legacy Oso open source library. We have plans for the next open source release and we’re looking forward to getting feedback from the community leading up to that point (please reach out to us in the Slack #help channel). In the meantime, if you’re happy using the Oso open source library now, nothing needs to change – i.e., we are not end-of-lifing (EOL) the library and we’ll continue to provide support and critical bug fixes. More context: [here](https://www.osohq.com/docs/oss/getting-started/deprecation.html).
+
 # Oso
 
 [![Development][badge-ci]][badge-ci-link]
@@ -15,6 +19,7 @@
 Oso is a batteries-included framework for building authorization in your application.
 
 With Oso, you can:
+
 - **Model**: Set up common permissions patterns like role-based access control (RBAC) and relationships using Oso’s built-in primitives. Extend them however you need with Oso’s declarative policy language, Polar.
 - **Filter**: Go beyond yes/no authorization questions. Implement authorization over collections too - e.g., “Show me only the records that Juno can see.”
 - **Test**: Write unit tests over your authorization logic now that you have a single interface for it. Use the Oso debugger or REPL to track down unexpected behavior.
