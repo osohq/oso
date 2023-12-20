@@ -8,9 +8,9 @@ description: >-
 draft: true
 ---
 
-## `oso` NEW_VERSION
+## `RELEASED_PACKAGE_1` NEW_VERSION
 
-### Core
+### LANGUAGE (e.g., 'Core' or 'Python' or 'Node.js')
 
 #### Breaking changes
 
@@ -37,6 +37,6 @@ Link to [relevant documentation section]().
 
 #### Other bugs & improvements
 
-- Thank you to [`FinnRG`](https://github.com/FinnRG) and
-  [`onalante-msft`](https://github.com/onalante-msft) for updating dependencies
-  across the core, the C API crate, and the Rust language library.
+- Bulleted list
+- Of smaller improvements
+- Potentially with doc [links]().
