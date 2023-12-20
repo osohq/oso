@@ -329,7 +329,7 @@ jobs:
           rm languages/python/oso/README.md
           cp README.md languages/python/oso/README.md
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.11.2
+        uses: pypa/cibuildwheel@v2.16.2
         env:
           # Skip Python 2.7 and Python 3.5
           CIBW_SKIP: "cp27-* cp35-* pp27-*"
@@ -364,7 +364,7 @@ jobs:
           rm languages/python/oso/README.md
           cp README.md languages/python/oso/README.md
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.11.2
+        uses: pypa/cibuildwheel@v2.16.2
         env:
           # Skip Python 2.7 and Python 3.5
           CIBW_SKIP: "cp27-* cp35-* pp27-*"
@@ -401,7 +401,7 @@ jobs:
           rm languages/python/oso/README.md
           cp README.md languages/python/oso/README.md
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.11.2
+        uses: pypa/cibuildwheel@v2.16.2
         env:
           # Skip Python 2.7 and Python 3.5
           CIBW_SKIP: "cp27-* cp35-* pp27-*"
