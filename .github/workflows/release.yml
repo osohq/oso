@@ -280,7 +280,7 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-          ruby-version: '3.0'
+          ruby-version: '2.7'
           working-directory: "languages/ruby"
       - name: Set version env
         id: version
@@ -801,11 +801,11 @@ jobs:
         uses: actions/setup-python@v1
         with:
           python-version: "3.7"
-      - name: Use Ruby 3.0
+      - name: Use Ruby 2.7
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-          ruby-version: '3.0'
+          ruby-version: '2.7'
           working-directory: "docs/examples/quickstart/ruby"
       - name: Use Node.js 12
         uses: actions/setup-node@v1
