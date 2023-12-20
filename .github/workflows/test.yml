@@ -57,7 +57,7 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-          ruby-version: 2.4
+          ruby-version: '3.0'
           working-directory: "languages/ruby"
       - name: Lint Ruby code
         working-directory: "languages/ruby"
@@ -214,7 +214,7 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-          ruby-version: 2.4
+          ruby-version: '3.0'
           working-directory: "languages/ruby"
       - name: Test ruby
         run: make ruby-test
@@ -350,7 +350,7 @@ jobs:
       - name: Install Ruby + gems
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 2.4
+          ruby-version: '3.0'
           bundler-cache: true
       - name: Use Node.js 18
         uses: actions/setup-node@v3
