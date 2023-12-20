@@ -36,7 +36,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rake', '~> 12.0'
   spec.add_development_dependency 'rspec', '~> 3.0'
   spec.add_development_dependency 'rubocop', '~> 0.89.1'
-  spec.add_development_dependency 'solargraph', '~> 0.39.14'
+  spec.add_development_dependency 'solargraph', '~> 0.40.0'
   spec.add_development_dependency 'sqlite3'
   spec.add_development_dependency 'yard', '~> 0.9.25'
 end
