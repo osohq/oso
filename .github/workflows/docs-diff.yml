@@ -135,7 +135,7 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-          ruby-version: "2.4"
+          ruby-version: "2.7"
           working-directory: "languages/ruby"
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Install yard

@@ -8,7 +8,12 @@ Gem::Specification.new do |spec|
   spec.authors       = ['Oso Security, Inc.']
   spec.email         = ['support@osohq.com']
   spec.licenses      = ['Apache-2.0']
-  spec.summary       = 'Oso authorization library.'
+  spec.summary       = 'We have deprecated the legacy Oso open source library. We have plans for the next open ' \
+                       "source release and we're looking forward to getting feedback from the community leading up " \
+                       'to that point (please reach out to us in the Slack #help channel). In the meantime, if ' \
+                       "you're happy using the Oso open source library now, nothing needs to change – i.e., we are " \
+                       "not end-of-lifing (EOL) the library and we'll continue to provide support and critical bug " \
+                       'fixes. More context: [here](https://www.osohq.com/docs/oss/getting-started/deprecation.html).'
   spec.homepage      = 'https://www.osohq.com/'
 
   spec.required_ruby_version = Gem::Requirement.new('>= 2.6.10')
