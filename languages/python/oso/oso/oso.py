@@ -143,6 +143,25 @@ class Oso(Polar):
         if not self.query_rule_once("allow_request", actor, request):
             raise self.forbidden_error()
 
+    def authorized_roles(
+        self,
+        actor: _Actor,
+        resource: _Resource,
+    ) -> Set[Any]:
+        """Determine the roles ``actor`` has on ``resource``.
+
+        Collects all roles of the actor in the Polar policy for the given
+        combination of actor and resource.
+
+        :param actor: The actor for whom to collect roles.
+
+        :param resource: The resource being accessed.
+
+        :return: A set containing all assigned roles.
+        """
+        results = self.query_rule("has_role", actor, Variable("role"), resource)
+        return {result.get("bindings").get("role") for result in results}
+
     def authorized_actions(
         self, actor: _Actor, resource: _Resource, allow_wildcard: bool = False
     ) -> Set[Any]:
