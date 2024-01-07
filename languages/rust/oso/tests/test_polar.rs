@@ -119,7 +119,7 @@ fn test_data_conversions_polar_values() -> oso::Result<()> {
     // TODO (dhatch): Type handling: Would be great to be able to get each index
     // out here dynamically, the same way we can with result set.
     if let PolarValue::List(x_vec) = v_x {
-        assert_eq!(i64::from_polar(x_vec.get(0).unwrap().to_owned())?, 1);
+        assert_eq!(i64::from_polar(x_vec.first().unwrap().to_owned())?, 1);
         assert_eq!(
             String::from_polar(x_vec.get(1).unwrap().to_owned())?,
             String::from("two")
@@ -327,8 +327,7 @@ fn test_basic_queries() {
     let results = oso.query("f(1)");
 
     assert_eq!(results.len(), 1);
-    assert!(results
-        .get(0)
+    assert!(results.first()
         .map(|r| r.keys().next().is_none())
         .unwrap_or_default());
 }
