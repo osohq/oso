@@ -327,7 +327,8 @@ fn test_basic_queries() {
     let results = oso.query("f(1)");
 
     assert_eq!(results.len(), 1);
-    assert!(results.first()
+    assert!(results
+        .first()
         .map(|r| r.keys().next().is_none())
         .unwrap_or_default());
 }
