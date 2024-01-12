@@ -62,14 +62,14 @@ jobs:
         run: |
           gh release download --repo cross-rs/cross --pattern 'cross-x86_64-unknown-linux-gnu\.tar\.gz'
           tar -xzvf cross-x86_64-unknown-linux-gnu.tar.gz
-      - name: Build aarch64 release musl library
-        run: |
-          rustup target add aarch64-unknown-linux-musl
-          RUSTFLAGS="-C target-feature=-crt-static" ./cross build --target aarch64-unknown-linux-musl --release -p polar-c-api
       - name: Build aarch64 dynamic lib
         run: |
           rustup target add aarch64-unknown-linux-gnu
           RUSTFLAGS="-C target-feature=-crt-static" ./cross build --target aarch64-unknown-linux-gnu --release -p polar-c-api
+      - name: Build aarch64 release musl library
+        run: |
+          rustup target add aarch64-unknown-linux-musl
+          RUSTFLAGS="-C target-feature=-crt-static" ./cross build --target aarch64-unknown-linux-musl --release -p polar-c-api
       - name: Build x86_64 release libraries
         run: cargo build --release -p polar-c-api
       - name: Build x86_64 release musl library
