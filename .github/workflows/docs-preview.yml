@@ -31,7 +31,6 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-          ruby-version: '2.7'
           working-directory: "languages/ruby"
       - name: Install yard
         run: gem install yard
@@ -61,7 +60,7 @@ jobs:
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v2
         with:
-          hugo-version: '0.79.1'
+          hugo-version: "0.79.1"
       - name: Get branch name (branch)
         if: github.event_name != 'pull_request'
         shell: bash

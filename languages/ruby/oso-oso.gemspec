@@ -16,7 +16,7 @@ Gem::Specification.new do |spec|
                        'fixes. More context: [here](https://www.osohq.com/docs/oss/getting-started/deprecation.html).'
   spec.homepage      = 'https://www.osohq.com/'
 
-  spec.required_ruby_version = Gem::Requirement.new('>= 2.4.0')
+  spec.required_ruby_version = Gem::Requirement.new('>= 2.6.10')
 
   spec.metadata['homepage_uri'] = spec.homepage
   spec.metadata['source_code_uri'] = 'https://github.com/osohq/oso'
@@ -37,11 +37,11 @@ Gem::Specification.new do |spec|
 
   # Development dependencies
   spec.add_development_dependency 'activerecord'
-  spec.add_development_dependency 'pry-byebug', '~> 3.9.0'
+  spec.add_development_dependency 'pry-byebug', '~> 3.10.1'
   spec.add_development_dependency 'rake', '~> 12.0'
   spec.add_development_dependency 'rspec', '~> 3.0'
-  spec.add_development_dependency 'rubocop', '~> 0.89.1'
-  spec.add_development_dependency 'solargraph', '~> 0.40.0'
+  spec.add_development_dependency 'rubocop', '~> 1.58.0'
+  spec.add_development_dependency 'solargraph', '~> 0.49.0'
   spec.add_development_dependency 'sqlite3'
   spec.add_development_dependency 'yard', '~> 0.9.25'
 end

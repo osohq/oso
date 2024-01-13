@@ -108,7 +108,7 @@ jobs:
       - name: Set up ruby ${{ matrix.ruby-version }}
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "2.7"
+          ruby-version: "3.2"
           working-directory: "languages/ruby"
       - run: gem push oso-oso-${{ github.event.inputs.version }}.gem
         working-directory: "oso-ruby-${{ github.event.inputs.version }}"

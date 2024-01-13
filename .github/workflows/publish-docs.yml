@@ -6,7 +6,7 @@ on:
         description: "docs s3 path (docs.oso.dev or docs-preview.oso.dev)"
       oso_version:
         description: "oso release to build docs for"
-        default: "0.27.2" # oso_version
+        default: "0.27.3" # oso_version
       flask_oso_version:
         description: "flask oso release to build docs for"
         default: "0.27.1" # flask_oso_version
@@ -49,7 +49,6 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-          ruby-version: '2.7'
           working-directory: "languages/ruby"
       - name: Install yard
         run: gem install yard

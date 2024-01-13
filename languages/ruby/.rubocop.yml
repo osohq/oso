@@ -1,10 +1,50 @@
 AllCops:
-  TargetRubyVersion: 2.4
+  TargetRubyVersion: 2.6
   Exclude:
     - "**/*~"
     - "bin/oso"
     - "vendor/**/*"
   NewCops: enable
+  SuggestExtensions: false
+
 Naming/FileName:
   Exclude:
     - "lib/oso-oso.rb"
+
+Layout/EmptyLineBetweenDefs:
+  Enabled: false
+Layout/LineContinuationSpacing:
+  Enabled: false
+
+Gemspec/RequireMFA:
+  Enabled: false
+Gemspec/DevelopmentDependencies:
+  Enabled: false
+
+Lint/ConstantDefinitionInBlock:
+  Enabled: false
+Lint/SymbolConversion:
+  Enabled: false
+Lint/NonAtomicFileOperation:
+  Enabled: false
+Lint/EmptyBlock:
+  Enabled: false
+Lint/AmbiguousOperatorPrecedence:
+  Enabled: false
+
+Style/FetchEnvVar:
+  Enabled: false
+Style/RedundantCurrentDirectoryInPath:
+  Enabled: false
+Style/QuotedSymbols:
+  Enabled: false
+Style/RedundantConstantBase:
+  Enabled: false
+Style/RedundantInitialize:
+  Enabled: false
+Style/CommentAnnotation:
+  Enabled: false
+Style/FileRead:
+  Enabled: false
+Style/HashConversion:
+  Enabled: false
