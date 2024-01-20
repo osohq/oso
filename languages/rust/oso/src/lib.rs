@@ -74,7 +74,7 @@
 //!
 
 #[macro_use]
-pub mod macros;
+mod macros;
 
 pub(crate) mod builtins;
 pub mod errors;
