@@ -1,3 +1,4 @@
+from functools import reduce
 from typing import Tuple, Union
 
 from django.apps import apps
@@ -138,6 +139,8 @@ class FilterBuilder:
             self.in_expr(expr)
         elif expr.operator == "Not":
             self.not_expr(expr)
+        elif expr.operator == "Or":
+            self.or_expr(expr)
         else:
             raise UnsupportedError(f"Unsupported partial expression: {expr}")
         return self
@@ -146,6 +149,18 @@ class FilterBuilder:
         assert expr.operator == "And"
         for arg in expr.args:
             self.translate_expr(arg)
+
+    def or_expr(self, expr: Expression):
+        assert expr.operator == "Or"
+        or_filters = None
+        for arg in expr.args:
+            fb = FilterBuilder(self.model, parent=self.parent)
+            fb.translate_expr(arg)
+            exp_filters = fb.finish()
+            or_filters = (
+                or_filters | exp_filters if or_filters is not None else exp_filters
+            )
+        self.add_filter(or_filters)
 
     def compare_expr(self, expr: Expression):
         assert expr.operator in COMPARISONS
