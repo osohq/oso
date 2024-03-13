@@ -113,4 +113,4 @@ Our program has deduced the grandfather of Asclepius!
 
 Most Polar rules you'll see are in this `statement if condition;` form. That's where we'll wrap up this guide—to dive deeper into Polar syntax, we have a Polar **[Syntax Guide](reference/polar/polar-syntax)**.
 
-We haven’t covered how to use Polar to express particular authorization policies. Many Polar examples can be found in our [authorization guides](https://docs.osohq.com/guides.html).
+We haven’t covered how to use Polar to express particular authorization policies. Many Polar examples can be found in our [authorization guides](https://www.osohq.com/docs/oss/guides.html).

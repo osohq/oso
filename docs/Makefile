@@ -74,7 +74,7 @@ build: install api_docs clean
 
 build-prod: install api_docs
 	cd themes/oso-webpack && npm run-script build-prod
-	HUGO_ENV=production hugo -b https://docs.osohq.com/
+	HUGO_ENV=production hugo -b https://www.osohq.com/docs/oss/
 
 # Look for the s3deploy binary: https://github.com/bep/s3deploy
 S3DEPLOY := $(shell command -v s3deploy 2> /dev/null)

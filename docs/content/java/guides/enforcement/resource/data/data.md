@@ -5,13 +5,13 @@ forbiddenError: ForbiddenException
 notFoundError: NotFoundException
 # TODO: change these to relative links
 authorizeLink: |-
-  [`Oso.authorize`](https://docs.osohq.com/java/reference/api/com/osohq/oso/Oso.html#authorize(java.lang.Object,java.lang.Object,java.lang.Object,boolean))
+  [`Oso.authorize`](https://www.osohq.com/docs/oss/java/reference/api/com/osohq/oso/Oso.html#authorize(java.lang.Object,java.lang.Object,java.lang.Object,boolean))
 forbiddenErrorLink: |-
-  [`ForbiddenException`](https://docs.osohq.com/java/reference/api/com/osohq/oso/Exceptions.ForbiddenException.html)
+  [`ForbiddenException`](https://www.osohq.com/docs/oss/java/reference/api/com/osohq/oso/Exceptions.ForbiddenException.html)
 notFoundErrorLink: |-
-  [`NotFoundException`](https://docs.osohq.com/java/reference/api/com/osohq/oso/Exceptions.NotFoundException.html)
+  [`NotFoundException`](https://www.osohq.com/docs/oss/java/reference/api/com/osohq/oso/Exceptions.NotFoundException.html)
 authorizationErrorLink: |-
-  an [`AuthorizationException`](https://docs.osohq.com/java/reference/api/com/osohq/oso/Exceptions.AuthorizationException.html)
+  an [`AuthorizationException`](https://www.osohq.com/docs/oss/java/reference/api/com/osohq/oso/Exceptions.AuthorizationException.html)
 exampleCall: |-
     ```java
     oso.authorize(user, "approve", expense);

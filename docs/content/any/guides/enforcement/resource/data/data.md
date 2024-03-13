@@ -5,13 +5,13 @@ forbiddenError: ForbiddenError
 notFoundError: NotFoundError
 # TODO: change these to relative links
 authorizeLink: |-
-  [`Oso.authorize`](https://docs.osohq.com/python/reference/api/index.html#oso.Oso.authorize)
+  [`Oso.authorize`](https://www.osohq.com/docs/oss/python/reference/api/index.html#oso.Oso.authorize)
 forbiddenErrorLink: |-
-  [`ForbiddenError`](https://docs.osohq.com/python/reference/api/index.html#oso.exceptions.ForbiddenError)
+  [`ForbiddenError`](https://www.osohq.com/docs/oss/python/reference/api/index.html#oso.exceptions.ForbiddenError)
 notFoundErrorLink: |-
-  [`NotFoundError`](https://docs.osohq.com/python/reference/api/index.html#oso.exceptions.NotFoundError)
+  [`NotFoundError`](https://www.osohq.com/docs/oss/python/reference/api/index.html#oso.exceptions.NotFoundError)
 authorizationErrorLink: |-
-  an [`AuthorizationError`](https://docs.osohq.com/python/reference/api/index.html#oso.exceptions.AuthorizationError)
+  an [`AuthorizationError`](https://www.osohq.com/docs/oss/python/reference/api/index.html#oso.exceptions.AuthorizationError)
 exampleCall: |-
     ```python
     oso.authorize(user, "approve", expense)

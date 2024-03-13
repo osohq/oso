@@ -1,6 +1,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex">
     <title>{{ block "title" . }}
         {{- if .Params.metaTitle -}}
         {{- replace .Params.metaTitle "$LANG" .Page.Language.LanguageName }} - {{ .Site.Title -}}
@@ -32,7 +33,7 @@
     <link href="{{ $.Site.BaseURL}}all.min.css" rel="stylesheet"> <!--load all styles -->
 
     <meta id="facet-language" name="facet-language" content="{{ .Language.Lang }}" />
-    {{- if eq $.Site.BaseURL "https://docs.osohq.com/"}}
+    {{- if eq $.Site.BaseURL "https://www.osohq.com/docs/oss/"}}
     <meta id="search-index" name="search-index" content="prod_OSODOCS" />
     {{ else }}
     <meta id="search-index" name="search-index" content="preview_OSODOCS" />
@@ -60,7 +61,7 @@
     {{ end }}
     {{ end }}
 
-    <script defer data-domain="osohq.com,docs.osohq.com" src="https://plausible-proxy.analytics.osohq.com/js/script.outbound-links.js"></script>
+    <script defer data-domain="osohq.com,www.osohq.com/docs/oss" src="https://plausible-proxy.analytics.osohq.com/js/script.outbound-links.js"></script>
     <script>
       window.koalaSettings = {
           host: 'https://koala-proxy.analytics.osohq.com'

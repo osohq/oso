@@ -202,7 +202,7 @@ func ProcessRecordWeight(vals map[string]interface{}) int64 {
 		// We don't want to index the homepage
 		return 0
 	case "taxonomy":
-		// this is a taxonomy page, like https://docs.osohq.com/node/tags.html, so we ignore it
+		// this is a taxonomy page, like https://www.osohq.com/docs/oss/node/tags.html, so we ignore it
 		return 0
 	case "page":
 		return 10

@@ -47,7 +47,6 @@
     "jest": "^27.0.4",
     "live-server": "^1.2.1",
     "reflect-metadata": "^0.1.13",
-    "sqlite3": "^5.0.2",
     "temp-write": "^4.0.0",
     "ts-jest": "^27.0.3",
     "ts-node": "^8.10.2",

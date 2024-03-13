@@ -1,4 +1,4 @@
-baseURL = "https://docs.osohq.com/"
+baseURL = "https://www.osohq.com/docs/oss/"
 languageCode = "en-us"
 title = "Oso Library Documentation"
 theme = ["oso-tailwind", "oso-webpack"]

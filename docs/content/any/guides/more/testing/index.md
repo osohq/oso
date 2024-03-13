@@ -152,6 +152,6 @@ def test_combinations_of_role_and_action(oso):
 
 ## What's Next
 
-- Check out our [How-To Guides](https://docs.osohq.com/guides.html) for more on using Polar
+- Check out our [How-To Guides](https://www.osohq.com/docs/oss/guides.html) for more on using Polar
 policies for authorization.
-- Check out the [Polar reference](https://docs.osohq.com/reference/polar.html) for more on the Polar language and syntax.
+- Check out the [Polar reference](https://www.osohq.com/docs/oss/reference/polar.html) for more on the Polar language and syntax.
