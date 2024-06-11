@@ -9,6 +9,7 @@ We must detect all entities properly to apply authorization.
 import sqlalchemy
 from sqlalchemy import inspect
 from sqlalchemy.orm.util import AliasedClass, AliasedInsp
+
 from .compat import USING_SQLAlchemy_v1_3, USING_SQLAlchemy_v2_0
 
 

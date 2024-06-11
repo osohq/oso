@@ -2,9 +2,9 @@ import pytest
 from sqlalchemy import Column, Integer
 from sqlalchemy.orm import Session
 
+from sqlalchemy_oso.compat import USING_SQLAlchemy_v2_0
 from sqlalchemy_oso.flask import AuthorizedSQLAlchemy
 from sqlalchemy_oso.session import Permissions
-from sqlalchemy_oso.compat import USING_SQLAlchemy_v2_0
 
 from .models import ModelBase, Post
 
@@ -70,7 +70,6 @@ def test_authorized_sqlalchemy(ctx, oso, sqlalchemy, post_fixtures):
     assert authorized_session.query(Post).count() == 1
 
     assert sqlalchemy.session.query(Post).count() == 1
-
 
 
 @pytest.mark.skipif(
