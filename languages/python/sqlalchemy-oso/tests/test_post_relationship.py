@@ -7,7 +7,7 @@ https://www.notion.so/osohq/Relationships-621b884edbc6423f93d29e6066e58d16.
 import pytest
 
 from sqlalchemy_oso.auth import authorize_model
-from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
+from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3, USING_SQLAlchemy_v2_0
 
 from .conftest import print_query
 from .models import Category, Post, Tag, User
@@ -621,13 +621,18 @@ def test_empty_constraints_in(session, oso, tag_nested_many_many_test_fixture):
         # SQLAlchemy 1.4.
         true_clause = " AND 1 = 1"
 
+    if USING_SQLAlchemy_v2_0:
+        tables = "tags, post_tags"
+    else:
+        tables = "post_tags, tags"
+
     assert str(posts) == (
         "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS"
         + " posts_title, posts.access_level AS posts_access_level,"
         + " posts.created_by_id AS posts_created_by_id, posts.needs_moderation AS posts_needs_moderation"
         + " \nFROM posts"
         + " \nWHERE EXISTS (SELECT 1"
-        + " \nFROM post_tags, tags"
+        + f" \nFROM {tables}"
         + f" \nWHERE posts.id = post_tags.post_id AND tags.name = post_tags.tag_id{true_clause})"
     )
     posts = posts.all()
@@ -649,13 +654,18 @@ def test_in_with_constraints_but_no_matching_objects(
     posts = session.query(Post).filter(
         authorize_model(oso, user, "read", session, Post)
     )
+
+    if USING_SQLAlchemy_v2_0:
+        tables = "tags, post_tags"
+    else:
+        tables = "post_tags, tags"
     assert str(posts) == (
         "SELECT posts.id AS posts_id, posts.contents AS posts_contents, posts.title AS posts_title,"
         + " posts.access_level AS posts_access_level,"
         + " posts.created_by_id AS posts_created_by_id, posts.needs_moderation AS posts_needs_moderation"
         + " \nFROM posts"
         + " \nWHERE EXISTS (SELECT 1"
-        + " \nFROM post_tags, tags"
+        + f" \nFROM {tables}"
         + " \nWHERE posts.id = post_tags.post_id AND tags.name = post_tags.tag_id AND tags.name = ?)"
     )
     posts = posts.all()

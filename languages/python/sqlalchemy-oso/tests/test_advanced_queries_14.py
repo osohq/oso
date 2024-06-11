@@ -26,7 +26,7 @@ from sqlalchemy.orm import (
     with_loader_criteria,
 )
 
-from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
+from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3, USING_SQLAlchemy_v2_0
 from sqlalchemy_oso.session import AuthorizedSession
 from sqlalchemy_oso.sqlalchemy_utils import (
     all_entities_in_statement,
@@ -129,6 +129,9 @@ def test_get_column_entities(stmt, o):
             marks=pytest.mark.xfail(reason="wildcard doesn't work"),
         ),
     ),
+)
+@pytest.mark.skipif(
+    USING_SQLAlchemy_v2_0, reason="flask sqlalchemy does not support 2.0"
 )
 def test_get_joinedload_entities(stmt, o):
     assert set(map(to_class, get_joinedload_entities(stmt))) == o
