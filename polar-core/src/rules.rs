@@ -122,7 +122,7 @@ impl RuleTypes {
     pub fn add(&mut self, rule_type: Rule) {
         let name = rule_type.name.clone();
         // get rule types with this rule name
-        let rule_types = self.0.entry(name).or_insert_with(Vec::new);
+        let rule_types = self.0.entry(name).or_default();
         rule_types.push(rule_type);
     }
 
@@ -161,7 +161,7 @@ impl RuleIndex {
                         None
                     }
                 })
-                .or_insert_with(RuleIndex::default)
+                .or_default()
                 .index_rule(rule_id, params, i + 1);
         } else {
             self.rules.insert(rule_id);
@@ -180,8 +180,8 @@ impl RuleIndex {
                 let mut ruleset = self
                     .index
                     .get(&Some(arg.clone()))
-                    .map(|index| filter_next_args(index))
-                    .unwrap_or_else(RuleSet::default);
+                    .map(filter_next_args)
+                    .unwrap_or_default();
 
                 // Extend for a variable parameter.
                 if let Some(index) = self.index.get(&None) {
@@ -193,7 +193,7 @@ impl RuleIndex {
                 self.index.values().fold(
                     RuleSet::default(),
                     |mut result: RuleSet, index: &RuleIndex| {
-                        result.extend(filter_next_args(index).into_iter());
+                        result.extend(filter_next_args(index));
                         result
                     },
                 )

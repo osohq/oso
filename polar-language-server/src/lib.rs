@@ -604,7 +604,7 @@ mod tests {
             assert_eq!(params.uri, doc.uri);
             assert_eq!(params.version.unwrap(), doc.version);
             assert_eq!(params.diagnostics.len(), 1, "{}", doc.uri);
-            let diagnostic = params.diagnostics.get(0).unwrap();
+            let diagnostic = params.diagnostics.first().unwrap();
             assert_eq!(
                 diagnostic.message,
                 "hit the end of the file unexpectedly. Did you forget a semi-colon"
@@ -629,7 +629,7 @@ mod tests {
             assert_eq!(params.uri, doc.uri);
             assert_eq!(params.version.unwrap(), doc.version);
             assert_eq!(params.diagnostics.len(), 1, "{}", doc.uri);
-            let diagnostic = params.diagnostics.get(0).unwrap();
+            let diagnostic = params.diagnostics.first().unwrap();
             let expected = diagnostic
                 .message
                 .starts_with("Your policy does not contain an allow rule");
@@ -892,7 +892,7 @@ mod tests {
         // `load_documents()` API performs no filtering.
         let polar_diagnostics = pls.load_documents();
         assert_eq!(polar_diagnostics.len(), 2, "{:?}", polar_diagnostics);
-        let unknown_specializer = polar_diagnostics.get(0).unwrap();
+        let unknown_specializer = polar_diagnostics.first().unwrap();
         let expected_message = "Unknown specializer String at line 3, column 41 of file file:///whatever.polar:\n\t003:             has_permission(_: Actor, _: String, _: Resource);\n\t                                             ^\n";
         assert_eq!(unknown_specializer.to_string(), expected_message);
         let unregistered_class = polar_diagnostics.get(1).unwrap();
@@ -918,7 +918,7 @@ mod tests {
         // `load_documents()` API performs no filtering.
         let polar_diagnostics = pls.load_documents();
         assert_eq!(polar_diagnostics.len(), 2, "{:?}", polar_diagnostics);
-        let unknown_specializer = polar_diagnostics.get(0).unwrap();
+        let unknown_specializer = polar_diagnostics.first().unwrap();
         let expected_message = "Unknown specializer B at line 4, column 18 of file file:///whatever.polar:\n\t004:             f(_: B);\n\t                      ^\n";
         assert_eq!(unknown_specializer.to_string(), expected_message);
         let unregistered_constant = polar_diagnostics.get(1).unwrap();
@@ -939,7 +939,7 @@ mod tests {
         // `load_documents()` API performs no filtering.
         let polar_diagnostics = pls.load_documents();
         assert_eq!(polar_diagnostics.len(), 1, "{:?}", polar_diagnostics);
-        let singleton_variable = polar_diagnostics.get(0).unwrap();
+        let singleton_variable = polar_diagnostics.first().unwrap();
         assert!(singleton_variable
             .to_string()
             .starts_with("Singleton variable a is unused or undefined; try renaming to _a or _"));
@@ -963,7 +963,7 @@ mod tests {
         assert_eq!(params.uri, doc.uri);
         assert_eq!(params.version.unwrap(), doc.version);
         assert_eq!(params.diagnostics.len(), 1);
-        let diagnostic = params.diagnostics.get(0).unwrap();
+        let diagnostic = params.diagnostics.first().unwrap();
         assert_eq!(
             diagnostic.message,
             "debug is a reserved Polar word and cannot be used here"
@@ -989,7 +989,7 @@ mod tests {
         assert_eq!(params.uri, doc.uri);
         assert_eq!(params.version.unwrap(), doc.version);
         assert_eq!(params.diagnostics.len(), 1, "{:?}", params.diagnostics);
-        let undeclared_term = &params.diagnostics.get(0).unwrap().message;
+        let undeclared_term = &params.diagnostics.first().unwrap().message;
         assert!(
             undeclared_term.starts_with("Undeclared term \"read\""),
             "{}",
@@ -1016,7 +1016,7 @@ mod tests {
         assert_eq!(params.uri, doc2.uri);
         assert_eq!(params.version.unwrap(), doc2.version);
         assert_eq!(params.diagnostics.len(), 1, "{:?}", params.diagnostics);
-        let undeclared_term = &params.diagnostics.get(0).unwrap().message;
+        let undeclared_term = &params.diagnostics.first().unwrap().message;
         assert_eq!(
             undeclared_term,
             &format!("Problem loading file: A file with the same contents as {} named {} has already been loaded.", doc2.uri, doc1.uri),

@@ -1,3 +1,4 @@
+AArch
 ABAC
 AGPL
 APIs
@@ -19,6 +20,7 @@ DFA
 Dexec
 EMR
 EOF
+EOL
 EndsWith
 FFI
 ForbiddenError
@@ -121,6 +123,7 @@ changelog
 classpath
 cmp
 codebase
+codebases
 constructable
 coroutine
 customizations
@@ -148,6 +151,7 @@ favoriteAnimal
 fieldName
 filesystem
 filterRelation
+footguns
 forbiddenerror
 fromFieldName
 fromTypeName
@@ -175,6 +179,7 @@ lastLogin
 latencies
 lhs
 lifecycle
+lifing
 loadFile
 loadStr
 localhost

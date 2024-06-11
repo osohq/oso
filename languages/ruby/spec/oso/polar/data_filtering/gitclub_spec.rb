@@ -3,6 +3,7 @@
 require_relative './helpers'
 require 'sqlite3'
 require 'active_record'
+require 'oso/polar/data/adapter/active_record_adapter'
 DB_FILE = 'gitclub_test.db'
 
 RSpec.describe Oso::Oso do # rubocop:disable Metrics/BlockLength
