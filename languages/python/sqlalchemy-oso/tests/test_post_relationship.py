@@ -3,6 +3,7 @@
 Tests come from the relationship document & operations laid out there
 https://www.notion.so/osohq/Relationships-621b884edbc6423f93d29e6066e58d16.
 """
+
 import pytest
 
 from sqlalchemy_oso.auth import authorize_model
@@ -183,7 +184,7 @@ def tag_test_fixture(session):
 
     # HACK!
     objects = {}
-    for (name, local) in locals().items():
+    for name, local in locals().items():
         if name != "session" and name != "objects":
             session.add(local)
 
@@ -259,7 +260,7 @@ def tag_nested_test_fixture(session):
 
     # HACK!
     objects = {}
-    for (name, local) in locals().items():
+    for name, local in locals().items():
         if name != "session" and name != "objects":
             session.add(local)
 
@@ -357,7 +358,7 @@ def tag_nested_many_many_test_fixture(session):
 
     # HACK!
     objects = {}
-    for (name, local) in locals().items():
+    for name, local in locals().items():
         if name != "session" and name != "objects":
             session.add(local)
 

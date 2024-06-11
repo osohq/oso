@@ -1,4 +1,5 @@
 """SQLAlchemy session classes and factories for oso."""
+
 import logging
 from typing import Any, Callable, Dict, Optional, Type
 

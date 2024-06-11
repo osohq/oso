@@ -1,4 +1,5 @@
 """Test hooks & SQLAlchemy API integrations."""
+
 import pytest
 from sqlalchemy.orm import aliased, joinedload
 

@@ -3,6 +3,7 @@
 Keep us compatible with multiple SQLAlchemy versions by implementing wrappers
 when needed here.
 """
+
 import sqlalchemy
 from packaging.version import parse
 

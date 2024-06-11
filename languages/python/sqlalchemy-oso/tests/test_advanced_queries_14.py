@@ -134,7 +134,6 @@ def test_get_joinedload_entities(stmt, o):
     assert set(map(to_class, get_joinedload_entities(stmt))) == o
 
 
-
 def test_default_loader_strategies_all_entities_in_statement():
     """Test that all_entitites_in_statement finds default "joined" entities."""
     Base2 = declarative_base()

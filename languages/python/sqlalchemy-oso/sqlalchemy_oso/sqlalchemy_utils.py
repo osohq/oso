@@ -5,6 +5,7 @@ that is about to be executed.
 
 We must detect all entities properly to apply authorization.
 """
+
 import sqlalchemy
 from sqlalchemy import inspect
 from sqlalchemy.orm.util import AliasedClass, AliasedInsp
@@ -20,10 +21,12 @@ def to_class(entity):
     else:
         return entity
 
+
 if USING_SQLAlchemy_v1_3:
     # unsupported for <= 1.3
     def all_entities_in_statement(statement):
         raise NotImplementedError("Unsupported on SQLAlchemy < 1.4")
+
 else:
     if USING_SQLAlchemy_v2_0:
 
@@ -78,6 +81,7 @@ else:
                             entities.add(loadopt.path[-1].entity)
 
             return entities
+
     else:
         # Start POC code from @zzzeek (Mike Bayer)
         # TODO: Still needs to be generalized & support other options.
@@ -123,7 +127,10 @@ else:
                 elif hasattr(opt, "context"):
                     # these options are called Load
                     for key, loadopt in opt.context.items():
-                        if key[0] == "loader" and ("lazy", "joined") in loadopt.strategy:
+                        if (
+                            key[0] == "loader"
+                            and ("lazy", "joined") in loadopt.strategy
+                        ):
                             # the "path" is a tuple showing the entity/relationships
                             # being targeted
 
@@ -218,4 +225,3 @@ else:
                     default_entities.add(rel.mapper)
 
         return default_entities
-
