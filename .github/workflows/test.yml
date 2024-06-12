@@ -178,10 +178,10 @@ jobs:
           python-version: "3.7"
       - name: Test python
         run: make python-test
-      # - name: Test flask
-      #   run: make python-flask-test
-      # - name: Test django
-      #   run: make python-django-test
+      - name: Test flask
+        run: make python-flask-test
+      - name: Test django
+        run: make python-django-test
       - name: Test sqlalchemy
         run: make python-sqlalchemy-test
       - name: Lint Python code
