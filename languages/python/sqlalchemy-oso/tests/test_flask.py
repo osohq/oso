@@ -2,6 +2,7 @@ import pytest
 from sqlalchemy import Column, Integer
 from sqlalchemy.orm import Session
 
+from sqlalchemy_oso.compat import USING_SQLAlchemy_v2_0
 from sqlalchemy_oso.flask import AuthorizedSQLAlchemy
 from sqlalchemy_oso.session import Permissions
 
@@ -46,6 +47,9 @@ def sqlalchemy(flask_app, oso):
     return sqlalchemy
 
 
+@pytest.mark.skipif(
+    USING_SQLAlchemy_v2_0, reason="flask sqlalchemy does not support 2.0"
+)
 def test_authorized_sqlalchemy(ctx, oso, sqlalchemy, post_fixtures):
     global checked_permissions
     checked_permissions = {Post: "read"}
@@ -68,6 +72,9 @@ def test_authorized_sqlalchemy(ctx, oso, sqlalchemy, post_fixtures):
     assert sqlalchemy.session.query(Post).count() == 1
 
 
+@pytest.mark.skipif(
+    USING_SQLAlchemy_v2_0, reason="flask sqlalchemy does not support 2.0"
+)
 def test_flask_model(ctx, oso, sqlalchemy):
     class TestModel(sqlalchemy.Model):
         id = Column(Integer, primary_key=True)

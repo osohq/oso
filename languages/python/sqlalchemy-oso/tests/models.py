@@ -1,8 +1,18 @@
 from sqlalchemy import Boolean, Column, Enum, ForeignKey, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
+
+from sqlalchemy_oso.compat import USING_SQLAlchemy_v1_3
+
+if USING_SQLAlchemy_v1_3:
+    # mypy: ignore-errors
+    from sqlalchemy.ext.declarative import declarative_base
+else:
+    # mypy: ignore-errors
+    from sqlalchemy.orm import declarative_base
+
 from sqlalchemy.schema import Table
 
+# mypy: ignore-errors
 ModelBase = declarative_base(name="ModelBase")
 
 

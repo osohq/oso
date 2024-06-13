@@ -3,11 +3,13 @@
 Keep us compatible with multiple SQLAlchemy versions by implementing wrappers
 when needed here.
 """
+
 import sqlalchemy
 from packaging.version import parse
 
 version = parse(sqlalchemy.__version__)  # type: ignore
 USING_SQLAlchemy_v1_3 = version >= parse("1.3") and version < parse("1.4")
+USING_SQLAlchemy_v2_0 = version >= parse("2.0") and version < parse("3.0")
 
 
 def iterate_model_classes(base_or_registry):

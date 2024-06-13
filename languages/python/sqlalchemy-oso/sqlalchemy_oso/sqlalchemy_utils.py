@@ -5,9 +5,12 @@ that is about to be executed.
 
 We must detect all entities properly to apply authorization.
 """
+
 import sqlalchemy
 from sqlalchemy import inspect
 from sqlalchemy.orm.util import AliasedClass, AliasedInsp
+
+from .compat import USING_SQLAlchemy_v1_3, USING_SQLAlchemy_v2_0
 
 
 def to_class(entity):
@@ -20,7 +23,124 @@ def to_class(entity):
         return entity
 
 
-try:
+if USING_SQLAlchemy_v1_3:
+    # unsupported for <= 1.3
+    def all_entities_in_statement(statement):
+        raise NotImplementedError("Unsupported on SQLAlchemy < 1.4")
+
+else:
+    if USING_SQLAlchemy_v2_0:
+
+        # the structure we're dealing with is essentially:
+
+        # (path, strategy, options)
+        # where "path" indicates what it is we are loading,
+        # like (A, A.bs, B, B.cs, C)
+        # "strategy" is a tuple that keys to one of the loader strategies,
+        # some of them apply to relationships and others to column attributes
+        # then "options" is extra stuff like "innerjoin=True"
+        def get_joinedload_entities(stmt):
+            """Get extra entities that are loaded from a ``stmt`` due to joinedload
+            options specified in the statement options.
+
+            These entities will not be returned directly by the query, but will prepopulate
+            relationships in the returned data.
+
+            For example::
+
+                get_joinedload_entities(query(A).options(joinedload(A.bs))) == {A, B}
+            """
+            # there are two kinds of options that both represent the same information,
+            # just in different ways.  This is largely a product of legacy options
+            # that have things like strings, i.e. joinedload("addresses").  note we
+            # aren't covering that here, which is legacy form.  you can if you want
+            # raise an exception if you detect that form here.
+
+            entities = set()
+
+            for opt in stmt._with_options:
+                if hasattr(opt, "_to_bind"):
+                    # these options are called _UnboundLoad
+                    for b in opt._to_bind:
+                        if ("lazy", "joined") in b.strategy:
+                            # the "path" is a tuple showing the entity/relationships
+                            # being targeted
+
+                            # TODO check for wild card.
+                            # TODO: Check whether entity is a string.
+                            entities.add(b.path[-1].entity)
+                elif hasattr(opt, "context"):
+                    # these options are called Load
+                    for loadopt in opt.context:
+                        if ("lazy", "joined") in loadopt.strategy:
+                            # the "path" is a tuple showing the entity/relationships
+                            # being targeted
+
+                            # TODO: Check for of_type.
+                            # TODO: Check whether entity is a string, unsupported.
+                            # TODO check for wild card.
+                            entities.add(loadopt.path[-1].entity)
+
+            return entities
+
+    else:
+        # Start POC code from @zzzeek (Mike Bayer)
+        # TODO: Still needs to be generalized & support other options.
+
+        # the structure we're dealing with is essentially:
+
+        # (path, strategy, options)
+        # where "path" indicates what it is we are loading,
+        # like (A, A.bs, B, B.cs, C)
+        # "strategy" is a tuple that keys to one of the loader strategies,
+        # some of them apply to relationships and others to column attributes
+        # then "options" is extra stuff like "innerjoin=True"
+        def get_joinedload_entities(stmt):
+            """Get extra entities that are loaded from a ``stmt`` due to joinedload
+            options specified in the statement options.
+
+            These entities will not be returned directly by the query, but will prepopulate
+            relationships in the returned data.
+
+            For example::
+
+                get_joinedload_entities(query(A).options(joinedload(A.bs))) == {A, B}
+            """
+            # there are two kinds of options that both represent the same information,
+            # just in different ways.  This is largely a product of legacy options
+            # that have things like strings, i.e. joinedload("addresses").  note we
+            # aren't covering that here, which is legacy form.  you can if you want
+            # raise an exception if you detect that form here.
+
+            entities = set()
+
+            for opt in stmt._with_options:
+                if hasattr(opt, "_to_bind"):
+                    # these options are called _UnboundLoad
+                    for b in opt._to_bind:
+                        if ("lazy", "joined") in b.strategy:
+                            # the "path" is a tuple showing the entity/relationships
+                            # being targeted
+
+                            # TODO check for wild card.
+                            # TODO: Check whether entity is a string.
+                            entities.add(b.path[-1].entity)
+                elif hasattr(opt, "context"):
+                    # these options are called Load
+                    for key, loadopt in opt.context.items():
+                        if (
+                            key[0] == "loader"
+                            and ("lazy", "joined") in loadopt.strategy
+                        ):
+                            # the "path" is a tuple showing the entity/relationships
+                            # being targeted
+
+                            # TODO: Check for of_type.
+                            # TODO: Check whether entity is a string, unsupported.
+                            # TODO check for wild card.
+                            entities.add(key[1][-1].entity)
+
+            return entities
 
     def all_entities_in_statement(statement):
         """
@@ -106,63 +226,3 @@ try:
                     default_entities.add(rel.mapper)
 
         return default_entities
-
-    # Start POC code from @zzzeek (Mike Bayer)
-    # TODO: Still needs to be generalized & support other options.
-
-    # the structure we're dealing with is essentially:
-
-    # (path, strategy, options)
-    # where "path" indicates what it is we are loading,
-    # like (A, A.bs, B, B.cs, C)
-    # "strategy" is a tuple that keys to one of the loader strategies,
-    # some of them apply to relationships and others to column attributes
-    # then "options" is extra stuff like "innerjoin=True"
-    def get_joinedload_entities(stmt):
-        """Get extra entities that are loaded from a ``stmt`` due to joinedload
-        options specified in the statement options.
-
-        These entities will not be returned directly by the query, but will prepopulate
-        relationships in the returned data.
-
-        For example::
-
-            get_joinedload_entities(query(A).options(joinedload(A.bs))) == {A, B}
-        """
-        # there are two kinds of options that both represent the same information,
-        # just in different ways.  This is largely a product of legacy options
-        # that have things like strings, i.e. joinedload("addresses").  note we
-        # aren't covering that here, which is legacy form.  you can if you want
-        # raise an exception if you detect that form here.
-
-        entities = set()
-
-        for opt in stmt._with_options:
-            if hasattr(opt, "_to_bind"):
-                # these options are called _UnboundLoad
-                for b in opt._to_bind:
-                    if ("lazy", "joined") in b.strategy:
-                        # the "path" is a tuple showing the entity/relationships
-                        # being targeted
-
-                        # TODO check for wild card.
-                        # TODO: Check whether entity is a string.
-                        entities.add(b.path[-1].entity)
-            elif hasattr(opt, "context"):
-                # these options are called Load
-                for key, loadopt in opt.context.items():
-                    if key[0] == "loader" and ("lazy", "joined") in loadopt.strategy:
-                        # the "path" is a tuple showing the entity/relationships
-                        # being targeted
-
-                        # TODO: Check for of_type.
-                        # TODO: Check whether entity is a string, unsupported.
-                        # TODO check for wild card.
-                        entities.add(key[1][-1].entity)
-
-        return entities
-
-except ImportError:
-    # This code should not be called for SQLAlchemy 1.4.
-    def all_entities_in_statement(statement):
-        raise NotImplementedError("Unsupported on SQLAlchemy < 1.4")
