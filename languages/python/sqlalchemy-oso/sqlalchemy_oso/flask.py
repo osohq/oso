@@ -49,13 +49,6 @@ class AuthorizedSQLAlchemy(SQLAlchemy):
     :param get_user: Callable that returns the user to authorize for the current request.
     :param get_checked_permissions: Callable that returns the permissions to authorize for the current request.
 
-    >>> from sqlalchemy_oso.flask import AuthorizedSQLAlchemy
-    >>> db = AuthorizedSQLAlchemy(
-    ...    get_oso=lambda: flask.current_app.oso,
-    ...    get_user=lambda: flask_login.current_user,
-    ...    get_checked_permissions=lambda: {Post: flask.request.method}
-    ... )
-
     .. _flask_sqlalchemy: https://flask-sqlalchemy.palletsprojects.com/en/2.x/
     """
 
