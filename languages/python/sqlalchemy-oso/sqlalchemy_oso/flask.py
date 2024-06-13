@@ -91,9 +91,7 @@ class AuthorizedSQLAlchemy(SQLAlchemy):
             **options
         )
 
-    def create_session(
-        self, options: Mapping[str, Any]
-    ) -> sqlalchemy.orm.sessionmaker:
+    def create_session(self, options: Mapping[str, Any]) -> sqlalchemy.orm.sessionmaker:
         return authorized_sessionmaker(
             get_oso=self._get_oso,
             get_user=self._get_user,
