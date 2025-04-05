@@ -71,7 +71,11 @@ where
         if let PolarValue::Instance(instance) = val {
             Ok(instance.downcast::<T>(None).map_err(|e| e.user())?.clone())
         } else {
-            Err(TypeError::expected("Instance").user())
+            Err(
+                TypeError::expected(format!("Instance of {}", std::any::type_name::<T>()))
+                    .got(val.type_name().to_string())
+                    .user(),
+            )
         }
     }
 }

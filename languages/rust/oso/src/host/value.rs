@@ -127,4 +127,38 @@ This may mean you performed an operation in your policy over an unbound variable
         };
         Term::new_from_ffi(value)
     }
+
+    pub fn type_name(&self) -> PolarValueType {
+        match self {
+            PolarValue::Integer(_) => PolarValueType::Integer,
+            PolarValue::Float(_) => PolarValueType::Float,
+            PolarValue::String(_) => PolarValueType::String,
+            PolarValue::Boolean(_) => PolarValueType::Boolean,
+            PolarValue::Map(_) => PolarValueType::Map,
+            PolarValue::List(_) => PolarValueType::List,
+            PolarValue::Variable(_) => PolarValueType::Variable,
+            PolarValue::Instance(i) => PolarValueType::Instance(i.debug_name()),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum PolarValueType {
+    Integer,
+    Float,
+    String,
+    Boolean,
+    Map,
+    List,
+    Variable,
+    Instance(&'static str),
+}
+
+impl std::fmt::Display for PolarValueType {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PolarValueType::Instance(name) => write!(fmt, "Instance<{}>", name),
+            _ => std::fmt::Debug::fmt(self, fmt),
+        }
+    }
 }
