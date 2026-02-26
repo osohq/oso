@@ -321,7 +321,7 @@ jobs:
           path: languages/ruby/*.gem
 
   build_linux_wheels:
-    name: Build wheels on Linux
+    name: Build wheels on Linux (x86_64)
     runs-on: ubuntu-latest
     needs: [version, linux_libs]
     steps:
@@ -344,8 +344,47 @@ jobs:
         env:
           # Skip Python 2.7 and Python 3.5
           CIBW_SKIP: "cp27-* cp35-* pp27-*"
-          # 64-bit builds only
-          CIBW_BUILD: "*64"
+          # x86_64 builds only
+          CIBW_ARCHS: x86_64
+          # Used in build.py to find right files
+          CIBW_ENVIRONMENT: OSO_ENV=CI
+        with:
+          package-dir: languages/python/oso
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheel
+          path: ./wheelhouse/*.whl
+
+  build_linux_arm64_wheels:
+    name: Build wheels on Linux (aarch64)
+    runs-on: ubuntu-latest
+    needs: [version, linux_libs]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: arm64
+      - name: Download static libs
+        uses: actions/download-artifact@v1
+        with:
+          name: oso_static_library
+      - name: Copy static library.
+        run: |
+          mkdir -p languages/python/oso/native
+          cp -r oso_static_library/libpolar-musl-aarch64.a languages/python/oso/native/libpolar.a
+          cp -r oso_static_library/polar.h languages/python/oso/native/polar.h
+      - name: Copy in readme
+        run: |
+          rm languages/python/oso/README.md
+          cp README.md languages/python/oso/README.md
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.16.2
+        env:
+          # Skip Python 2.7 and Python 3.5
+          CIBW_SKIP: "cp27-* cp35-* pp27-*"
+          # aarch64 builds only
+          CIBW_ARCHS: aarch64
           # Used in build.py to find right files
           CIBW_ENVIRONMENT: OSO_ENV=CI
         with:
@@ -564,6 +603,34 @@ jobs:
           pip install oso==${{ steps.version.outputs.oso_version }} -f ../wheel
           python test.py
         working-directory: test
+
+  validate_python_linux_arm64:
+    name: Test python ${{ matrix.python-version }} on Linux ARM64
+    needs: [build_linux_arm64_wheels]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: arm64
+      - name: Set version env
+        id: version
+        run: echo "::set-output name=oso_version::$(cat VERSION)"
+      - name: Download oso python wheels from package run
+        uses: actions/download-artifact@v1
+        with:
+          name: wheel
+      - name: "test"
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v $(pwd):/work -w /work \
+            -e OSO_VERSION=${{ steps.version.outputs.oso_version }} \
+            python:${{ matrix.python-version }}-slim \
+            bash -c "pip install oso==\$OSO_VERSION -f wheel --no-deps --no-index && pip install oso==\$OSO_VERSION -f wheel && python test/test.py"
 
   validate_python_macos_11:
     name: Test python ${{ matrix.python-version }} on MacOS
@@ -839,6 +906,48 @@ jobs:
       - name: Run quickstart tests
         run: make -C docs test-quickstarts-release
 
+  publish_to_codeartifact:
+    name: Publish Python wheels to CodeArtifact
+    runs-on: ["x64", "self-hosted", "shared-resources", "linux", "general"]
+    if: startsWith(github.ref, 'refs/tags/')
+    needs:
+      [
+        build_linux_wheels,
+        build_linux_arm64_wheels,
+        build_macos_wheels,
+        build_windows_wheels,
+        validate_python_linux,
+        validate_python_linux_arm64,
+        validate_python_macos_11,
+        validate_python_windows,
+        validate_python_musl,
+      ]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout PostEra Actions
+        uses: actions/checkout@v4
+        with:
+          repository: postera-ai/actions
+          ref: main
+          path: "./.github/postera-actions"
+          token: ${{ secrets.POSTERA_MACHINE_USER_GITHUB_ACTIONS_TOKEN }}
+      - name: Fetch Postera-Package Auth Token
+        id: auth
+        uses: "./.github/postera-actions/authenticate-postera-packages"
+      - name: Download oso python wheels
+        uses: actions/download-artifact@v1
+        with:
+          name: wheel
+      - name: Install twine
+        run: pip install twine
+      - name: Publish wheels to CodeArtifact
+        run: |
+          twine upload \
+            --repository-url ${{ steps.auth.outputs.repositories_publish_url }} \
+            --username aws \
+            --password ${{ steps.auth.outputs.http_basic_publish_token }} \
+            wheel/*.whl
+
   release:
     name: Create release
     runs-on: ubuntu-latest
@@ -846,12 +955,14 @@ jobs:
     needs:
       [
         build_linux_wheels,
+        build_linux_arm64_wheels,
         build_macos_wheels,
         build_windows_wheels,
         build_jar,
         build_gem,
         build_go,
         validate_python_linux,
+        validate_python_linux_arm64,
         validate_python_macos_11,
         validate_python_windows,
         validate_python_musl,
@@ -978,6 +1089,7 @@ jobs:
     needs:
       [
         validate_python_linux,
+        validate_python_linux_arm64,
         validate_python_macos_11,
         validate_python_macos_arm,
         validate_python_windows,

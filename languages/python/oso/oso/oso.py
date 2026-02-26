@@ -1,6 +1,6 @@
 """Core oso functionality"""
 
-__version__ = "0.27.3"
+__version__ = "0.28.0"
 
 import os
 from typing import Any, List, Set, Type
@@ -33,7 +33,7 @@ class Oso(Polar):
         *,
         forbidden_error: Type[BaseException] = ForbiddenError,
         not_found_error: Type[BaseException] = NotFoundError,
-        read_action: _Action = "read"
+        read_action: _Action = "read",
     ) -> None:
         """
         Create an Oso object.
@@ -93,7 +93,7 @@ class Oso(Polar):
         action: _Action,
         resource: _Resource,
         *,
-        check_read: bool = True
+        check_read: bool = True,
     ) -> None:
         """Ensure that ``actor`` is allowed to perform ``action`` on
         ``resource``.
