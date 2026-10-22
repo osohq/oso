@@ -1,6 +1,10 @@
-# Deprecated
+# Archived
 
-We have deprecated the legacy Oso open source library. We have plans for the next open source release and we’re looking forward to getting feedback from the community leading up to that point (please reach out to us in the Slack #help channel). In the meantime, if you’re happy using the Oso open source library now, nothing needs to change – i.e., we are not end-of-lifing (EOL) the library and we’ll continue to provide support and critical bug fixes. More context: [here](https://www.osohq.com/docs/oss/getting-started/deprecation.html).
+This is the legacy Oso open source library. It's no longer maintained, and this repository is archived and read-only. The published packages stay available, so existing installs keep working, but there won't be new releases or bug fixes.
+
+If you're looking for where Oso went, it's [Oso Cloud](https://www.osohq.com/docs/get-started/introduction). It uses Polar too, and you can [get started here](https://www.osohq.com/docs/get-started/quickstart).
+
+Thanks to everyone who used and contributed to the library!
 
 # Oso
 
