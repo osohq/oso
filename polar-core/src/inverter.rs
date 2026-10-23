@@ -42,6 +42,11 @@ pub struct Inverter {
     _debug_id: u64,
 }
 
+/// Note about memory ordering: 
+/// 
+/// Here 'ID' is just a global counter between threads and doesn't synchronize with 
+/// other variables. Therefore, `Relaxed` can be used in both single-threaded and 
+/// multi-threaded environments.
 static ID: AtomicU64 = AtomicU64::new(0);
 
 impl Inverter {
@@ -59,7 +64,7 @@ impl Inverter {
             add_constraints,
             results: vec![],
             follower: None,
-            _debug_id: ID.fetch_add(1, Ordering::AcqRel),
+            _debug_id: ID.fetch_add(1, Ordering::Relaxed),
         }
     }
 }

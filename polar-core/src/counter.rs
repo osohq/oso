@@ -5,6 +5,16 @@ use crate::numerics::MOST_POSITIVE_EXACT_FLOAT;
 
 const MAX_ID: u64 = (MOST_POSITIVE_EXACT_FLOAT - 1) as u64;
 
+/// Note about memory ordering: 
+/// 
+/// Here 'next' is just a global counter between threads and doesn't synchronize with other 
+/// variables. Therefore, `Relaxed` can be used in both single-threaded and  multi-threaded 
+/// environments.
+/// 
+/// While atomic operations using 'Relaxed' memory ordering do not provide any happens-before 
+/// relationship, they do guarantee a total modification order of the 'next' atomic variable. 
+/// This means that all modifications of the 'next' atomic variable happen in an order that 
+/// is the same from the perspective of every single thread. 
 #[derive(Clone, Debug)]
 pub struct Counter {
     next: Arc<AtomicU64>,
@@ -34,12 +44,12 @@ impl Counter {
     pub fn next(&self) -> u64 {
         if self
             .next
-            .compare_exchange(MAX_ID, 1, Ordering::SeqCst, Ordering::SeqCst)
+            .compare_exchange(MAX_ID, 1, Ordering::Relaxed, Ordering::Relaxed)
             == Ok(MAX_ID)
         {
             MAX_ID
         } else {
-            self.next.fetch_add(1, Ordering::SeqCst)
+            self.next.fetch_add(1, Ordering::Relaxed)
         }
     }
 }
