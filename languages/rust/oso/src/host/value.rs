@@ -1,16 +1,16 @@
 use polar_core::terms::*;
 use std::collections::hash_map::HashMap;
 
-use crate::host::{Host, Instance};
+use crate::{
+    host::{Host, Instance},
+    OsoError, Result,
+};
 
-/// An enum of the possible value types that can be
-/// sent to/from Polar.
+/// An enum of the possible value types that can be sent to and from Polar.
 ///
-/// All variants except `Instance` represent types that can
-/// be used natively in Polar.
-/// Any other types can be wrapped using `PolarValue::new_from_instance`.
-/// If the instance has a registered `Class`, then this can be used
-/// from the policy too.
+/// All variants except [`PolarValue::Instance`] represent types that can be used natively in
+/// Polar. All other types can be wrapped using [`PolarValue::new_from_instance`]. If the instance
+/// has a registered [`Class`](crate::Class), then this can be used from the policy too.
 #[derive(Clone, Debug)]
 pub enum PolarValue {
     Integer(i64),
@@ -38,7 +38,10 @@ impl PartialEq for PolarValue {
 }
 
 impl PolarValue {
-    /// Create a `PolarValue::Instance` from any type.
+    /// Create a [`PolarValue::Instance`] from any type.
+    ///
+    /// The only constraints are that the type must me threadsafe (as represented by the [`Send`]
+    /// and [`Sync`] bounds), as well as owned (as represented by the `'static` bound).
     pub fn new_from_instance<T>(instance: T) -> Self
     where
         T: Send + Sync + 'static,
@@ -46,7 +49,7 @@ impl PolarValue {
         Self::Instance(Instance::new(instance))
     }
 
-    pub(crate) fn from_term(term: &Term, host: &Host) -> crate::Result<Self> {
+    pub(crate) fn from_term(term: &Term, host: &Host) -> Result<Self> {
         let val = match term.value() {
             Value::Number(Numeric::Integer(i)) => PolarValue::Integer(*i),
             Value::Number(Numeric::Float(f)) => PolarValue::Float(*f),
@@ -73,7 +76,7 @@ impl PolarValue {
             }
             Value::Variable(Symbol(sym)) => PolarValue::Variable(sym.clone()),
             Value::Expression(_) => {
-                return Err(crate::OsoError::Custom {
+                return Err(OsoError::Custom {
                     message: r#"
 Received Expression from Polar VM. The Expression type is not yet supported in this language.
 
@@ -83,7 +86,7 @@ This may mean you performed an operation in your policy over an unbound variable
                 })
             }
             _ => {
-                return Err(crate::OsoError::Custom {
+                return Err(OsoError::Custom {
                     message: "Unsupported value type".to_owned(),
                 })
             }

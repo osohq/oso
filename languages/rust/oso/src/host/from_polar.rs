@@ -2,15 +2,14 @@
 //! Trait and implementations of `FromPolar` for converting from
 //! Polar types back to Rust types.
 
-use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque};
-use std::hash::Hash;
-
+use super::{class::Instance, PolarValue};
+use crate::{errors::TypeError, OsoError, PolarClass, Result};
 use impl_trait_for_tuples::*;
-
-use super::class::Instance;
-use super::PolarValue;
-use crate::errors::TypeError;
-use crate::PolarClass;
+use std::{
+    collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque},
+    hash::Hash,
+};
+use tracing::{trace, warn};
 
 /// Convert Polar types to Rust types.
 ///
@@ -32,11 +31,11 @@ use crate::PolarClass;
 /// is possible to store a `FromPolar` value on an `Oso` instance
 /// which can be shared between threads
 pub trait FromPolar: Clone {
-    fn from_polar(val: PolarValue) -> crate::Result<Self>;
+    fn from_polar(val: PolarValue) -> Result<Self>;
 }
 
 impl FromPolar for PolarValue {
-    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+    fn from_polar(val: PolarValue) -> Result<Self> {
         Ok(val)
     }
 }
@@ -44,9 +43,9 @@ impl FromPolar for PolarValue {
 macro_rules! polar_to_int {
     ($i:ty) => {
         impl FromPolar for $i {
-            fn from_polar(val: PolarValue) -> crate::Result<Self> {
+            fn from_polar(val: PolarValue) -> Result<Self> {
                 if let PolarValue::Integer(i) = val {
-                    <$i>::try_from(i).map_err(|_| crate::OsoError::FromPolar)
+                    <$i>::try_from(i).map_err(|_| OsoError::FromPolar)
                 } else {
                     Err(TypeError::expected("Integer").user())
                 }
@@ -67,7 +66,7 @@ impl<T> FromPolar for T
 where
     T: 'static + Clone + PolarClass,
 {
-    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+    fn from_polar(val: PolarValue) -> Result<Self> {
         if let PolarValue::Instance(instance) = val {
             Ok(instance.downcast::<T>(None).map_err(|e| e.user())?.clone())
         } else {
@@ -77,7 +76,7 @@ where
 }
 
 impl FromPolar for f64 {
-    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+    fn from_polar(val: PolarValue) -> Result<Self> {
         if let PolarValue::Float(f) = val {
             Ok(f)
         } else {
@@ -87,7 +86,7 @@ impl FromPolar for f64 {
 }
 
 impl FromPolar for String {
-    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+    fn from_polar(val: PolarValue) -> Result<Self> {
         if let PolarValue::String(s) = val {
             Ok(s)
         } else {
@@ -97,7 +96,7 @@ impl FromPolar for String {
 }
 
 impl FromPolar for bool {
-    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+    fn from_polar(val: PolarValue) -> Result<Self> {
         if let PolarValue::Boolean(b) = val {
             Ok(b)
         } else {
@@ -107,7 +106,7 @@ impl FromPolar for bool {
 }
 
 impl<T: FromPolar> FromPolar for HashMap<String, T> {
-    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+    fn from_polar(val: PolarValue) -> Result<Self> {
         if let PolarValue::Map(map) = val {
             let mut result = HashMap::new();
             for (k, v) in map {
@@ -122,7 +121,7 @@ impl<T: FromPolar> FromPolar for HashMap<String, T> {
 }
 
 impl<T: FromPolar> FromPolar for BTreeMap<String, T> {
-    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+    fn from_polar(val: PolarValue) -> Result<Self> {
         if let PolarValue::Map(map) = val {
             let mut result = BTreeMap::new();
             for (k, v) in map {
@@ -137,7 +136,7 @@ impl<T: FromPolar> FromPolar for BTreeMap<String, T> {
 }
 
 impl<T: FromPolar> FromPolar for Vec<T> {
-    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+    fn from_polar(val: PolarValue) -> Result<Self> {
         if let PolarValue::List(l) = val {
             let mut result = vec![];
             for v in l {
@@ -151,7 +150,7 @@ impl<T: FromPolar> FromPolar for Vec<T> {
 }
 
 impl<T: FromPolar> FromPolar for LinkedList<T> {
-    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+    fn from_polar(val: PolarValue) -> Result<Self> {
         if let PolarValue::List(l) = val {
             let mut result = LinkedList::new();
             for v in l {
@@ -165,7 +164,7 @@ impl<T: FromPolar> FromPolar for LinkedList<T> {
 }
 
 impl<T: FromPolar> FromPolar for VecDeque<T> {
-    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+    fn from_polar(val: PolarValue) -> Result<Self> {
         if let PolarValue::List(l) = val {
             let mut result = VecDeque::new();
             for v in l {
@@ -179,7 +178,7 @@ impl<T: FromPolar> FromPolar for VecDeque<T> {
 }
 
 impl<T: Eq + Hash + FromPolar> FromPolar for HashSet<T> {
-    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+    fn from_polar(val: PolarValue) -> Result<Self> {
         if let PolarValue::List(l) = val {
             let mut result = HashSet::new();
             for v in l {
@@ -193,7 +192,7 @@ impl<T: Eq + Hash + FromPolar> FromPolar for HashSet<T> {
 }
 
 impl<T: Eq + Ord + FromPolar> FromPolar for BTreeSet<T> {
-    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+    fn from_polar(val: PolarValue) -> Result<Self> {
         if let PolarValue::List(l) = val {
             let mut result = BTreeSet::new();
             for v in l {
@@ -207,7 +206,7 @@ impl<T: Eq + Ord + FromPolar> FromPolar for BTreeSet<T> {
 }
 
 impl<T: Ord + FromPolar> FromPolar for BinaryHeap<T> {
-    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+    fn from_polar(val: PolarValue) -> Result<Self> {
         if let PolarValue::List(l) = val {
             let mut result = BinaryHeap::new();
             for v in l {
@@ -221,7 +220,7 @@ impl<T: Ord + FromPolar> FromPolar for BinaryHeap<T> {
 }
 
 impl<T: FromPolar> FromPolar for Option<T> {
-    fn from_polar(val: PolarValue) -> crate::Result<Self> {
+    fn from_polar(val: PolarValue) -> Result<Self> {
         // if the value is a Option<PolarValue>, convert from PolarValue
         if let PolarValue::Instance(ref instance) = &val {
             if let Ok(opt) = instance.downcast::<Option<PolarValue>>(None) {
@@ -234,7 +233,7 @@ impl<T: FromPolar> FromPolar for Option<T> {
 
 // well, you can't do this
 // impl<U: FromPolar> TryFrom<U> for PolarValue {
-//     type Error = crate::OsoError;
+//     type Error = OsoError;
 
 //     fn try_from(v: PolarValue) -> Result<Self, Self::Error> {
 //         U::from_polar(v)
@@ -245,7 +244,7 @@ impl<T: FromPolar> FromPolar for Option<T> {
 macro_rules! try_from_polar {
     ($i:ty) => {
         impl TryFrom<PolarValue> for $i {
-            type Error = crate::OsoError;
+            type Error = OsoError;
 
             fn try_from(v: PolarValue) -> Result<Self, Self::Error> {
                 Self::from_polar(v)
@@ -266,7 +265,7 @@ try_from_polar!(String);
 try_from_polar!(bool);
 
 impl<T: FromPolar> TryFrom<PolarValue> for HashMap<String, T> {
-    type Error = crate::OsoError;
+    type Error = OsoError;
 
     fn try_from(v: PolarValue) -> Result<Self, Self::Error> {
         Self::from_polar(v)
@@ -274,26 +273,15 @@ impl<T: FromPolar> TryFrom<PolarValue> for HashMap<String, T> {
 }
 
 impl<T: FromPolar> TryFrom<PolarValue> for Vec<T> {
-    type Error = crate::OsoError;
+    type Error = OsoError;
 
     fn try_from(v: PolarValue) -> Result<Self, Self::Error> {
         Self::from_polar(v)
     }
 }
 
-mod private {
-    /// Prevents implementations of `FromPolarList` outside of this crate
-    pub trait Sealed {}
-}
-
-pub trait FromPolarList: private::Sealed {
-    fn from_polar_list(values: &[PolarValue]) -> crate::Result<Self>
-    where
-        Self: Sized;
-}
-
 impl FromPolar for Instance {
-    fn from_polar(value: PolarValue) -> crate::Result<Self> {
+    fn from_polar(value: PolarValue) -> Result<Self> {
         // We need to handle converting all value variants to an
         // instance so that we can use the `Class` mechanism to
         // handle methods on them
@@ -306,34 +294,49 @@ impl FromPolar for Instance {
             PolarValue::Map(d) => Instance::new(d),
             PolarValue::Instance(instance) => instance,
             v => {
-                tracing::warn!(value = ?v, "invalid conversion attempted");
-                return Err(crate::OsoError::FromPolar);
+                warn!(value = ?v, "invalid conversion attempted");
+                return Err(OsoError::FromPolar);
             }
         };
         Ok(instance)
     }
 }
 
+mod private {
+    /// Prevents implementations of `FromPolarList` outside of this crate
+    pub trait Sealed {}
+}
+
+/// Convert lists of Polar values into a Rust tuple.
+///
+/// This trait is automatically implemented to tuples of up to 16 elements.
+pub trait FromPolarList: private::Sealed {
+    /// Attempt to convert the list of PolarValues into Self.
+    fn from_polar_list(values: &[PolarValue]) -> Result<Self>
+    where
+        Self: Sized;
+}
+
 #[impl_for_tuples(16)]
 #[tuple_types_custom_trait_bound(FromPolar)]
 impl FromPolarList for Tuple {
-    fn from_polar_list(values: &[PolarValue]) -> crate::Result<Self> {
+    fn from_polar_list(values: &[PolarValue]) -> Result<Self> {
         let mut iter = values.iter();
         let result = Ok((for_tuples!(
             #( Tuple::from_polar(iter.next().ok_or(
                 // TODO better error type
-                crate::OsoError::FromPolar
+                OsoError::FromPolar
             )?.clone())? ),*
         )));
 
         if iter.len() > 0 {
             // TODO (dhatch): Debug this!!!
-            tracing::warn!("Remaining items in iterator after conversion.");
+            warn!("Remaining items in iterator after conversion.");
             for item in iter {
-                tracing::trace!("Remaining item {:?}", item);
+                trace!("Remaining item {:?}", item);
             }
 
-            return Err(crate::OsoError::FromPolar);
+            return Err(OsoError::FromPolar);
         }
 
         result
